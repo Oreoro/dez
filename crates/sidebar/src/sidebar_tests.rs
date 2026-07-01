@@ -229,10 +229,12 @@ fn setup_sidebar_closed(
     cx: &mut gpui::VisualTestContext,
 ) -> Entity<Sidebar> {
     let multi_workspace = multi_workspace.clone();
-    let sidebar =
-        cx.update(|window, cx| cx.new(|cx| Sidebar::new(multi_workspace.clone(), window, cx)));
-    multi_workspace.update(cx, |mw, cx| {
-        mw.register_sidebar(sidebar.clone(), window, cx);
+    let sidebar = cx.update(|window, cx| {
+        let sidebar = cx.new(|cx| Sidebar::new(multi_workspace.clone(), window, cx));
+        multi_workspace.update(cx, |mw, cx| {
+            mw.register_sidebar(sidebar.clone(), window, cx);
+        });
+        sidebar
     });
     cx.run_until_parked();
     sidebar

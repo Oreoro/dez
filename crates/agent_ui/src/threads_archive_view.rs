@@ -34,7 +34,6 @@ use theme::ActiveTheme;
 use ui::{
     AgentThreadStatus, Divider, KeyBinding, ListItem, ListItemSpacing, ListSubHeader, ScrollAxes,
     Scrollbars, Tab, ThreadItem, Tooltip, WithScrollbar, prelude::*,
-    utils::platform_title_bar_height,
 };
 use ui_input::ErasedEditor;
 use util::ResultExt;
@@ -863,14 +862,13 @@ impl ThreadsArchiveView {
         let left_window_controls = !cfg!(target_os = "macos") && not_fullscreen && sidebar_on_left;
         let right_window_controls =
             !cfg!(target_os = "macos") && not_fullscreen && sidebar_on_right;
-        let header_height = platform_title_bar_height(window);
         let show_focus_keybinding =
             self.selection.is_some() && !self.filter_editor.focus_handle(cx).is_focused(window);
 
         h_flex()
-            .h(header_height)
-            .mt_px()
-            .pb_px()
+            .relative()
+            .flex_none()
+            .h(Tab::container_height(cx))
             .when(left_window_controls, |this| {
                 this.children(Self::render_left_window_controls(window, cx))
             })
@@ -886,8 +884,15 @@ impl ThreadsArchiveView {
             .when(!right_window_controls, |this| this.pr_1p5())
             .gap_1()
             .justify_between()
-            .border_b_1()
-            .border_color(cx.theme().colors().border)
+            .child(
+                div()
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .size_full()
+                    .border_b_1()
+                    .border_color(cx.theme().colors().border),
+            )
             .when(traffic_lights, |this| {
                 this.child(Divider::vertical().color(ui::DividerColor::Border))
             })
@@ -958,13 +963,21 @@ impl ThreadsArchiveView {
         };
 
         h_flex()
-            .mt_px()
+            .relative()
+            .flex_none()
             .pl_2p5()
             .pr_1p5()
-            .h(Tab::content_height(cx))
+            .h(Tab::container_height(cx))
             .justify_between()
-            .border_b_1()
-            .border_color(cx.theme().colors().border)
+            .child(
+                div()
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .size_full()
+                    .border_b_1()
+                    .border_color(cx.theme().colors().border),
+            )
             .child(
                 Label::new(count_label)
                     .size(LabelSize::Small)

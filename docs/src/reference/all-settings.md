@@ -4876,6 +4876,7 @@ Run the {#action theme_selector::Toggle} action in the command palette to see a 
 ```json [settings]
 {
   "title_bar": {
+    "show": true,
     "show_branch_status_icon": false,
     "show_branch_name": true,
     "show_project_items": true,
@@ -4891,6 +4892,7 @@ Run the {#action theme_selector::Toggle} action in the command palette to see a 
 
 **Options**
 
+- `show`: Whether to show the title bar
 - `show_branch_status_icon`: Whether to show git status indicators on the branch icon in the titlebar
 - `show_branch_name`: Whether to show the branch name button in the titlebar
 - `show_project_items`: Whether to show the project host and name in the titlebar
