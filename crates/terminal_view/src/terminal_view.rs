@@ -1914,7 +1914,55 @@ impl Item for TerminalView {
             .filter(|title| !title.trim().is_empty())
             .cloned()
             .unwrap_or_else(|| terminal.title(true));
+        let title = match title.trim() {
+            "" => "Terminal".to_string(),
+            title => title.to_string(),
+        };
 
+        let self_handle = self.self_handle.clone();
+        h_flex()
+            .relative()
+            .min_w_0()
+            .when(!params.selected, |this| {
+                this.track_focus(&self.focus_handle)
+            })
+            .on_action(move |action: &RenameTerminal, window, cx| {
+                self_handle
+                    .update(cx, |this, cx| this.rename_terminal(action, window, cx))
+                    .ok();
+            })
+            .child(
+                Label::new(title)
+                    .color(params.text_color())
+                    .when(self.is_renaming(), |this| this.alpha(0.)),
+            )
+            .when_some(self.rename_editor.clone(), |this, editor| {
+                let self_handle = self.self_handle.clone();
+                let self_handle_cancel = self.self_handle.clone();
+                this.child(
+                    div()
+                        .absolute()
+                        .top_0()
+                        .left_0()
+                        .size_full()
+                        .child(editor)
+                        .on_action(move |_: &menu::Confirm, window, cx| {
+                            self_handle
+                                .update(cx, |this, cx| this.finish_renaming(true, window, cx))
+                                .ok();
+                        })
+                        .on_action(move |_: &menu::Cancel, window, cx| {
+                            self_handle_cancel
+                                .update(cx, |this, cx| this.finish_renaming(false, window, cx))
+                                .ok();
+                        }),
+                )
+            })
+            .into_any()
+    }
+
+    fn tab_icon_element(&self, _window: &Window, cx: &App) -> Option<AnyElement> {
+        let terminal = self.terminal().read(cx);
         let (icon, icon_color, rerun_button) = match terminal.task() {
             Some(terminal_task) => match &terminal_task.status {
                 TaskStatus::Running => (
@@ -1940,81 +1988,43 @@ impl Item for TerminalView {
             None => (IconName::Terminal, Color::Muted, None),
         };
 
-        let self_handle = self.self_handle.clone();
-        h_flex()
-            .gap_1()
-            .group("term-tab-icon")
-            .when(!params.selected, |this| {
-                this.track_focus(&self.focus_handle)
-            })
-            .on_action(move |action: &RenameTerminal, window, cx| {
-                self_handle
-                    .update(cx, |this, cx| this.rename_terminal(action, window, cx))
-                    .ok();
-            })
-            .child(
-                h_flex()
-                    .group("term-tab-icon")
-                    .child(
-                        div()
-                            .when(rerun_button.is_some(), |this| {
-                                this.hover(|style| style.invisible().w_0())
-                            })
-                            .child(Icon::new(icon).color(icon_color)),
-                    )
-                    .when_some(rerun_button, |this, rerun_button| {
-                        this.child(
-                            div()
-                                .absolute()
-                                .visible_on_hover("term-tab-icon")
-                                .child(rerun_button),
-                        )
-                    }),
-            )
-            .child(
-                div()
-                    .relative()
-                    .child(
-                        Label::new(title)
-                            .color(params.text_color())
-                            .when(self.is_renaming(), |this| this.alpha(0.)),
-                    )
-                    .when_some(self.rename_editor.clone(), |this, editor| {
-                        let self_handle = self.self_handle.clone();
-                        let self_handle_cancel = self.self_handle.clone();
-                        this.child(
-                            div()
-                                .absolute()
-                                .top_0()
-                                .left_0()
-                                .size_full()
-                                .child(editor)
-                                .on_action(move |_: &menu::Confirm, window, cx| {
-                                    self_handle
-                                        .update(cx, |this, cx| {
-                                            this.finish_renaming(true, window, cx)
-                                        })
-                                        .ok();
-                                })
-                                .on_action(move |_: &menu::Cancel, window, cx| {
-                                    self_handle_cancel
-                                        .update(cx, |this, cx| {
-                                            this.finish_renaming(false, window, cx)
-                                        })
-                                        .ok();
-                                }),
-                        )
-                    }),
-            )
-            .into_any()
+        Some(
+            h_flex()
+                .relative()
+                .flex_none()
+                .size(IconSize::Small.rems())
+                .items_center()
+                .justify_center()
+                .group("term-tab-icon")
+                .child(
+                    div()
+                        .when(rerun_button.is_some(), |this| {
+                            this.group_hover("", |style| style.invisible())
+                        })
+                        .child(Icon::new(icon).size(IconSize::Small).color(icon_color)),
+                )
+                .when_some(rerun_button, |this, rerun_button| {
+                    this.child(div().absolute().visible_on_hover("").child(rerun_button))
+                })
+                .into_any(),
+        )
     }
 
     fn tab_content_text(&self, detail: usize, cx: &App) -> SharedString {
-        if let Some(custom_title) = self.custom_title.as_ref().filter(|l| !l.trim().is_empty()) {
-            return custom_title.clone().into();
+        let title = self
+            .custom_title
+            .as_ref()
+            .filter(|title| !title.trim().is_empty())
+            .cloned()
+            .unwrap_or_else(|| {
+                let terminal = self.terminal().read(cx);
+                terminal.title(detail == 0)
+            });
+
+        match title.trim() {
+            "" => "Terminal".into(),
+            title => title.to_string().into(),
         }
-        let terminal = self.terminal().read(cx);
-        terminal.title(detail == 0).into()
     }
 
     fn telemetry_event_text(&self) -> Option<&'static str> {

@@ -125,15 +125,19 @@ impl RenderOnce for Tab {
         };
 
         let (start_slot, end_slot) = {
-            let start_slot = h_flex()
-                .size(START_TAB_SLOT_SIZE)
-                .justify_center()
-                .children(self.start_slot);
+            let start_slot = self.start_slot.map(|slot| {
+                h_flex()
+                    .size(START_TAB_SLOT_SIZE)
+                    .justify_center()
+                    .child(slot)
+            });
 
-            let end_slot = h_flex()
-                .size(END_TAB_SLOT_SIZE)
-                .justify_center()
-                .children(self.end_slot);
+            let end_slot = self.end_slot.map(|slot| {
+                h_flex()
+                    .size(END_TAB_SLOT_SIZE)
+                    .justify_center()
+                    .child(slot)
+            });
 
             match self.close_side {
                 TabCloseSide::End => (start_slot, end_slot),
@@ -170,12 +174,13 @@ impl RenderOnce for Tab {
                     .group("")
                     .relative()
                     .h(Tab::content_height(cx))
-                    .px(DynamicSpacing::Base04.px(cx))
+                    .pl(DynamicSpacing::Base08.px(cx))
+                    .pr(DynamicSpacing::Base04.px(cx))
                     .gap(DynamicSpacing::Base04.rems(cx))
                     .text_color(text_color)
-                    .child(start_slot)
+                    .children(start_slot)
                     .children(self.children)
-                    .child(end_slot),
+                    .children(end_slot),
             )
     }
 }

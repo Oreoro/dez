@@ -2914,8 +2914,9 @@ impl Pane {
             .project_path(cx)
             .map_or(None, |project_path| self.diagnostics.get(&project_path));
 
+        let tab_icon = item.tab_icon(window, cx);
         let decorated_icon = item_diagnostic.map_or(None, |diagnostic| {
-            let icon = match item.tab_icon(window, cx) {
+            let icon = match tab_icon.clone() {
                 Some(icon) => icon,
                 None => return None,
             };
@@ -2950,18 +2951,21 @@ impl Pane {
             match item_diagnostic {
                 Some(&DiagnosticSeverity::ERROR) => None,
                 Some(&DiagnosticSeverity::WARNING) => None,
-                _ => item
-                    .tab_icon(window, cx)
-                    .map(|icon| icon.color(Color::Muted)),
+                _ => item.tab_icon_element(window, cx).or_else(|| {
+                    tab_icon.clone().map(|icon| {
+                        icon.color(Color::Muted)
+                            .size(IconSize::Small)
+                            .into_any_element()
+                    })
+                }),
             }
-            .map(|icon| icon.size(IconSize::Small))
         } else {
             None
         };
 
         let settings = ItemSettings::get_global(cx);
-        let close_side = &settings.close_position;
-        let show_close_button = &settings.show_close_button;
+        let close_side = settings.close_position;
+        let show_close_button = settings.show_close_button;
         let indicator = render_item_indicator(item.boxed_clone(), cx);
         let tab_tooltip_content = item.tab_tooltip_content(cx);
         let item_id = item.item_id();
@@ -3090,21 +3094,22 @@ impl Pane {
                 this.drag_split_direction = None;
                 this.handle_external_paths_drop(paths, window, cx)
             }))
-            .start_slot::<Indicator>(indicator)
             .map(|this| {
                 let end_slot_action: &'static dyn Action;
                 let end_slot_tooltip_text: &'static str;
-                let end_slot = if is_pinned {
+                let end_slot_control = if is_pinned {
                     end_slot_action = &TogglePinTab;
                     end_slot_tooltip_text = "Unpin Tab";
-                    IconButton::new("unpin tab", IconName::Pin)
-                        .shape(IconButtonShape::Square)
-                        .icon_color(Color::Muted)
-                        .size(ButtonSize::None)
-                        .icon_size(IconSize::Small)
-                        .on_click(cx.listener(move |pane, _, window, cx| {
-                            pane.unpin_tab_at(ix, window, cx);
-                        }))
+                    Some(
+                        IconButton::new("unpin tab", IconName::Pin)
+                            .shape(IconButtonShape::Square)
+                            .icon_color(Color::Muted)
+                            .size(ButtonSize::None)
+                            .icon_size(IconSize::Small)
+                            .on_click(cx.listener(move |pane, _, window, cx| {
+                                pane.unpin_tab_at(ix, window, cx);
+                            })),
+                    )
                 } else {
                     end_slot_action = &CloseActiveItem {
                         save_intent: None,
@@ -3112,22 +3117,28 @@ impl Pane {
                     };
                     end_slot_tooltip_text = "Close Tab";
                     match show_close_button {
-                        ShowCloseButton::Always => IconButton::new("close tab", IconName::Close),
-                        ShowCloseButton::Hover => {
-                            IconButton::new("close tab", IconName::Close).visible_on_hover("")
+                        ShowCloseButton::Always => {
+                            Some(IconButton::new("close tab", IconName::Close))
                         }
-                        ShowCloseButton::Hidden => return this,
+                        ShowCloseButton::Hover => {
+                            Some(IconButton::new("close tab", IconName::Close))
+                        }
+                        ShowCloseButton::Hidden => None,
                     }
-                    .shape(IconButtonShape::Square)
-                    .icon_color(Color::Muted)
-                    .size(ButtonSize::None)
-                    .icon_size(IconSize::Small)
-                    .on_click(cx.listener(move |pane, _, window, cx| {
-                        pane.close_item_by_id(item_id, SaveIntent::Close, window, cx)
-                            .detach_and_log_err(cx);
-                    }))
-                }
-                .map(|this| {
+                    .map(|button| {
+                        button
+                            .shape(IconButtonShape::Square)
+                            .icon_color(Color::Muted)
+                            .size(ButtonSize::None)
+                            .icon_size(IconSize::Small)
+                            .on_click(cx.listener(move |pane, _, window, cx| {
+                                pane.close_item_by_id(item_id, SaveIntent::Close, window, cx)
+                                    .detach_and_log_err(cx);
+                            }))
+                    })
+                };
+
+                let Some(end_slot_control) = end_slot_control.map(|this| {
                     if is_active {
                         let focus_handle = focus_handle.clone();
                         this.tooltip(move |window, cx| {
@@ -3141,7 +3152,40 @@ impl Pane {
                     } else {
                         this.tooltip(Tooltip::text(end_slot_tooltip_text))
                     }
-                });
+                }) else {
+                    return if let Some(indicator) = indicator {
+                        this.end_slot(indicator)
+                    } else {
+                        this
+                    };
+                };
+
+                let show_control_on_hover =
+                    show_close_button == ShowCloseButton::Hover || is_pinned && indicator.is_some();
+                let end_slot = if show_control_on_hover {
+                    if let Some(indicator) = indicator {
+                        h_flex()
+                            .relative()
+                            .size_full()
+                            .justify_center()
+                            .child(
+                                div()
+                                    .absolute()
+                                    .inset_0()
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .group_hover("", |this| this.invisible())
+                                    .child(indicator),
+                            )
+                            .child(end_slot_control.visible_on_hover(""))
+                            .into_any_element()
+                    } else {
+                        end_slot_control.visible_on_hover("").into_any_element()
+                    }
+                } else {
+                    end_slot_control.into_any_element()
+                };
                 this.end_slot(end_slot)
             })
             .child(
