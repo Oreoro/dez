@@ -162,6 +162,19 @@ pub use workspace_settings::{
 };
 use zed_actions::{Spawn, feedback::FileBugReport, theme::ToggleMode};
 
+pub(crate) fn workspace_card_gap(cx: &App) -> Pixels {
+    gpui::px(WorkspaceSettings::get_global(cx).card_gap.max(0.0))
+}
+
+pub(crate) fn title_bar_visible(cx: &App) -> bool {
+    cx.global::<SettingsStore>()
+        .merged_settings()
+        .title_bar
+        .as_ref()
+        .and_then(|title_bar| title_bar.show)
+        .unwrap_or(true)
+}
+
 use crate::{dock::PanelSizeState, item::ItemBufferKind, notifications::NotificationId};
 use crate::{
     persistence::{
@@ -9019,6 +9032,8 @@ impl Render for Workspace {
 
         let theme = cx.theme().clone();
         let colors = theme.colors();
+        let title_bar_visible = title_bar_visible(cx);
+        let status_bar_visible = self.status_bar_visible(cx);
         let notification_entities = self
             .notifications
             .iter()
@@ -9067,9 +9082,9 @@ impl Render for Workspace {
                             .flex()
                             .flex_col()
                             .overflow_hidden()
-                            .border_t_1()
-                            .border_b_1()
                             .border_color(colors.border)
+                            .when(title_bar_visible, |this| this.border_t_1())
+                            .when(status_bar_visible, |this| this.border_b_1())
                             .child({
                                 let this = cx.entity();
                                 canvas(
@@ -9177,7 +9192,7 @@ impl Render for Workspace {
                             }))
                             .children(self.render_notifications(window, cx)),
                     )
-                    .when(self.status_bar_visible(cx), |parent| {
+                    .when(status_bar_visible, |parent| {
                         parent.child(self.status_bar.clone())
                     })
                     .child(self.toast_layer.clone()),

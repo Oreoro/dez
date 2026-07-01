@@ -599,6 +599,10 @@ impl Member {
                         .relative()
                         .flex_1()
                         .size_full()
+                        .overflow_hidden()
+                        .rounded_lg()
+                        .border_1()
+                        .border_color(cx.theme().colors().border)
                         .child(
                             AnyView::from(pane.clone())
                                 .cached(StyleRefinement::default().v_flex().size_full()),
@@ -1151,13 +1155,9 @@ mod element {
     use ui::prelude::*;
     use util::ResultExt;
 
-    use crate::Workspace;
-
-    use crate::WorkspaceSettings;
+    use crate::{Workspace, WorkspaceSettings, workspace_card_gap};
 
     use super::{HANDLE_HITBOX_SIZE, HORIZONTAL_MIN_SIZE, VERTICAL_MIN_SIZE};
-
-    const DIVIDER_SIZE: f32 = 1.0;
 
     pub(super) fn pane_axis(
         axis: Axis,
@@ -1210,7 +1210,6 @@ mod element {
 
     struct PaneAxisHandleLayout {
         hitbox: Hitbox,
-        divider_bounds: Bounds<Pixels>,
         current_ix: usize,
         next_ix: usize,
     }
@@ -1370,26 +1369,20 @@ mod element {
             current_ix: usize,
             next_ix: usize,
             window: &mut Window,
-            _cx: &mut App,
+            cx: &mut App,
         ) -> PaneAxisHandleLayout {
+            let card_gap = workspace_card_gap(cx);
             let handle_bounds = Bounds {
                 origin: pane_bounds.origin.apply_along(axis, |origin| {
                     origin + pane_bounds.size.along(axis) - px(HANDLE_HITBOX_SIZE / 2.)
                 }),
                 size: pane_bounds
                     .size
-                    .apply_along(axis, |_| px(HANDLE_HITBOX_SIZE)),
-            };
-            let divider_bounds = Bounds {
-                origin: pane_bounds
-                    .origin
-                    .apply_along(axis, |origin| origin + pane_bounds.size.along(axis)),
-                size: pane_bounds.size.apply_along(axis, |_| px(DIVIDER_SIZE)),
+                    .apply_along(axis, |_| px(HANDLE_HITBOX_SIZE) + card_gap),
             };
 
             PaneAxisHandleLayout {
                 hitbox: window.insert_hitbox(handle_bounds, HitboxBehavior::BlockMouse),
-                divider_bounds,
                 current_ix,
                 next_ix,
             }
@@ -1467,7 +1460,11 @@ mod element {
                 .max(0.001);
 
             let mut origin = bounds.origin;
-            let space_per_flex = bounds.size.along(self.axis) / total_flex;
+            let card_gap = workspace_card_gap(cx);
+            let gap_count = len.saturating_sub(1);
+            let total_gap = card_gap * gap_count as f32;
+            let available_size = Pixels::max(bounds.size.along(self.axis) - total_gap, px(0.0));
+            let space_per_flex = available_size / total_flex;
 
             let mut bounding_boxes = self.bounding_boxes.lock();
             bounding_boxes.clear();
@@ -1496,7 +1493,9 @@ mod element {
                 child.layout_as_root(child_size.into(), window, cx);
                 child.prepaint_at(origin, window, cx);
 
-                origin = origin.apply_along(self.axis, |val| val + child_size.along(self.axis));
+                origin = origin.apply_along(self.axis, |val| {
+                    val + child_size.along(self.axis) + card_gap
+                });
 
                 let is_leaf_pane = self.is_leaf_pane_mask.get(ix).copied().unwrap_or(true);
 
@@ -1557,19 +1556,20 @@ mod element {
                 .border_size
                 .and_then(|val| (val >= 0.).then_some(val));
 
+            let card_gap = workspace_card_gap(cx);
+
             for (ix, child) in &mut layout.children.iter_mut().enumerate() {
                 if overlay_opacity.is_some() || overlay_border.is_some() {
-                    // the overlay has to be painted in origin+1px with size width-1px
-                    // in order to accommodate the divider between panels
+                    // Keep active/inactive overlays inside the pane card border.
                     let overlay_bounds = Bounds {
-                        origin: child
-                            .bounds
-                            .origin
-                            .apply_along(Axis::Horizontal, |val| val + px(1.)),
-                        size: child
-                            .bounds
-                            .size
-                            .apply_along(Axis::Horizontal, |val| val - px(1.)),
+                        origin: Point::new(
+                            child.bounds.origin.x + px(1.),
+                            child.bounds.origin.y + px(1.),
+                        ),
+                        size: Size {
+                            width: Pixels::max(child.bounds.size.width - px(2.), px(0.)),
+                            height: Pixels::max(child.bounds.size.height - px(2.), px(0.)),
+                        },
                     };
 
                     if overlay_opacity.is_some()
@@ -1609,11 +1609,6 @@ mod element {
                     } else {
                         window.set_cursor_style(cursor_style, &handle.hitbox);
                     }
-
-                    window.paint_quad(gpui::fill(
-                        handle.divider_bounds,
-                        cx.theme().colors().pane_group_border,
-                    ));
 
                     window.on_mouse_event({
                         let dragged_handle = layout.dragged_handle.clone();
@@ -1656,7 +1651,13 @@ mod element {
                                     &visible_indices,
                                     axis,
                                     child_bounds.origin,
-                                    bounds.size,
+                                    bounds.size.apply_along(axis, |size| {
+                                        Pixels::max(
+                                            size - card_gap
+                                                * visible_indices.len().saturating_sub(1) as f32,
+                                            px(0.0),
+                                        )
+                                    }),
                                     workspace.clone(),
                                     window,
                                     cx,

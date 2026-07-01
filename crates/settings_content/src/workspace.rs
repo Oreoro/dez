@@ -29,6 +29,11 @@ pub struct WorkspaceSettingsContent {
     pub pane_split_direction_vertical: Option<PaneSplitDirectionVertical>,
     /// Centered layout related settings.
     pub centered_layout: Option<CenteredLayoutSettings>,
+    /// The gap between workspace cards, in pixels.
+    ///
+    /// Default: 8
+    #[serde(serialize_with = "serialize_optional_f32_with_two_decimal_places")]
+    pub card_gap: Option<f32>,
     /// Whether or not to prompt the user to confirm before closing the application.
     ///
     /// Default: false

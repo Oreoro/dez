@@ -8080,10 +8080,9 @@ impl Render for Sidebar {
             .h_full()
             .w(self.width)
             .bg(bg)
-            .border_t_1()
-            .border_b_1()
-            .when(self.side(cx) == SidebarSide::Left, |el| el.border_r_1())
-            .when(self.side(cx) == SidebarSide::Right, |el| el.border_l_1())
+            .overflow_hidden()
+            .rounded_lg()
+            .border_1()
             .border_color(color.border)
             .map(|this| match &self.view {
                 SidebarView::ThreadList => this

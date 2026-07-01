@@ -4633,9 +4633,23 @@ fn window_and_layout_page() -> SettingsPage {
         ]
     }
 
-    fn layout_section() -> [SettingsPageItem; 5] {
+    fn layout_section() -> [SettingsPageItem; 6] {
         [
             SettingsPageItem::SectionHeader("Layout"),
+            SettingsPageItem::SettingItem(SettingItem {
+                files: USER,
+                title: "Card Gap",
+                description: "Gap between workspace cards, in pixels.",
+                field: Box::new(SettingField {
+                    organization_override: None,
+                    json_path: Some("card_gap"),
+                    pick: |settings_content| settings_content.workspace.card_gap.as_ref(),
+                    write: |settings_content, value, _| {
+                        settings_content.workspace.card_gap = value;
+                    },
+                }),
+                metadata: None,
+            }),
             SettingsPageItem::SettingItem(SettingItem {
                 files: USER,
                 title: "Centered Layout Left Padding",

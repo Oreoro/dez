@@ -25,12 +25,14 @@ use settings::SidebarDockPosition;
 use ui::{ContextMenu, right_click_menu};
 
 const SIDEBAR_RESIZE_HANDLE_SIZE: Pixels = px(6.0);
+#[cfg(target_os = "macos")]
+const TRAFFIC_LIGHT_INSET: Pixels = px(9.0);
 
 use crate::open_remote_project_with_existing_connection;
 use crate::{
     CloseIntent, CloseWindow, DockPosition, Event as WorkspaceEvent, Item, ModalView, OpenMode,
     Panel, Workspace, WorkspaceId, client_side_decorations,
-    persistence::model::MultiWorkspaceState,
+    persistence::model::MultiWorkspaceState, workspace_card_gap,
 };
 
 actions!(
@@ -2155,25 +2157,28 @@ impl Render for MultiWorkspace {
         let multi_workspace_enabled = self.multi_workspace_enabled(cx);
         let sidebar_side = self.sidebar_side(cx);
         let sidebar_on_right = sidebar_side == SidebarSide::Right;
+        let card_gap = workspace_card_gap(cx);
 
         let sidebar: Option<AnyElement> = if multi_workspace_enabled && self.sidebar_open() {
             self.sidebar.as_ref().map(|sidebar_handle| {
                 let weak = cx.weak_entity();
 
                 let sidebar_width = sidebar_handle.width(cx);
+                let resize_handle_overhang = SIDEBAR_RESIZE_HANDLE_SIZE / 2.;
+                let resize_handle_width = card_gap + SIDEBAR_RESIZE_HANDLE_SIZE;
                 let resize_handle = deferred(
                     div()
                         .id("sidebar-resize-handle")
                         .absolute()
                         .when(!sidebar_on_right, |el| {
-                            el.right(-SIDEBAR_RESIZE_HANDLE_SIZE / 2.)
+                            el.right(-(card_gap + resize_handle_overhang))
                         })
                         .when(sidebar_on_right, |el| {
-                            el.left(-SIDEBAR_RESIZE_HANDLE_SIZE / 2.)
+                            el.left(-(card_gap + resize_handle_overhang))
                         })
                         .top(px(0.))
                         .h_full()
-                        .w(SIDEBAR_RESIZE_HANDLE_SIZE)
+                        .w(resize_handle_width)
                         .cursor_col_resize()
                         .on_drag(DraggedSidebar, |dragged, _, _, cx| {
                             cx.stop_propagation();
@@ -2224,6 +2229,7 @@ impl Render for MultiWorkspace {
 
         let ui_font = theme_settings::setup_ui_font(window, cx);
         let text_color = cx.theme().colors().text;
+        Self::update_traffic_light_position(card_gap, window, cx);
 
         let workspace = self.workspace().clone();
         let workspace_key_context = workspace.update(cx, |workspace, cx| workspace.key_context(cx));
@@ -2304,26 +2310,35 @@ impl Render for MultiWorkspace {
                                   cx| {
                                 if let Some(sidebar) = &this.sidebar {
                                     let new_width = if sidebar_on_right {
-                                        window.bounds().size.width - e.event.position.x
+                                        window.bounds().size.width - e.event.position.x - card_gap
                                     } else {
-                                        e.event.position.x
+                                        e.event.position.x - card_gap
                                     };
-                                    sidebar.set_width(Some(new_width), cx);
+                                    sidebar.set_width(Some(Pixels::max(new_width, px(0.0))), cx);
                                 }
                             },
                         ))
                     },
                 )
-                .children(left_sidebar)
                 .child(
-                    div()
-                        .flex()
-                        .flex_1()
+                    h_flex()
                         .size_full()
+                        .flex_1()
                         .overflow_hidden()
-                        .child(self.workspace().clone()),
+                        .bg(cx.theme().colors().background)
+                        .p(card_gap)
+                        .gap(card_gap)
+                        .children(left_sidebar)
+                        .child(
+                            div()
+                                .flex()
+                                .flex_1()
+                                .size_full()
+                                .overflow_hidden()
+                                .child(self.workspace().clone()),
+                        )
+                        .children(right_sidebar),
                 )
-                .children(right_sidebar)
                 .child(self.workspace().read(cx).modal_layer.clone())
                 .children(self.sidebar_overlay.as_ref().map(|view| {
                     deferred(div().absolute().size_full().inset_0().occlude().child(
@@ -2340,11 +2355,23 @@ impl Render for MultiWorkspace {
                 })),
             window,
             cx,
-            Tiling {
-                left: !sidebar_on_right && multi_workspace_enabled && self.sidebar_open(),
-                right: sidebar_on_right && multi_workspace_enabled && self.sidebar_open(),
-                ..Tiling::default()
-            },
+            Tiling::default(),
         )
     }
+}
+
+impl MultiWorkspace {
+    #[cfg(target_os = "macos")]
+    fn update_traffic_light_position(card_gap: Pixels, window: &Window, cx: &App) {
+        let offset = if crate::title_bar_visible(cx) {
+            px(0.0)
+        } else {
+            card_gap
+        };
+        let inset = TRAFFIC_LIGHT_INSET + offset;
+        window.set_traffic_light_position(gpui::point(inset, inset));
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn update_traffic_light_position(_card_gap: Pixels, _window: &Window, _cx: &App) {}
 }

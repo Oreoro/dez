@@ -102,6 +102,8 @@
     // workspace when the centered layout is used.
     "right_padding": 0.2,
   },
+  // Gap between workspace cards, in pixels.
+  "card_gap": 8.0,
   // Image viewer settings
   "image_viewer": {
     // The unit for image file sizes: "binary" (KiB, MiB) or decimal (KB, MB)

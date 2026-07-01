@@ -1022,6 +1022,7 @@ impl VsCodeSettings {
                 _ => None,
             }),
             drop_target_size: None,
+            card_gap: None,
             // workbench.editor.limit contains "enabled", "value", and "perEditorGroup"
             // our semantics match if those are set to true, some N, and true respectively.
             // we'll ignore "perEditorGroup" for now since we only support a global max
