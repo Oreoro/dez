@@ -872,10 +872,11 @@ impl ThreadsArchiveView {
             .when(left_window_controls, |this| {
                 this.children(Self::render_left_window_controls(window, cx))
             })
+            .when(traffic_lights, |this| {
+                this.child(ui::utils::traffic_light_spacer(cx, false))
+            })
             .map(|this| {
-                if traffic_lights {
-                    this.pl(px(ui::utils::TRAFFIC_LIGHT_PADDING))
-                } else if !left_window_controls {
+                if !traffic_lights && !left_window_controls {
                     this.pl_1p5()
                 } else {
                     this
@@ -893,9 +894,6 @@ impl ThreadsArchiveView {
                     .border_b_1()
                     .border_color(cx.theme().colors().border),
             )
-            .when(traffic_lights, |this| {
-                this.child(Divider::vertical().color(ui::DividerColor::Border))
-            })
             .child(
                 h_flex()
                     .ml_1()

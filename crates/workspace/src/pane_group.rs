@@ -222,7 +222,12 @@ impl PaneGroup {
     }
 
     pub fn mark_positions(&mut self, cx: &mut App) {
-        self.root.mark_positions(self.is_center, cx);
+        let top_left_pane = self
+            .is_center
+            .then(|| self.root.first_visible_pane(cx))
+            .flatten();
+        self.root
+            .mark_positions(self.is_center, top_left_pane.as_ref(), cx);
     }
 
     pub fn render(
@@ -294,15 +299,24 @@ pub enum Member {
 }
 
 impl Member {
-    pub fn mark_positions(&mut self, in_center_group: bool, cx: &mut App) {
+    pub fn mark_positions(
+        &mut self,
+        in_center_group: bool,
+        top_left_pane: Option<&Entity<Pane>>,
+        cx: &mut App,
+    ) {
         match self {
             Member::Axis(pane_axis) => {
                 for member in pane_axis.members.iter_mut() {
-                    member.mark_positions(in_center_group, cx);
+                    member.mark_positions(in_center_group, top_left_pane, cx);
                 }
             }
-            Member::Pane(entity) => entity.update(cx, |pane, _| {
+            Member::Pane(entity) => entity.update(cx, |pane, cx| {
                 pane.in_center_group = in_center_group;
+                pane.set_reserve_traffic_light_space(
+                    in_center_group && top_left_pane.is_some_and(|pane| pane == entity),
+                    cx,
+                );
             }),
         }
     }
@@ -533,6 +547,16 @@ impl Member {
         match self {
             Member::Axis(axis) => axis.members[0].first_pane(),
             Member::Pane(pane) => pane.clone(),
+        }
+    }
+
+    fn first_visible_pane(&self, cx: &App) -> Option<Entity<Pane>> {
+        match self {
+            Member::Axis(axis) => axis
+                .members
+                .iter()
+                .find_map(|member| member.first_visible_pane(cx)),
+            Member::Pane(pane) => pane.read(cx).is_visible().then(|| pane.clone()),
         }
     }
 

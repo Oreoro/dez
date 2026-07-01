@@ -2620,6 +2620,12 @@ impl Workspace {
         self.sidebar_focus_handle = handle;
     }
 
+    pub fn notify_panes(&self, cx: &mut App) {
+        for pane in &self.panes {
+            cx.notify(pane.entity_id());
+        }
+    }
+
     pub fn status_bar_visible(&self, cx: &App) -> bool {
         StatusBarSettings::get_global(cx).show
     }
@@ -4591,6 +4597,9 @@ impl Workspace {
             pane.activate_item(ix, true, focus, window, cx);
             was_hidden
         });
+        if was_hidden {
+            self.center.mark_positions(cx);
+        }
         if focus {
             panel.panel_focus_handle(cx).focus(window, cx);
         }
@@ -4613,6 +4622,9 @@ impl Workspace {
             pane.activate_item(ix, true, focus, window, cx);
             was_hidden
         });
+        if was_hidden {
+            self.center.mark_positions(cx);
+        }
         if focus {
             panel.panel_focus_handle(cx).focus(window, cx);
         }
@@ -4746,6 +4758,16 @@ impl Workspace {
             .is_some_and(|pane| pane.read(cx).is_visible())
     }
 
+    pub fn panel_pane_should_reserve_traffic_light_space(
+        &self,
+        pane_kind: PaneKind,
+        window: &Window,
+        cx: &App,
+    ) -> bool {
+        self.panel_pane_for_kind(pane_kind, cx)
+            .is_some_and(|pane| pane.read(cx).should_reserve_traffic_light_space(window, cx))
+    }
+
     pub fn toggle_panel_pane_visibility(
         &mut self,
         pane_kind: PaneKind,
@@ -4758,6 +4780,7 @@ impl Workspace {
 
         let visible = pane.read(cx).is_visible();
         pane.update(cx, |pane, cx| pane.set_visible(!visible, cx));
+        self.center.mark_positions(cx);
 
         if visible {
             if self.active_pane == pane

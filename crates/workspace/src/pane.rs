@@ -1,7 +1,7 @@
 use crate::{
     CloseWindow, NewCenterTerminal, NewFile, NewTerminal, OpenInTerminal, OpenOptions,
-    OpenTerminal, OpenVisible, SplitDirection, ToggleFileFinder, ToggleProjectSymbols, ToggleZoom,
-    Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
+    OpenTerminal, OpenVisible, SidebarSide, SplitDirection, ToggleFileFinder, ToggleProjectSymbols,
+    ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
     focus_follows_mouse::FocusFollowsMouse as _,
     invalid_item_view::InvalidItemView,
     item::{
@@ -467,6 +467,7 @@ pub struct Pane {
     welcome_page: Option<Entity<crate::welcome::WelcomePage>>,
 
     pub in_center_group: bool,
+    reserve_traffic_light_space: bool,
     pane_kind: PaneKind,
     visible: bool,
 }
@@ -645,6 +646,7 @@ impl Pane {
             project_item_restoration_data: HashMap::default(),
             welcome_page: None,
             in_center_group: false,
+            reserve_traffic_light_space: false,
             pane_kind: PaneKind::Tabs,
             visible: true,
         }
@@ -882,6 +884,49 @@ impl Pane {
 
     pub fn is_visible(&self) -> bool {
         self.visible
+    }
+
+    pub fn set_reserve_traffic_light_space(
+        &mut self,
+        reserve_traffic_light_space: bool,
+        cx: &mut Context<Self>,
+    ) {
+        if self.reserve_traffic_light_space != reserve_traffic_light_space {
+            self.reserve_traffic_light_space = reserve_traffic_light_space;
+            cx.notify();
+        }
+    }
+
+    pub fn should_reserve_traffic_light_space(&self, window: &Window, cx: &App) -> bool {
+        if !cfg!(target_os = "macos")
+            || window.is_fullscreen()
+            || !self.reserve_traffic_light_space
+            || Self::titlebar_visible(cx)
+        {
+            return false;
+        }
+
+        !self.left_sidebar_visible(cx)
+    }
+
+    fn titlebar_visible(cx: &App) -> bool {
+        cx.global::<SettingsStore>()
+            .merged_settings()
+            .title_bar
+            .as_ref()
+            .and_then(|title_bar| title_bar.show)
+            .unwrap_or(true)
+    }
+
+    fn left_sidebar_visible(&self, cx: &App) -> bool {
+        self.workspace
+            .upgrade()
+            .and_then(|workspace| workspace.read(cx).multi_workspace().cloned())
+            .and_then(|multi_workspace| multi_workspace.upgrade())
+            .is_some_and(|multi_workspace| {
+                let sidebar = multi_workspace.read(cx).sidebar_render_state(cx);
+                sidebar.open && sidebar.side == SidebarSide::Left
+            })
     }
 
     pub fn set_can_split(
@@ -4303,6 +4348,26 @@ impl Pane {
             )
     }
 
+    fn render_header_with_traffic_light_spacer(
+        &self,
+        header: AnyElement,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        if !self.should_reserve_traffic_light_space(window, cx) {
+            return header;
+        }
+
+        h_flex()
+            .h(Tab::container_height(cx))
+            .w_full()
+            .flex_none()
+            .bg(cx.theme().colors().tab_bar_background)
+            .child(ui::utils::traffic_light_spacer(cx, true))
+            .child(div().h_full().min_w_0().flex_1().child(header))
+            .into_any_element()
+    }
+
     pub fn set_zoom_out_on_close(&mut self, zoom_out_on_close: bool) {
         self.zoom_out_on_close = zoom_out_on_close;
     }
@@ -4585,8 +4650,9 @@ impl Render for Pane {
                     cx.propagate();
                 }
             }))
-            .when(self.active_item().is_some() && display_tab_bar, |pane| {
-                pane.child((self.render_tab_bar.clone())(self, window, cx))
+            .when(self.active_item().is_some() && display_tab_bar, |element| {
+                let header = (self.render_tab_bar.clone())(self, window, cx);
+                element.child(self.render_header_with_traffic_light_spacer(header, window, cx))
             })
             .child({
                 let has_worktrees = project.read(cx).visible_worktrees(cx).next().is_some();

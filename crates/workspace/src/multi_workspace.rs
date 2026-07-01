@@ -511,8 +511,9 @@ impl MultiWorkspace {
         self.retain_active_workspace_without_serializing(cx);
         let sidebar_focus_handle = self.sidebar.as_ref().map(|s| s.focus_handle(cx));
         for workspace in self.retained_workspaces.clone() {
-            workspace.update(cx, |workspace, _cx| {
+            workspace.update(cx, |workspace, cx| {
                 workspace.set_sidebar_focus_handle(sidebar_focus_handle.clone());
+                workspace.notify_panes(cx);
             });
         }
         if serialize {
@@ -543,8 +544,9 @@ impl MultiWorkspace {
         telemetry::event!("Sidebar Toggled", action = "close", side = side);
         self.sidebar_open = false;
         for workspace in self.retained_workspaces.clone() {
-            workspace.update(cx, |workspace, _cx| {
+            workspace.update(cx, |workspace, cx| {
                 workspace.set_sidebar_focus_handle(None);
+                workspace.notify_panes(cx);
             });
         }
         let sidebar_has_focus = self

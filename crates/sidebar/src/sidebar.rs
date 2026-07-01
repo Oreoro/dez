@@ -52,7 +52,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use theme::ActiveTheme;
 use ui::{
-    AgentThreadStatus, CommonAnimationExt, ContextMenu, ContextMenuEntry, Divider, GradientFade,
+    AgentThreadStatus, CommonAnimationExt, ContextMenu, ContextMenuEntry, GradientFade,
     HighlightedLabel, KeyBinding, PopoverMenu, PopoverMenuHandle, ProjectEmptyState, ScrollAxes,
     Scrollbars, Tab, ThreadItem, ThreadItemWorktreeInfo, TintColor, Tooltip, WithScrollbar,
     prelude::*, render_modifiers, right_click_menu,
@@ -7494,10 +7494,11 @@ impl Sidebar {
             .when(left_window_controls, |this| {
                 this.children(Self::render_left_window_controls(window, cx))
             })
+            .when(traffic_lights, |this| {
+                this.child(ui::utils::traffic_light_spacer(cx, false))
+            })
             .map(|this| {
-                if traffic_lights {
-                    this.pl(px(ui::utils::TRAFFIC_LIGHT_PADDING))
-                } else if !left_window_controls {
+                if !traffic_lights && !left_window_controls {
                     this.pl_1p5()
                 } else {
                     this
@@ -7515,9 +7516,6 @@ impl Sidebar {
                         .border_b_1()
                         .border_color(cx.theme().colors().border),
                 )
-                .when(traffic_lights, |this| {
-                    this.child(Divider::vertical().color(ui::DividerColor::Border))
-                })
                 .child(
                     div().ml_1().child(
                         Icon::new(IconName::MagnifyingGlass)

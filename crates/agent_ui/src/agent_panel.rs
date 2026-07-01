@@ -98,8 +98,8 @@ use ui::{
 };
 use util::ResultExt as _;
 use workspace::{
-    CollaboratorId, DraggedSelection, DraggedTab, MultiWorkspace, PathList, SerializedPathList,
-    ToggleWorkspaceSidebar, ToggleZoom, Workspace, WorkspaceId,
+    CollaboratorId, DraggedSelection, DraggedTab, MultiWorkspace, PaneKind, PathList,
+    SerializedPathList, ToggleWorkspaceSidebar, ToggleZoom, Workspace, WorkspaceId,
     dock::{DockPosition, Panel, PanelEvent},
     item::ItemEvent,
 };
@@ -6238,6 +6238,21 @@ impl AgentPanel {
                 )
                 .into_any_element()
         };
+        let reserve_traffic_light_space = self.workspace.upgrade().is_some_and(|workspace| {
+            workspace
+                .read(cx)
+                .panel_pane_should_reserve_traffic_light_space(PaneKind::Agent, window, cx)
+        });
+        let toolbar_content = if reserve_traffic_light_space {
+            div()
+                .h_full()
+                .min_w_0()
+                .flex_1()
+                .child(toolbar_content)
+                .into_any_element()
+        } else {
+            toolbar_content
+        };
 
         h_flex()
             .id("agent-panel-toolbar")
@@ -6247,6 +6262,9 @@ impl AgentPanel {
             .bg(cx.theme().colors().tab_bar_background)
             .border_b_1()
             .border_color(cx.theme().colors().border)
+            .when(reserve_traffic_light_space, |this| {
+                this.child(ui::utils::traffic_light_spacer(cx, false))
+            })
             .child(toolbar_content)
     }
 

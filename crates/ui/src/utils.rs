@@ -1,7 +1,9 @@
 //! UI-related utilities
 
-use gpui::App;
+use gpui::{App, IntoElement, px};
 use theme::ActiveTheme;
+
+use crate::{Divider, DividerColor, prelude::*};
 
 mod apca_contrast;
 mod color_contrast;
@@ -33,6 +35,16 @@ pub fn reveal_in_file_manager_label(is_remote: bool) -> &'static str {
     } else {
         "Reveal in File Manager"
     }
+}
+
+pub fn traffic_light_spacer(cx: &mut App, include_bottom_border: bool) -> impl IntoElement {
+    h_flex()
+        .flex_none()
+        .h_full()
+        .pl(px(TRAFFIC_LIGHT_PADDING))
+        .border_color(cx.theme().colors().border)
+        .when(include_bottom_border, |this| this.border_b_1())
+        .child(Divider::vertical().color(DividerColor::Border))
 }
 
 /// Capitalizes the first character of a string.
