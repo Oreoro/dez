@@ -508,6 +508,13 @@ impl Dock {
             .map(|entry| &entry.panel)
     }
 
+    pub fn panel_handles(&self) -> Vec<Arc<dyn PanelHandle>> {
+        self.panel_entries
+            .iter()
+            .map(|entry| entry.panel.clone())
+            .collect()
+    }
+
     pub fn first_enabled_panel_idx(&mut self, cx: &mut Context<Self>) -> anyhow::Result<usize> {
         self.panel_entries
             .iter()
@@ -686,6 +693,22 @@ impl Dock {
                             .ok();
                     }
                     PanelEvent::Activate => {
+                        if workspace
+                            .update(cx, |workspace, cx| {
+                                workspace
+                                    .activate_panel_item_for_id(
+                                        Entity::entity_id(panel),
+                                        true,
+                                        window,
+                                        cx,
+                                    )
+                                    .is_some()
+                            })
+                            .unwrap_or(false)
+                        {
+                            return;
+                        }
+
                         if let Some(ix) = this
                             .panel_entries
                             .iter()
@@ -1161,8 +1184,8 @@ impl Render for Dock {
                 .border_color(cx.theme().colors().border)
                 .overflow_hidden()
                 .map(|this| match self.position().axis() {
-                    // Width and height are always set on the workspace wrapper in
-                    // render_dock, so fill whatever space the wrapper provides.
+                    // Width and height are set by the dock wrapper, so fill
+                    // whatever space the wrapper provides.
                     Axis::Horizontal => this.w_full().h_full().flex_row(),
                     Axis::Vertical => this.h_full().w_full().flex_col(),
                 })

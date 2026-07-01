@@ -10,6 +10,7 @@ mod multi_workspace_tests;
 pub mod notifications;
 pub mod pane;
 pub mod pane_group;
+pub mod panel_pane;
 pub mod path_list {
     pub use util::path_list::{PathList, SerializedPathList};
 }
@@ -49,7 +50,7 @@ use client::{
     proto::{self, ErrorCode, PanelId, PeerId},
 };
 use collections::{HashMap, HashSet, TypeIdHashMap, hash_map};
-use dock::{Dock, DockPosition, PanelButtons, PanelHandle, RESIZE_HANDLE_SIZE};
+use dock::{Dock, DockPosition, PanelHandle, RESIZE_HANDLE_SIZE};
 use fs::Fs;
 use futures::{
     Future, FutureExt, StreamExt,
@@ -85,6 +86,7 @@ pub use pane_group::{
     ActivePaneDecorator, HANDLE_HITBOX_SIZE, Member, PaneAxis, PaneGroup, PaneRenderContext,
     SplitDirection,
 };
+use panel_pane::{PanelItem, PanelPaneKind, configure_agent_pane, configure_project_pane};
 pub use persistence::{
     RecentWorkspace, WorkspaceDb, delete_unloaded_items,
     model::{
@@ -119,8 +121,8 @@ use sqlez::{
     bindable::{Bind, Column, StaticColumnCount},
     statement::Statement,
 };
-use status_bar::StatusBar;
 pub use status_bar::{HideStatusItem, StatusItemView, add_hide_button_entry};
+use status_bar::{PaneVisibilityToggle, StatusBar};
 use std::{
     any::TypeId,
     borrow::Cow,
@@ -559,6 +561,10 @@ actions!(
         MovePaneUp,
         /// Move the current pane to be at the very bottom.
         MovePaneDown,
+        /// Toggles the agent pane.
+        ToggleAgentPane,
+        /// Toggles the project pane.
+        ToggleProjectPane,
     ]
 );
 
@@ -1724,17 +1730,20 @@ impl Workspace {
 
         let left_dock = Dock::new(DockPosition::Left, modal_layer.clone(), window, cx);
         let right_dock = Dock::new(DockPosition::Right, modal_layer.clone(), window, cx);
-        let left_dock_buttons = cx.new(|cx| PanelButtons::new(left_dock.clone(), cx));
-        let right_dock_buttons = cx.new(|cx| PanelButtons::new(right_dock.clone(), cx));
         let multi_workspace = window
             .root::<MultiWorkspace>()
             .flatten()
             .map(|mw| mw.downgrade());
+        let workspace_handle = cx.entity();
+        let agent_pane_toggle =
+            cx.new(|cx| PaneVisibilityToggle::new(workspace_handle.clone(), PaneKind::Agent, cx));
+        let project_pane_toggle =
+            cx.new(|cx| PaneVisibilityToggle::new(workspace_handle.clone(), PaneKind::Project, cx));
         let status_bar = cx.new(|cx| {
             let mut status_bar =
                 StatusBar::new(&center_pane.clone(), multi_workspace.clone(), window, cx);
-            status_bar.add_left_item(left_dock_buttons, window, cx);
-            status_bar.add_right_item(right_dock_buttons, window, cx);
+            status_bar.add_left_item(agent_pane_toggle, window, cx);
+            status_bar.add_right_item(project_pane_toggle, window, cx);
             status_bar
         });
 
@@ -2167,20 +2176,23 @@ impl Workspace {
     }
 
     pub fn capture_dock_state(&self, _window: &Window, cx: &App) -> DockStructure {
+        let active_hosted_panel_by_kind = [
+            self.active_panel_for_pane_kind(PaneKind::Project, cx),
+            self.active_panel_for_pane_kind(PaneKind::Agent, cx),
+        ];
+
         let left_dock = self.left_dock.read(cx);
         let left_visible = left_dock.is_open();
-        let left_active_panel = left_dock
-            .active_panel()
-            .map(|panel| panel.persistent_name().to_string());
+        let left_active_panel =
+            self.active_panel_name_for_dock(&left_dock, active_hosted_panel_by_kind.as_slice());
         // `zoomed_position` is kept in sync with individual panel zoom state
         // by the dock code in `Dock::new` and `Dock::add_panel`.
         let left_dock_zoom = self.zoomed_position == Some(DockPosition::Left);
 
         let right_dock = self.right_dock.read(cx);
         let right_visible = right_dock.is_open();
-        let right_active_panel = right_dock
-            .active_panel()
-            .map(|panel| panel.persistent_name().to_string());
+        let right_active_panel =
+            self.active_panel_name_for_dock(&right_dock, active_hosted_panel_by_kind.as_slice());
         let right_dock_zoom = self.zoomed_position == Some(DockPosition::Right);
 
         DockStructure {
@@ -2196,6 +2208,49 @@ impl Workspace {
             },
             bottom: DockData::default(),
         }
+    }
+
+    fn active_panel_for_pane_kind(
+        &self,
+        pane_kind: PaneKind,
+        cx: &App,
+    ) -> Option<Arc<dyn PanelHandle>> {
+        self.center.panes().into_iter().find_map(|pane| {
+            if pane.read(cx).pane_kind() != pane_kind {
+                return None;
+            }
+
+            let item = pane.read(cx).active_item()?;
+            let panel_item = item.downcast::<PanelItem>()?;
+            Some(panel_item.read(cx).panel())
+        })
+    }
+
+    fn active_panel_name_for_dock(
+        &self,
+        dock: &Dock,
+        active_hosted_panels: &[Option<Arc<dyn PanelHandle>>],
+    ) -> Option<String> {
+        for active_panel in active_hosted_panels.iter().flatten() {
+            let Some(panel_pane_kind) = PanelPaneKind::for_panel_key(active_panel.panel_key())
+            else {
+                continue;
+            };
+            let dock_has_hosted_panel_of_same_kind = dock.panel_handles().iter().any(|panel| {
+                PanelPaneKind::for_panel_key(panel.panel_key()) == Some(panel_pane_kind)
+            });
+            if !dock_has_hosted_panel_of_same_kind {
+                continue;
+            }
+
+            return dock
+                .panel_for_id(active_panel.panel_id())
+                .map(|panel| panel.persistent_name().to_string());
+        }
+
+        dock.active_panel()
+            .filter(|panel| PanelPaneKind::for_panel_key(panel.panel_key()).is_none())
+            .map(|panel| panel.persistent_name().to_string())
     }
 
     pub fn set_dock_structure(
@@ -2542,6 +2597,7 @@ impl Workspace {
             index
         });
 
+        self.add_panel_to_panel_pane(panel.clone(), window, cx);
         cx.emit(Event::PanelAdded(any_panel));
     }
 
@@ -4279,6 +4335,10 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<Entity<T>> {
+        if let Some(panel) = self.activate_panel_item::<T>(true, window, cx) {
+            return panel.to_any().downcast().ok();
+        }
+
         let panel = self.focus_or_unfocus_panel::<T>(window, cx, &mut |_, _, _| true)?;
         panel.to_any().downcast().ok()
     }
@@ -4292,6 +4352,23 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> bool {
+        if let Some((_, _, panel)) = self.panel_item_for::<T>(cx) {
+            let did_focus_panel = !panel.panel_focus_handle(cx).contains_focused(window, cx);
+            if did_focus_panel {
+                self.activate_panel_item::<T>(true, window, cx);
+            } else if let Some(pane) = self.last_tabbed_pane(cx) {
+                pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
+            }
+
+            telemetry::event!(
+                "Panel Button Clicked",
+                name = T::persistent_name(),
+                toggle_state = did_focus_panel
+            );
+
+            return did_focus_panel;
+        }
+
         let mut did_focus_panel = false;
         self.focus_or_unfocus_panel::<T>(window, cx, &mut |panel, window, cx| {
             did_focus_panel = !panel.panel_focus_handle(cx).contains_focused(window, cx);
@@ -4325,6 +4402,16 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<Arc<dyn PanelHandle>> {
+        if let Some((pane, ix, panel)) = self.panel_item_for_proto_id(panel_id, cx) {
+            pane.update(cx, |pane, cx| {
+                pane.activate_item(ix, true, true, window, cx);
+            });
+            panel.panel_focus_handle(cx).focus(window, cx);
+            cx.notify();
+            self.serialize_workspace(window, cx);
+            return Some(panel);
+        }
+
         let mut panel = None;
         for dock in self.all_docks() {
             if let Some(panel_index) = dock.read(cx).panel_index_for_proto_id(panel_id) {
@@ -4393,6 +4480,10 @@ impl Workspace {
 
     /// Open the panel of the given type
     pub fn open_panel<T: Panel>(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.activate_panel_item::<T>(false, window, cx).is_some() {
+            return;
+        }
+
         for dock in self.all_docks() {
             if let Some(panel_index) = dock.read(cx).panel_index_for_type::<T>() {
                 dock.update(cx, |dock, cx| {
@@ -4406,6 +4497,10 @@ impl Workspace {
     /// Open the panel of the given type, dismissing any zoomed items that
     /// would obscure it (e.g. a zoomed terminal).
     pub fn reveal_panel<T: Panel>(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.activate_panel_item::<T>(false, window, cx).is_some() {
+            return;
+        }
+
         let dock_position = self.all_docks().iter().find_map(|dock| {
             let dock = dock.read(cx);
             dock.panel_index_for_type::<T>().map(|_| dock.position())
@@ -4428,6 +4523,103 @@ impl Workspace {
         self.all_docks()
             .iter()
             .find_map(|dock| dock.read(cx).panel::<T>())
+    }
+
+    fn panel_item_for<T: Panel>(
+        &self,
+        cx: &App,
+    ) -> Option<(Entity<Pane>, usize, Arc<dyn PanelHandle>)> {
+        self.panes.iter().find_map(|pane| {
+            if !self.pane_is_in_center(pane) {
+                return None;
+            }
+            pane.read(cx).items().enumerate().find_map(|(ix, item)| {
+                let item = item.downcast::<PanelItem>()?;
+                let item = item.read(cx);
+                item.is_panel::<T>()
+                    .then(|| (pane.clone(), ix, item.panel()))
+            })
+        })
+    }
+
+    fn panel_item_for_id(
+        &self,
+        panel_id: EntityId,
+        cx: &App,
+    ) -> Option<(Entity<Pane>, usize, Arc<dyn PanelHandle>)> {
+        self.panes.iter().find_map(|pane| {
+            if !self.pane_is_in_center(pane) {
+                return None;
+            }
+            pane.read(cx).items().enumerate().find_map(|(ix, item)| {
+                let item = item.downcast::<PanelItem>()?;
+                let item = item.read(cx);
+                (item.panel_id() == panel_id).then(|| (pane.clone(), ix, item.panel()))
+            })
+        })
+    }
+
+    fn panel_item_for_proto_id(
+        &self,
+        panel_id: PanelId,
+        cx: &App,
+    ) -> Option<(Entity<Pane>, usize, Arc<dyn PanelHandle>)> {
+        self.panes.iter().find_map(|pane| {
+            if !self.pane_is_in_center(pane) {
+                return None;
+            }
+            pane.read(cx).items().enumerate().find_map(|(ix, item)| {
+                let item = item.downcast::<PanelItem>()?;
+                let item = item.read(cx);
+                let panel = item.panel();
+                (panel.remote_id() == Some(panel_id)).then(|| (pane.clone(), ix, panel))
+            })
+        })
+    }
+
+    pub(crate) fn activate_panel_item_for_id(
+        &mut self,
+        panel_id: EntityId,
+        focus: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<Arc<dyn PanelHandle>> {
+        let (pane, ix, panel) = self.panel_item_for_id(panel_id, cx)?;
+        let was_hidden = pane.update(cx, |pane, cx| {
+            let was_hidden = !pane.is_visible();
+            pane.set_visible(true, cx);
+            pane.activate_item(ix, true, focus, window, cx);
+            was_hidden
+        });
+        if focus {
+            panel.panel_focus_handle(cx).focus(window, cx);
+        }
+        if was_hidden {
+            self.serialize_workspace(window, cx);
+        }
+        Some(panel)
+    }
+
+    fn activate_panel_item<T: Panel>(
+        &mut self,
+        focus: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<Arc<dyn PanelHandle>> {
+        let (pane, ix, panel) = self.panel_item_for::<T>(cx)?;
+        let was_hidden = pane.update(cx, |pane, cx| {
+            let was_hidden = !pane.is_visible();
+            pane.set_visible(true, cx);
+            pane.activate_item(ix, true, focus, window, cx);
+            was_hidden
+        });
+        if focus {
+            panel.panel_focus_handle(cx).focus(window, cx);
+        }
+        if was_hidden {
+            self.serialize_workspace(window, cx);
+        }
+        Some(panel)
     }
 
     fn dismiss_zoomed_items_to_reveal(
@@ -4472,6 +4664,16 @@ impl Workspace {
     }
 
     fn add_pane(&mut self, window: &mut Window, cx: &mut Context<Self>) -> Entity<Pane> {
+        self.add_pane_with_kind(PaneKind::Tabs, true, window, cx)
+    }
+
+    fn add_pane_with_kind(
+        &mut self,
+        pane_kind: PaneKind,
+        focus: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<Pane> {
         let pane = cx.new(|cx| {
             let mut pane = Pane::new(
                 self.weak_handle(),
@@ -4479,21 +4681,290 @@ impl Workspace {
                 self.pane_history_timestamp.clone(),
                 None,
                 NewFile.boxed_clone(),
-                true,
+                pane_kind.is_tabbed(),
                 window,
                 cx,
             );
             pane.set_can_split(Some(Arc::new(|_, _, _, _| true)));
+            match pane_kind {
+                PaneKind::Tabs => {}
+                PaneKind::Project => configure_project_pane(&mut pane, cx),
+                PaneKind::Agent => configure_agent_pane(&mut pane, cx),
+            }
             pane
         });
         cx.subscribe_in(&pane, window, Self::handle_pane_event)
             .detach();
         self.panes.push(pane.clone());
 
-        window.focus(&pane.focus_handle(cx), cx);
+        if focus {
+            window.focus(&pane.focus_handle(cx), cx);
+        }
 
         cx.emit(Event::PaneAdded(pane.clone()));
         pane
+    }
+
+    fn last_tabbed_pane(&self, cx: &App) -> Option<Entity<Pane>> {
+        self.last_active_center_pane
+            .as_ref()
+            .and_then(|pane| pane.upgrade())
+            .filter(|pane| {
+                pane.read(cx).is_tabbed()
+                    && pane.read(cx).is_visible()
+                    && self.pane_is_in_center(pane)
+            })
+            .or_else(|| {
+                self.panes
+                    .iter()
+                    .find(|pane| {
+                        pane.read(cx).is_tabbed()
+                            && pane.read(cx).is_visible()
+                            && self.pane_is_in_center(pane)
+                    })
+                    .cloned()
+            })
+    }
+
+    fn pane_is_in_center(&self, pane: &Entity<Pane>) -> bool {
+        self.center
+            .panes()
+            .into_iter()
+            .any(|center_pane| center_pane == pane)
+    }
+
+    fn panel_pane_for_kind(&self, pane_kind: PaneKind, cx: &App) -> Option<Entity<Pane>> {
+        self.center
+            .panes()
+            .into_iter()
+            .find(|pane| pane.read(cx).pane_kind() == pane_kind)
+            .cloned()
+    }
+
+    pub fn panel_pane_visible(&self, pane_kind: PaneKind, cx: &App) -> bool {
+        self.panel_pane_for_kind(pane_kind, cx)
+            .is_some_and(|pane| pane.read(cx).is_visible())
+    }
+
+    pub fn toggle_panel_pane_visibility(
+        &mut self,
+        pane_kind: PaneKind,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(pane) = self.panel_pane_for_kind(pane_kind, cx) else {
+            return;
+        };
+
+        let visible = pane.read(cx).is_visible();
+        pane.update(cx, |pane, cx| pane.set_visible(!visible, cx));
+
+        if visible {
+            if self.active_pane == pane
+                && let Some(fallback_pane) = self.last_tabbed_pane(cx).or_else(|| {
+                    self.center
+                        .panes()
+                        .into_iter()
+                        .find(|candidate| *candidate != &pane && candidate.read(cx).is_visible())
+                        .cloned()
+                })
+            {
+                self.set_active_pane(&fallback_pane, window, cx);
+                fallback_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
+            }
+        } else {
+            self.set_active_pane(&pane, window, cx);
+            pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
+        }
+
+        self.serialize_workspace(window, cx);
+        cx.notify();
+    }
+
+    fn ensure_panel_pane(
+        &mut self,
+        panel_pane_kind: PanelPaneKind,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<Pane> {
+        let pane_kind = panel_pane_kind.pane_kind();
+        let existing_pane = self
+            .panes
+            .iter()
+            .find(|pane| pane.read(cx).pane_kind() == pane_kind && self.pane_is_in_center(pane))
+            .cloned();
+        if let Some(pane) = existing_pane {
+            return pane;
+        }
+
+        let split_direction = match panel_pane_kind {
+            PanelPaneKind::Project => SplitDirection::Right,
+            PanelPaneKind::Agent => SplitDirection::Left,
+        };
+        let split_target = self
+            .last_tabbed_pane(cx)
+            .unwrap_or_else(|| self.center.first_pane());
+
+        let pane = self.add_pane_with_kind(pane_kind, false, window, cx);
+        self.center.split(&split_target, &pane, split_direction, cx);
+        cx.notify();
+        pane
+    }
+
+    fn add_panel_to_panel_pane<T: Panel>(
+        &mut self,
+        panel: Entity<T>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let panel_handle: Arc<dyn PanelHandle> = Arc::new(panel.clone());
+        let activate = panel.read(cx).starts_open(window, cx);
+        self.add_panel_handle_to_panel_pane(panel_handle, activate, window, cx);
+    }
+
+    fn add_panel_handle_to_panel_pane(
+        &mut self,
+        panel_handle: Arc<dyn PanelHandle>,
+        activate: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(panel_pane_kind) = PanelPaneKind::for_panel_key(panel_handle.panel_key()) else {
+            return;
+        };
+
+        let panel_id = panel_handle.panel_id();
+        let pane = self.ensure_panel_pane(panel_pane_kind, window, cx);
+        pane.update(cx, |pane, cx| {
+            let existing_index = pane.items().enumerate().find_map(|(ix, item)| {
+                let item = item.downcast::<PanelItem>()?;
+                (item.read(cx).panel_id() == panel_id).then_some(ix)
+            });
+            if let Some(existing_index) = existing_index {
+                if activate {
+                    pane.activate_item(existing_index, true, false, window, cx);
+                }
+                return;
+            }
+
+            let panel_priority = panel_handle.activation_priority(cx);
+            let destination_index = pane.items().enumerate().find_map(|(ix, item)| {
+                let item = item.downcast::<PanelItem>()?;
+                let existing_priority = item.read(cx).panel().activation_priority(cx);
+                (existing_priority > panel_priority).then_some(ix)
+            });
+            let activate = pane.items_len() == 0 || activate;
+            let panel_item = cx.new(|_| PanelItem::new(panel_handle.clone()));
+            pane.add_item_inner(
+                Box::new(panel_item),
+                false,
+                false,
+                activate,
+                destination_index,
+                window,
+                cx,
+            );
+        });
+    }
+
+    fn sync_panel_panes_from_docks(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.enforce_singleton_panel_panes(window, cx);
+
+        let mut panels = Vec::new();
+        let mut active_panel_ids_by_pane_kind = HashMap::default();
+        for dock in self.all_docks() {
+            let dock = dock.read(cx);
+            if let Some(active_panel) = dock.active_panel()
+                && let Some(panel_pane_kind) =
+                    PanelPaneKind::for_panel_key(active_panel.panel_key())
+            {
+                active_panel_ids_by_pane_kind
+                    .entry(panel_pane_kind)
+                    .or_insert_with(|| active_panel.panel_id());
+            }
+
+            for panel in dock.panel_handles() {
+                panels.push(panel);
+            }
+        }
+
+        for panel in panels {
+            let activate = PanelPaneKind::for_panel_key(panel.panel_key())
+                .and_then(|panel_pane_kind| active_panel_ids_by_pane_kind.get(&panel_pane_kind))
+                .is_some_and(|active_panel_id| *active_panel_id == panel.panel_id());
+            self.add_panel_handle_to_panel_pane(panel, activate, window, cx);
+        }
+
+        self.enforce_singleton_panel_panes(window, cx);
+    }
+
+    fn enforce_singleton_panel_panes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        for pane_kind in [PaneKind::Agent, PaneKind::Project] {
+            let mut panes = self
+                .center
+                .panes()
+                .into_iter()
+                .filter(|pane| pane.read(cx).pane_kind() == pane_kind)
+                .cloned()
+                .collect::<Vec<_>>();
+            if panes.len() <= 1 {
+                continue;
+            }
+
+            let keep_pane = panes.remove(0);
+            for duplicate_pane in panes {
+                self.merge_panel_pane_items(&duplicate_pane, &keep_pane, window, cx);
+                self.remove_pane(duplicate_pane, Some(keep_pane.clone()), window, cx);
+            }
+        }
+    }
+
+    fn merge_panel_pane_items(
+        &mut self,
+        source_pane: &Entity<Pane>,
+        target_pane: &Entity<Pane>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let active_panel_id = source_pane
+            .read(cx)
+            .active_item()
+            .and_then(|item| item.downcast::<PanelItem>())
+            .map(|panel_item| panel_item.read(cx).panel_id());
+        let panel_items = source_pane
+            .read(cx)
+            .items()
+            .filter_map(|item| {
+                let panel_item = item.downcast::<PanelItem>()?;
+                Some((panel_item.read(cx).panel_id(), item.clone()))
+            })
+            .collect::<Vec<_>>();
+
+        target_pane.update(cx, |target_pane, cx| {
+            for (panel_id, item) in panel_items {
+                let existing_index =
+                    target_pane
+                        .items()
+                        .enumerate()
+                        .find_map(|(index, existing_item)| {
+                            existing_item
+                                .downcast::<PanelItem>()
+                                .is_some_and(|panel_item| {
+                                    panel_item.read(cx).panel_id() == panel_id
+                                })
+                                .then_some(index)
+                        });
+                if let Some(existing_index) = existing_index {
+                    if active_panel_id == Some(panel_id) {
+                        target_pane.activate_item(existing_index, true, false, window, cx);
+                    }
+                    continue;
+                }
+
+                let activate = target_pane.items_len() == 0 || active_panel_id == Some(panel_id);
+                target_pane.add_item_inner(item, false, false, activate, None, window, cx);
+            }
+        });
     }
 
     pub fn add_item_to_center(
@@ -4502,15 +4973,11 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> bool {
-        if let Some(center_pane) = self.last_active_center_pane.clone() {
-            if let Some(center_pane) = center_pane.upgrade() {
-                center_pane.update(cx, |pane, cx| {
-                    pane.add_item(item, true, true, None, window, cx)
-                });
-                true
-            } else {
-                false
-            }
+        if let Some(center_pane) = self.last_tabbed_pane(cx) {
+            center_pane.update(cx, |pane, cx| {
+                pane.add_item(item, true, true, None, window, cx)
+            });
+            true
         } else {
             false
         }
@@ -4524,15 +4991,13 @@ impl Workspace {
         window: &mut Window,
         cx: &mut App,
     ) {
-        self.add_item(
-            self.active_pane.clone(),
-            item,
-            destination_index,
-            false,
-            focus_item,
-            window,
-            cx,
-        )
+        let pane = if self.active_pane.read(cx).is_tabbed() {
+            self.active_pane.clone()
+        } else {
+            self.last_tabbed_pane(cx)
+                .unwrap_or_else(|| self.active_pane.clone())
+        };
+        self.add_item(pane, item, destination_index, false, focus_item, window, cx)
     }
 
     pub fn add_item(
@@ -4637,12 +5102,14 @@ impl Workspace {
         cx: &mut App,
     ) -> Task<anyhow::Result<Box<dyn ItemHandle>>> {
         let pane = pane.unwrap_or_else(|| {
-            self.last_active_center_pane.clone().unwrap_or_else(|| {
-                self.panes
-                    .first()
-                    .expect("There must be an active pane")
-                    .downgrade()
-            })
+            self.last_tabbed_pane(cx)
+                .unwrap_or_else(|| {
+                    self.panes
+                        .first()
+                        .expect("There must be an active pane")
+                        .clone()
+                })
+                .downgrade()
         });
 
         let project_path = path.into();
@@ -4785,12 +5252,15 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Task<anyhow::Result<Box<dyn ItemHandle>>> {
-        let pane = self.last_active_center_pane.clone().unwrap_or_else(|| {
-            self.panes
-                .first()
-                .expect("There must be an active pane")
-                .downgrade()
-        });
+        let pane = self
+            .last_tabbed_pane(cx)
+            .unwrap_or_else(|| {
+                self.panes
+                    .first()
+                    .expect("There must be an active pane")
+                    .clone()
+            })
+            .downgrade();
 
         if let Member::Pane(center_pane) = &self.center.root
             && center_pane.read(cx).items_len() == 0
@@ -5192,16 +5662,7 @@ impl Workspace {
         };
 
         let get_last_active_pane = || {
-            let pane = self
-                .last_active_center_pane
-                .clone()
-                .unwrap_or_else(|| {
-                    self.panes
-                        .first()
-                        .expect("There must be an active pane")
-                        .downgrade()
-                })
-                .upgrade()?;
+            let pane = self.last_tabbed_pane(cx)?;
             (pane.read(cx).items_len() != 0).then_some(pane)
         };
 
@@ -5440,11 +5901,13 @@ impl Workspace {
             self.center
                 .resize(&self.active_pane, axis, amount, &self.bounds, cx);
         }
+        self.serialize_workspace(window, cx);
         cx.notify();
     }
 
-    pub fn reset_pane_sizes(&mut self, cx: &mut Context<Self>) {
+    pub fn reset_pane_sizes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.center.reset_pane_sizes(cx);
+        self.serialize_workspace(window, cx);
         cx.notify();
     }
 
@@ -5465,7 +5928,7 @@ impl Workspace {
             self.set_active_pane(&pane, window, cx);
         }
 
-        if self.last_active_center_pane.is_none() {
+        if self.last_active_center_pane.is_none() && pane.read(cx).is_tabbed() {
             self.last_active_center_pane = Some(pane.downgrade());
         }
 
@@ -5509,7 +5972,9 @@ impl Workspace {
     ) {
         self.active_pane = pane.clone();
         self.active_item_path_changed(true, window, cx);
-        self.last_active_center_pane = Some(pane.downgrade());
+        if pane.read(cx).is_tabbed() {
+            self.last_active_center_pane = Some(pane.downgrade());
+        }
     }
 
     fn handle_panel_focused(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -5671,6 +6136,33 @@ impl Workspace {
             .split(&pane_to_split, &new_pane, split_direction, cx);
         cx.notify();
         new_pane
+    }
+
+    pub fn move_pane_to_pane(
+        &mut self,
+        pane_to_move: Entity<Pane>,
+        target_pane: Entity<Pane>,
+        split_direction: Option<SplitDirection>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if pane_to_move == target_pane {
+            return;
+        }
+
+        if let Some(split_direction) = split_direction {
+            if self.center.remove(&pane_to_move, cx).unwrap_or(false) {
+                self.center
+                    .split(&target_pane, &pane_to_move, split_direction, cx);
+            }
+        } else {
+            self.center.swap(&pane_to_move, &target_pane, cx);
+        }
+
+        self.set_active_pane(&pane_to_move, window, cx);
+        pane_to_move.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
+        self.serialize_workspace(window, cx);
+        cx.notify();
     }
 
     pub fn split_and_move(
@@ -6986,7 +7478,7 @@ impl Workspace {
             window: &mut Window,
             cx: &mut App,
         ) -> SerializedPane {
-            let (items, active, pinned_count) = {
+            let (items, active, pinned_count, pane_kind, visible) = {
                 let pane = pane_handle.read(cx);
                 let active_item_id = pane.active_item().map(|item| item.item_id());
                 (
@@ -7004,34 +7496,49 @@ impl Workspace {
                         .collect::<Vec<_>>(),
                     pane.has_focus(window, cx),
                     pane.pinned_count(),
+                    pane.pane_kind(),
+                    pane.is_visible(),
                 )
             };
 
-            SerializedPane::new(items, active, pinned_count)
+            if pane_kind.is_tabbed() {
+                SerializedPane::new(items, active, pinned_count).with_visible(visible)
+            } else {
+                SerializedPane::new_with_kind(items, active, pinned_count, pane_kind)
+                    .with_visible(visible)
+            }
         }
 
         fn build_serialized_pane_group(
             pane_group: &Member,
             window: &mut Window,
             cx: &mut App,
-        ) -> SerializedPaneGroup {
+        ) -> Option<SerializedPaneGroup> {
             match pane_group {
                 Member::Axis(PaneAxis {
                     axis,
                     members,
                     flexes,
                     bounding_boxes: _,
-                }) => SerializedPaneGroup::Group {
-                    axis: SerializedAxis(*axis),
-                    children: members
+                }) => {
+                    let children = members
                         .iter()
-                        .map(|member| build_serialized_pane_group(member, window, cx))
-                        .collect::<Vec<_>>(),
-                    flexes: Some(flexes.lock().clone()),
-                },
-                Member::Pane(pane_handle) => {
-                    SerializedPaneGroup::Pane(serialize_pane_handle(pane_handle, window, cx))
+                        .filter_map(|member| build_serialized_pane_group(member, window, cx))
+                        .collect::<Vec<_>>();
+
+                    match children.len() {
+                        0 => None,
+                        1 => children.into_iter().next(),
+                        _ => Some(SerializedPaneGroup::Group {
+                            axis: SerializedAxis(*axis),
+                            flexes: Some(flexes.lock().clone()),
+                            children,
+                        }),
+                    }
                 }
+                Member::Pane(pane_handle) => Some(SerializedPaneGroup::Pane(
+                    serialize_pane_handle(pane_handle, window, cx),
+                )),
             }
         }
 
@@ -7064,7 +7571,8 @@ impl Workspace {
                     .user_toolchains(cx)
                     .unwrap_or_default();
 
-                let center_group = build_serialized_pane_group(&self.center.root, window, cx);
+                let center_group = build_serialized_pane_group(&self.center.root, window, cx)
+                    .unwrap_or_else(|| SerializedPaneGroup::Pane(SerializedPane::default()));
                 let docks = build_serialized_docks(self, window, cx);
                 let window_bounds = Some(SerializedWindowBounds(window.window_bounds()));
                 let identity_paths_hint = self.project_group_key(cx).path_list().clone();
@@ -7126,7 +7634,9 @@ impl Workspace {
     }
 
     fn has_any_items_open(&self, cx: &App) -> bool {
-        self.panes.iter().any(|pane| pane.read(cx).items_len() > 0)
+        self.panes
+            .iter()
+            .any(|pane| pane.read(cx).is_tabbed() && pane.read(cx).items_len() > 0)
     }
 
     fn workspace_location(&self, cx: &App) -> WorkspaceLocation {
@@ -7286,6 +7796,7 @@ impl Workspace {
                     });
                 }
 
+                workspace.sync_panel_panes_from_docks(window, cx);
                 cx.notify();
             })?;
 
@@ -7603,8 +8114,18 @@ impl Workspace {
                 },
             ))
             .on_action(cx.listener(
-                |workspace: &mut Workspace, _: &ResetPaneSizes, _window, cx| {
-                    workspace.reset_pane_sizes(cx);
+                |workspace: &mut Workspace, _: &ResetPaneSizes, window, cx| {
+                    workspace.reset_pane_sizes(window, cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &ToggleAgentPane, window, cx| {
+                    workspace.toggle_panel_pane_visibility(PaneKind::Agent, window, cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &ToggleProjectPane, window, cx| {
+                    workspace.toggle_panel_pane_visibility(PaneKind::Project, window, cx);
                 },
             ))
             .on_action(cx.listener(
@@ -7921,78 +8442,6 @@ impl Workspace {
             )
     }
 
-    fn render_dock(
-        &self,
-        position: DockPosition,
-        dock: &Entity<Dock>,
-        window: &mut Window,
-        cx: &mut App,
-    ) -> Option<Div> {
-        if self.zoomed_position == Some(position) {
-            return None;
-        }
-
-        let leader_border = dock.read(cx).active_panel().and_then(|panel| {
-            let pane = panel.pane(cx)?;
-            let follower_states = &self.follower_states;
-            leader_border_for_pane(follower_states, &pane, window, cx)
-        });
-
-        let mut container = div()
-            .flex()
-            .overflow_hidden()
-            .flex_none()
-            .child(dock.clone())
-            .children(leader_border);
-
-        // Apply sizing only when the dock is open. When closed the dock is still
-        // included in the element tree so its focus handle remains mounted — without
-        // this, toggle_panel_focus cannot focus the panel when the dock is closed.
-        let dock = dock.read(cx);
-        if let Some(panel) = dock.visible_panel() {
-            let size_state = dock.stored_panel_size_state(panel.as_ref());
-            let min_size = panel.min_size(window, cx);
-            if position.axis() == Axis::Horizontal {
-                let use_flexible = panel.has_flexible_size(window, cx);
-                let flex_grow = if use_flexible {
-                    size_state
-                        .and_then(|state| state.flex)
-                        .or_else(|| self.default_dock_flex(position))
-                } else {
-                    None
-                };
-                if let Some(grow) = flex_grow {
-                    let grow = (grow / self.center_full_height_column_count()).max(0.001);
-                    let style = container.style();
-                    style.flex_grow = Some(grow);
-                    style.flex_shrink = Some(1.0);
-                    style.flex_basis = Some(relative(0.).into());
-                } else {
-                    let size = size_state
-                        .and_then(|state| state.size)
-                        .unwrap_or_else(|| panel.default_size(window, cx));
-                    container = container.w(size);
-                    // Allow the fixed-width dock to shrink when there isn't
-                    // enough space (e.g. when the sidebar is open). The
-                    // stored size is preserved so the dock expands back
-                    // when space becomes available.
-                    let style = container.style();
-                    style.flex_shrink = Some(1.0);
-                }
-                if let Some(min) = min_size {
-                    container = container.min_w(min);
-                }
-            } else {
-                let size = size_state
-                    .and_then(|state| state.size)
-                    .unwrap_or_else(|| panel.default_size(window, cx));
-                container = container.h(size);
-            }
-        }
-
-        Some(container)
-    }
-
     pub fn for_window(window: &Window, cx: &App) -> Option<Entity<Workspace>> {
         window
             .root::<MultiWorkspace>()
@@ -8291,45 +8740,6 @@ pub enum ActiveCallEvent {
     LocalScreenShareStarted,
     LocalScreenShareStopped,
     RoomLeft,
-}
-
-fn leader_border_for_pane(
-    follower_states: &HashMap<CollaboratorId, FollowerState>,
-    pane: &Entity<Pane>,
-    _: &Window,
-    cx: &App,
-) -> Option<Div> {
-    let (leader_id, _follower_state) = follower_states.iter().find_map(|(leader_id, state)| {
-        if state.pane() == pane {
-            Some((*leader_id, state))
-        } else {
-            None
-        }
-    })?;
-
-    let mut leader_color = match leader_id {
-        CollaboratorId::PeerId(leader_peer_id) => {
-            let leader = GlobalAnyActiveCall::try_global(cx)?
-                .0
-                .remote_participant_for_peer_id(leader_peer_id, cx)?;
-
-            cx.theme()
-                .players()
-                .color_for_participant(leader.participant_index.0)
-                .cursor
-        }
-        CollaboratorId::Agent => cx.theme().players().agent().cursor,
-    };
-    leader_color.fade_out(0.3);
-    Some(
-        div()
-            .absolute()
-            .size_full()
-            .left_0()
-            .top_0()
-            .border_2()
-            .border_color(leader_color),
-    )
 }
 
 fn window_bounds_env_override() -> Option<Bounds<Pixels>> {
@@ -8703,39 +9113,21 @@ impl Render for Workspace {
                                 ))
                             })
                             .child(
-                                div()
-                                    .flex()
-                                    .flex_row()
-                                    .h_full()
-                                    .children(self.render_dock(
-                                        DockPosition::Left,
-                                        &self.left_dock,
-                                        window,
-                                        cx,
-                                    ))
-                                    .child(
-                                        h_flex()
-                                            .flex_1()
-                                            .overflow_hidden()
-                                            .when_some(paddings.0, |this, p| {
-                                                this.child(p.border_r_1())
-                                            })
-                                            .child(self.center.render(
-                                                self.zoomed.as_ref(),
-                                                &pane_render_context,
-                                                window,
-                                                cx,
-                                            ))
-                                            .when_some(paddings.1, |this, p| {
-                                                this.child(p.border_l_1())
-                                            }),
-                                    )
-                                    .children(self.render_dock(
-                                        DockPosition::Right,
-                                        &self.right_dock,
-                                        window,
-                                        cx,
-                                    )),
+                                div().flex().flex_row().h_full().child(
+                                    h_flex()
+                                        .flex_1()
+                                        .overflow_hidden()
+                                        .when_some(paddings.0, |this, p| this.child(p.border_r_1()))
+                                        .child(self.center.render(
+                                            self.zoomed.as_ref(),
+                                            &pane_render_context,
+                                            window,
+                                            cx,
+                                        ))
+                                        .when_some(paddings.1, |this, p| {
+                                            this.child(p.border_l_1())
+                                        }),
+                                ),
                             )
                             .children(self.zoomed.as_ref().and_then(|view| {
                                 let zoomed_view = view.upgrade()?;
@@ -9090,10 +9482,7 @@ pub async fn apply_restored_multiworkspace_state(
     if let Some(sidebar_state) = sidebar_state {
         window_handle
             .update(cx, |multi_workspace, window, cx| {
-                if let Some(sidebar) = multi_workspace.sidebar() {
-                    sidebar.restore_serialized_state(sidebar_state, window, cx);
-                }
-                multi_workspace.serialize(cx);
+                multi_workspace.restore_sidebar_serialized_state(sidebar_state.clone(), window, cx);
             })
             .ok();
     }
@@ -10649,6 +11038,10 @@ fn move_all_items(
     window: &mut Window,
     cx: &mut App,
 ) {
+    if !from_pane.read(cx).is_tabbed() || !to_pane.read(cx).is_tabbed() {
+        return;
+    }
+
     let destination_is_different = from_pane != to_pane;
     let mut moved_items = 0;
     for (item_ix, item_handle) in from_pane
@@ -10684,6 +11077,10 @@ pub fn move_item(
     window: &mut Window,
     cx: &mut App,
 ) {
+    if !source.read(cx).is_tabbed() || !destination.read(cx).is_tabbed() {
+        return;
+    }
+
     let Some((item_ix, item_handle)) = source
         .read(cx)
         .items()
@@ -10730,6 +11127,9 @@ pub fn move_active_item(
     if source == destination {
         return;
     }
+    if !source.read(cx).is_tabbed() || !destination.read(cx).is_tabbed() {
+        return;
+    }
     let Some(active_item) = source.read(cx).active_item() else {
         return;
     };
@@ -10758,6 +11158,9 @@ pub fn clone_active_item(
     cx: &mut App,
 ) {
     if source == destination {
+        return;
+    }
+    if !source.read(cx).is_tabbed() || !destination.read(cx).is_tabbed() {
         return;
     }
     let Some(active_item) = source.read(cx).active_item() else {

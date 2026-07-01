@@ -509,7 +509,7 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
                     let sidebar =
                         cx.new(|cx| Sidebar::new(multi_workspace_handle.clone(), window, cx));
                     multi_workspace_handle.update(cx, |multi_workspace, cx| {
-                        multi_workspace.register_sidebar(sidebar, cx);
+                        multi_workspace.register_sidebar(sidebar, window, cx);
                     });
                 })
                 .ok();

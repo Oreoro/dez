@@ -298,6 +298,7 @@ pub struct MultiWorkspace {
     active_workspace_id: Rc<Cell<EntityId>>,
     sidebar: Option<Box<dyn SidebarHandle>>,
     sidebar_open: bool,
+    pending_sidebar_state: Option<String>,
     sidebar_overlay: Option<AnyView>,
     pending_removal_tasks: Vec<Task<()>>,
     _serialize_task: Option<Task<()>>,
@@ -357,6 +358,7 @@ impl MultiWorkspace {
             active_workspace_id,
             sidebar: None,
             sidebar_open: false,
+            pending_sidebar_state: None,
             sidebar_overlay: None,
             pending_removal_tasks: Vec::new(),
             _serialize_task: None,
@@ -369,7 +371,12 @@ impl MultiWorkspace {
         }
     }
 
-    pub fn register_sidebar<T: Sidebar>(&mut self, sidebar: Entity<T>, cx: &mut Context<Self>) {
+    pub fn register_sidebar<T: Sidebar>(
+        &mut self,
+        sidebar: Entity<T>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         self._subscriptions
             .push(cx.observe(&sidebar, |_this, _, cx| {
                 cx.notify();
@@ -381,6 +388,21 @@ impl MultiWorkspace {
                 }
             }));
         self.sidebar = Some(Box::new(sidebar));
+        if self.sidebar_open {
+            let sidebar_focus_handle = self.sidebar.as_ref().map(|s| s.focus_handle(cx));
+            for workspace in self.retained_workspaces.clone() {
+                workspace.update(cx, |workspace, _cx| {
+                    workspace.set_sidebar_focus_handle(sidebar_focus_handle.clone());
+                });
+            }
+        }
+
+        if let Some(state) = self.pending_sidebar_state.take()
+            && let Some(sidebar) = &self.sidebar
+        {
+            sidebar.restore_serialized_state(&state, window, cx);
+            self.serialize(cx);
+        }
     }
 
     pub fn sidebar(&self) -> Option<&dyn SidebarHandle> {
@@ -475,26 +497,42 @@ impl MultiWorkspace {
             SidebarSide::Right => "right",
         };
         telemetry::event!("Sidebar Toggled", action = "open", side = side);
-        self.apply_open_sidebar(cx);
+        self.apply_open_sidebar(true, cx);
     }
 
     /// Restores the sidebar to open state from persisted session data without
     /// firing a telemetry event, since this is not a user-initiated action.
     pub(crate) fn restore_open_sidebar(&mut self, cx: &mut Context<Self>) {
-        self.apply_open_sidebar(cx);
+        self.apply_open_sidebar(false, cx);
     }
 
-    fn apply_open_sidebar(&mut self, cx: &mut Context<Self>) {
+    fn apply_open_sidebar(&mut self, serialize: bool, cx: &mut Context<Self>) {
         self.sidebar_open = true;
-        self.retain_active_workspace(cx);
+        self.retain_active_workspace_without_serializing(cx);
         let sidebar_focus_handle = self.sidebar.as_ref().map(|s| s.focus_handle(cx));
         for workspace in self.retained_workspaces.clone() {
             workspace.update(cx, |workspace, _cx| {
                 workspace.set_sidebar_focus_handle(sidebar_focus_handle.clone());
             });
         }
-        self.serialize(cx);
+        if serialize {
+            self.serialize(cx);
+        }
         cx.notify();
+    }
+
+    pub(crate) fn restore_sidebar_serialized_state(
+        &mut self,
+        state: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if let Some(sidebar) = &self.sidebar {
+            sidebar.restore_serialized_state(&state, window, cx);
+            self.serialize(cx);
+        } else {
+            self.pending_sidebar_state = Some(state);
+        }
     }
 
     pub fn close_sidebar(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -1558,15 +1596,21 @@ impl MultiWorkspace {
     /// transient, so it is retained across workspace switches even when
     /// the sidebar is closed. No-op if the workspace is already persistent.
     pub fn retain_active_workspace(&mut self, cx: &mut Context<Self>) {
+        if self.retain_active_workspace_without_serializing(cx) {
+            self.serialize(cx);
+            cx.notify();
+        }
+    }
+
+    fn retain_active_workspace_without_serializing(&mut self, cx: &mut Context<Self>) -> bool {
         let workspace = self.active_workspace.clone();
         if self.is_workspace_retained(&workspace) {
-            return;
+            return false;
         }
 
         let key = workspace.read(cx).project_group_key(cx);
         self.retain_workspace(workspace, key, cx);
-        self.serialize(cx);
-        cx.notify();
+        true
     }
 
     /// Collapses to a single workspace, discarding all groups.
@@ -1650,7 +1694,11 @@ impl MultiWorkspace {
                             })
                             .collect::<Vec<_>>(),
                         sidebar_open: this.sidebar_open,
-                        sidebar_state: this.sidebar.as_ref().and_then(|s| s.serialized_state(cx)),
+                        sidebar_state: this
+                            .sidebar
+                            .as_ref()
+                            .and_then(|s| s.serialized_state(cx))
+                            .or_else(|| this.pending_sidebar_state.clone()),
                     };
                     (this.window_id, state)
                 })

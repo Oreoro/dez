@@ -1,7 +1,7 @@
 use super::{SerializedAxis, SerializedWindowBounds};
 use crate::{
-    Member, Pane, PaneAxis, SerializableItemRegistry, Workspace, WorkspaceId, item::ItemHandle,
-    multi_workspace::SerializedProjectGroupState, path_list::PathList,
+    Member, Pane, PaneAxis, PaneKind, SerializableItemRegistry, Workspace, WorkspaceId,
+    item::ItemHandle, multi_workspace::SerializedProjectGroupState, path_list::PathList,
 };
 use anyhow::{Context, Result};
 use async_recursion::async_recursion;
@@ -247,6 +247,8 @@ impl Default for SerializedPaneGroup {
             children: vec![SerializedItem::default()],
             active: false,
             pinned_count: 0,
+            kind: PaneKind::Tabs,
+            visible: true,
         })
     }
 }
@@ -299,9 +301,13 @@ impl SerializedPaneGroup {
                 ))
             }
             SerializedPaneGroup::Pane(serialized_pane) => {
+                let pane_kind = serialized_pane.kind;
+                let visible = serialized_pane.visible;
                 let pane = workspace
                     .update_in(cx, |workspace, window, cx| {
-                        workspace.add_pane(window, cx).downgrade()
+                        let pane = workspace.add_pane_with_kind(pane_kind, true, window, cx);
+                        pane.update(cx, |pane, cx| pane.set_visible(visible, cx));
+                        pane.downgrade()
                     })
                     .log_err()?;
                 let active = serialized_pane.active;
@@ -311,9 +317,11 @@ impl SerializedPaneGroup {
                     .context("Could not deserialize pane)")
                     .log_err()?;
 
-                if pane
-                    .read_with(cx, |pane, _| pane.items_len() != 0)
-                    .log_err()?
+                let keep_empty_pane = !serialized_pane.kind.is_tabbed();
+                if keep_empty_pane
+                    || pane
+                        .read_with(cx, |pane, _| pane.items_len() != 0)
+                        .log_err()?
                 {
                     let pane = pane.upgrade()?;
                     Some((
@@ -340,15 +348,33 @@ pub struct SerializedPane {
     pub(crate) active: bool,
     pub(crate) children: Vec<SerializedItem>,
     pub(crate) pinned_count: usize,
+    pub(crate) kind: PaneKind,
+    pub(crate) visible: bool,
 }
 
 impl SerializedPane {
     pub fn new(children: Vec<SerializedItem>, active: bool, pinned_count: usize) -> Self {
+        Self::new_with_kind(children, active, pinned_count, PaneKind::Tabs)
+    }
+
+    pub fn new_with_kind(
+        children: Vec<SerializedItem>,
+        active: bool,
+        pinned_count: usize,
+        kind: PaneKind,
+    ) -> Self {
         SerializedPane {
             children,
             active,
             pinned_count,
+            kind,
+            visible: true,
         }
+    }
+
+    pub fn with_visible(mut self, visible: bool) -> Self {
+        self.visible = visible;
+        self
     }
 
     pub async fn deserialize_to(

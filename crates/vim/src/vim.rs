@@ -366,8 +366,8 @@ pub fn init(cx: &mut App) {
             });
         });
 
-        workspace.register_action(|workspace, _: &ResetPaneSizes, _, cx| {
-            workspace.reset_pane_sizes(cx);
+        workspace.register_action(|workspace, _: &ResetPaneSizes, window, cx| {
+            workspace.reset_pane_sizes(window, cx);
         });
 
         workspace.register_action(|workspace, _: &MaximizePane, window, cx| {

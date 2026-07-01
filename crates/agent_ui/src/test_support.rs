@@ -211,7 +211,7 @@ pub fn register_test_sidebar(
             .expect("test window should have a MultiWorkspace root");
         let sidebar = cx.new(|cx| TestWorkspaceSidebar::new(threads_list_active, cx));
         multi_workspace.update(cx, |multi_workspace, cx| {
-            multi_workspace.register_sidebar(sidebar.clone(), cx);
+            multi_workspace.register_sidebar(sidebar.clone(), window, cx);
         });
         sidebar
     })

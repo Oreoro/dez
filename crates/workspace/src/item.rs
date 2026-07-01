@@ -212,6 +212,7 @@ pub trait Item: Focusable + EventEmitter<Self::Event> + Render + Sized {
 
     fn to_item_events(_event: &Self::Event, _f: &mut dyn FnMut(ItemEvent)) {}
 
+    fn activated(&mut self, _window: &mut Window, _: &mut Context<Self>) {}
     fn deactivated(&mut self, _window: &mut Window, _: &mut Context<Self>) {}
     fn discarded(&self, _project: Entity<Project>, _window: &mut Window, _cx: &mut Context<Self>) {}
     fn on_removed(&self, _cx: &mut Context<Self>) {}
@@ -520,6 +521,7 @@ pub trait ItemHandle: 'static + Send {
         window: &mut Window,
         cx: &mut Context<Workspace>,
     );
+    fn activated(&self, window: &mut Window, cx: &mut App);
     fn deactivated(&self, window: &mut Window, cx: &mut App);
     fn on_removed(&self, cx: &mut App);
     fn workspace_deactivated(&self, window: &mut Window, cx: &mut App);
@@ -1010,6 +1012,10 @@ impl<T: Item> ItemHandle for Entity<T> {
         cx.defer_in(window, |workspace, window, cx| {
             workspace.serialize_workspace(window, cx);
         });
+    }
+
+    fn activated(&self, window: &mut Window, cx: &mut App) {
+        self.update(cx, |this, cx| this.activated(window, cx));
     }
 
     fn deactivated(&self, window: &mut Window, cx: &mut App) {

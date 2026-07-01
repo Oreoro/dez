@@ -313,6 +313,25 @@ impl Member {
             Member::Axis(axis) => axis.full_height_column_count(),
         }
     }
+
+    fn is_visible(&self, cx: &App) -> bool {
+        match self {
+            Member::Axis(axis) => axis.members.iter().any(|member| member.is_visible(cx)),
+            Member::Pane(pane) => pane.read(cx).is_visible(),
+        }
+    }
+
+    fn clear_bounding_boxes(&self) {
+        match self {
+            Member::Axis(axis) => {
+                axis.bounding_boxes.lock().fill(None);
+                for member in &axis.members {
+                    member.clear_bounding_boxes();
+                }
+            }
+            Member::Pane(_) => {}
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -534,6 +553,13 @@ impl Member {
     ) -> PaneRenderResult {
         match self {
             Member::Pane(pane) => {
+                if !pane.read(cx).is_visible() {
+                    return PaneRenderResult {
+                        element: div().into_any(),
+                        contains_active_pane: false,
+                    };
+                }
+
                 if zoomed == Some(&pane.downgrade().into()) {
                     return PaneRenderResult {
                         element: div().into_any(),
@@ -929,23 +955,31 @@ impl PaneAxis {
         debug_assert!(self.members.len() == self.flexes.lock().len());
         let mut active_pane_ix = None;
         let mut contains_active_pane = false;
-        let mut is_leaf_pane = vec![false; self.members.len()];
+        let mut is_leaf_pane = Vec::new();
+        let mut visible_indices = Vec::new();
 
         let rendered_children = self
             .members
             .iter()
             .enumerate()
-            .map(|(ix, member)| {
+            .filter_map(|(ix, member)| {
+                if !member.is_visible(cx) {
+                    member.clear_bounding_boxes();
+                    return None;
+                }
+
+                let visible_ix = visible_indices.len();
+                visible_indices.push(ix);
                 match member {
                     Member::Pane(pane) => {
-                        is_leaf_pane[ix] = true;
+                        is_leaf_pane.push(true);
                         if pane == render_cx.active_pane() {
-                            active_pane_ix = Some(ix);
+                            active_pane_ix = Some(visible_ix);
                             contains_active_pane = true;
                         }
                     }
                     Member::Axis(_) => {
-                        is_leaf_pane[ix] = false;
+                        is_leaf_pane.push(false);
                     }
                 }
 
@@ -953,9 +987,16 @@ impl PaneAxis {
                 if result.contains_active_pane {
                     contains_active_pane = true;
                 }
-                result.element.into_any_element()
+                Some(result.element.into_any_element())
             })
             .collect::<Vec<_>>();
+
+        if rendered_children.is_empty() {
+            return PaneRenderResult {
+                element: div().into_any(),
+                contains_active_pane: false,
+            };
+        }
 
         let element = pane_axis(
             self.axis,
@@ -964,6 +1005,7 @@ impl PaneAxis {
             self.bounding_boxes.clone(),
             render_cx.workspace().clone(),
         )
+        .with_visible_indices(visible_indices)
         .with_is_leaf_pane_mask(is_leaf_pane)
         .children(rendered_children)
         .with_active_pane(active_pane_ix)
@@ -1109,6 +1151,7 @@ mod element {
             active_pane_ix: None,
             workspace,
             is_leaf_pane_mask: Vec::new(),
+            visible_indices: Vec::new(),
         }
     }
 
@@ -1124,11 +1167,13 @@ mod element {
         workspace: WeakEntity<Workspace>,
         // Track which children are leaf panes (Member::Pane) vs axes (Member::Axis)
         is_leaf_pane_mask: Vec<bool>,
+        visible_indices: Vec<usize>,
     }
 
     pub struct PaneAxisLayout {
         dragged_handle: Rc<RefCell<Option<usize>>>,
         children: Vec<PaneAxisChildLayout>,
+        visible_indices: Vec<usize>,
     }
 
     struct PaneAxisChildLayout {
@@ -1136,11 +1181,14 @@ mod element {
         element: AnyElement,
         handle: Option<PaneAxisHandleLayout>,
         is_leaf_pane: bool,
+        original_ix: usize,
     }
 
     struct PaneAxisHandleLayout {
         hitbox: Hitbox,
         divider_bounds: Bounds<Pixels>,
+        current_ix: usize,
+        next_ix: usize,
     }
 
     impl PaneAxisElement {
@@ -1154,10 +1202,17 @@ mod element {
             self
         }
 
+        pub fn with_visible_indices(mut self, indices: Vec<usize>) -> Self {
+            self.visible_indices = indices;
+            self
+        }
+
         fn compute_resize(
             flexes: &Arc<Mutex<Vec<f32>>>,
             e: &MouseMoveEvent,
-            ix: usize,
+            current_ix: usize,
+            next_ix: usize,
+            visible_indices: &[usize],
             axis: Axis,
             child_start: Point<Pixels>,
             container_size: Size<Pixels>,
@@ -1171,79 +1226,112 @@ mod element {
             };
             let mut flexes = flexes.lock();
             debug_assert!(flex_values_in_bounds(flexes.as_slice()));
+            let all_members_visible = visible_indices.len() == flexes.len()
+                && visible_indices
+                    .iter()
+                    .enumerate()
+                    .all(|(visible_ix, original_ix)| visible_ix == *original_ix);
 
-            // Math to convert a flex value to a pixel value
-            let size = move |ix, flexes: &[f32]| {
-                container_size.along(axis) * (flexes[ix] / flexes.len() as f32)
-            };
+            if all_members_visible && current_ix + 1 == next_ix {
+                let ix = current_ix;
 
-            // Don't allow resizing to less than the minimum size, if elements are already too small
-            if min_size - px(1.) > size(ix, flexes.as_slice()) {
+                let size = move |ix, flexes: &[f32]| {
+                    container_size.along(axis) * (flexes[ix] / flexes.len() as f32)
+                };
+
+                if min_size - px(1.) > size(ix, flexes.as_slice()) {
+                    return;
+                }
+
+                let mut proposed_current_pixel_change =
+                    (e.position - child_start).along(axis) - size(ix, flexes.as_slice());
+
+                let flex_changes = |pixel_dx, target_ix, next: isize, flexes: &[f32]| {
+                    let flex_change = pixel_dx / container_size.along(axis);
+                    let current_target_flex = flexes[target_ix] + flex_change;
+                    let next_target_flex =
+                        flexes[(target_ix as isize + next) as usize] - flex_change;
+                    (current_target_flex, next_target_flex)
+                };
+
+                let mut successors = iter::from_fn({
+                    let forward = proposed_current_pixel_change > px(0.);
+                    let mut ix_offset = 0;
+                    let len = flexes.len();
+                    move || {
+                        let result = if forward {
+                            (ix + 1 + ix_offset < len).then(|| ix + ix_offset)
+                        } else {
+                            (ix as isize - ix_offset as isize >= 0).then(|| ix - ix_offset)
+                        };
+
+                        ix_offset += 1;
+
+                        result
+                    }
+                });
+
+                while proposed_current_pixel_change.abs() > px(0.) {
+                    let Some(current_ix) = successors.next() else {
+                        break;
+                    };
+
+                    let next_target_size = Pixels::max(
+                        size(current_ix + 1, flexes.as_slice()) - proposed_current_pixel_change,
+                        min_size,
+                    );
+
+                    let current_target_size = Pixels::max(
+                        size(current_ix, flexes.as_slice())
+                            + size(current_ix + 1, flexes.as_slice())
+                            - next_target_size,
+                        min_size,
+                    );
+
+                    let current_pixel_change =
+                        current_target_size - size(current_ix, flexes.as_slice());
+
+                    let (current_target_flex, next_target_flex) =
+                        flex_changes(current_pixel_change, current_ix, 1, flexes.as_slice());
+
+                    flexes[current_ix] = current_target_flex;
+                    flexes[current_ix + 1] = next_target_flex;
+
+                    proposed_current_pixel_change -= current_pixel_change;
+                }
+
+                workspace
+                    .update(cx, |this, cx| this.serialize_workspace(window, cx))
+                    .log_err();
+                cx.stop_propagation();
+                window.refresh();
                 return;
             }
 
-            // This is basically a "bucket" of pixel changes that need to be applied in response to this
-            // mouse event. Probably a small, fractional number like 0.5 or 1.5 pixels
-            let mut proposed_current_pixel_change =
-                (e.position - child_start).along(axis) - size(ix, flexes.as_slice());
-
-            // This takes a pixel change, and computes the flex changes that correspond to this pixel change
-            // as well as the next one, for some reason
-            let flex_changes = |pixel_dx, target_ix, next: isize, flexes: &[f32]| {
-                let flex_change = pixel_dx / container_size.along(axis);
-                let current_target_flex = flexes[target_ix] + flex_change;
-                let next_target_flex = flexes[(target_ix as isize + next) as usize] - flex_change;
-                (current_target_flex, next_target_flex)
-            };
-
-            // Generate the list of flex successors, from the current index.
-            // If you're dragging column 3 forward, out of 6 columns, then this code will produce [4, 5, 6]
-            // If you're dragging column 3 backward, out of 6 columns, then this code will produce [2, 1, 0]
-            let mut successors = iter::from_fn({
-                let forward = proposed_current_pixel_change > px(0.);
-                let mut ix_offset = 0;
-                let len = flexes.len();
-                move || {
-                    let result = if forward {
-                        (ix + 1 + ix_offset < len).then(|| ix + ix_offset)
-                    } else {
-                        (ix as isize - ix_offset as isize >= 0).then(|| ix - ix_offset)
-                    };
-
-                    ix_offset += 1;
-
-                    result
-                }
-            });
-
-            // Now actually loop over these, and empty our bucket of pixel changes
-            while proposed_current_pixel_change.abs() > px(0.) {
-                let Some(current_ix) = successors.next() else {
-                    break;
-                };
-
-                let next_target_size = Pixels::max(
-                    size(current_ix + 1, flexes.as_slice()) - proposed_current_pixel_change,
-                    min_size,
-                );
-
-                let current_target_size = Pixels::max(
-                    size(current_ix, flexes.as_slice()) + size(current_ix + 1, flexes.as_slice())
-                        - next_target_size,
-                    min_size,
-                );
-
-                let current_pixel_change =
-                    current_target_size - size(current_ix, flexes.as_slice());
-
-                let (current_target_flex, next_target_flex) =
-                    flex_changes(current_pixel_change, current_ix, 1, flexes.as_slice());
-
-                flexes[current_ix] = current_target_flex;
-                flexes[current_ix + 1] = next_target_flex;
-
-                proposed_current_pixel_change -= current_pixel_change;
+            let visible_total_flex = visible_indices.iter().map(|ix| flexes[*ix]).sum::<f32>();
+            if visible_total_flex <= 0. {
+                return;
             }
+
+            let pair_flex = flexes[current_ix] + flexes[next_ix];
+            if pair_flex <= 0. {
+                return;
+            }
+
+            let pair_size = container_size.along(axis) * (pair_flex / visible_total_flex);
+            let current_size = pair_size * (flexes[current_ix] / pair_flex);
+            let next_size = pair_size * (flexes[next_ix] / pair_flex);
+
+            let proposed_current_pixel_change =
+                (e.position - child_start).along(axis) - current_size;
+            let current_pixel_change = Pixels::min(
+                Pixels::max(proposed_current_pixel_change, min_size - current_size),
+                next_size - min_size,
+            );
+            let flex_change = pair_flex * current_pixel_change / pair_size;
+
+            flexes[current_ix] += flex_change;
+            flexes[next_ix] -= flex_change;
 
             workspace
                 .update(cx, |this, cx| this.serialize_workspace(window, cx))
@@ -1255,6 +1343,8 @@ mod element {
         fn layout_handle(
             axis: Axis,
             pane_bounds: Bounds<Pixels>,
+            current_ix: usize,
+            next_ix: usize,
             window: &mut Window,
             _cx: &mut App,
         ) -> PaneAxisHandleLayout {
@@ -1276,6 +1366,8 @@ mod element {
             PaneAxisHandleLayout {
                 hitbox: window.insert_hitbox(handle_bounds, HitboxBehavior::BlockMouse),
                 divider_bounds,
+                current_ix,
+                next_ix,
             }
         }
     }
@@ -1334,24 +1426,37 @@ mod element {
                 },
             );
             let flexes = self.flexes.lock().clone();
-            let len = self.children.len();
-            debug_assert!(flexes.len() == len);
+            let visible_indices = if self.visible_indices.is_empty() {
+                (0..self.children.len()).collect::<Vec<_>>()
+            } else {
+                self.visible_indices.clone()
+            };
+            let len = visible_indices.len();
+            debug_assert!(len == self.children.len());
+            debug_assert!(visible_indices.iter().all(|ix| *ix < flexes.len()));
             debug_assert!(flex_values_in_bounds(flexes.as_slice()));
 
-            let total_flex = len as f32;
+            let total_flex = visible_indices
+                .iter()
+                .map(|ix| flexes[*ix])
+                .sum::<f32>()
+                .max(0.001);
 
             let mut origin = bounds.origin;
             let space_per_flex = bounds.size.along(self.axis) / total_flex;
 
             let mut bounding_boxes = self.bounding_boxes.lock();
             bounding_boxes.clear();
+            bounding_boxes.resize(flexes.len(), None);
 
             let mut layout = PaneAxisLayout {
                 dragged_handle,
                 children: Vec::new(),
+                visible_indices,
             };
             for (ix, mut child) in mem::take(&mut self.children).into_iter().enumerate() {
-                let child_flex = flexes[ix];
+                let original_ix = layout.visible_indices[ix];
+                let child_flex = flexes[original_ix];
 
                 let child_size = bounds
                     .size
@@ -1363,7 +1468,7 @@ mod element {
                     size: child_size,
                 };
 
-                bounding_boxes.push(Some(child_bounds));
+                bounding_boxes[original_ix] = Some(child_bounds);
                 child.layout_as_root(child_size.into(), window, cx);
                 child.prepaint_at(origin, window, cx);
 
@@ -1376,14 +1481,19 @@ mod element {
                     element: child,
                     handle: None,
                     is_leaf_pane,
+                    original_ix,
                 })
             }
 
-            for (ix, child_layout) in layout.children.iter_mut().enumerate() {
+            for ix in 0..layout.children.len() {
                 if ix < len - 1 {
+                    let next_ix = layout.children[ix + 1].original_ix;
+                    let child_layout = &mut layout.children[ix];
                     child_layout.handle = Some(Self::layout_handle(
                         self.axis,
                         child_layout.bounds,
+                        child_layout.original_ix,
+                        next_ix,
                         window,
                         cx,
                     ));
@@ -1508,13 +1618,18 @@ mod element {
                         let flexes = self.flexes.clone();
                         let child_bounds = child.bounds;
                         let axis = self.axis;
+                        let current_ix = handle.current_ix;
+                        let next_ix = handle.next_ix;
+                        let visible_indices = layout.visible_indices.clone();
                         move |e: &MouseMoveEvent, phase, window, cx| {
                             let dragged_handle = dragged_handle.borrow();
                             if phase.bubble() && *dragged_handle == Some(ix) {
                                 Self::compute_resize(
                                     &flexes,
                                     e,
-                                    ix,
+                                    current_ix,
+                                    next_ix,
+                                    &visible_indices,
                                     axis,
                                     child_bounds.origin,
                                     bounds.size,

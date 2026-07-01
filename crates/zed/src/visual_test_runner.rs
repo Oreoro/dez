@@ -2678,7 +2678,7 @@ fn run_multi_workspace_sidebar_visual_tests(
 
     multi_workspace_window
         .update(cx, |multi_workspace, _window, cx| {
-            multi_workspace.register_sidebar(sidebar.clone(), cx);
+            multi_workspace.register_sidebar(sidebar.clone(), window, cx);
         })
         .context("Failed to register sidebar")?;
 
@@ -3422,7 +3422,7 @@ fn open_sidebar_test_window(
 
     multi_workspace_window
         .update(cx, |mw, _window, cx| {
-            mw.register_sidebar(sidebar.clone(), cx);
+            mw.register_sidebar(sidebar.clone(), window, cx);
         })
         .context("Failed to register sidebar")?;
 

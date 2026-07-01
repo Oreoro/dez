@@ -77,6 +77,20 @@ impl DraggedSelection {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum PaneKind {
+    #[default]
+    Tabs,
+    Project,
+    Agent,
+}
+
+impl PaneKind {
+    pub fn is_tabbed(self) -> bool {
+        self == Self::Tabs
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SaveIntent {
@@ -453,6 +467,8 @@ pub struct Pane {
     welcome_page: Option<Entity<crate::welcome::WelcomePage>>,
 
     pub in_center_group: bool,
+    pane_kind: PaneKind,
+    visible: bool,
 }
 
 pub struct ActivationHistoryEntry {
@@ -525,6 +541,11 @@ pub struct DraggedTab {
     pub ix: usize,
     pub detail: usize,
     pub is_active: bool,
+}
+
+#[derive(Clone)]
+pub struct DraggedPane {
+    pub pane: Entity<Pane>,
 }
 
 impl EventEmitter<Event> for Pane {}
@@ -624,6 +645,8 @@ impl Pane {
             project_item_restoration_data: HashMap::default(),
             welcome_page: None,
             in_center_group: false,
+            pane_kind: PaneKind::Tabs,
+            visible: true,
         }
     }
 
@@ -835,6 +858,30 @@ impl Pane {
 
     pub fn set_should_display_welcome_page(&mut self, should_display_welcome_page: bool) {
         self.should_display_welcome_page = should_display_welcome_page;
+    }
+
+    pub fn set_pane_kind(&mut self, pane_kind: PaneKind, cx: &mut Context<Self>) {
+        self.pane_kind = pane_kind;
+        cx.notify();
+    }
+
+    pub fn pane_kind(&self) -> PaneKind {
+        self.pane_kind
+    }
+
+    pub fn is_tabbed(&self) -> bool {
+        self.pane_kind.is_tabbed()
+    }
+
+    pub fn set_visible(&mut self, visible: bool, cx: &mut Context<Self>) {
+        if self.visible != visible {
+            self.visible = visible;
+            cx.notify();
+        }
+    }
+
+    pub fn is_visible(&self) -> bool {
+        self.visible
     }
 
     pub fn set_can_split(
@@ -1481,11 +1528,16 @@ impl Pane {
         use NavigationMode::{GoingBack, GoingForward};
         if index < self.items.len() {
             let prev_active_item_ix = mem::replace(&mut self.active_item_index, index);
-            if (prev_active_item_ix != self.active_item_index
-                || matches!(self.nav_history.mode(), GoingBack | GoingForward))
-                && let Some(prev_item) = self.items.get(prev_active_item_ix)
-            {
-                prev_item.deactivated(window, cx);
+            let active_item_changed = prev_active_item_ix != self.active_item_index;
+            if active_item_changed || matches!(self.nav_history.mode(), GoingBack | GoingForward) {
+                if let Some(prev_item) = self.items.get(prev_active_item_ix) {
+                    prev_item.deactivated(window, cx);
+                }
+            }
+            if active_item_changed {
+                if let Some(active_item) = self.items.get(self.active_item_index) {
+                    active_item.activated(window, cx);
+                }
             }
             self.update_history(index);
             self.update_toolbar(window, cx);
@@ -1602,6 +1654,10 @@ impl Pane {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Task<Result<()>> {
+        if !self.is_tabbed() {
+            return Task::ready(Ok(()));
+        }
+
         if self.items.is_empty() {
             // Close the window when there's no active items to close, if configured
             if WorkspaceSettings::get_global(cx)
@@ -1954,6 +2010,10 @@ impl Pane {
         mut save_intent: SaveIntent,
         should_close: &dyn Fn(EntityId) -> bool,
     ) -> Task<Result<()>> {
+        if !self.is_tabbed() {
+            return Task::ready(Ok(()));
+        }
+
         // Find the items to close.
         let mut items_to_close = Vec::new();
         for item in &self.items {
@@ -2075,6 +2135,10 @@ impl Pane {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<Box<dyn ItemHandle>> {
+        if !self.is_tabbed() {
+            return None;
+        }
+
         let item = self.active_item()?;
         self.remove_item(item.item_id(), false, false, window, cx);
         Some(item)
@@ -3795,6 +3859,10 @@ impl Pane {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if !self.is_tabbed() && self.drag_split_direction.is_none() {
+            return;
+        }
+
         if is_pane_target
             && ix == self.active_item_index
             && let Some(active_item) = self.active_item()
@@ -3968,6 +4036,10 @@ impl Pane {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if !self.is_tabbed() && self.drag_split_direction.is_none() {
+            return;
+        }
+
         if let Some(active_item) = self.active_item()
             && active_item.handle_drop(self, project_entry_id, window, cx)
         {
@@ -4045,6 +4117,10 @@ impl Pane {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if !self.is_tabbed() && self.drag_split_direction.is_none() {
+            return;
+        }
+
         if let Some(active_item) = self.active_item()
             && active_item.handle_drop(self, paths, window, cx)
         {
@@ -4128,6 +4204,30 @@ impl Pane {
             .log_err();
     }
 
+    fn handle_pane_drop(
+        &mut self,
+        dragged_pane: &DraggedPane,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let target_pane = cx.entity();
+        let split_direction = self.drag_split_direction.take();
+        let pane_to_move = dragged_pane.pane.clone();
+        self.workspace
+            .update(cx, |_, cx| {
+                cx.defer_in(window, move |workspace, window, cx| {
+                    workspace.move_pane_to_pane(
+                        pane_to_move,
+                        target_pane,
+                        split_direction,
+                        window,
+                        cx,
+                    );
+                });
+            })
+            .log_err();
+    }
+
     pub fn display_nav_history_buttons(&mut self, display: Option<bool>) {
         self.display_nav_history_buttons = display;
     }
@@ -4183,6 +4283,24 @@ impl Pane {
 
     pub fn drag_split_direction(&self) -> Option<SplitDirection> {
         self.drag_split_direction
+    }
+
+    fn render_pane_drag_handle(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .id("pane_drag_handle")
+            .absolute()
+            .top_0()
+            .left_1_2()
+            .w_16()
+            .h(px(5.))
+            .ml(rems(-2.))
+            .cursor_move()
+            .rounded_b_sm()
+            .hover(|this| this.bg(cx.theme().colors().element_hover))
+            .on_drag(
+                DraggedPane { pane: cx.entity() },
+                |dragged_pane, _, _, cx| cx.new(|_| dragged_pane.clone()),
+            )
     }
 
     pub fn set_zoom_out_on_close(&mut self, zoom_out_on_close: bool) {
@@ -4480,6 +4598,7 @@ impl Render for Pane {
                     .overflow_hidden()
                     .on_drag_move::<DraggedTab>(cx.listener(Self::handle_drag_move))
                     .on_drag_move::<DraggedSelection>(cx.listener(Self::handle_drag_move))
+                    .on_drag_move::<DraggedPane>(cx.listener(Self::handle_drag_move))
                     .when(is_local, |div| {
                         div.on_drag_move::<ExternalPaths>(cx.listener(Self::handle_drag_move))
                     })
@@ -4531,6 +4650,7 @@ impl Render for Pane {
                             .bg(cx.theme().colors().drop_target_background)
                             .group_drag_over::<DraggedTab>("", |style| style.visible())
                             .group_drag_over::<DraggedSelection>("", |style| style.visible())
+                            .group_drag_over::<DraggedPane>("", |style| style.visible())
                             .when(is_local, |div| {
                                 div.group_drag_over::<ExternalPaths>("", |style| style.visible())
                             })
@@ -4549,6 +4669,11 @@ impl Render for Pane {
                             .on_drop(cx.listener(
                                 move |this, selection: &DraggedSelection, window, cx| {
                                     this.handle_dragged_selection_drop(selection, None, window, cx)
+                                },
+                            ))
+                            .on_drop(cx.listener(
+                                move |this, dragged_pane: &DraggedPane, window, cx| {
+                                    this.handle_pane_drop(dragged_pane, window, cx)
                                 },
                             ))
                             .on_drop(cx.listener(move |this, paths, window, cx| {
@@ -4574,6 +4699,7 @@ impl Render for Pane {
                             }),
                     )
             })
+            .child(self.render_pane_drag_handle(cx))
             .on_mouse_down(
                 MouseButton::Navigate(NavigationDirection::Back),
                 cx.listener(|pane, _, window, cx| {
@@ -4940,6 +5066,20 @@ impl Render for DraggedTab {
             .child(label)
             .render(window, cx)
             .font(ui_font)
+    }
+}
+
+impl Render for DraggedPane {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .px_2()
+            .h(Tab::container_height(cx))
+            .flex()
+            .items_center()
+            .border_1()
+            .border_color(cx.theme().colors().border)
+            .bg(cx.theme().colors().tab_bar_background)
+            .child(Label::new("Pane").color(Color::Muted))
     }
 }
 

@@ -1,9 +1,9 @@
 use crate::{
-    ItemHandle, MultiWorkspace, Pane, SidebarSide, ToggleWorkspaceSidebar,
-    sidebar_side_context_menu,
+    ItemHandle, MultiWorkspace, Pane, SidebarSide, ToggleAgentPane, ToggleProjectPane,
+    ToggleWorkspaceSidebar, Workspace, pane::PaneKind, sidebar_side_context_menu,
 };
 use gpui::{
-    Anchor, AnyView, App, Context, Decorations, Entity, IntoElement, ParentElement, Render,
+    Action, Anchor, AnyView, App, Context, Decorations, Entity, IntoElement, ParentElement, Render,
     SharedString, Styled, Subscription, WeakEntity, Window,
 };
 use settings::{SettingsContent, update_settings_file};
@@ -76,6 +76,89 @@ struct SidebarStatus {
     side: SidebarSide,
     has_notifications: bool,
     show_toggle: bool,
+}
+
+pub struct PaneVisibilityToggle {
+    workspace: WeakEntity<Workspace>,
+    pane_kind: PaneKind,
+    _observe_workspace: Subscription,
+}
+
+impl PaneVisibilityToggle {
+    pub fn new(workspace: Entity<Workspace>, pane_kind: PaneKind, cx: &mut Context<Self>) -> Self {
+        let observe_workspace = cx.observe(&workspace, |_, _, cx| cx.notify());
+        Self {
+            workspace: workspace.downgrade(),
+            pane_kind,
+            _observe_workspace: observe_workspace,
+        }
+    }
+
+    fn action(&self) -> Box<dyn Action> {
+        match self.pane_kind {
+            PaneKind::Agent => ToggleAgentPane.boxed_clone(),
+            PaneKind::Project => ToggleProjectPane.boxed_clone(),
+            PaneKind::Tabs => ToggleProjectPane.boxed_clone(),
+        }
+    }
+
+    fn icon(&self) -> IconName {
+        match self.pane_kind {
+            PaneKind::Agent => IconName::ZedAssistant,
+            PaneKind::Project | PaneKind::Tabs => IconName::FileTree,
+        }
+    }
+
+    fn label(&self, visible: bool) -> &'static str {
+        match (self.pane_kind, visible) {
+            (PaneKind::Agent, true) => "Hide Agent Pane",
+            (PaneKind::Agent, false) => "Show Agent Pane",
+            (PaneKind::Project | PaneKind::Tabs, true) => "Hide Project Pane",
+            (PaneKind::Project | PaneKind::Tabs, false) => "Show Project Pane",
+        }
+    }
+
+    fn element_id(&self) -> (&'static str, u64) {
+        match self.pane_kind {
+            PaneKind::Agent => ("pane-visibility-toggle", 0),
+            PaneKind::Project => ("pane-visibility-toggle", 1),
+            PaneKind::Tabs => ("pane-visibility-toggle", 2),
+        }
+    }
+}
+
+impl Render for PaneVisibilityToggle {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let visible = self
+            .workspace
+            .upgrade()
+            .is_some_and(|workspace| workspace.read(cx).panel_pane_visible(self.pane_kind, cx));
+        let action = self.action();
+        let action_for_click = action.boxed_clone();
+        let label = self.label(visible);
+
+        IconButton::new(self.element_id(), self.icon())
+            .icon_size(IconSize::Small)
+            .toggle_state(visible)
+            .tooltip(move |_window, cx| Tooltip::for_action(label, &*action, cx))
+            .on_click(move |_event, window, cx| {
+                window.dispatch_action(action_for_click.boxed_clone(), cx);
+            })
+    }
+}
+
+impl StatusItemView for PaneVisibilityToggle {
+    fn set_active_pane_item(
+        &mut self,
+        _active_pane_item: Option<&dyn crate::ItemHandle>,
+        _window: &mut Window,
+        _cx: &mut Context<Self>,
+    ) {
+    }
+
+    fn hide_setting(&self, _: &App) -> Option<HideStatusItem> {
+        None
+    }
 }
 
 impl SidebarStatus {
