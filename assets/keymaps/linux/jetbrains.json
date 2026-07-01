@@ -137,20 +137,20 @@
     "bindings": {
       "alt-1": "project_panel::ToggleFocus",
       "alt-2": null, // Bookmarks (left dock)
-      "alt-3": null, // Find Panel (bottom dock)
-      "alt-4": null, // Run Panel (bottom dock)
+      "alt-3": null, // Find Panel
+      "alt-4": null, // Run Panel
       "alt-5": "debug_panel::ToggleFocus",
       "alt-6": "diagnostics::Deploy",
       "alt-7": "outline_panel::ToggleFocus",
-      "alt-8": null, // Services (bottom dock)
-      "alt-9": null, // Git History (bottom dock)
+      "alt-8": null, // Services
+      "alt-9": null, // Git History
       "alt-0": "git_panel::ToggleFocus",
     },
   },
   {
     "context": "Workspace || Editor",
     "bindings": {
-      "alt-f12": "terminal_panel::Toggle",
+      "alt-f12": "workspace::NewTerminal",
       "ctrl-shift-k": "git::Push",
     },
   },
@@ -187,7 +187,7 @@
   },
   { "context": "GitPanel", "bindings": { "alt-0": "workspace::CloseActiveDock" } },
   { "context": "ProjectPanel", "bindings": { "alt-1": "workspace::CloseActiveDock" } },
-  { "context": "DebugPanel", "bindings": { "alt-5": "workspace::CloseActiveDock" } },
+  { "context": "DebugPanel", "bindings": { "alt-5": "pane::CloseActiveItem" } },
   { "context": "Diagnostics > Editor", "bindings": { "alt-6": "pane::CloseActiveItem" } },
   { "context": "OutlinePanel", "bindings": { "alt-7": "workspace::CloseActiveDock" } },
   {

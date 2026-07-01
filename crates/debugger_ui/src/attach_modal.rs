@@ -253,7 +253,11 @@ impl PickerDelegate for AttachModalDelegate {
 
                 let workspace = self.workspace.clone();
                 let Some(panel) = workspace
-                    .update(cx, |workspace, cx| workspace.panel::<DebugPanel>(cx))
+                    .update(cx, |workspace, cx| {
+                        workspace
+                            .item_of_type::<DebugPanel>(cx)
+                            .or_else(|| workspace.panel::<DebugPanel>(cx))
+                    })
                     .ok()
                     .flatten()
                 else {

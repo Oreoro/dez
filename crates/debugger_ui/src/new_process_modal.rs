@@ -84,7 +84,10 @@ impl NewProcessModal {
         reveal_target: Option<RevealTarget>,
         cx: &mut Context<Workspace>,
     ) {
-        let Some(debug_panel) = workspace.panel::<DebugPanel>(cx) else {
+        let Some(debug_panel) = workspace
+            .item_of_type::<DebugPanel>(cx)
+            .or_else(|| workspace.panel::<DebugPanel>(cx))
+        else {
             return;
         };
         let task_store = workspace.project().read(cx).task_store().clone();

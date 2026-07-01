@@ -115,11 +115,7 @@ impl TabSwitcher {
         cx: &mut Context<Workspace>,
     ) {
         let mut weak_pane = workspace.active_pane().downgrade();
-        for dock in [
-            workspace.left_dock(),
-            workspace.bottom_dock(),
-            workspace.right_dock(),
-        ] {
+        for dock in [workspace.left_dock(), workspace.right_dock()] {
             dock.update(cx, |this, cx| {
                 let Some(panel) = this
                     .active_panel()

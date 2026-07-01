@@ -4633,23 +4633,9 @@ fn window_and_layout_page() -> SettingsPage {
         ]
     }
 
-    fn layout_section() -> [SettingsPageItem; 6] {
+    fn layout_section() -> [SettingsPageItem; 5] {
         [
             SettingsPageItem::SectionHeader("Layout"),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Bottom Dock Layout",
-                description: "Layout mode for the bottom dock.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("bottom_dock_layout"),
-                    pick: |settings_content| settings_content.workspace.bottom_dock_layout.as_ref(),
-                    write: |settings_content, value, _| {
-                        settings_content.workspace.bottom_dock_layout = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
             SettingsPageItem::SettingItem(SettingItem {
                 files: USER,
                 title: "Centered Layout Left Padding",
@@ -5562,63 +5548,6 @@ fn panels_page() -> SettingsPage {
         ]
     }
 
-    fn terminal_panel_section() -> [SettingsPageItem; 4] {
-        [
-            SettingsPageItem::SectionHeader("Terminal Panel"),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Terminal Dock",
-                description: "Where to dock the terminal panel.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("terminal.dock"),
-                    pick: |settings_content| settings_content.terminal.as_ref()?.dock.as_ref(),
-                    write: |settings_content, value, _| {
-                        settings_content.terminal.get_or_insert_default().dock = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Terminal Panel Flexible Sizing",
-                description: "Whether the terminal panel should use flexible (proportional) sizing when docked to the left or right.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("terminal.flexible"),
-                    pick: |settings_content| settings_content.terminal.as_ref()?.flexible.as_ref(),
-                    write: |settings_content, value, _| {
-                        settings_content.terminal.get_or_insert_default().flexible = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Show Count Badge",
-                description: "Show a badge on the terminal panel icon with the count of open terminals.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("terminal.show_count_badge"),
-                    pick: |settings_content| {
-                        settings_content
-                            .terminal
-                            .as_ref()?
-                            .show_count_badge
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .terminal
-                            .get_or_insert_default()
-                            .show_count_badge = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-        ]
-    }
-
     fn outline_panel_section() -> [SettingsPageItem; 11] {
         [
             SettingsPageItem::SectionHeader("Outline Panel"),
@@ -6155,26 +6084,6 @@ fn panels_page() -> SettingsPage {
         ]
     }
 
-    fn debugger_panel_section() -> [SettingsPageItem; 2] {
-        [
-            SettingsPageItem::SectionHeader("Debugger Panel"),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Debugger Panel Dock",
-                description: "The dock position of the debug panel.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("debugger.dock"),
-                    pick: |settings_content| settings_content.debugger.as_ref()?.dock.as_ref(),
-                    write: |settings_content, value, _| {
-                        settings_content.debugger.get_or_insert_default().dock = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-        ]
-    }
-
     fn collaboration_panel_section() -> [SettingsPageItem; 4] {
         [
             SettingsPageItem::SectionHeader("Collaboration Panel"),
@@ -6388,10 +6297,8 @@ fn panels_page() -> SettingsPage {
         title: "Panels",
         items: concat_sections![
             project_panel_section(),
-            terminal_panel_section(),
             outline_panel_section(),
             git_panel_section(),
-            debugger_panel_section(),
             collaboration_panel_section(),
             agent_panel_section(),
         ],

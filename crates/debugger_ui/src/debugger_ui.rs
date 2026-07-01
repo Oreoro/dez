@@ -13,7 +13,6 @@ use tasks_ui::{Spawn, TaskOverrides};
 use ui::{FluentBuilder, InteractiveElement};
 use util::maybe;
 use workspace::{ShutdownDebugAdapters, Workspace};
-use zed_actions::debug_panel::{Toggle, ToggleFocus};
 
 pub mod attach_modal;
 pub mod debugger_panel;
@@ -112,26 +111,6 @@ pub fn init(cx: &mut App) {
     cx.observe_new(|workspace: &mut Workspace, _, _| {
         workspace
             .register_action(spawn_task_or_modal)
-            .register_action(|workspace, _: &ToggleFocus, window, cx| {
-                workspace.toggle_panel_focus::<DebugPanel>(window, cx);
-            })
-            .register_action(|workspace, _: &Toggle, window, cx| {
-                if !workspace.toggle_panel_focus::<DebugPanel>(window, cx) {
-                    workspace.close_panel::<DebugPanel>(window, cx);
-                }
-            })
-            .register_action(|workspace: &mut Workspace, _: &Start, window, cx| {
-                NewProcessModal::show(workspace, window, NewProcessMode::Debug, None, cx);
-            })
-            .register_action(|workspace: &mut Workspace, _: &Rerun, window, cx| {
-                let Some(debug_panel) = workspace.panel::<DebugPanel>(cx) else {
-                    return;
-                };
-
-                debug_panel.update(cx, |debug_panel, cx| {
-                    debug_panel.rerun_last_session(workspace, window, cx);
-                })
-            })
             .register_action(
                 |workspace: &mut Workspace, _: &ShutdownDebugAdapters, _window, cx| {
                     workspace.project().update(cx, |project, cx| {
@@ -142,7 +121,10 @@ pub fn init(cx: &mut App) {
                 },
             )
             .register_action_renderer(|div, workspace, _, cx| {
-                let Some(debug_panel) = workspace.panel::<DebugPanel>(cx) else {
+                let Some(debug_panel) = workspace
+                    .item_of_type::<DebugPanel>(cx)
+                    .or_else(|| workspace.panel::<DebugPanel>(cx))
+                else {
                     return div;
                 };
                 let Some(active_item) = debug_panel
@@ -266,7 +248,11 @@ pub fn init(cx: &mut App) {
                     let Some(workspace) = editor.workspace() else {
                         return;
                     };
-                    let Some(debug_panel) = workspace.read(cx).panel::<DebugPanel>(cx) else {
+                    let Some(debug_panel) = workspace
+                        .read(cx)
+                        .item_of_type::<DebugPanel>(cx)
+                        .or_else(|| workspace.read(cx).panel::<DebugPanel>(cx))
+                    else {
                         return;
                     };
                     let Some(active_session) =

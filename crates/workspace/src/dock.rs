@@ -126,16 +126,12 @@ pub trait PanelHandle: Send + Sync {
     fn hide_button_setting(&self, cx: &App) -> Option<HideStatusItem>;
     fn move_to_next_position(&self, window: &mut Window, cx: &mut App) {
         let current_position = self.position(window, cx);
-        let next_position = [
-            DockPosition::Left,
-            DockPosition::Bottom,
-            DockPosition::Right,
-        ]
-        .into_iter()
-        .filter(|position| self.position_is_valid(*position, cx))
-        .skip_while(|valid_position| *valid_position != current_position)
-        .nth(1)
-        .unwrap_or(DockPosition::Left);
+        let next_position = [DockPosition::Left, DockPosition::Right]
+            .into_iter()
+            .filter(|position| self.position_is_valid(*position, cx))
+            .skip_while(|valid_position| *valid_position != current_position)
+            .nth(1)
+            .unwrap_or(DockPosition::Left);
 
         self.set_position(next_position, window, cx);
     }
@@ -591,7 +587,10 @@ impl Dock {
                 let panel = panel.clone();
 
                 move |this, window, cx| {
-                    let new_position = panel.read(cx).position(window, cx);
+                    let mut new_position = panel.read(cx).position(window, cx);
+                    if new_position == DockPosition::Bottom {
+                        new_position = DockPosition::Right;
+                    }
                     if new_position == this.position {
                         return;
                     }
@@ -602,8 +601,8 @@ impl Dock {
                         }
                         match new_position {
                             DockPosition::Left => &workspace.left_dock,
-                            DockPosition::Bottom => &workspace.bottom_dock,
                             DockPosition::Right => &workspace.right_dock,
+                            DockPosition::Bottom => &workspace.right_dock,
                         }
                         .clone()
                     }) else {
@@ -1034,7 +1033,7 @@ impl Dock {
     pub fn toggle_action(&self) -> Box<dyn Action> {
         match self.position {
             DockPosition::Left => crate::ToggleLeftDock.boxed_clone(),
-            DockPosition::Bottom => crate::ToggleBottomDock.boxed_clone(),
+            DockPosition::Bottom => crate::CloseActiveDock.boxed_clone(),
             DockPosition::Right => crate::ToggleRightDock.boxed_clone(),
         }
     }
@@ -1262,11 +1261,8 @@ impl Render for PanelButtons {
                 Some(
                     right_click_menu(name)
                         .menu(move |window, cx| {
-                            const POSITIONS: [DockPosition; 3] = [
-                                DockPosition::Left,
-                                DockPosition::Right,
-                                DockPosition::Bottom,
-                            ];
+                            const POSITIONS: [DockPosition; 2] =
+                                [DockPosition::Left, DockPosition::Right];
 
                             let panel_hide = panel.hide_button_setting(cx);
                             ContextMenu::build(window, cx, |mut menu, _, cx| {

@@ -841,8 +841,13 @@ impl RunningState {
                         let panel = this
                             .workspace
                             .update(cx, |workspace, cx| {
-                                workspace.open_panel::<crate::DebugPanel>(window, cx);
-                                workspace.panel::<crate::DebugPanel>(cx)
+                                let panel = workspace
+                                    .item_of_type::<crate::DebugPanel>(cx)
+                                    .or_else(|| workspace.panel::<crate::DebugPanel>(cx));
+                                if let Some(panel) = panel.clone() {
+                                    crate::DebugPanel::open(panel, workspace, window, cx);
+                                }
+                                panel
                             })
                             .log_err()
                             .flatten();

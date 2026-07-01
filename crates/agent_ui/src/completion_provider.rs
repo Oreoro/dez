@@ -26,8 +26,6 @@ use project::{
 };
 
 use rope::Point;
-use settings::Settings;
-use terminal::terminal_settings::TerminalSettings;
 use terminal_view::{TerminalView, terminal_panel::TerminalPanel};
 use text::{Anchor, ToOffset as _, ToPoint as _};
 use ui::IconName;
@@ -132,11 +130,7 @@ impl AgentContextSource {
 }
 
 fn terminal_panel_dock_is_open(workspace: &Workspace, cx: &App) -> bool {
-    if workspace.panel::<TerminalPanel>(cx).is_none() {
-        return false;
-    }
-    let position = TerminalSettings::get_global(cx).dock.into();
-    workspace.dock_at_position(position).read(cx).is_open()
+    workspace.panel::<TerminalPanel>(cx).is_some_and(|_| false)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

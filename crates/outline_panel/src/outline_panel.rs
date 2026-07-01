@@ -4648,24 +4648,20 @@ impl OutlinePanel {
                         .gap_1()
                         .justify_center()
                         .child(Label::new("Toggle Panel With").color(Color::Muted))
-                        .child({
-                            let key_binding = match self.position(window, cx) {
-                                DockPosition::Left => {
+                        .when_some(
+                            match self.position(window, cx) {
+                                DockPosition::Left => Some(
                                     KeyBinding::for_action(&workspace::ToggleLeftDock, cx)
-                                        .into_any_element()
-                                }
-                                DockPosition::Bottom => {
-                                    KeyBinding::for_action(&workspace::ToggleBottomDock, cx)
-                                        .into_any_element()
-                                }
-                                DockPosition::Right => {
+                                        .into_any_element(),
+                                ),
+                                DockPosition::Bottom => None,
+                                DockPosition::Right => Some(
                                     KeyBinding::for_action(&workspace::ToggleRightDock, cx)
-                                        .into_any_element()
-                                }
-                            };
-
-                            key_binding
-                        }),
+                                        .into_any_element(),
+                                ),
+                            },
+                            |this, key_binding| this.child(key_binding),
+                        ),
                 )
         } else {
             let list_contents = {

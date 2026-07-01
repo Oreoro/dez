@@ -4,15 +4,18 @@ pub mod terminal_panel;
 mod terminal_path_like_target;
 pub mod terminal_scrollbar;
 
+use anyhow::{Result, anyhow};
+use collections::HashMap;
 use editor::{
     Editor, EditorSettings, actions::SelectAll, blink_manager::BlinkManager,
     ui_scrollbar_settings_from_raw,
 };
+use futures::{channel::oneshot, future::join_all};
 use gpui::{
-    Action, AnyElement, App, ClipboardEntry, DismissEvent, Entity, EventEmitter, ExternalPaths,
-    FocusHandle, Focusable, Font, KeyContext, KeyDownEvent, Keystroke, MouseButton, MouseDownEvent,
-    Pixels, Point as GpuiPoint, Render, ScrollWheelEvent, Styled, Subscription, Task, TaskExt,
-    WeakEntity, actions, anchored, deferred, div,
+    Action, Anchor, AnyElement, App, AsyncApp, ClipboardEntry, DismissEvent, Entity, EventEmitter,
+    ExternalPaths, FocusHandle, Focusable, Font, KeyContext, KeyDownEvent, Keystroke, MouseButton,
+    MouseDownEvent, Pixels, Point as GpuiPoint, Render, ScrollWheelEvent, Styled, Subscription,
+    Task, TaskExt, WeakEntity, actions, anchored, deferred, div,
 };
 use menu;
 use persistence::TerminalDb;
@@ -27,11 +30,12 @@ use std::{
     cmp,
     ops::Range as StdRange,
     path::{Path, PathBuf},
+    process::ExitStatus,
     rc::Rc,
     sync::Arc,
     time::Duration,
 };
-use task::TaskId;
+use task::{RevealStrategy, Shell, SpawnInTerminal, TaskId};
 use terminal::{
     Clear, Copy, Event, HoveredWord, MaybeNavigationTarget, Modes, Paste, PasteText, Point, Range,
     ScrollLineDown, ScrollLineUp, ScrollPageDown, ScrollPageUp, ScrollToBottom, ScrollToTop,
@@ -39,18 +43,18 @@ use terminal::{
     terminal_settings::{CursorShape, TerminalSettings},
 };
 use terminal_element::TerminalElement;
-use terminal_panel::TerminalPanel;
 use terminal_path_like_target::{hover_path_like_target, open_path_like_target};
 use terminal_scrollbar::TerminalScrollHandle;
 use ui::{
-    ContextMenu, Divider, ScrollAxes, Scrollbars, Tooltip, WithScrollbar,
+    ButtonLike, ContextMenu, Divider, PopoverMenu, ScrollAxes, Scrollbars, SplitButton, Tooltip,
+    WithScrollbar,
     prelude::*,
     scrollbars::{self, ScrollbarVisibility},
 };
 use util::ResultExt;
 use workspace::{
-    CloseActiveItem, DraggedSelection, DraggedTab, NewCenterTerminal, NewTerminal, Pane,
-    ToolbarItemLocation, Workspace, WorkspaceId, delete_unloaded_items,
+    CloseActiveItem, DraggedSelection, DraggedTab, NewCenterTerminal, NewTerminal, OpenTerminal,
+    Pane, ToolbarItemLocation, Workspace, WorkspaceId, delete_unloaded_items,
     item::{
         HighlightedText, Item, ItemEvent, SerializableItem, TabContentParams, TabTooltipContent,
     },
@@ -105,14 +109,466 @@ actions!(
 pub struct RenameTerminal;
 
 pub fn init(cx: &mut App) {
-    terminal_panel::init(cx);
-
     register_serializable_item::<TerminalView>(cx);
 
-    cx.observe_new(|workspace: &mut Workspace, _window, _cx| {
+    cx.observe_new(|workspace: &mut Workspace, window, cx| {
+        let terminal_provider = cx.new(|_| WorkspaceTerminalProviderState::new(workspace));
+        workspace.set_terminal_provider(WorkspaceTerminalProvider(terminal_provider));
         workspace.register_action(TerminalView::deploy);
+        workspace.register_action(new_terminal);
+        workspace.register_action(open_terminal);
+        if let Some(window) = window
+            && let Some((database_id, serialization_key)) = workspace
+                .database_id()
+                .zip(persistence::terminal_panel_serialization_key(workspace))
+        {
+            persistence::migrate_legacy_terminal_panel(
+                workspace.weak_handle(),
+                database_id,
+                serialization_key,
+                workspace.project().clone(),
+                window,
+                cx,
+            )
+            .detach_and_log_err(cx);
+        }
     })
     .detach();
+}
+
+struct WorkspaceTerminalProvider(Entity<WorkspaceTerminalProviderState>);
+
+impl workspace::TerminalProvider for WorkspaceTerminalProvider {
+    fn spawn(
+        &self,
+        task: SpawnInTerminal,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Task<Option<Result<ExitStatus>>> {
+        let terminal_provider = self.0.clone();
+        window.spawn(cx, async move |cx| {
+            let terminal = terminal_provider
+                .update_in(cx, |terminal_provider, window, cx| {
+                    terminal_provider.spawn_task(&task, window, cx)
+                })
+                .ok()?
+                .await;
+            match terminal {
+                Ok(terminal) => {
+                    let exit_status = terminal
+                        .read_with(cx, |terminal, cx| terminal.wait_for_completed_task(cx))
+                        .ok()?
+                        .await?;
+                    Some(Ok(exit_status))
+                }
+                Err(error) => Some(Err(error)),
+            }
+        })
+    }
+}
+
+struct WorkspaceTerminalProviderState {
+    workspace: WeakEntity<Workspace>,
+    deferred_tasks: HashMap<TaskId, Task<()>>,
+}
+
+impl WorkspaceTerminalProviderState {
+    fn new(workspace: &Workspace) -> Self {
+        Self {
+            workspace: workspace.weak_handle(),
+            deferred_tasks: HashMap::default(),
+        }
+    }
+
+    fn spawn_task(
+        &mut self,
+        task: &SpawnInTerminal,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Task<Result<WeakEntity<Terminal>>> {
+        let Some(workspace) = self.workspace.upgrade() else {
+            return Task::ready(Err(anyhow!("failed to read workspace")));
+        };
+
+        let project = workspace.read(cx).project().read(cx);
+
+        if project.is_via_collab() {
+            return Task::ready(Err(anyhow!("cannot spawn tasks as a guest")));
+        }
+
+        let remote_client = project.remote_client();
+        let is_windows = project.path_style(cx).is_windows();
+        let remote_shell = remote_client
+            .as_ref()
+            .and_then(|remote_client| remote_client.read(cx).shell());
+
+        let shell = if let Some(remote_shell) = remote_shell
+            && task.shell == Shell::System
+        {
+            Shell::Program(remote_shell)
+        } else {
+            task.shell.clone()
+        };
+
+        let task = terminal_panel::prepare_task_for_spawn(task, &shell, is_windows);
+
+        if task.allow_concurrent_runs && task.use_new_terminal {
+            return self.spawn_in_new_terminal(task, window, cx);
+        }
+
+        let mut terminals_for_task = self.terminals_for_task(&task.full_label, cx);
+        let Some((_, existing_terminal)) = terminals_for_task.pop() else {
+            return self.spawn_in_new_terminal(task, window, cx);
+        };
+
+        if task.allow_concurrent_runs {
+            return self.replace_terminal(task, existing_terminal, window, cx);
+        }
+
+        let (tx, rx) = oneshot::channel();
+
+        self.deferred_tasks.insert(
+            task.id.clone(),
+            cx.spawn_in(window, async move |terminal_provider, cx| {
+                wait_for_terminals_tasks(terminals_for_task, cx).await;
+                let task = terminal_provider.update_in(cx, |terminal_provider, window, cx| {
+                    if task.use_new_terminal {
+                        terminal_provider.spawn_in_new_terminal(task, window, cx)
+                    } else {
+                        terminal_provider.replace_terminal(task, existing_terminal, window, cx)
+                    }
+                });
+                if let Ok(task) = task {
+                    tx.send(task.await).ok();
+                }
+            }),
+        );
+
+        cx.spawn(async move |_, _| rx.await?)
+    }
+
+    fn terminals_for_task(
+        &self,
+        label: &str,
+        cx: &mut App,
+    ) -> Vec<(Entity<Pane>, Entity<TerminalView>)> {
+        let Some(workspace) = self.workspace.upgrade() else {
+            return Vec::new();
+        };
+
+        let panes = workspace.read(cx).panes().to_vec();
+        let mut terminals = Vec::new();
+        for pane in panes {
+            let terminal_views = pane
+                .read(cx)
+                .items()
+                .filter_map(|item| item.act_as::<TerminalView>(cx))
+                .collect::<Vec<_>>();
+
+            for terminal_view in terminal_views {
+                let matches_label = terminal_view
+                    .read(cx)
+                    .terminal()
+                    .read(cx)
+                    .task()
+                    .is_some_and(|task_state| task_state.spawned_task.full_label == label);
+
+                if matches_label {
+                    terminals.push((pane.clone(), terminal_view));
+                }
+            }
+        }
+
+        terminals.sort_by_key(|(_, terminal_view)| terminal_view.entity_id());
+        terminals
+    }
+
+    fn spawn_in_new_terminal(
+        &mut self,
+        spawn_task: SpawnInTerminal,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Task<Result<WeakEntity<Terminal>>> {
+        let reveal = spawn_task.reveal;
+        let workspace = self.workspace.clone();
+        cx.spawn_in(window, async move |_, cx| {
+            let project = workspace.update(cx, |workspace, cx| {
+                if !is_enabled_in_workspace(workspace, cx) {
+                    anyhow::bail!("terminal not yet supported for remote projects");
+                }
+                Ok(workspace.project().clone())
+            })??;
+
+            let terminal = project
+                .update(cx, |project, cx| {
+                    project.create_terminal_task(spawn_task, cx)
+                })
+                .await?;
+
+            workspace.update_in(cx, |workspace, window, cx| {
+                add_terminal_to_workspace(
+                    workspace,
+                    select_terminal_target_pane(workspace, cx),
+                    terminal.clone(),
+                    matches!(reveal, RevealStrategy::Always),
+                    window,
+                    cx,
+                );
+                Ok(terminal.downgrade())
+            })?
+        })
+    }
+
+    fn replace_terminal(
+        &self,
+        spawn_task: SpawnInTerminal,
+        terminal_to_replace: Entity<TerminalView>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Task<Result<WeakEntity<Terminal>>> {
+        let reveal = spawn_task.reveal;
+        let workspace = self.workspace.clone();
+        cx.spawn_in(window, async move |_, cx| {
+            let project = workspace.read_with(cx, |workspace, _| workspace.project().clone())?;
+            let new_terminal = project
+                .update(cx, |project, cx| {
+                    project.create_terminal_task(spawn_task, cx)
+                })
+                .await?;
+
+            terminal_to_replace.update_in(cx, |terminal_to_replace, window, cx| {
+                terminal_to_replace.set_terminal(new_terminal.clone(), window, cx);
+            })?;
+
+            match reveal {
+                RevealStrategy::Always => {
+                    workspace.update_in(cx, |workspace, window, cx| {
+                        let did_activate =
+                            workspace.activate_item(&terminal_to_replace, true, true, window, cx);
+                        anyhow::ensure!(did_activate, "failed to retrieve terminal pane");
+                        anyhow::Ok(())
+                    })??;
+                }
+                RevealStrategy::NoFocus => {
+                    workspace.update_in(cx, |workspace, window, cx| {
+                        workspace.activate_item(&terminal_to_replace, false, false, window, cx);
+                    })?;
+                }
+                RevealStrategy::Never => {}
+            }
+
+            Ok(new_terminal.downgrade())
+        })
+    }
+}
+
+fn new_terminal(
+    workspace: &mut Workspace,
+    action: &NewTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    let local = action.local;
+    let working_directory = default_working_directory(workspace, cx);
+    add_terminal_to_active_pane(workspace, window, cx, move |project, cx| {
+        if local {
+            project.create_local_terminal(cx)
+        } else {
+            project.create_terminal_shell(working_directory, cx)
+        }
+    })
+    .detach_and_log_err(cx);
+}
+
+fn open_terminal(
+    workspace: &mut Workspace,
+    action: &OpenTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    let local = action.local;
+    let working_directory = action.working_directory.clone();
+    add_terminal_to_active_pane(workspace, window, cx, move |project, cx| {
+        if local {
+            project.create_local_terminal(cx)
+        } else {
+            project.create_terminal_shell(Some(working_directory), cx)
+        }
+    })
+    .detach_and_log_err(cx);
+}
+
+fn add_terminal_to_active_pane<F>(
+    workspace: &mut Workspace,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+    create_terminal: F,
+) -> Task<Result<WeakEntity<Terminal>>>
+where
+    F: FnOnce(&mut Project, &mut Context<Project>) -> Task<Result<Entity<Terminal>>> + 'static,
+{
+    if !is_enabled_in_workspace(workspace, cx) {
+        return Task::ready(Err(anyhow!(
+            "terminal not yet supported for collaborative projects"
+        )));
+    }
+
+    let project = workspace.project().downgrade();
+
+    cx.spawn_in(window, async move |workspace, cx| {
+        let terminal = project.update(cx, create_terminal)?.await;
+        workspace.update_in(cx, |workspace, window, cx| match terminal {
+            Ok(terminal) => {
+                let pane = workspace.active_pane().clone();
+                add_terminal_to_workspace(workspace, pane, terminal.clone(), true, window, cx);
+                Ok(terminal.downgrade())
+            }
+            Err(error) => {
+                let pane = workspace.active_pane().clone();
+                let failed_to_spawn = Box::new(cx.new(|cx| FailedToSpawnTerminal {
+                    error: error.to_string(),
+                    focus_handle: cx.focus_handle(),
+                }));
+                workspace.add_item(pane, failed_to_spawn, None, true, true, window, cx);
+                Err(error)
+            }
+        })?
+    })
+}
+
+fn add_terminal_to_workspace(
+    workspace: &mut Workspace,
+    pane: Entity<Pane>,
+    terminal: Entity<Terminal>,
+    focus: bool,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    let terminal_view = Box::new(cx.new(|cx| {
+        TerminalView::new(
+            terminal,
+            workspace.weak_handle(),
+            workspace.database_id(),
+            workspace.project().downgrade(),
+            window,
+            cx,
+        )
+    }));
+    workspace.add_item(pane, terminal_view, None, focus, focus, window, cx);
+}
+
+fn select_terminal_target_pane(workspace: &Workspace, cx: &App) -> Entity<Pane> {
+    let active_pane = workspace.active_pane().clone();
+    if pane_contains_terminal(&active_pane, cx) {
+        return active_pane;
+    }
+
+    workspace
+        .panes()
+        .iter()
+        .find(|pane| pane_contains_terminal(pane, cx))
+        .cloned()
+        .unwrap_or(active_pane)
+}
+
+fn pane_contains_terminal(pane: &Entity<Pane>, cx: &App) -> bool {
+    pane.read(cx)
+        .items()
+        .any(|item| item.act_as::<TerminalView>(cx).is_some())
+}
+
+fn is_enabled_in_workspace(workspace: &Workspace, cx: &App) -> bool {
+    workspace.project().read(cx).supports_terminal(cx)
+}
+
+async fn wait_for_terminals_tasks(
+    terminals_for_task: Vec<(Entity<Pane>, Entity<TerminalView>)>,
+    cx: &mut AsyncApp,
+) {
+    let pending_tasks = terminals_for_task.iter().map(|(_, terminal)| {
+        terminal.update(cx, |terminal_view, cx| {
+            terminal_view
+                .terminal()
+                .update(cx, |terminal, cx| terminal.wait_for_completed_task(cx))
+        })
+    });
+    join_all(pending_tasks).await;
+}
+
+struct FailedToSpawnTerminal {
+    error: String,
+    focus_handle: FocusHandle,
+}
+
+impl Focusable for FailedToSpawnTerminal {
+    fn focus_handle(&self, _: &App) -> FocusHandle {
+        self.focus_handle.clone()
+    }
+}
+
+impl Render for FailedToSpawnTerminal {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let popover_menu = PopoverMenu::new("settings-popover")
+            .trigger(
+                IconButton::new("icon-button-popover", IconName::ChevronDown)
+                    .icon_size(IconSize::XSmall),
+            )
+            .menu(move |window, cx| {
+                Some(ContextMenu::build(window, cx, |context_menu, _, _| {
+                    context_menu
+                        .action("Open Settings", zed_actions::OpenSettings.boxed_clone())
+                        .action(
+                            "Edit settings.json",
+                            zed_actions::OpenSettingsFile.boxed_clone(),
+                        )
+                }))
+            })
+            .anchor(Anchor::TopRight)
+            .offset(gpui::Point {
+                x: px(0.0),
+                y: px(2.0),
+            });
+
+        v_flex()
+            .track_focus(&self.focus_handle)
+            .size_full()
+            .p_4()
+            .items_center()
+            .justify_center()
+            .bg(cx.theme().colors().editor_background)
+            .child(
+                v_flex()
+                    .max_w_112()
+                    .items_center()
+                    .justify_center()
+                    .text_center()
+                    .child(Label::new("Failed to spawn terminal"))
+                    .child(
+                        Label::new(self.error.to_string())
+                            .size(LabelSize::Small)
+                            .color(Color::Muted)
+                            .mb_4(),
+                    )
+                    .child(SplitButton::new(
+                        ButtonLike::new("open-settings-ui")
+                            .child(Label::new("Edit Settings").size(LabelSize::Small))
+                            .on_click(|_, window, cx| {
+                                window.dispatch_action(zed_actions::OpenSettings.boxed_clone(), cx);
+                            }),
+                        popover_menu.into_any_element(),
+                    )),
+            )
+    }
+}
+
+impl EventEmitter<()> for FailedToSpawnTerminal {}
+
+impl workspace::Item for FailedToSpawnTerminal {
+    type Event = ();
+
+    fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
+        SharedString::new_static("Failed to spawn terminal")
+    }
 }
 
 pub struct BlockProperties {
@@ -220,7 +676,7 @@ impl TerminalView {
     ) {
         let local = action.local;
         let working_directory = default_working_directory(workspace, cx);
-        TerminalPanel::add_center_terminal(workspace, window, cx, move |project, cx| {
+        add_terminal_to_active_pane(workspace, window, cx, move |project, cx| {
             if local {
                 project.create_local_terminal(cx)
             } else {
@@ -520,11 +976,7 @@ impl TerminalView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let assistant_enabled = self
-            .workspace
-            .upgrade()
-            .and_then(|workspace| workspace.read(cx).panel::<TerminalPanel>(cx))
-            .is_some_and(|terminal_panel| terminal_panel.read(cx).assistant_enabled());
+        let assistant_enabled = false;
         let context_menu = ContextMenu::build(window, cx, |menu, _, _| {
             menu.context(self.focus_handle.clone())
                 .when(self.shows_workspace_actions(), |menu| {
@@ -1612,72 +2064,7 @@ impl Item for TerminalView {
             };
 
             if item.downcast::<TerminalView>().is_some() {
-                let Some(split_direction) = active_pane.drag_split_direction() else {
-                    return false;
-                };
-
-                let Some(terminal_panel) = workspace.read(cx).panel::<TerminalPanel>(cx) else {
-                    return false;
-                };
-
-                if !terminal_panel.read(cx).center.panes().contains(&&this_pane) {
-                    return false;
-                }
-
-                let source = tab.pane.clone();
-                let item_id_to_move = item.item_id();
-                let is_zoomed = {
-                    let terminal_panel = terminal_panel.read(cx);
-                    if terminal_panel.active_pane == this_pane {
-                        active_pane.is_zoomed()
-                    } else {
-                        terminal_panel.active_pane.read(cx).is_zoomed()
-                    }
-                };
-
-                let workspace = workspace.downgrade();
-                let terminal_panel = terminal_panel.downgrade();
-                // Defer the split operation to avoid re-entrancy panic.
-                // The pane may be the one currently being updated, so we cannot
-                // call mark_positions (via split) synchronously.
-                window
-                    .spawn(cx, async move |cx| {
-                        cx.update(|window, cx| {
-                            let Ok(new_pane) = terminal_panel.update(cx, |terminal_panel, cx| {
-                                let new_pane = terminal_panel::new_terminal_pane(
-                                    workspace, project, is_zoomed, window, cx,
-                                );
-                                terminal_panel.apply_tab_bar_buttons(&new_pane, cx);
-                                terminal_panel.center.split(
-                                    &this_pane,
-                                    &new_pane,
-                                    split_direction,
-                                    cx,
-                                );
-                                anyhow::Ok(new_pane)
-                            }) else {
-                                return;
-                            };
-
-                            let Some(new_pane) = new_pane.log_err() else {
-                                return;
-                            };
-
-                            workspace::move_item(
-                                &source,
-                                &new_pane,
-                                item_id_to_move,
-                                new_pane.read(cx).active_item_index(),
-                                true,
-                                window,
-                                cx,
-                            );
-                        })
-                        .ok();
-                    })
-                    .detach();
-
-                return true;
+                return false;
             } else {
                 if let Some(project_path) = item.project_path(cx)
                     && let Some(path) = project.read(cx).absolute_path(&project_path, cx)

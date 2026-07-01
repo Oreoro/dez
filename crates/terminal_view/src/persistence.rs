@@ -10,6 +10,7 @@ use ui::{App, Context, Window};
 use util::ResultExt as _;
 
 use db::{
+    kvp::KeyValueStore,
     query,
     sqlez::{domain::Domain, statement::Statement, thread_safe_connection::ThreadSafeConnection},
     sqlez_macros::sql,
@@ -23,6 +24,8 @@ use crate::{
     TerminalView, default_working_directory,
     terminal_panel::{TerminalPanel, new_terminal_pane},
 };
+
+const TERMINAL_PANEL_KEY: &str = "TerminalPanel";
 
 pub(crate) fn serialize_pane_group(
     pane_group: &PaneGroup,
@@ -156,6 +159,139 @@ fn populate_pane_items(
     }
     if let Some(index) = active_item_index {
         pane.activate_item(index, false, false, window, cx);
+    }
+}
+
+pub(crate) fn migrate_legacy_terminal_panel(
+    workspace: WeakEntity<Workspace>,
+    database_id: WorkspaceId,
+    serialization_key: String,
+    project: Entity<Project>,
+    window: &mut Window,
+    cx: &mut App,
+) -> Task<Result<()>> {
+    let kvp = KeyValueStore::global(cx);
+
+    window.spawn(cx, async move |cx| {
+        let Some(serialized_panel) = kvp
+            .read_kvp(&serialization_key)
+            .log_err()
+            .flatten()
+            .map(|panel| serde_json::from_str::<SerializedTerminalPanel>(&panel))
+            .transpose()
+            .log_err()
+            .flatten()
+        else {
+            return Ok(());
+        };
+
+        let (item_ids, active_item_id) = serialized_panel_item_ids(&serialized_panel);
+        if item_ids.is_empty() {
+            kvp.delete_kvp(serialization_key).await?;
+            return Ok(());
+        }
+
+        let items =
+            deserialize_terminal_views(database_id, project, workspace.clone(), &item_ids, cx)
+                .await;
+
+        if items.is_empty() {
+            kvp.delete_kvp(serialization_key).await?;
+            return Ok(());
+        }
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            let pane = workspace.active_pane().clone();
+            let should_focus_restored_terminal = workspace.active_item(cx).is_none();
+            let active_item_id = active_item_id.or_else(|| {
+                items
+                    .first()
+                    .map(|terminal_view| terminal_view.item_id().as_u64())
+            });
+
+            for item in items {
+                let focus_item = should_focus_restored_terminal
+                    && Some(item.item_id().as_u64()) == active_item_id;
+                workspace.add_item(
+                    pane.clone(),
+                    Box::new(item),
+                    None,
+                    false,
+                    focus_item,
+                    window,
+                    cx,
+                );
+            }
+        })?;
+
+        kvp.delete_kvp(serialization_key).await?;
+        Ok(())
+    })
+}
+
+pub(crate) fn terminal_panel_serialization_key(workspace: &Workspace) -> Option<String> {
+    workspace
+        .database_id()
+        .map(|id| i64::from(id).to_string())
+        .or(workspace.session_id())
+        .map(|id| format!("{:?}-{:?}", TERMINAL_PANEL_KEY, id))
+}
+
+fn serialized_panel_item_ids(
+    serialized_panel: &SerializedTerminalPanel,
+) -> (Vec<u64>, Option<u64>) {
+    let mut item_ids = Vec::new();
+    let mut seen_item_ids = HashSet::default();
+    let mut active_item_id = serialized_panel.active_item_id;
+
+    match &serialized_panel.items {
+        SerializedItems::NoSplits(ids) => {
+            for item_id in ids {
+                push_unique_item_id(*item_id, &mut seen_item_ids, &mut item_ids);
+            }
+        }
+        SerializedItems::WithSplits(group) => {
+            collect_serialized_group_item_ids(
+                group,
+                &mut seen_item_ids,
+                &mut item_ids,
+                &mut active_item_id,
+            );
+        }
+    }
+
+    (item_ids, active_item_id)
+}
+
+fn collect_serialized_group_item_ids(
+    group: &SerializedPaneGroup,
+    seen_item_ids: &mut HashSet<u64>,
+    item_ids: &mut Vec<u64>,
+    active_item_id: &mut Option<u64>,
+) {
+    match group {
+        SerializedPaneGroup::Pane(pane) => {
+            for item_id in &pane.children {
+                push_unique_item_id(*item_id, seen_item_ids, item_ids);
+            }
+            if pane.active {
+                *active_item_id = pane
+                    .active_item
+                    .or_else(|| pane.children.first().copied())
+                    .or(*active_item_id);
+            }
+        }
+        SerializedPaneGroup::Group { children, .. } => {
+            for child in children {
+                collect_serialized_group_item_ids(child, seen_item_ids, item_ids, active_item_id);
+            }
+        }
+    }
+}
+
+fn push_unique_item_id(item_id: u64, seen_item_ids: &mut HashSet<u64>, item_ids: &mut Vec<u64>) {
+    if seen_item_ids.insert(item_id) {
+        item_ids.push(item_id);
     }
 }
 

@@ -155,8 +155,8 @@ use util::{
 };
 use uuid::Uuid;
 pub use workspace_settings::{
-    AutosaveSetting, BottomDockLayout, EncodingDisplayOptions, FocusFollowsMouse,
-    RestoreOnStartupBehavior, StatusBarSettings, TabBarSettings, WorkspaceSettings,
+    AutosaveSetting, EncodingDisplayOptions, FocusFollowsMouse, RestoreOnStartupBehavior,
+    StatusBarSettings, TabBarSettings, WorkspaceSettings,
 };
 use zed_actions::{Spawn, feedback::FileBugReport, theme::ToggleMode};
 
@@ -319,8 +319,6 @@ actions!(
         ShutdownDebugAdapters,
         /// Suppresses the current notification.
         SuppressNotification,
-        /// Toggles the bottom dock.
-        ToggleBottomDock,
         /// Toggles centered layout mode.
         ToggleCenteredLayout,
         /// Toggles edit prediction feature globally for all files.
@@ -1364,7 +1362,6 @@ pub struct Workspace {
     zoomed_position: Option<DockPosition>,
     center: PaneGroup,
     left_dock: Entity<Dock>,
-    bottom_dock: Entity<Dock>,
     right_dock: Entity<Dock>,
     panes: Vec<Entity<Pane>>,
     panes_by_item: HashMap<EntityId, WeakEntity<Pane>>,
@@ -1726,10 +1723,8 @@ impl Workspace {
         .detach();
 
         let left_dock = Dock::new(DockPosition::Left, modal_layer.clone(), window, cx);
-        let bottom_dock = Dock::new(DockPosition::Bottom, modal_layer.clone(), window, cx);
         let right_dock = Dock::new(DockPosition::Right, modal_layer.clone(), window, cx);
         let left_dock_buttons = cx.new(|cx| PanelButtons::new(left_dock.clone(), cx));
-        let bottom_dock_buttons = cx.new(|cx| PanelButtons::new(bottom_dock.clone(), cx));
         let right_dock_buttons = cx.new(|cx| PanelButtons::new(right_dock.clone(), cx));
         let multi_workspace = window
             .root::<MultiWorkspace>()
@@ -1740,7 +1735,6 @@ impl Workspace {
                 StatusBar::new(&center_pane.clone(), multi_workspace.clone(), window, cx);
             status_bar.add_left_item(left_dock_buttons, window, cx);
             status_bar.add_right_item(right_dock_buttons, window, cx);
-            status_bar.add_right_item(bottom_dock_buttons, window, cx);
             status_bar
         });
 
@@ -1825,7 +1819,6 @@ impl Workspace {
             notifications: Notifications::default(),
             suppressed_notifications: HashSet::default(),
             left_dock,
-            bottom_dock,
             right_dock,
             _panels_task: None,
             project: project.clone(),
@@ -2107,7 +2100,6 @@ impl Workspace {
                                 for (dock, serialized_dock) in [
                                     (&workspace.right_dock, &default_docks.right),
                                     (&workspace.left_dock, &default_docks.left),
-                                    (&workspace.bottom_dock, &default_docks.bottom),
                                 ] {
                                     dock.update(cx, |dock, cx| {
                                         dock.serialized_dock = Some(serialized_dock.clone());
@@ -2166,31 +2158,12 @@ impl Workspace {
         &self.left_dock
     }
 
-    pub fn bottom_dock(&self) -> &Entity<Dock> {
-        &self.bottom_dock
-    }
-
-    pub fn set_bottom_dock_layout(
-        &mut self,
-        layout: BottomDockLayout,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let fs = self.project().read(cx).fs();
-        settings::update_settings_file(fs.clone(), cx, move |content, _cx| {
-            content.workspace.bottom_dock_layout = Some(layout);
-        });
-
-        cx.notify();
-        self.serialize_workspace(window, cx);
-    }
-
     pub fn right_dock(&self) -> &Entity<Dock> {
         &self.right_dock
     }
 
-    pub fn all_docks(&self) -> [&Entity<Dock>; 3] {
-        [&self.left_dock, &self.bottom_dock, &self.right_dock]
+    pub fn all_docks(&self) -> [&Entity<Dock>; 2] {
+        [&self.left_dock, &self.right_dock]
     }
 
     pub fn capture_dock_state(&self, _window: &Window, cx: &App) -> DockStructure {
@@ -2210,13 +2183,6 @@ impl Workspace {
             .map(|panel| panel.persistent_name().to_string());
         let right_dock_zoom = self.zoomed_position == Some(DockPosition::Right);
 
-        let bottom_dock = self.bottom_dock.read(cx);
-        let bottom_visible = bottom_dock.is_open();
-        let bottom_active_panel = bottom_dock
-            .active_panel()
-            .map(|panel| panel.persistent_name().to_string());
-        let bottom_dock_zoom = self.zoomed_position == Some(DockPosition::Bottom);
-
         DockStructure {
             left: DockData {
                 visible: left_visible,
@@ -2228,11 +2194,7 @@ impl Workspace {
                 active_panel: right_active_panel,
                 zoom: right_dock_zoom,
             },
-            bottom: DockData {
-                visible: bottom_visible,
-                active_panel: bottom_active_panel,
-                zoom: bottom_dock_zoom,
-            },
+            bottom: DockData::default(),
         }
     }
 
@@ -2244,7 +2206,6 @@ impl Workspace {
     ) {
         for (dock, data) in [
             (&self.left_dock, docks.left),
-            (&self.bottom_dock, docks.bottom),
             (&self.right_dock, docks.right),
         ] {
             dock.update(cx, |dock, cx| {
@@ -2260,7 +2221,6 @@ impl Workspace {
         [
             (DockPosition::Left, &self.left_dock),
             (DockPosition::Right, &self.right_dock),
-            (DockPosition::Bottom, &self.bottom_dock),
         ]
         .into_iter()
         .find(|(_, dock)| {
@@ -2324,8 +2284,26 @@ impl Workspace {
     pub fn dock_at_position(&self, position: DockPosition) -> &Entity<Dock> {
         match position {
             DockPosition::Left => &self.left_dock,
-            DockPosition::Bottom => &self.bottom_dock,
             DockPosition::Right => &self.right_dock,
+            DockPosition::Bottom => &self.right_dock,
+        }
+    }
+
+    fn valid_panel_dock_position<T: Panel>(
+        &self,
+        panel: &Entity<T>,
+        window: &Window,
+        cx: &App,
+    ) -> DockPosition {
+        let requested_position = panel.position(window, cx);
+        if requested_position != DockPosition::Bottom
+            && panel.position_is_valid(requested_position, cx)
+        {
+            requested_position
+        } else if panel.position_is_valid(DockPosition::Left, cx) {
+            DockPosition::Left
+        } else {
+            DockPosition::Right
         }
     }
 
@@ -2390,7 +2368,8 @@ impl Workspace {
             return false;
         };
 
-        let dock = self.dock_at_position(panel.position(window, cx));
+        let dock_position = self.valid_panel_dock_position(&panel, window, cx);
+        let dock = self.dock_at_position(dock_position);
         let did_set = dock.update(cx, |dock, cx| {
             dock.set_panel_size_state(&panel, size_state, cx)
         });
@@ -2539,7 +2518,7 @@ impl Workspace {
         cx.on_focus_in(&focus_handle, window, Self::handle_panel_focused)
             .detach();
 
-        let dock_position = panel.position(window, cx);
+        let dock_position = self.valid_panel_dock_position(&panel, window, cx);
         let dock = self.dock_at_position(dock_position);
         let any_panel = panel.to_any();
         let persisted_size_state =
@@ -2572,7 +2551,7 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        for dock in [&self.left_dock, &self.bottom_dock, &self.right_dock] {
+        for dock in self.all_docks() {
             dock.update(cx, |dock, cx| dock.remove_panel(panel, window, cx));
         }
     }
@@ -5187,7 +5166,6 @@ impl Workspace {
             Sidebar,
             LeftDock,
             RightDock,
-            BottomDock,
             Center,
         }
 
@@ -5201,7 +5179,6 @@ impl Workspace {
             [
                 (&self.left_dock, Origin::LeftDock),
                 (&self.right_dock, Origin::RightDock),
-                (&self.bottom_dock, Origin::BottomDock),
             ]
             .into_iter()
             .find_map(|(dock, origin)| {
@@ -5259,7 +5236,6 @@ impl Workspace {
         let target = match (origin, direction) {
             (Origin::Sidebar, dir) if dir == away_from_sidebar => try_dock(near_dock)
                 .or_else(|| get_last_active_pane().map(Target::Pane))
-                .or_else(|| try_dock(&self.bottom_dock))
                 .or_else(|| try_dock(far_dock)),
 
             (Origin::Sidebar, _) => None,
@@ -5272,7 +5248,7 @@ impl Workspace {
                 } else {
                     match direction {
                         SplitDirection::Up => None,
-                        SplitDirection::Down => try_dock(&self.bottom_dock),
+                        SplitDirection::Down => None,
                         SplitDirection::Left => {
                             let dock_target = try_dock(&self.left_dock);
                             if sidebar_on_right {
@@ -5297,7 +5273,7 @@ impl Workspace {
                 if let Some(last_active_pane) = get_last_active_pane() {
                     Some(Target::Pane(last_active_pane))
                 } else {
-                    try_dock(&self.bottom_dock).or_else(|| try_dock(&self.right_dock))
+                    try_dock(&self.right_dock)
                 }
             }
 
@@ -5310,31 +5286,13 @@ impl Workspace {
             }
 
             (Origin::LeftDock, SplitDirection::Down)
-            | (Origin::RightDock, SplitDirection::Down) => try_dock(&self.bottom_dock),
-
-            (Origin::BottomDock, SplitDirection::Up) => get_last_active_pane().map(Target::Pane),
-            (Origin::BottomDock, SplitDirection::Left) => {
-                let dock_target = try_dock(&self.left_dock);
-                if sidebar_on_right {
-                    dock_target
-                } else {
-                    dock_target.or(sidebar_target)
-                }
-            }
-            (Origin::BottomDock, SplitDirection::Right) => {
-                let dock_target = try_dock(&self.right_dock);
-                if sidebar_on_right {
-                    dock_target.or(sidebar_target)
-                } else {
-                    dock_target
-                }
-            }
+            | (Origin::RightDock, SplitDirection::Down) => None,
 
             (Origin::RightDock, SplitDirection::Left) => {
                 if let Some(last_active_pane) = get_last_active_pane() {
                     Some(Target::Pane(last_active_pane))
                 } else {
-                    try_dock(&self.bottom_dock).or_else(|| try_dock(&self.left_dock))
+                    try_dock(&self.left_dock)
                 }
             }
 
@@ -5475,8 +5433,8 @@ impl Workspace {
             };
             match dock.position() {
                 DockPosition::Left => self.resize_left_dock(panel_size + amount, window, cx),
-                DockPosition::Bottom => self.resize_bottom_dock(panel_size + amount, window, cx),
                 DockPosition::Right => self.resize_right_dock(panel_size + amount, window, cx),
+                DockPosition::Bottom => {}
             }
         } else {
             self.center
@@ -7319,7 +7277,6 @@ impl Workspace {
                 for (dock, serialized_dock) in [
                     (&mut workspace.right_dock, docks.right),
                     (&mut workspace.left_dock, docks.left),
-                    (&mut workspace.bottom_dock, docks.bottom),
                 ]
                 .iter_mut()
                 {
@@ -7416,12 +7373,6 @@ impl Workspace {
         if self.right_dock.read(cx).is_open() {
             if let Some(active_panel) = self.right_dock.read(cx).active_panel() {
                 context.set("right_dock", active_panel.panel_key());
-            }
-        }
-
-        if self.bottom_dock.read(cx).is_open() {
-            if let Some(active_panel) = self.bottom_dock.read(cx).active_panel() {
-                context.set("bottom_dock", active_panel.panel_key());
             }
         }
 
@@ -7558,11 +7509,6 @@ impl Workspace {
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ToggleRightDock, window, cx| {
                     workspace.toggle_dock(DockPosition::Right, window, cx);
-                },
-            ))
-            .on_action(cx.listener(
-                |workspace: &mut Workspace, _: &ToggleBottomDock, window, cx| {
-                    workspace.toggle_dock(DockPosition::Bottom, window, cx);
                 },
             ))
             .on_action(cx.listener(
@@ -8124,7 +8070,7 @@ impl Workspace {
         match dock_pos {
             DockPosition::Left => self.resize_left_dock(new_size, window, cx),
             DockPosition::Right => self.resize_right_dock(new_size, window, cx),
-            DockPosition::Bottom => self.resize_bottom_dock(new_size, window, cx),
+            DockPosition::Bottom => {}
         }
     }
 
@@ -8174,20 +8120,6 @@ impl Workspace {
                 right_dock.resize_all_panels(Some(size), flex_grow, window, cx);
             } else {
                 right_dock.resize_active_panel(Some(size), flex_grow, window, cx);
-            }
-        });
-    }
-
-    fn resize_bottom_dock(&mut self, new_size: Pixels, window: &mut Window, cx: &mut App) {
-        let size = new_size.min(self.bounds.bottom() - RESIZE_HANDLE_SIZE - self.bounds.top());
-        self.bottom_dock.update(cx, |bottom_dock, cx| {
-            if WorkspaceSettings::get_global(cx)
-                .resize_all_panels_in_dock
-                .contains(&DockPosition::Bottom)
-            {
-                bottom_dock.resize_all_panels(Some(size), None, window, cx);
-            } else {
-                bottom_dock.resize_active_panel(Some(size), None, window, cx);
             }
         });
     }
@@ -8659,8 +8591,6 @@ impl Render for Workspace {
             .iter()
             .map(|(_, notification)| notification.entity_id())
             .collect::<Vec<_>>();
-        let bottom_dock_layout = WorkspaceSettings::get_global(cx).bottom_dock_layout;
-
         let pane_render_context = PaneRenderContext {
             follower_states: &self.follower_states,
             active_call: self.active_call(),
@@ -8731,14 +8661,6 @@ impl Render for Workspace {
                                                         cx,
                                                     )
                                                 });
-
-                                                this.bottom_dock.update(cx, |dock, cx| {
-                                                    dock.clamp_panel_size(
-                                                        bounds.size.height,
-                                                        window,
-                                                        cx,
-                                                    )
-                                                });
                                             }
                                         })
                                     },
@@ -8773,261 +8695,48 @@ impl Render for Workspace {
                                                         cx,
                                                     );
                                                 }
-                                                DockPosition::Bottom => {
-                                                    workspace.resize_bottom_dock(
-                                                        workspace.bounds.bottom()
-                                                            - e.event.position.y,
-                                                        window,
-                                                        cx,
-                                                    );
-                                                }
+                                                DockPosition::Bottom => {}
                                             };
                                             workspace.serialize_workspace(window, cx);
                                         }
                                     },
                                 ))
                             })
-                            .child({
-                                match bottom_dock_layout {
-                                    BottomDockLayout::Full => div()
-                                        .flex()
-                                        .flex_col()
-                                        .h_full()
-                                        .child(
-                                            div()
-                                                .flex()
-                                                .flex_row()
-                                                .flex_1()
-                                                .overflow_hidden()
-                                                .children(self.render_dock(
-                                                    DockPosition::Left,
-                                                    &self.left_dock,
-                                                    window,
-                                                    cx,
-                                                ))
-                                                .child(
-                                                    div()
-                                                        .flex()
-                                                        .flex_col()
-                                                        .flex_1()
-                                                        .overflow_hidden()
-                                                        .child(
-                                                            h_flex()
-                                                                .flex_1()
-                                                                .when_some(paddings.0, |this, p| {
-                                                                    this.child(p.border_r_1())
-                                                                })
-                                                                .child(self.center.render(
-                                                                    self.zoomed.as_ref(),
-                                                                    &pane_render_context,
-                                                                    window,
-                                                                    cx,
-                                                                ))
-                                                                .when_some(
-                                                                    paddings.1,
-                                                                    |this, p| {
-                                                                        this.child(p.border_l_1())
-                                                                    },
-                                                                ),
-                                                        ),
-                                                )
-                                                .children(self.render_dock(
-                                                    DockPosition::Right,
-                                                    &self.right_dock,
-                                                    window,
-                                                    cx,
-                                                )),
-                                        )
-                                        .child(div().w_full().children(self.render_dock(
-                                            DockPosition::Bottom,
-                                            &self.bottom_dock,
-                                            window,
-                                            cx,
-                                        ))),
-
-                                    BottomDockLayout::LeftAligned => div()
-                                        .flex()
-                                        .flex_row()
-                                        .h_full()
-                                        .child(
-                                            div()
-                                                .flex()
-                                                .flex_col()
-                                                .flex_1()
-                                                .h_full()
-                                                .child(
-                                                    div()
-                                                        .flex()
-                                                        .flex_row()
-                                                        .flex_1()
-                                                        .children(self.render_dock(
-                                                            DockPosition::Left,
-                                                            &self.left_dock,
-                                                            window,
-                                                            cx,
-                                                        ))
-                                                        .child(
-                                                            div()
-                                                                .flex()
-                                                                .flex_col()
-                                                                .flex_1()
-                                                                .overflow_hidden()
-                                                                .child(
-                                                                    h_flex()
-                                                                        .flex_1()
-                                                                        .when_some(
-                                                                            paddings.0,
-                                                                            |this, p| {
-                                                                                this.child(
-                                                                                    p.border_r_1(),
-                                                                                )
-                                                                            },
-                                                                        )
-                                                                        .child(self.center.render(
-                                                                            self.zoomed.as_ref(),
-                                                                            &pane_render_context,
-                                                                            window,
-                                                                            cx,
-                                                                        ))
-                                                                        .when_some(
-                                                                            paddings.1,
-                                                                            |this, p| {
-                                                                                this.child(
-                                                                                    p.border_l_1(),
-                                                                                )
-                                                                            },
-                                                                        ),
-                                                                ),
-                                                        ),
-                                                )
-                                                .child(div().w_full().children(self.render_dock(
-                                                    DockPosition::Bottom,
-                                                    &self.bottom_dock,
-                                                    window,
-                                                    cx,
-                                                ))),
-                                        )
-                                        .children(self.render_dock(
-                                            DockPosition::Right,
-                                            &self.right_dock,
-                                            window,
-                                            cx,
-                                        )),
-                                    BottomDockLayout::RightAligned => div()
-                                        .flex()
-                                        .flex_row()
-                                        .h_full()
-                                        .children(self.render_dock(
-                                            DockPosition::Left,
-                                            &self.left_dock,
-                                            window,
-                                            cx,
-                                        ))
-                                        .child(
-                                            div()
-                                                .flex()
-                                                .flex_col()
-                                                .flex_1()
-                                                .h_full()
-                                                .child(
-                                                    div()
-                                                        .flex()
-                                                        .flex_row()
-                                                        .flex_1()
-                                                        .child(
-                                                            div()
-                                                                .flex()
-                                                                .flex_col()
-                                                                .flex_1()
-                                                                .overflow_hidden()
-                                                                .child(
-                                                                    h_flex()
-                                                                        .flex_1()
-                                                                        .when_some(
-                                                                            paddings.0,
-                                                                            |this, p| {
-                                                                                this.child(
-                                                                                    p.border_r_1(),
-                                                                                )
-                                                                            },
-                                                                        )
-                                                                        .child(self.center.render(
-                                                                            self.zoomed.as_ref(),
-                                                                            &pane_render_context,
-                                                                            window,
-                                                                            cx,
-                                                                        ))
-                                                                        .when_some(
-                                                                            paddings.1,
-                                                                            |this, p| {
-                                                                                this.child(
-                                                                                    p.border_l_1(),
-                                                                                )
-                                                                            },
-                                                                        ),
-                                                                ),
-                                                        )
-                                                        .children(self.render_dock(
-                                                            DockPosition::Right,
-                                                            &self.right_dock,
-                                                            window,
-                                                            cx,
-                                                        )),
-                                                )
-                                                .child(div().w_full().children(self.render_dock(
-                                                    DockPosition::Bottom,
-                                                    &self.bottom_dock,
-                                                    window,
-                                                    cx,
-                                                ))),
-                                        ),
-                                    BottomDockLayout::Contained => div()
-                                        .flex()
-                                        .flex_row()
-                                        .h_full()
-                                        .children(self.render_dock(
-                                            DockPosition::Left,
-                                            &self.left_dock,
-                                            window,
-                                            cx,
-                                        ))
-                                        .child(
-                                            div()
-                                                .flex()
-                                                .flex_col()
-                                                .flex_1()
-                                                .overflow_hidden()
-                                                .child(
-                                                    h_flex()
-                                                        .flex_1()
-                                                        .when_some(paddings.0, |this, p| {
-                                                            this.child(p.border_r_1())
-                                                        })
-                                                        .child(self.center.render(
-                                                            self.zoomed.as_ref(),
-                                                            &pane_render_context,
-                                                            window,
-                                                            cx,
-                                                        ))
-                                                        .when_some(paddings.1, |this, p| {
-                                                            this.child(p.border_l_1())
-                                                        }),
-                                                )
-                                                .children(self.render_dock(
-                                                    DockPosition::Bottom,
-                                                    &self.bottom_dock,
-                                                    window,
-                                                    cx,
-                                                )),
-                                        )
-                                        .children(self.render_dock(
-                                            DockPosition::Right,
-                                            &self.right_dock,
-                                            window,
-                                            cx,
-                                        )),
-                                }
-                            })
+                            .child(
+                                div()
+                                    .flex()
+                                    .flex_row()
+                                    .h_full()
+                                    .children(self.render_dock(
+                                        DockPosition::Left,
+                                        &self.left_dock,
+                                        window,
+                                        cx,
+                                    ))
+                                    .child(
+                                        h_flex()
+                                            .flex_1()
+                                            .overflow_hidden()
+                                            .when_some(paddings.0, |this, p| {
+                                                this.child(p.border_r_1())
+                                            })
+                                            .child(self.center.render(
+                                                self.zoomed.as_ref(),
+                                                &pane_render_context,
+                                                window,
+                                                cx,
+                                            ))
+                                            .when_some(paddings.1, |this, p| {
+                                                this.child(p.border_l_1())
+                                            }),
+                                    )
+                                    .children(self.render_dock(
+                                        DockPosition::Right,
+                                        &self.right_dock,
+                                        window,
+                                        cx,
+                                    )),
+                            )
                             .children(self.zoomed.as_ref().and_then(|view| {
                                 let zoomed_view = view.upgrade()?;
                                 let div = div()
@@ -9047,7 +8756,7 @@ impl Render for Workspace {
                                 Some(match self.zoomed_position {
                                     Some(DockPosition::Left) => div.right_2().border_r_1(),
                                     Some(DockPosition::Right) => div.left_2().border_l_1(),
-                                    Some(DockPosition::Bottom) => div.top_2().border_t_1(),
+                                    Some(DockPosition::Bottom) => div,
                                     None => div.top_2().bottom_2().left_2().right_2().border_1(),
                                 })
                             }))
@@ -13311,156 +13020,6 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn test_toggle_all_docks_after_dock_move(cx: &mut gpui::TestAppContext) {
-        init_test(cx);
-        let fs = FakeFs::new(cx.executor());
-        let project = Project::test(fs, [], cx).await;
-        let (multi_workspace, cx) =
-            cx.add_window_view(|window, cx| MultiWorkspace::test_new(project, window, cx));
-        let workspace = multi_workspace.read_with(cx, |mw, _| mw.workspace().clone());
-
-        // Open two docks (left and right) with one panel each
-        let (left_panel, right_panel) = workspace.update_in(cx, |workspace, window, cx| {
-            let left_panel = cx.new(|cx| TestPanel::new(DockPosition::Left, 100, cx));
-            workspace.add_panel(left_panel.clone(), window, cx);
-
-            let right_panel = cx.new(|cx| TestPanel::new(DockPosition::Right, 101, cx));
-            workspace.add_panel(right_panel.clone(), window, cx);
-
-            workspace.toggle_dock(DockPosition::Left, window, cx);
-            workspace.toggle_dock(DockPosition::Right, window, cx);
-
-            // Verify initial state
-            assert!(
-                workspace.left_dock().read(cx).is_open(),
-                "Left dock should be open"
-            );
-            assert_eq!(
-                workspace
-                    .left_dock()
-                    .read(cx)
-                    .visible_panel()
-                    .unwrap()
-                    .panel_id(),
-                left_panel.panel_id(),
-                "Left panel should be visible in left dock"
-            );
-            assert!(
-                workspace.right_dock().read(cx).is_open(),
-                "Right dock should be open"
-            );
-            assert_eq!(
-                workspace
-                    .right_dock()
-                    .read(cx)
-                    .visible_panel()
-                    .unwrap()
-                    .panel_id(),
-                right_panel.panel_id(),
-                "Right panel should be visible in right dock"
-            );
-            assert!(
-                !workspace.bottom_dock().read(cx).is_open(),
-                "Bottom dock should be closed"
-            );
-
-            (left_panel, right_panel)
-        });
-
-        // Focus the left panel and move it to the next position (bottom dock)
-        workspace.update_in(cx, |workspace, window, cx| {
-            workspace.toggle_panel_focus::<TestPanel>(window, cx); // Focus left panel
-            assert!(
-                left_panel.read(cx).focus_handle(cx).is_focused(window),
-                "Left panel should be focused"
-            );
-        });
-
-        cx.dispatch_action(MoveFocusedPanelToNextPosition);
-
-        // Verify the left panel has moved to the bottom dock, and the bottom dock is now open
-        workspace.update(cx, |workspace, cx| {
-            assert!(
-                !workspace.left_dock().read(cx).is_open(),
-                "Left dock should be closed"
-            );
-            assert!(
-                workspace.bottom_dock().read(cx).is_open(),
-                "Bottom dock should now be open"
-            );
-            assert_eq!(
-                left_panel.read(cx).position,
-                DockPosition::Bottom,
-                "Left panel should now be in the bottom dock"
-            );
-            assert_eq!(
-                workspace
-                    .bottom_dock()
-                    .read(cx)
-                    .visible_panel()
-                    .unwrap()
-                    .panel_id(),
-                left_panel.panel_id(),
-                "Left panel should be the visible panel in the bottom dock"
-            );
-        });
-
-        // Toggle all docks off
-        workspace.update_in(cx, |workspace, window, cx| {
-            workspace.toggle_all_docks(&ToggleAllDocks, window, cx);
-            assert!(
-                !workspace.left_dock().read(cx).is_open(),
-                "Left dock should be closed"
-            );
-            assert!(
-                !workspace.right_dock().read(cx).is_open(),
-                "Right dock should be closed"
-            );
-            assert!(
-                !workspace.bottom_dock().read(cx).is_open(),
-                "Bottom dock should be closed"
-            );
-        });
-
-        // Toggle all docks back on and verify positions are restored
-        workspace.update_in(cx, |workspace, window, cx| {
-            workspace.toggle_all_docks(&ToggleAllDocks, window, cx);
-            assert!(
-                !workspace.left_dock().read(cx).is_open(),
-                "Left dock should remain closed"
-            );
-            assert!(
-                workspace.right_dock().read(cx).is_open(),
-                "Right dock should remain open"
-            );
-            assert!(
-                workspace.bottom_dock().read(cx).is_open(),
-                "Bottom dock should remain open"
-            );
-            assert_eq!(
-                left_panel.read(cx).position,
-                DockPosition::Bottom,
-                "Left panel should remain in the bottom dock"
-            );
-            assert_eq!(
-                right_panel.read(cx).position,
-                DockPosition::Right,
-                "Right panel should remain in the right dock"
-            );
-            assert_eq!(
-                workspace
-                    .bottom_dock()
-                    .read(cx)
-                    .visible_panel()
-                    .unwrap()
-                    .panel_id(),
-                left_panel.panel_id(),
-                "Left panel should be the visible panel in the right dock"
-            );
-        });
-    }
-
-    #[gpui::test]
     async fn test_join_pane_into_next(cx: &mut gpui::TestAppContext) {
         init_test(cx);
 
@@ -14365,26 +13924,6 @@ mod tests {
             );
             // And the right dock should be closed as it no longer has any panels.
             assert!(!workspace.right_dock().read(cx).is_open());
-
-            // Now we move panel_1 to the bottom
-            panel_1.set_position(DockPosition::Bottom, window, cx);
-        });
-
-        workspace.update_in(cx, |workspace, window, cx| {
-            // Since panel_1 was visible on the left, we close the left dock.
-            assert!(!workspace.left_dock().read(cx).is_open());
-            // The bottom dock is sized based on the panel's default size,
-            // since the panel orientation changed from vertical to horizontal.
-            let bottom_dock = workspace.bottom_dock();
-            assert_eq!(
-                workspace.dock_size(&bottom_dock.read(cx), window, cx),
-                Some(px(300.))
-            );
-            // Close bottom dock and move panel_1 back to the left.
-            bottom_dock.update(cx, |bottom_dock, cx| {
-                bottom_dock.set_open(false, window, cx)
-            });
-            panel_1.set_position(DockPosition::Left, window, cx);
         });
 
         // Emit activated event on panel 1
@@ -15205,17 +14744,8 @@ mod tests {
             assert_eq!(panel.read(cx).position, DockPosition::Left);
         });
 
-        // Dispatch the `MoveFocusedPanelToNextPosition` action, moving the
-        // panel to the next valid position which, in this case, is the bottom
-        // dock.
-        cx.dispatch_action(MoveFocusedPanelToNextPosition);
-        workspace.update(cx, |workspace, cx| {
-            assert!(workspace.bottom_dock().read(cx).is_open());
-            assert_eq!(panel.read(cx).position, DockPosition::Bottom);
-        });
-
         // Dispatch the `MoveFocusedPanelToNextPosition` action again, this time
-        // around moving the panel to its initial position, the right dock.
+        // moving the panel to its initial position, the right dock.
         cx.dispatch_action(MoveFocusedPanelToNextPosition);
         workspace.update(cx, |workspace, cx| {
             assert!(workspace.right_dock().read(cx).is_open());

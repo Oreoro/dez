@@ -86,11 +86,10 @@ use language::LanguageRegistry;
 use language_model::LanguageModelRegistry;
 use notifications::status_toast::StatusToast;
 use project::{Project, ProjectPath, Worktree};
-use settings::TerminalDockPosition;
 use settings::{NotifyWhenAgentWaiting, Settings, update_settings_file};
 
-use terminal::{Event as TerminalEvent, terminal_settings::TerminalSettings};
-use terminal_view::{TerminalView, terminal_panel::TerminalPanel};
+use terminal::Event as TerminalEvent;
+use terminal_view::TerminalView;
 use text::OffsetRangeExt;
 use theme_settings::ThemeSettings;
 use ui::{
@@ -659,22 +658,7 @@ pub fn init(cx: &mut App) {
                                     .is_some_and(|text| !text.is_empty())
                             });
 
-                        let has_terminal_panel_selection =
-                            workspace.panel::<TerminalPanel>(cx).is_some_and(|panel| {
-                                let position = match TerminalSettings::get_global(cx).dock {
-                                    TerminalDockPosition::Left => DockPosition::Left,
-                                    TerminalDockPosition::Bottom => DockPosition::Bottom,
-                                    TerminalDockPosition::Right => DockPosition::Right,
-                                };
-                                let dock_is_open =
-                                    workspace.dock_at_position(position).read(cx).is_open();
-                                dock_is_open && !panel.read(cx).terminal_selections(cx).is_empty()
-                            });
-
-                        if !has_editor_selection
-                            && !has_terminal_selection
-                            && !has_terminal_panel_selection
-                        {
+                        if !has_editor_selection && !has_terminal_selection {
                             return;
                         }
 
@@ -6833,7 +6817,7 @@ impl AgentPanel {
         cx: &mut Context<Self>,
     ) -> Result<()> {
         let init_command = Self::terminal_init_command(run_init_command, cx);
-        let settings = TerminalSettings::get_global(cx).clone();
+        let settings = terminal::terminal_settings::TerminalSettings::get_global(cx).clone();
         let path_style = self.project.read(cx).path_style(cx);
         let builder = terminal::TerminalBuilder::new_display_only(
             settings.cursor_shape,
@@ -7558,9 +7542,10 @@ mod tests {
             AgentSettings::override_global(settings, cx);
 
             // Force a known POSIX shell so the test doesn't depend on the developer's login shell.
-            let mut terminal_settings = TerminalSettings::get_global(cx).clone();
+            let mut terminal_settings =
+                terminal::terminal_settings::TerminalSettings::get_global(cx).clone();
             terminal_settings.shell = task::Shell::Program("/bin/sh".to_string());
-            TerminalSettings::override_global(terminal_settings, cx);
+            terminal::terminal_settings::TerminalSettings::override_global(terminal_settings, cx);
         });
 
         let terminal_id = TerminalId::new();
