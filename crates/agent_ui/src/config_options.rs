@@ -17,7 +17,7 @@ use picker::{Picker, PickerDelegate};
 use settings::{AgentConfigOptionValue, SettingsStore};
 use ui::{
     ElevationIndex, IconButton, KeyBinding, ListItem, ListItemSpacing, PopoverMenuHandle, Switch,
-    SwitchLabelPosition, ToggleState, Tooltip, prelude::*,
+    SwitchLabelPosition, SwitchSize, ToggleState, Tooltip, prelude::*,
 };
 use unicode_segmentation::UnicodeSegmentation;
 use util::ResultExt as _;
@@ -591,6 +591,8 @@ impl Render for ConfigOptionSelector {
                         .label(option_name)
                         .label_position(SwitchLabelPosition::Start)
                         .label_size(LabelSize::Small)
+                        .label_color(Color::Muted)
+                        .size(SwitchSize::Small)
                         .disabled(self.setting_value)
                         .on_click(move |state, _window, cx| {
                             let next_value = matches!(state, ToggleState::Selected);

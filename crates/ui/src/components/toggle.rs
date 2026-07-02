@@ -331,6 +331,13 @@ pub enum SwitchLabelPosition {
     End,
 }
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Default)]
+pub enum SwitchSize {
+    #[default]
+    Default,
+    Small,
+}
+
 /// # Switch
 ///
 /// Switches are used to represent opposite states, such as enabled or disabled.
@@ -343,9 +350,11 @@ pub struct Switch {
     label: Option<SharedString>,
     label_position: Option<SwitchLabelPosition>,
     label_size: LabelSize,
+    label_color: Color,
     full_width: bool,
     key_binding: Option<KeyBinding>,
     color: SwitchColor,
+    size: SwitchSize,
     tab_index: Option<isize>,
     aria_label: Option<SharedString>,
 }
@@ -361,9 +370,11 @@ impl Switch {
             label: None,
             label_position: None,
             label_size: LabelSize::Small,
+            label_color: Color::Default,
             full_width: false,
             key_binding: None,
             color: SwitchColor::default(),
+            size: SwitchSize::default(),
             tab_index: None,
             aria_label: None,
         }
@@ -406,6 +417,16 @@ impl Switch {
 
     pub fn label_size(mut self, size: LabelSize) -> Self {
         self.label_size = size;
+        self
+    }
+
+    pub fn label_color(mut self, color: Color) -> Self {
+        self.label_color = color;
+        self
+    }
+
+    pub fn size(mut self, size: SwitchSize) -> Self {
+        self.size = size;
         self
     }
 
@@ -457,6 +478,14 @@ impl RenderOnce for Switch {
         let group_id = format!("switch_group_{:?}", self.id);
         let label = self.label;
         let aria_label = self.aria_label.or_else(|| label.clone());
+        let (switch_width, switch_height, thumb_size) = match self.size {
+            SwitchSize::Default => (
+                DynamicSpacing::Base32.rems(cx),
+                DynamicSpacing::Base20.rems(cx),
+                DynamicSpacing::Base12.rems(cx),
+            ),
+            SwitchSize::Small => (rems_from_px(28.), rems_from_px(16.), rems_from_px(10.)),
+        };
 
         let switch = div()
             .id((self.id.clone(), "switch"))
@@ -488,8 +517,8 @@ impl RenderOnce for Switch {
             )
             .child(
                 h_flex()
-                    .w(DynamicSpacing::Base32.rems(cx))
-                    .h(DynamicSpacing::Base20.rems(cx))
+                    .w(switch_width)
+                    .h(switch_height)
                     .group(group_id.clone())
                     .child(
                         h_flex()
@@ -506,7 +535,7 @@ impl RenderOnce for Switch {
                             .border_color(border_color)
                             .child(
                                 div()
-                                    .size(DynamicSpacing::Base12.rems(cx))
+                                    .size(thumb_size)
                                     .rounded_full()
                                     .bg(thumb_color)
                                     .opacity(thumb_opacity),
@@ -523,7 +552,11 @@ impl RenderOnce for Switch {
                 self.label_position == Some(SwitchLabelPosition::Start),
                 |this| {
                     this.when_some(label.clone(), |this, label| {
-                        this.child(Label::new(label).size(self.label_size))
+                        this.child(
+                            Label::new(label)
+                                .size(self.label_size)
+                                .color(self.label_color),
+                        )
                     })
                 },
             )
@@ -532,7 +565,11 @@ impl RenderOnce for Switch {
                 self.label_position == Some(SwitchLabelPosition::End),
                 |this| {
                     this.when_some(label, |this, label| {
-                        this.child(Label::new(label).size(self.label_size))
+                        this.child(
+                            Label::new(label)
+                                .size(self.label_size)
+                                .color(self.label_color),
+                        )
                     })
                 },
             )
