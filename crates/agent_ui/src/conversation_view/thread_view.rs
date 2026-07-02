@@ -4068,7 +4068,8 @@ impl ThreadView {
 
         let max_content_width = AgentSettings::get_global(cx).max_content_width;
         let has_messages = self.list_state.item_count() > 0;
-        let fills_container = !has_messages || editor_expanded;
+        let compact_editor = has_messages || self.is_root_draft_thread(cx);
+        let fills_container = !compact_editor || editor_expanded;
         let draft_agent_selector = self
             .is_root_draft_thread(cx)
             .then(|| self.render_draft_agent_selector(cx));
@@ -4079,8 +4080,9 @@ impl ThreadView {
             .justify_center()
             .on_action(cx.listener(Self::handle_message_editor_move_up))
             .map(|this| {
-                if has_messages {
+                if compact_editor {
                     this.on_action(cx.listener(Self::expand_message_editor))
+                        .flex_none()
                         .border_t_1()
                         .border_color(cx.theme().colors().border)
                         .when(editor_expanded, |this| this.h(vh(0.8, window)))
@@ -6863,9 +6865,9 @@ impl ThreadView {
 
     pub(crate) fn sync_editor_mode_for_empty_state(&mut self, cx: &mut Context<Self>) {
         let has_messages = self.list_state.item_count() > 0;
-        let v2_empty_state = !has_messages;
+        let full_height_empty_state = !has_messages && !self.is_root_draft_thread(cx);
 
-        let mode = if v2_empty_state {
+        let mode = if full_height_empty_state {
             EditorMode::Full {
                 scale_ui_elements_with_buffer_font_size: false,
                 show_active_line_background: false,
@@ -11409,7 +11411,7 @@ impl Render for ThreadView {
                         .vertical_scrollbar_for(&list_state, window, cx)
                         .into_any()
                 } else {
-                    this.into_any()
+                    this.w_full().min_h_0().flex_1().into_any()
                 }
             });
 

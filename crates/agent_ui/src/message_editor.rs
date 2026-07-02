@@ -188,6 +188,7 @@ pub struct MessageEditor {
     mention_set: Entity<MentionSet>,
     editor: Entity<Editor>,
     workspace: WeakEntity<Workspace>,
+    project: WeakEntity<Project>,
     session_capabilities: SharedSessionCapabilities,
     agent_id: AgentId,
     thread_store: Option<Entity<ThreadStore>>,
@@ -483,7 +484,7 @@ impl MessageEditor {
 
             editor
         });
-        let mention_set = cx.new(|_cx| MentionSet::new(project, thread_store.clone()));
+        let mention_set = cx.new(|_cx| MentionSet::new(project.clone(), thread_store.clone()));
         let completion_provider = Rc::new(PromptCompletionProvider::new(
             MessageEditorCompletionDelegate {
                 session_capabilities: session_capabilities.clone(),
@@ -582,6 +583,7 @@ impl MessageEditor {
             editor,
             mention_set,
             workspace,
+            project,
             session_capabilities,
             agent_id,
             thread_store,
@@ -1689,11 +1691,11 @@ impl MessageEditor {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let Some(workspace) = self.workspace.upgrade() else {
+        let Some(project) = self.project.upgrade() else {
             return;
         };
 
-        let path_style = workspace.read(cx).project().read(cx).path_style(cx);
+        let path_style = project.read(cx).path_style(cx);
         let mut text = String::new();
         let mut mentions = Vec::new();
         let append_normalized = |text: &mut String, mut segment: String| {

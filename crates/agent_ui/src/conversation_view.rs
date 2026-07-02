@@ -3331,52 +3331,61 @@ impl ConversationView {
             .clone()
             .unwrap_or_else(|| "Agent is loading...".into());
 
-        h_flex()
-            .py_2()
+        v_flex()
             .bg(editor_bg_color)
-            .justify_center()
             .flex_1()
             .size_full()
+            .child(div().w_full().min_h_0().flex_1())
             .child(
-                v_flex()
-                    .when_some(max_content_width, |this, max_w| this.flex_basis(max_w))
-                    .when(max_content_width.is_none(), |this| this.w_full())
-                    .h_full()
-                    .px_2()
-                    .flex_shrink_1()
-                    .flex_grow_0()
-                    .justify_between()
-                    .gap_2()
+                h_flex()
+                    .py_2()
+                    .justify_center()
+                    .flex_none()
+                    .border_t_1()
+                    .border_color(cx.theme().colors().border)
                     .child(
                         v_flex()
-                            .relative()
-                            .w_full()
-                            .min_h_0()
-                            .flex_1()
-                            .pt_1()
-                            .pr_2p5()
-                            .child(draft.message_editor.clone()),
-                    )
-                    .child(
-                        h_flex()
-                            .w_full()
-                            .flex_none()
+                            .when_some(max_content_width, |this, max_w| this.flex_basis(max_w))
+                            .when(max_content_width.is_none(), |this| this.w_full())
+                            .px_2()
+                            .flex_shrink_1()
+                            .flex_grow_0()
                             .justify_between()
+                            .gap_2()
                             .child(
-                                Label::new(loading_text)
-                                    .size(LabelSize::Small)
-                                    .color(Color::Muted),
+                                v_flex()
+                                    .relative()
+                                    .w_full()
+                                    .min_h_0()
+                                    .pt_1()
+                                    .pr_2p5()
+                                    .child(draft.message_editor.clone()),
                             )
                             .child(
                                 h_flex()
-                                    .gap_1()
-                                    .child(self.render_loading_draft_agent_selector(draft, cx))
+                                    .w_full()
+                                    .flex_none()
+                                    .justify_between()
                                     .child(
-                                        IconButton::new("send-message", IconName::Send)
-                                            .style(ButtonStyle::Filled)
-                                            .disabled(true)
-                                            .icon_color(Color::Muted)
-                                            .tooltip(Tooltip::text("Agent is still loading")),
+                                        Label::new(loading_text)
+                                            .size(LabelSize::Small)
+                                            .color(Color::Muted),
+                                    )
+                                    .child(
+                                        h_flex()
+                                            .gap_1()
+                                            .child(
+                                                self.render_loading_draft_agent_selector(draft, cx),
+                                            )
+                                            .child(
+                                                IconButton::new("send-message", IconName::Send)
+                                                    .style(ButtonStyle::Filled)
+                                                    .disabled(true)
+                                                    .icon_color(Color::Muted)
+                                                    .tooltip(Tooltip::text(
+                                                        "Agent is still loading",
+                                                    )),
+                                            ),
                                     ),
                             ),
                     ),
