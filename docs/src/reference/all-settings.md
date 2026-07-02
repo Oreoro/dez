@@ -928,7 +928,7 @@ List of `string` values
 {
   "scrollbar": {
     "show": "auto",
-    "size": 15,
+    "size": 7,
     "cursors": true,
     "git_diff": true,
     "search_results": true,
@@ -936,7 +936,7 @@ List of `string` values
     "selected_symbol": true,
     "diagnostics": "all",
     "axes": {
-      "horizontal": true,
+      "horizontal": false,
       "vertical": true
     }
   }
@@ -995,7 +995,7 @@ List of `string` values
 
 - Description: Size of the editor scrollbar in pixels. This controls vertical scrollbar width and horizontal scrollbar height.
 - Setting: `size`
-- Default: `15`
+- Default: `7`
 
 **Options**
 
@@ -1131,7 +1131,7 @@ Diagnostic indicators appear as colored marks showing errors, warnings, and othe
 {
   "scrollbar": {
     "axes": {
-      "horizontal": true,
+      "horizontal": false,
       "vertical": true
     }
   }
@@ -1142,7 +1142,7 @@ Diagnostic indicators appear as colored marks showing errors, warnings, and othe
 
 - Description: When false, forcefully disables the horizontal scrollbar. Otherwise, obey other settings.
 - Setting: `horizontal`
-- Default: `true`
+- Default: `false`
 
 **Options**
 

@@ -577,7 +577,7 @@
     //    "never"
     "show": "auto",
     // Size of the editor scrollbar in pixels. This controls vertical scrollbar width and horizontal scrollbar height.
-    "size": 15,
+    "size": 7,
     // Whether to show cursor positions in the scrollbar.
     "cursors": true,
     // Whether to show git diff indicators in the scrollbar.
@@ -598,7 +598,7 @@
     // Forcefully enable or disable the scrollbar for each axis
     "axes": {
       // When false, forcefully disables the horizontal scrollbar. Otherwise, obey other settings.
-      "horizontal": true,
+      "horizontal": false,
       // When false, forcefully disables the vertical scrollbar. Otherwise, obey other settings.
       "vertical": true,
     },
