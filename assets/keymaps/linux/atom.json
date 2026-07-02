@@ -30,7 +30,7 @@
       "ctrl-shift-d": "editor::DuplicateLineDown", // editor:duplicate-lines
       "ctrl-up": "editor::MoveLineUp", // editor:move-line-up
       "ctrl-down": "editor::MoveLineDown", // editor:move-line-down
-      "ctrl-\\": "workspace::ToggleLeftDock", // tree-view:toggle
+      "ctrl-\\": "multi_workspace::ToggleWorkspaceSidebar", // tree-view:toggle
       "ctrl-shift-m": "markdown::OpenPreviewToTheSide", // markdown-preview:toggle
       "ctrl-r": "outline::Toggle", // symbols-view:toggle-project-symbols
     },
@@ -47,8 +47,8 @@
   {
     "context": "Workspace",
     "bindings": {
-      "ctrl-\\": "workspace::ToggleLeftDock", // tree-view:toggle
-      "ctrl-k ctrl-b": "workspace::ToggleLeftDock", // tree-view:toggle
+      "ctrl-\\": "multi_workspace::ToggleWorkspaceSidebar", // tree-view:toggle
+      "ctrl-k ctrl-b": "multi_workspace::ToggleWorkspaceSidebar", // tree-view:toggle
       "ctrl-t": "file_finder::Toggle", // fuzzy-finder:toggle-file-finder
       "ctrl-r": "project_symbols::Toggle", // symbols-view:toggle-project-symbols
     },

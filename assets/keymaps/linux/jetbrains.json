@@ -47,7 +47,7 @@
       "ctrl-alt-right": "pane::GoForward",
       "alt-f7": "editor::FindAllReferences",
       "ctrl-alt-f7": "editor::FindAllReferences",
-      "ctrl-b": "editor::GoToDefinition", // Conflicts with workspace::ToggleLeftDock
+      "ctrl-b": "editor::GoToDefinition", // Conflicts with multi_workspace::ToggleWorkspaceSidebar
       "ctrl-alt-b": "editor::GoToImplementation", // Conflicts with workspace::ToggleRightDock
       "ctrl-shift-b": "editor::GoToTypeDefinition",
       "ctrl-alt-shift-b": "editor::GoToTypeDefinitionSplit",

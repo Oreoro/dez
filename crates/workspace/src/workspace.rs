@@ -338,8 +338,6 @@ actions!(
         ToggleCenteredLayout,
         /// Toggles edit prediction feature globally for all files.
         ToggleEditPrediction,
-        /// Toggles the left dock.
-        ToggleLeftDock,
         /// Toggles the right dock.
         ToggleRightDock,
         /// Toggles zoom on the active pane.
@@ -8068,9 +8066,6 @@ impl Workspace {
             }))
             .on_action(cx.listener(|workspace, _: &MovePaneDown, _, cx| {
                 workspace.move_pane_to_border(SplitDirection::Down, cx)
-            }))
-            .on_action(cx.listener(|this, _: &ToggleLeftDock, window, cx| {
-                this.toggle_dock(DockPosition::Left, window, cx);
             }))
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ToggleRightDock, window, cx| {
