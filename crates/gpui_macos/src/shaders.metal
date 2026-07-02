@@ -28,6 +28,8 @@ float pick_corner_radius(float2 center_to_point, Corners_ScaledPixels corner_rad
 float quad_sdf(float2 point, Bounds_ScaledPixels bounds,
                Corners_ScaledPixels corner_radii);
 float quad_sdf_impl(float2 center_to_point, float corner_radius);
+bool corner_radii_are_zero(Corners_ScaledPixels corner_radii);
+float rounded_clip_alpha(float2 position, ContentMask_ScaledPixels content_mask);
 float gaussian(float x, float sigma);
 float2 erf(float2 x);
 float blur_along_x(float x, float y, float sigma, float corner,
@@ -103,6 +105,7 @@ fragment float4 quad_fragment(QuadFragmentInput input [[stage_in]],
   Quad quad = quads[input.quad_id];
   float4 background_color = fill_color(quad.background, input.position.xy, quad.bounds,
     input.background_solid, input.background_color0, input.background_color1);
+  float clip_alpha = rounded_clip_alpha(input.position.xy, quad.content_mask);
 
   bool unrounded = quad.corner_radii.top_left == 0.0 &&
     quad.corner_radii.bottom_left == 0.0 &&
@@ -115,7 +118,7 @@ fragment float4 quad_fragment(QuadFragmentInput input [[stage_in]],
       quad.border_widths.right == 0.0 &&
       quad.border_widths.bottom == 0.0 &&
       unrounded) {
-    return background_color;
+    return background_color * float4(1.0, 1.0, 1.0, clip_alpha);
   }
 
   float2 size = float2(quad.bounds.size.width, quad.bounds.size.height);
@@ -175,7 +178,7 @@ fragment float4 quad_fragment(QuadFragmentInput input [[stage_in]],
 
   // Fast path for points that must be part of the background
   if (is_within_inner_straight_border && !is_near_rounded_corner) {
-    return background_color;
+    return background_color * float4(1.0, 1.0, 1.0, clip_alpha);
   }
 
   // Signed distance of the point to the outside edge of the quad's border
@@ -393,7 +396,7 @@ fragment float4 quad_fragment(QuadFragmentInput input [[stage_in]],
                 saturate(antialias_threshold - inner_sdf));
   }
 
-  return color * float4(1.0, 1.0, 1.0, saturate(antialias_threshold - outer_sdf));
+  return color * float4(1.0, 1.0, 1.0, saturate(antialias_threshold - outer_sdf) * clip_alpha);
 }
 
 // Returns the dash velocity of a corner given the dash velocity of the two
@@ -1069,6 +1072,22 @@ float quad_sdf(float2 point, Bounds_ScaledPixels bounds,
     float2 corner_to_point = fabs(center_to_point) - half_size;
     float2 corner_center_to_point = corner_to_point + corner_radius;
     return quad_sdf_impl(corner_center_to_point, corner_radius);
+}
+
+bool corner_radii_are_zero(Corners_ScaledPixels corner_radii) {
+  return corner_radii.top_left == 0.0 &&
+         corner_radii.top_right == 0.0 &&
+         corner_radii.bottom_right == 0.0 &&
+         corner_radii.bottom_left == 0.0;
+}
+
+float rounded_clip_alpha(float2 position, ContentMask_ScaledPixels content_mask) {
+  if (corner_radii_are_zero(content_mask.corner_radii)) {
+    return 1.0;
+  }
+
+  float distance = quad_sdf(position, content_mask.bounds, content_mask.corner_radii);
+  return saturate(0.5 - distance);
 }
 
 // Implementation of quad signed distance field

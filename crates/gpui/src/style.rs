@@ -645,20 +645,25 @@ impl Style {
                 let mut min = bounds.origin;
                 let mut max = bounds.bottom_right();
 
-                if self
+                let border_widths = if self
                     .border_color
                     .is_some_and(|color| !color.is_transparent())
                 {
-                    min.x += self.border_widths.left.to_pixels(rem_size);
-                    max.x -= self.border_widths.right.to_pixels(rem_size);
-                    min.y += self.border_widths.top.to_pixels(rem_size);
-                    max.y -= self.border_widths.bottom.to_pixels(rem_size);
-                }
+                    let border_widths = self.border_widths.to_pixels(rem_size);
+                    min.x += border_widths.left;
+                    max.x -= border_widths.right;
+                    min.y += border_widths.top;
+                    max.y -= border_widths.bottom;
+                    border_widths
+                } else {
+                    Edges::default()
+                };
 
-                let bounds = match (
+                let overflow = (
                     self.overflow.x == Overflow::Visible,
                     self.overflow.y == Overflow::Visible,
-                ) {
+                );
+                let bounds = match overflow {
                     // x and y both visible
                     (true, true) => return None,
                     // x visible, y hidden
@@ -675,7 +680,27 @@ impl Style {
                     (false, false) => Bounds::from_corners(min, max),
                 };
 
-                Some(ContentMask { bounds })
+                let corner_radii = if overflow == (false, false) {
+                    let corner_radii = self.corner_radii.to_pixels(rem_size);
+                    Corners {
+                        top_left: (corner_radii.top_left
+                            - border_widths.top.max(border_widths.left))
+                        .max(Pixels::ZERO),
+                        top_right: (corner_radii.top_right
+                            - border_widths.top.max(border_widths.right))
+                        .max(Pixels::ZERO),
+                        bottom_right: (corner_radii.bottom_right
+                            - border_widths.bottom.max(border_widths.right))
+                        .max(Pixels::ZERO),
+                        bottom_left: (corner_radii.bottom_left
+                            - border_widths.bottom.max(border_widths.left))
+                        .max(Pixels::ZERO),
+                    }
+                } else {
+                    Corners::default()
+                };
+
+                Some(ContentMask::rounded(bounds, corner_radii))
             }
         }
     }
