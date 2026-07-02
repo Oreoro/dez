@@ -1234,11 +1234,10 @@ mod element {
     use std::{cell::RefCell, iter, rc::Rc, sync::Arc};
 
     use gpui::{
-        Along, AnyElement, App, Axis, BorderStyle, Bounds, Element, GlobalElementId,
-        HitboxBehavior, IntoElement, MouseDownEvent, MouseMoveEvent, MouseUpEvent, ParentElement,
-        Pixels, Point, Size, Style, WeakEntity, Window, px, relative, size,
+        Along, AnyElement, App, Axis, BorderStyle, Bounds, CursorStyle, Element, GlobalElementId,
+        Hitbox, HitboxBehavior, IntoElement, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
+        ParentElement, Pixels, Point, Size, Style, WeakEntity, Window, px, relative, size,
     };
-    use gpui::{CursorStyle, Hitbox};
     use parking_lot::Mutex;
     use settings::Settings;
     use smallvec::SmallVec;
@@ -1453,6 +1452,18 @@ mod element {
             window.refresh();
         }
 
+        fn pixel_snap_bounds(window: &Window, bounds: Bounds<Pixels>) -> Bounds<Pixels> {
+            let origin = Point::new(
+                window.pixel_snap(bounds.left()),
+                window.pixel_snap(bounds.top()),
+            );
+            let corner = Point::new(
+                window.pixel_snap(bounds.right()).max(origin.x),
+                window.pixel_snap(bounds.bottom()).max(origin.y),
+            );
+            Bounds::from_corners(origin, corner)
+        }
+
         fn layout_handle(
             axis: Axis,
             pane_bounds: Bounds<Pixels>,
@@ -1569,22 +1580,23 @@ mod element {
                 let original_ix = layout.visible_indices[ix];
                 let child_flex = flexes[original_ix];
 
-                let child_size = bounds
+                let raw_child_size = bounds
                     .size
-                    .apply_along(self.axis, |_| space_per_flex * child_flex)
-                    .map(|d| d.round());
-
-                let child_bounds = Bounds {
+                    .apply_along(self.axis, |_| space_per_flex * child_flex);
+                let raw_child_bounds = Bounds {
                     origin,
-                    size: child_size,
+                    size: raw_child_size,
                 };
+                // Pane axes bypass Taffy, so snap their child edges explicitly to avoid
+                // 1dp border jitter when flex sizes or card gaps are fractional.
+                let child_bounds = Self::pixel_snap_bounds(window, raw_child_bounds);
 
                 bounding_boxes[original_ix] = Some(child_bounds);
-                child.layout_as_root(child_size.into(), window, cx);
-                child.prepaint_at(origin, window, cx);
+                child.layout_as_root(child_bounds.size.into(), window, cx);
+                child.prepaint_at(child_bounds.origin, window, cx);
 
                 origin = origin.apply_along(self.axis, |val| {
-                    val + child_size.along(self.axis) + card_gap
+                    val + raw_child_size.along(self.axis) + card_gap
                 });
 
                 let is_leaf_pane = self.is_leaf_pane_mask.get(ix).copied().unwrap_or(true);
