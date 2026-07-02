@@ -1,6 +1,6 @@
 //! UI-related utilities
 
-use gpui::{App, IntoElement, px};
+use gpui::{AnyElement, App, IntoElement, px};
 use theme::ActiveTheme;
 
 use crate::{Divider, DividerColor, prelude::*};
@@ -38,12 +38,32 @@ pub fn reveal_in_file_manager_label(is_remote: bool) -> &'static str {
 }
 
 pub fn traffic_light_spacer(cx: &mut App, include_bottom_border: bool) -> impl IntoElement {
+    traffic_light_spacer_with_child(cx, include_bottom_border, None)
+}
+
+pub fn traffic_light_spacer_with_child(
+    cx: &mut App,
+    include_bottom_border: bool,
+    child: Option<AnyElement>,
+) -> impl IntoElement {
+    const CHILD_GAP: f32 = 6.;
+    const SDK_26_EXTRA_TRAFFIC_LIGHT_PADDING: f32 = 2.;
+
+    let padding_left = if child.is_some() && MACOS_SDK_26_OR_LATER {
+        TRAFFIC_LIGHT_PADDING - SDK_26_EXTRA_TRAFFIC_LIGHT_PADDING
+    } else {
+        TRAFFIC_LIGHT_PADDING
+    };
+
     h_flex()
         .flex_none()
         .h_full()
-        .pl(px(TRAFFIC_LIGHT_PADDING))
+        .pl(px(padding_left))
         .border_color(cx.theme().colors().border)
         .when(include_bottom_border, |this| this.border_b_1())
+        .when_some(child, |this, child| {
+            this.child(h_flex().h_full().pr(px(CHILD_GAP)).child(child))
+        })
         .child(Divider::vertical().color(DividerColor::Border))
 }
 

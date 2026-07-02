@@ -11,7 +11,6 @@ use crate::{Agent, ArchiveSelectedThread, DEFAULT_THREAD_TITLE, RemoveSelectedTh
 
 use agent::ThreadStore;
 use agent_client_protocol::schema::v1 as acp;
-use agent_settings::AgentSettings;
 use chrono::{DateTime, Datelike as _, Local, NaiveDate, TimeDelta, Utc};
 use collections::HashMap;
 use editor::Editor;
@@ -29,7 +28,6 @@ use picker::{
     highlighted_match_with_paths::{HighlightedMatch, HighlightedMatchWithPaths},
 };
 use project::{AgentId, AgentServerStore};
-use settings::Settings as _;
 use theme::ActiveTheme;
 use ui::{
     AgentThreadStatus, Divider, KeyBinding, ListItem, ListItemSpacing, ListSubHeader, ScrollAxes,
@@ -39,11 +37,10 @@ use ui_input::ErasedEditor;
 use util::ResultExt;
 use util::paths::PathExt;
 use workspace::{
-    CloseWindow, ModalView, PathList, RecentWorkspace, SerializedWorkspaceLocation, Workspace,
-    WorkspaceDb, WorkspaceId,
+    ModalView, PathList, RecentWorkspace, SerializedWorkspaceLocation, Workspace, WorkspaceDb,
+    WorkspaceId,
 };
 
-use zed_actions::agents_sidebar::FocusSidebarFilter;
 use zed_actions::editor::{MoveDown, MoveUp};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -255,18 +252,6 @@ impl ThreadsArchiveView {
         cx.notify();
     }
 
-    pub fn focus_filter_editor(&self, window: &mut Window, cx: &mut App) {
-        let handle = self.filter_editor.read(cx).focus_handle(cx);
-        handle.focus(window, cx);
-    }
-
-    pub fn is_filter_editor_focused(&self, window: &Window, cx: &App) -> bool {
-        self.filter_editor
-            .read(cx)
-            .focus_handle(cx)
-            .is_focused(window)
-    }
-
     fn update_items(&mut self, cx: &mut Context<Self>) {
         let store = ThreadMetadataStore::global(cx).read(cx);
 
@@ -292,7 +277,7 @@ impl ThreadsArchiveView {
             .cloned()
             .collect::<Vec<_>>();
 
-        let query = self.filter_editor.read(cx).text(cx).to_lowercase();
+        let query = "";
         let today = Local::now().naive_local().date();
 
         let mut items = Vec::with_capacity(sessions.len() + 5);
@@ -551,7 +536,7 @@ impl ThreadsArchiveView {
                     self.list_state.scroll_to_reveal_item(prev);
                 } else {
                     self.selection = None;
-                    self.focus_filter_editor(window, cx);
+                    self.focus_handle.focus(window, cx);
                 }
                 cx.notify();
             }
@@ -851,98 +836,6 @@ impl ThreadsArchiveView {
         .detach_and_log_err(cx);
     }
 
-    fn render_header(&self, window: &Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let has_query = !self.filter_editor.read(cx).text(cx).is_empty();
-        let sidebar_on_left = matches!(
-            AgentSettings::get_global(cx).sidebar_side(),
-            settings::SidebarSide::Left
-        );
-        let sidebar_on_right = !sidebar_on_left;
-        let not_fullscreen = !window.is_fullscreen();
-        let traffic_lights = cfg!(target_os = "macos") && not_fullscreen && sidebar_on_left;
-        let left_window_controls = !cfg!(target_os = "macos") && not_fullscreen && sidebar_on_left;
-        let right_window_controls =
-            !cfg!(target_os = "macos") && not_fullscreen && sidebar_on_right;
-        let show_focus_keybinding =
-            self.selection.is_some() && !self.filter_editor.focus_handle(cx).is_focused(window);
-
-        h_flex()
-            .relative()
-            .flex_none()
-            .h(Tab::container_height(cx))
-            .when(left_window_controls, |this| {
-                this.children(Self::render_left_window_controls(window, cx))
-            })
-            .when(traffic_lights, |this| {
-                this.child(ui::utils::traffic_light_spacer(cx, false))
-            })
-            .map(|this| {
-                if !traffic_lights && !left_window_controls {
-                    this.pl_1p5()
-                } else {
-                    this
-                }
-            })
-            .when(!right_window_controls, |this| this.pr_1p5())
-            .gap_1()
-            .justify_between()
-            .child(
-                div()
-                    .absolute()
-                    .top_0()
-                    .left_0()
-                    .size_full()
-                    .border_b_1()
-                    .border_color(cx.theme().colors().border),
-            )
-            .child(
-                h_flex()
-                    .ml_1()
-                    .min_w_0()
-                    .w_full()
-                    .gap_1()
-                    .child(
-                        Icon::new(IconName::MagnifyingGlass)
-                            .size(IconSize::Small)
-                            .color(Color::Muted),
-                    )
-                    .child(self.filter_editor.clone()),
-            )
-            .when(show_focus_keybinding, |this| {
-                this.child(KeyBinding::for_action(&FocusSidebarFilter, cx))
-            })
-            .when(has_query, |this| {
-                this.child(
-                    IconButton::new("clear-filter", IconName::Close)
-                        .icon_size(IconSize::Small)
-                        .tooltip(Tooltip::text("Clear Search"))
-                        .on_click(cx.listener(|this, _, window, cx| {
-                            this.reset_filter_editor_text(window, cx);
-                            this.update_items(cx);
-                        })),
-                )
-            })
-            .when(right_window_controls, |this| {
-                this.children(Self::render_right_window_controls(window, cx))
-            })
-    }
-
-    fn render_left_window_controls(window: &Window, cx: &mut App) -> Option<AnyElement> {
-        platform_title_bar::render_left_window_controls(
-            cx.button_layout(),
-            Box::new(CloseWindow),
-            window,
-        )
-    }
-
-    fn render_right_window_controls(window: &Window, cx: &mut App) -> Option<AnyElement> {
-        platform_title_bar::render_right_window_controls(
-            cx.button_layout(),
-            Box::new(CloseWindow),
-            window,
-        )
-    }
-
     fn render_toolbar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let entry_count = self
             .items
@@ -1059,21 +952,14 @@ impl Focusable for ThreadsArchiveView {
 impl Render for ThreadsArchiveView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let is_empty = self.items.is_empty();
-        let has_query = !self.filter_editor.read(cx).text(cx).is_empty();
 
         let content = if is_empty {
-            let message = if has_query {
-                "No threads match your search."
-            } else {
-                "No threads yet."
-            };
-
             v_flex()
                 .flex_1()
                 .justify_center()
                 .items_center()
                 .child(
-                    Label::new(message)
+                    Label::new("No threads yet.")
                         .size(LabelSize::Small)
                         .color(Color::Muted),
                 )
@@ -1111,8 +997,7 @@ impl Render for ThreadsArchiveView {
             .on_action(cx.listener(Self::remove_selected_thread))
             .on_action(cx.listener(Self::archive_selected_thread))
             .size_full()
-            .child(self.render_header(window, cx))
-            .when(!has_query, |this| this.child(self.render_toolbar(cx)))
+            .child(self.render_toolbar(cx))
             .child(content)
     }
 }

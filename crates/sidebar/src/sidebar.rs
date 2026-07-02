@@ -64,10 +64,10 @@ use unicode_segmentation::UnicodeSegmentation as _;
 use util::ResultExt as _;
 use util::path_list::PathList;
 use workspace::{
-    CloseWindow, FocusWorkspaceSidebar, MultiWorkspace, MultiWorkspaceEvent, NextProject,
-    NextThread, Open, OpenMode, PreviousProject, PreviousThread, ProjectGroupKey, SaveIntent,
-    Sidebar as WorkspaceSidebar, SidebarSide, Toast, ToggleWorkspaceSidebar, Workspace,
-    notifications::NotificationId, sidebar_side_context_menu,
+    CloseWindow, MultiWorkspace, MultiWorkspaceEvent, NextProject, NextThread, Open, OpenMode,
+    PreviousProject, PreviousThread, ProjectGroupKey, SaveIntent, Sidebar as WorkspaceSidebar,
+    SidebarSide, Toast, ToggleWorkspaceSidebar, Workspace, notifications::NotificationId,
+    sidebar_side_context_menu,
 };
 
 use git_ui::worktree_service::{RemoteBranchName, worktree_create_targets};
@@ -1434,7 +1434,7 @@ impl Sidebar {
             .first()
             .map(|ws| ws.read(cx).project().read(cx).agent_server_store().clone());
 
-        let query = self.filter_editor.read(cx).text(cx);
+        let query = "";
 
         let previous = mem::take(&mut self.contents);
 
@@ -3340,18 +3340,12 @@ impl Sidebar {
         dispatch_context.add("ThreadsSidebar");
         dispatch_context.add("menu");
 
-        let is_archived_search_focused = matches!(&self.view, SidebarView::Archive(archive) if archive.read(cx).is_filter_editor_focused(window, cx));
-
         let is_renaming_thread = self
             .thread_rename_editor
             .focus_handle(cx)
             .is_focused(window);
 
-        let identifier = if self.filter_editor.focus_handle(cx).is_focused(window)
-            || is_archived_search_focused
-        {
-            "searching"
-        } else if is_renaming_thread {
+        let identifier = if is_renaming_thread {
             "editing"
         } else {
             "not_searching"
@@ -3364,15 +3358,6 @@ impl Sidebar {
     fn focus_in(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if !self.focus_handle.is_focused(window) {
             return;
-        }
-
-        if let SidebarView::Archive(archive) = &self.view {
-            let has_selection = archive.read(cx).has_selection();
-            if !has_selection {
-                archive.update(cx, |view, cx| view.focus_filter_editor(window, cx));
-            }
-        } else if self.selection.is_none() {
-            self.filter_editor.focus_handle(cx).focus(window, cx);
         }
 
         cx.notify();
@@ -3405,7 +3390,7 @@ impl Sidebar {
             self.update_entries(cx);
         } else {
             self.selection = None;
-            self.filter_editor.focus_handle(cx).focus(window, cx);
+            self.focus_handle.focus(window, cx);
             cx.notify();
         }
     }
@@ -3418,13 +3403,11 @@ impl Sidebar {
     ) {
         self.selection = None;
         if let SidebarView::Archive(archive) = &self.view {
-            archive.update(cx, |view, cx| {
+            archive.update(cx, |view, _cx| {
                 view.clear_selection();
-                view.focus_filter_editor(window, cx);
             });
-        } else {
-            self.filter_editor.focus_handle(cx).focus(window, cx);
         }
+        self.focus_handle.focus(window, cx);
 
         cx.notify();
     }
@@ -3440,8 +3423,8 @@ impl Sidebar {
         })
     }
 
-    fn has_filter_query(&self, cx: &App) -> bool {
-        !self.filter_editor.read(cx).text(cx).is_empty()
+    fn has_filter_query(&self, _cx: &App) -> bool {
+        false
     }
 
     fn start_renaming_thread(
@@ -3573,15 +3556,6 @@ impl Sidebar {
         }
     }
 
-    fn editor_confirm(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.selection.is_none() {
-            self.select_next(&SelectNext, window, cx);
-        }
-        if self.selection.is_some() {
-            self.focus_handle.focus(window, cx);
-        }
-    }
-
     fn select_next(&mut self, _: &SelectNext, _window: &mut Window, cx: &mut Context<Self>) {
         let next = match self.selection {
             Some(ix) if ix + 1 < self.contents.entries.len() => ix + 1,
@@ -3598,7 +3572,7 @@ impl Sidebar {
         match self.selection {
             Some(0) => {
                 self.selection = None;
-                self.filter_editor.focus_handle(cx).focus(window, cx);
+                self.focus_handle.focus(window, cx);
                 cx.notify();
             }
             Some(ix) => {
@@ -6796,18 +6770,6 @@ impl Sidebar {
             .into_any_element()
     }
 
-    fn render_filter_input(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        div()
-            .min_w_0()
-            .flex_1()
-            .capture_action(
-                cx.listener(|this, _: &editor::actions::Newline, window, cx| {
-                    this.editor_confirm(window, cx);
-                }),
-            )
-            .child(self.filter_editor.clone())
-    }
-
     fn render_recent_projects_button(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let multi_workspace = self.multi_workspace.upgrade();
 
@@ -7496,14 +7458,7 @@ impl Sidebar {
         self.cycle_thread_impl(false, window, cx);
     }
 
-    fn render_no_results(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let has_query = self.has_filter_query(cx);
-        let message = if has_query {
-            "No threads match your search."
-        } else {
-            "No threads yet"
-        };
-
+    fn render_no_results(&self, _cx: &mut Context<Self>) -> impl IntoElement {
         v_flex()
             .id("sidebar-no-results")
             .p_4()
@@ -7511,7 +7466,7 @@ impl Sidebar {
             .items_center()
             .justify_center()
             .child(
-                Label::new(message)
+                Label::new("No threads yet")
                     .size(LabelSize::Small)
                     .color(Color::Muted),
             )
@@ -7542,13 +7497,7 @@ impl Sidebar {
         })
     }
 
-    fn render_sidebar_header(
-        &self,
-        no_open_projects: bool,
-        window: &Window,
-        cx: &mut Context<Self>,
-    ) -> impl IntoElement {
-        let has_query = self.has_filter_query(cx);
+    fn render_sidebar_header(&self, window: &Window, cx: &mut Context<Self>) -> impl IntoElement {
         let sidebar_on_left = self.side(cx) == SidebarSide::Left;
         let sidebar_on_right = self.side(cx) == SidebarSide::Right;
         let not_fullscreen = !window.is_fullscreen();
@@ -7556,6 +7505,8 @@ impl Sidebar {
         let left_window_controls = !cfg!(target_os = "macos") && not_fullscreen && sidebar_on_left;
         let right_window_controls =
             !cfg!(target_os = "macos") && not_fullscreen && sidebar_on_right;
+        let traffic_light_toggle_button =
+            traffic_lights.then(|| self.render_sidebar_toggle_button(cx));
 
         h_flex()
             .relative()
@@ -7565,7 +7516,11 @@ impl Sidebar {
                 this.children(Self::render_left_window_controls(window, cx))
             })
             .when(traffic_lights, |this| {
-                this.child(ui::utils::traffic_light_spacer(cx, false))
+                this.child(ui::utils::traffic_light_spacer_with_child(
+                    cx,
+                    false,
+                    traffic_light_toggle_button,
+                ))
             })
             .map(|this| {
                 if !traffic_lights && !left_window_controls {
@@ -7576,44 +7531,21 @@ impl Sidebar {
             })
             .when(!right_window_controls, |this| this.pr_1p5())
             .gap_1()
-            .when(!no_open_projects, |this| {
-                this.child(
-                    div()
-                        .absolute()
-                        .top_0()
-                        .left_0()
-                        .size_full()
-                        .border_b_1()
-                        .border_color(cx.theme().colors().border),
-                )
-                .child(
-                    div().ml_1().child(
-                        Icon::new(IconName::MagnifyingGlass)
-                            .size(IconSize::Small)
-                            .color(Color::Muted),
-                    ),
-                )
-                .child(self.render_filter_input(cx))
-                .child(
-                    h_flex()
-                        .gap_1()
-                        .when(
-                            self.selection.is_some()
-                                && !self.filter_editor.focus_handle(cx).is_focused(window),
-                            |this| this.child(KeyBinding::for_action(&FocusSidebarFilter, cx)),
-                        )
-                        .when(has_query, |this| {
-                            this.child(
-                                IconButton::new("clear_filter", IconName::Close)
-                                    .icon_size(IconSize::Small)
-                                    .tooltip(Tooltip::text("Clear Search"))
-                                    .on_click(cx.listener(|this, _, window, cx| {
-                                        this.reset_filter_editor_text(window, cx);
-                                        this.update_entries(cx);
-                                    })),
-                            )
-                        }),
-                )
+            .child(
+                div()
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .size_full()
+                    .border_b_1()
+                    .border_color(cx.theme().colors().border),
+            )
+            .when(!traffic_lights && !sidebar_on_right, |this| {
+                this.child(self.render_sidebar_toggle_button(cx))
+            })
+            .child(div().flex_1())
+            .when(!traffic_lights && sidebar_on_right, |this| {
+                this.child(self.render_sidebar_toggle_button(cx))
             })
             .when(right_window_controls, |this| {
                 this.children(Self::render_right_window_controls(window, cx))
@@ -7636,7 +7568,7 @@ impl Sidebar {
         )
     }
 
-    fn render_sidebar_toggle_button(&self, _cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_sidebar_toggle_button(&self, _cx: &mut Context<Self>) -> AnyElement {
         let on_right = AgentSettings::get_global(_cx).sidebar_side() == SidebarSide::Right;
 
         sidebar_side_context_menu("sidebar-toggle-menu", _cx)
@@ -7658,28 +7590,10 @@ impl Sidebar {
                 };
                 IconButton::new("sidebar-close-toggle", icon)
                     .icon_size(IconSize::Small)
-                    .tooltip(Tooltip::element(move |_window, cx| {
-                        v_flex()
-                            .gap_1()
-                            .child(
-                                h_flex()
-                                    .gap_2()
-                                    .justify_between()
-                                    .child(Label::new("Toggle Sidebar"))
-                                    .child(KeyBinding::for_action(&ToggleWorkspaceSidebar, cx)),
-                            )
-                            .child(
-                                h_flex()
-                                    .pt_1()
-                                    .gap_2()
-                                    .border_t_1()
-                                    .border_color(cx.theme().colors().border_variant)
-                                    .justify_between()
-                                    .child(Label::new("Focus Sidebar"))
-                                    .child(KeyBinding::for_action(&FocusWorkspaceSidebar, cx)),
-                            )
-                            .into_any_element()
-                    }))
+                    .icon_color(Color::Muted)
+                    .tooltip(|_, cx| {
+                        Tooltip::for_action("Hide Threads Sidebar", &ToggleWorkspaceSidebar, cx)
+                    })
                     .on_click(|_, window, cx| {
                         if let Some(multi_workspace) = window.root::<MultiWorkspace>().flatten() {
                             multi_workspace.update(cx, |multi_workspace, cx| {
@@ -7688,6 +7602,7 @@ impl Sidebar {
                         }
                     })
             })
+            .into_any_element()
     }
 
     fn active_agent_conversation_view(&self, cx: &App) -> Option<Entity<ConversationView>> {
@@ -7886,7 +7801,6 @@ impl Sidebar {
             .when(on_right, |this| this.flex_row_reverse())
             .border_t_1()
             .border_color(cx.theme().colors().border)
-            .child(self.render_sidebar_toggle_button(cx))
             .child(self.render_agent_options_menu(cx))
             .child(
                 IconButton::new("history", IconName::Clock)
@@ -8133,7 +8047,6 @@ impl Sidebar {
 
         self._subscriptions.push(subscription);
         self.view = SidebarView::Archive(archive_view.clone());
-        archive_view.update(cx, |view, cx| view.focus_filter_editor(window, cx));
         self.serialize(cx);
         cx.notify();
     }
@@ -8141,8 +8054,7 @@ impl Sidebar {
     fn show_thread_list(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.view = SidebarView::ThreadList;
         self._subscriptions.clear();
-        let handle = self.filter_editor.read(cx).focus_handle(cx);
-        handle.focus(window, cx);
+        self.focus_handle.focus(window, cx);
         self.serialize(cx);
         cx.notify();
     }
@@ -8349,39 +8261,38 @@ impl Render for Sidebar {
             .rounded_lg()
             .border_1()
             .border_color(color.border)
+            .child(self.render_sidebar_header(window, cx))
             .map(|this| match &self.view {
-                SidebarView::ThreadList => this
-                    .child(self.render_sidebar_header(no_open_projects, window, cx))
-                    .map(|this| {
-                        if no_open_projects {
-                            this.child(self.render_empty_state(cx))
-                        } else {
-                            this.child(
-                                v_flex()
-                                    .relative()
-                                    .flex_1()
-                                    .overflow_hidden()
-                                    .child(
-                                        list(
-                                            self.list_state.clone(),
-                                            cx.processor(Self::render_list_entry),
-                                        )
-                                        .flex_1()
-                                        .size_full(),
+                SidebarView::ThreadList => this.map(|this| {
+                    if no_open_projects {
+                        this.child(self.render_empty_state(cx))
+                    } else {
+                        this.child(
+                            v_flex()
+                                .relative()
+                                .flex_1()
+                                .overflow_hidden()
+                                .child(
+                                    list(
+                                        self.list_state.clone(),
+                                        cx.processor(Self::render_list_entry),
                                     )
-                                    .when(no_search_results, |this| {
-                                        this.child(self.render_no_results(cx))
-                                    })
-                                    .when_some(sticky_header, |this, header| this.child(header))
-                                    .custom_scrollbars(
-                                        Scrollbars::new(ScrollAxes::Vertical)
-                                            .tracked_scroll_handle(&self.list_state),
-                                        window,
-                                        cx,
-                                    ),
-                            )
-                        }
-                    }),
+                                    .flex_1()
+                                    .size_full(),
+                                )
+                                .when(no_search_results, |this| {
+                                    this.child(self.render_no_results(cx))
+                                })
+                                .when_some(sticky_header, |this, header| this.child(header))
+                                .custom_scrollbars(
+                                    Scrollbars::new(ScrollAxes::Vertical)
+                                        .tracked_scroll_handle(&self.list_state),
+                                    window,
+                                    cx,
+                                ),
+                        )
+                    }
+                }),
                 SidebarView::Archive(archive_view) => this.child(archive_view.clone()),
             })
             .map(|this| {
