@@ -556,6 +556,7 @@ impl PermissionSelection {
 
 pub struct ThreadView {
     pub(crate) root_thread_id: ThreadId,
+    pub(crate) started_as_draft: bool,
     pub session_id: acp::SessionId,
     pub parent_session_id: Option<acp::SessionId>,
     pub thread: Entity<AcpThread>,
@@ -755,6 +756,7 @@ pub fn open_markdown_in_workspace(
 impl ThreadView {
     pub(crate) fn new(
         root_thread_id: ThreadId,
+        started_as_draft: bool,
         thread: Entity<AcpThread>,
         conversation: Entity<super::Conversation>,
         server_view: WeakEntity<ConversationView>,
@@ -947,6 +949,7 @@ impl ThreadView {
 
         let mut this = Self {
             root_thread_id,
+            started_as_draft,
             session_id,
             parent_session_id,
             focus_handle: cx.focus_handle(),
@@ -1160,8 +1163,20 @@ impl ThreadView {
         self.parent_session_id.is_some()
     }
 
-    fn is_root_draft_thread(&self, cx: &App) -> bool {
-        self.parent_session_id.is_none() && self.thread.read(cx).is_draft_thread()
+    pub(crate) fn is_draft(&self, cx: &App) -> bool {
+        self.parent_session_id.is_none()
+            && self.started_as_draft
+            && !self.has_user_submitted_prompt(cx)
+    }
+
+    pub(crate) fn has_user_submitted_prompt(&self, cx: &App) -> bool {
+        self.in_flight_prompt.is_some()
+            || self
+                .thread
+                .read(cx)
+                .entries()
+                .iter()
+                .any(|entry| matches!(entry, AgentThreadEntry::UserMessage(_)))
     }
 
     /// Returns the currently active editor, either for a message that is being
@@ -4068,10 +4083,10 @@ impl ThreadView {
 
         let max_content_width = AgentSettings::get_global(cx).max_content_width;
         let has_messages = self.list_state.item_count() > 0;
-        let compact_editor = has_messages || self.is_root_draft_thread(cx);
+        let compact_editor = has_messages || self.is_draft(cx);
         let fills_container = !compact_editor || editor_expanded;
         let draft_agent_selector = self
-            .is_root_draft_thread(cx)
+            .is_draft(cx)
             .then(|| self.render_draft_agent_selector(cx));
 
         h_flex()
@@ -6865,7 +6880,7 @@ impl ThreadView {
 
     pub(crate) fn sync_editor_mode_for_empty_state(&mut self, cx: &mut Context<Self>) {
         let has_messages = self.list_state.item_count() > 0;
-        let full_height_empty_state = !has_messages && !self.is_root_draft_thread(cx);
+        let full_height_empty_state = !has_messages && !self.is_draft(cx);
 
         let mode = if full_height_empty_state {
             EditorMode::Full {

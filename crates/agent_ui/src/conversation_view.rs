@@ -558,6 +558,7 @@ pub struct ConversationView {
     thread_store: Option<Entity<ThreadStore>>,
     pub(crate) thread_id: ThreadId,
     pub(crate) root_session_id: Option<acp::SessionId>,
+    started_as_draft: bool,
     server_state: ServerState,
     focus_handle: FocusHandle,
     notifications: Vec<WindowHandle<AgentNotification>>,
@@ -821,7 +822,8 @@ impl ConversationView {
         .detach();
 
         let thread_id = thread_id.unwrap_or_else(ThreadId::new);
-        if resume_session_id.is_none() {
+        let started_as_draft = resume_session_id.is_none();
+        if started_as_draft {
             Self::save_provisional_draft_metadata(thread_id, &connection_key, &project, cx);
         }
 
@@ -835,6 +837,7 @@ impl ConversationView {
             thread_store: thread_store.clone(),
             thread_id,
             root_session_id: resume_session_id.clone(),
+            started_as_draft,
             server_state: Self::initial_state(
                 agent.clone(),
                 connection_store,
@@ -1087,7 +1090,7 @@ impl ConversationView {
         }
 
         let thread_view = self.root_thread_view()?;
-        if !thread_view.read(cx).thread.read(cx).is_draft_thread() {
+        if !self.is_draft(cx) {
             return None;
         }
         Some(thread_view.update(cx, |thread_view, cx| {
@@ -1103,8 +1106,8 @@ impl ConversationView {
             ServerState::Loading { .. } => false,
             ServerState::LoadError { .. } => self.root_session_id.is_none(),
             ServerState::Connected(_) => self
-                .root_thread(cx)
-                .is_some_and(|thread| thread.read(cx).is_draft_thread()),
+                .root_thread_view()
+                .is_some_and(|thread_view| thread_view.read(cx).is_draft(cx)),
         }
     }
 
@@ -1628,6 +1631,7 @@ impl ConversationView {
         cx.new(|cx| {
             ThreadView::new(
                 self.thread_id,
+                self.started_as_draft,
                 thread,
                 conversation,
                 weak,
@@ -1795,11 +1799,11 @@ impl ConversationView {
             ServerState::Connected(view) => view.active_view().map_or_else(
                 || DEFAULT_THREAD_TITLE.into(),
                 |view| {
-                    let thread = view.read(cx).thread.clone();
-                    let thread = thread.read(cx);
-                    if thread.is_draft_thread() {
+                    if self.is_draft(cx) {
                         DEFAULT_THREAD_TITLE.into()
                     } else {
+                        let thread = view.read(cx).thread.clone();
+                        let thread = thread.read(cx);
                         self.metadata_title(cx)
                             .or_else(|| thread.title())
                             .unwrap_or_else(|| DEFAULT_THREAD_TITLE.into())
@@ -2131,7 +2135,7 @@ impl ConversationView {
                 cx.notify();
             }
             AcpThreadEvent::PromptUpdated => {
-                if !is_subagent && thread.read(cx).is_draft_thread() {
+                if !is_subagent && self.is_draft(cx) {
                     self.schedule_draft_prompt_persist(cx);
                 }
                 cx.notify();
@@ -2147,11 +2151,11 @@ impl ConversationView {
                 .timer(DRAFT_PROMPT_PERSIST_DEBOUNCE)
                 .await;
             let persist = this.update(cx, |this, cx| {
-                let thread = this.root_thread(cx)?;
-                let thread = thread.read(cx);
-                if !thread.is_draft_thread() {
+                if !this.is_draft(cx) {
                     return None;
                 }
+                let thread = this.root_thread(cx)?;
+                let thread = thread.read(cx);
                 let snapshot: Vec<acp::ContentBlock> = thread
                     .draft_prompt()
                     .map(|p| p.to_vec())
@@ -2495,15 +2499,8 @@ impl ConversationView {
     }
 
     pub fn has_user_submitted_prompt(&self, cx: &App) -> bool {
-        self.root_thread_view().is_some_and(|active| {
-            active
-                .read(cx)
-                .thread
-                .read(cx)
-                .entries()
-                .iter()
-                .any(|entry| matches!(entry, AgentThreadEntry::UserMessage(_)))
-        })
+        self.root_thread_view()
+            .is_some_and(|active| active.read(cx).has_user_submitted_prompt(cx))
     }
 
     pub fn regenerate_thread_title(&self, cx: &mut App) -> ThreadTitleRegenerationResult {

@@ -43,6 +43,7 @@ impl Global for AgentThreadItemState {}
 pub struct AgentThreadItem {
     conversation_view: Entity<ConversationView>,
     window: gpui::AnyWindowHandle,
+    focus_handle: FocusHandle,
     tab_title: SharedString,
     tab_is_draft: bool,
     _subscriptions: Vec<Subscription>,
@@ -54,6 +55,14 @@ impl AgentThreadItem {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
+        let focus_handle = cx.focus_handle();
+        cx.on_focus_in(&focus_handle, window, |this: &mut Self, window, cx| {
+            if this.focus_handle.is_focused(window) {
+                this.conversation_view.focus_handle(cx).focus(window, cx);
+            }
+        })
+        .detach();
+
         let subscriptions = vec![
             cx.subscribe(&conversation_view, |this, _, _: &StateChange, cx| {
                 this.emit_tab_update(cx);
@@ -78,6 +87,7 @@ impl AgentThreadItem {
         let this = Self {
             conversation_view,
             window: window.window_handle(),
+            focus_handle,
             tab_title,
             tab_is_draft,
             _subscriptions: subscriptions,
@@ -201,14 +211,14 @@ impl AgentThreadItem {
 
     pub fn active_thread_info(&self, cx: &App) -> Option<AgentThreadInfo> {
         let conversation_view = self.conversation_view.read(cx);
+        if conversation_view.is_draft(cx) {
+            return None;
+        }
         let has_pending_tool_call = conversation_view.root_thread_has_pending_tool_call(cx);
         let thread_id = conversation_view.parent_id();
         let thread_view = conversation_view.root_thread_view()?;
         let thread_view = thread_view.read(cx);
         let thread = thread_view.thread.read(cx);
-        if thread.is_draft_thread() {
-            return None;
-        }
         let title = conversation_view.title(cx);
 
         let status = if has_pending_tool_call {
@@ -240,8 +250,8 @@ impl AgentThreadItem {
 impl EventEmitter<ItemEvent> for AgentThreadItem {}
 
 impl Focusable for AgentThreadItem {
-    fn focus_handle(&self, cx: &App) -> FocusHandle {
-        self.conversation_view.focus_handle(cx)
+    fn focus_handle(&self, _cx: &App) -> FocusHandle {
+        self.focus_handle.clone()
     }
 }
 
@@ -334,7 +344,10 @@ impl Item for AgentThreadItem {
 
 impl Render for AgentThreadItem {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
-        self.conversation_view.clone()
+        div()
+            .track_focus(&self.focus_handle)
+            .size_full()
+            .child(self.conversation_view.clone())
     }
 }
 

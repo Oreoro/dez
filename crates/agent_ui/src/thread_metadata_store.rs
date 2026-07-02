@@ -326,8 +326,7 @@ pub struct ThreadMetadata {
 }
 
 impl ThreadMetadata {
-    /// A thread is a draft until its first message is sent, at which point
-    /// it gets an ACP `session_id`.
+    /// Draft metadata stays sessionless until its first message is sent.
     pub fn is_draft(&self) -> bool {
         self.session_id.is_none()
     }
@@ -1274,21 +1273,22 @@ impl ThreadMetadataStore {
             return;
         };
 
+        let is_draft = view.is_draft(cx);
         let thread_ref = thread.read(cx);
         // Collab-hosted threads don't own their metadata locally.
         if thread_ref.project().read(cx).is_via_collab() {
             return;
         }
-        let is_draft = thread_ref.is_draft_thread();
         let existing_thread = self.entry(thread_id);
 
-        // Draft session IDs may change on reload, so let's not save them until they're valid
+        // New ACP sessions exist before the user sends. Keep draft metadata
+        // sessionless until the conversation is promoted by user input.
         let session_id = if is_draft {
             None
         } else {
             Some(thread_ref.session_id().clone())
         };
-        let title = thread_ref.title();
+        let title = if is_draft { None } else { thread_ref.title() };
         let title_override = existing_thread.and_then(|t| t.title_override.clone());
 
         let updated_at = Utc::now();
