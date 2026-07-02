@@ -1270,8 +1270,8 @@ impl Item for ProjectDiff {
 
     fn tab_content_text(&self, _detail: usize, cx: &App) -> SharedString {
         match self.branch_diff.read(cx).diff_base() {
-            DiffBase::Head => "Uncommitted Changes".into(),
-            DiffBase::Merge { base_ref } => format!("Changes since {}", base_ref).into(),
+            DiffBase::Head => "Uncommitted Diff".into(),
+            DiffBase::Merge { base_ref } => format!("Diff since {}", base_ref).into(),
         }
     }
 
