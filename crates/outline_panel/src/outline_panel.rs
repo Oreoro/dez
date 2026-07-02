@@ -4984,7 +4984,7 @@ impl Panel for OutlinePanel {
     }
 
     fn icon(&self, _: &Window, _cx: &App) -> Option<IconName> {
-        Some(IconName::ListTree)
+        Some(IconName::ToC)
     }
 
     fn button_visible(&self, cx: &App) -> bool {

@@ -265,6 +265,7 @@ pub enum IconName {
     ThreadsSidebarRightOpen,
     ThumbsDown,
     ThumbsUp,
+    ToC,
     TodoComplete,
     TodoPending,
     TodoProgress,
