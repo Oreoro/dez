@@ -295,21 +295,17 @@ pub enum SwitchColor {
 }
 
 impl SwitchColor {
-    fn get_colors(&self, is_on: bool, cx: &App) -> (Hsla, Hsla) {
+    fn bg_color(&self, is_on: bool, cx: &App) -> Hsla {
         if !is_on {
-            return (
-                cx.theme().colors().element_disabled,
-                cx.theme().colors().border,
-            );
+            return cx.theme().colors().element_disabled;
         }
 
         match self {
             SwitchColor::Accent => {
                 let status = cx.theme().status();
-                let colors = cx.theme().colors();
-                (status.info.opacity(0.4), colors.text_accent.opacity(0.2))
+                status.info.opacity(0.4)
             }
-            SwitchColor::Custom(color) => (*color, color.opacity(0.6)),
+            SwitchColor::Custom(color) => *color,
         }
     }
 }
@@ -461,7 +457,7 @@ impl RenderOnce for Switch {
 
         let base_color = cx.theme().colors().text;
         let thumb_color = base_color;
-        let (bg_color, border_color) = self.color.get_colors(is_on, cx);
+        let bg_color = self.color.bg_color(is_on, cx);
 
         let bg_hover_color = if is_on {
             bg_color.blend(base_color.opacity(0.16 * adjust_ratio))
@@ -496,18 +492,10 @@ impl RenderOnce for Switch {
                 ToggleState::Indeterminate => Toggled::Mixed,
                 ToggleState::Unselected => Toggled::False,
             })
-            .p(px(1.0))
-            .border_2()
-            .border_color(cx.theme().colors().border_transparent)
-            .rounded_full()
             .when_some(
                 self.tab_index.filter(|_| !self.disabled),
                 |this, tab_index| {
                     this.tab_index(tab_index)
-                        .focus_visible(|mut style| {
-                            style.border_color = Some(cx.theme().colors().border_focused);
-                            style
-                        })
                         .when_some(self.on_click.clone(), |this, on_click| {
                             this.on_click(move |_, window, cx| {
                                 on_click(&self.toggle_state.inverse(), window, cx)
@@ -531,8 +519,6 @@ impl RenderOnce for Switch {
                             .when(!self.disabled, |this| {
                                 this.group_hover(group_id.clone(), |el| el.bg(bg_hover_color))
                             })
-                            .border_1()
-                            .border_color(border_color)
                             .child(
                                 div()
                                     .size(thumb_size)
