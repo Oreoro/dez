@@ -502,11 +502,12 @@ enum AnimationState {
 const DELTA_MAX: f32 = 1.0;
 
 impl VisibilityState {
-    fn from_behavior(behavior: ShowBehavior) -> Self {
+    fn from_behavior(behavior: ShowBehavior, keep_track_visible: bool) -> Self {
         match behavior {
             ShowBehavior::Always => Self::Visible,
             ShowBehavior::Never => Self::Disabled,
-            ShowBehavior::Autohide => Self::for_show(),
+            ShowBehavior::Autohide if keep_track_visible => Self::ThumbHidden,
+            ShowBehavior::Autohide => Self::Hidden,
         }
     }
 
@@ -529,6 +530,14 @@ impl VisibilityState {
             self,
             Self::Visible | Self::Animating { .. } | Self::ThumbHidden
         )
+    }
+
+    fn needs_autohide_timer(&self) -> bool {
+        matches!(self, Self::Visible | Self::Animating { showing: true, .. })
+    }
+
+    fn thumb_accepts_hover(&self) -> bool {
+        matches!(self, Self::Visible | Self::Animating { .. })
     }
 
     #[inline]
@@ -602,6 +611,12 @@ struct TrackColors {
     has_border: bool,
 }
 
+impl TrackColors {
+    fn keeps_track_visible(&self) -> bool {
+        self.has_border
+    }
+}
+
 pub fn on_new_scrollbars<T: gpui::Global>(cx: &mut App) {
     cx.observe_new::<ScrollbarState>(|_, window, cx| {
         if let Some(window) = window {
@@ -641,20 +656,24 @@ impl<T: ScrollableHandle> ScrollbarState<T> {
         };
 
         let show_behavior = ShowBehavior::from_setting((config.get_visibility)(cx), cx);
+        let track_color = config.track_color.map(|color| TrackColors {
+            background: color,
+            has_border: config.border,
+        });
+        let keep_track_visible = track_color
+            .as_ref()
+            .is_some_and(TrackColors::keeps_track_visible);
         ScrollbarState {
             thumb_state: Default::default(),
             notify_id: config.tracked_entity.map(|id| id.unwrap_or(parent_id)),
             manually_added,
             scroll_handle,
             visibility: config.visibility,
-            track_color: config.track_color.map(|color| TrackColors {
-                background: color,
-                has_border: config.border,
-            }),
+            track_color,
             show_behavior,
             get_visibility: config.get_visibility,
             style: config.style.unwrap_or_default(),
-            show_state: VisibilityState::from_behavior(show_behavior),
+            show_state: VisibilityState::from_behavior(show_behavior, keep_track_visible),
             mouse_in_parent: true,
             last_prepaint_state: None,
             _auto_hide_task: None,
@@ -672,7 +691,8 @@ impl<T: ScrollableHandle> ScrollbarState<T> {
     /// Schedules a scrollbar auto hide if no auto hide is currently in progress yet.
     fn schedule_auto_hide(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if self._auto_hide_task.is_none() {
-            self._auto_hide_task = (self.visible() && self.show_behavior == ShowBehavior::Autohide)
+            self._auto_hide_task = (self.show_state.needs_autohide_timer()
+                && self.show_behavior == ShowBehavior::Autohide)
                 .then(|| {
                     cx.spawn_in(window, async move |scrollbar_state, cx| {
                         cx.background_executor()
@@ -706,7 +726,14 @@ impl<T: ScrollableHandle> ScrollbarState<T> {
     ) {
         if self.show_behavior != behavior {
             self.show_behavior = behavior;
-            self.set_visibility(VisibilityState::from_behavior(behavior), cx);
+            let keep_track_visible = self
+                .track_color
+                .as_ref()
+                .is_some_and(TrackColors::keeps_track_visible);
+            self.set_visibility(
+                VisibilityState::from_behavior(behavior, keep_track_visible),
+                cx,
+            );
             self.schedule_auto_hide(window, cx);
             cx.notify();
         }
@@ -834,6 +861,12 @@ impl<T: ScrollableHandle> ScrollbarState<T> {
             .is_some_and(|state| state.parent_bounds_hitbox.is_hovered(window))
     }
 
+    fn parent_should_handle_scroll(&self, window: &Window) -> bool {
+        self.last_prepaint_state
+            .as_ref()
+            .is_some_and(|state| state.parent_bounds_hitbox.should_handle_scroll(window))
+    }
+
     fn hit_for_position(&self, position: &Point<Pixels>) -> Option<&ScrollbarLayout> {
         self.last_prepaint_state
             .as_ref()
@@ -886,6 +919,10 @@ impl<T: ScrollableHandle> ScrollbarState<T> {
 
     fn visible(&self) -> bool {
         self.show_state.is_visible()
+    }
+
+    fn thumb_accepts_hover(&self) -> bool {
+        self.show_state.thumb_accepts_hover()
     }
 
     #[inline]
@@ -1011,6 +1048,7 @@ enum ScrollbarMouseEvent {
     ThumbDrag(Pixels),
 }
 
+#[derive(Clone)]
 struct ScrollbarLayout {
     thumb_bounds: Bounds<Pixels>,
     track_bounds: Bounds<Pixels>,
@@ -1074,12 +1112,17 @@ impl PartialEq for ScrollbarLayout {
     }
 }
 
+#[derive(Clone)]
 pub struct ScrollbarPrepaintState {
     parent_bounds_hitbox: Hitbox,
     thumbs: SmallVec<[ScrollbarLayout; 2]>,
 }
 
 impl ScrollbarPrepaintState {
+    fn has_thumbs(&self) -> bool {
+        !self.thumbs.is_empty()
+    }
+
     fn thumb_for_position(&self, position: &Point<Pixels>) -> Option<&ScrollbarLayout> {
         self.thumbs
             .iter()
@@ -1245,10 +1288,21 @@ impl<T: ScrollableHandle> Element for ScrollbarElement<T> {
                     },
                     parent_bounds_hitbox: window.insert_hitbox(bounds, HitboxBehavior::Normal),
                 });
-        if prepaint_state
-            .as_ref()
-            .is_some_and(|state| Some(state) != self.state.read(cx).last_prepaint_state.as_ref())
-        {
+        let became_scrollable = prepaint_state.as_ref().is_some_and(|state| {
+            state.has_thumbs()
+                && self
+                    .state
+                    .read(cx)
+                    .last_prepaint_state
+                    .as_ref()
+                    .is_none_or(|previous| !previous.has_thumbs())
+        });
+
+        self.state.update(cx, |state, _| {
+            state.last_prepaint_state = prepaint_state.clone()
+        });
+
+        if became_scrollable {
             self.state
                 .update(cx, |state, cx| state.show_scrollbars(window, cx));
         }
@@ -1437,13 +1491,16 @@ impl<T: ScrollableHandle> Element for ScrollbarElement<T> {
                             && event.button == MouseButton::Left)
                             .then(|| state.hit_for_position(&event.position))
                             .flatten()
+                            .cloned()
                         else {
                             return;
                         };
 
                         let ScrollbarLayout {
                             thumb_bounds, axis, ..
-                        } = scrollbar_layout;
+                        } = &scrollbar_layout;
+
+                        state.show_scrollbars(window, cx);
 
                         if thumb_bounds.contains(&event.position) {
                             let offset =
@@ -1456,10 +1513,9 @@ impl<T: ScrollableHandle> Element for ScrollbarElement<T> {
                                 scroll_handle.max_offset(),
                                 ScrollbarMouseEvent::TrackClick,
                             );
-                            state.set_offset(
-                                scroll_handle.offset().apply_along(*axis, |_| click_offset),
-                                cx,
-                            );
+                            let offset =
+                                scroll_handle.offset().apply_along(*axis, |_| click_offset);
+                            state.set_offset(offset, cx);
                         };
 
                         cx.stop_propagation();
@@ -1472,7 +1528,11 @@ impl<T: ScrollableHandle> Element for ScrollbarElement<T> {
 
                 move |event: &ScrollWheelEvent, phase, window, cx| {
                     state.update(cx, |state, cx| {
-                        if phase.capture() && state.parent_hovered(window) {
+                        if phase.capture()
+                            && state.parent_should_handle_scroll(window)
+                            && !event.delta.pixel_delta(window.line_height()).is_zero()
+                        {
+                            state.show_scrollbars(window, cx);
                             state.update_hovered_thumb(&event.position, window, cx)
                         }
                     });
@@ -1505,14 +1565,12 @@ impl<T: ScrollableHandle> Element for ScrollbarElement<T> {
                         }
                         _ => state.update(cx, |state, cx| {
                             match state.update_parent_hovered(window) {
-                                hover @ ParentHoverEvent::Entered
-                                | hover @ ParentHoverEvent::Within
+                                ParentHoverEvent::Entered | ParentHoverEvent::Within
                                     if event.pressed_button.is_none() =>
                                 {
-                                    if matches!(hover, ParentHoverEvent::Entered) {
-                                        state.show_scrollbars(window, cx);
+                                    if state.thumb_accepts_hover() {
+                                        state.update_hovered_thumb(&event.position, window, cx);
                                     }
-                                    state.update_hovered_thumb(&event.position, window, cx);
                                     if state.thumb_state != ThumbState::Inactive {
                                         cx.stop_propagation();
                                     }
@@ -1544,7 +1602,9 @@ impl<T: ScrollableHandle> Element for ScrollbarElement<T> {
                             return;
                         }
 
-                        state.update_hovered_thumb(&event.position, window, cx);
+                        if state.thumb_accepts_hover() {
+                            state.update_hovered_thumb(&event.position, window, cx);
+                        }
                     });
                 }
             });
