@@ -1520,10 +1520,12 @@ impl Terminal {
 
                 self.breadcrumb_text = title;
                 cx.emit(Event::BreadcrumbsChanged);
+                cx.emit(Event::TitleChanged);
             }
             TerminalBackendEvent::ResetTitle => {
                 self.breadcrumb_text = String::new();
                 cx.emit(Event::BreadcrumbsChanged);
+                cx.emit(Event::TitleChanged);
             }
             TerminalBackendEvent::ClipboardStore(data) => {
                 cx.write_to_clipboard(ClipboardItem::new_string(data))
@@ -1559,7 +1561,7 @@ impl Terminal {
                 cx.emit(Event::Wakeup);
 
                 if let TerminalType::Pty { info, .. } = &self.terminal_type {
-                    info.emit_title_changed_if_changed(cx);
+                    info.refresh_current(cx);
                 }
             }
             TerminalBackendEvent::ColorRequest(index, format) => {
@@ -2704,41 +2706,17 @@ impl Terminal {
                 .title_override
                 .as_ref()
                 .map(|title_override| title_override.to_string())
-                .unwrap_or_else(|| match &self.terminal_type {
-                    TerminalType::Pty { info, .. } => info
-                        .current
-                        .read()
-                        .as_ref()
-                        .map(|fpi| {
-                            let process_file = fpi
-                                .cwd
-                                .file_name()
-                                .map(|name| name.to_string_lossy().into_owned())
-                                .unwrap_or_default();
-
-                            let argv = fpi.argv.as_slice();
-                            let process_name = format!(
-                                "{}{}",
-                                fpi.name,
-                                if !argv.is_empty() {
-                                    format!(" {}", (argv[1..]).join(" "))
-                                } else {
-                                    "".to_string()
-                                }
-                            );
-                            let (process_file, process_name) = if truncate {
-                                (
-                                    truncate_and_trailoff(&process_file, MAX_CHARS),
-                                    truncate_and_trailoff(&process_name, MAX_CHARS),
-                                )
-                            } else {
-                                (process_file, process_name)
-                            };
-                            format!("{process_file} — {process_name}")
-                        })
-                        .unwrap_or_else(|| "Terminal".to_string()),
-                    TerminalType::DisplayOnly => "Terminal".to_string(),
-                }),
+                .or_else(|| {
+                    let title = strip_user_host_from_title(self.breadcrumb_text.trim());
+                    (!title.is_empty()).then(|| {
+                        if truncate {
+                            truncate_and_trailoff(title, MAX_CHARS)
+                        } else {
+                            title.to_string()
+                        }
+                    })
+                })
+                .unwrap_or_else(|| "Terminal".to_string()),
         }
     }
 
@@ -3144,6 +3122,35 @@ fn foreground_process_command_from_argv(argv: &[String]) -> Option<String> {
         .filter_map(|argument| normalize_script_command_name(argument))
         .next()
         .or(command)
+}
+
+fn strip_user_host_from_title(title: &str) -> &str {
+    let Some((prefix, rest)) = title.split_once(':') else {
+        return title;
+    };
+    let Some((user, host)) = prefix.split_once('@') else {
+        return title;
+    };
+
+    if is_shell_title_user(user) && is_shell_title_host(host) && !rest.is_empty() {
+        rest
+    } else {
+        title
+    }
+}
+
+fn is_shell_title_user(user: &str) -> bool {
+    !user.is_empty()
+        && user
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || matches!(character, '_' | '-'))
+}
+
+fn is_shell_title_host(host: &str) -> bool {
+    !host.is_empty()
+        && host.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '.' | '_' | '-')
+        })
 }
 
 fn normalize_script_command_name(argument: &str) -> Option<String> {

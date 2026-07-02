@@ -7,7 +7,7 @@ use windows::Win32::{Foundation::HANDLE, System::Threading::GetProcessId};
 
 use sysinfo::{Pid, Process, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 
-use crate::{Event, Terminal};
+use crate::Terminal;
 
 #[derive(Clone, Copy)]
 pub struct ProcessIdGetter {
@@ -67,7 +67,6 @@ impl ProcessIdGetter {
 
 #[derive(Clone, Debug)]
 pub(crate) struct ProcessInfo {
-    pub(crate) name: String,
     pub(crate) cwd: PathBuf,
     pub(crate) argv: Vec<String>,
 }
@@ -179,7 +178,6 @@ impl PtyProcessInfo {
         let cwd = process.cwd().map_or(PathBuf::new(), |p| p.to_owned());
 
         let info = ProcessInfo {
-            name: process.name().to_str()?.to_owned(),
             cwd,
             argv: process
                 .cmd()
@@ -196,30 +194,17 @@ impl PtyProcessInfo {
         self.load()
     }
 
-    /// Updates the cached process info, emitting a [`Event::TitleChanged`] event if the Zed-relevant info has changed
-    pub(crate) fn emit_title_changed_if_changed(self: &Arc<Self>, cx: &mut Context<'_, Terminal>) {
+    pub(crate) fn refresh_current(self: &Arc<Self>, cx: &mut Context<'_, Terminal>) {
         if self.task.lock().is_some() {
             return;
         }
         let this = self.clone();
-        let has_changed = cx.background_executor().spawn(async move {
-            let previous = this.current.read().clone();
-            let current = this.load();
-            let has_changed = match (previous.as_ref(), current.as_ref()) {
-                (None, None) => false,
-                (Some(prev), Some(now)) => prev.cwd != now.cwd || prev.name != now.name,
-                _ => true,
-            };
-            if has_changed {
-                *this.current.write() = current;
-            }
-            has_changed
+        let refresh = cx.background_executor().spawn(async move {
+            this.load();
         });
         let this = Arc::downgrade(self);
-        *self.task.lock() = Some(cx.spawn(async move |term, cx| {
-            if has_changed.await {
-                term.update(cx, |_, cx| cx.emit(Event::TitleChanged)).ok();
-            }
+        *self.task.lock() = Some(cx.spawn(async move |_term, _cx| {
+            refresh.await;
             if let Some(this) = this.upgrade() {
                 this.task.lock().take();
             }
