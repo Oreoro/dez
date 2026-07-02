@@ -261,7 +261,7 @@ pub struct EditorSettingsContent {
 
     /// How to display diffs in the editor.
     ///
-    /// Default: split
+    /// Default: unified
     pub diff_view_style: Option<DiffViewStyle>,
 
     /// The minimum width (in em-widths) at which the split diff view is used.
@@ -483,11 +483,11 @@ pub struct GutterContent {
     pub line_numbers: Option<bool>,
     /// Minimum number of characters to reserve space for in the gutter.
     ///
-    /// Default: 4
+    /// Default: 0
     pub min_line_number_digits: Option<usize>,
     /// Whether to show runnable buttons in the gutter.
     ///
-    /// Default: true
+    /// Default: false
     pub runnables: Option<bool>,
     /// Whether to show breakpoints in the gutter.
     ///
@@ -499,7 +499,7 @@ pub struct GutterContent {
     pub bookmarks: Option<bool>,
     /// Whether to show fold buttons in the gutter.
     ///
-    /// Default: true
+    /// Default: false
     pub folds: Option<bool>,
 }
 

@@ -31,7 +31,7 @@ pub struct WorkspaceSettingsContent {
     pub centered_layout: Option<CenteredLayoutSettings>,
     /// The gap between workspace cards, in pixels.
     ///
-    /// Default: 8
+    /// Default: 7.5
     #[serde(serialize_with = "serialize_optional_f32_with_two_decimal_places")]
     pub card_gap: Option<f32>,
     /// Whether or not to prompt the user to confirm before closing the application.
@@ -150,7 +150,7 @@ pub struct ItemSettingsContent {
     pub close_position: Option<ClosePosition>,
     /// Whether to show the file icon for a tab.
     ///
-    /// Default: false
+    /// Default: true
     pub file_icons: Option<bool>,
     /// What to do after closing the current tab.
     ///
@@ -729,7 +729,7 @@ pub struct ProjectPanelSettingsContent {
     pub git_status: Option<bool>,
     /// Amount of indentation (in pixels) for nested items.
     ///
-    /// Default: 20
+    /// Default: 12.5
     #[serde(serialize_with = "serialize_optional_f32_with_two_decimal_places")]
     pub indent_size: Option<f32>,
     /// Whether to reveal it in the project panel automatically,
@@ -741,7 +741,7 @@ pub struct ProjectPanelSettingsContent {
     /// Whether to fold directories automatically
     /// when directory has only one directory inside.
     ///
-    /// Default: true
+    /// Default: false
     pub auto_fold_dirs: Option<bool>,
     /// Whether to show folder names with bold text in the project panel.
     ///
@@ -761,7 +761,7 @@ pub struct ProjectPanelSettingsContent {
     pub indent_guides: Option<ProjectPanelIndentGuidesSettings>,
     /// Whether to hide the root entry when only one folder is open in the window.
     ///
-    /// Default: false
+    /// Default: true
     pub hide_root: Option<bool>,
     /// Whether to hide the hidden entries in the project panel.
     ///
@@ -904,7 +904,7 @@ impl From<ProjectPanelSortOrder> for util::paths::SortOrder {
 pub struct ProjectPanelScrollbarSettingsContent {
     /// When to show the scrollbar in the project panel.
     ///
-    /// Default: inherits editor scrollbar settings
+    /// Default: never
     pub show: Option<ShowScrollbar>,
     /// Whether to allow horizontal scrolling in the project panel.
     /// When false, the view is locked to the leftmost position and

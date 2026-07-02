@@ -1062,7 +1062,7 @@ struct LanguageServerSpecifierContent {
 pub struct IndentGuideSettingsContent {
     /// Whether to display indent guides in the editor.
     ///
-    /// Default: true
+    /// Default: false
     pub enabled: Option<bool>,
     /// The width of the indent guides in pixels, between 1 and 10.
     ///

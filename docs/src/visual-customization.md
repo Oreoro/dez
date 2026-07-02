@@ -48,15 +48,15 @@ If you would like to use distinct themes for light mode/dark mode that can be se
   // or ".ZedSans" for the bundled default (currently IBM Plex)
   "ui_font_family": ".SystemUIFont",
   "ui_font_weight": 400, // Font weight in standard CSS units from 100 to 900.
-  "ui_font_size": 16,
+  "ui_font_size": 15.5,
 
   // Buffer Font - Used by editor buffers
   // use ".ZedMono" for the bundled default monospace (currently Lilex)
   "buffer_font_family": "Berkeley Mono", // Font name for editor buffers
-  "buffer_font_size": 15,                 // Font size for editor buffers
+  "buffer_font_size": 13.5,               // Font size for editor buffers
   "buffer_font_weight": 400,              // Font weight in CSS units [100-900]
   // Line height "comfortable" (1.618), "standard" (1.3) or custom: `{ "custom": 2 }`
-  "buffer_line_height": "comfortable",
+  "buffer_line_height": { "custom": 1.55 },
 
   // Terminal Font Settings
   "terminal": {
@@ -68,10 +68,10 @@ If you would like to use distinct themes for light mode/dark mode that can be se
 
   // Controls the font size for agent responses in the agent panel.
   // If not specified, it falls back to the UI font size.
-  "agent_ui_font_size": 15,
+  "agent_ui_font_size": 15.5,
   // Controls the font size for the agent panel's message editor, user message,
   // and any other snippet of code.
-  "agent_buffer_font_size": 12,
+  "agent_buffer_font_size": 13,
 
   // Controls the font size for the markdown preview.
   // If not specified, it falls back to the editor font size.
@@ -220,16 +220,16 @@ TBD: Centered layout related settings
   // Gutter Settings
   "gutter": {
     "line_numbers": true,         // Show/hide line numbers in the gutter.
-    "runnables": true,            // Show/hide runnables buttons in the gutter.
+    "runnables": false,           // Show/hide runnables buttons in the gutter.
     "breakpoints": true,          // Show/hide show breakpoints in the gutter.
-    "folds": true,                // Show/hide show fold buttons in the gutter.
-    "min_line_number_digits": 4   // Reserve space for N digit line numbers
+    "folds": false,               // Show/hide show fold buttons in the gutter.
+    "min_line_number_digits": 0   // Reserve space for N digit line numbers
   },
   "relative_line_numbers": "enabled", // Show relative line numbers in gutter
 
   // Indent guides
   "indent_guides": {
-    "enabled": true,
+    "enabled": false,
     "line_width": 1,                  // Width of guides in pixels [1-10]
     "active_line_width": 1,           // Width of active guide in pixels [1-10]
     "coloring": "fixed",              // disabled, fixed, indent_aware
@@ -327,7 +327,7 @@ TBD: Centered layout related settings
     "git_status": false,              // Color to show git status
     "close_position": "right",        // Close button position (left, right, hidden)
     "show_close_button": "hover",     // Close button shown (hover, always, hidden)
-    "file_icons": false,              // Icon showing file type
+    "file_icons": true,               // Icon showing file type
     // Show diagnostics in file icon (off, errors, all). Requires file_icons=true
     "show_diagnostics": "off"
   }
@@ -466,25 +466,25 @@ Project panel can be shown/hidden with {#action project_panel::ToggleFocus} ({#k
   "project_panel": {
     "button": true,                 // Show/hide button in the status bar
     "default_width": 240,           // Default panel width
-    "dock": "left",                 // Position of the dock (left, right)
+    "dock": "right",                // Position of the dock (left, right)
     "entry_spacing": "comfortable", // Vertical spacing (comfortable, standard)
     "file_icons": true,             // Show/hide file icons
     "folder_icons": true,           // Show/hide folder icons
     "git_status": true,             // Indicate new/updated files
-    "indent_size": 20,              // Pixels for each successive indent
+    "indent_size": 12.5,            // Pixels for each successive indent
     "auto_reveal_entries": true,    // Show file in panel when activating its buffer
-    "auto_fold_dirs": true,         // Fold dirs with single subdir
+    "auto_fold_dirs": false,        // Fold dirs with single subdir
     "bold_folder_labels": false,    // Show folder names with bold text
     "sticky_scroll": true,          // Stick parent directories at top of the project panel.
     "drag_and_drop": true,          // Whether drag and drop is enabled
     "scrollbar": {                  // Project panel scrollbar settings
-      "show": null                  // Show/hide: (auto, system, always, never)
+      "show": "never"               // Show/hide: (auto, system, always, never)
     },
     "show_diagnostics": "all",      //
     // Settings related to indent guides in the project panel.
     "indent_guides": {
       // When to show indent guides in the project panel. (always, never)
-      "show": "always"
+      "show": "never"
     },
     // Sort order for entries (directories_first, mixed, files_first)
     "sort_mode": "directories_first",
@@ -496,7 +496,7 @@ Project panel can be shown/hidden with {#action project_panel::ToggleFocus} ({#k
     "sort_order": "default",
     // Whether to hide the root entry when only one folder is open in the window;
     // this also affects how file paths appear in the file finder history.
-    "hide_root": false,
+    "hide_root": true,
     // Whether to hide the hidden entries in the project panel.
     "hide_hidden": false
   }
@@ -515,10 +515,10 @@ Project panel can be shown/hidden with {#action project_panel::ToggleFocus} ({#k
   },
   // Controls the font size for agent responses in the agent panel.
   // If not specified, it falls back to the UI font size.
-  "agent_ui_font_size": 15,
+  "agent_ui_font_size": 15.5,
   // Controls the font size for the agent panel's message editor, user message,
   // and any other snippet of code.
-  "agent_buffer_font_size": 12
+  "agent_buffer_font_size": 13
 }
 ```
 
@@ -609,7 +609,7 @@ See [Terminal settings](./reference/all-settings.md#terminal) for additional non
 {
   // Collaboration Panel
   "collaboration_panel": {
-    "button": true, // Show/hide status bar icon
+    "button": false, // Show/hide status bar icon
     "dock": "left", // Where to dock: left, right
     "default_width": 240 // Default width of the collaboration panel.
   },

@@ -36,7 +36,7 @@
     // "calt": false
   },
   // The default font size for text in the editor
-  "buffer_font_size": 15,
+  "buffer_font_size": 13.5,
   // The weight of the editor font in standard CSS units from 100 to 900.
   "buffer_font_weight": 400,
   // Set the buffer's line height.
@@ -49,7 +49,9 @@
   //         "buffer_line_height": {
   //           "custom": 2
   //         },
-  "buffer_line_height": "comfortable",
+  "buffer_line_height": {
+    "custom": 1.55,
+  },
   // The name of a font to use for rendering text in the UI
   // You can set this to ".SystemUIFont" to use the system font
   // ".ZedSans" currently aliases to "IBM Plex Sans", but this may
@@ -66,11 +68,11 @@
   // The weight of the UI font in standard CSS units from 100 to 900.
   "ui_font_weight": 400,
   // The default font size for text in the UI
-  "ui_font_size": 16,
+  "ui_font_size": 15.5,
   // The default font size for agent responses in the agent panel. Falls back to the UI font size if unset.
-  "agent_ui_font_size": null,
+  "agent_ui_font_size": 15.5,
   // The default font size for user messages in the agent panel.
-  "agent_buffer_font_size": 12,
+  "agent_buffer_font_size": 13,
   // The default font size for the commit editor in the git panel and commit modal.
   "git_commit_buffer_font_size": 12,
   // The default font size for the markdown preview. Falls back to the editor font size if unset.
@@ -103,7 +105,7 @@
     "right_padding": 0.2,
   },
   // Gap between workspace cards, in pixels.
-  "card_gap": 9.0,
+  "card_gap": 7.5,
   // Image viewer settings
   "image_viewer": {
     // The unit for image file sizes: "binary" (KiB, MiB) or decimal (KB, MB)
@@ -350,8 +352,8 @@
   "completion_menu_item_kind": "off",
   // How to display diffs in the editor.
   //
-  // Default: split
-  "diff_view_style": "split",
+  // Default: unified
+  "diff_view_style": "unified",
   // The minimum width (in em-widths) at which the split diff view is used.
   // When the editor is narrower than this, the diff view automatically
   // switches to unified mode and switches back when the editor is wide
@@ -658,19 +660,19 @@
     // Whether to show line numbers in the gutter.
     "line_numbers": true,
     // Whether to show runnables buttons in the gutter.
-    "runnables": true,
+    "runnables": false,
     // Whether to show bookmarks in the gutter.
     "bookmarks": true,
     // Whether to show breakpoints in the gutter.
     "breakpoints": true,
     // Whether to show fold buttons in the gutter.
-    "folds": true,
+    "folds": false,
     // Minimum number of characters to reserve space for in the gutter.
-    "min_line_number_digits": 4,
+    "min_line_number_digits": 0,
   },
   "indent_guides": {
     // Whether to show indent guides in the editor.
-    "enabled": true,
+    "enabled": false,
     // The width of the indent guides in pixels, between 1 and 10.
     "line_width": 1,
     // The width of the active indent guide in pixels, between 1 and 10.
@@ -794,7 +796,7 @@
     // Whether to show the git status in the project panel.
     "git_status": true,
     // Amount of indentation for nested items.
-    "indent_size": 20,
+    "indent_size": 12.5,
     // Whether to reveal it in the project panel automatically,
     // when a corresponding project entry becomes active.
     // Gitignored entries are never auto revealed.
@@ -803,7 +805,7 @@
     "starts_open": true,
     // Whether to fold directories automatically and show compact folders
     // (e.g. "a/b/c" ) when a directory has only one subdirectory inside.
-    "auto_fold_dirs": true,
+    "auto_fold_dirs": false,
     // Whether to show folder names with bold text in the project panel.
     "bold_folder_labels": false,
     // Scrollbar-related settings
@@ -811,9 +813,9 @@
       // When to show the scrollbar in the project panel.
       // This setting can take five values:
       //
-      // 1. null (default): Inherit editor settings
+      // 1. null: Inherit editor settings
       // 2. Show the scrollbar if there's important information or
-      //    follow the system's configured behavior (default):
+      //    follow the system's configured behavior:
       //   "auto"
       // 3. Match the system's configured behavior:
       //    "system"
@@ -821,7 +823,7 @@
       //    "always"
       // 5. Never show the scrollbar:
       //    "never"
-      "show": null,
+      "show": "never",
       // Whether to allow horizontal scrolling in the project panel.
       // When false, the view is locked to the leftmost position and long file names are clipped.
       "horizontal_scroll": true,
@@ -847,7 +849,7 @@
       //    "always"
       // 2. Never show indent guides:
       //    "never"
-      "show": "always",
+      "show": "never",
     },
     // Sort order for entries in the project panel.
     // This setting can take three values:
@@ -882,7 +884,7 @@
     "drag_and_drop": true,
     // Whether to hide the root entry when only one folder is open in the window;
     // this also affects how file paths appear in the file finder history.
-    "hide_root": false,
+    "hide_root": true,
     // Whether to hide the hidden entries in the project panel.
     "hide_hidden": false,
     // Settings for automatically opening files.
@@ -951,7 +953,7 @@
   },
   "collaboration_panel": {
     // Whether to show the collaboration panel button in the status bar.
-    "button": true,
+    "button": false,
     // Where to dock the collaboration panel. Can be 'left' or 'right'.
     "dock": "right",
     // Default width of the collaboration panel.
@@ -1339,7 +1341,7 @@
     // One of: ["right", "left"]
     "close_position": "right",
     // Whether to show the file icon for a tab.
-    "file_icons": false,
+    "file_icons": true,
     // Controls the appearance behavior of the tab's close button.
     //
     // 1. Show it just upon hovering the tab. (default)

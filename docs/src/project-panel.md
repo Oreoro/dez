@@ -39,7 +39,7 @@ of the panel as you scroll, so you always know which directory you're on.
 
 ### Directory Folding
 
-When `project_panel.auto_fold_dirs` is enabled (the default), chains of directories that each contain a
+When `project_panel.auto_fold_dirs` is enabled, chains of directories that each contain a
 single child directory are collapsed into one row (for example,
 `src/utils/helpers` instead of three separate levels). Right-click a folded
 directory and choose **Unfold Directory** to expand the chain, or **Fold

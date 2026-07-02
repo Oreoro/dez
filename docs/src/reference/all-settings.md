@@ -88,15 +88,25 @@ Non-negative `float` values
 }
 ```
 
-## Agent Font Size
+## Agent Buffer Font Size
 
-- Description: The font size for text in the agent panel. Inherits the UI font size if unset.
-- Setting: `agent_font_size`
-- Default: `null`
+- Description: The default font size for user messages and message editors in the agent UI.
+- Setting: `agent_buffer_font_size`
+- Default: `13`
 
 **Options**
 
-`integer` values from `6` to `100` pixels (inclusive)
+`float` values from `6` to `100` pixels (inclusive)
+
+## Agent UI Font Size
+
+- Description: The default font size for agent responses in the agent UI.
+- Setting: `agent_ui_font_size`
+- Default: `15.5`
+
+**Options**
+
+`float` values from `6` to `100` pixels (inclusive)
 
 ## Allow Rewrap
 
@@ -418,7 +428,7 @@ For example, to use `Nerd Font` as a fallback, add the following to your setting
 
 - Description: The default font size for text in the editor.
 - Setting: `buffer_font_size`
-- Default: `15`
+- Default: `13.5`
 
 **Options**
 
@@ -438,11 +448,21 @@ A font size from `6` to `100` pixels (inclusive)
 
 - Description: The default line height for text in the editor.
 - Setting: `buffer_line_height`
-- Default: `"comfortable"`
+- Default: `{ "custom": 1.55 }`
 
 **Options**
 
 `"standard"`, `"comfortable"` or `{ "custom": float }` (`1` is compact, `2` is loose)
+
+## Card Gap
+
+- Description: The gap between workspace cards, in pixels.
+- Setting: `card_gap`
+- Default: `7.5`
+
+**Options**
+
+Non-negative `float` values
 
 ## Centered Layout
 
@@ -558,12 +578,12 @@ Note: Dirty files (files with unsaved changes) will not be automatically closed 
 
 - Description: How to display diffs in the editor.
 - Setting: `diff_view_style`
-- Default: `"split"`
+- Default: `"unified"`
 
 **Options**
 
 - `"unified"`: Show changes inline with added and deleted lines stacked vertically
-- `"split"`: Display old and new versions side by side in separate panes (default)
+- `"split"`: Display old and new versions side by side in separate panes
 
 See [Git documentation](../git.md#diff-view-styles) for more details.
 
@@ -811,10 +831,10 @@ List of `string` values
 {
   "gutter": {
     "line_numbers": true,
-    "runnables": true,
+    "runnables": false,
     "breakpoints": true,
-    "folds": true,
-    "min_line_number_digits": 4
+    "folds": false,
+    "min_line_number_digits": 0
   }
 }
 ```
@@ -1382,7 +1402,7 @@ or
 {
   "tabs": {
     "close_position": "right",
-    "file_icons": false,
+    "file_icons": true,
     "git_status": false,
     "activate_on_close": "history",
     "show_close_button": "hover",
@@ -1423,7 +1443,7 @@ or
 
 - Description: Whether to show the file icon for a tab.
 - Setting: `file_icons`
-- Default: `false`
+- Default: `true`
 
 ### Git Status
 
@@ -2566,7 +2586,7 @@ Example:
 ```json [settings]
 {
   "indent_guides": {
-    "enabled": true,
+    "enabled": false,
     "line_width": 1,
     "active_line_width": 1,
     "coloring": "fixed",
@@ -4952,27 +4972,27 @@ Run the {#action theme_selector::Toggle} action in the command palette to see a 
   "project_panel": {
     "button": true,
     "default_width": 240,
-    "dock": "left",
+    "dock": "right",
     "entry_spacing": "comfortable",
     "file_icons": true,
     "folder_icons": true,
     "git_status": true,
-    "indent_size": 20,
+    "indent_size": 12.5,
     "auto_reveal_entries": true,
-    "auto_fold_dirs": true,
+    "auto_fold_dirs": false,
     "bold_folder_labels": false,
     "drag_and_drop": true,
     "scrollbar": {
-      "show": null,
+      "show": "never",
       "horizontal_scroll": true
     },
     "sticky_scroll": true,
     "show_diagnostics": "all",
     "indent_guides": {
-      "show": "always"
+      "show": "never"
     },
     "sort_mode": "directories_first",
-    "hide_root": false,
+    "hide_root": true,
     "hide_hidden": false,
     "starts_open": true,
     "auto_open": {
@@ -5110,7 +5130,7 @@ Run the {#action theme_selector::Toggle} action in the command palette to see a 
 
 - Description: Whether to fold directories automatically when directory has only one directory inside.
 - Setting: `auto_fold_dirs`
-- Default: `true`
+- Default: `false`
 
 **Options**
 
@@ -5166,7 +5186,7 @@ Run the {#action theme_selector::Toggle} action in the command palette to see a 
 
 - Description: Amount of indentation (in pixels) for nested items.
 - Setting: `indent_size`
-- Default: `20`
+- Default: `12.5`
 
 ### Indent Guides: Show
 
@@ -5178,7 +5198,7 @@ Run the {#action theme_selector::Toggle} action in the command palette to see a 
 {
   "project_panel": {
     "indent_guides": {
-      "show": "always"
+      "show": "never"
     }
   }
 }
@@ -5220,7 +5240,7 @@ Run the {#action theme_selector::Toggle} action in the command palette to see a 
 {
   "project_panel": {
     "scrollbar": {
-      "show": null,
+      "show": "never",
       "horizontal_scroll": true
     }
   }
@@ -5229,7 +5249,7 @@ Run the {#action theme_selector::Toggle} action in the command palette to see a 
 
 **Options**
 
-- `show`: Whether to show a scrollbar in the project panel. Possible values: null, "auto", "system", "always", "never". Inherits editor settings when absent, see its description for more details.
+- `show`: Whether to show a scrollbar in the project panel. Possible values: null, "auto", "system", "always", "never". Use null to inherit editor settings.
 - `horizontal_scroll`: Whether to allow horizontal scrolling in the project panel. When `false`, the view is locked to the leftmost position and long file names are clipped.
 
 ### Sort Mode
@@ -5355,7 +5375,7 @@ Visit [AI Quick Start](../ai/quick-start.md) under the AI section to learn more 
 ```json [settings]
 {
   "collaboration_panel": {
-    "button": true,
+    "button": false,
     "dock": "left",
     "default_width": 240
   }
@@ -5628,11 +5648,11 @@ For example, to use `Nerd Font` as a fallback, add the following to your setting
 
 - Description: The default font size for text in the UI.
 - Setting: `ui_font_size`
-- Default: `16`
+- Default: `15.5`
 
 **Options**
 
-`integer` values from `6` to `100` pixels (inclusive)
+`float` values from `6` to `100` pixels (inclusive)
 
 ## UI Font Weight
 
