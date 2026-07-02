@@ -1054,7 +1054,12 @@ impl Element for TerminalElement {
                         let padding = px(padding_device_px as f32 / scale_factor.max(1.0));
 
                         size.height = snapped_height;
-                        if self.terminal.read(cx).scrolled_to_bottom() {
+                        let should_bottom_anchor = {
+                            let terminal = self.terminal.read(cx);
+                            terminal.scrolled_to_bottom()
+                                && terminal_content_reaches_bottom(terminal.last_content())
+                        };
+                        if should_bottom_anchor {
                             origin.y += padding;
                         }
                     }
@@ -1645,6 +1650,23 @@ pub fn is_blank(cell: &Cell) -> bool {
     }
 
     true
+}
+
+fn terminal_content_reaches_bottom(content: &Content) -> bool {
+    let Some(last_line) = content.terminal_bounds.num_lines().checked_sub(1) else {
+        return false;
+    };
+
+    let display_offset = i32::try_from(content.display_offset).unwrap_or(i32::MAX);
+    let cursor_line = content.cursor.point.line.saturating_add(display_offset);
+    if cursor_line >= 0 && cursor_line as usize >= last_line {
+        return true;
+    }
+
+    content.cells.iter().any(|cell| {
+        let line = cell.point.line.saturating_add(display_offset);
+        line >= 0 && line as usize >= last_line && !is_blank(&cell.cell)
+    })
 }
 
 fn to_highlighted_range_lines(
