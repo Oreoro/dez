@@ -42,7 +42,7 @@ use std::{
 use text::{BufferId, BufferSnapshot, OffsetRangeExt, Selection};
 use ui::{IconDecorationKind, prelude::*};
 use util::{ResultExt, TryFutureExt, paths::PathExt, rel_path::RelPath};
-use workspace::item::{Dedup, ItemSettings, SerializableItem, TabContentParams};
+use workspace::item::{Dedup, ItemSettings, SerializableItem, TabContentParams, tab_label_color};
 use workspace::{
     CollaboratorId, ItemId, ItemNavHistory, ToolbarItemLocation, ViewId, Workspace, WorkspaceId,
     invalid_item_view::InvalidItemView,
@@ -2079,11 +2079,7 @@ pub fn active_match_index(
 }
 
 pub fn entry_label_color(selected: bool) -> Color {
-    if selected {
-        Color::Default
-    } else {
-        Color::Muted
-    }
+    tab_label_color(selected)
 }
 
 pub fn entry_diagnostic_aware_icon_name_and_color(

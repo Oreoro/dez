@@ -55,9 +55,7 @@ use util::ResultExt;
 use workspace::{
     CloseActiveItem, DraggedSelection, DraggedTab, NewCenterTerminal, NewTerminal, OpenTerminal,
     Pane, ToolbarItemLocation, Workspace, WorkspaceId, delete_unloaded_items,
-    item::{
-        HighlightedText, Item, ItemEvent, SerializableItem, TabContentParams, TabTooltipContent,
-    },
+    item::{HighlightedText, Item, ItemEvent, SerializableItem, TabTooltipContent},
     register_serializable_item,
     searchable::{
         Direction, SearchEvent, SearchOptions, SearchToken, SearchableItem, SearchableItemHandle,
@@ -1906,59 +1904,27 @@ impl Item for TerminalView {
         }))))
     }
 
-    fn tab_content(&self, params: TabContentParams, _window: &Window, cx: &App) -> AnyElement {
-        let terminal = self.terminal().read(cx);
-        let title = self
-            .custom_title
-            .as_ref()
-            .filter(|title| !title.trim().is_empty())
-            .cloned()
-            .unwrap_or_else(|| terminal.title(true));
-        let title = match title.trim() {
-            "" => "Terminal".to_string(),
-            title => title.to_string(),
-        };
-
+    fn tab_content_overlay(&self, _window: &Window, _cx: &App) -> Option<AnyElement> {
+        let editor = self.rename_editor.clone()?;
         let self_handle = self.self_handle.clone();
-        h_flex()
-            .relative()
-            .min_w_0()
-            .when(!params.selected, |this| {
-                this.track_focus(&self.focus_handle)
-            })
-            .on_action(move |action: &RenameTerminal, window, cx| {
-                self_handle
-                    .update(cx, |this, cx| this.rename_terminal(action, window, cx))
-                    .ok();
-            })
-            .child(
-                Label::new(title)
-                    .color(params.text_color())
-                    .when(self.is_renaming(), |this| this.alpha(0.)),
-            )
-            .when_some(self.rename_editor.clone(), |this, editor| {
-                let self_handle = self.self_handle.clone();
-                let self_handle_cancel = self.self_handle.clone();
-                this.child(
-                    div()
-                        .absolute()
-                        .top_0()
-                        .left_0()
-                        .size_full()
-                        .child(editor)
-                        .on_action(move |_: &menu::Confirm, window, cx| {
-                            self_handle
-                                .update(cx, |this, cx| this.finish_renaming(true, window, cx))
-                                .ok();
-                        })
-                        .on_action(move |_: &menu::Cancel, window, cx| {
-                            self_handle_cancel
-                                .update(cx, |this, cx| this.finish_renaming(false, window, cx))
-                                .ok();
-                        }),
-                )
-            })
-            .into_any()
+        let self_handle_cancel = self.self_handle.clone();
+
+        Some(
+            div()
+                .size_full()
+                .child(editor)
+                .on_action(move |_: &menu::Confirm, window, cx| {
+                    self_handle
+                        .update(cx, |this, cx| this.finish_renaming(true, window, cx))
+                        .ok();
+                })
+                .on_action(move |_: &menu::Cancel, window, cx| {
+                    self_handle_cancel
+                        .update(cx, |this, cx| this.finish_renaming(false, window, cx))
+                        .ok();
+                })
+                .into_any(),
+        )
     }
 
     fn tab_icon_element(&self, _window: &Window, cx: &App) -> Option<AnyElement> {

@@ -12,8 +12,8 @@ use client::{Client, proto};
 use futures::channel::mpsc;
 use gpui::{
     Action, AnyElement, AnyEntity, AnyView, App, AppContext, Context, Entity, EntityId,
-    EventEmitter, FocusHandle, Focusable, Font, Pixels, Point, Render, SharedString, Task, TaskExt,
-    WeakEntity, Window,
+    EventEmitter, FocusHandle, Focusable, Font, ParentElement, Pixels, Point, Render, SharedString,
+    Styled, Task, TaskExt, WeakEntity, Window,
 };
 use language::Capability;
 pub use language::HighlightedText;
@@ -31,7 +31,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use ui::{Color, Icon, IconName, IntoElement, Label, LabelCommon};
+use ui::{Color, FluentBuilder, Icon, IconName, IntoElement, Label, LabelCommon, div, h_flex};
 use util::ResultExt;
 
 pub const LEADER_UPDATE_THROTTLE: Duration = Duration::from_millis(200);
@@ -155,6 +155,14 @@ impl TabContentParams {
     }
 }
 
+pub fn tab_label_color(selected: bool) -> Color {
+    if selected {
+        Color::Default
+    } else {
+        Color::Muted
+    }
+}
+
 pub enum TabTooltipContent {
     Text(SharedString),
     Custom(Box<dyn Fn(&mut Window, &mut App) -> AnyView>),
@@ -174,16 +182,31 @@ pub trait Item: Focusable + EventEmitter<Self::Event> + Render + Sized {
     ///
     /// By default this returns a [`Label`] that displays that text from
     /// `tab_content_text`.
-    fn tab_content(&self, params: TabContentParams, _window: &Window, cx: &App) -> AnyElement {
+    fn tab_content(&self, params: TabContentParams, window: &Window, cx: &App) -> AnyElement {
         let text = self.tab_content_text(params.detail.unwrap_or_default(), cx);
+        let overlay = self.tab_content_overlay(window, cx);
+        let label = Label::new(text)
+            .color(tab_label_color(params.selected))
+            .when(overlay.is_some(), |this| this.alpha(0.));
 
-        Label::new(text)
-            .color(params.text_color())
-            .into_any_element()
+        if let Some(overlay) = overlay {
+            h_flex()
+                .relative()
+                .min_w_0()
+                .child(label)
+                .child(div().absolute().top_0().left_0().size_full().child(overlay))
+                .into_any_element()
+        } else {
+            label.into_any_element()
+        }
     }
 
     /// Returns the textual contents of the tab.
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString;
+
+    fn tab_content_overlay(&self, _window: &Window, _cx: &App) -> Option<AnyElement> {
+        None
+    }
 
     /// Returns the suggested filename for saving this item.
     /// By default, returns the tab content text.
