@@ -103,7 +103,7 @@ impl ModuleList {
                     let project_path = buffer.read(cx).project_path(cx).ok_or_else(|| {
                         anyhow!("Could not select a stack frame for unnamed buffer")
                     })?;
-                    anyhow::Ok(workspace.open_path_preview(
+                    anyhow::Ok(workspace.open_path_preview_in_tabbed_pane(
                         project_path,
                         None,
                         false,

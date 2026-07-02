@@ -440,7 +440,7 @@ fn add_terminal_to_workspace(
     terminal: Entity<Terminal>,
     focus: bool,
     window: &mut Window,
-    cx: &mut App,
+    cx: &mut Context<Workspace>,
 ) {
     let terminal_view = Box::new(cx.new(|cx| {
         TerminalView::new(

@@ -1485,7 +1485,7 @@ impl FileFinderDelegate {
                 if secondary {
                     workspace.split_path_preview(project_path, allow_preview, None, window, cx)
                 } else {
-                    workspace.open_path_preview(
+                    workspace.open_path_preview_in_tabbed_pane(
                         project_path,
                         None,
                         focus_item,
@@ -1502,7 +1502,7 @@ impl FileFinderDelegate {
                     if secondary {
                         workspace.split_path_preview(project_path.clone(), false, None, window, cx)
                     } else {
-                        workspace.open_path_preview(
+                        workspace.open_path_preview_in_tabbed_pane(
                             project_path.clone(),
                             None,
                             focus_item,

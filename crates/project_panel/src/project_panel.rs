@@ -888,7 +888,7 @@ impl ProjectPanel {
                             let is_via_ssh = project.read(cx).is_via_remote_server();
 
                             workspace
-                                .open_path_preview(
+                                .open_path_preview_in_tabbed_pane(
                                     ProjectPath {
                                         worktree_id,
                                         path: file_path.clone(),

@@ -16,7 +16,7 @@ use project::Project;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use settings::Settings;
-use std::{cmp::Ordering, sync::Arc};
+use std::{cmp::Ordering, mem, sync::Arc};
 use ui::prelude::*;
 
 pub const HANDLE_HITBOX_SIZE: f32 = 4.0;
@@ -38,7 +38,8 @@ pub struct PaneRenderResult {
 }
 
 impl PaneGroup {
-    pub fn with_root(root: Member) -> Self {
+    pub fn with_root(mut root: Member) -> Self {
+        root.normalize_same_axis();
         Self {
             root,
             is_center: false,
@@ -222,6 +223,7 @@ impl PaneGroup {
     }
 
     pub fn mark_positions(&mut self, cx: &mut App) {
+        self.root.normalize_same_axis();
         let top_left_pane = self
             .is_center
             .then(|| self.root.first_visible_pane(cx))
@@ -723,6 +725,12 @@ impl Member {
             Self::Pane(_) => {}
         }
     }
+
+    fn normalize_same_axis(&mut self) {
+        if let Self::Axis(axis) = self {
+            axis.normalize_same_axis();
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -746,21 +754,17 @@ impl PaneAxis {
     }
 
     pub fn load(axis: Axis, members: Vec<Member>, flexes: Option<Vec<f32>>) -> Self {
-        let mut flexes = flexes.unwrap_or_else(|| vec![1.; members.len()]);
-        if flexes.len() != members.len()
-            || (flexes.iter().copied().sum::<f32>() - flexes.len() as f32).abs() >= 0.001
-        {
-            flexes = vec![1.; members.len()];
-        }
-
+        let flexes = normalize_flexes(members.len(), flexes.unwrap_or_default());
         let flexes = Arc::new(Mutex::new(flexes));
         let bounding_boxes = Arc::new(Mutex::new(vec![None; members.len()]));
-        Self {
+        let mut axis = Self {
             axis,
             members,
             flexes,
             bounding_boxes,
-        }
+        };
+        axis.normalize_same_axis();
+        axis
     }
 
     fn split(
@@ -866,6 +870,51 @@ impl PaneAxis {
         }
     }
 
+    fn normalize_same_axis(&mut self) {
+        for member in &mut self.members {
+            member.normalize_same_axis();
+        }
+
+        if !self
+            .members
+            .iter()
+            .any(|member| matches!(member, Member::Axis(axis) if axis.axis == self.axis))
+        {
+            let flexes = normalize_flexes(self.members.len(), self.flexes.lock().clone());
+            *self.flexes.lock() = flexes;
+            return;
+        }
+
+        let members = mem::take(&mut self.members);
+        let flexes = normalize_flexes(members.len(), self.flexes.lock().clone());
+        let mut flattened_members = Vec::with_capacity(members.len());
+        let mut flattened_flexes = Vec::with_capacity(flexes.len());
+
+        for (member, flex) in members.into_iter().zip(flexes) {
+            match member {
+                Member::Axis(axis) if axis.axis == self.axis => {
+                    let child_flexes =
+                        normalize_flexes(axis.members.len(), axis.flexes.lock().clone());
+                    let child_total_flex = child_flexes.iter().sum::<f32>().max(0.001);
+                    flattened_members.extend(axis.members);
+                    flattened_flexes.extend(
+                        child_flexes
+                            .into_iter()
+                            .map(|child_flex| flex * child_flex / child_total_flex),
+                    );
+                }
+                member => {
+                    flattened_members.push(member);
+                    flattened_flexes.push(flex);
+                }
+            }
+        }
+
+        self.members = flattened_members;
+        *self.flexes.lock() = normalize_flexes(self.members.len(), flattened_flexes);
+        *self.bounding_boxes.lock() = vec![None; self.members.len()];
+    }
+
     fn resize(
         &mut self,
         pane: &Entity<Pane>,
@@ -873,15 +922,6 @@ impl PaneAxis {
         amount: Pixels,
         bounds: &Bounds<Pixels>,
     ) -> Option<bool> {
-        let container_size = self
-            .bounding_boxes
-            .lock()
-            .iter()
-            .filter_map(|e| *e)
-            .reduce(|acc, e| acc.union(&e))
-            .unwrap_or(*bounds)
-            .size;
-
         let found_pane = self
             .members
             .iter()
@@ -932,46 +972,53 @@ impl PaneAxis {
 
         let ix = ix.unwrap_or(0);
 
-        let size = move |ix, flexes: &[f32]| {
-            container_size.along(axis) * (flexes[ix] / flexes.len() as f32)
+        let (visible_indices, available_size) = {
+            let bounding_boxes = self.bounding_boxes.lock();
+            let indices = bounding_boxes
+                .iter()
+                .enumerate()
+                .filter_map(|(ix, bounds)| bounds.is_some().then_some(ix))
+                .collect::<Vec<_>>();
+            if indices.is_empty() {
+                ((0..self.members.len()).collect(), bounds.size.along(axis))
+            } else {
+                let available_size = indices
+                    .iter()
+                    .filter_map(|ix| bounding_boxes[*ix].map(|bounds| bounds.size.along(axis)))
+                    .sum();
+                (indices, available_size)
+            }
         };
-
-        // Don't allow resizing to less than the minimum size, if elements are already too small
-        if min_size - px(1.) > size(ix, flexes.as_slice()) {
+        let Some(visible_ix) = visible_indices
+            .iter()
+            .position(|visible_member_ix| *visible_member_ix == ix)
+        else {
             return Some(true);
-        }
-
-        let flex_changes = |pixel_dx, target_ix, next: isize, flexes: &[f32]| {
-            let flex_change = flexes.len() as f32 * pixel_dx / container_size.along(axis);
-            let current_target_flex = flexes[target_ix] + flex_change;
-            let next_target_flex = flexes[(target_ix as isize + next) as usize] - flex_change;
-            (current_target_flex, next_target_flex)
         };
 
-        let apply_changes =
-            |current_ix: usize, proposed_current_pixel_change: Pixels, flexes: &mut [f32]| {
-                let next_target_size = Pixels::max(
-                    size(current_ix + 1, flexes) - proposed_current_pixel_change,
-                    min_size,
-                );
-                let current_target_size = Pixels::max(
-                    size(current_ix, flexes) + size(current_ix + 1, flexes) - next_target_size,
-                    min_size,
-                );
-
-                let current_pixel_change = current_target_size - size(current_ix, flexes);
-
-                let (current_target_flex, next_target_flex) =
-                    flex_changes(current_pixel_change, current_ix, 1, flexes);
-
-                flexes[current_ix] = current_target_flex;
-                flexes[current_ix + 1] = next_target_flex;
-            };
-
-        if ix + 1 == flexes.len() {
-            apply_changes(ix - 1, -1.0 * amount, flexes.as_mut_slice());
+        if visible_ix + 1 == visible_indices.len() {
+            if visible_ix == 0 {
+                return Some(true);
+            }
+            resize_adjacent_visible_pair(
+                flexes.as_mut_slice(),
+                &visible_indices,
+                visible_indices[visible_ix - 1],
+                ix,
+                -amount,
+                available_size,
+                min_size,
+            );
         } else {
-            apply_changes(ix, amount, flexes.as_mut_slice());
+            resize_adjacent_visible_pair(
+                flexes.as_mut_slice(),
+                &visible_indices,
+                ix,
+                visible_indices[visible_ix + 1],
+                amount,
+                available_size,
+                min_size,
+            );
         }
         Some(true)
     }
@@ -1136,6 +1183,80 @@ impl PaneAxis {
     }
 }
 
+fn normalize_flexes(member_count: usize, flexes: Vec<f32>) -> Vec<f32> {
+    if member_count == 0 {
+        return Vec::new();
+    }
+
+    let total_flex = flexes.iter().copied().sum::<f32>();
+    if flexes.len() != member_count
+        || !total_flex.is_finite()
+        || total_flex <= f32::EPSILON
+        || flexes.iter().any(|flex| !flex.is_finite() || *flex <= 0.)
+    {
+        return vec![1.; member_count];
+    }
+
+    let scale = member_count as f32 / total_flex;
+    flexes.into_iter().map(|flex| flex * scale).collect()
+}
+
+fn resize_adjacent_visible_pair(
+    flexes: &mut [f32],
+    visible_indices: &[usize],
+    current_ix: usize,
+    next_ix: usize,
+    pixel_delta: Pixels,
+    available_size: Pixels,
+    min_size: Pixels,
+) -> bool {
+    let requested_delta = pixel_delta.as_f32();
+    if requested_delta.abs() <= f32::EPSILON || available_size <= px(0.) {
+        return false;
+    }
+
+    let Some(current_visible_ix) = visible_indices
+        .iter()
+        .position(|visible_ix| *visible_ix == current_ix)
+    else {
+        return false;
+    };
+    let Some(next_visible_ix) = visible_indices
+        .iter()
+        .position(|visible_ix| *visible_ix == next_ix)
+    else {
+        return false;
+    };
+    if next_visible_ix != current_visible_ix + 1 {
+        return false;
+    }
+
+    let visible_total_flex = visible_indices.iter().map(|ix| flexes[*ix]).sum::<f32>();
+    if !visible_total_flex.is_finite() || visible_total_flex <= f32::EPSILON {
+        return false;
+    }
+
+    let current_size = available_size.as_f32() * flexes[current_ix] / visible_total_flex;
+    let next_size = available_size.as_f32() * flexes[next_ix] / visible_total_flex;
+    let min_size = min_size.as_f32();
+    let min_delta = min_size - current_size;
+    let max_delta = next_size - min_size;
+
+    if min_delta > max_delta {
+        return false;
+    }
+
+    let actual_delta = requested_delta.clamp(min_delta, max_delta);
+    if actual_delta.abs() <= f32::EPSILON {
+        return false;
+    }
+
+    let flex_delta = actual_delta * visible_total_flex / available_size.as_f32();
+    flexes[current_ix] += flex_delta;
+    flexes[next_ix] -= flex_delta;
+    true
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SplitDirection {
@@ -1231,7 +1352,7 @@ impl SplitDirection {
 
 mod element {
     use std::mem;
-    use std::{cell::RefCell, iter, rc::Rc, sync::Arc};
+    use std::{cell::RefCell, rc::Rc, sync::Arc};
 
     use gpui::{
         Along, AnyElement, App, Axis, BorderStyle, Bounds, CursorStyle, Element, GlobalElementId,
@@ -1246,7 +1367,9 @@ mod element {
 
     use crate::{Workspace, WorkspaceSettings, workspace_card_gap};
 
-    use super::{HANDLE_HITBOX_SIZE, HORIZONTAL_MIN_SIZE, VERTICAL_MIN_SIZE};
+    use super::{
+        HANDLE_HITBOX_SIZE, HORIZONTAL_MIN_SIZE, VERTICAL_MIN_SIZE, resize_adjacent_visible_pair,
+    };
 
     pub(super) fn pane_axis(
         axis: Axis,
@@ -1338,112 +1461,27 @@ mod element {
             };
             let mut flexes = flexes.lock();
             debug_assert!(flex_values_in_bounds(flexes.as_slice()));
-            let all_members_visible = visible_indices.len() == flexes.len()
-                && visible_indices
-                    .iter()
-                    .enumerate()
-                    .all(|(visible_ix, original_ix)| visible_ix == *original_ix);
-
-            if all_members_visible && current_ix + 1 == next_ix {
-                let ix = current_ix;
-
-                let size = move |ix, flexes: &[f32]| {
-                    container_size.along(axis) * (flexes[ix] / flexes.len() as f32)
-                };
-
-                if min_size - px(1.) > size(ix, flexes.as_slice()) {
-                    return;
-                }
-
-                let mut proposed_current_pixel_change =
-                    (e.position - child_start).along(axis) - size(ix, flexes.as_slice());
-
-                let flex_changes = |pixel_dx, target_ix, next: isize, flexes: &[f32]| {
-                    let flex_change = pixel_dx / container_size.along(axis);
-                    let current_target_flex = flexes[target_ix] + flex_change;
-                    let next_target_flex =
-                        flexes[(target_ix as isize + next) as usize] - flex_change;
-                    (current_target_flex, next_target_flex)
-                };
-
-                let mut successors = iter::from_fn({
-                    let forward = proposed_current_pixel_change > px(0.);
-                    let mut ix_offset = 0;
-                    let len = flexes.len();
-                    move || {
-                        let result = if forward {
-                            (ix + 1 + ix_offset < len).then(|| ix + ix_offset)
-                        } else {
-                            (ix as isize - ix_offset as isize >= 0).then(|| ix - ix_offset)
-                        };
-
-                        ix_offset += 1;
-
-                        result
-                    }
-                });
-
-                while proposed_current_pixel_change.abs() > px(0.) {
-                    let Some(current_ix) = successors.next() else {
-                        break;
-                    };
-
-                    let next_target_size = Pixels::max(
-                        size(current_ix + 1, flexes.as_slice()) - proposed_current_pixel_change,
-                        min_size,
-                    );
-
-                    let current_target_size = Pixels::max(
-                        size(current_ix, flexes.as_slice())
-                            + size(current_ix + 1, flexes.as_slice())
-                            - next_target_size,
-                        min_size,
-                    );
-
-                    let current_pixel_change =
-                        current_target_size - size(current_ix, flexes.as_slice());
-
-                    let (current_target_flex, next_target_flex) =
-                        flex_changes(current_pixel_change, current_ix, 1, flexes.as_slice());
-
-                    flexes[current_ix] = current_target_flex;
-                    flexes[current_ix + 1] = next_target_flex;
-
-                    proposed_current_pixel_change -= current_pixel_change;
-                }
-
-                workspace
-                    .update(cx, |this, cx| this.serialize_workspace(window, cx))
-                    .log_err();
-                cx.stop_propagation();
-                window.refresh();
-                return;
-            }
-
             let visible_total_flex = visible_indices.iter().map(|ix| flexes[*ix]).sum::<f32>();
             if visible_total_flex <= 0. {
                 return;
             }
 
-            let pair_flex = flexes[current_ix] + flexes[next_ix];
-            if pair_flex <= 0. {
-                return;
-            }
-
-            let pair_size = container_size.along(axis) * (pair_flex / visible_total_flex);
-            let current_size = pair_size * (flexes[current_ix] / pair_flex);
-            let next_size = pair_size * (flexes[next_ix] / pair_flex);
+            let available_size = Pixels::max(container_size.along(axis), px(0.001));
+            let current_size = available_size * (flexes[current_ix] / visible_total_flex);
 
             let proposed_current_pixel_change =
                 (e.position - child_start).along(axis) - current_size;
-            let current_pixel_change = Pixels::min(
-                Pixels::max(proposed_current_pixel_change, min_size - current_size),
-                next_size - min_size,
-            );
-            let flex_change = pair_flex * current_pixel_change / pair_size;
-
-            flexes[current_ix] += flex_change;
-            flexes[next_ix] -= flex_change;
+            if !resize_adjacent_visible_pair(
+                flexes.as_mut_slice(),
+                visible_indices,
+                current_ix,
+                next_ix,
+                proposed_current_pixel_change,
+                available_size,
+                min_size,
+            ) {
+                return;
+            }
 
             workspace
                 .update(cx, |this, cx| this.serialize_workspace(window, cx))

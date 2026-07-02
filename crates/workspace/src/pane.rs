@@ -9617,7 +9617,7 @@ mod tests {
                     } => {
                         self.workspace
                             .update_in(&mut self.cx, |workspace, window, cx| {
-                                workspace.open_path_preview(
+                                workspace.open_path_preview_in_tabbed_pane(
                                     ProjectPath {
                                         worktree_id: self.worktree_id,
                                         path,

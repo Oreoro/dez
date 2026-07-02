@@ -1657,7 +1657,15 @@ impl GitPanel {
             self.workspace
                 .update(cx, |workspace, cx| {
                     workspace
-                        .open_path_preview(project_path, None, false, false, true, window, cx)
+                        .open_path_preview_in_tabbed_pane(
+                            project_path,
+                            None,
+                            false,
+                            false,
+                            true,
+                            window,
+                            cx,
+                        )
                         .detach_and_log_err(cx);
                 })
                 .ok()?;

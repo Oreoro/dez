@@ -410,14 +410,14 @@ impl LanguageServerState {
                                     return;
                                 };
 
-                                let window_handle = window.window_handle();
                                 let workspace = workspace_for_message.clone();
                                 let message = message_for_handler.clone();
                                 let server_name = server_name_for_message.clone();
-                                cx.spawn(async move |cx| {
-                                    let buffer = create_buffer.await?;
-                                    buffer.update(cx, |buffer, cx| {
-                                        buffer.edit(
+                                window
+                                    .spawn(cx, async move |cx| {
+                                        let buffer = create_buffer.await?;
+                                        buffer.update(cx, |buffer, cx| {
+                                            buffer.edit(
                                             [(
                                                 0..0,
                                                 format!(
@@ -427,11 +427,11 @@ impl LanguageServerState {
                                             None,
                                             cx,
                                         );
-                                        buffer.set_capability(language::Capability::ReadOnly, cx);
-                                    });
+                                            buffer
+                                                .set_capability(language::Capability::ReadOnly, cx);
+                                        });
 
-                                    workspace.update(cx, |workspace, cx| {
-                                        window_handle.update(cx, |_, window, cx| {
+                                        workspace.update_in(cx, |workspace, window, cx| {
                                             workspace.add_item_to_active_pane(
                                                 Box::new(cx.new(|cx| {
                                                     let mut editor = Editor::for_buffer(
@@ -445,12 +445,11 @@ impl LanguageServerState {
                                                 window,
                                                 cx,
                                             );
-                                        })
-                                    })??;
+                                        })?;
 
-                                    anyhow::Ok(())
-                                })
-                                .detach();
+                                        anyhow::Ok(())
+                                    })
+                                    .detach();
                             });
                         }
 

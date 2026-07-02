@@ -463,7 +463,7 @@ impl StackFrameList {
                             pane_with_active_file.map(|pane| pane.downgrade())
                         };
 
-                        anyhow::Ok(workspace.open_path_preview(
+                        anyhow::Ok(workspace.open_path_preview_in_tabbed_pane(
                             project_path,
                             debug_pane,
                             true,

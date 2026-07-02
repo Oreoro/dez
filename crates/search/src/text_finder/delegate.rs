@@ -765,7 +765,7 @@ impl PickerDelegate for Delegate {
         };
 
         let open_task = workspace.update(cx, |workspace, cx| {
-            workspace.open_path_preview(path, None, true, false, true, window, cx)
+            workspace.open_path_preview_in_tabbed_pane(path, None, true, false, true, window, cx)
         });
 
         let row = line_number.saturating_sub(1);

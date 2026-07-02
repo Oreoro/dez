@@ -3711,7 +3711,7 @@ impl Workspace {
                     } else {
                         Some(
                             this.update_in(cx, |this, window, cx| {
-                                this.open_path(
+                                this.open_path_in_tabbed_pane(
                                     project_path,
                                     pane,
                                     options.focus.unwrap_or(true),
@@ -3822,7 +3822,7 @@ impl Workspace {
     ) -> Task<anyhow::Result<Box<dyn ItemHandle>>> {
         match path {
             ResolvedPath::ProjectPath { project_path, .. } => {
-                self.open_path(project_path, None, true, window, cx)
+                self.open_path_in_tabbed_pane(project_path, None, true, window, cx)
             }
             ResolvedPath::AbsPath { path, .. } => self.open_abs_path(
                 PathBuf::from(path),
@@ -4606,6 +4606,72 @@ impl Workspace {
             })
     }
 
+    fn ensure_tabbed_pane(&mut self, window: &mut Window, cx: &mut Context<Self>) -> Entity<Pane> {
+        if let Some(pane) = self.last_tabbed_pane(cx) {
+            return pane;
+        }
+
+        if let Some(pane) = self
+            .center
+            .panes()
+            .into_iter()
+            .find(|pane| pane.read(cx).pane_kind() == PaneKind::Tabs)
+            .cloned()
+        {
+            pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+            self.center.mark_positions(cx);
+            return pane;
+        }
+
+        let split_target = self
+            .panel_pane_for_kind(PaneKind::Project, cx)
+            .or_else(|| self.panel_pane_for_kind(PaneKind::Agent, cx))
+            .unwrap_or_else(|| self.center.first_pane());
+        let split_direction = match split_target.read(cx).pane_kind() {
+            PaneKind::Project => SplitDirection::Left,
+            PaneKind::Agent | PaneKind::Tabs => SplitDirection::Right,
+        };
+
+        let pane = self.add_pane_with_kind(PaneKind::Tabs, false, window, cx);
+        self.center.split(&split_target, &pane, split_direction, cx);
+        cx.notify();
+        pane
+    }
+
+    fn ensure_visible_center_pane(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let tabbed_pane = self
+            .last_tabbed_pane(cx)
+            .or_else(|| {
+                let pane = self
+                    .center
+                    .panes()
+                    .into_iter()
+                    .find(|pane| pane.read(cx).pane_kind() == PaneKind::Tabs)
+                    .cloned()?;
+                pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+                Some(pane)
+            })
+            .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
+
+        if !self.pane_is_in_center(&self.active_pane) || !self.active_pane.read(cx).is_visible() {
+            self.set_active_pane(&tabbed_pane, window, cx);
+            tabbed_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
+        }
+
+        self.center.mark_positions(cx);
+        cx.notify();
+    }
+
+    fn existing_tabbed_pane(
+        &self,
+        pane: Option<WeakEntity<Pane>>,
+        cx: &App,
+    ) -> Option<Entity<Pane>> {
+        pane.and_then(|pane| pane.upgrade())
+            .filter(|pane| pane.read(cx).is_tabbed() && pane.read(cx).is_visible())
+            .or_else(|| self.last_tabbed_pane(cx))
+    }
+
     fn last_focusable_center_pane(&self, cx: &App) -> Option<Entity<Pane>> {
         self.last_active_center_pane
             .as_ref()
@@ -4662,23 +4728,40 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let Some(pane) = self.panel_pane_for_kind(pane_kind, cx) else {
-            return;
+        let pane = if let Some(pane) = self.panel_pane_for_kind(pane_kind, cx) {
+            pane
+        } else {
+            match pane_kind {
+                PaneKind::Project => self.ensure_panel_pane(PanelPaneKind::Project, window, cx),
+                PaneKind::Agent => self.ensure_panel_pane(PanelPaneKind::Agent, window, cx),
+                PaneKind::Tabs => self.ensure_tabbed_pane(window, cx),
+            }
         };
 
         let visible = pane.read(cx).is_visible();
+        let fallback_pane = if visible {
+            self.last_tabbed_pane(cx).or_else(|| {
+                self.center
+                    .panes()
+                    .into_iter()
+                    .find(|candidate| *candidate != &pane && candidate.read(cx).is_visible())
+                    .cloned()
+            })
+        } else {
+            None
+        };
+        let fallback_pane = if visible && fallback_pane.is_none() {
+            Some(self.ensure_tabbed_pane(window, cx))
+        } else {
+            fallback_pane
+        };
+
         pane.update(cx, |pane, cx| pane.set_visible(!visible, cx));
         self.center.mark_positions(cx);
 
         if visible {
             if self.active_pane == pane
-                && let Some(fallback_pane) = self.last_tabbed_pane(cx).or_else(|| {
-                    self.center
-                        .panes()
-                        .into_iter()
-                        .find(|candidate| *candidate != &pane && candidate.read(cx).is_visible())
-                        .cloned()
-                })
+                && let Some(fallback_pane) = fallback_pane
             {
                 self.set_active_pane(&fallback_pane, window, cx);
                 fallback_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
@@ -4890,7 +4973,11 @@ impl Workspace {
             });
             true
         } else {
-            false
+            let center_pane = self.ensure_tabbed_pane(window, cx);
+            center_pane.update(cx, |pane, cx| {
+                pane.add_item(item, true, true, None, window, cx)
+            });
+            true
         }
     }
 
@@ -4900,13 +4987,13 @@ impl Workspace {
         destination_index: Option<usize>,
         focus_item: bool,
         window: &mut Window,
-        cx: &mut App,
+        cx: &mut Context<Self>,
     ) {
         let pane = if self.active_pane.read(cx).is_tabbed() {
             self.active_pane.clone()
         } else {
             self.last_tabbed_pane(cx)
-                .unwrap_or_else(|| self.active_pane.clone())
+                .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx))
         };
         self.add_item(pane, item, destination_index, false, focus_item, window, cx)
     }
@@ -4919,8 +5006,15 @@ impl Workspace {
         activate_pane: bool,
         focus_item: bool,
         window: &mut Window,
-        cx: &mut App,
+        cx: &mut Context<Self>,
     ) {
+        let is_panel_item = item.downcast::<PanelItem>().is_some();
+        let pane = if pane.read(cx).is_tabbed() || is_panel_item {
+            pane
+        } else {
+            self.ensure_tabbed_pane(window, cx)
+        };
+
         pane.update(cx, |pane, cx| {
             pane.add_item(
                 item,
@@ -5002,6 +5096,17 @@ impl Workspace {
         self.open_path_preview(path, pane, focus_item, false, true, window, cx)
     }
 
+    pub fn open_path_in_tabbed_pane(
+        &mut self,
+        path: impl Into<ProjectPath>,
+        pane: Option<WeakEntity<Pane>>,
+        focus_item: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Task<anyhow::Result<Box<dyn ItemHandle>>> {
+        self.open_path_preview_in_tabbed_pane(path, pane, focus_item, false, true, window, cx)
+    }
+
     pub fn open_path_preview(
         &mut self,
         path: impl Into<ProjectPath>,
@@ -5012,18 +5117,57 @@ impl Workspace {
         window: &mut Window,
         cx: &mut App,
     ) -> Task<anyhow::Result<Box<dyn ItemHandle>>> {
-        let pane = pane.unwrap_or_else(|| {
-            self.last_tabbed_pane(cx)
-                .unwrap_or_else(|| {
-                    self.panes
-                        .first()
-                        .expect("There must be an active pane")
-                        .clone()
-                })
-                .downgrade()
-        });
+        let Some(pane) = self.existing_tabbed_pane(pane, cx) else {
+            return Task::ready(Err(anyhow!("no tabbed pane available")));
+        };
 
-        let project_path = path.into();
+        self.open_path_preview_in_pane(
+            path.into(),
+            pane.downgrade(),
+            focus_item,
+            allow_preview,
+            activate,
+            window,
+            cx,
+        )
+    }
+
+    pub fn open_path_preview_in_tabbed_pane(
+        &mut self,
+        path: impl Into<ProjectPath>,
+        pane: Option<WeakEntity<Pane>>,
+        focus_item: bool,
+        allow_preview: bool,
+        activate: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Task<anyhow::Result<Box<dyn ItemHandle>>> {
+        let pane = pane
+            .and_then(|pane| pane.upgrade())
+            .filter(|pane| pane.read(cx).is_tabbed() && pane.read(cx).is_visible())
+            .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
+
+        self.open_path_preview_in_pane(
+            path.into(),
+            pane.downgrade(),
+            focus_item,
+            allow_preview,
+            activate,
+            window,
+            cx,
+        )
+    }
+
+    fn open_path_preview_in_pane(
+        &mut self,
+        project_path: ProjectPath,
+        pane: WeakEntity<Pane>,
+        focus_item: bool,
+        allow_preview: bool,
+        activate: bool,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Task<anyhow::Result<Box<dyn ItemHandle>>> {
         let task = self.load_path(project_path.clone(), window, cx);
         window.spawn(cx, async move |cx| {
             let (project_entry_id, build_item) = task.await?;
@@ -5130,7 +5274,7 @@ impl Workspace {
             project.update(cx, |project, cx| project.find_project_path(url_or_path, cx))
         {
             let url_or_path = url_or_path.to_owned();
-            let task = self.open_path(project_path, None, true, window, cx);
+            let task = self.open_path_in_tabbed_pane(project_path, None, true, window, cx);
             (**cx)
                 .spawn(async move |cx| {
                     if let Err(_) = task.await {
@@ -5163,20 +5307,12 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Task<anyhow::Result<Box<dyn ItemHandle>>> {
-        let pane = self
-            .last_tabbed_pane(cx)
-            .unwrap_or_else(|| {
-                self.panes
-                    .first()
-                    .expect("There must be an active pane")
-                    .clone()
-            })
-            .downgrade();
+        let pane = self.ensure_tabbed_pane(window, cx).downgrade();
 
         if let Member::Pane(center_pane) = &self.center.root
             && center_pane.read(cx).items_len() == 0
         {
-            return self.open_path(path, Some(pane), true, window, cx);
+            return self.open_path_in_tabbed_pane(path, Some(pane), true, window, cx);
         }
 
         let project_path = path.into();
@@ -5261,7 +5397,7 @@ impl Workspace {
 
     pub fn open_project_item<T>(
         &mut self,
-        pane: Entity<Pane>,
+        mut pane: Entity<Pane>,
         project_item: Entity<T::Item>,
         activate_pane: bool,
         focus_item: bool,
@@ -5273,6 +5409,10 @@ impl Workspace {
     where
         T: ProjectItem,
     {
+        if !pane.read(cx).is_tabbed() {
+            pane = self.ensure_tabbed_pane(window, cx);
+        }
+
         let old_item_id = pane.read(cx).active_item().map(|item| item.item_id());
 
         if let Some(item) = self.find_project_item(&pane, &project_item, cx) {
@@ -5328,10 +5468,14 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if let Some(shared_screen) =
-            self.shared_screen_for_peer(peer_id, &self.active_pane, window, cx)
-        {
-            self.active_pane.update(cx, |pane, cx| {
+        let pane = if self.active_pane.read(cx).is_tabbed() {
+            self.active_pane.clone()
+        } else {
+            self.ensure_tabbed_pane(window, cx)
+        };
+
+        if let Some(shared_screen) = self.shared_screen_for_peer(peer_id, &pane, window, cx) {
+            pane.update(cx, |pane, cx| {
                 pane.add_item(Box::new(shared_screen), false, true, None, window, cx)
             });
         }
@@ -7710,6 +7854,7 @@ impl Workspace {
                 }
 
                 workspace.sync_panel_panes_from_docks(window, cx);
+                workspace.ensure_visible_center_pane(window, cx);
                 cx.notify();
             })?;
 
@@ -8631,7 +8776,7 @@ fn open_items(
                                 ix,
                                 workspace
                                     .update_in(cx, |workspace, window, cx| {
-                                        workspace.open_path(
+                                        workspace.open_path_in_tabbed_pane(
                                             file_project_path,
                                             None,
                                             true,
