@@ -1223,7 +1223,7 @@ impl Item for ProjectDiff {
     type Event = EditorEvent;
 
     fn tab_icon(&self, _window: &Window, _cx: &App) -> Option<Icon> {
-        Some(Icon::new(IconName::GitBranch).color(Color::Muted))
+        Some(Icon::new(IconName::DiffBoxed).color(Color::Muted))
     }
 
     fn to_item_events(event: &EditorEvent, f: &mut dyn FnMut(ItemEvent)) {

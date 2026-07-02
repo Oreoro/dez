@@ -100,6 +100,7 @@ pub enum IconName {
     DebugStepOut,
     DebugStepOver,
     Diff,
+    DiffBoxed,
     DiffSplit,
     DiffSplitAuto,
     DiffUnified,
