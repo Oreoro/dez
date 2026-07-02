@@ -4791,7 +4791,7 @@ impl OutlinePanel {
                         .tracked_scroll_handle(&self.scroll_handle.clone())
                         .with_track_along(
                             ScrollAxes::Horizontal,
-                            cx.theme().colors().panel_background,
+                            cx.theme().colors().editor_background,
                         )
                         .tracked_entity(cx.entity_id()),
                     window,
@@ -5082,6 +5082,7 @@ impl Render for OutlinePanel {
         v_flex()
             .id("outline-panel")
             .size_full()
+            .bg(cx.theme().colors().editor_background)
             .overflow_hidden()
             .relative()
             .key_context(self.dispatch_context(window, cx))

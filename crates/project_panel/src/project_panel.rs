@@ -627,7 +627,7 @@ fn get_item_color(is_sticky: bool, cx: &App) -> ItemColors {
         default: if is_sticky {
             colors.panel_overlay_background
         } else {
-            colors.panel_background
+            colors.editor_background
         },
         hover: if is_sticky {
             colors.panel_overlay_hover
@@ -6837,6 +6837,7 @@ impl Render for ProjectPanel {
                         .on_drag_move(cx.listener(handle_drag_move::<DraggedSelection>))
                 })
                 .size_full()
+                .bg(cx.theme().colors().editor_background)
                 .relative()
                 .on_modifiers_changed(cx.listener(
                     |this, event: &ModifiersChangedEvent, window, cx| {
@@ -7306,7 +7307,7 @@ impl Render for ProjectPanel {
                         if horizontal_scroll {
                             scrollbars = scrollbars.with_track_along(
                                 ScrollAxes::Horizontal,
-                                cx.theme().colors().panel_background,
+                                cx.theme().colors().editor_background,
                             );
                         }
                         scrollbars.notify_content()
@@ -7331,6 +7332,7 @@ impl Render for ProjectPanel {
             v_flex()
                 .id("empty-project_panel-wrapper")
                 .size_full()
+                .bg(cx.theme().colors().editor_background)
                 .child(
                     ProjectEmptyState::new(
                         "Project Panel",

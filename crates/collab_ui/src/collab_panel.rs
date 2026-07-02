@@ -3732,6 +3732,7 @@ impl Render for CollabPanel {
             .on_action(cx.listener(CollabPanel::move_channel_down))
             .track_focus(&self.focus_handle)
             .size_full()
+            .bg(cx.theme().colors().editor_background)
             .child(if is_collaboration_disabled {
                 self.render_disabled_by_organization(cx)
             } else if !status.is_or_was_connected() || status.is_signing_in() {

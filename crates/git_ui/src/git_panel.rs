@@ -6392,7 +6392,7 @@ impl GitPanel {
                             .tracked_scroll_handle(&self.scroll_handle)
                             .with_track_along(
                                 ScrollAxes::Horizontal,
-                                cx.theme().colors().panel_background,
+                                cx.theme().colors().editor_background,
                             ),
                         window,
                         cx,
@@ -7261,7 +7261,7 @@ impl Render for GitPanel {
             .on_action(cx.listener(Self::activate_history_tab))
             .size_full()
             .overflow_hidden()
-            .bg(cx.theme().colors().panel_background)
+            .bg(cx.theme().colors().editor_background)
             .child(
                 v_flex()
                     .size_full()

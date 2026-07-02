@@ -860,6 +860,7 @@ impl ThreadsArchiveView {
             .pl_2p5()
             .pr_1p5()
             .h(Tab::container_height(cx))
+            .bg(cx.theme().colors().tab_bar_background)
             .justify_between()
             .child(
                 div()
