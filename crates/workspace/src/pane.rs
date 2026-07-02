@@ -900,7 +900,7 @@ impl Pane {
     pub fn should_reserve_traffic_light_space(&self, window: &Window, cx: &App) -> bool {
         if !cfg!(target_os = "macos")
             || window.is_fullscreen()
-            || !self.reserve_traffic_light_space
+            || !(self.reserve_traffic_light_space || self.zoomed)
             || Self::titlebar_visible(cx)
         {
             return false;
@@ -3673,6 +3673,8 @@ impl Pane {
                     tab_bar
                         .start_children(left_children)
                         .end_children(right_children)
+                } else if self.zoomed {
+                    tab_bar.end_child(render_toggle_zoom_button(self, cx))
                 } else {
                     tab_bar
                 }
@@ -4487,26 +4489,24 @@ fn default_render_tab_bar_buttons(
                     .into()
                 }),
         )
-        .child({
-            let zoomed = pane.is_zoomed();
-            IconButton::new("toggle_zoom", IconName::Maximize)
-                .icon_size(IconSize::Small)
-                .toggle_state(zoomed)
-                .selected_icon(IconName::Minimize)
-                .on_click(cx.listener(|pane, _, window, cx| {
-                    pane.toggle_zoom(&crate::ToggleZoom, window, cx);
-                }))
-                .tooltip(move |_window, cx| {
-                    Tooltip::for_action(
-                        if zoomed { "Zoom Out" } else { "Zoom In" },
-                        &ToggleZoom,
-                        cx,
-                    )
-                })
-        })
+        .child(render_toggle_zoom_button(pane, cx))
         .into_any_element()
         .into();
     (None, right_children)
+}
+
+fn render_toggle_zoom_button(pane: &Pane, cx: &mut Context<Pane>) -> IconButton {
+    let zoomed = pane.is_zoomed();
+    IconButton::new("toggle_zoom", IconName::Maximize)
+        .icon_size(IconSize::Small)
+        .toggle_state(zoomed)
+        .selected_icon(IconName::Minimize)
+        .on_click(cx.listener(|pane, _, window, cx| {
+            pane.toggle_zoom(&crate::ToggleZoom, window, cx);
+        }))
+        .tooltip(move |_window, cx| {
+            Tooltip::for_action(if zoomed { "Zoom Out" } else { "Zoom In" }, &ToggleZoom, cx)
+        })
 }
 
 impl Focusable for Pane {

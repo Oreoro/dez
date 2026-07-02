@@ -1156,7 +1156,6 @@ impl TerminalPanel {
         if let Some(to) = self
             .center
             .find_pane_in_direction(&self.active_pane, direction, cx)
-            .cloned()
         {
             self.center.swap(&self.active_pane, &to, cx);
             cx.notify();
@@ -1517,7 +1516,7 @@ impl Render for TerminalPanel {
                         {
                             move_active_item(
                                 source_pane,
-                                destination_pane,
+                                &destination_pane,
                                 action.focus,
                                 true,
                                 window,

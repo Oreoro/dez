@@ -4751,6 +4751,26 @@ impl Workspace {
             })
     }
 
+    fn last_focusable_center_pane(&self, cx: &App) -> Option<Entity<Pane>> {
+        self.last_active_center_pane
+            .as_ref()
+            .and_then(|pane| pane.upgrade())
+            .filter(|pane| {
+                pane.read(cx).is_visible()
+                    && pane.read(cx).active_item().is_some()
+                    && self.pane_is_in_center(pane)
+            })
+            .or_else(|| {
+                self.center
+                    .panes()
+                    .into_iter()
+                    .find(|pane| {
+                        pane.read(cx).is_visible() && pane.read(cx).active_item().is_some()
+                    })
+                    .cloned()
+            })
+    }
+
     fn pane_is_in_center(&self, pane: &Entity<Pane>) -> bool {
         self.center
             .panes()
@@ -5688,7 +5708,9 @@ impl Workspace {
             ]
             .into_iter()
             .find_map(|(dock, origin)| {
-                if dock.focus_handle(cx).contains_focused(window, cx) && dock.read(cx).is_open() {
+                if dock.focus_handle(cx).contains_focused(window, cx)
+                    && dock_has_focus_target(dock, cx)
+                {
                     Some(origin)
                 } else {
                     None
@@ -5698,12 +5720,13 @@ impl Workspace {
         };
 
         let get_last_active_pane = || {
-            let pane = self.last_tabbed_pane(cx)?;
-            (pane.read(cx).items_len() != 0).then_some(pane)
+            let pane = self.last_focusable_center_pane(cx)?;
+            pane.read(cx).active_item().is_some().then_some(pane)
         };
 
-        let try_dock =
-            |dock: &Entity<Dock>| dock.read(cx).is_open().then(|| Target::Dock(dock.clone()));
+        let try_dock = |dock: &Entity<Dock>| {
+            dock_has_focus_target(dock, cx).then(|| Target::Dock(dock.clone()))
+        };
 
         let sidebar_target = self
             .sidebar_focus_handle
@@ -5891,7 +5914,6 @@ impl Workspace {
     ) -> Option<Entity<Pane>> {
         self.center
             .find_pane_in_direction(&self.active_pane, direction, cx)
-            .cloned()
     }
 
     pub fn swap_pane_in_direction(&mut self, direction: SplitDirection, cx: &mut Context<Self>) {
@@ -5964,7 +5986,7 @@ impl Workspace {
             self.set_active_pane(&pane, window, cx);
         }
 
-        if self.last_active_center_pane.is_none() && pane.read(cx).is_tabbed() {
+        if self.last_active_center_pane.is_none() && self.pane_is_in_center(&pane) {
             self.last_active_center_pane = Some(pane.downgrade());
         }
 
@@ -6008,7 +6030,7 @@ impl Workspace {
     ) {
         self.active_pane = pane.clone();
         self.active_item_path_changed(true, window, cx);
-        if pane.read(cx).is_tabbed() {
+        if self.pane_is_in_center(pane) {
             self.last_active_center_pane = Some(pane.downgrade());
         }
     }
@@ -8899,6 +8921,16 @@ enum ActivateInDirectionTarget {
     Sidebar(FocusHandle),
 }
 
+fn dock_has_focus_target(dock: &Entity<Dock>, cx: &App) -> bool {
+    let dock = dock.read(cx);
+    if !dock.is_open() {
+        return false;
+    }
+
+    dock.active_panel()
+        .is_some_and(|panel| PanelPaneKind::for_panel_key(panel.panel_key()).is_none())
+}
+
 fn notify_if_database_failed(window: WindowHandle<MultiWorkspace>, cx: &mut AsyncApp) {
     window
         .update(cx, |multi_workspace, _, cx| {
@@ -9169,26 +9201,23 @@ impl Render for Workspace {
                             )
                             .children(self.zoomed.as_ref().and_then(|view| {
                                 let zoomed_view = view.upgrade()?;
+                                let zoomed_content = match zoomed_view.downcast::<Pane>() {
+                                    Ok(pane) => {
+                                        pane_group::render_pane_card(pane, &pane_render_context, cx)
+                                    }
+                                    Err(zoomed_view) => zoomed_view.into_any_element(),
+                                };
+
                                 let div = div()
                                     .occlude()
                                     .absolute()
                                     .overflow_hidden()
-                                    .border_color(colors.border)
                                     .bg(colors.background)
-                                    .child(zoomed_view)
+                                    .child(zoomed_content)
                                     .inset_0()
                                     .shadow_lg();
 
-                                if !WorkspaceSettings::get_global(cx).zoomed_padding {
-                                    return Some(div);
-                                }
-
-                                Some(match self.zoomed_position {
-                                    Some(DockPosition::Left) => div.right_2().border_r_1(),
-                                    Some(DockPosition::Right) => div.left_2().border_l_1(),
-                                    Some(DockPosition::Bottom) => div,
-                                    None => div.top_2().bottom_2().left_2().right_2().border_1(),
-                                })
+                                Some(div)
                             }))
                             .children(self.render_notifications(window, cx)),
                     )

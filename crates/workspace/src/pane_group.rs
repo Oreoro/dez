@@ -16,7 +16,7 @@ use project::Project;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use settings::Settings;
-use std::sync::Arc;
+use std::{cmp::Ordering, sync::Arc};
 use ui::prelude::*;
 
 pub const HANDLE_HITBOX_SIZE: f32 = 4.0;
@@ -255,11 +255,11 @@ impl PaneGroup {
     }
 
     pub fn find_pane_in_direction(
-        &mut self,
+        &self,
         active_pane: &Entity<Pane>,
         direction: SplitDirection,
         cx: &App,
-    ) -> Option<&Entity<Pane>> {
+    ) -> Option<Entity<Pane>> {
         let bounding_box = self.bounding_box_for_pane(active_pane)?;
         let cursor = active_pane.read(cx).pixel_position_of_cursor(cx);
         let center = match cursor {
@@ -267,29 +267,121 @@ impl PaneGroup {
             _ => bounding_box.center(),
         };
 
-        let distance_to_next = crate::HANDLE_HITBOX_SIZE;
-
-        let target = match direction {
-            SplitDirection::Left => {
-                Point::new(bounding_box.left() - distance_to_next.into(), center.y)
-            }
-            SplitDirection::Right => {
-                Point::new(bounding_box.right() + distance_to_next.into(), center.y)
-            }
-            SplitDirection::Up => {
-                Point::new(center.x, bounding_box.top() - distance_to_next.into())
-            }
-            SplitDirection::Down => {
-                Point::new(center.x, bounding_box.bottom() + distance_to_next.into())
-            }
-        };
-        self.pane_at_pixel_position(target)
+        let mut pane_bounds = Vec::new();
+        self.root.collect_pane_bounds(&mut pane_bounds);
+        pane_bounds
+            .into_iter()
+            .filter(|(pane, _)| pane != active_pane)
+            .filter_map(|(pane, candidate_bounds)| {
+                pane_distances_in_direction(bounding_box, candidate_bounds, center, direction)
+                    .map(|distances| (pane, distances))
+            })
+            .min_by(|(_, left), (_, right)| compare_pane_distances(*left, *right))
+            .map(|(pane, _)| pane)
     }
 
     pub fn invert_axies(&mut self, cx: &mut App) {
         self.root.invert_pane_axies();
         self.mark_positions(cx);
     }
+}
+
+pub(crate) fn render_pane_card(
+    pane: Entity<Pane>,
+    render_cx: &dyn PaneLeaderDecorator,
+    cx: &mut App,
+) -> AnyElement {
+    let decoration = render_cx.decorate(&pane, cx);
+
+    div()
+        .relative()
+        .flex_1()
+        .size_full()
+        .overflow_hidden()
+        .rounded_lg()
+        .border_1()
+        .border_color(cx.theme().colors().border)
+        .child(AnyView::from(pane).cached(StyleRefinement::default().v_flex().size_full()))
+        .when_some(decoration.border, |this, color| {
+            this.child(
+                div()
+                    .absolute()
+                    .size_full()
+                    .left_0()
+                    .top_0()
+                    .border_2()
+                    .border_color(color),
+            )
+        })
+        .children(decoration.status_box)
+        .into_any()
+}
+
+type PaneDistances = (f32, f32, f32);
+
+fn pane_distances_in_direction(
+    active: Bounds<Pixels>,
+    candidate: Bounds<Pixels>,
+    anchor: Point<Pixels>,
+    direction: SplitDirection,
+) -> Option<PaneDistances> {
+    let (primary, cross, center) = match direction {
+        SplitDirection::Left => {
+            let primary = active.left() - candidate.right();
+            if primary < Pixels::ZERO {
+                return None;
+            }
+            let cross = distance_to_interval(anchor.y, candidate.top(), candidate.bottom());
+            let center = (candidate.center().y - anchor.y).as_f32().abs();
+            (primary, cross, center)
+        }
+        SplitDirection::Right => {
+            let primary = candidate.left() - active.right();
+            if primary < Pixels::ZERO {
+                return None;
+            }
+            let cross = distance_to_interval(anchor.y, candidate.top(), candidate.bottom());
+            let center = (candidate.center().y - anchor.y).as_f32().abs();
+            (primary, cross, center)
+        }
+        SplitDirection::Up => {
+            let primary = active.top() - candidate.bottom();
+            if primary < Pixels::ZERO {
+                return None;
+            }
+            let cross = distance_to_interval(anchor.x, candidate.left(), candidate.right());
+            let center = (candidate.center().x - anchor.x).as_f32().abs();
+            (primary, cross, center)
+        }
+        SplitDirection::Down => {
+            let primary = candidate.top() - active.bottom();
+            if primary < Pixels::ZERO {
+                return None;
+            }
+            let cross = distance_to_interval(anchor.x, candidate.left(), candidate.right());
+            let center = (candidate.center().x - anchor.x).as_f32().abs();
+            (primary, cross, center)
+        }
+    };
+
+    Some((primary.as_f32(), cross.as_f32(), center))
+}
+
+fn distance_to_interval(value: Pixels, start: Pixels, end: Pixels) -> Pixels {
+    if value < start {
+        start - value
+    } else if value > end {
+        value - end
+    } else {
+        Pixels::ZERO
+    }
+}
+
+fn compare_pane_distances(left: PaneDistances, right: PaneDistances) -> Ordering {
+    left.0
+        .total_cmp(&right.0)
+        .then_with(|| left.1.total_cmp(&right.1))
+        .then_with(|| left.2.total_cmp(&right.2))
 }
 
 #[derive(Debug, Clone)]
@@ -591,35 +683,10 @@ impl Member {
                     };
                 }
 
-                let decoration = render_cx.decorate(pane, cx);
                 let is_active = pane == render_cx.active_pane();
 
                 PaneRenderResult {
-                    element: div()
-                        .relative()
-                        .flex_1()
-                        .size_full()
-                        .overflow_hidden()
-                        .rounded_lg()
-                        .border_1()
-                        .border_color(cx.theme().colors().border)
-                        .child(
-                            AnyView::from(pane.clone())
-                                .cached(StyleRefinement::default().v_flex().size_full()),
-                        )
-                        .when_some(decoration.border, |this, color| {
-                            this.child(
-                                div()
-                                    .absolute()
-                                    .size_full()
-                                    .left_0()
-                                    .top_0()
-                                    .border_2()
-                                    .border_color(color),
-                            )
-                        })
-                        .children(decoration.status_box)
-                        .into_any(),
+                    element: render_pane_card(pane.clone(), render_cx, cx),
                     contains_active_pane: is_active,
                 }
             }
@@ -635,6 +702,13 @@ impl Member {
                 }
             }
             Member::Pane(pane) => panes.push(pane),
+        }
+    }
+
+    fn collect_pane_bounds(&self, panes: &mut Vec<(Entity<Pane>, Bounds<Pixels>)>) {
+        match self {
+            Member::Axis(axis) => axis.collect_pane_bounds(panes),
+            Member::Pane(_) => {}
         }
     }
 
@@ -953,6 +1027,22 @@ impl PaneAxis {
             }
         }
         None
+    }
+
+    fn collect_pane_bounds(&self, panes: &mut Vec<(Entity<Pane>, Bounds<Pixels>)>) {
+        debug_assert!(self.members.len() == self.bounding_boxes.lock().len());
+
+        let bounding_boxes = self.bounding_boxes.lock();
+        for (idx, member) in self.members.iter().enumerate() {
+            let Some(bounds) = bounding_boxes[idx] else {
+                continue;
+            };
+
+            match member {
+                Member::Pane(pane) => panes.push((pane.clone(), bounds)),
+                Member::Axis(axis) => axis.collect_pane_bounds(panes),
+            }
+        }
     }
 
     fn full_height_column_count(&self) -> usize {
