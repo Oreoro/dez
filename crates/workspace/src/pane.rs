@@ -2155,6 +2155,12 @@ impl Pane {
                     }
                 }
 
+                if should_close {
+                    let close_task =
+                        cx.update(|_window, cx| item_to_close.on_close(save_intent, cx))?;
+                    should_close = close_task.await?;
+                }
+
                 // Remove the item from the pane.
                 if should_close {
                     pane.update_in(cx, |pane, window, cx| {
@@ -3115,14 +3121,11 @@ impl Pane {
                         save_intent: None,
                         close_pinned: false,
                     };
-                    end_slot_tooltip_text = "Close Tab";
+                    end_slot_tooltip_text = item.tab_close_tooltip_text(cx);
+                    let close_icon = item.tab_close_icon(cx);
                     match show_close_button {
-                        ShowCloseButton::Always => {
-                            Some(IconButton::new("close tab", IconName::Close))
-                        }
-                        ShowCloseButton::Hover => {
-                            Some(IconButton::new("close tab", IconName::Close))
-                        }
+                        ShowCloseButton::Always => Some(IconButton::new("close tab", close_icon)),
+                        ShowCloseButton::Hover => Some(IconButton::new("close tab", close_icon)),
                         ShowCloseButton::Hidden => None,
                     }
                     .map(|button| {

@@ -131,7 +131,7 @@ impl Column for PaneKind {
                 match kind.as_str() {
                     "tabs" => Self::Tabs,
                     "project" => Self::Project,
-                    "agent" => Self::Agent,
+                    "agent" => Self::Tabs,
                     _ => Self::Tabs,
                 },
                 next_index,

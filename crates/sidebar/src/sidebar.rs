@@ -4,7 +4,7 @@ use acp_thread::ThreadStatus;
 use action_log::DiffStats;
 use agent::{ThreadStore, ZED_AGENT_ID};
 use agent_client_protocol::schema::v1 as acp;
-use agent_settings::AgentSettings;
+use agent_settings::{AgentSettings, UserAgentsMd};
 use agent_ui::terminal_thread_metadata_store::{
     TerminalThreadMetadata, TerminalThreadMetadataStore, terminal_title_prefix,
 };
@@ -16,10 +16,13 @@ use agent_ui::threads_archive_view::{
     fuzzy_match_positions,
 };
 use agent_ui::{
-    AcpThreadImportOnboarding, Agent, AgentPanel, AgentPanelEvent, AgentThreadSource,
-    ArchiveSelectedThread, CrossChannelImportOnboarding, DEFAULT_THREAD_TITLE, NewTerminalThread,
+    AcpThreadImportOnboarding, AddContextServer, Agent, AgentPanel, AgentPanelEvent,
+    AgentThreadItem, AgentThreadSource, ArchiveSelectedThread, ConversationView,
+    CrossChannelImportOnboarding, DEFAULT_THREAD_TITLE, ManageProfiles, NewTerminalThread,
     NewThread, RenameSelectedThread, TerminalId, ThreadId, ThreadImportModal,
-    ThreadTitleRegenerationResult, channels_with_threads, import_threads_from_other_channels,
+    ThreadTitleRegenerationResult, ToggleOptionsMenu, channels_with_threads,
+    connection_store_for_project, create_agent_thread_in_workspace,
+    import_threads_from_other_channels, open_agent_thread_in_workspace,
 };
 use agent_ui::{MessageEditorEvent, StateChange, thread_worktree_archive};
 use chrono::{DateTime, Utc};
@@ -68,6 +71,8 @@ use workspace::{
 };
 
 use git_ui::worktree_service::{RemoteBranchName, worktree_create_targets};
+use zed_actions::agent::OpenSettings;
+use zed_actions::assistant::{ManageSkills, OpenGlobalAgentsMdRules, OpenProjectAgentsMdRules};
 use zed_actions::editor::{MoveDown, MoveUp};
 use zed_actions::{CreateWorktree, NewWorktreeBranchTarget, OpenRecent};
 
@@ -804,6 +809,7 @@ pub struct Sidebar {
     draft_kinds: HashMap<ThreadId, DraftKind>,
     view: SidebarView,
     restoring_tasks: HashMap<agent_ui::ThreadId, Task<()>>,
+    agent_options_menu_handle: PopoverMenuHandle<ContextMenu>,
     recent_projects_popover_handle: PopoverMenuHandle<SidebarRecentProjects>,
     project_header_menu_handles: HashMap<usize, PopoverMenuHandle<ContextMenu>>,
     project_header_new_thread_menu_handles: HashMap<usize, PopoverMenuHandle<ContextMenu>>,
@@ -942,6 +948,7 @@ impl Sidebar {
             draft_kinds: HashMap::new(),
             view: SidebarView::default(),
             restoring_tasks: HashMap::new(),
+            agent_options_menu_handle: PopoverMenuHandle::default(),
             recent_projects_popover_handle: PopoverMenuHandle::default(),
             project_header_menu_handles: HashMap::new(),
             project_header_new_thread_menu_handles: HashMap::new(),
@@ -1039,13 +1046,20 @@ impl Sidebar {
         cx.subscribe_in(
             workspace,
             window,
-            move |this, workspace, event: &workspace::Event, window, cx| {
-                if let workspace::Event::PanelAdded(view) = event {
+            move |this, workspace, event: &workspace::Event, window, cx| match event {
+                workspace::Event::ActiveItemChanged
+                | workspace::Event::ItemAdded { .. }
+                | workspace::Event::ItemRemoved { .. } => {
+                    this.sync_active_entry_from_active_workspace(cx);
+                    this.schedule_update_entries(false, cx);
+                }
+                workspace::Event::PanelAdded(view) => {
                     if let Ok(agent_panel) = view.clone().downcast::<AgentPanel>() {
                         this.subscribe_to_agent_panel(workspace, &agent_panel, window, cx);
                         this.schedule_update_entries(false, cx);
                     }
                 }
+                _ => {}
             },
         )
         .detach();
@@ -1153,12 +1167,49 @@ impl Sidebar {
     }
 
     fn sync_active_entry_from_active_workspace(&mut self, cx: &App) {
-        let panel = self
-            .active_workspace(cx)
-            .and_then(|ws| ws.read(cx).panel::<AgentPanel>(cx));
-        if let Some(panel) = panel {
+        let Some(active_workspace) = self.active_workspace(cx) else {
+            return;
+        };
+
+        if let Some(item) = active_workspace
+            .read(cx)
+            .active_item_as::<AgentThreadItem>(cx)
+        {
+            let item = item.read(cx);
+            let thread_id = item.thread_id(cx);
+            self.active_entry = Some(ActiveEntry::Thread {
+                thread_id,
+                session_id: item.session_id(cx),
+                workspace: active_workspace,
+            });
+            if self.pending_thread_activation == Some(thread_id) {
+                self.pending_thread_activation = None;
+            }
+            return;
+        }
+
+        if let Some(panel) = active_workspace.read(cx).panel::<AgentPanel>(cx) {
             self.sync_active_entry_from_panel(&panel, cx);
         }
+    }
+
+    fn focused_thread_entry(&self, window: &Window, cx: &App) -> Option<ActiveEntry> {
+        let active_workspace = self.active_workspace(cx)?;
+        let active_pane = active_workspace.read(cx).active_pane().clone();
+        let active_item = {
+            let active_pane = active_pane.read(cx);
+            if !active_pane.has_focus(window, cx) {
+                return None;
+            }
+            active_pane.active_item()?.downcast::<AgentThreadItem>()?
+        };
+
+        let active_item = active_item.read(cx);
+        Some(ActiveEntry::Thread {
+            thread_id: active_item.thread_id(cx),
+            session_id: active_item.session_id(cx),
+            workspace: active_workspace,
+        })
     }
 
     /// When switching workspaces, the active panel may still be showing
@@ -1597,10 +1648,6 @@ impl Sidebar {
                         let (icon, icon_from_external_svg) = resolve_agent_icon(&row.agent_id);
                         let worktrees =
                             worktree_info_from_thread_paths(&row.worktree_paths, &branch_by_path);
-                        // Start drafts as `WithContent`; the post-processing
-                        // pass below downgrades them to `Empty` if no draft
-                        // label can be derived.
-                        let draft = row.is_draft().then_some(DraftKind::WithContent);
                         Arc::new(ThreadEntry {
                             metadata: row,
                             icon,
@@ -1610,7 +1657,7 @@ impl Sidebar {
                             is_live: false,
                             is_background: false,
                             is_title_generating: false,
-                            draft,
+                            draft: None,
                             highlight_positions: Vec::new(),
                             worktrees,
                             diff_stats: DiffStats::default(),
@@ -1626,6 +1673,9 @@ impl Sidebar {
                     .entries_for_main_worktree_path(group_key.path_list(), group_host.as_ref())
                     .cloned()
                 {
+                    if row.is_draft() {
+                        continue;
+                    }
                     if !seen_thread_ids.insert(row.thread_id) {
                         continue;
                     }
@@ -1642,6 +1692,9 @@ impl Sidebar {
                     .entries_for_path(group_key.path_list(), group_host.as_ref())
                     .cloned()
                 {
+                    if row.is_draft() {
+                        continue;
+                    }
                     if !seen_thread_ids.insert(row.thread_id) {
                         continue;
                     }
@@ -1670,6 +1723,9 @@ impl Sidebar {
                         .entries_for_path(&ws_paths, group_host.as_ref())
                         .cloned()
                     {
+                        if row.is_draft() {
+                            continue;
+                        }
                         if !seen_thread_ids.insert(row.thread_id) {
                             continue;
                         }
@@ -1687,6 +1743,9 @@ impl Sidebar {
                         .entries_for_path(worktree_path_list, group_host.as_ref())
                         .cloned()
                     {
+                        if row.is_draft() {
+                            continue;
+                        }
                         if !seen_thread_ids.insert(row.thread_id) {
                             continue;
                         }
@@ -2151,8 +2210,11 @@ impl Sidebar {
         let draft_conversation_views: Vec<Entity<agent_ui::ConversationView>> = multi_workspace
             .read(cx)
             .workspaces()
-            .filter_map(|ws| ws.read(cx).panel::<AgentPanel>(cx))
-            .flat_map(|panel| panel.read(cx).conversation_views())
+            .flat_map(|ws| {
+                ws.read(cx)
+                    .items_of_type::<AgentThreadItem>(cx)
+                    .map(|item| item.read(cx).conversation_view())
+            })
             .collect();
 
         for cv in draft_conversation_views {
@@ -2246,7 +2308,13 @@ impl Sidebar {
                     cx,
                 )
             }
-            ListEntry::Thread(thread) => self.render_thread(ix, thread, is_active, is_selected, cx),
+            ListEntry::Thread(thread) => {
+                let is_active = self
+                    .focused_thread_entry(window, cx)
+                    .as_ref()
+                    .is_some_and(|active| active.matches_entry(entry));
+                self.render_thread(ix, thread, is_active, is_selected, cx)
+            }
             ListEntry::Terminal(terminal) => {
                 self.render_terminal(ix, terminal, is_active, is_selected, cx)
             }
@@ -3306,6 +3374,8 @@ impl Sidebar {
         } else if self.selection.is_none() {
             self.filter_editor.focus_handle(cx).focus(window, cx);
         }
+
+        cx.notify();
     }
 
     fn cancel(&mut self, _: &Cancel, window: &mut Window, cx: &mut Context<Self>) {
@@ -3441,6 +3511,23 @@ impl Sidebar {
         if let Some(multi_workspace) = self.multi_workspace.upgrade() {
             let workspaces: Vec<_> = multi_workspace.read(cx).workspaces().cloned().collect();
             for workspace in workspaces {
+                let agent_thread_item = workspace
+                    .read(cx)
+                    .items_of_type::<AgentThreadItem>(cx)
+                    .find(|item| item.read(cx).thread_id(cx) == thread_id);
+                if let Some(agent_thread_item) = agent_thread_item
+                    && let Some(thread_view) = agent_thread_item
+                        .read(cx)
+                        .conversation_view()
+                        .read(cx)
+                        .root_thread_view()
+                {
+                    thread_view.update(cx, |thread_view, cx| {
+                        thread_view.rename(title.clone(), window, cx);
+                    });
+                    found = true;
+                }
+
                 if let Some(agent_panel) = workspace.read(cx).panel::<AgentPanel>(cx) {
                     if let Some(view) = agent_panel
                         .read(cx)
@@ -3631,66 +3718,7 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut App,
     ) {
-        let load_thread = |agent_panel: Entity<AgentPanel>,
-                           metadata: &ThreadMetadata,
-                           focus: bool,
-                           window: &mut Window,
-                           cx: &mut App| {
-            agent_panel.update(cx, |panel, cx| {
-                panel.load_agent_thread(
-                    Agent::from(metadata.agent_id.clone()),
-                    metadata.thread_id,
-                    Some(metadata.folder_paths().clone()),
-                    metadata.title.clone(),
-                    focus,
-                    AgentThreadSource::Sidebar,
-                    window,
-                    cx,
-                );
-            });
-        };
-
-        let mut existing_panel = None;
-        workspace.update(cx, |workspace, cx| {
-            if let Some(panel) = workspace.panel::<AgentPanel>(cx) {
-                existing_panel = Some(panel);
-            }
-        });
-
-        if let Some(agent_panel) = existing_panel {
-            load_thread(agent_panel, metadata, focus, window, cx);
-            workspace.update(cx, |workspace, cx| {
-                if focus {
-                    workspace.focus_panel::<AgentPanel>(window, cx);
-                } else {
-                    workspace.reveal_panel::<AgentPanel>(window, cx);
-                }
-            });
-            return;
-        }
-
-        let workspace = workspace.downgrade();
-        let metadata = metadata.clone();
-        let mut async_window_cx = window.to_async(cx);
-        cx.spawn(async move |_cx| {
-            let panel = AgentPanel::load(workspace.clone(), async_window_cx.clone()).await?;
-
-            workspace.update_in(&mut async_window_cx, |workspace, window, cx| {
-                let panel = workspace.panel::<AgentPanel>(cx).unwrap_or_else(|| {
-                    workspace.add_panel(panel.clone(), window, cx);
-                    panel.clone()
-                });
-                load_thread(panel, &metadata, focus, window, cx);
-                if focus {
-                    workspace.focus_panel::<AgentPanel>(window, cx);
-                } else {
-                    workspace.reveal_panel::<AgentPanel>(window, cx);
-                }
-            })?;
-
-            anyhow::Ok(())
-        })
-        .detach_and_log_err(cx);
+        open_agent_thread_in_workspace(workspace, metadata, focus, window, cx);
     }
 
     fn open_closed_native_thread_as_markdown(
@@ -3883,14 +3911,12 @@ impl Sidebar {
         };
 
         if self.is_thread_active_in_workspace(&metadata.thread_id, workspace, cx) {
-            workspace.update(cx, |workspace, cx| {
-                workspace.focus_panel::<AgentPanel>(window, cx);
-            });
+            Self::load_agent_thread_in_workspace(workspace, metadata, true, window, cx);
             return;
         }
 
         // Set active_entry eagerly so the sidebar highlight updates
-        // immediately, rather than waiting for a deferred AgentPanel
+        // immediately, rather than waiting for a deferred item activation
         // event which can race with ActiveWorkspaceChanged clearing it.
         self.active_entry = Some(ActiveEntry::Thread {
             thread_id: metadata.thread_id,
@@ -4403,12 +4429,13 @@ impl Sidebar {
 
         let workspaces: Vec<_> = multi_workspace.read(cx).workspaces().cloned().collect();
         for workspace in workspaces {
-            if let Some(agent_panel) = workspace.read(cx).panel::<AgentPanel>(cx) {
-                let cancelled =
-                    agent_panel.update(cx, |panel, cx| panel.cancel_thread(thread_id, cx));
-                if cancelled {
-                    return;
-                }
+            let item = workspace
+                .read(cx)
+                .items_of_type::<AgentThreadItem>(cx)
+                .find(|item| item.read(cx).thread_id(cx) == *thread_id);
+            if let Some(item) = item {
+                item.update(cx, |item, cx| item.cancel_thread(cx));
+                return;
             }
         }
     }
@@ -5322,6 +5349,51 @@ impl Sidebar {
         close_item_tasks
     }
 
+    fn close_agent_thread_tabs(
+        &self,
+        thread_id: ThreadId,
+        workspaces_to_remove: &[Entity<Workspace>],
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Vec<Task<anyhow::Result<()>>> {
+        let Some(multi_workspace) = self.multi_workspace.upgrade() else {
+            return Vec::new();
+        };
+
+        let workspaces: Vec<_> = multi_workspace
+            .read(cx)
+            .workspaces()
+            .filter(|workspace| !workspaces_to_remove.contains(workspace))
+            .cloned()
+            .collect();
+
+        let mut close_item_tasks = Vec::new();
+        for workspace in workspaces {
+            let panes = workspace.read(cx).panes().to_vec();
+            for pane in panes {
+                let items_to_close: Vec<EntityId> = pane
+                    .read(cx)
+                    .items()
+                    .filter_map(|item| {
+                        let item = item.downcast::<AgentThreadItem>()?;
+                        (item.read(cx).thread_id(cx) == thread_id).then_some(item.entity_id())
+                    })
+                    .collect();
+
+                if !items_to_close.is_empty() {
+                    let task = pane.update(cx, |pane, cx| {
+                        pane.close_items(window, cx, SaveIntent::Skip, &|item_id| {
+                            items_to_close.contains(&item_id)
+                        })
+                    });
+                    close_item_tasks.push(task);
+                }
+            }
+        }
+
+        close_item_tasks
+    }
+
     fn archive_thread(
         &mut self,
         session_id: &acp::SessionId,
@@ -5447,12 +5519,20 @@ impl Sidebar {
         // dropped without destroying the user's workspace layout.
         let mut workspaces_to_remove: Vec<Entity<Workspace>> =
             workspace_to_remove.into_iter().collect();
-        let close_item_tasks = self.close_items_for_archived_worktrees(
+        let mut close_item_tasks = self.close_items_for_archived_worktrees(
             &roots_to_archive,
             &mut workspaces_to_remove,
             window,
             cx,
         );
+        if let Some(thread_id) = thread_id {
+            close_item_tasks.extend(self.close_agent_thread_tabs(
+                thread_id,
+                &workspaces_to_remove,
+                window,
+                cx,
+            ));
+        }
 
         if !workspaces_to_remove.is_empty() {
             let multi_workspace = self.multi_workspace.upgrade().unwrap();
@@ -7142,13 +7222,10 @@ impl Sidebar {
 
     fn should_create_terminal_for_workspace(
         &self,
-        workspace: &Entity<Workspace>,
-        cx: &App,
+        _workspace: &Entity<Workspace>,
+        _cx: &App,
     ) -> bool {
-        workspace
-            .read(cx)
-            .panel::<AgentPanel>(cx)
-            .is_some_and(|panel| panel.read(cx).should_create_terminal_for_new_entry(cx))
+        false
     }
 
     fn create_new_thread(
@@ -7169,17 +7246,10 @@ impl Sidebar {
             multi_workspace.activate(workspace.clone(), None, window, cx);
         });
 
-        let draft_id = workspace.update(cx, |workspace, cx| {
-            let panel = workspace.panel::<AgentPanel>(cx)?;
-            let draft_id = panel.update(cx, |panel, cx| {
-                panel.activate_new_thread(true, AgentThreadSource::Sidebar, window, cx);
-                panel.active_thread_id(cx)
-            });
-            workspace.focus_panel::<AgentPanel>(window, cx);
-            draft_id
-        });
+        let draft = create_agent_thread_in_workspace(workspace, true, window, cx);
 
-        if let Some(draft_id) = draft_id {
+        if let Some(draft) = draft {
+            let draft_id = draft.read(cx).thread_id(cx);
             self.active_entry = Some(ActiveEntry::Thread {
                 thread_id: draft_id,
                 session_id: None,
@@ -7620,6 +7690,192 @@ impl Sidebar {
             })
     }
 
+    fn active_agent_conversation_view(&self, cx: &App) -> Option<Entity<ConversationView>> {
+        self.active_workspace(cx)?
+            .read(cx)
+            .active_item_as::<AgentThreadItem>(cx)
+            .map(|item| item.read(cx).conversation_view())
+    }
+
+    fn active_project_agents_md_exists(&self, cx: &App) -> bool {
+        let Some(workspace) = self.active_workspace(cx) else {
+            return false;
+        };
+        let project = workspace.read(cx).project().clone();
+        let Ok(rel_path) = util::rel_path::RelPath::unix("AGENTS.md") else {
+            return false;
+        };
+        project
+            .read(cx)
+            .visible_worktrees(cx)
+            .next()
+            .and_then(|worktree| {
+                let worktree = worktree.read(cx);
+                worktree
+                    .entry_for_path(rel_path)
+                    .is_some_and(|entry| entry.is_file())
+                    .then_some(())
+            })
+            .is_some()
+    }
+
+    fn render_agent_options_menu(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let on_right = self.side(cx) == SidebarSide::Right;
+        let active_conversation_view = self.active_agent_conversation_view(cx);
+        let can_regenerate_thread_title =
+            active_conversation_view
+                .as_ref()
+                .is_some_and(|conversation_view| {
+                    let conversation_view = conversation_view.read(cx);
+                    conversation_view.has_user_submitted_prompt(cx)
+                        && conversation_view
+                            .as_native_thread(cx)
+                            .is_some_and(|thread| !thread.read(cx).is_generating_title())
+                });
+        let has_auth_methods = active_conversation_view
+            .as_ref()
+            .is_some_and(|conversation_view| conversation_view.read(cx).has_auth_methods());
+        let supports_logout = active_conversation_view
+            .as_ref()
+            .is_some_and(|conversation_view| conversation_view.read(cx).supports_logout());
+        let global_agents_md_loaded = UserAgentsMd::global(cx)
+            .and_then(|md| md.content())
+            .is_some();
+        let project_agents_md_exists = self.active_project_agents_md_exists(cx);
+        let focus_handle = self.focus_handle.clone();
+        let sidebar = cx.weak_entity();
+
+        PopoverMenu::new("agent-sidebar-options-menu")
+            .trigger_with_tooltip(
+                IconButton::new("agent-sidebar-options-menu", IconName::Robot)
+                    .icon_size(IconSize::Small),
+                Tooltip::text("Agent Menu"),
+            )
+            .anchor(if on_right {
+                gpui::Anchor::BottomRight
+            } else {
+                gpui::Anchor::BottomLeft
+            })
+            .attach(if on_right {
+                gpui::Anchor::TopRight
+            } else {
+                gpui::Anchor::TopLeft
+            })
+            .offset(gpui::Point {
+                x: px(0.0),
+                y: px(-4.0),
+            })
+            .with_handle(self.agent_options_menu_handle.clone())
+            .menu(move |window, cx| {
+                let active_conversation_view = active_conversation_view.clone();
+                let sidebar = sidebar.clone();
+                let focus_handle = focus_handle.clone();
+                Some(ContextMenu::build(
+                    window,
+                    cx,
+                    move |mut menu, _window, _| {
+                        menu = menu.context(focus_handle.clone());
+
+                        if can_regenerate_thread_title {
+                            menu = menu.header("Current Thread");
+                            if let Some(conversation_view) = active_conversation_view.clone() {
+                                menu = menu
+                                    .entry("Regenerate Thread Title", None, {
+                                        let sidebar = sidebar.clone();
+                                        move |_window, cx| {
+                                            let result = conversation_view.update(
+                                                cx,
+                                                |conversation_view, cx| {
+                                                    conversation_view.regenerate_thread_title(cx)
+                                                },
+                                            );
+                                            if matches!(
+                                                result,
+                                                ThreadTitleRegenerationResult::NoModel
+                                            ) {
+                                                sidebar
+                                                .update(cx, |sidebar, cx| {
+                                                    if let Some(workspace) =
+                                                        sidebar.active_workspace(cx)
+                                                    {
+                                                        Self::show_no_thread_summary_model_toast(
+                                                            workspace, cx,
+                                                        );
+                                                    }
+                                                })
+                                                .ok();
+                                            }
+                                        }
+                                    })
+                                    .separator();
+                            }
+                        }
+
+                        menu = menu
+                            .header("MCP Servers")
+                            .action("Add Custom Server…", Box::new(AddContextServer::local()))
+                            .action("Add Remote Server…", Box::new(AddContextServer::remote()))
+                            .action(
+                                "Install New Servers…",
+                                Box::new(zed_actions::Extensions {
+                                    category_filter: Some(
+                                        zed_actions::ExtensionCategoryFilter::ContextServers,
+                                    ),
+                                    id: None,
+                                }),
+                            )
+                            .separator()
+                            .header("Context")
+                            .action("Skills", Box::new(ManageSkills));
+
+                        if global_agents_md_loaded || project_agents_md_exists {
+                            if global_agents_md_loaded {
+                                menu = menu
+                                    .action("Open Global Rules", Box::new(OpenGlobalAgentsMdRules));
+                            }
+                            if project_agents_md_exists {
+                                menu = menu.action(
+                                    "Open Project Rules",
+                                    Box::new(OpenProjectAgentsMdRules),
+                                );
+                            }
+                            menu = menu.separator();
+                        }
+
+                        menu = menu
+                            .action("Profiles", Box::new(ManageProfiles::default()))
+                            .action("Settings", Box::new(OpenSettings))
+                            .separator()
+                            .action("Toggle Threads Sidebar", Box::new(ToggleWorkspaceSidebar));
+
+                        if has_auth_methods || supports_logout {
+                            menu = menu.separator();
+                        }
+                        if has_auth_methods {
+                            if let Some(conversation_view) = active_conversation_view.clone() {
+                                menu = menu.entry("Reauthenticate", None, move |window, cx| {
+                                    conversation_view.update(cx, |conversation_view, cx| {
+                                        conversation_view.reauthenticate(window, cx)
+                                    });
+                                });
+                            }
+                        }
+                        if supports_logout {
+                            if let Some(conversation_view) = active_conversation_view.clone() {
+                                menu = menu.entry("Log Out", None, move |window, cx| {
+                                    conversation_view.update(cx, |conversation_view, cx| {
+                                        conversation_view.logout(window, cx)
+                                    });
+                                });
+                            }
+                        }
+
+                        menu
+                    },
+                ))
+            })
+    }
+
     fn render_sidebar_bottom_bar(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
         let is_archive = matches!(self.view, SidebarView::Archive(..));
         let on_right = self.side(cx) == SidebarSide::Right;
@@ -7631,6 +7887,7 @@ impl Sidebar {
             .border_t_1()
             .border_color(cx.theme().colors().border)
             .child(self.render_sidebar_toggle_button(cx))
+            .child(self.render_agent_options_menu(cx))
             .child(
                 IconButton::new("history", IconName::Clock)
                     .icon_size(IconSize::Small)
@@ -7649,6 +7906,17 @@ impl Sidebar {
             )
             .child(div().flex_1())
             .child(self.render_recent_projects_button(cx))
+    }
+
+    fn toggle_agent_options_menu(
+        &mut self,
+        _: &ToggleOptionsMenu,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        cx.stop_propagation();
+        window.focus(&self.focus_handle, cx);
+        self.agent_options_menu_handle.toggle(window, cx);
     }
 
     fn active_workspace(&self, cx: &App) -> Option<Entity<Workspace>> {
@@ -7824,18 +8092,9 @@ impl Sidebar {
         else {
             return;
         };
-        let Some(agent_panel) = active_workspace.read(cx).panel::<AgentPanel>(cx) else {
-            return;
-        };
-
-        let agent_server_store = active_workspace
-            .read(cx)
-            .project()
-            .read(cx)
-            .agent_server_store()
-            .downgrade();
-
-        let agent_connection_store = agent_panel.read(cx).connection_store().downgrade();
+        let project = active_workspace.read(cx).project().clone();
+        let agent_server_store = project.read(cx).agent_server_store().downgrade();
+        let agent_connection_store = connection_store_for_project(&project, cx).downgrade();
 
         let archive_view = cx.new(|cx| {
             ThreadsArchiveView::new(
@@ -7993,6 +8252,11 @@ impl WorkspaceSidebar for Sidebar {
         self.cycle_thread_impl(forward, window, cx);
     }
 
+    fn toggle_options_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        window.focus(&self.focus_handle, cx);
+        self.agent_options_menu_handle.toggle(window, cx);
+    }
+
     fn serialized_state(&self, _cx: &App) -> Option<String> {
         let serialized = SerializedSidebar {
             width: Some(f32::from(self.width)),
@@ -8073,6 +8337,7 @@ impl Render for Sidebar {
             .on_action(cx.listener(Self::on_previous_project))
             .on_action(cx.listener(Self::on_next_thread))
             .on_action(cx.listener(Self::on_previous_thread))
+            .on_action(cx.listener(Self::toggle_agent_options_menu))
             .on_action(cx.listener(|this, _: &OpenRecent, window, cx| {
                 this.recent_projects_popover_handle.toggle(window, cx);
             }))
@@ -8142,59 +8407,20 @@ fn all_thread_infos_for_workspace(
     workspace: &Entity<Workspace>,
     cx: &App,
 ) -> impl Iterator<Item = ActiveThreadInfo> {
-    let Some(agent_panel) = workspace.read(cx).panel::<AgentPanel>(cx) else {
-        return None.into_iter().flatten();
-    };
-    let agent_panel = agent_panel.read(cx);
-    let threads = agent_panel
-        .conversation_views()
-        .into_iter()
-        .filter_map(|conversation_view| {
-            let has_pending_tool_call = conversation_view
-                .read(cx)
-                .root_thread_has_pending_tool_call(cx);
-            let conversation_thread_id = conversation_view.read(cx).parent_id();
-            let thread_view = conversation_view.read(cx).root_thread_view()?;
-            let thread_view_ref = thread_view.read(cx);
-            let thread = thread_view_ref.thread.read(cx);
-
-            let icon = thread_view_ref.agent_icon;
-            let icon_from_external_svg = thread_view_ref.agent_icon_from_external_svg.clone();
-            let title = thread
-                .title()
-                .unwrap_or_else(|| DEFAULT_THREAD_TITLE.into());
-            let is_title_generating = thread_view_ref
-                .as_native_thread(cx)
-                .is_some_and(|native_thread| native_thread.read(cx).is_generating_title());
-            let session_id = thread.session_id().clone();
-            let is_background = agent_panel.is_retained_thread(&conversation_thread_id);
-
-            let status = if has_pending_tool_call {
-                AgentThreadStatus::WaitingForConfirmation
-            } else if thread.had_error() {
-                AgentThreadStatus::Error
-            } else {
-                match thread.status() {
-                    ThreadStatus::Generating => AgentThreadStatus::Running,
-                    ThreadStatus::Idle => AgentThreadStatus::Completed,
-                }
-            };
-
-            let diff_stats = thread.action_log().read(cx).diff_stats(cx);
-
-            Some(ActiveThreadInfo {
-                session_id,
-                title,
-                status,
-                icon,
-                icon_from_external_svg,
-                is_background,
-                is_title_generating,
-                diff_stats,
-            })
-        });
-
-    Some(threads).into_iter().flatten()
+    workspace
+        .read(cx)
+        .items_of_type::<AgentThreadItem>(cx)
+        .filter_map(|item| item.read(cx).active_thread_info(cx))
+        .map(|info| ActiveThreadInfo {
+            session_id: info.session_id,
+            title: info.title,
+            status: info.status,
+            icon: info.icon,
+            icon_from_external_svg: info.icon_from_external_svg,
+            is_background: false,
+            is_title_generating: info.is_title_generating,
+            diff_stats: info.diff_stats,
+        })
 }
 
 pub fn dump_workspace_info(

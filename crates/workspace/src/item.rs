@@ -2,7 +2,7 @@ use crate::{
     CollaboratorId, DelayedDebouncedEditAction, FollowableViewRegistry, ItemNavHistory,
     SerializableItemRegistry, ToolbarItemLocation, ViewId, Workspace, WorkspaceId,
     invalid_item_view::InvalidItemView,
-    pane::{self, Pane},
+    pane::{self, Pane, SaveIntent},
     persistence::model::ItemId,
     searchable::SearchableItemHandle,
     workspace_settings::{AutosaveSetting, WorkspaceSettings},
@@ -31,7 +31,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use ui::{Color, Icon, IntoElement, Label, LabelCommon};
+use ui::{Color, Icon, IconName, IntoElement, Label, LabelCommon};
 use util::ResultExt;
 
 pub const LEADER_UPDATE_THROTTLE: Duration = Duration::from_millis(200);
@@ -199,6 +199,14 @@ pub trait Item: Focusable + EventEmitter<Self::Event> + Render + Sized {
         None
     }
 
+    fn tab_close_icon(&self, _cx: &App) -> IconName {
+        IconName::Close
+    }
+
+    fn tab_close_tooltip_text(&self) -> &'static str {
+        "Close Tab"
+    }
+
     /// Returns the tab tooltip text.
     ///
     /// Use this if you don't need to customize the tab tooltip content.
@@ -220,6 +228,13 @@ pub trait Item: Focusable + EventEmitter<Self::Event> + Render + Sized {
     fn deactivated(&mut self, _window: &mut Window, _: &mut Context<Self>) {}
     fn discarded(&self, _project: Entity<Project>, _window: &mut Window, _cx: &mut Context<Self>) {}
     fn on_removed(&self, _cx: &mut Context<Self>) {}
+    fn on_close(
+        &mut self,
+        _save_intent: SaveIntent,
+        _cx: &mut Context<Self>,
+    ) -> Task<Result<bool>> {
+        Task::ready(Ok(true))
+    }
     fn workspace_deactivated(&mut self, _window: &mut Window, _: &mut Context<Self>) {}
     fn pane_changed(&mut self, _new_pane_id: EntityId, _cx: &mut Context<Self>) {}
     fn navigate(
@@ -492,6 +507,8 @@ pub trait ItemHandle: 'static + Send {
     fn suggested_filename(&self, cx: &App) -> SharedString;
     fn tab_icon(&self, window: &Window, cx: &App) -> Option<Icon>;
     fn tab_icon_element(&self, window: &Window, cx: &App) -> Option<AnyElement>;
+    fn tab_close_icon(&self, cx: &App) -> IconName;
+    fn tab_close_tooltip_text(&self, cx: &App) -> &'static str;
     fn tab_tooltip_text(&self, cx: &App) -> Option<SharedString>;
     fn tab_tooltip_content(&self, cx: &App) -> Option<TabTooltipContent>;
     fn telemetry_event_text(&self, cx: &App) -> Option<&'static str>;
@@ -529,6 +546,7 @@ pub trait ItemHandle: 'static + Send {
     fn activated(&self, window: &mut Window, cx: &mut App);
     fn deactivated(&self, window: &mut Window, cx: &mut App);
     fn on_removed(&self, cx: &mut App);
+    fn on_close(&self, save_intent: SaveIntent, cx: &mut App) -> Task<Result<bool>>;
     fn workspace_deactivated(&self, window: &mut Window, cx: &mut App);
     fn navigate(&self, data: Arc<dyn Any + Send>, window: &mut Window, cx: &mut App) -> bool;
     fn item_id(&self) -> EntityId;
@@ -651,6 +669,14 @@ impl<T: Item> ItemHandle for Entity<T> {
 
     fn tab_icon_element(&self, window: &Window, cx: &App) -> Option<AnyElement> {
         self.read(cx).tab_icon_element(window, cx)
+    }
+
+    fn tab_close_icon(&self, cx: &App) -> IconName {
+        self.read(cx).tab_close_icon(cx)
+    }
+
+    fn tab_close_tooltip_text(&self, cx: &App) -> &'static str {
+        self.read(cx).tab_close_tooltip_text()
     }
 
     fn tab_tooltip_content(&self, cx: &App) -> Option<TabTooltipContent> {
@@ -1033,6 +1059,10 @@ impl<T: Item> ItemHandle for Entity<T> {
 
     fn on_removed(&self, cx: &mut App) {
         self.update(cx, |item, cx| item.on_removed(cx));
+    }
+
+    fn on_close(&self, save_intent: SaveIntent, cx: &mut App) -> Task<Result<bool>> {
+        self.update(cx, |item, cx| item.on_close(save_intent, cx))
     }
 
     fn workspace_deactivated(&self, window: &mut Window, cx: &mut App) {

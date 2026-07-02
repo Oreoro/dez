@@ -220,6 +220,7 @@ pub enum IconName {
     ReplyArrowRight,
     Rerun,
     Return,
+    Robot,
     RotateCcw,
     RotateCw,
     Scissors,

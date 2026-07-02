@@ -375,12 +375,18 @@ pub fn init(cx: &mut App) {
         |workspace: &mut Workspace, _window, _cx: &mut Context<Workspace>| {
             workspace
                 .register_action(|workspace, _: &NewThread, window, cx| {
-                    if let Some(panel) = workspace.panel::<AgentPanel>(cx) {
-                        panel.update(cx, |panel, cx| {
-                            panel.new_thread_with_workspace(Some(workspace), window, cx)
-                        });
-                        workspace.focus_panel::<AgentPanel>(window, cx);
-                    }
+                    crate::agent_thread_item::create_agent_thread(
+                        workspace,
+                        Agent::NativeAgent,
+                        None,
+                        None,
+                        None,
+                        true,
+                        None,
+                        AgentThreadSource::Sidebar,
+                        window,
+                        cx,
+                    );
                 })
                 .register_action(|workspace, _: &NewTerminalThread, window, cx| {
                     if let Some(panel) = workspace.panel::<AgentPanel>(cx) {
@@ -418,12 +424,18 @@ pub fn init(cx: &mut App) {
                     }
                 })
                 .register_action(|workspace, action: &NewExternalAgentThread, window, cx| {
-                    if let Some(panel) = workspace.panel::<AgentPanel>(cx) {
-                        workspace.focus_panel::<AgentPanel>(window, cx);
-                        panel.update(cx, |panel, cx| {
-                            panel.new_external_agent_thread(action, window, cx);
-                        });
-                    }
+                    crate::agent_thread_item::create_agent_thread(
+                        workspace,
+                        Agent::from(action.agent.clone()),
+                        None,
+                        None,
+                        None,
+                        true,
+                        None,
+                        AgentThreadSource::Sidebar,
+                        window,
+                        cx,
+                    );
                 })
                 .register_action(|workspace, action: &ManageSkills, window, cx| {
                     if let Some(panel) = workspace.panel::<AgentPanel>(cx) {
@@ -456,6 +468,20 @@ pub fn init(cx: &mut App) {
                     }
                 })
                 .register_action(|workspace, _: &ToggleOptionsMenu, window, cx| {
+                    if let Some(multi_workspace) =
+                        workspace.multi_workspace().and_then(|mw| mw.upgrade())
+                        && multi_workspace.update(cx, |multi_workspace, cx| {
+                            let Some(sidebar) = multi_workspace.sidebar() else {
+                                return false;
+                            };
+                            sidebar.toggle_options_menu(window, cx);
+                            true
+                        })
+                    {
+                        cx.stop_propagation();
+                        return;
+                    }
+
                     if let Some(panel) = workspace.panel::<AgentPanel>(cx) {
                         workspace.focus_panel::<AgentPanel>(window, cx);
                         panel.update(cx, |panel, cx| {
@@ -4095,24 +4121,8 @@ impl AgentPanel {
         conversation_view: Entity<ConversationView>,
         cx: &mut App,
     ) -> ThreadTitleRegenerationResult {
-        let Some(thread) = conversation_view.read(cx).as_native_thread(cx) else {
-            return ThreadTitleRegenerationResult::NotOpen;
-        };
-        let thread_id = conversation_view.read(cx).parent_id();
-        thread.update(cx, |thread, cx| {
-            if thread.is_generating_title() {
-                ThreadTitleRegenerationResult::AlreadyGenerating
-            } else if thread.summarization_model().is_none() {
-                ThreadTitleRegenerationResult::NoModel
-            } else if thread.regenerate_title_with_callback(cx, move |title, cx| {
-                ThreadMetadataStore::global(cx).update(cx, |store, cx| {
-                    store.set_generated_title(thread_id, title, cx);
-                });
-            }) {
-                ThreadTitleRegenerationResult::Started
-            } else {
-                ThreadTitleRegenerationResult::AlreadyGenerating
-            }
+        conversation_view.update(cx, |conversation_view, cx| {
+            conversation_view.regenerate_thread_title(cx)
         })
     }
 

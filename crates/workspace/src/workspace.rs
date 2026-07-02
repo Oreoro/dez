@@ -1748,14 +1748,11 @@ impl Workspace {
             .flatten()
             .map(|mw| mw.downgrade());
         let workspace_handle = cx.entity();
-        let agent_pane_toggle =
-            cx.new(|cx| PaneVisibilityToggle::new(workspace_handle.clone(), PaneKind::Agent, cx));
         let project_pane_toggle =
             cx.new(|cx| PaneVisibilityToggle::new(workspace_handle.clone(), PaneKind::Project, cx));
         let status_bar = cx.new(|cx| {
             let mut status_bar =
                 StatusBar::new(&center_pane.clone(), multi_workspace.clone(), window, cx);
-            status_bar.add_left_item(agent_pane_toggle, window, cx);
             status_bar.add_right_item(project_pane_toggle, window, cx);
             status_bar
         });

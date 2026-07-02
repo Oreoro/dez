@@ -143,6 +143,9 @@ pub trait Sidebar: Focusable + Render + EventEmitter<SidebarEvent> + Sized {
     /// Activates the next or previous thread in sidebar order.
     fn cycle_thread(&mut self, _forward: bool, _window: &mut Window, _cx: &mut Context<Self>) {}
 
+    /// Toggles the sidebar's primary options menu, if it has one.
+    fn toggle_options_menu(&mut self, _window: &mut Window, _cx: &mut Context<Self>) {}
+
     /// Return an opaque JSON blob of sidebar-specific state to persist.
     fn serialized_state(&self, _cx: &App) -> Option<String> {
         None
@@ -170,6 +173,7 @@ pub trait SidebarHandle: 'static + Send + Sync {
     fn toggle_thread_switcher(&self, select_last: bool, window: &mut Window, cx: &mut App);
     fn cycle_project(&self, forward: bool, window: &mut Window, cx: &mut App);
     fn cycle_thread(&self, forward: bool, window: &mut Window, cx: &mut App);
+    fn toggle_options_menu(&self, window: &mut Window, cx: &mut App);
 
     fn is_threads_list_view_active(&self, cx: &App) -> bool;
 
@@ -244,6 +248,15 @@ impl<T: Sidebar> SidebarHandle for Entity<T> {
         window.defer(cx, move |window, cx| {
             entity.update(cx, |this, cx| {
                 this.cycle_thread(forward, window, cx);
+            });
+        });
+    }
+
+    fn toggle_options_menu(&self, window: &mut Window, cx: &mut App) {
+        let entity = self.clone();
+        window.defer(cx, move |window, cx| {
+            entity.update(cx, |this, cx| {
+                this.toggle_options_menu(window, cx);
             });
         });
     }

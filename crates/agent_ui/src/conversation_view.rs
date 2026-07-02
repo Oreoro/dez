@@ -32,13 +32,16 @@ use gpui::{
     TextRun, TextStyle, WeakEntity, Window, WindowHandle, div, ease_in_out, img, linear_color_stop,
     linear_gradient, list, pulsating_between,
 };
+use itertools::Itertools;
 use language::{Buffer, Language, Rope};
 use language_model::{LanguageModelCompletionError, LanguageModelRegistry};
 use markdown::{
     CodeBlockRenderer, CopyButtonVisibility, Markdown, MarkdownElement, MarkdownFont, MarkdownStyle,
 };
 use parking_lot::{Mutex, RwLock};
-use project::{AgentId, AgentServerStore, Project, ProjectEntryId, ProjectPath};
+use project::{
+    AgentId, AgentRegistryStore, AgentServerStore, Project, ProjectEntryId, ProjectPath,
+};
 
 use crate::message_editor::SessionCapabilities;
 use crate::{AgentThreadSource, DEFAULT_THREAD_TITLE, resolve_agent_image};
@@ -84,7 +87,7 @@ use crate::entry_view_state::{EntryViewEvent, ViewEvent};
 use crate::message_editor::{InputAttempt, MessageEditor, MessageEditorEvent};
 use crate::profile_selector::{ProfileProvider, ProfileSelector};
 
-use crate::thread_metadata_store::{ThreadId, ThreadMetadataStore};
+use crate::thread_metadata_store::{ThreadId, ThreadMetadata, ThreadMetadataStore};
 use crate::ui::{AgentNotification, AgentNotificationEvent};
 use crate::{
     Agent, AgentDiffPane, AgentInitialContent, AgentPanel, AgentPanelEvent, AllowAlways, AllowOnce,
@@ -93,8 +96,8 @@ use crate::{
     OpenAddContextMenu, OpenAgentDiff, RejectAll, RejectOnce, RemoveFirstQueuedMessage,
     ScrollOutputLineDown, ScrollOutputLineUp, ScrollOutputPageDown, ScrollOutputPageUp,
     ScrollOutputToBottom, ScrollOutputToNextMessage, ScrollOutputToPreviousMessage,
-    ScrollOutputToTop, SendImmediately, SendNextQueuedMessage, ToggleFastMode,
-    ToggleProfileSelector, ToggleSteerFirstQueuedMessage, ToggleThinkingEffortMenu,
+    ScrollOutputToTop, SendImmediately, SendNextQueuedMessage, ThreadTitleRegenerationResult,
+    ToggleFastMode, ToggleProfileSelector, ToggleSteerFirstQueuedMessage, ToggleThinkingEffortMenu,
     ToggleThinkingMode, UndoLastReject,
 };
 
@@ -452,6 +455,10 @@ pub(crate) struct RootThreadUpdated;
 
 impl EventEmitter<RootThreadUpdated> for ConversationView {}
 
+pub(crate) struct ConversationTitleUpdated;
+
+impl EventEmitter<ConversationTitleUpdated> for ConversationView {}
+
 fn permission_option_for_action(
     options: &PermissionOptions,
     kind: acp::PermissionOptionKind,
@@ -675,8 +682,13 @@ impl ConversationView {
 }
 
 enum ServerState {
-    Loading { _loading: Entity<LoadingView> },
-    LoadError { error: LoadError },
+    Loading {
+        _loading: Entity<LoadingView>,
+        draft: Option<LoadingDraft>,
+    },
+    LoadError {
+        error: LoadError,
+    },
     Connected(ConnectedServerState),
 }
 
@@ -709,6 +721,12 @@ impl AuthState {
 
 struct LoadingView {
     _load_task: Task<()>,
+}
+
+struct LoadingDraft {
+    message_editor: Entity<MessageEditor>,
+    agent_selector_menu_handle: PopoverMenuHandle<ContextMenu>,
+    _subscriptions: Vec<Subscription>,
 }
 
 impl ConnectedServerState {
@@ -803,15 +821,18 @@ impl ConversationView {
         .detach();
 
         let thread_id = thread_id.unwrap_or_else(ThreadId::new);
+        if resume_session_id.is_none() {
+            Self::save_provisional_draft_metadata(thread_id, &connection_key, &project, cx);
+        }
 
         Self {
             agent: agent.clone(),
             connection_store: connection_store.clone(),
             connection_key: connection_key.clone(),
             agent_server_store,
-            workspace,
+            workspace: workspace.clone(),
             project: project.clone(),
-            thread_store,
+            thread_store: thread_store.clone(),
             thread_id,
             root_session_id: resume_session_id.clone(),
             server_state: Self::initial_state(
@@ -819,9 +840,12 @@ impl ConversationView {
                 connection_store,
                 connection_key,
                 resume_session_id,
+                thread_id,
                 work_dirs,
                 title,
                 project,
+                workspace.clone(),
+                thread_store.clone(),
                 initial_content,
                 source,
                 window,
@@ -885,9 +909,12 @@ impl ConversationView {
             self.connection_store.clone(),
             self.connection_key.clone(),
             resume_session_id,
+            self.thread_id,
             work_dirs,
             title,
             self.project.clone(),
+            self.workspace.clone(),
+            self.thread_store.clone(),
             None,
             AgentThreadSource::AgentPanel,
             window,
@@ -905,14 +932,287 @@ impl ConversationView {
         cx.notify();
     }
 
+    fn save_provisional_draft_metadata(
+        thread_id: ThreadId,
+        agent: &Agent,
+        project: &Entity<Project>,
+        cx: &mut App,
+    ) {
+        if project.read(cx).is_via_collab() {
+            return;
+        }
+        let Some(store) = ThreadMetadataStore::try_global(cx) else {
+            return;
+        };
+
+        let project = project.read(cx);
+        let worktree_paths = project.worktree_paths(cx);
+        let remote_connection = project.remote_connection_options(cx);
+        let updated_at = chrono::Utc::now();
+        let archived = worktree_paths.is_empty();
+
+        store.update(cx, |store, cx| {
+            store.save(
+                ThreadMetadata {
+                    thread_id,
+                    session_id: None,
+                    agent_id: agent.id(),
+                    title: None,
+                    title_override: None,
+                    updated_at,
+                    created_at: Some(updated_at),
+                    interacted_at: Some(updated_at),
+                    worktree_paths,
+                    remote_connection,
+                    archived,
+                },
+                cx,
+            );
+        });
+    }
+
+    fn new_loading_draft(
+        agent: &Rc<dyn AgentServer>,
+        connection_key: &Agent,
+        thread_id: ThreadId,
+        workspace: WeakEntity<Workspace>,
+        project: WeakEntity<Project>,
+        thread_store: Option<Entity<ThreadStore>>,
+        initial_content: Option<&AgentInitialContent>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> LoadingDraft {
+        let session_capabilities = Arc::new(RwLock::new(SessionCapabilities::default()));
+        let agent_display_name = project
+            .upgrade()
+            .and_then(|project| {
+                let agent_server_store = project.read(cx).agent_server_store().clone();
+                agent_server_store
+                    .read(cx)
+                    .agent_display_name(&agent.agent_id())
+            })
+            .unwrap_or_else(|| connection_key.label());
+        let placeholder = placeholder_text(agent_display_name.as_ref(), false);
+
+        let message_editor = cx.new(|cx| {
+            let mut editor = MessageEditor::new(
+                workspace.clone(),
+                project,
+                thread_store,
+                session_capabilities.clone(),
+                agent.agent_id(),
+                &placeholder,
+                editor::EditorMode::AutoHeight {
+                    min_lines: AgentSettings::get_global(cx).message_editor_min_lines,
+                    max_lines: Some(AgentSettings::get_global(cx).set_message_editor_max_lines()),
+                },
+                window,
+                cx,
+            );
+            let mut seeded_from_initial_content = false;
+            if let Some(AgentInitialContent::ContentBlock {
+                blocks,
+                auto_submit: false,
+            }) = initial_content
+            {
+                editor.set_message(blocks.clone(), window, cx);
+                seeded_from_initial_content = true;
+            }
+            if !seeded_from_initial_content
+                && let Some(blocks) = crate::draft_prompt_store::read(thread_id, cx)
+            {
+                editor.set_message(blocks, window, cx);
+            }
+            editor
+        });
+
+        let mut subscriptions = Vec::new();
+        subscriptions.push(
+            cx.subscribe(&message_editor, move |_this, editor, event, cx| {
+                if !matches!(event, MessageEditorEvent::Edited) {
+                    return;
+                }
+                let draft_contents = editor.update(cx, |editor, cx| editor.draft_contents(cx));
+                cx.spawn(async move |_, cx| {
+                    let blocks = draft_contents
+                        .await
+                        .ok()
+                        .filter(|blocks| !blocks.is_empty());
+                    cx.update(|cx| {
+                        if let Some(blocks) = blocks {
+                            crate::draft_prompt_store::write(thread_id, &blocks, cx)
+                        } else {
+                            crate::draft_prompt_store::delete(thread_id, cx)
+                        }
+                        .detach_and_log_err(cx);
+                    });
+                })
+                .detach();
+            }),
+        );
+        subscriptions.push(cx.subscribe(&message_editor, |this, _editor, event, cx| {
+            if matches!(
+                event,
+                MessageEditorEvent::Send | MessageEditorEvent::SendImmediately
+            ) {
+                this.loading_status = Some("Agent is still loading...".into());
+                cx.notify();
+            }
+        }));
+
+        LoadingDraft {
+            message_editor,
+            agent_selector_menu_handle: PopoverMenuHandle::default(),
+            _subscriptions: subscriptions,
+        }
+    }
+
+    fn loading_draft_editor(&self) -> Option<Entity<MessageEditor>> {
+        match &self.server_state {
+            ServerState::Loading {
+                draft: Some(draft), ..
+            } => Some(draft.message_editor.clone()),
+            _ => None,
+        }
+    }
+
+    fn draft_contents_task(
+        &self,
+        cx: &mut Context<Self>,
+    ) -> Option<Task<Result<Vec<acp::ContentBlock>>>> {
+        if let Some(message_editor) = self.loading_draft_editor() {
+            return Some(
+                message_editor.update(cx, |message_editor, cx| message_editor.draft_contents(cx)),
+            );
+        }
+
+        let thread_view = self.root_thread_view()?;
+        if !thread_view.read(cx).thread.read(cx).is_draft_thread() {
+            return None;
+        }
+        Some(thread_view.update(cx, |thread_view, cx| {
+            thread_view
+                .message_editor
+                .update(cx, |message_editor, cx| message_editor.draft_contents(cx))
+        }))
+    }
+
+    pub fn is_draft(&self, cx: &App) -> bool {
+        match &self.server_state {
+            ServerState::Loading { draft: Some(_), .. } => true,
+            ServerState::Loading { .. } => false,
+            ServerState::LoadError { .. } => self.root_session_id.is_none(),
+            ServerState::Connected(_) => self
+                .root_thread(cx)
+                .is_some_and(|thread| thread.read(cx).is_draft_thread()),
+        }
+    }
+
+    fn server_for_agent(
+        &self,
+        agent: &Agent,
+        cx: &mut App,
+    ) -> Option<(Rc<dyn AgentServer>, Option<Entity<ThreadStore>>)> {
+        let workspace = self.workspace.upgrade()?;
+        let fs = workspace.read(cx).app_state().fs.clone();
+        let thread_store = ThreadStore::global(cx);
+        let server = agent.server(fs, thread_store.clone());
+        let thread_store_for_view = server
+            .clone()
+            .downcast::<NativeAgentServer>()
+            .is_some()
+            .then_some(thread_store);
+        Some((server, thread_store_for_view))
+    }
+
+    pub fn switch_draft_agent(
+        &mut self,
+        connection_key: Agent,
+        server: Rc<dyn AgentServer>,
+        thread_store: Option<Entity<ThreadStore>>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.is_draft(cx) || self.connection_key == connection_key {
+            return;
+        }
+
+        let draft_contents_task = self.draft_contents_task(cx);
+        let this = cx.weak_entity();
+        cx.spawn_in(window, async move |_, cx| {
+            let initial_content = if let Some(task) = draft_contents_task {
+                task.await
+                    .ok()
+                    .filter(|blocks| !blocks.is_empty())
+                    .map(|blocks| AgentInitialContent::ContentBlock {
+                        blocks,
+                        auto_submit: false,
+                    })
+            } else {
+                None
+            };
+
+            this.update_in(cx, |this, window, cx| {
+                if !this.is_draft(cx) {
+                    return;
+                }
+                this.agent = server.clone();
+                this.connection_key = connection_key.clone();
+                this.thread_store = thread_store.clone();
+                this.root_session_id = None;
+                this.loading_status = None;
+                Self::save_provisional_draft_metadata(
+                    this.thread_id,
+                    &connection_key,
+                    &this.project,
+                    cx,
+                );
+                let state = Self::initial_state(
+                    server,
+                    this.connection_store.clone(),
+                    connection_key,
+                    None,
+                    this.thread_id,
+                    None,
+                    None,
+                    this.project.clone(),
+                    this.workspace.clone(),
+                    thread_store,
+                    initial_content,
+                    AgentThreadSource::Sidebar,
+                    window,
+                    cx,
+                );
+                this.set_server_state(state, cx);
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    pub fn switch_draft_agent_to(
+        &mut self,
+        agent: Agent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some((server, thread_store)) = self.server_for_agent(&agent, cx) else {
+            return;
+        };
+        self.switch_draft_agent(agent, server, thread_store, window, cx);
+    }
+
     fn initial_state(
         agent: Rc<dyn AgentServer>,
         connection_store: Entity<AgentConnectionStore>,
         connection_key: Agent,
         resume_session_id: Option<acp::SessionId>,
+        thread_id: ThreadId,
         work_dirs: Option<PathList>,
         title: Option<SharedString>,
         project: Entity<Project>,
+        workspace: WeakEntity<Workspace>,
+        thread_store: Option<Entity<ThreadStore>>,
         initial_content: Option<AgentInitialContent>,
         source: AgentThreadSource,
         window: &mut Window,
@@ -930,7 +1230,7 @@ impl ConversationView {
         let session_work_dirs = work_dirs.unwrap_or_else(|| project.read(cx).default_path_list(cx));
 
         let connection_entry = connection_store.update(cx, |store, cx| {
-            store.request_connection(connection_key, agent.clone(), cx)
+            store.request_connection(connection_key.clone(), agent.clone(), cx)
         });
 
         let connection_entry_subscription =
@@ -953,6 +1253,35 @@ impl ConversationView {
 
         let side = crate::agent_sidebar_side(cx);
         let thread_location = "current_worktree";
+        let loading_draft = if resume_session_id.is_none()
+            && initial_content.as_ref().is_none_or(|content| {
+                matches!(
+                    content,
+                    AgentInitialContent::ContentBlock {
+                        auto_submit: false,
+                        ..
+                    }
+                )
+            }) {
+            Some(Self::new_loading_draft(
+                &agent,
+                &connection_key,
+                thread_id,
+                workspace.clone(),
+                project.downgrade(),
+                thread_store.clone(),
+                initial_content.as_ref(),
+                window,
+                cx,
+            ))
+        } else {
+            None
+        };
+        let initial_content = if loading_draft.is_some() {
+            None
+        } else {
+            initial_content
+        };
 
         let load_task = cx.spawn_in(window, async move |this, cx| {
             let connection = match connect_result.await {
@@ -1036,6 +1365,32 @@ impl ConversationView {
                 Ok(thread) => Ok(thread),
             };
 
+            let draft_initial_content = if result.is_ok() {
+                let draft_contents_task = this
+                    .update(cx, |this, cx| {
+                        this.loading_draft_editor().map(|message_editor| {
+                            message_editor
+                                .update(cx, |message_editor, cx| message_editor.draft_contents(cx))
+                        })
+                    })
+                    .ok()
+                    .flatten();
+
+                if let Some(task) = draft_contents_task {
+                    task.await
+                        .ok()
+                        .filter(|blocks| !blocks.is_empty())
+                        .map(|blocks| AgentInitialContent::ContentBlock {
+                            blocks,
+                            auto_submit: false,
+                        })
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
             this.update_in(cx, |this, window, cx| {
                 match result {
                     Ok(thread) => {
@@ -1051,7 +1406,7 @@ impl ConversationView {
                             thread,
                             conversation.clone(),
                             resumed_without_history,
-                            initial_content,
+                            draft_initial_content.or(initial_content),
                             window,
                             cx,
                         );
@@ -1095,6 +1450,7 @@ impl ConversationView {
 
         ServerState::Loading {
             _loading: loading_view,
+            draft: loading_draft,
         }
     }
 
@@ -1429,12 +1785,28 @@ impl ConversationView {
         &self.connection_key
     }
 
+    fn metadata_title(&self, cx: &App) -> Option<SharedString> {
+        ThreadMetadataStore::try_global(cx)
+            .and_then(|store| store.read(cx).entry(self.thread_id).and_then(|m| m.title()))
+    }
+
     pub fn title(&self, cx: &App) -> SharedString {
         match &self.server_state {
-            ServerState::Connected(view) => view
-                .active_view()
-                .and_then(|v| v.read(cx).thread.read(cx).title())
-                .unwrap_or_else(|| DEFAULT_THREAD_TITLE.into()),
+            ServerState::Connected(view) => view.active_view().map_or_else(
+                || DEFAULT_THREAD_TITLE.into(),
+                |view| {
+                    let thread = view.read(cx).thread.clone();
+                    let thread = thread.read(cx);
+                    if thread.is_draft_thread() {
+                        DEFAULT_THREAD_TITLE.into()
+                    } else {
+                        self.metadata_title(cx)
+                            .or_else(|| thread.title())
+                            .unwrap_or_else(|| DEFAULT_THREAD_TITLE.into())
+                    }
+                },
+            ),
+            ServerState::Loading { draft: Some(_), .. } => DEFAULT_THREAD_TITLE.into(),
             ServerState::Loading { .. } => self
                 .loading_status
                 .clone()
@@ -1462,6 +1834,10 @@ impl ConversationView {
 
     pub fn parent_id(&self) -> ThreadId {
         self.thread_id
+    }
+
+    pub(crate) fn workspace(&self) -> WeakEntity<Workspace> {
+        self.workspace.clone()
     }
 
     pub fn is_loading(&self) -> bool {
@@ -1690,6 +2066,7 @@ impl ConversationView {
                         }
                     });
                 }
+                cx.emit(ConversationTitleUpdated);
                 cx.notify();
             }
             AcpThreadEvent::PromptCapabilitiesUpdated => {
@@ -2126,6 +2503,28 @@ impl ConversationView {
                 .entries()
                 .iter()
                 .any(|entry| matches!(entry, AgentThreadEntry::UserMessage(_)))
+        })
+    }
+
+    pub fn regenerate_thread_title(&self, cx: &mut App) -> ThreadTitleRegenerationResult {
+        let Some(thread) = self.as_native_thread(cx) else {
+            return ThreadTitleRegenerationResult::NotOpen;
+        };
+        let thread_id = self.parent_id();
+        thread.update(cx, |thread, cx| {
+            if thread.is_generating_title() {
+                ThreadTitleRegenerationResult::AlreadyGenerating
+            } else if thread.summarization_model().is_none() {
+                ThreadTitleRegenerationResult::NoModel
+            } else if thread.regenerate_title_with_callback(cx, move |title, cx| {
+                ThreadMetadataStore::global(cx).update(cx, |store, cx| {
+                    store.set_generated_title(thread_id, title, cx);
+                });
+            }) {
+                ThreadTitleRegenerationResult::Started
+            } else {
+                ThreadTitleRegenerationResult::AlreadyGenerating
+            }
         })
     }
 
@@ -2731,7 +3130,12 @@ impl ConversationView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if let Some(active_thread) = self.active_thread() {
+        if let Some(message_editor) = self.loading_draft_editor() {
+            message_editor.update(cx, |editor, cx| {
+                editor.insert_dragged_files(paths, added_worktrees, window, cx);
+                editor.focus_handle(cx).focus(window, cx);
+            });
+        } else if let Some(active_thread) = self.active_thread() {
             active_thread.update(cx, |thread, cx| {
                 thread.message_editor.update(cx, |editor, cx| {
                     editor.insert_dragged_files(paths, added_worktrees, window, cx);
@@ -2749,7 +3153,11 @@ impl ConversationView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if let Some(active_thread) = self.active_thread() {
+        if let Some(message_editor) = self.loading_draft_editor() {
+            message_editor.update(cx, |editor, cx| {
+                editor.insert_selections(selection, window, cx);
+            });
+        } else if let Some(active_thread) = self.active_thread() {
             active_thread.update(cx, |thread, cx| {
                 thread.active_editor(cx).update(cx, |editor, cx| {
                     editor.insert_selections(selection, window, cx);
@@ -2780,7 +3188,7 @@ impl ConversationView {
         CopyButton::new("copy-error-message", message).tooltip_label("Copy Error Message")
     }
 
-    pub(crate) fn reauthenticate(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub fn reauthenticate(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let agent_id = self.agent.agent_id();
         if let Some(active) = self.root_thread_view() {
             active.update(cx, |active, cx| active.clear_thread_error(cx));
@@ -2795,7 +3203,7 @@ impl ConversationView {
         })
     }
 
-    pub(crate) fn logout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub fn logout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if !self.supports_logout() {
             return;
         }
@@ -2871,24 +3279,15 @@ fn native_available_skills(
         .collect()
 }
 
-fn placeholder_text(agent_name: &str, has_commands: bool) -> String {
-    if agent_name == agent::ZED_AGENT_ID.as_ref() {
-        format!(
-            "Message the {}, @ to include context, / for commands",
-            agent_name
-        )
-    } else if has_commands {
-        format!(
-            "Message {} — @ to include context, / for commands",
-            agent_name
-        )
-    } else {
-        format!("Message {} — @ to include context", agent_name)
-    }
+fn placeholder_text(_agent_name: &str, _has_commands: bool) -> String {
+    "Ask anything".to_string()
 }
 
 impl Focusable for ConversationView {
     fn focus_handle(&self, cx: &App) -> FocusHandle {
+        if let Some(message_editor) = self.loading_draft_editor() {
+            return message_editor.focus_handle(cx);
+        }
         match self.active_thread() {
             Some(thread) => thread.read(cx).focus_handle(cx),
             None => self.focus_handle.clone(),
@@ -2923,6 +3322,264 @@ impl ConversationView {
     }
 }
 
+impl ConversationView {
+    fn render_loading_draft(&self, draft: &LoadingDraft, cx: &mut Context<Self>) -> AnyElement {
+        let editor_bg_color = cx.theme().colors().editor_background;
+        let max_content_width = AgentSettings::get_global(cx).max_content_width;
+        let loading_text = self
+            .loading_status
+            .clone()
+            .unwrap_or_else(|| "Agent is loading...".into());
+
+        h_flex()
+            .py_2()
+            .bg(editor_bg_color)
+            .justify_center()
+            .flex_1()
+            .size_full()
+            .child(
+                v_flex()
+                    .when_some(max_content_width, |this, max_w| this.flex_basis(max_w))
+                    .when(max_content_width.is_none(), |this| this.w_full())
+                    .h_full()
+                    .px_2()
+                    .flex_shrink_1()
+                    .flex_grow_0()
+                    .justify_between()
+                    .gap_2()
+                    .child(
+                        v_flex()
+                            .relative()
+                            .w_full()
+                            .min_h_0()
+                            .flex_1()
+                            .pt_1()
+                            .pr_2p5()
+                            .child(draft.message_editor.clone()),
+                    )
+                    .child(
+                        h_flex()
+                            .w_full()
+                            .flex_none()
+                            .justify_between()
+                            .child(
+                                Label::new(loading_text)
+                                    .size(LabelSize::Small)
+                                    .color(Color::Muted),
+                            )
+                            .child(
+                                h_flex()
+                                    .gap_1()
+                                    .child(self.render_loading_draft_agent_selector(draft, cx))
+                                    .child(
+                                        IconButton::new("send-message", IconName::Send)
+                                            .style(ButtonStyle::Filled)
+                                            .disabled(true)
+                                            .icon_color(Color::Muted)
+                                            .tooltip(Tooltip::text("Agent is still loading")),
+                                    ),
+                            ),
+                    ),
+            )
+            .into_any_element()
+    }
+
+    fn render_loading_draft_agent_selector(
+        &self,
+        draft: &LoadingDraft,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let selected_agent = self.connection_key.clone();
+        let agent_server_store = self.project.read(cx).agent_server_store().clone();
+        let is_via_collab = self.project.read(cx).is_via_collab();
+
+        let (selected_agent_custom_icon, selected_agent_label) = {
+            let store = agent_server_store.read(cx);
+            let registry_store = AgentRegistryStore::try_global(cx);
+            let registry_store_ref = registry_store.as_ref().map(|store| store.read(cx));
+
+            if let Agent::Custom { id } = &selected_agent {
+                (
+                    store.agent_icon(id).or_else(|| {
+                        registry_store_ref
+                            .as_ref()
+                            .and_then(|store| store.agent(id))
+                            .and_then(|agent| agent.icon_path().cloned())
+                    }),
+                    store
+                        .agent_display_name(id)
+                        .or_else(|| {
+                            registry_store_ref
+                                .as_ref()
+                                .and_then(|store| store.agent(id))
+                                .map(|agent| agent.name().clone())
+                        })
+                        .unwrap_or_else(|| selected_agent.label()),
+                )
+            } else {
+                (None, selected_agent.label())
+            }
+        };
+
+        let has_custom_icon = selected_agent_custom_icon.is_some();
+        let selected_agent_builtin_icon = selected_agent.icon();
+        let this = cx.weak_entity();
+        let (color, icon) = if draft.agent_selector_menu_handle.is_deployed() {
+            (Color::Accent, IconName::ChevronUp)
+        } else {
+            (Color::Muted, IconName::ChevronDown)
+        };
+
+        PopoverMenu::new("loading-draft-agent-selector")
+            .trigger_with_tooltip(
+                Button::new("loading-draft-agent-selector-trigger", selected_agent_label)
+                    .label_size(LabelSize::Small)
+                    .color(color)
+                    .when_some(selected_agent_custom_icon, |this, icon_path| {
+                        this.start_icon(
+                            Icon::from_external_svg(icon_path)
+                                .color(color)
+                                .size(IconSize::XSmall),
+                        )
+                    })
+                    .when(!has_custom_icon, |this| {
+                        this.when_some(selected_agent_builtin_icon, |this, icon| {
+                            this.start_icon(Icon::new(icon).color(color).size(IconSize::XSmall))
+                        })
+                    })
+                    .end_icon(Icon::new(icon).color(Color::Muted).size(IconSize::XSmall)),
+                Tooltip::text("Select Agent"),
+            )
+            .anchor(gpui::Anchor::BottomRight)
+            .with_handle(draft.agent_selector_menu_handle.clone())
+            .offset(gpui::Point {
+                x: px(0.0),
+                y: px(-2.0),
+            })
+            .menu(move |window, cx| {
+                struct AgentMenuItem {
+                    id: AgentId,
+                    display_name: SharedString,
+                    icon_path: Option<SharedString>,
+                }
+
+                let agent_items = {
+                    let agent_server_store = agent_server_store.read(cx);
+                    let registry_store = AgentRegistryStore::try_global(cx);
+                    let registry_store_ref = registry_store.as_ref().map(|store| store.read(cx));
+
+                    agent_server_store
+                        .external_agents()
+                        .map(|agent_id| {
+                            let display_name = agent_server_store
+                                .agent_display_name(agent_id)
+                                .or_else(|| {
+                                    registry_store_ref
+                                        .as_ref()
+                                        .and_then(|store| store.agent(agent_id))
+                                        .map(|agent| agent.name().clone())
+                                })
+                                .unwrap_or_else(|| agent_id.0.clone());
+                            let icon_path = agent_server_store.agent_icon(agent_id).or_else(|| {
+                                registry_store_ref
+                                    .as_ref()
+                                    .and_then(|store| store.agent(agent_id))
+                                    .and_then(|agent| agent.icon_path().cloned())
+                            });
+                            AgentMenuItem {
+                                id: agent_id.clone(),
+                                display_name,
+                                icon_path,
+                            }
+                        })
+                        .sorted_unstable_by_key(|item| item.display_name.to_lowercase())
+                        .collect::<Vec<_>>()
+                };
+
+                Some(ContextMenu::build(window, cx, |mut menu, _window, _cx| {
+                    menu = menu.item(
+                        ContextMenuEntry::new("Zed Agent")
+                            .icon(IconName::ZedAgent)
+                            .icon_color(Color::Muted)
+                            .handler({
+                                let this = this.clone();
+                                move |window, cx| {
+                                    this.update(cx, |this, cx| {
+                                        let agent = Agent::NativeAgent;
+                                        if let Some((server, thread_store)) =
+                                            this.server_for_agent(&agent, cx)
+                                        {
+                                            this.switch_draft_agent(
+                                                agent,
+                                                server,
+                                                thread_store,
+                                                window,
+                                                cx,
+                                            );
+                                        }
+                                    })
+                                    .ok();
+                                }
+                            }),
+                    );
+
+                    if !agent_items.is_empty() {
+                        menu = menu.separator().header("External Agents");
+                    }
+                    for AgentMenuItem {
+                        id,
+                        display_name,
+                        icon_path,
+                    } in agent_items
+                    {
+                        let mut entry = ContextMenuEntry::new(display_name);
+
+                        if let Some(icon_path) = icon_path {
+                            entry = entry.custom_icon_svg(icon_path);
+                        } else {
+                            entry = entry.icon(IconName::Sparkle);
+                        }
+
+                        menu = menu.item(
+                            entry
+                                .icon_color(Color::Muted)
+                                .disabled(is_via_collab)
+                                .handler({
+                                    let this = this.clone();
+                                    move |window, cx| {
+                                        let agent = Agent::Custom { id: id.clone() };
+                                        this.update(cx, |this, cx| {
+                                            if let Some((server, thread_store)) =
+                                                this.server_for_agent(&agent, cx)
+                                            {
+                                                this.switch_draft_agent(
+                                                    agent,
+                                                    server,
+                                                    thread_store,
+                                                    window,
+                                                    cx,
+                                                );
+                                            }
+                                        })
+                                        .ok();
+                                    }
+                                }),
+                        );
+                    }
+
+                    menu.separator().item(
+                        ContextMenuEntry::new("Add More Agents")
+                            .icon(IconName::Plus)
+                            .icon_color(Color::Muted)
+                            .handler(|window, cx| {
+                                window.dispatch_action(Box::new(zed_actions::AcpRegistry), cx)
+                            }),
+                    )
+                }))
+            })
+    }
+}
+
 impl Render for ConversationView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         v_flex()
@@ -2930,6 +3587,9 @@ impl Render for ConversationView {
             .size_full()
             .bg(cx.theme().colors().panel_background)
             .child(match &self.server_state {
+                ServerState::Loading {
+                    draft: Some(draft), ..
+                } => self.render_loading_draft(draft, cx),
                 ServerState::Loading { .. } => {
                     let label_text = self
                         .loading_status
@@ -3833,10 +4493,7 @@ pub(crate) mod tests {
             assert_eq!(available_commands[0].description.as_str(), "Get help");
         });
 
-        assert_eq!(
-            placeholder,
-            Some("Message Test — @ to include context, / for commands".to_string())
-        );
+        assert_eq!(placeholder, Some("Ask anything".to_string()));
 
         message_editor.update_in(cx, |editor, window, cx| {
             editor.set_text("/help", window, cx);

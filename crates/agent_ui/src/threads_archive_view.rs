@@ -274,7 +274,7 @@ impl ThreadsArchiveView {
         // user just deleted the last one), fall back to showing all threads
         // so they aren't stranded with an empty list and a disabled toggle.
         if self.thread_filter == ThreadFilter::ArchivedOnly
-            && store.archived_entries().next().is_none()
+            && store.archived_entries().all(|thread| thread.is_draft())
         {
             self.thread_filter = ThreadFilter::All;
         }
@@ -282,6 +282,7 @@ impl ThreadsArchiveView {
         let thread_filter = self.thread_filter;
         let sessions = store
             .entries()
+            .filter(|t| !t.is_draft())
             .filter(|t| match thread_filter {
                 ThreadFilter::All => true,
                 ThreadFilter::ArchivedOnly => t.archived,
@@ -951,7 +952,7 @@ impl ThreadsArchiveView {
 
         let has_archived_threads = {
             let store = ThreadMetadataStore::global(cx).read(cx);
-            store.archived_entries().next().is_some()
+            store.archived_entries().any(|thread| !thread.is_draft())
         };
 
         let count_label = if entry_count == 1 {
