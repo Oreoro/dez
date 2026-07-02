@@ -93,9 +93,10 @@ pub struct Toolbar {
     pub code_actions: bool,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Scrollbar {
     pub show: ShowScrollbar,
+    pub size: f32,
     pub git_diff: bool,
     pub selected_text: bool,
     pub selected_symbol: bool,
@@ -227,6 +228,7 @@ impl Settings for EditorSettings {
             },
             scrollbar: Scrollbar {
                 show: scrollbar.show.map(ui_scrollbar_settings_from_raw).unwrap(),
+                size: scrollbar.size.unwrap(),
                 git_diff: scrollbar.git_diff.unwrap()
                     && content
                         .git

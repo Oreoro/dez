@@ -10748,6 +10748,7 @@ impl Editor {
 
     fn create_style(&self, cx: &App) -> EditorStyle {
         let settings = ThemeSettings::get_global(cx);
+        let editor_settings = EditorSettings::get_global(cx);
 
         let mut text_style = match self.mode {
             EditorMode::SingleLine | EditorMode::AutoHeight { .. } => TextStyle {
@@ -10787,7 +10788,7 @@ impl Editor {
             border: cx.theme().colors().border,
             local_player: cx.theme().players().local(),
             text: text_style,
-            scrollbar_width: EditorElement::SCROLLBAR_WIDTH,
+            scrollbar_width: px(editor_settings.scrollbar.size.max(0.0)),
             syntax: cx.theme().syntax().clone(),
             status: cx.theme().status().clone(),
             inlay_hints_style: make_inlay_hints_style(cx),

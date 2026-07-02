@@ -393,6 +393,10 @@ pub struct ScrollbarContent {
     ///
     /// Default: auto
     pub show: Option<ShowScrollbar>,
+    /// Size of the editor scrollbar in pixels. This controls vertical scrollbar width and horizontal scrollbar height.
+    ///
+    /// Default: 15
+    pub size: Option<f32>,
     /// Whether to show git diff indicators in the scrollbar.
     ///
     /// Default: true
