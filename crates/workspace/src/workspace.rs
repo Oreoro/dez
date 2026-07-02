@@ -158,7 +158,7 @@ use util::{
 use uuid::Uuid;
 pub use workspace_settings::{
     AutosaveSetting, EncodingDisplayOptions, FocusFollowsMouse, RestoreOnStartupBehavior,
-    StatusBarSettings, TabBarSettings, WorkspaceSettings,
+    StatusBarSettings, TabBarSettings, ToolbarSettings, WorkspaceSettings,
 };
 use zed_actions::{Spawn, feedback::FileBugReport, theme::ToggleMode};
 

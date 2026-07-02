@@ -358,6 +358,14 @@ pub struct ToolbarContent {
     ///
     /// Default: true
     pub breadcrumbs: Option<bool>,
+    /// Whether to render the editor toolbar with compact height.
+    ///
+    /// Default: true
+    pub compact_mode: Option<bool>,
+    /// Whether to display document symbols in editor breadcrumbs.
+    ///
+    /// Default: false
+    pub show_breadcrumb_symbols: Option<bool>,
     /// Whether to display quick action buttons in the editor toolbar.
     ///
     /// Default: true

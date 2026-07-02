@@ -263,6 +263,8 @@ TBD: Centered layout related settings
   // Editor toolbar related settings
   "toolbar": {
     "breadcrumbs": true, // Whether to show breadcrumbs.
+    "compact_mode": true, // Whether to use compact toolbar height.
+    "show_breadcrumb_symbols": false, // Whether to show document symbols in breadcrumbs.
     "quick_actions": true, // Whether to show quick action buttons.
     "selections_menu": true, // Whether to show the Selections menu
     "agent_review": true, // Whether to show agent review buttons

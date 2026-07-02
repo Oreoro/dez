@@ -10800,8 +10800,15 @@ impl Editor {
     fn breadcrumbs_inner(&self, cx: &App) -> Option<Vec<HighlightedText>> {
         let multibuffer = self.buffer().read(cx);
         let is_singleton = multibuffer.is_singleton();
-        let (buffer_id, symbols) = self.outline_symbols_at_cursor.as_ref()?;
-        let buffer = multibuffer.buffer(*buffer_id)?;
+        let show_symbols = EditorSettings::get_global(cx)
+            .toolbar
+            .show_breadcrumb_symbols;
+        let buffer = if show_symbols {
+            let (buffer_id, _) = self.outline_symbols_at_cursor.as_ref()?;
+            multibuffer.buffer(*buffer_id)?
+        } else {
+            self.active_buffer(cx)?
+        };
 
         let buffer = buffer.read(cx);
         // In a multi-buffer layout, we don't want to include the filename in the breadcrumbs
@@ -10832,11 +10839,19 @@ impl Editor {
             vec![]
         };
 
-        breadcrumbs.extend(symbols.iter().map(|symbol| HighlightedText {
-            text: symbol.text.clone(),
-            highlights: symbol.highlight_ranges.clone(),
-        }));
-        Some(breadcrumbs)
+        if show_symbols {
+            let (_, symbols) = self.outline_symbols_at_cursor.as_ref()?;
+            breadcrumbs.extend(symbols.iter().map(|symbol| HighlightedText {
+                text: symbol.text.clone(),
+                highlights: symbol.highlight_ranges.clone(),
+            }));
+        }
+
+        if breadcrumbs.is_empty() {
+            None
+        } else {
+            Some(breadcrumbs)
+        }
     }
 
     fn disable_lsp_data(&mut self) {

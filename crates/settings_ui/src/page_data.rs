@@ -2658,7 +2658,7 @@ fn editor_page() -> SettingsPage {
         ]
     }
 
-    fn toolbar_section() -> [SettingsPageItem; 6] {
+    fn toolbar_section() -> [SettingsPageItem; 8] {
         [
             SettingsPageItem::SectionHeader("Toolbar"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -2681,6 +2681,56 @@ fn editor_page() -> SettingsPage {
                             .toolbar
                             .get_or_insert_default()
                             .breadcrumbs = value;
+                    },
+                }),
+                metadata: None,
+                files: USER,
+            }),
+            SettingsPageItem::SettingItem(SettingItem {
+                title: "Compact Mode",
+                description: "Use compact toolbar height.",
+                field: Box::new(SettingField {
+                    organization_override: None,
+                    json_path: Some("toolbar.compact_mode"),
+                    pick: |settings_content| {
+                        settings_content
+                            .editor
+                            .toolbar
+                            .as_ref()?
+                            .compact_mode
+                            .as_ref()
+                    },
+                    write: |settings_content, value, _| {
+                        settings_content
+                            .editor
+                            .toolbar
+                            .get_or_insert_default()
+                            .compact_mode = value;
+                    },
+                }),
+                metadata: None,
+                files: USER,
+            }),
+            SettingsPageItem::SettingItem(SettingItem {
+                title: "Breadcrumb Symbols",
+                description: "Show document symbols in breadcrumbs.",
+                field: Box::new(SettingField {
+                    organization_override: None,
+                    json_path: Some("toolbar.show_breadcrumb_symbols"),
+                    pick: |settings_content| {
+                        settings_content
+                            .editor
+                            .toolbar
+                            .as_ref()?
+                            .show_breadcrumb_symbols
+                            .as_ref()
+                    },
+                    write: |settings_content, value, _| {
+                        settings_content
+                            .editor
+                            .toolbar
+                            .get_or_insert_default()
+                            .show_breadcrumb_symbols = value;
                     },
                 }),
                 metadata: None,

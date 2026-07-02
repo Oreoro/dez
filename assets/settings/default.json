@@ -513,6 +513,10 @@
   "toolbar": {
     // Whether to show breadcrumbs.
     "breadcrumbs": true,
+    // Whether to render the editor toolbar with compact height.
+    "compact_mode": true,
+    // Whether to show document symbols in breadcrumbs.
+    "show_breadcrumb_symbols": false,
     // Whether to show quick action buttons.
     "quick_actions": true,
     // Whether to show the Selections menu in the editor toolbar.

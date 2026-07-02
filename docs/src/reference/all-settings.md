@@ -1641,6 +1641,8 @@ When trusted, project settings are synchronized automatically, language and MCP 
 {
   "toolbar": {
     "breadcrumbs": true,
+    "compact_mode": true,
+    "show_breadcrumb_symbols": false,
     "quick_actions": true,
     "selections_menu": true,
     "agent_review": true,
