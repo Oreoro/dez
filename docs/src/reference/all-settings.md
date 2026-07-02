@@ -5379,6 +5379,11 @@ Run the {#action theme_selector::Toggle} action in the command palette to see a 
 
 Visit [AI Quick Start](../ai/quick-start.md) under the AI section to learn more about AI setup.
 
+## Sidebar
+
+- `side`: Which side of the window the sidebar appears on. Default: `"left"`
+- `starts_open`: Whether the sidebar should start open in new windows. Default: `true`
+
 ## Collaboration Panel
 
 - Description: Customizations for the collaboration panel.

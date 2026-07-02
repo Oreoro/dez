@@ -463,19 +463,19 @@ fn run_visual_tests(project_path: PathBuf, update_baseline: bool) -> Result<()> 
         }
     }
 
-    // Run Test 3: Multi-workspace sidebar visual tests
-    println!("\n--- Test 3: multi_workspace_sidebar ---");
-    match run_multi_workspace_sidebar_visual_tests(app_state.clone(), &mut cx, update_baseline) {
+    // Run Test 3: Sidebar visual tests
+    println!("\n--- Test 3: sidebar ---");
+    match run_sidebar_visual_tests(app_state.clone(), &mut cx, update_baseline) {
         Ok(TestResult::Passed) => {
-            println!("✓ multi_workspace_sidebar: PASSED");
+            println!("✓ sidebar: PASSED");
             passed += 1;
         }
         Ok(TestResult::BaselineUpdated(_)) => {
-            println!("✓ multi_workspace_sidebar: Baselines updated");
+            println!("✓ sidebar: Baselines updated");
             updated += 1;
         }
         Err(e) => {
-            eprintln!("✗ multi_workspace_sidebar: FAILED - {}", e);
+            eprintln!("✗ sidebar: FAILED - {}", e);
             failed += 1;
         }
     }
@@ -2533,7 +2533,7 @@ fn run_tool_permissions_visual_tests(
 }
 
 #[cfg(target_os = "macos")]
-fn run_multi_workspace_sidebar_visual_tests(
+fn run_sidebar_visual_tests(
     app_state: Arc<AppState>,
     cx: &mut VisualTestAppContext,
     update_baseline: bool,
@@ -2782,7 +2782,7 @@ fn run_multi_workspace_sidebar_visual_tests(
 
     // Capture: sidebar open with active workspaces and recent projects
     let test_result = run_visual_test(
-        "multi_workspace_sidebar_open",
+        "sidebar_open",
         multi_workspace_window.into(),
         cx,
         update_baseline,

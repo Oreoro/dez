@@ -99,7 +99,7 @@ use ui::{
 use util::ResultExt as _;
 use workspace::{
     CollaboratorId, DraggedSelection, DraggedTab, MultiWorkspace, PaneKind, PathList,
-    SerializedPathList, ToggleWorkspaceSidebar, ToggleZoom, Workspace, WorkspaceId,
+    SerializedPathList, ToggleSidebar, ToggleZoom, Workspace, WorkspaceId,
     dock::{DockPosition, Panel, PanelEvent},
     item::ItemEvent,
 };
@@ -1109,7 +1109,7 @@ impl AgentTerminal {
                 terminal_id = terminal_id.to_key_string(),
                 program = program,
                 source = source.as_str(),
-                side = crate::agent_sidebar_side(cx),
+                side = crate::sidebar_side(cx),
                 thread_location = "current_worktree",
             );
         }
@@ -2325,7 +2325,7 @@ impl AgentPanel {
             agent = TERMINAL_AGENT_TELEMETRY_ID,
             terminal_id = terminal_id.to_key_string(),
             source = source.as_str(),
-            side = crate::agent_sidebar_side(cx),
+            side = crate::sidebar_side(cx),
             thread_location = "current_worktree",
         );
     }
@@ -5820,7 +5820,7 @@ impl AgentPanel {
                         menu = menu
                             .action("Settings", Box::new(OpenSettings))
                             .separator()
-                            .action("Toggle Threads Sidebar", Box::new(ToggleWorkspaceSidebar));
+                            .action("Toggle Sidebar", Box::new(ToggleSidebar));
 
                         if has_auth_methods || supports_logout {
                             menu = menu.separator()

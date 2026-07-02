@@ -66,7 +66,7 @@ use util::path_list::PathList;
 use workspace::{
     CloseWindow, MultiWorkspace, MultiWorkspaceEvent, NextProject, NextThread, Open, OpenMode,
     PreviousProject, PreviousThread, ProjectGroupKey, SaveIntent, Sidebar as WorkspaceSidebar,
-    SidebarSide, Toast, ToggleWorkspaceSidebar, Workspace, notifications::NotificationId,
+    SidebarSettings, SidebarSide, Toast, ToggleSidebar, Workspace, notifications::NotificationId,
     sidebar_side_context_menu,
 };
 
@@ -76,7 +76,7 @@ use zed_actions::assistant::{ManageSkills, OpenGlobalAgentsMdRules, OpenProjectA
 use zed_actions::editor::{MoveDown, MoveUp};
 use zed_actions::{CreateWorktree, NewWorktreeBranchTarget, OpenRecent};
 
-use zed_actions::agents_sidebar::{FocusSidebarFilter, ToggleThreadSwitcher};
+use zed_actions::sidebar::{FocusSidebarFilter, ToggleThreadSwitcher};
 
 use crate::thread_switcher::{
     ThreadSwitcher, ThreadSwitcherEntry, ThreadSwitcherEvent, ThreadSwitcherSelection,
@@ -87,7 +87,7 @@ use crate::thread_switcher::{
 mod sidebar_tests;
 
 gpui::actions!(
-    agents_sidebar,
+    sidebar,
     [
         /// Creates a new thread in the currently selected or active project group.
         NewThreadInGroup,
@@ -3331,7 +3331,7 @@ impl Sidebar {
 
     fn dispatch_context(&self, window: &Window, cx: &Context<Self>) -> KeyContext {
         let mut dispatch_context = KeyContext::new_with_defaults();
-        dispatch_context.add("ThreadsSidebar");
+        dispatch_context.add("Sidebar");
         dispatch_context.add("menu");
 
         let is_renaming_thread = self
@@ -7464,12 +7464,12 @@ impl Sidebar {
 
     fn render_empty_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
         ProjectEmptyState::new(
-            "Threads Sidebar",
+            "Sidebar",
             self.focus_handle(cx),
             KeyBinding::for_action(&workspace::Open::default(), cx),
         )
         .on_open_project(|_, window, cx| {
-            let side = match AgentSettings::get_global(cx).sidebar_side() {
+            let side = match SidebarSettings::get_global(cx).side() {
                 SidebarSide::Left => "left",
                 SidebarSide::Right => "right",
             };
@@ -7560,7 +7560,7 @@ impl Sidebar {
     }
 
     fn render_sidebar_toggle_button(&self, _cx: &mut Context<Self>) -> AnyElement {
-        let on_right = AgentSettings::get_global(_cx).sidebar_side() == SidebarSide::Right;
+        let on_right = SidebarSettings::get_global(_cx).side() == SidebarSide::Right;
 
         sidebar_side_context_menu("sidebar-toggle-menu", _cx)
             .anchor(if on_right {
@@ -7575,16 +7575,14 @@ impl Sidebar {
             })
             .trigger(move |_is_active, _window, _cx| {
                 let icon = if on_right {
-                    IconName::ThreadsSidebarRightOpen
+                    IconName::SidebarRightOpen
                 } else {
-                    IconName::ThreadsSidebarLeftOpen
+                    IconName::SidebarLeftOpen
                 };
                 IconButton::new("sidebar-close-toggle", icon)
                     .icon_size(IconSize::Small)
                     .icon_color(Color::Muted)
-                    .tooltip(|_, cx| {
-                        Tooltip::for_action("Hide Threads Sidebar", &ToggleWorkspaceSidebar, cx)
-                    })
+                    .tooltip(|_, cx| Tooltip::for_action("Hide Sidebar", &ToggleSidebar, cx))
                     .on_click(|_, window, cx| {
                         if let Some(multi_workspace) = window.root::<MultiWorkspace>().flatten() {
                             multi_workspace.update(cx, |multi_workspace, cx| {
@@ -7752,7 +7750,7 @@ impl Sidebar {
                             .action("Profiles", Box::new(ManageProfiles::default()))
                             .action("Settings", Box::new(OpenSettings))
                             .separator()
-                            .action("Toggle Threads Sidebar", Box::new(ToggleWorkspaceSidebar));
+                            .action("Toggle Sidebar", Box::new(ToggleSidebar));
 
                         if has_auth_methods || supports_logout {
                             menu = menu.separator();
@@ -8117,7 +8115,12 @@ impl WorkspaceSidebar for Sidebar {
     }
 
     fn set_width(&mut self, width: Option<Pixels>, cx: &mut Context<Self>) {
-        self.width = width.unwrap_or(DEFAULT_WIDTH).clamp(MIN_WIDTH, MAX_WIDTH);
+        let width = width.unwrap_or(DEFAULT_WIDTH).clamp(MIN_WIDTH, MAX_WIDTH);
+        if self.width == width {
+            return;
+        }
+        self.width = width;
+        self.serialize(cx);
         cx.notify();
     }
 
@@ -8130,7 +8133,7 @@ impl WorkspaceSidebar for Sidebar {
     }
 
     fn side(&self, cx: &App) -> SidebarSide {
-        AgentSettings::get_global(cx).sidebar_side()
+        SidebarSettings::get_global(cx).side()
     }
 
     fn prepare_for_focus(&mut self, _window: &mut Window, cx: &mut Context<Self>) {

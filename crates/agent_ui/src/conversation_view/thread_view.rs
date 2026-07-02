@@ -1625,7 +1625,7 @@ impl ThreadView {
         })
         .detach();
 
-        let side = crate::agent_sidebar_side(cx);
+        let side = crate::sidebar_side(cx);
 
         let task = cx.spawn_in(window, async move |this, cx| {
             let Some((contents, tracked_buffers)) = contents_task.await? else {

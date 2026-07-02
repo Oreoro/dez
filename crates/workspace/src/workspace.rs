@@ -32,11 +32,10 @@ mod workspace_settings;
 
 pub use dock::Panel;
 pub use multi_workspace::{
-    CloseWorkspaceSidebar, DraggedSidebar, FocusWorkspaceSidebar, MoveProjectToNewWindow,
-    MultiWorkspace, MultiWorkspaceEvent, NewThread, NextProject, NextThread, PreviousProject,
-    PreviousThread, ProjectGroup, ProjectGroupKey, SerializedProjectGroupState, Sidebar,
-    SidebarEvent, SidebarHandle, SidebarRenderState, SidebarSide, ToggleWorkspaceSidebar,
-    sidebar_side_context_menu,
+    CloseSidebar, DraggedSidebar, FocusSidebar, MoveProjectToNewWindow, MultiWorkspace,
+    MultiWorkspaceEvent, NextProject, NextThread, PreviousProject, PreviousThread, ProjectGroup,
+    ProjectGroupKey, SerializedProjectGroupState, Sidebar, SidebarEvent, SidebarHandle,
+    SidebarRenderState, SidebarSide, ToggleSidebar, sidebar_side_context_menu,
 };
 pub use path_list::{PathList, SerializedPathList};
 pub use remote::{
@@ -158,7 +157,7 @@ use util::{
 use uuid::Uuid;
 pub use workspace_settings::{
     AutosaveSetting, EncodingDisplayOptions, FocusFollowsMouse, RestoreOnStartupBehavior,
-    StatusBarSettings, TabBarSettings, ToolbarSettings, WorkspaceSettings,
+    SidebarSettings, StatusBarSettings, TabBarSettings, ToolbarSettings, WorkspaceSettings,
 };
 use zed_actions::{Spawn, feedback::FileBugReport, theme::ToggleMode};
 
@@ -280,12 +279,6 @@ actions!(
         ClearAllNotifications,
         /// Clears all navigation history, including forward/backward navigation, recently opened files, and recently closed tabs. **This action is irreversible**.
         ClearNavigationHistory,
-        /// Closes the active dock.
-        CloseActiveDock,
-        /// Closes all docks.
-        CloseAllDocks,
-        /// Toggles all docks.
-        ToggleAllDocks,
         /// Closes the current window.
         CloseWindow,
         /// Closes the current project.
@@ -294,8 +287,6 @@ actions!(
         Feedback,
         /// Follows the next collaborator in the session.
         FollowNextCollaborator,
-        /// Moves the focused panel to the next position.
-        MoveFocusedPanelToNextPosition,
         /// Creates a new file.
         NewFile,
         /// Creates a new file in a vertical split.
@@ -316,10 +307,6 @@ actions!(
         ReloadActiveItem,
         /// Reopens the most recently dismissed picker in the current window.
         ReopenLastPicker,
-        /// Resets the active dock to its default size.
-        ResetActiveDockSize,
-        /// Resets all open docks to their default sizes.
-        ResetOpenDocksSize,
         /// Resets all panes in the center group to equal sizes, preserving the split layout.
         ResetPaneSizes,
         /// Reloads the application
@@ -338,8 +325,6 @@ actions!(
         ToggleCenteredLayout,
         /// Toggles edit prediction feature globally for all files.
         ToggleEditPrediction,
-        /// Toggles the right dock.
-        ToggleRightDock,
         /// Toggles zoom on the active pane.
         ToggleZoom,
         /// Toggles read-only mode for the active item (if supported by that item).
@@ -501,46 +486,6 @@ pub struct NewTerminal {
     /// If true, creates a local terminal even in remote projects.
     #[serde(default)]
     pub local: bool,
-}
-
-/// Increases size of a currently focused dock by a given amount of pixels.
-#[derive(Clone, PartialEq, Deserialize, JsonSchema, Action)]
-#[action(namespace = workspace)]
-#[serde(deny_unknown_fields)]
-pub struct IncreaseActiveDockSize {
-    /// For 0px parameter, uses UI font size value.
-    #[serde(default)]
-    pub px: u32,
-}
-
-/// Decreases size of a currently focused dock by a given amount of pixels.
-#[derive(Clone, PartialEq, Deserialize, JsonSchema, Action)]
-#[action(namespace = workspace)]
-#[serde(deny_unknown_fields)]
-pub struct DecreaseActiveDockSize {
-    /// For 0px parameter, uses UI font size value.
-    #[serde(default)]
-    pub px: u32,
-}
-
-/// Increases size of all currently visible docks uniformly, by a given amount of pixels.
-#[derive(Clone, PartialEq, Deserialize, JsonSchema, Action)]
-#[action(namespace = workspace)]
-#[serde(deny_unknown_fields)]
-pub struct IncreaseOpenDocksSize {
-    /// For 0px parameter, uses UI font size value.
-    #[serde(default)]
-    pub px: u32,
-}
-
-/// Decreases size of all currently visible docks uniformly, by a given amount of pixels.
-#[derive(Clone, PartialEq, Deserialize, JsonSchema, Action)]
-#[action(namespace = workspace)]
-#[serde(deny_unknown_fields)]
-pub struct DecreaseOpenDocksSize {
-    /// For 0px parameter, uses UI font size value.
-    #[serde(default)]
-    pub px: u32,
 }
 
 actions!(
@@ -1421,7 +1366,6 @@ pub struct Workspace {
     _items_serializer: Task<Result<()>>,
     session_id: Option<String>,
     scheduled_tasks: Vec<Task<()>>,
-    last_open_dock_positions: Vec<DockPosition>,
     removing: bool,
     open_in_dev_container: bool,
     _dev_container_task: Option<Task<Result<()>>>,
@@ -1871,7 +1815,6 @@ impl Workspace {
             session_id: Some(session_id),
 
             scheduled_tasks: Vec::new(),
-            last_open_dock_positions: Vec::new(),
             removing: false,
             sidebar_focus_handle: None,
             multi_workspace,
@@ -1916,6 +1859,21 @@ impl Workspace {
             }
 
             let serialized_workspace = db.workspace_for_roots(paths_to_open.as_slice());
+            let restored_multi_workspace_state = if open_mode != OpenMode::Add
+                && let Some(window_id) = serialized_workspace.as_ref().and_then(|ws| ws.window_id)
+            {
+                cx.update(move |cx| {
+                    persistence::read_multi_workspace_state_if_present(
+                        WindowId::from(window_id),
+                        cx,
+                    )
+                })
+            } else {
+                None
+            };
+            let initial_sidebar_open = restored_multi_workspace_state
+                .as_ref()
+                .map(|state| state.sidebar_open);
 
             if let Some(paths) = serialized_workspace.as_ref().map(|ws| &ws.paths) {
                 paths_to_open = paths.ordered_paths().cloned().collect();
@@ -2076,7 +2034,18 @@ impl Workspace {
 
                                 workspace
                             });
-                            cx.new(|cx| MultiWorkspace::new(workspace, window, cx))
+                            cx.new(|cx| {
+                                if let Some(sidebar_open) = initial_sidebar_open {
+                                    MultiWorkspace::new_with_initial_sidebar_open(
+                                        workspace,
+                                        window,
+                                        cx,
+                                        sidebar_open,
+                                    )
+                                } else {
+                                    MultiWorkspace::new(workspace, window, cx)
+                                }
+                            })
                         }
                     })?;
                     let workspace =
@@ -2085,6 +2054,10 @@ impl Workspace {
                         })?;
                     (window, workspace)
                 };
+
+            if let Some(state) = &restored_multi_workspace_state {
+                apply_restored_sidebar_state(window, state, cx);
+            }
 
             notify_if_database_failed(window, cx);
             // Check if this is an empty workspace (no paths to open)
@@ -3274,30 +3247,6 @@ impl Workspace {
         });
     }
 
-    pub fn move_focused_panel_to_next_position(
-        &mut self,
-        _: &MoveFocusedPanelToNextPosition,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let docks = self.all_docks();
-        let active_dock = docks
-            .into_iter()
-            .find(|dock| dock.focus_handle(cx).contains_focused(window, cx));
-
-        if let Some(dock) = active_dock {
-            dock.update(cx, |dock, cx| {
-                let active_panel = dock
-                    .active_panel()
-                    .filter(|panel| panel.panel_focus_handle(cx).contains_focused(window, cx));
-
-                if let Some(panel) = active_panel {
-                    panel.move_to_next_position(window, cx);
-                }
-            })
-        }
-    }
-
     pub fn prepare_to_close(
         &mut self,
         close_intent: CloseIntent,
@@ -4205,10 +4154,6 @@ impl Workspace {
                 toggle_state = !was_visible
             );
         }
-        if was_visible {
-            self.save_open_dock_positions(cx);
-        }
-
         let dock = self.dock_at_position(dock_side);
         dock.update(cx, |dock, cx| {
             dock.set_open(!was_visible, window, cx);
@@ -4256,91 +4201,6 @@ impl Workspace {
         self.all_docks().into_iter().find(|&dock| {
             dock.read(cx).is_open() && dock.focus_handle(cx).contains_focused(window, cx)
         })
-    }
-
-    fn close_active_dock(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
-        if let Some(dock) = self.active_dock(window, cx).cloned() {
-            self.save_open_dock_positions(cx);
-            dock.update(cx, |dock, cx| {
-                dock.set_open(false, window, cx);
-            });
-            return true;
-        }
-        false
-    }
-
-    pub fn close_all_docks(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        self.save_open_dock_positions(cx);
-        for dock in self.all_docks() {
-            dock.update(cx, |dock, cx| {
-                dock.set_open(false, window, cx);
-            });
-        }
-
-        cx.focus_self(window);
-        cx.notify();
-        self.serialize_workspace(window, cx);
-    }
-
-    fn get_open_dock_positions(&self, cx: &Context<Self>) -> Vec<DockPosition> {
-        self.all_docks()
-            .into_iter()
-            .filter_map(|dock| {
-                let dock_ref = dock.read(cx);
-                if dock_ref.is_open() {
-                    Some(dock_ref.position())
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
-
-    /// Saves the positions of currently open docks.
-    ///
-    /// Updates `last_open_dock_positions` with positions of all currently open
-    /// docks, to later be restored by the 'Toggle All Docks' action.
-    fn save_open_dock_positions(&mut self, cx: &mut Context<Self>) {
-        let open_dock_positions = self.get_open_dock_positions(cx);
-        if !open_dock_positions.is_empty() {
-            self.last_open_dock_positions = open_dock_positions;
-        }
-    }
-
-    /// Toggles all docks between open and closed states.
-    ///
-    /// If any docks are open, closes all and remembers their positions. If all
-    /// docks are closed, restores the last remembered dock configuration.
-    fn toggle_all_docks(
-        &mut self,
-        _: &ToggleAllDocks,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let open_dock_positions = self.get_open_dock_positions(cx);
-
-        if !open_dock_positions.is_empty() {
-            self.close_all_docks(window, cx);
-        } else if !self.last_open_dock_positions.is_empty() {
-            self.restore_last_open_docks(window, cx);
-        }
-    }
-
-    /// Reopens docks from the most recently remembered configuration.
-    ///
-    /// Opens all docks whose positions are stored in `last_open_dock_positions`
-    /// and clears the stored positions.
-    fn restore_last_open_docks(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let positions_to_open = std::mem::take(&mut self.last_open_dock_positions);
-
-        for position in positions_to_open {
-            let dock = self.dock_at_position(position);
-            dock.update(cx, |dock, cx| dock.set_open(true, window, cx));
-        }
-
-        cx.focus_self(window);
-        cx.notify();
-        self.serialize_workspace(window, cx);
     }
 
     /// Transfer focus to the panel of the given type.
@@ -7962,7 +7822,6 @@ impl Workspace {
             .on_action(cx.listener(Self::follow_next_collaborator))
             .on_action(cx.listener(Self::activate_pane_at_index))
             .on_action(cx.listener(Self::move_item_to_pane_at_index))
-            .on_action(cx.listener(Self::move_focused_panel_to_next_position))
             .on_action(cx.listener(Self::reopen_last_picker))
             .on_action(cx.listener(Self::toggle_edit_predictions_all_files))
             .on_action(cx.listener(Self::toggle_theme_mode))
@@ -8068,24 +7927,6 @@ impl Workspace {
                 workspace.move_pane_to_border(SplitDirection::Down, cx)
             }))
             .on_action(cx.listener(
-                |workspace: &mut Workspace, _: &ToggleRightDock, window, cx| {
-                    workspace.toggle_dock(DockPosition::Right, window, cx);
-                },
-            ))
-            .on_action(cx.listener(
-                |workspace: &mut Workspace, _: &CloseActiveDock, window, cx| {
-                    if !workspace.close_active_dock(window, cx) {
-                        cx.propagate();
-                    }
-                },
-            ))
-            .on_action(
-                cx.listener(|workspace: &mut Workspace, _: &CloseAllDocks, window, cx| {
-                    workspace.close_all_docks(window, cx);
-                }),
-            )
-            .on_action(cx.listener(Self::toggle_all_docks))
-            .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ClearAllNotifications, _, cx| {
                     workspace.clear_all_notifications(cx);
                 },
@@ -8129,41 +7970,6 @@ impl Workspace {
                 },
             ))
             .on_action(cx.listener(
-                |workspace: &mut Workspace, _: &ResetActiveDockSize, window, cx| {
-                    for dock in workspace.all_docks() {
-                        if dock.focus_handle(cx).contains_focused(window, cx) {
-                            let panel = dock.read(cx).active_panel().cloned();
-                            if let Some(panel) = panel {
-                                dock.update(cx, |dock, cx| {
-                                    dock.set_panel_size_state(
-                                        panel.as_ref(),
-                                        dock::PanelSizeState::default(),
-                                        cx,
-                                    );
-                                });
-                            }
-                            return;
-                        }
-                    }
-                },
-            ))
-            .on_action(cx.listener(
-                |workspace: &mut Workspace, _: &ResetOpenDocksSize, _window, cx| {
-                    for dock in workspace.all_docks() {
-                        let panel = dock.read(cx).visible_panel().cloned();
-                        if let Some(panel) = panel {
-                            dock.update(cx, |dock, cx| {
-                                dock.set_panel_size_state(
-                                    panel.as_ref(),
-                                    dock::PanelSizeState::default(),
-                                    cx,
-                                );
-                            });
-                        }
-                    }
-                },
-            ))
-            .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ResetPaneSizes, window, cx| {
                     workspace.reset_pane_sizes(window, cx);
                 },
@@ -8176,46 +7982,6 @@ impl Workspace {
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ToggleProjectPane, window, cx| {
                     workspace.toggle_panel_pane_visibility(PaneKind::Project, window, cx);
-                },
-            ))
-            .on_action(cx.listener(
-                |workspace: &mut Workspace, act: &IncreaseActiveDockSize, window, cx| {
-                    adjust_active_dock_size_by_px(
-                        px_with_ui_font_fallback(act.px, cx),
-                        workspace,
-                        window,
-                        cx,
-                    );
-                },
-            ))
-            .on_action(cx.listener(
-                |workspace: &mut Workspace, act: &DecreaseActiveDockSize, window, cx| {
-                    adjust_active_dock_size_by_px(
-                        px_with_ui_font_fallback(act.px, cx) * -1.,
-                        workspace,
-                        window,
-                        cx,
-                    );
-                },
-            ))
-            .on_action(cx.listener(
-                |workspace: &mut Workspace, act: &IncreaseOpenDocksSize, window, cx| {
-                    adjust_open_docks_size_by_px(
-                        px_with_ui_font_fallback(act.px, cx),
-                        workspace,
-                        window,
-                        cx,
-                    );
-                },
-            ))
-            .on_action(cx.listener(
-                |workspace: &mut Workspace, act: &DecreaseOpenDocksSize, window, cx| {
-                    adjust_open_docks_size_by_px(
-                        px_with_ui_font_fallback(act.px, cx) * -1.,
-                        workspace,
-                        window,
-                        cx,
-                    );
                 },
             ))
             .on_action(cx.listener(Workspace::toggle_centered_layout))
@@ -8556,20 +8322,6 @@ impl Workspace {
             dismiss_app_notification(&notification_id, cx);
         } else {
             cx.propagate();
-        }
-    }
-
-    fn resize_dock(
-        &mut self,
-        dock_pos: DockPosition,
-        new_size: Pixels,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        match dock_pos {
-            DockPosition::Left => self.resize_left_dock(new_size, window, cx),
-            DockPosition::Right => self.resize_right_dock(new_size, window, cx),
-            DockPosition::Bottom => {}
         }
     }
 
@@ -8949,60 +8701,6 @@ fn notify_if_database_failed(window: WindowHandle<MultiWorkspace>, cx: &mut Asyn
             });
         })
         .log_err();
-}
-
-fn px_with_ui_font_fallback(val: u32, cx: &Context<Workspace>) -> Pixels {
-    if val == 0 {
-        ThemeSettings::get_global(cx).ui_font_size(cx)
-    } else {
-        px(val as f32)
-    }
-}
-
-fn adjust_active_dock_size_by_px(
-    px: Pixels,
-    workspace: &mut Workspace,
-    window: &mut Window,
-    cx: &mut Context<Workspace>,
-) {
-    let Some(active_dock) = workspace
-        .all_docks()
-        .into_iter()
-        .find(|dock| dock.focus_handle(cx).contains_focused(window, cx))
-    else {
-        return;
-    };
-    let dock = active_dock.read(cx);
-    let Some(panel_size) = workspace.dock_size(&dock, window, cx) else {
-        return;
-    };
-    workspace.resize_dock(dock.position(), panel_size + px, window, cx);
-}
-
-fn adjust_open_docks_size_by_px(
-    px: Pixels,
-    workspace: &mut Workspace,
-    window: &mut Window,
-    cx: &mut Context<Workspace>,
-) {
-    let docks = workspace
-        .all_docks()
-        .into_iter()
-        .filter_map(|dock_entity| {
-            let dock = dock_entity.read(cx);
-            if dock.is_open() {
-                let dock_pos = dock.position();
-                let panel_size = workspace.dock_size(&dock, window, cx)?;
-                Some((dock_pos, panel_size + px))
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<_>>();
-
-    for (position, new_size) in docks {
-        workspace.resize_dock(position, new_size, window, cx);
-    }
 }
 
 impl Focusable for Workspace {
@@ -9530,13 +9228,11 @@ pub async fn apply_restored_multiworkspace_state(
             .ok();
     }
 
-    if *sidebar_open {
-        window_handle
-            .update(cx, |multi_workspace, _, cx| {
-                multi_workspace.restore_open_sidebar(cx);
-            })
-            .ok();
-    }
+    window_handle
+        .update(cx, |multi_workspace, window, cx| {
+            multi_workspace.restore_sidebar_open_state(*sidebar_open, window, cx);
+        })
+        .ok();
 
     if let Some(sidebar_state) = sidebar_state {
         window_handle
@@ -9545,6 +9241,21 @@ pub async fn apply_restored_multiworkspace_state(
             })
             .ok();
     }
+}
+
+fn apply_restored_sidebar_state(
+    window_handle: WindowHandle<MultiWorkspace>,
+    state: &MultiWorkspaceState,
+    cx: &mut AsyncApp,
+) {
+    window_handle
+        .update(cx, |multi_workspace, window, cx| {
+            multi_workspace.restore_sidebar_open_state(state.sidebar_open, window, cx);
+            if let Some(sidebar_state) = &state.sidebar_state {
+                multi_workspace.restore_sidebar_serialized_state(sidebar_state.clone(), window, cx);
+            }
+        })
+        .ok();
 }
 
 actions!(
@@ -13399,89 +13110,6 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn test_toggle_all_docks(cx: &mut gpui::TestAppContext) {
-        init_test(cx);
-        let fs = FakeFs::new(cx.executor());
-
-        let project = Project::test(fs, [], cx).await;
-        let (workspace, cx) =
-            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
-        workspace.update_in(cx, |workspace, window, cx| {
-            // Open two docks
-            let left_dock = workspace.dock_at_position(DockPosition::Left);
-            let right_dock = workspace.dock_at_position(DockPosition::Right);
-
-            left_dock.update(cx, |dock, cx| dock.set_open(true, window, cx));
-            right_dock.update(cx, |dock, cx| dock.set_open(true, window, cx));
-
-            assert!(left_dock.read(cx).is_open());
-            assert!(right_dock.read(cx).is_open());
-        });
-
-        workspace.update_in(cx, |workspace, window, cx| {
-            // Toggle all docks - should close both
-            workspace.toggle_all_docks(&ToggleAllDocks, window, cx);
-
-            let left_dock = workspace.dock_at_position(DockPosition::Left);
-            let right_dock = workspace.dock_at_position(DockPosition::Right);
-            assert!(!left_dock.read(cx).is_open());
-            assert!(!right_dock.read(cx).is_open());
-        });
-
-        workspace.update_in(cx, |workspace, window, cx| {
-            // Toggle again - should reopen both
-            workspace.toggle_all_docks(&ToggleAllDocks, window, cx);
-
-            let left_dock = workspace.dock_at_position(DockPosition::Left);
-            let right_dock = workspace.dock_at_position(DockPosition::Right);
-            assert!(left_dock.read(cx).is_open());
-            assert!(right_dock.read(cx).is_open());
-        });
-    }
-
-    #[gpui::test]
-    async fn test_toggle_all_with_manual_close(cx: &mut gpui::TestAppContext) {
-        init_test(cx);
-        let fs = FakeFs::new(cx.executor());
-
-        let project = Project::test(fs, [], cx).await;
-        let (workspace, cx) =
-            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
-        workspace.update_in(cx, |workspace, window, cx| {
-            // Open two docks
-            let left_dock = workspace.dock_at_position(DockPosition::Left);
-            let right_dock = workspace.dock_at_position(DockPosition::Right);
-
-            left_dock.update(cx, |dock, cx| dock.set_open(true, window, cx));
-            right_dock.update(cx, |dock, cx| dock.set_open(true, window, cx));
-
-            assert!(left_dock.read(cx).is_open());
-            assert!(right_dock.read(cx).is_open());
-        });
-
-        workspace.update_in(cx, |workspace, window, cx| {
-            // Close them manually
-            workspace.toggle_dock(DockPosition::Left, window, cx);
-            workspace.toggle_dock(DockPosition::Right, window, cx);
-
-            let left_dock = workspace.dock_at_position(DockPosition::Left);
-            let right_dock = workspace.dock_at_position(DockPosition::Right);
-            assert!(!left_dock.read(cx).is_open());
-            assert!(!right_dock.read(cx).is_open());
-        });
-
-        workspace.update_in(cx, |workspace, window, cx| {
-            // Toggle all docks - only last closed (right dock) should reopen
-            workspace.toggle_all_docks(&ToggleAllDocks, window, cx);
-
-            let left_dock = workspace.dock_at_position(DockPosition::Left);
-            let right_dock = workspace.dock_at_position(DockPosition::Right);
-            assert!(!left_dock.read(cx).is_open());
-            assert!(right_dock.read(cx).is_open());
-        });
-    }
-
-    #[gpui::test]
     async fn test_join_pane_into_next(cx: &mut gpui::TestAppContext) {
         init_test(cx);
 
@@ -14476,7 +14104,9 @@ mod tests {
         });
 
         // When the panel is activated, it is zoomed again.
-        cx.dispatch_action(ToggleRightDock);
+        workspace.update_in(cx, |workspace, window, cx| {
+            workspace.toggle_dock(DockPosition::Right, window, cx);
+        });
         workspace.read_with(cx, |workspace, _| {
             assert_eq!(workspace.zoomed, Some(panel_1.to_any().downgrade()));
             assert_eq!(workspace.zoomed_position, Some(DockPosition::Right));
@@ -15170,61 +14800,6 @@ mod tests {
             );
             assert!(dirty_regular_buffer.read(cx).is_dirty);
             assert!(dirty_regular_buffer_2.read(cx).is_dirty);
-        });
-    }
-
-    #[gpui::test]
-    async fn test_move_focused_panel_to_next_position(cx: &mut gpui::TestAppContext) {
-        init_test(cx);
-        let fs = FakeFs::new(cx.executor());
-        let project = Project::test(fs, [], cx).await;
-        let (multi_workspace, cx) =
-            cx.add_window_view(|window, cx| MultiWorkspace::test_new(project, window, cx));
-        let workspace = multi_workspace.read_with(cx, |mw, _| mw.workspace().clone());
-
-        // Add a new panel to the right dock, opening the dock and setting the
-        // focus to the new panel.
-        let panel = workspace.update_in(cx, |workspace, window, cx| {
-            let panel = cx.new(|cx| TestPanel::new(DockPosition::Right, 100, cx));
-            workspace.add_panel(panel.clone(), window, cx);
-
-            workspace
-                .right_dock()
-                .update(cx, |right_dock, cx| right_dock.set_open(true, window, cx));
-
-            workspace.toggle_panel_focus::<TestPanel>(window, cx);
-
-            panel
-        });
-
-        // Dispatch the `MoveFocusedPanelToNextPosition` action, moving the
-        // panel to the next valid position which, in this case, is the left
-        // dock.
-        cx.dispatch_action(MoveFocusedPanelToNextPosition);
-        workspace.update(cx, |workspace, cx| {
-            assert!(workspace.left_dock().read(cx).is_open());
-            assert_eq!(panel.read(cx).position, DockPosition::Left);
-        });
-
-        // Dispatch the `MoveFocusedPanelToNextPosition` action again, this time
-        // moving the panel to its initial position, the right dock.
-        cx.dispatch_action(MoveFocusedPanelToNextPosition);
-        workspace.update(cx, |workspace, cx| {
-            assert!(workspace.right_dock().read(cx).is_open());
-            assert_eq!(panel.read(cx).position, DockPosition::Right);
-        });
-
-        // Remove focus from the panel, ensuring that, if the panel is not
-        // focused, the `MoveFocusedPanelToNextPosition` action does not update
-        // the panel's position, so the panel is still in the right dock.
-        workspace.update_in(cx, |workspace, window, cx| {
-            workspace.toggle_panel_focus::<TestPanel>(window, cx);
-        });
-
-        cx.dispatch_action(MoveFocusedPanelToNextPosition);
-        workspace.update(cx, |workspace, cx| {
-            assert!(workspace.right_dock().read(cx).is_open());
-            assert_eq!(panel.read(cx).position, DockPosition::Right);
         });
     }
 

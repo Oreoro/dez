@@ -5203,7 +5203,7 @@ mod tests {
                 "action",
                 "activity_indicator",
                 "agent",
-                "agents_sidebar",
+                "sidebar",
                 "app_menu",
                 "assistant",
                 "assistant2",

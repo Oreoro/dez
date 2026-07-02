@@ -7950,14 +7950,14 @@ fn ai_page(cx: &App) -> SettingsPage {
                 files: USER | PROJECT,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Threads Sidebar Side",
-                description: "Which side of the window the threads sidebar appears on.",
+                title: "Sidebar Side",
+                description: "Which side of the window the sidebar appears on.",
                 field: Box::new(SettingField {
                     organization_override: None,
-                    json_path: Some("agent.sidebar_side"),
-                    pick: |settings_content| settings_content.agent.as_ref()?.sidebar_side.as_ref(),
+                    json_path: Some("sidebar.side"),
+                    pick: |settings_content| settings_content.sidebar.as_ref()?.side.as_ref(),
                     write: |settings_content, value, _| {
-                        settings_content.agent.get_or_insert_default().sidebar_side = value;
+                        settings_content.sidebar.get_or_insert_default().side = value;
                     },
                 }),
                 metadata: None,

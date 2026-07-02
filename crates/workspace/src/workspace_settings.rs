@@ -7,6 +7,7 @@ use settings::CommandAliasTarget;
 pub use settings::{
     AutosaveSetting, EncodingDisplayOptions, InactiveOpacity, PaneSplitDirectionHorizontal,
     PaneSplitDirectionVertical, RegisterSetting, RestoreOnStartupBehavior, Settings,
+    SidebarDockPosition, SidebarSide,
 };
 
 #[derive(RegisterSetting)]
@@ -44,6 +45,21 @@ pub struct WorkspaceSettings {
 pub struct FocusFollowsMouse {
     pub enabled: bool,
     pub debounce: Duration,
+}
+
+#[derive(Clone, Debug, RegisterSetting)]
+pub struct SidebarSettings {
+    pub side: SidebarDockPosition,
+    pub starts_open: bool,
+}
+
+impl SidebarSettings {
+    pub fn side(&self) -> SidebarSide {
+        match self.side {
+            SidebarDockPosition::Left => SidebarSide::Left,
+            SidebarDockPosition::Right => SidebarSide::Right,
+        }
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Debug, Default)]
@@ -143,6 +159,16 @@ impl Settings for WorkspaceSettings {
                         .unwrap_or(250),
                 ),
             },
+        }
+    }
+}
+
+impl Settings for SidebarSettings {
+    fn from_settings(content: &settings::SettingsContent) -> Self {
+        let sidebar = content.sidebar.clone().unwrap();
+        Self {
+            side: sidebar.side.unwrap(),
+            starts_open: sidebar.starts_open.unwrap(),
         }
     }
 }

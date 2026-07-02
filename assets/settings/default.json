@@ -1040,6 +1040,12 @@
     // For example: typing `:wave:` gets replaced with `👋`.
     "auto_replace_emoji_shortcode": true,
   },
+  "sidebar": {
+    // Where to position the sidebar. Can be 'left' or 'right'.
+    "side": "left",
+    // Whether the sidebar should start open in new windows.
+    "starts_open": true,
+  },
   "agent": {
     // Whether the inline assistant should use streaming tools, when available
     "inline_assistant_use_streaming_tools": true,
@@ -1056,8 +1062,6 @@
     //
     // Default: true
     "flexible": true,
-    // Where to position the threads sidebar. Can be 'left' or 'right'.
-    "sidebar_side": "left",
     // Default width when the agent panel is docked to the left or right.
     "default_width": 640,
     // Default height when the agent panel is docked to the bottom.

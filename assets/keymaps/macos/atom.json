@@ -32,7 +32,7 @@
       "cmd-shift-d": "editor::DuplicateLineDown",
       "ctrl-cmd-up": "editor::MoveLineUp",
       "ctrl-cmd-down": "editor::MoveLineDown",
-      "cmd-\\": "multi_workspace::ToggleWorkspaceSidebar",
+      "cmd-\\": "sidebar::ToggleSidebar",
       "ctrl-shift-m": "markdown::OpenPreviewToTheSide",
       "cmd-r": "outline::Toggle",
     },
@@ -49,8 +49,8 @@
   {
     "context": "Workspace",
     "bindings": {
-      "cmd-\\": "multi_workspace::ToggleWorkspaceSidebar",
-      "cmd-k cmd-b": "multi_workspace::ToggleWorkspaceSidebar",
+      "cmd-\\": "sidebar::ToggleSidebar",
+      "cmd-k cmd-b": "sidebar::ToggleSidebar",
       "cmd-t": "file_finder::Toggle",
       "cmd-shift-r": "project_symbols::Toggle",
     },

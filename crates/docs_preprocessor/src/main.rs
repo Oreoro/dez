@@ -901,14 +901,14 @@ mod tests {
         let keymap: KeymapFile = serde_json::from_value(json!([
             {
                 "bindings": {
-                    "ctrl-tab": "agents_sidebar::ToggleThreadSwitcher",
-                    "ctrl-shift-tab": ["agents_sidebar::ToggleThreadSwitcher", { "select_last": true }]
+                    "ctrl-tab": "sidebar::ToggleThreadSwitcher",
+                    "ctrl-shift-tab": ["sidebar::ToggleThreadSwitcher", { "select_last": true }]
                 }
             }
         ]))
         .unwrap();
 
-        let binding = find_binding_in_keymap(&keymap, "agents_sidebar::ToggleThreadSwitcher");
+        let binding = find_binding_in_keymap(&keymap, "sidebar::ToggleThreadSwitcher");
         assert_eq!(binding.as_deref(), Some("ctrl-tab"));
     }
 
@@ -917,13 +917,13 @@ mod tests {
         let keymap: KeymapFile = serde_json::from_value(json!([
             {
                 "bindings": {
-                    "ctrl-shift-tab": ["agents_sidebar::ToggleThreadSwitcher", { "select_last": true }]
+                    "ctrl-shift-tab": ["sidebar::ToggleThreadSwitcher", { "select_last": true }]
                 }
             }
         ]))
         .unwrap();
 
-        let binding = find_binding_in_keymap(&keymap, "agents_sidebar::ToggleThreadSwitcher");
+        let binding = find_binding_in_keymap(&keymap, "sidebar::ToggleThreadSwitcher");
         assert_eq!(binding.as_deref(), Some("ctrl-shift-tab"));
     }
 
@@ -932,14 +932,14 @@ mod tests {
         let keymap: KeymapFile = serde_json::from_value(json!([
             {
                 "bindings": {
-                    "ctrl-shift-tab": ["agents_sidebar::ToggleThreadSwitcher", { "select_last": true }],
-                    "ctrl-tab": "agents_sidebar::ToggleThreadSwitcher"
+                    "ctrl-shift-tab": ["sidebar::ToggleThreadSwitcher", { "select_last": true }],
+                    "ctrl-tab": "sidebar::ToggleThreadSwitcher"
                 }
             }
         ]))
         .unwrap();
 
-        let binding = find_binding_in_keymap(&keymap, "agents_sidebar::ToggleThreadSwitcher");
+        let binding = find_binding_in_keymap(&keymap, "sidebar::ToggleThreadSwitcher");
         assert_eq!(binding.as_deref(), Some("ctrl-tab"));
     }
 

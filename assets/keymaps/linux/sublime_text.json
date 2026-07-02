@@ -89,7 +89,7 @@
   {
     "context": "Workspace",
     "bindings": {
-      "ctrl-k ctrl-b": "multi_workspace::ToggleWorkspaceSidebar",
+      "ctrl-k ctrl-b": "sidebar::ToggleSidebar",
       // "ctrl-0": "project_panel::ToggleFocus", // normally resets zoom
       "shift-ctrl-r": "project_symbols::Toggle",
     },

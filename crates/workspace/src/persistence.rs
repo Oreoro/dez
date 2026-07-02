@@ -331,14 +331,20 @@ impl From<WindowBoundsJson> for WindowBounds {
     }
 }
 
-fn read_multi_workspace_state(window_id: WindowId, cx: &App) -> model::MultiWorkspaceState {
+pub(crate) fn read_multi_workspace_state_if_present(
+    window_id: WindowId,
+    cx: &App,
+) -> Option<model::MultiWorkspaceState> {
     let kvp = KeyValueStore::global(cx);
     kvp.scoped("multi_workspace_state")
         .read(&window_id.as_u64().to_string())
         .log_err()
         .flatten()
         .and_then(|json| serde_json::from_str(&json).ok())
-        .unwrap_or_default()
+}
+
+fn read_multi_workspace_state(window_id: WindowId, cx: &App) -> model::MultiWorkspaceState {
+    read_multi_workspace_state_if_present(window_id, cx).unwrap_or_default()
 }
 
 pub async fn write_multi_workspace_state(

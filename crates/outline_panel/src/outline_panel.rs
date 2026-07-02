@@ -4651,15 +4651,12 @@ impl OutlinePanel {
                         .when_some(
                             match self.position(window, cx) {
                                 DockPosition::Left => Some(
-                                    KeyBinding::for_action(
-                                        &workspace::ToggleWorkspaceSidebar,
-                                        cx,
-                                    )
-                                    .into_any_element(),
+                                    KeyBinding::for_action(&workspace::ToggleSidebar, cx)
+                                        .into_any_element(),
                                 ),
                                 DockPosition::Bottom => None,
                                 DockPosition::Right => Some(
-                                    KeyBinding::for_action(&workspace::ToggleRightDock, cx)
+                                    KeyBinding::for_action(&workspace::ToggleProjectPane, cx)
                                         .into_any_element(),
                                 ),
                             },

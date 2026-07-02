@@ -24,8 +24,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             zed_actions::ResetAllZoom { persist: false },
         ),
         MenuItem::separator(),
-        MenuItem::action("Toggle Right Dock", workspace::ToggleRightDock),
-        MenuItem::action("Toggle All Docks", workspace::ToggleAllDocks),
+        MenuItem::action("Toggle Project Pane", workspace::ToggleProjectPane),
         MenuItem::submenu(Menu {
             name: "Editor Layout".into(),
             disabled: false,

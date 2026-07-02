@@ -18,8 +18,8 @@ use serde::{Deserialize, Serialize};
 use settings::{
     DockPosition, DockSide, LanguageModelParameters, LanguageModelSelection,
     NotifyWhenAgentWaiting, PlaySoundWhenAgentDone, RegisterSetting, Settings, SettingsContent,
-    SettingsStore, SidebarDockPosition, SidebarSide, ThinkingBlockDisplay, ToolPermissionMode,
-    update_settings_file, update_settings_file_with_completion,
+    SettingsStore, ThinkingBlockDisplay, ToolPermissionMode, update_settings_file,
+    update_settings_file_with_completion,
 };
 use util::ResultExt as _;
 
@@ -207,7 +207,6 @@ pub struct AgentSettings {
     pub button: bool,
     pub dock: DockPosition,
     pub flexible: bool,
-    pub sidebar_side: SidebarDockPosition,
     pub default_width: Pixels,
     pub default_height: Pixels,
     pub max_content_width: Option<Pixels>,
@@ -264,13 +263,6 @@ impl AgentSettings {
             return setting.temperature;
         }
         return None;
-    }
-
-    pub fn sidebar_side(&self) -> SidebarSide {
-        match self.sidebar_side {
-            SidebarDockPosition::Left => SidebarSide::Left,
-            SidebarDockPosition::Right => SidebarSide::Right,
-        }
     }
 
     pub fn set_message_editor_max_lines(&self) -> usize {
@@ -733,7 +725,6 @@ impl Settings for AgentSettings {
             enabled: agent.enabled.unwrap(),
             button: agent.button.unwrap(),
             dock: agent.dock.unwrap(),
-            sidebar_side: agent.sidebar_side.unwrap(),
             default_width: px(agent.default_width.unwrap()),
             default_height: px(agent.default_height.unwrap()),
             max_content_width: if agent.limit_content_width.unwrap() {

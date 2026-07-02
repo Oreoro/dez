@@ -9,37 +9,6 @@ use crate::ExtendingVec;
 
 use crate::DockPosition;
 
-/// Where to position the threads sidebar.
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    Default,
-    PartialEq,
-    Eq,
-    Serialize,
-    Deserialize,
-    JsonSchema,
-    MergeFrom,
-    strum::VariantArray,
-    strum::VariantNames,
-)]
-#[serde(rename_all = "snake_case")]
-pub enum SidebarDockPosition {
-    /// Always show the sidebar on the left side.
-    #[default]
-    Left,
-    /// Always show the sidebar on the right side.
-    Right,
-}
-
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-pub enum SidebarSide {
-    #[default]
-    Left,
-    Right,
-}
-
 /// How thinking blocks should be displayed by default in the agent panel.
 #[derive(
     Clone,
@@ -207,10 +176,6 @@ pub struct AgentSettingsContent {
     ///
     /// Default: true
     pub flexible: Option<bool>,
-    /// Where to position the threads sidebar.
-    ///
-    /// Default: left
-    pub sidebar_side: Option<SidebarDockPosition>,
     /// Default width in pixels when the agent panel is docked to the left or right.
     ///
     /// Default: 640
@@ -357,10 +322,6 @@ pub struct AgentSettingsContent {
 impl AgentSettingsContent {
     pub fn set_dock(&mut self, dock: DockPosition) {
         self.dock = Some(dock);
-    }
-
-    pub fn set_sidebar_side(&mut self, position: SidebarDockPosition) {
-        self.sidebar_side = Some(position);
     }
 
     pub fn set_flexible_size(&mut self, flexible: bool) {

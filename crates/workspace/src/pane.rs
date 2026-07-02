@@ -1,7 +1,7 @@
 use crate::{
     CloseWindow, NewCenterTerminal, NewFile, NewTerminal, OpenInTerminal, OpenOptions,
     OpenTerminal, OpenVisible, SidebarSide, SplitDirection, ToggleFileFinder, ToggleProjectSymbols,
-    ToggleWorkspaceSidebar, ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
+    ToggleSidebar, ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
     focus_follows_mouse::FocusFollowsMouse as _,
     invalid_item_view::InvalidItemView,
     item::{
@@ -4440,19 +4440,17 @@ impl Pane {
         }
 
         let icon = match sidebar.side {
-            SidebarSide::Left => IconName::ThreadsSidebarLeftClosed,
-            SidebarSide::Right => IconName::ThreadsSidebarRightClosed,
+            SidebarSide::Left => IconName::SidebarLeftClosed,
+            SidebarSide::Right => IconName::SidebarRightClosed,
         };
 
         Some(
             IconButton::new("toggle-workspace-sidebar", icon)
                 .icon_size(IconSize::Small)
                 .icon_color(Color::Muted)
-                .tooltip(|_, cx| {
-                    Tooltip::for_action("Open Threads Sidebar", &ToggleWorkspaceSidebar, cx)
-                })
+                .tooltip(|_, cx| Tooltip::for_action("Open Sidebar", &ToggleSidebar, cx))
                 .on_click(|_, window, cx| {
-                    window.dispatch_action(Box::new(ToggleWorkspaceSidebar), cx);
+                    window.dispatch_action(Box::new(ToggleSidebar), cx);
                 })
                 .into_any_element(),
         )

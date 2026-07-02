@@ -43,17 +43,17 @@ From the "New Thread…" menu you can:
 
 {#action agent::NewExternalAgentThread} creates a new thread with the specified External Agent id.
 
-You can also start a new thread from the [Threads Sidebar](./parallel-agents.md#threads-sidebar), scoped to a specific project — see [Running Multiple Threads](./parallel-agents.md#running-multiple-threads).
+You can also start a new thread from the [Sidebar](./parallel-agents.md#sidebar), scoped to a specific project — see [Running Multiple Threads](./parallel-agents.md#running-multiple-threads).
 
 ### Managing Multiple Threads {#multiple-threads}
 
-You can run multiple agent threads at once, each working independently with its own agent, context window, and conversation history. Open the Threads Sidebar with {#kb multi_workspace::ToggleWorkspaceSidebar} to see all your threads grouped by project. Click any thread to switch to it, or use the thread switcher ({#kb agents_sidebar::ToggleThreadSwitcher}) to cycle between recent threads without opening the sidebar.
+You can run multiple agent threads at once, each working independently with its own agent, context window, and conversation history. Open the Sidebar with {#kb sidebar::ToggleSidebar} to see all your threads grouped by project. Click any thread to switch to it, or use the thread switcher ({#kb sidebar::ToggleThreadSwitcher}) to cycle between recent threads without opening the sidebar.
 
 Threads you're no longer working on can be archived by hovering over them in the sidebar and clicking the archive icon, or selecting them and pressing {#kb agent::ArchiveSelectedThread}. The Thread History holds all your threads across all projects, sorted chronologically, and you can restore them at any time.
 
 If two threads might edit the same files, you can isolate one in a new Git worktree. Use the worktree picker in the title bar to pick which worktree the agent runs in, or create a new one. See [Worktree Isolation](./parallel-agents.md#worktree-isolation) for details.
 
-For more details on the Threads Sidebar and managing multiple projects, see [Parallel Agents](./parallel-agents.md).
+For more details on the Sidebar and managing multiple projects, see [Parallel Agents](./parallel-agents.md).
 
 ### Editing Messages {#editing-messages}
 

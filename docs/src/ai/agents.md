@@ -9,9 +9,9 @@ Zed supports three agent paths. Choose the path based on how you want agentic wo
 
 | Agent path                                | Runs in                         | Uses                                                                  | Best when                                                                              |
 | ----------------------------------------- | ------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| [Zed Agent](./zed-agent.md)               | Agent Panel and Threads Sidebar | Zed-configured LLM providers, native tools, skills, instructions, MCP | You want Zed's native agent integration                                                |
-| [External Agents](./external-agents.md)   | Agent Panel and Threads Sidebar | ACP agent process and its own auth/config                             | You want Claude, Codex, OpenCode, Copilot, Cursor, Pi, or another ACP-integrated agent |
-| [Terminal Threads](./terminal-threads.md) | Threads Sidebar and terminal    | Native CLI/TUI auth/config                                            | You want the tool's command-line experience organized in Zed                           |
+| [Zed Agent](./zed-agent.md)               | Agent Panel and Sidebar | Zed-configured LLM providers, native tools, skills, instructions, MCP | You want Zed's native agent integration                                                |
+| [External Agents](./external-agents.md)   | Agent Panel and Sidebar | ACP agent process and its own auth/config                             | You want Claude, Codex, OpenCode, Copilot, Cursor, Pi, or another ACP-integrated agent |
+| [Terminal Threads](./terminal-threads.md) | Sidebar and terminal    | Native CLI/TUI auth/config                                            | You want the tool's command-line experience organized in Zed                           |
 
 An agent path is sometimes called a harness. It is the way agentic work is started, displayed, configured, and controlled in Zed.
 
@@ -26,7 +26,7 @@ The [Zed Agent](./zed-agent.md) uses models configured in Zed. [External Agents]
 
 ## Thread Types {#thread-types}
 
-Threads are the units shown in the [Threads Sidebar](./parallel-agents.md#threads-sidebar). Thread types include:
+Threads are the units shown in the [Sidebar](./parallel-agents.md#sidebar). Thread types include:
 
 - [Zed Agent](./zed-agent.md) threads
 - [External Agent](./external-agents.md) threads

@@ -1063,9 +1063,8 @@ impl Dock {
 
     pub fn toggle_action(&self) -> Box<dyn Action> {
         match self.position {
-            DockPosition::Left => crate::ToggleWorkspaceSidebar.boxed_clone(),
-            DockPosition::Bottom => crate::CloseActiveDock.boxed_clone(),
-            DockPosition::Right => crate::ToggleRightDock.boxed_clone(),
+            DockPosition::Left => crate::ToggleSidebar.boxed_clone(),
+            DockPosition::Bottom | DockPosition::Right => crate::ToggleProjectPane.boxed_clone(),
         }
     }
 

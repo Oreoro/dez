@@ -36,11 +36,11 @@
     "context": "AgentPanel || (MessageEditor > Editor)",
     "use_key_equivalents": true,
     "bindings": {
-      "ctrl-i": "workspace::ToggleRightDock",
-      "ctrl-shift-i": "workspace::ToggleRightDock",
-      "ctrl-l": "workspace::ToggleRightDock",
-      "ctrl-shift-l": "workspace::ToggleRightDock",
-      "ctrl-w": "workspace::ToggleRightDock", // technically should close chat
+      "ctrl-i": "workspace::ToggleProjectPane",
+      "ctrl-shift-i": "workspace::ToggleProjectPane",
+      "ctrl-l": "workspace::ToggleProjectPane",
+      "ctrl-shift-l": "workspace::ToggleProjectPane",
+      "ctrl-w": "workspace::ToggleProjectPane",
       "ctrl-.": "agent::ToggleProfileSelector",
       "ctrl-/": "agent::ToggleModelSelector",
       "ctrl-shift-backspace": "editor::Cancel",

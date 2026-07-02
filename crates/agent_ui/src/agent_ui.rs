@@ -179,8 +179,8 @@ impl AgentThreadSource {
     }
 }
 
-pub(crate) fn agent_sidebar_side(cx: &App) -> &'static str {
-    match AgentSettings::get_global(cx).sidebar_side() {
+pub(crate) fn sidebar_side(cx: &App) -> &'static str {
+    match workspace::SidebarSettings::get_global(cx).side() {
         SidebarSide::Left => "left",
         SidebarSide::Right => "right",
     }
@@ -1025,7 +1025,6 @@ mod tests {
             sandbox_permissions: Default::default(),
             show_turn_stats: false,
             show_merge_conflict_indicator: true,
-            sidebar_side: Default::default(),
             thinking_display: Default::default(),
         };
 

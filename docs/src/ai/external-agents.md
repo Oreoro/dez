@@ -5,7 +5,7 @@ description: Install and use ACP-integrated External Agents such as Claude, Code
 
 # External Agents
 
-External Agents are agents that integrate with Zed through the [Agent Client Protocol (ACP)](https://agentclientprotocol.com). Zed hosts the thread in the [Agent Panel](./agent-panel.md) and [Threads Sidebar](./parallel-agents.md#threads-sidebar), while the External Agent usually owns its own runtime, auth, model selection, tools, and native configuration.
+External Agents are agents that integrate with Zed through the [Agent Client Protocol (ACP)](https://agentclientprotocol.com). Zed hosts the thread in the [Agent Panel](./agent-panel.md) and [Sidebar](./parallel-agents.md#sidebar), while the External Agent usually owns its own runtime, auth, model selection, tools, and native configuration.
 
 Use [Terminal Threads](./terminal-threads.md) instead when you want to run a CLI or TUI directly in a terminal-backed thread.
 
@@ -19,7 +19,7 @@ The ACP Registry is the primary way to install common External Agents in Zed.
 
 Open the registry with {#action zed::AcpRegistry}, or open [Agent Settings](./agent-settings.md) with {#action agent::OpenSettings}, click `Add Agent`, and choose `Install from Registry`.
 
-After installation, the agent appears in the new-thread menu in the Agent Panel and Threads Sidebar.
+After installation, the agent appears in the new-thread menu in the Agent Panel and Sidebar.
 
 ## Common Agents {#common-agents}
 
@@ -40,7 +40,7 @@ For company-specific setup paths, including Claude, Codex, Gemini, OpenCode, Cop
 
 Use Claude Agent when you want Claude running as an ACP-integrated External Agent in Zed.
 
-Install Claude Agent from the [ACP Registry](#registry), then start a Claude Agent thread from the Agent Panel or Threads Sidebar. Claude Agent owns its own authentication and billing. An Anthropic API key configured for [Zed Agent](./zed-agent.md) does not automatically configure Claude Agent.
+Install Claude Agent from the [ACP Registry](#registry), then start a Claude Agent thread from the Agent Panel or Sidebar. Claude Agent owns its own authentication and billing. An Anthropic API key configured for [Zed Agent](./zed-agent.md) does not automatically configure Claude Agent.
 
 To choose your billing method, open a Claude Agent thread, run `/login`, and authenticate with an API key or with Claude Code where supported. Claude-specific files such as `CLAUDE.md` may be read by Claude Agent directly.
 
@@ -48,7 +48,7 @@ To choose your billing method, open a Claude Agent thread, run `/login`, and aut
 
 Use Codex when you want Codex running as an ACP-integrated External Agent in Zed.
 
-Install Codex from the [ACP Registry](#registry), then start a Codex thread from the Agent Panel or Threads Sidebar. Codex owns its own authentication and billing. An OpenAI API key configured for [Zed Agent](./zed-agent.md) does not automatically configure Codex.
+Install Codex from the [ACP Registry](#registry), then start a Codex thread from the Agent Panel or Sidebar. Codex owns its own authentication and billing. An OpenAI API key configured for [Zed Agent](./zed-agent.md) does not automatically configure Codex.
 
 Codex may support ChatGPT login, Codex API keys, OpenAI API keys, or Codex-native configuration depending on the installed version and environment. To change authentication, use the Codex thread's native login/logout flow.
 
@@ -56,7 +56,7 @@ Codex may support ChatGPT login, Codex API keys, OpenAI API keys, or Codex-nativ
 
 Use Gemini CLI when you want Gemini running as an ACP-integrated External Agent in Zed.
 
-Install Gemini CLI from the [ACP Registry](#registry), then start a Gemini CLI thread from the Agent Panel or Threads Sidebar. Gemini CLI owns its own authentication and may prompt you to log in with Google, Vertex AI, or another Gemini-supported flow.
+Install Gemini CLI from the [ACP Registry](#registry), then start a Gemini CLI thread from the Agent Panel or Sidebar. Gemini CLI owns its own authentication and may prompt you to log in with Google, Vertex AI, or another Gemini-supported flow.
 
 If `GEMINI_API_KEY` or `GOOGLE_AI_API_KEY` is available to the agent process, Gemini CLI uses that key. Otherwise, if you have configured an API key for Zed's Google AI provider, Zed passes that key to Gemini CLI as `GEMINI_API_KEY`.
 
@@ -64,7 +64,7 @@ If `GEMINI_API_KEY` or `GOOGLE_AI_API_KEY` is available to the agent process, Ge
 
 Use OpenCode when you want OpenCode running as an ACP-integrated External Agent in Zed.
 
-Install OpenCode from the [ACP Registry](#registry), then start an OpenCode thread from the Agent Panel or Threads Sidebar. OpenCode owns its own auth, model selection, and subscription behavior. To use OpenCode models in Zed Agent instead, configure [OpenCode API access](./use-api-access.md#opencode).
+Install OpenCode from the [ACP Registry](#registry), then start an OpenCode thread from the Agent Panel or Sidebar. OpenCode owns its own auth, model selection, and subscription behavior. To use OpenCode models in Zed Agent instead, configure [OpenCode API access](./use-api-access.md#opencode).
 
 ## Copilot {#copilot}
 
@@ -157,7 +157,7 @@ For details, see [Agent Server Extensions](../extensions/agent-servers.md).
 
 Zed can import existing threads from configured External Agents so they appear in your [Thread History](./agent-panel.md#multiple-threads) alongside the rest of your threads.
 
-Open the Threads Sidebar with {#kb multi_workspace::ToggleWorkspaceSidebar}, then open Thread History by clicking the clock icon at the bottom of the sidebar or running {#action agents_sidebar::ToggleThreadHistory} from the Command Palette. Click **Import Threads**, choose the agents you want to import from, then click **Import Threads** again.
+Open the Sidebar with {#kb sidebar::ToggleSidebar}, then open Thread History by clicking the clock icon at the bottom of the sidebar or running {#action sidebar::ToggleThreadHistory} from the Command Palette. Click **Import Threads**, choose the agents you want to import from, then click **Import Threads** again.
 
 Zed connects to each selected agent over ACP and adds sessions that are not already in your history. Imported threads are archived entries; open one to restore it and continue where you left off.
 

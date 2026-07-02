@@ -5,7 +5,7 @@ description: Run agent CLIs and TUIs directly in terminal-backed threads in Zed.
 
 # Terminal Threads
 
-Terminal Threads are terminal-backed threads in the [Threads Sidebar](./parallel-agents.md#threads-sidebar). Use them when you want to run an agent CLI or TUI directly in Zed.
+Terminal Threads are terminal-backed threads in the [Sidebar](./parallel-agents.md#sidebar). Use them when you want to run an agent CLI or TUI directly in Zed.
 
 Terminal Threads are different from [External Agents](./external-agents.md). External Agents integrate with Zed through ACP and render as agent threads. Terminal Threads run the native command-line tool in a terminal that Zed organizes as a thread.
 
@@ -13,7 +13,7 @@ Terminal Threads are different from [External Agents](./external-agents.md). Ext
 
 Zed owns the thread surface:
 
-- the terminal-backed thread in the Threads Sidebar
+- the terminal-backed thread in the Sidebar
 - thread grouping by project
 - switching and organizing the terminal session alongside other threads
 
@@ -34,7 +34,7 @@ Zed Agent profiles, Zed Agent tool permissions, Zed Skills, and Zed Agent MCP se
 
 Open the new-thread menu from the [Agent Panel](./agent-panel.md) using the agent selector button on the left or the `+` icon in the top-right of the panel toolbar, then choose **Terminal**. The Terminal Thread opens in the panel body, just like switching to an agent thread.
 
-You can open as many Terminal Threads as you like. Each gets its own entry in the Threads Sidebar.
+You can open as many Terminal Threads as you like. Each gets its own entry in the Sidebar.
 
 ## Running a Command Automatically {#terminal-thread-init-command}
 
@@ -64,7 +64,7 @@ The same `agent.notify_when_agent_waiting` and `agent.play_sound_when_agent_done
 
 ## Closing Terminal Threads {#closing-terminal-threads}
 
-Unlike agent threads, Terminal Threads are closed rather than archived. They do not go to Thread History. To close one, hover over it in the Threads Sidebar and click the **×** button, or select it and press {#kb agent::ArchiveSelectedThread}.
+Unlike agent threads, Terminal Threads are closed rather than archived. They do not go to Thread History. To close one, hover over it in the Sidebar and click the **×** button, or select it and press {#kb agent::ArchiveSelectedThread}.
 
 ## CLI/TUI Setup Notes {#cli-setup}
 

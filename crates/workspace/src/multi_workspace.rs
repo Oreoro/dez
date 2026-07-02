@@ -6,8 +6,8 @@ use gpui::{
     ManagedView, MouseButton, Pixels, Render, Subscription, Task, TaskExt, Tiling, WeakEntity,
     Window, WindowId, actions, deferred, px,
 };
+use project::Project;
 pub use project::ProjectGroupKey;
-use project::{DisableAiSettings, Project};
 use remote::RemoteConnectionOptions;
 use settings::Settings;
 pub use settings::SidebarSide;
@@ -18,9 +18,9 @@ use std::rc::Rc;
 use ui::prelude::*;
 use util::ResultExt;
 use util::path_list::PathList;
-use zed_actions::agents_sidebar::ToggleThreadSwitcher;
+use zed_actions::sidebar::ToggleThreadSwitcher;
 
-use agent_settings::AgentSettings;
+use crate::workspace_settings::SidebarSettings;
 use settings::SidebarDockPosition;
 use ui::{ContextMenu, right_click_menu};
 
@@ -36,14 +36,14 @@ use crate::{
 };
 
 actions!(
-    multi_workspace,
+    sidebar,
     [
-        /// Toggles the workspace switcher sidebar.
-        ToggleWorkspaceSidebar,
-        /// Closes the workspace sidebar.
-        CloseWorkspaceSidebar,
-        /// Moves focus to or from the workspace sidebar without closing it.
-        FocusWorkspaceSidebar,
+        /// Toggles the sidebar.
+        ToggleSidebar,
+        /// Closes the sidebar.
+        CloseSidebar,
+        /// Moves focus to or from the sidebar without closing it.
+        FocusSidebar,
         /// Activates the next project in the sidebar.
         NextProject,
         /// Activates the previous project in the sidebar.
@@ -52,8 +52,12 @@ actions!(
         NextThread,
         /// Activates the previous thread in sidebar order.
         PreviousThread,
-        /// Creates a new thread in the current workspace.
-        NewThread,
+    ]
+);
+
+actions!(
+    multi_workspace,
+    [
         /// Moves the active project to a new window.
         MoveProjectToNewWindow,
     ]
@@ -69,7 +73,7 @@ pub fn sidebar_side_context_menu(
     id: impl Into<ElementId>,
     cx: &App,
 ) -> ui::RightClickMenu<ContextMenu> {
-    let current_position = AgentSettings::get_global(cx).sidebar_side;
+    let current_position = SidebarSettings::get_global(cx).side;
     right_click_menu(id).menu(move |window, cx| {
         let fs = <dyn fs::Fs>::global(cx);
         ContextMenu::build(window, cx, move |mut menu, _, _cx| {
@@ -91,10 +95,7 @@ pub fn sidebar_side_context_menu(
                         };
                         telemetry::event!("Sidebar Side Changed", side = side);
                         settings::update_settings_file(fs.clone(), cx, move |settings, _cx| {
-                            settings
-                                .agent
-                                .get_or_insert_default()
-                                .set_sidebar_side(position);
+                            settings.sidebar.get_or_insert_default().set_side(position);
                         });
                     },
                 );
@@ -332,12 +333,22 @@ impl MultiWorkspace {
 
     pub fn sidebar_render_state(&self, cx: &App) -> SidebarRenderState {
         SidebarRenderState {
-            open: self.sidebar_open() && self.multi_workspace_enabled(cx),
+            open: self.sidebar_open(),
             side: self.sidebar_side(cx),
         }
     }
 
     pub fn new(workspace: Entity<Workspace>, window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let sidebar_open = SidebarSettings::get_global(cx).starts_open;
+        Self::new_with_initial_sidebar_open(workspace, window, cx, sidebar_open)
+    }
+
+    pub(crate) fn new_with_initial_sidebar_open(
+        workspace: Entity<Workspace>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+        sidebar_open: bool,
+    ) -> Self {
         let release_subscription = cx.on_release(|this: &mut MultiWorkspace, _cx| {
             if let Some(task) = this._serialize_task.take() {
                 task.detach();
@@ -347,25 +358,13 @@ impl MultiWorkspace {
             }
         });
         let quit_subscription = cx.on_app_quit(Self::app_will_quit);
-        let settings_subscription = cx.observe_global_in::<settings::SettingsStore>(window, {
-            let mut previous_multi_workspace_enabled = !DisableAiSettings::get_global(cx)
-                .disable_ai
-                && AgentSettings::get_global(cx).enabled;
-            move |this, window, cx| {
-                let multi_workspace_enabled = this.multi_workspace_enabled(cx);
-                if previous_multi_workspace_enabled && !multi_workspace_enabled {
-                    this.collapse_to_single_workspace(window, cx);
-                }
-                previous_multi_workspace_enabled = multi_workspace_enabled;
-            }
-        });
         Self::subscribe_to_workspace(&workspace, window, cx);
         let weak_self = cx.weak_entity();
         let active_workspace_id = Rc::new(Cell::new(workspace.entity_id()));
         workspace.update(cx, |workspace, cx| {
             workspace.set_multi_workspace(weak_self, active_workspace_id.clone(), cx);
         });
-        Self {
+        let mut multi_workspace = Self {
             window_id: window.window_handle().window_id(),
             retained_workspaces: Vec::new(),
             project_groups: Vec::new(),
@@ -377,13 +376,15 @@ impl MultiWorkspace {
             sidebar_overlay: None,
             pending_removal_tasks: Vec::new(),
             _serialize_task: None,
-            _subscriptions: vec![
-                release_subscription,
-                quit_subscription,
-                settings_subscription,
-            ],
+            _subscriptions: vec![release_subscription, quit_subscription],
             previous_focus_handle: None,
+        };
+
+        if sidebar_open {
+            multi_workspace.apply_open_sidebar(false, cx);
         }
+
+        multi_workspace
     }
 
     pub fn register_sidebar<T: Sidebar>(
@@ -418,6 +419,7 @@ impl MultiWorkspace {
             sidebar.restore_serialized_state(&state, window, cx);
             self.serialize(cx);
         }
+        cx.notify();
     }
 
     pub fn sidebar(&self) -> Option<&dyn SidebarHandle> {
@@ -445,8 +447,8 @@ impl MultiWorkspace {
             .map_or(false, |s| s.is_threads_list_view_active(cx))
     }
 
-    pub fn multi_workspace_enabled(&self, cx: &App) -> bool {
-        !DisableAiSettings::get_global(cx).disable_ai && AgentSettings::get_global(cx).enabled
+    pub fn multi_workspace_enabled(&self, _cx: &App) -> bool {
+        true
     }
 
     pub fn toggle_sidebar(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -515,10 +517,17 @@ impl MultiWorkspace {
         self.apply_open_sidebar(true, cx);
     }
 
-    /// Restores the sidebar to open state from persisted session data without
-    /// firing a telemetry event, since this is not a user-initiated action.
-    pub(crate) fn restore_open_sidebar(&mut self, cx: &mut Context<Self>) {
-        self.apply_open_sidebar(false, cx);
+    pub(crate) fn restore_sidebar_open_state(
+        &mut self,
+        sidebar_open: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if sidebar_open {
+            self.apply_open_sidebar(false, cx);
+        } else {
+            self.apply_close_sidebar(false, window, false, cx);
+        }
     }
 
     fn apply_open_sidebar(&mut self, serialize: bool, cx: &mut Context<Self>) {
@@ -557,6 +566,16 @@ impl MultiWorkspace {
             SidebarSide::Right => "right",
         };
         telemetry::event!("Sidebar Toggled", action = "close", side = side);
+        self.apply_close_sidebar(true, window, true, cx);
+    }
+
+    fn apply_close_sidebar(
+        &mut self,
+        restore_focus: bool,
+        window: &mut Window,
+        serialize: bool,
+        cx: &mut Context<Self>,
+    ) {
         self.sidebar_open = false;
         for workspace in self.retained_workspaces.clone() {
             workspace.update(cx, |workspace, cx| {
@@ -568,12 +587,14 @@ impl MultiWorkspace {
             .sidebar
             .as_ref()
             .is_some_and(|s| s.focus_handle(cx).contains_focused(window, cx));
-        if sidebar_has_focus {
+        if restore_focus && sidebar_has_focus {
             self.restore_previous_focus(true, window, cx);
         } else {
             self.previous_focus_handle.take();
         }
-        self.serialize(cx);
+        if serialize {
+            self.serialize(cx);
+        }
         cx.notify();
     }
 
@@ -1630,25 +1651,6 @@ impl MultiWorkspace {
         true
     }
 
-    /// Collapses to a single workspace, discarding all groups.
-    /// Used when multi-workspace is disabled by settings.
-    fn collapse_to_single_workspace(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.sidebar_open {
-            self.close_sidebar(window, cx);
-        }
-
-        let active_workspace = self.active_workspace.clone();
-        for workspace in self.retained_workspaces.clone() {
-            if workspace != active_workspace {
-                self.detach_workspace(&workspace, cx);
-            }
-        }
-
-        self.retained_workspaces.clear();
-        self.project_groups.clear();
-        cx.notify();
-    }
-
     /// Detaches a workspace: clears session state, DB binding, cached
     /// group key, and emits `WorkspaceRemoved`. The DB row is preserved
     /// so the workspace still appears in the recent-projects list.
@@ -1735,7 +1737,8 @@ impl MultiWorkspace {
         self._serialize_task.take().unwrap_or(Task::ready(()))
     }
 
-    fn app_will_quit(&mut self, _cx: &mut Context<Self>) -> impl Future<Output = ()> + use<> {
+    fn app_will_quit(&mut self, cx: &mut Context<Self>) -> impl Future<Output = ()> + use<> {
+        self.serialize(cx);
         let mut tasks: Vec<Task<()>> = Vec::new();
         if let Some(task) = self._serialize_task.take() {
             tasks.push(task);
@@ -2256,21 +2259,21 @@ impl Render for MultiWorkspace {
                 .text_color(text_color)
                 .on_action(cx.listener(Self::close_window))
                 .when(self.multi_workspace_enabled(cx), |this| {
-                    this.on_action(cx.listener(
-                        |this: &mut Self, _: &ToggleWorkspaceSidebar, window, cx| {
+                    this.on_action(
+                        cx.listener(|this: &mut Self, _: &ToggleSidebar, window, cx| {
                             this.toggle_sidebar(window, cx);
-                        },
-                    ))
-                    .on_action(cx.listener(
-                        |this: &mut Self, _: &CloseWorkspaceSidebar, window, cx| {
+                        }),
+                    )
+                    .on_action(
+                        cx.listener(|this: &mut Self, _: &CloseSidebar, window, cx| {
                             this.close_sidebar_action(window, cx);
-                        },
-                    ))
-                    .on_action(cx.listener(
-                        |this: &mut Self, _: &FocusWorkspaceSidebar, window, cx| {
+                        }),
+                    )
+                    .on_action(
+                        cx.listener(|this: &mut Self, _: &FocusSidebar, window, cx| {
                             this.focus_sidebar(window, cx);
-                        },
-                    ))
+                        }),
+                    )
                     .on_action(cx.listener(
                         |this: &mut Self, action: &ToggleThreadSwitcher, window, cx| {
                             if let Some(sidebar) = &this.sidebar {

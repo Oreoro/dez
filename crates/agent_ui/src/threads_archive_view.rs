@@ -759,7 +759,7 @@ impl ThreadsArchiveView {
                             telemetry::event!(
                                 "Archived Thread Opened",
                                 agent = thread.agent_id.as_ref(),
-                                side = crate::agent_sidebar_side(cx)
+                                side = crate::sidebar_side(cx)
                             );
                             this.unarchive_thread(thread.clone(), window, cx);
                         })

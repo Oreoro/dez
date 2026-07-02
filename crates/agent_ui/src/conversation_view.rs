@@ -1254,7 +1254,7 @@ impl ConversationView {
 
         let connect_result = connection_entry.read(cx).wait_for_connection();
 
-        let side = crate::agent_sidebar_side(cx);
+        let side = crate::sidebar_side(cx);
         let thread_location = "current_worktree";
         let loading_draft = if resume_session_id.is_none()
             && initial_content.as_ref().is_none_or(|content| {

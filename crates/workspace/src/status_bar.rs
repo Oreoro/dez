@@ -1,6 +1,6 @@
 use crate::{
     ItemHandle, MultiWorkspace, Pane, SidebarSide, ToggleAgentPane, ToggleProjectPane,
-    ToggleWorkspaceSidebar, Workspace, pane::PaneKind, sidebar_side_context_menu,
+    ToggleSidebar, Workspace, pane::PaneKind, sidebar_side_context_menu,
 };
 use gpui::{
     Action, Anchor, AnyView, App, Context, Decorations, Entity, IntoElement, ParentElement, Render,
@@ -299,9 +299,9 @@ impl StatusBar {
                 IconButton::new(
                     "toggle-workspace-sidebar",
                     if on_right {
-                        IconName::ThreadsSidebarRightClosed
+                        IconName::SidebarRightClosed
                     } else {
-                        IconName::ThreadsSidebarLeftClosed
+                        IconName::SidebarLeftClosed
                     },
                 )
                 .icon_size(IconSize::Small)
@@ -309,9 +309,7 @@ impl StatusBar {
                     this.indicator(Indicator::dot().color(Color::Accent))
                         .indicator_border_color(Some(indicator_border))
                 })
-                .tooltip(move |_, cx| {
-                    Tooltip::for_action("Open Threads Sidebar", &ToggleWorkspaceSidebar, cx)
-                })
+                .tooltip(move |_, cx| Tooltip::for_action("Open Sidebar", &ToggleSidebar, cx))
                 .on_click(move |_, window, cx| {
                     if let Some(multi_workspace) = window.root::<MultiWorkspace>().flatten() {
                         multi_workspace.update(cx, |multi_workspace, cx| {
