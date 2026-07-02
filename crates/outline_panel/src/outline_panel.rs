@@ -4983,10 +4983,12 @@ impl Panel for OutlinePanel {
         OutlinePanelSettings::get_global(cx).default_width
     }
 
-    fn icon(&self, _: &Window, cx: &App) -> Option<IconName> {
-        OutlinePanelSettings::get_global(cx)
-            .button
-            .then_some(IconName::ListTree)
+    fn icon(&self, _: &Window, _cx: &App) -> Option<IconName> {
+        Some(IconName::ListTree)
+    }
+
+    fn button_visible(&self, cx: &App) -> bool {
+        OutlinePanelSettings::get_global(cx).button
     }
 
     fn icon_tooltip(&self, _window: &Window, _: &App) -> Option<&'static str> {

@@ -93,6 +93,9 @@ pub trait Panel: Focusable + EventEmitter<PanelEvent> + Render + Sized {
     fn hide_button_setting(&self, _: &App) -> Option<HideStatusItem> {
         None
     }
+    fn button_visible(&self, _cx: &App) -> bool {
+        true
+    }
 }
 
 pub trait PanelHandle: Send + Sync {
@@ -124,6 +127,7 @@ pub trait PanelHandle: Send + Sync {
     fn enabled(&self, cx: &App) -> bool;
     fn is_agent_panel(&self, cx: &App) -> bool;
     fn hide_button_setting(&self, cx: &App) -> Option<HideStatusItem>;
+    fn button_visible(&self, cx: &App) -> bool;
     fn move_to_next_position(&self, window: &mut Window, cx: &mut App) {
         let current_position = self.position(window, cx);
         let next_position = [DockPosition::Left, DockPosition::Right]
@@ -251,6 +255,10 @@ where
 
     fn hide_button_setting(&self, cx: &App) -> Option<HideStatusItem> {
         self.read(cx).hide_button_setting(cx)
+    }
+
+    fn button_visible(&self, cx: &App) -> bool {
+        self.read(cx).button_visible(cx)
     }
 }
 
@@ -1249,6 +1257,9 @@ impl Render for PanelButtons {
             .iter()
             .enumerate()
             .filter_map(|(i, entry)| {
+                if !entry.panel.button_visible(cx) {
+                    return None;
+                }
                 let icon = entry.panel.icon(window, cx)?;
                 let icon_tooltip = entry
                     .panel

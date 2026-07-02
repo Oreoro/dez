@@ -7376,8 +7376,12 @@ impl Panel for GitPanel {
         GitPanelSettings::get_global(cx).default_width
     }
 
-    fn icon(&self, _: &Window, cx: &App) -> Option<ui::IconName> {
-        Some(ui::IconName::GitBranch).filter(|_| GitPanelSettings::get_global(cx).button)
+    fn icon(&self, _: &Window, _cx: &App) -> Option<ui::IconName> {
+        Some(ui::IconName::GitBranch)
+    }
+
+    fn button_visible(&self, cx: &App) -> bool {
+        GitPanelSettings::get_global(cx).button
     }
 
     fn icon_tooltip(&self, _window: &Window, _cx: &App) -> Option<&'static str> {

@@ -8,14 +8,12 @@ use gpui::{
     App, Context, EventEmitter, FocusHandle, Focusable, IntoElement, Render, SharedString, Window,
 };
 use std::sync::Arc;
-use ui::{
-    Icon, IconButton, IconButtonShape, IconSize, Label, LabelCommon, TabBar, Tooltip, prelude::*,
-};
+use ui::{Icon, IconButton, IconSize, Label, LabelCommon, Tab, Tooltip, prelude::*};
 
 pub const PROJECT_PANEL_KEYS: &[&str] = &[
     "ProjectPanel",
-    "OutlinePanel",
     "GitPanel",
+    "OutlinePanel",
     "CollaborationPanel",
 ];
 
@@ -146,32 +144,61 @@ fn render_project_pane_header(
     cx: &mut Context<Pane>,
 ) -> gpui::AnyElement {
     let active_item_id = pane.active_item().map(|item| item.item_id());
-    let buttons = pane
+    let mut buttons = pane
         .items()
         .enumerate()
         .filter_map(|(ix, item)| {
             let panel_item = item.downcast::<PanelItem>()?;
             let panel = panel_item.read(cx).panel();
+            let panel_order = PROJECT_PANEL_KEYS
+                .iter()
+                .position(|panel_key| *panel_key == panel.panel_key())
+                .unwrap_or(PROJECT_PANEL_KEYS.len());
+            let is_active = active_item_id == Some(panel_item.entity_id());
+            if !is_active && !panel.button_visible(cx) {
+                return None;
+            }
+
             let icon = panel.icon(window, cx)?;
             let tooltip = panel
                 .icon_tooltip(window, cx)
                 .unwrap_or_else(|| panel.persistent_name());
-            let is_active = active_item_id == Some(panel_item.entity_id());
 
-            Some(
-                IconButton::new(("project-pane-panel", panel.panel_id()), icon)
-                    .shape(IconButtonShape::Square)
-                    .icon_size(IconSize::Small)
-                    .toggle_state(is_active)
-                    .tooltip(Tooltip::text(tooltip))
-                    .on_click(cx.listener(move |pane, _, window, cx| {
-                        pane.activate_item(ix, true, true, window, cx);
-                    })),
-            )
+            let icon_color = if is_active {
+                Color::Default
+            } else {
+                Color::Muted
+            };
+
+            Some((panel_order, ix, panel.panel_id(), icon, tooltip, icon_color))
+        })
+        .collect::<Vec<_>>();
+    buttons.sort_by_key(|(panel_order, _, _, _, _, _)| *panel_order);
+
+    let buttons = buttons
+        .into_iter()
+        .map(|(_, ix, panel_id, icon, tooltip, icon_color)| {
+            IconButton::new(("project-pane-panel", panel_id), icon)
+                .icon_size(IconSize::Small)
+                .icon_color(icon_color)
+                .tooltip(Tooltip::text(tooltip))
+                .on_click(cx.listener(move |pane, _, window, cx| {
+                    pane.activate_item(ix, true, true, window, cx);
+                }))
         })
         .collect::<Vec<_>>();
 
-    TabBar::new("project_pane_header")
-        .start_children(buttons)
+    h_flex()
+        .id("project_pane_header")
+        .flex_none()
+        .w_full()
+        .h(Tab::container_height(cx))
+        .px_1p5()
+        .gap_1()
+        .bg(cx.theme().colors().tab_bar_background)
+        .border_b_1()
+        .border_color(cx.theme().colors().border)
+        .child(div().flex_1())
+        .children(buttons)
         .into_any_element()
 }

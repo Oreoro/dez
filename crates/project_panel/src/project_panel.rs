@@ -7449,10 +7449,12 @@ impl Panel for ProjectPanel {
         ProjectPanelSettings::get_global(cx).default_width
     }
 
-    fn icon(&self, _: &Window, cx: &App) -> Option<IconName> {
-        ProjectPanelSettings::get_global(cx)
-            .button
-            .then_some(IconName::FileTree)
+    fn icon(&self, _: &Window, _cx: &App) -> Option<IconName> {
+        Some(IconName::FileTree)
+    }
+
+    fn button_visible(&self, cx: &App) -> bool {
+        ProjectPanelSettings::get_global(cx).button
     }
 
     fn icon_tooltip(&self, _window: &Window, _cx: &App) -> Option<&'static str> {

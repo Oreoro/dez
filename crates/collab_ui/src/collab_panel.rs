@@ -3792,10 +3792,12 @@ impl Panel for CollabPanel {
         }
     }
 
-    fn icon(&self, _window: &Window, cx: &App) -> Option<ui::IconName> {
-        CollaborationPanelSettings::get_global(cx)
-            .button
-            .then_some(ui::IconName::UserGroup)
+    fn icon(&self, _window: &Window, _cx: &App) -> Option<ui::IconName> {
+        Some(ui::IconName::UserGroup)
+    }
+
+    fn button_visible(&self, cx: &App) -> bool {
+        CollaborationPanelSettings::get_global(cx).button
     }
 
     fn icon_tooltip(&self, _window: &Window, _cx: &App) -> Option<&'static str> {
