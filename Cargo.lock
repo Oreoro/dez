@@ -16895,6 +16895,7 @@ dependencies = [
  "telemetry",
  "theme",
  "theme_settings",
+ "title_bar",
  "ui",
  "unicode-segmentation",
  "util",

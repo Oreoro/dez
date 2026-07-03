@@ -165,13 +165,8 @@ pub(crate) fn workspace_card_gap(cx: &App) -> Pixels {
     gpui::px(WorkspaceSettings::get_global(cx).card_gap.max(0.0))
 }
 
-pub(crate) fn title_bar_visible(cx: &App) -> bool {
-    cx.global::<SettingsStore>()
-        .merged_settings()
-        .title_bar
-        .as_ref()
-        .and_then(|title_bar| title_bar.show)
-        .unwrap_or(true)
+pub(crate) fn title_bar_visible(_cx: &App) -> bool {
+    false
 }
 
 use crate::{dock::PanelSizeState, item::ItemBufferKind, notifications::NotificationId};
@@ -1333,7 +1328,6 @@ pub struct Workspace {
     status_bar: Entity<StatusBar>,
     pub(crate) modal_layer: Entity<ModalLayer>,
     toast_layer: Entity<ToastLayer>,
-    titlebar_item: Option<AnyView>,
     notifications: Notifications,
     suppressed_notifications: HashSet<NotificationId>,
     project: Entity<Project>,
@@ -1776,7 +1770,6 @@ impl Workspace {
             status_bar,
             modal_layer,
             toast_layer,
-            titlebar_item: None,
             notifications: Notifications::default(),
             suppressed_notifications: HashSet::default(),
             left_dock,
@@ -2972,11 +2965,6 @@ impl Workspace {
         &self.app_state.client
     }
 
-    pub fn set_titlebar_item(&mut self, item: AnyView, _: &mut Window, cx: &mut Context<Self>) {
-        self.titlebar_item = Some(item);
-        cx.notify();
-    }
-
     pub fn set_prompt_for_new_path(&mut self, prompt: PromptForNewPath) {
         self.on_prompt_for_new_path = Some(prompt)
     }
@@ -3117,10 +3105,6 @@ impl Workspace {
         .detach();
 
         rx
-    }
-
-    pub fn titlebar_item(&self) -> Option<AnyView> {
-        self.titlebar_item.clone()
     }
 
     /// Call the given callback with a workspace whose project is local or remote via WSL (allowing host access).
@@ -8899,7 +8883,6 @@ impl Render for Workspace {
 
         let theme = cx.theme().clone();
         let colors = theme.colors();
-        let title_bar_visible = title_bar_visible(cx);
         let status_bar_visible = self.status_bar_visible(cx);
         let notification_entities = self
             .notifications
@@ -8926,7 +8909,6 @@ impl Render for Workspace {
             .items_start()
             .text_color(colors.text)
             .overflow_hidden()
-            .children(self.titlebar_item.clone())
             .on_modifiers_changed(move |_, _, cx| {
                 for &id in &notification_entities {
                     cx.notify(id);
@@ -8950,7 +8932,6 @@ impl Render for Workspace {
                             .flex_col()
                             .overflow_hidden()
                             .border_color(colors.border)
-                            .when(title_bar_visible, |this| this.border_t_1())
                             .when(status_bar_visible, |this| this.border_b_1())
                             .child({
                                 let this = cx.entity();

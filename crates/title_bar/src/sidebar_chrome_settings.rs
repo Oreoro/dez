@@ -2,8 +2,7 @@ use gpui::WindowButtonLayout;
 use settings::{RegisterSetting, Settings, SettingsContent};
 
 #[derive(Copy, Clone, Debug, RegisterSetting)]
-pub struct TitleBarSettings {
-    pub show: bool,
+pub struct SidebarChromeSettings {
     pub show_branch_status_icon: bool,
     pub show_onboarding_banner: bool,
     pub show_user_picture: bool,
@@ -15,11 +14,10 @@ pub struct TitleBarSettings {
     pub button_layout: Option<WindowButtonLayout>,
 }
 
-impl Settings for TitleBarSettings {
+impl Settings for SidebarChromeSettings {
     fn from_settings(s: &SettingsContent) -> Self {
-        let content = s.title_bar.clone().unwrap();
-        TitleBarSettings {
-            show: content.show.unwrap(),
+        let content = s.sidebar.clone().unwrap();
+        SidebarChromeSettings {
             show_branch_status_icon: content.show_branch_status_icon.unwrap(),
             show_onboarding_banner: content.show_onboarding_banner.unwrap(),
             show_user_picture: content.show_user_picture.unwrap(),

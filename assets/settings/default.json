@@ -528,29 +528,6 @@
   },
   // Whether to allow windows to tab together based on the user’s tabbing preference (macOS only).
   "use_system_window_tabs": false,
-  // Titlebar related settings
-  "title_bar": {
-    // Whether to show the title bar.
-    "show": true,
-    // Whether to show git status indicators on the branch icon in the titlebar.
-    "show_branch_status_icon": false,
-    // Whether to show the branch name button in the titlebar.
-    "show_branch_name": true,
-    // Whether to show the project host and name in the titlebar.
-    "show_project_items": true,
-    // Whether to show onboarding banners in the titlebar.
-    "show_onboarding_banner": true,
-    // Whether to show user picture in the titlebar.
-    "show_user_picture": true,
-    // Whether to show the user menu in the titlebar.
-    "show_user_menu": true,
-    // Whether to show the sign in button in the titlebar.
-    "show_sign_in": true,
-    // Whether to show the menus in the titlebar.
-    "show_menus": false,
-    // The layout of window control buttons in the title bar (Linux only).
-    "button_layout": "platform_default",
-  },
   "audio": {
     // Select specific output audio device.
     // `null` means use system default.
@@ -1045,6 +1022,24 @@
     "side": "left",
     // Whether the sidebar should start open in new windows.
     "starts_open": true,
+    // Whether to show git status indicators on the branch icon in the sidebar.
+    "show_branch_status_icon": false,
+    // Whether to show the branch name button in the sidebar.
+    "show_branch_name": true,
+    // Whether to show the project host and name in the sidebar.
+    "show_project_items": true,
+    // Whether to show onboarding banners in the sidebar.
+    "show_onboarding_banner": true,
+    // Whether to show user picture in the sidebar.
+    "show_user_picture": true,
+    // Whether to show the user menu in the sidebar.
+    "show_user_menu": true,
+    // Whether to show the sign in button in the sidebar.
+    "show_sign_in": true,
+    // Whether to show the app menus in the sidebar.
+    "show_menus": false,
+    // The layout of window control buttons in the sidebar (Linux only).
+    "button_layout": "platform_default",
   },
   "agent": {
     // Whether the inline assistant should use streaming tools, when available

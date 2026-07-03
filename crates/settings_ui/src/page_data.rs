@@ -4029,25 +4029,25 @@ fn window_and_layout_page() -> SettingsPage {
         ]
     }
 
-    fn title_bar_section() -> [SettingsPageItem; 10] {
+    fn sidebar_chrome_section() -> [SettingsPageItem; 10] {
         [
-            SettingsPageItem::SectionHeader("Title Bar"),
+            SettingsPageItem::SectionHeader("Sidebar"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Branch Status Icon",
-                description: "Show git status indicators on the branch icon in the titlebar.",
+                description: "Show git status indicators on the branch icon in the sidebar.",
                 field: Box::new(SettingField {
                     organization_override: None,
-                    json_path: Some("title_bar.show_branch_status_icon"),
+                    json_path: Some("sidebar.show_branch_status_icon"),
                     pick: |settings_content| {
                         settings_content
-                            .title_bar
+                            .sidebar
                             .as_ref()?
                             .show_branch_status_icon
                             .as_ref()
                     },
                     write: |settings_content, value, _| {
                         settings_content
-                            .title_bar
+                            .sidebar
                             .get_or_insert_default()
                             .show_branch_status_icon = value;
                     },
@@ -4057,20 +4057,20 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Branch Name",
-                description: "Show the branch name button in the titlebar.",
+                description: "Show the branch name button in the sidebar.",
                 field: Box::new(SettingField {
                     organization_override: None,
-                    json_path: Some("title_bar.show_branch_name"),
+                    json_path: Some("sidebar.show_branch_name"),
                     pick: |settings_content| {
                         settings_content
-                            .title_bar
+                            .sidebar
                             .as_ref()?
                             .show_branch_name
                             .as_ref()
                     },
                     write: |settings_content, value, _| {
                         settings_content
-                            .title_bar
+                            .sidebar
                             .get_or_insert_default()
                             .show_branch_name = value;
                     },
@@ -4080,20 +4080,20 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Project Items",
-                description: "Show the project host and name in the titlebar.",
+                description: "Show the project host and name in the sidebar.",
                 field: Box::new(SettingField {
                     organization_override: None,
-                    json_path: Some("title_bar.show_project_items"),
+                    json_path: Some("sidebar.show_project_items"),
                     pick: |settings_content| {
                         settings_content
-                            .title_bar
+                            .sidebar
                             .as_ref()?
                             .show_project_items
                             .as_ref()
                     },
                     write: |settings_content, value, _| {
                         settings_content
-                            .title_bar
+                            .sidebar
                             .get_or_insert_default()
                             .show_project_items = value;
                     },
@@ -4103,20 +4103,20 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Onboarding Banner",
-                description: "Show banners announcing new features in the titlebar.",
+                description: "Show banners announcing new features in the sidebar.",
                 field: Box::new(SettingField {
                     organization_override: None,
-                    json_path: Some("title_bar.show_onboarding_banner"),
+                    json_path: Some("sidebar.show_onboarding_banner"),
                     pick: |settings_content| {
                         settings_content
-                            .title_bar
+                            .sidebar
                             .as_ref()?
                             .show_onboarding_banner
                             .as_ref()
                     },
                     write: |settings_content, value, _| {
                         settings_content
-                            .title_bar
+                            .sidebar
                             .get_or_insert_default()
                             .show_onboarding_banner = value;
                     },
@@ -4126,16 +4126,16 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Sign In",
-                description: "Show the sign in button in the titlebar.",
+                description: "Show the sign in button in the sidebar.",
                 field: Box::new(SettingField {
                     organization_override: None,
-                    json_path: Some("title_bar.show_sign_in"),
+                    json_path: Some("sidebar.show_sign_in"),
                     pick: |settings_content| {
-                        settings_content.title_bar.as_ref()?.show_sign_in.as_ref()
+                        settings_content.sidebar.as_ref()?.show_sign_in.as_ref()
                     },
                     write: |settings_content, value, _| {
                         settings_content
-                            .title_bar
+                            .sidebar
                             .get_or_insert_default()
                             .show_sign_in = value;
                     },
@@ -4145,16 +4145,16 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show User Menu",
-                description: "Show the user menu button in the titlebar.",
+                description: "Show the user menu button in the sidebar.",
                 field: Box::new(SettingField {
                     organization_override: None,
-                    json_path: Some("title_bar.show_user_menu"),
+                    json_path: Some("sidebar.show_user_menu"),
                     pick: |settings_content| {
-                        settings_content.title_bar.as_ref()?.show_user_menu.as_ref()
+                        settings_content.sidebar.as_ref()?.show_user_menu.as_ref()
                     },
                     write: |settings_content, value, _| {
                         settings_content
-                            .title_bar
+                            .sidebar
                             .get_or_insert_default()
                             .show_user_menu = value;
                     },
@@ -4164,20 +4164,20 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show User Picture",
-                description: "Show user picture in the titlebar.",
+                description: "Show user picture in the sidebar.",
                 field: Box::new(SettingField {
                     organization_override: None,
-                    json_path: Some("title_bar.show_user_picture"),
+                    json_path: Some("sidebar.show_user_picture"),
                     pick: |settings_content| {
                         settings_content
-                            .title_bar
+                            .sidebar
                             .as_ref()?
                             .show_user_picture
                             .as_ref()
                     },
                     write: |settings_content, value, _| {
                         settings_content
-                            .title_bar
+                            .sidebar
                             .get_or_insert_default()
                             .show_user_picture = value;
                     },
@@ -4187,16 +4187,16 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Menus",
-                description: "Show the menus in the titlebar.",
+                description: "Show the menus in the sidebar.",
                 field: Box::new(SettingField {
                     organization_override: None,
-                    json_path: Some("title_bar.show_menus"),
+                    json_path: Some("sidebar.show_menus"),
                     pick: |settings_content| {
-                        settings_content.title_bar.as_ref()?.show_menus.as_ref()
+                        settings_content.sidebar.as_ref()?.show_menus.as_ref()
                     },
                     write: |settings_content, value, _| {
                         settings_content
-                            .title_bar
+                            .sidebar
                             .get_or_insert_default()
                             .show_menus = value;
                     },
@@ -4209,14 +4209,14 @@ fn window_and_layout_page() -> SettingsPage {
                     files: USER,
                     title: "Button Layout",
                     description:
-                        "(Linux only) choose how window control buttons are laid out in the titlebar.",
+                        "(Linux only) choose how window control buttons are laid out in the sidebar.",
                     field: Box::new(SettingField {
                         organization_override: None,
-                        json_path: Some("title_bar.button_layout$"),
+                        json_path: Some("sidebar.button_layout$"),
                         pick: |settings_content| {
                             Some(
                                 &dynamic_variants::<settings::WindowButtonLayoutContent>()[settings_content
-                                    .title_bar
+                                    .sidebar
                                     .as_ref()?
                                     .button_layout
                                     .as_ref()?
@@ -4227,16 +4227,16 @@ fn window_and_layout_page() -> SettingsPage {
                         write: |settings_content, value, _| {
                             let Some(value) = value else {
                                 settings_content
-                                    .title_bar
+                                    .sidebar
                                     .get_or_insert_default()
                                     .button_layout = None;
                                 return;
                             };
 
                             let current_custom_layout = settings_content
-                                .title_bar
+                                .sidebar
                                 .as_ref()
-                                .and_then(|title_bar| title_bar.button_layout.as_ref())
+                                .and_then(|sidebar| sidebar.button_layout.as_ref())
                                 .and_then(|button_layout| match button_layout {
                                     settings::WindowButtonLayoutContent::Custom(layout) => {
                                         Some(layout.clone())
@@ -4261,7 +4261,7 @@ fn window_and_layout_page() -> SettingsPage {
                             };
 
                             settings_content
-                                .title_bar
+                                .sidebar
                                 .get_or_insert_default()
                                 .button_layout = Some(button_layout);
                         },
@@ -4271,7 +4271,7 @@ fn window_and_layout_page() -> SettingsPage {
                 pick_discriminant: |settings_content| {
                     Some(
                         settings_content
-                            .title_bar
+                            .sidebar
                             .as_ref()?
                             .button_layout
                             .as_ref()?
@@ -4293,9 +4293,9 @@ fn window_and_layout_page() -> SettingsPage {
                                     "GNOME-style layout string such as \"close:minimize,maximize\".",
                                 field: Box::new(SettingField {
                                     organization_override: None,
-                                    json_path: Some("title_bar.button_layout"),
+                                    json_path: Some("sidebar.button_layout"),
                                     pick: |settings_content| match settings_content
-                                        .title_bar
+                                        .sidebar
                                         .as_ref()?
                                         .button_layout
                                         .as_ref()?
@@ -4307,7 +4307,7 @@ fn window_and_layout_page() -> SettingsPage {
                                     },
                                     write: |settings_content, value, _| {
                                         settings_content
-                                            .title_bar
+                                            .sidebar
                                             .get_or_insert_default()
                                             .button_layout = value
                                             .map(settings::WindowButtonLayoutContent::Custom);
@@ -4976,7 +4976,7 @@ fn window_and_layout_page() -> SettingsPage {
         title: "Window & Layout",
         items: concat_sections![
             status_bar_section(),
-            title_bar_section(),
+            sidebar_chrome_section(),
             tab_bar_section(),
             tab_settings_section(),
             preview_tabs_section(),

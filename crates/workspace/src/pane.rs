@@ -909,13 +909,8 @@ impl Pane {
         !self.left_sidebar_visible(cx)
     }
 
-    fn titlebar_visible(cx: &App) -> bool {
-        cx.global::<SettingsStore>()
-            .merged_settings()
-            .title_bar
-            .as_ref()
-            .and_then(|title_bar| title_bar.show)
-            .unwrap_or(true)
+    fn titlebar_visible(_cx: &App) -> bool {
+        false
     }
 
     fn left_sidebar_visible(&self, cx: &App) -> bool {

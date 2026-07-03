@@ -811,6 +811,7 @@ pub struct Sidebar {
     restoring_tasks: HashMap<agent_ui::ThreadId, Task<()>>,
     agent_options_menu_handle: PopoverMenuHandle<ContextMenu>,
     recent_projects_popover_handle: PopoverMenuHandle<SidebarRecentProjects>,
+    sidebar_chrome: Entity<title_bar::SidebarChrome>,
     project_header_menu_handles: HashMap<usize, PopoverMenuHandle<ContextMenu>>,
     project_header_new_thread_menu_handles: HashMap<usize, PopoverMenuHandle<ContextMenu>>,
     project_header_menu_ix: Option<usize>,
@@ -847,12 +848,32 @@ impl Sidebar {
             editor
         });
         let thread_rename_editor = cx.new(|cx| Editor::single_line(window, cx));
+        let sidebar_chrome = cx.new(|cx| {
+            let workspace = multi_workspace.read(cx).workspace().clone();
+            title_bar::SidebarChrome::new(
+                "sidebar-title-bar-controls",
+                workspace,
+                Some(multi_workspace.downgrade()),
+                window,
+                cx,
+            )
+        });
 
         cx.subscribe_in(
             &multi_workspace,
             window,
             |this, _multi_workspace, event: &MultiWorkspaceEvent, window, cx| match event {
                 MultiWorkspaceEvent::ActiveWorkspaceChanged { .. } => {
+                    let workspace = _multi_workspace.read(cx).workspace().clone();
+                    this.sidebar_chrome = cx.new(|cx| {
+                        title_bar::SidebarChrome::new(
+                            "sidebar-title-bar-controls",
+                            workspace,
+                            Some(_multi_workspace.downgrade()),
+                            window,
+                            cx,
+                        )
+                    });
                     this.sync_active_entry_from_active_workspace(cx);
                     this.replace_archived_panel_thread(window, cx);
                     this.schedule_update_entries(false, cx);
@@ -950,6 +971,7 @@ impl Sidebar {
             restoring_tasks: HashMap::new(),
             agent_options_menu_handle: PopoverMenuHandle::default(),
             recent_projects_popover_handle: PopoverMenuHandle::default(),
+            sidebar_chrome,
             project_header_menu_handles: HashMap::new(),
             project_header_new_thread_menu_handles: HashMap::new(),
             project_header_menu_ix: None,
@@ -7545,7 +7567,7 @@ impl Sidebar {
 
     fn render_left_window_controls(window: &Window, cx: &mut App) -> Option<AnyElement> {
         platform_title_bar::render_left_window_controls(
-            cx.button_layout(),
+            title_bar::sidebar_button_layout(cx).or_else(|| cx.button_layout()),
             Box::new(CloseWindow),
             window,
         )
@@ -7553,7 +7575,7 @@ impl Sidebar {
 
     fn render_right_window_controls(window: &Window, cx: &mut App) -> Option<AnyElement> {
         platform_title_bar::render_right_window_controls(
-            cx.button_layout(),
+            title_bar::sidebar_button_layout(cx).or_else(|| cx.button_layout()),
             Box::new(CloseWindow),
             window,
         )
@@ -7784,31 +7806,36 @@ impl Sidebar {
         let is_archive = matches!(self.view, SidebarView::Archive(..));
         let on_right = self.side(cx) == SidebarSide::Right;
 
-        h_flex()
+        v_flex()
             .p_1()
             .gap_1()
-            .when(on_right, |this| this.flex_row_reverse())
             .border_t_1()
             .border_color(cx.theme().colors().border)
-            .child(self.render_agent_options_menu(cx))
+            .child(self.sidebar_chrome.clone())
             .child(
-                IconButton::new("history", IconName::Clock)
-                    .icon_size(IconSize::Small)
-                    .toggle_state(is_archive)
-                    .tooltip(move |_, cx| {
-                        let label = if is_archive {
-                            "Hide Thread History"
-                        } else {
-                            "Show Thread History"
-                        };
-                        Tooltip::for_action(label, &ToggleThreadHistory, cx)
-                    })
-                    .on_click(cx.listener(|this, _, window, cx| {
-                        this.toggle_archive(&ToggleThreadHistory, window, cx);
-                    })),
+                h_flex()
+                    .gap_1()
+                    .when(on_right, |this| this.flex_row_reverse())
+                    .child(self.render_agent_options_menu(cx))
+                    .child(
+                        IconButton::new("history", IconName::Clock)
+                            .icon_size(IconSize::Small)
+                            .toggle_state(is_archive)
+                            .tooltip(move |_, cx| {
+                                let label = if is_archive {
+                                    "Hide Thread History"
+                                } else {
+                                    "Show Thread History"
+                                };
+                                Tooltip::for_action(label, &ToggleThreadHistory, cx)
+                            })
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.toggle_archive(&ToggleThreadHistory, window, cx);
+                            })),
+                    )
+                    .child(div().flex_1())
+                    .child(self.render_recent_projects_button(cx)),
             )
-            .child(div().flex_1())
-            .child(self.render_recent_projects_button(cx))
     }
 
     fn toggle_agent_options_menu(
@@ -8161,6 +8188,36 @@ impl WorkspaceSidebar for Sidebar {
     fn toggle_options_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         window.focus(&self.focus_handle, cx);
         self.agent_options_menu_handle.toggle(window, cx);
+    }
+
+    fn simulate_update_available(&mut self, cx: &mut Context<Self>) {
+        self.sidebar_chrome.update(cx, |sidebar_chrome, cx| {
+            sidebar_chrome.toggle_update_simulation(cx);
+        });
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn open_application_menu(
+        &mut self,
+        menu_name: String,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.sidebar_chrome.update(cx, |sidebar_chrome, cx| {
+            sidebar_chrome.open_application_menu(menu_name, cx);
+        });
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn activate_application_menu(
+        &mut self,
+        right: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.sidebar_chrome.update(cx, |sidebar_chrome, cx| {
+            sidebar_chrome.activate_application_menu(right, window, cx);
+        });
     }
 
     fn serialized_state(&self, _cx: &App) -> Option<String> {

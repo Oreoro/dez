@@ -147,6 +147,27 @@ pub trait Sidebar: Focusable + Render + EventEmitter<SidebarEvent> + Sized {
     /// Toggles the sidebar's primary options menu, if it has one.
     fn toggle_options_menu(&mut self, _window: &mut Window, _cx: &mut Context<Self>) {}
 
+    /// Simulates update states for chrome testing.
+    fn simulate_update_available(&mut self, _cx: &mut Context<Self>) {}
+
+    #[cfg(not(target_os = "macos"))]
+    fn open_application_menu(
+        &mut self,
+        _menu_name: String,
+        _window: &mut Window,
+        _cx: &mut Context<Self>,
+    ) {
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn activate_application_menu(
+        &mut self,
+        _right: bool,
+        _window: &mut Window,
+        _cx: &mut Context<Self>,
+    ) {
+    }
+
     /// Return an opaque JSON blob of sidebar-specific state to persist.
     fn serialized_state(&self, _cx: &App) -> Option<String> {
         None
@@ -175,6 +196,11 @@ pub trait SidebarHandle: 'static + Send + Sync {
     fn cycle_project(&self, forward: bool, window: &mut Window, cx: &mut App);
     fn cycle_thread(&self, forward: bool, window: &mut Window, cx: &mut App);
     fn toggle_options_menu(&self, window: &mut Window, cx: &mut App);
+    fn simulate_update_available(&self, cx: &mut App);
+    #[cfg(not(target_os = "macos"))]
+    fn open_application_menu(&self, menu_name: String, window: &mut Window, cx: &mut App);
+    #[cfg(not(target_os = "macos"))]
+    fn activate_application_menu(&self, right: bool, window: &mut Window, cx: &mut App);
 
     fn is_threads_list_view_active(&self, cx: &App) -> bool;
 
@@ -259,6 +285,26 @@ impl<T: Sidebar> SidebarHandle for Entity<T> {
             entity.update(cx, |this, cx| {
                 this.toggle_options_menu(window, cx);
             });
+        });
+    }
+
+    fn simulate_update_available(&self, cx: &mut App) {
+        self.update(cx, |this, cx| {
+            this.simulate_update_available(cx);
+        });
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn open_application_menu(&self, menu_name: String, window: &mut Window, cx: &mut App) {
+        self.update(cx, |this, cx| {
+            this.open_application_menu(menu_name, window, cx);
+        });
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn activate_application_menu(&self, right: bool, window: &mut Window, cx: &mut App) {
+        self.update(cx, |this, cx| {
+            this.activate_application_menu(right, window, cx);
         });
     }
 
@@ -445,6 +491,36 @@ impl MultiWorkspace {
         self.sidebar
             .as_ref()
             .map_or(false, |s| s.is_threads_list_view_active(cx))
+    }
+
+    pub fn simulate_update_available(&mut self, cx: &mut Context<Self>) {
+        if let Some(sidebar) = &self.sidebar {
+            sidebar.simulate_update_available(cx);
+        }
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    pub fn open_application_menu(
+        &mut self,
+        menu_name: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if let Some(sidebar) = &self.sidebar {
+            sidebar.open_application_menu(menu_name, window, cx);
+        }
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    pub fn activate_application_menu(
+        &mut self,
+        right: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if let Some(sidebar) = &self.sidebar {
+            sidebar.activate_application_menu(right, window, cx);
+        }
     }
 
     pub fn multi_workspace_enabled(&self, _cx: &App) -> bool {

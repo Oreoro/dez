@@ -25,7 +25,7 @@ use util::rel_path::RelPath;
 use workspace::{ParticipantLocation, notifications::DetachAndPromptErr};
 use zed_actions::ShowCallStats;
 
-use crate::TitleBar;
+use crate::SidebarChrome;
 
 fn format_stat(value: Option<f64>, format: impl Fn(f64) -> String) -> String {
     match value {
@@ -141,7 +141,7 @@ fn render_color_ribbon(color: Hsla) -> impl Element {
     .w_full()
 }
 
-impl TitleBar {
+impl SidebarChrome {
     pub(crate) fn render_collaborator_list(
         &self,
         _: &mut Window,

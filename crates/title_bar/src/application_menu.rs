@@ -7,7 +7,7 @@ use serde::Deserialize;
 use smallvec::SmallVec;
 use ui::{ContextMenu, PopoverMenu, PopoverMenuHandle, Tooltip, prelude::*};
 
-use crate::title_bar_settings::TitleBarSettings;
+use crate::sidebar_chrome_settings::SidebarChromeSettings;
 
 actions!(
     app_menu,
@@ -29,6 +29,13 @@ actions!(
 #[derive(Clone, Deserialize, JsonSchema, PartialEq, Default, Action)]
 #[action(namespace = app_menu)]
 pub struct OpenApplicationMenu(String);
+
+#[cfg(not(target_os = "macos"))]
+impl OpenApplicationMenu {
+    pub fn menu_name(&self) -> &str {
+        &self.0
+    }
+}
 
 #[cfg(not(target_os = "macos"))]
 pub enum ActivateDirection {
@@ -223,7 +230,12 @@ impl ApplicationMenu {
         _window: &mut Window,
         _cx: &mut Context<Self>,
     ) {
-        self.pending_menu_open = Some(action.0.clone());
+        self.open_menu_name(action.0.clone());
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    pub fn open_menu_name(&mut self, menu_name: String) {
+        self.pending_menu_open = Some(menu_name);
     }
 
     #[cfg(not(target_os = "macos"))]
@@ -273,7 +285,7 @@ impl ApplicationMenu {
 }
 
 pub(crate) fn show_menus(cx: &mut App) -> bool {
-    TitleBarSettings::get_global(cx).show_menus
+    SidebarChromeSettings::get_global(cx).show_menus
         && (cfg!(not(target_os = "macos")) || option_env!("ZED_USE_CROSS_PLATFORM_MENU").is_some())
 }
 

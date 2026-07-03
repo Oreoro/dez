@@ -5144,7 +5144,7 @@ mod tests {
         assert_migrate_settings(
             &r#"
             {
-                "title_bar": {
+                "sidebar": {
                     "show_branch_icon": true,
                     "show_branch_name": true
                 }
@@ -5154,7 +5154,7 @@ mod tests {
             Some(
                 &r#"
                 {
-                    "title_bar": {
+                    "sidebar": {
                         "show_branch_status_icon": true,
                         "show_branch_name": true
                     }
@@ -5170,7 +5170,7 @@ mod tests {
         assert_migrate_settings(
             &r#"
             {
-                "title_bar": {
+                "sidebar": {
                     "show_branch_icon": false,
                     "show_branch_name": true
                 }
@@ -5180,7 +5180,7 @@ mod tests {
             Some(
                 &r#"
                 {
-                    "title_bar": {
+                    "sidebar": {
                         "show_branch_name": true
                     }
                 }
@@ -5196,7 +5196,7 @@ mod tests {
             &r#"
             {
                 "macos": {
-                    "title_bar": {
+                    "sidebar": {
                         "show_branch_icon": true,
                         "show_branch_name": true
                     }
@@ -5208,7 +5208,7 @@ mod tests {
                 &r#"
                 {
                     "macos": {
-                        "title_bar": {
+                        "sidebar": {
                             "show_branch_status_icon": true,
                             "show_branch_name": true
                         }
@@ -5226,7 +5226,7 @@ mod tests {
             &r#"
             {
                 "preview": {
-                    "title_bar": {
+                    "sidebar": {
                         "show_branch_icon": true,
                         "show_branch_name": true
                     }
@@ -5238,7 +5238,7 @@ mod tests {
                 &r#"
                 {
                     "preview": {
-                        "title_bar": {
+                        "sidebar": {
                             "show_branch_status_icon": true,
                             "show_branch_name": true
                         }
@@ -5257,7 +5257,7 @@ mod tests {
             {
                 "profiles": {
                     "work": {
-                        "title_bar": {
+                        "sidebar": {
                             "show_branch_icon": true,
                             "show_branch_name": true
                         }
@@ -5272,7 +5272,7 @@ mod tests {
                     "profiles": {
                         "work": {
                             "settings": {
-                                "title_bar": {
+                                "sidebar": {
                                     "show_branch_status_icon": true,
                                     "show_branch_name": true
                                 }
@@ -5291,25 +5291,25 @@ mod tests {
         assert_migrate_settings(
             &r#"
             {
-                "title_bar": {
+                "sidebar": {
                     "show_branch_icon": true,
                     "show_branch_name": true
                 },
                 "macos": {
-                    "title_bar": {
+                    "sidebar": {
                         "show_branch_icon": true,
                         "show_branch_name": true
                     }
                 },
                 "preview": {
-                    "title_bar": {
+                    "sidebar": {
                         "show_branch_icon": true,
                         "show_branch_name": true
                     }
                 },
                 "profiles": {
                     "work": {
-                        "title_bar": {
+                        "sidebar": {
                             "show_branch_icon": true,
                             "show_branch_name": true
                         }
@@ -5321,18 +5321,18 @@ mod tests {
             Some(
                 &r#"
                 {
-                    "title_bar": {
+                    "sidebar": {
                         "show_branch_status_icon": true,
                         "show_branch_name": true
                     },
                     "macos": {
-                        "title_bar": {
+                        "sidebar": {
                             "show_branch_status_icon": true,
                             "show_branch_name": true
                         }
                     },
                     "preview": {
-                        "title_bar": {
+                        "sidebar": {
                             "show_branch_status_icon": true,
                             "show_branch_name": true
                         }
@@ -5340,7 +5340,7 @@ mod tests {
                     "profiles": {
                         "work": {
                             "settings": {
-                                "title_bar": {
+                                "sidebar": {
                                     "show_branch_status_icon": true,
                                     "show_branch_name": true
                                 }
@@ -5396,7 +5396,7 @@ mod tests {
         assert_migrate_settings(
             &r#"
             {
-                "title_bar": {
+                "sidebar": {
                     "show_branch_status_icon": true,
                     "show_branch_name": true
                 }
@@ -5406,14 +5406,14 @@ mod tests {
             None,
         );
 
-        // No title_bar key — should be unchanged
+        // No sidebar key — should be unchanged
         assert_migrate_settings(&r#"{ "theme": "One Dark" }"#.unindent(), None);
 
-        // title_bar without show_branch_icon — should be unchanged
+        // sidebar without show_branch_icon — should be unchanged
         assert_migrate_settings(
             &r#"
             {
-                "title_bar": {
+                "sidebar": {
                     "show_branch_name": true
                 }
             }

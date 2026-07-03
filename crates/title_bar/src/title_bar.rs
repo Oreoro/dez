@@ -2,13 +2,12 @@ mod application_menu;
 pub mod collab;
 mod onboarding_banner;
 mod plan_chip;
-mod title_bar_settings;
+mod sidebar_chrome_settings;
 mod update_version;
 
 use crate::application_menu::{ApplicationMenu, show_menus};
 use crate::plan_chip::PlanChip;
 use agent_settings::{AgentSettings, WindowLayout};
-use arrayvec::ArrayVec;
 use git_ui::worktree_picker::WorktreePicker;
 pub use platform_title_bar::{
     self, DraggedWindowTab, MergeAllWindows, MoveTabToNewWindow, PlatformTitleBar,
@@ -27,8 +26,8 @@ use client::{Client, UserStore, zed_urls};
 use command_palette_hooks::CommandPaletteFilter;
 
 use gpui::{
-    Action, Anchor, Animation, AnimationExt, AnyElement, App, Context, Element, Empty, Entity,
-    Focusable, InteractiveElement, IntoElement, MouseButton, ParentElement, Render,
+    Action, Anchor, Animation, AnimationExt, AnyElement, App, Context, Element, Entity, Focusable,
+    InteractiveElement, IntoElement, MouseButton, ParentElement, Render,
     StatefulInteractiveElement, Styled, Subscription, TaskExt, WeakEntity, Window, actions, div,
     pulsating_between,
 };
@@ -40,14 +39,14 @@ use project::{
 use remote::RemoteConnectionOptions;
 use settings::{Settings as _, SettingsStore};
 
+use sidebar_chrome_settings::SidebarChromeSettings;
 use std::any::TypeId;
 use std::sync::Arc;
 use std::time::Duration;
 use theme::ActiveTheme;
-use title_bar_settings::TitleBarSettings;
 use ui::{
     Avatar, ButtonLike, ContextMenu, ContextMenuEntry, IconWithIndicator, Indicator, PopoverMenu,
-    PopoverMenuHandle, TintColor, Tooltip, prelude::*, utils::platform_title_bar_height,
+    PopoverMenuHandle, TintColor, Tooltip, prelude::*,
 };
 use update_version::UpdateVersion;
 use util::ResultExt;
@@ -96,14 +95,10 @@ pub fn init(cx: &mut App) {
     cx.observe_global::<SettingsStore>(update_layout_action_filter)
         .detach();
 
-    cx.observe_new(|workspace: &mut Workspace, window, cx| {
-        let Some(window) = window else {
+    cx.observe_new(|workspace: &mut Workspace, window, _cx| {
+        let Some(_window) = window else {
             return;
         };
-        let multi_workspace = workspace.multi_workspace().cloned();
-        let item = cx.new(|cx| TitleBar::new("title-bar", workspace, multi_workspace, window, cx));
-        workspace.set_titlebar_item(item.into(), window, cx);
-
         workspace.register_action(|_workspace, _: &UseClassicLayout, _window, cx| {
             set_window_layout(WindowLayout::Editor(None), cx);
         });
@@ -113,59 +108,49 @@ pub fn init(cx: &mut App) {
         });
 
         workspace.register_action(|workspace, _: &SimulateUpdateAvailable, _window, cx| {
-            if let Some(titlebar) = workspace
-                .titlebar_item()
-                .and_then(|item| item.downcast::<TitleBar>().ok())
-            {
-                titlebar.update(cx, |titlebar, cx| {
-                    titlebar.toggle_update_simulation(cx);
-                });
+            if let Some(multi_workspace) = workspace.multi_workspace().cloned() {
+                multi_workspace
+                    .update(cx, |multi_workspace, cx| {
+                        multi_workspace.simulate_update_available(cx);
+                    })
+                    .log_err();
             }
         });
 
         #[cfg(not(target_os = "macos"))]
         workspace.register_action(|workspace, action: &OpenApplicationMenu, window, cx| {
-            if let Some(titlebar) = workspace
-                .titlebar_item()
-                .and_then(|item| item.downcast::<TitleBar>().ok())
-            {
-                titlebar.update(cx, |titlebar, cx| {
-                    if let Some(ref menu) = titlebar.application_menu {
-                        menu.update(cx, |menu, cx| menu.open_menu(action, window, cx));
-                    }
-                });
+            if let Some(multi_workspace) = workspace.multi_workspace().cloned() {
+                multi_workspace
+                    .update(cx, |multi_workspace, cx| {
+                        multi_workspace.open_application_menu(
+                            action.menu_name().to_string(),
+                            window,
+                            cx,
+                        );
+                    })
+                    .log_err();
             }
         });
 
         #[cfg(not(target_os = "macos"))]
         workspace.register_action(|workspace, _: &ActivateMenuRight, window, cx| {
-            if let Some(titlebar) = workspace
-                .titlebar_item()
-                .and_then(|item| item.downcast::<TitleBar>().ok())
-            {
-                titlebar.update(cx, |titlebar, cx| {
-                    if let Some(ref menu) = titlebar.application_menu {
-                        menu.update(cx, |menu, cx| {
-                            menu.navigate_menus_in_direction(ActivateDirection::Right, window, cx)
-                        });
-                    }
-                });
+            if let Some(multi_workspace) = workspace.multi_workspace().cloned() {
+                multi_workspace
+                    .update(cx, |multi_workspace, cx| {
+                        multi_workspace.activate_application_menu(true, window, cx);
+                    })
+                    .log_err();
             }
         });
 
         #[cfg(not(target_os = "macos"))]
         workspace.register_action(|workspace, _: &ActivateMenuLeft, window, cx| {
-            if let Some(titlebar) = workspace
-                .titlebar_item()
-                .and_then(|item| item.downcast::<TitleBar>().ok())
-            {
-                titlebar.update(cx, |titlebar, cx| {
-                    if let Some(ref menu) = titlebar.application_menu {
-                        menu.update(cx, |menu, cx| {
-                            menu.navigate_menus_in_direction(ActivateDirection::Left, window, cx)
-                        });
-                    }
-                });
+            if let Some(multi_workspace) = workspace.multi_workspace().cloned() {
+                multi_workspace
+                    .update(cx, |multi_workspace, cx| {
+                        multi_workspace.activate_application_menu(false, window, cx);
+                    })
+                    .log_err();
             }
         });
     })
@@ -194,7 +179,11 @@ fn set_window_layout(layout: WindowLayout, cx: &App) {
     drop(AgentSettings::set_layout(layout, fs, cx));
 }
 
-pub struct TitleBar {
+pub fn sidebar_button_layout(cx: &App) -> Option<gpui::WindowButtonLayout> {
+    SidebarChromeSettings::get_global(cx).button_layout
+}
+
+pub struct SidebarChrome {
     platform_titlebar: Entity<PlatformTitleBar>,
     project: Entity<Project>,
     user_store: Entity<UserStore>,
@@ -209,7 +198,7 @@ pub struct TitleBar {
     _diagnostics_subscription: Option<gpui::Subscription>,
 }
 
-impl Render for TitleBar {
+impl Render for SidebarChrome {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         if self.multi_workspace.is_none() {
             if let Some(mw) = self
@@ -224,17 +213,9 @@ impl Render for TitleBar {
             }
         }
 
-        let title_bar_settings = *TitleBarSettings::get_global(cx);
-        if !title_bar_settings.show {
-            return Empty.into_any_element();
-        }
-
-        let button_layout = title_bar_settings.button_layout;
+        let sidebar_settings = *SidebarChromeSettings::get_global(cx);
         let is_git_enabled = ProjectSettings::get_global(cx).git.enabled.status;
-
         let show_menus = show_menus(cx);
-
-        let mut children = <ArrayVec<_, 5>>::new();
 
         let mut project_name = None;
         let mut repository = None;
@@ -293,59 +274,12 @@ impl Render for TitleBar {
             }
         }
 
-        children.push(
-            h_flex()
-                .h_full()
-                .gap_0p5()
-                .map(|title_bar| {
-                    let mut render_project_items = title_bar_settings.show_branch_name
-                        || title_bar_settings.show_project_items;
-                    title_bar
-                        .when_some(
-                            self.application_menu.clone().filter(|_| !show_menus),
-                            |title_bar, menu| {
-                                render_project_items &=
-                                    !menu.update(cx, |menu, cx| menu.all_menus_shown(cx));
-                                title_bar.child(menu)
-                            },
-                        )
-                        .children(self.render_restricted_mode(cx))
-                        .when(render_project_items, |title_bar| {
-                            title_bar
-                                .when(title_bar_settings.show_project_items, |title_bar| {
-                                    title_bar
-                                        .children(self.render_project_host(cx))
-                                        .child(self.render_project_name(project_name, window, cx))
-                                })
-                                .when_some(
-                                    repository.filter(|_| is_git_enabled),
-                                    |title_bar, repository| {
-                                        title_bar.children(self.render_worktree_and_branch(
-                                            repository,
-                                            linked_worktree_name,
-                                            cx,
-                                        ))
-                                    },
-                                )
-                        })
-                })
-                .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                .into_any_element(),
-        );
-
-        children.push(self.render_collaborator_list(window, cx).into_any_element());
-
-        if title_bar_settings.show_onboarding_banner {
-            if let Some(banner) = &self.banner {
-                children.push(banner.clone().into_any_element())
-            }
-        }
+        let has_call = ActiveCall::global(cx).read(cx).room().is_some();
 
         let status = self.client.status();
         let status = &*status.borrow();
         let user = self.user_store.read(cx).current_user();
 
-        let signed_in = user.is_some();
         let is_signing_in = user.is_none()
             && matches!(
                 status,
@@ -359,96 +293,117 @@ impl Render for TitleBar {
                 client::Status::SignedOut | client::Status::AuthenticationError
             );
 
-        children.push(
-            h_flex()
-                .map(|this| {
-                    if signed_in {
-                        this.pr_1p5()
-                    } else {
-                        this.pr_1()
-                    }
-                })
-                .gap_1()
-                .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                .child(self.render_call_controls(window, cx))
-                .children(self.render_connection_status(status, cx))
-                .child(self.update_version.clone())
-                .when(
-                    user.is_none()
-                        && is_signed_out_or_auth_error
-                        && TitleBarSettings::get_global(cx).show_sign_in,
-                    |this| this.child(self.render_sign_in_button(cx)),
-                )
-                .when(is_signing_in, |this| {
+        let mut render_project_items =
+            sidebar_settings.show_branch_name || sidebar_settings.show_project_items;
+        let application_menu = self.application_menu.clone();
+
+        v_flex()
+            .w_full()
+            .gap_1()
+            .when_some(
+                application_menu.clone().filter(|_| show_menus),
+                |this, menu| {
                     this.child(
-                        Label::new("Signing in…")
-                            .size(LabelSize::Small)
-                            .color(Color::Muted)
-                            .with_animation(
-                                "signing-in",
-                                Animation::new(Duration::from_secs(2))
-                                    .repeat()
-                                    .with_easing(pulsating_between(0.4, 0.8)),
-                                |label, delta| label.alpha(delta),
-                            ),
+                        div()
+                            .w_full()
+                            .overflow_x_hidden()
+                            .child(menu.into_any_element()),
                     )
-                })
-                .when(TitleBarSettings::get_global(cx).show_user_menu, |this| {
-                    this.child(self.render_user_menu_button(cx))
-                })
-                .into_any_element(),
-        );
-
-        if show_menus {
-            self.platform_titlebar.update(cx, |this, _| {
-                this.set_button_layout(button_layout);
-                this.set_children(
-                    self.application_menu
-                        .clone()
-                        .map(|menu| menu.into_any_element()),
-                );
-            });
-
-            let height = platform_title_bar_height(window);
-            let title_bar_color = self.platform_titlebar.update(cx, |platform_titlebar, cx| {
-                platform_titlebar.title_bar_color(window, cx)
-            });
-
-            v_flex()
-                .w_full()
-                .child(self.platform_titlebar.clone().into_any_element())
-                .child(
+                },
+            )
+            .child(
+                h_flex()
+                    .w_full()
+                    .gap_1()
+                    .overflow_x_hidden()
+                    .map(|this| {
+                        this.when_some(application_menu.filter(|_| !show_menus), |this, menu| {
+                            render_project_items &=
+                                !menu.update(cx, |menu, cx| menu.all_menus_shown(cx));
+                            this.child(menu)
+                        })
+                        .children(self.render_restricted_mode(cx))
+                        .when(render_project_items, |this| {
+                            this.when(sidebar_settings.show_project_items, |this| {
+                                this.children(self.render_project_host(cx))
+                                    .child(self.render_project_name(project_name, window, cx))
+                            })
+                            .when_some(
+                                repository.filter(|_| is_git_enabled),
+                                |this, repository| {
+                                    this.children(self.render_worktree_and_branch(
+                                        repository,
+                                        linked_worktree_name,
+                                        cx,
+                                    ))
+                                },
+                            )
+                        })
+                    })
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation()),
+            )
+            .when(has_call, |this| {
+                this.child(
                     h_flex()
-                        .bg(title_bar_color)
-                        .h(height)
-                        .pl_2()
-                        .justify_between()
                         .w_full()
-                        .children(children),
+                        .gap_1()
+                        .overflow_x_hidden()
+                        .child(self.render_collaborator_list(window, cx))
+                        .child(self.render_call_controls(window, cx)),
                 )
-                .into_any_element()
-        } else {
-            self.platform_titlebar.update(cx, |this, _| {
-                this.set_button_layout(button_layout);
-                this.set_children(children);
-            });
-            self.platform_titlebar.clone().into_any_element()
-        }
+            })
+            .when(sidebar_settings.show_onboarding_banner, |this| {
+                this.when_some(self.banner.clone(), |this, banner| this.child(banner))
+            })
+            .child(
+                h_flex()
+                    .w_full()
+                    .gap_1()
+                    .justify_between()
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                    .child(div().flex_1())
+                    .children(self.render_connection_status(status, cx))
+                    .child(self.update_version.clone())
+                    .when(
+                        user.is_none()
+                            && is_signed_out_or_auth_error
+                            && sidebar_settings.show_sign_in,
+                        |this| this.child(self.render_sign_in_button(cx)),
+                    )
+                    .when(is_signing_in, |this| {
+                        this.child(
+                            Label::new("Signing in…")
+                                .size(LabelSize::Small)
+                                .color(Color::Muted)
+                                .with_animation(
+                                    "signing-in",
+                                    Animation::new(Duration::from_secs(2))
+                                        .repeat()
+                                        .with_easing(pulsating_between(0.4, 0.8)),
+                                    |label, delta| label.alpha(delta),
+                                ),
+                        )
+                    })
+                    .when(sidebar_settings.show_user_menu, |this| {
+                        this.child(self.render_user_menu_button(cx))
+                    }),
+            )
+            .into_any_element()
     }
 }
 
-impl TitleBar {
+impl SidebarChrome {
     pub fn new(
         id: impl Into<ElementId>,
-        workspace: &Workspace,
+        workspace: Entity<Workspace>,
         multi_workspace: Option<WeakEntity<MultiWorkspace>>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let project = workspace.project().clone();
+        let project = workspace.read(cx).project().clone();
         let git_store = project.read(cx).git_store().clone();
-        let user_store = workspace.app_state().user_store.clone();
-        let client = workspace.app_state().client.clone();
+        let user_store = workspace.read(cx).app_state().user_store.clone();
+        let client = workspace.read(cx).app_state().client.clone();
         let active_call = ActiveCall::global(cx);
 
         let platform_style = PlatformStyle::platform();
@@ -466,11 +421,7 @@ impl TitleBar {
         };
 
         let mut subscriptions = Vec::new();
-        subscriptions.push(
-            cx.observe(&workspace.weak_handle().upgrade().unwrap(), |_, _, cx| {
-                cx.notify()
-            }),
-        );
+        subscriptions.push(cx.observe(&workspace, |_, _, cx| cx.notify()));
 
         subscriptions.push(cx.observe(&active_call, |this, _, cx| this.active_call_changed(cx)));
         subscriptions.push(cx.observe_window_activation(window, Self::window_activation_changed));
@@ -484,16 +435,13 @@ impl TitleBar {
             }),
         );
         subscriptions.push(cx.observe(&user_store, |_a, _, cx| cx.notify()));
-        if let Some(workspace_entity) = workspace.weak_handle().upgrade() {
-            subscriptions.push(cx.subscribe(
-                &workspace_entity,
-                |_, _, event: &workspace::Event, cx| {
-                    if matches!(event, workspace::Event::WorktreeCreationChanged) {
-                        cx.notify();
-                    }
-                },
-            ));
-        }
+        subscriptions.push(
+            cx.subscribe(&workspace, |_, _, event: &workspace::Event, cx| {
+                if matches!(event, workspace::Event::WorktreeCreationChanged) {
+                    cx.notify();
+                }
+            }),
+        );
         subscriptions.push(cx.observe_button_layout_changed(window, |_, _, cx| cx.notify()));
         if let Some(trusted_worktrees) = TrustedWorktrees::try_get_global(cx) {
             subscriptions.push(cx.subscribe(&trusted_worktrees, |_, _, _, cx| {
@@ -515,7 +463,7 @@ impl TitleBar {
         let mut this = Self {
             platform_titlebar,
             application_menu,
-            workspace: workspace.weak_handle(),
+            workspace: workspace.downgrade(),
             multi_workspace,
             project,
             user_store,
@@ -536,10 +484,38 @@ impl TitleBar {
         self.project.read(cx).visible_worktrees(cx).count()
     }
 
-    fn toggle_update_simulation(&mut self, cx: &mut Context<Self>) {
+    pub fn toggle_update_simulation(&mut self, cx: &mut Context<Self>) {
         self.update_version
             .update(cx, |banner, cx| banner.update_simulation(cx));
         cx.notify();
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    pub fn open_application_menu(&mut self, menu_name: String, cx: &mut Context<Self>) {
+        if let Some(menu) = &self.application_menu {
+            menu.update(cx, |menu, _| {
+                menu.open_menu_name(menu_name);
+            });
+        }
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    pub fn activate_application_menu(
+        &mut self,
+        right: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if let Some(menu) = &self.application_menu {
+            menu.update(cx, |menu, cx| {
+                let direction = if right {
+                    ActivateDirection::Right
+                } else {
+                    ActivateDirection::Left
+                };
+                menu.navigate_menus_in_direction(direction, window, cx);
+            });
+        }
     }
 
     /// Returns the worktree to display in the title bar.
@@ -673,7 +649,7 @@ impl TitleBar {
                                         Some(Indicator::dot().color(indicator_color)),
                                     )
                                     .indicator_border_color(Some(
-                                        cx.theme().colors().title_bar_background,
+                                        cx.theme().colors().editor_background,
                                     ))
                                     .into_any_element(),
                                 )
@@ -959,7 +935,7 @@ impl TitleBar {
             (branch_name, icon_info, is_detached_head)
         };
 
-        let settings = TitleBarSettings::get_global(cx);
+        let settings = SidebarChromeSettings::get_global(cx);
         let effective_repository = Some(repository);
 
         let worktree_label: SharedString = linked_worktree_name.unwrap_or_else(|| "main".into());
@@ -1238,7 +1214,7 @@ impl TitleBar {
             })
             .collect();
 
-        let show_user_picture = TitleBarSettings::get_global(cx).show_user_picture;
+        let show_user_picture = SidebarChromeSettings::get_global(cx).show_user_picture;
 
         let trigger = if is_signed_in && show_user_picture {
             let avatar = user_avatar.map(|avatar| Avatar::new(avatar)).map(|avatar| {

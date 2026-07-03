@@ -11,7 +11,6 @@ mod serde_helper;
 mod sidebar;
 mod terminal;
 mod theme;
-mod title_bar;
 mod workspace;
 
 pub use action::{ActionName, ActionWithArguments, CommandAliasTarget};
@@ -31,7 +30,6 @@ use settings_json::parse_json_with_comments;
 pub use sidebar::*;
 pub use terminal::*;
 pub use theme::*;
-pub use title_bar::*;
 pub use workspace::*;
 
 use collections::{HashMap, IndexMap};
@@ -240,8 +238,6 @@ pub struct SettingsContent {
 
     /// Configuration of the terminal in Zed.
     pub terminal: Option<TerminalSettingsContent>,
-
-    pub title_bar: Option<TitleBarSettingsContent>,
 
     /// Whether or not to enable Vim mode.
     ///
