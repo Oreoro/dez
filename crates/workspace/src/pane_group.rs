@@ -3,6 +3,7 @@ use crate::{
     WorkspaceSettings,
     notifications::DetachAndPromptErr,
     pane_group::element::pane_axis,
+    workspace_card_gap,
     workspace_settings::{PaneSplitDirectionHorizontal, PaneSplitDirectionVertical},
 };
 use anyhow::Result;
@@ -22,6 +23,28 @@ use ui::prelude::*;
 pub const HANDLE_HITBOX_SIZE: f32 = 4.0;
 const HORIZONTAL_MIN_SIZE: f32 = 80.;
 const VERTICAL_MIN_SIZE: f32 = 100.;
+
+#[derive(Clone, Copy, Debug)]
+pub struct SplitSizeHint {
+    inserted_size: Pixels,
+    available_size: Option<Pixels>,
+}
+
+impl SplitSizeHint {
+    pub fn inserted_size(inserted_size: Pixels) -> Self {
+        Self {
+            inserted_size,
+            available_size: None,
+        }
+    }
+
+    pub fn inserted_size_in_available_space(inserted_size: Pixels, available_size: Pixels) -> Self {
+        Self {
+            inserted_size,
+            available_size: Some(available_size),
+        }
+    }
+}
 
 /// One or many panes, arranged in a horizontal or vertical axis due to a split.
 /// Panes have all their tabs and capabilities preserved, and can be split again or resized.
@@ -64,16 +87,33 @@ impl PaneGroup {
         direction: SplitDirection,
         cx: &mut App,
     ) {
+        self.split_with_size_hint(old_pane, new_pane, direction, None, cx);
+    }
+
+    pub fn split_with_size_hint(
+        &mut self,
+        old_pane: &Entity<Pane>,
+        new_pane: &Entity<Pane>,
+        direction: SplitDirection,
+        size_hint: Option<SplitSizeHint>,
+        cx: &mut App,
+    ) {
         let found = match &mut self.root {
             Member::Pane(pane) => {
                 if pane == old_pane {
-                    self.root = Member::new_axis(old_pane.clone(), new_pane.clone(), direction);
+                    self.root = Member::new_axis_with_size_hint(
+                        old_pane.clone(),
+                        new_pane.clone(),
+                        direction,
+                        size_hint,
+                        None,
+                    );
                     true
                 } else {
                     false
                 }
             }
-            Member::Axis(axis) => axis.split(old_pane, new_pane, direction, cx),
+            Member::Axis(axis) => axis.split(old_pane, new_pane, direction, size_hint, cx),
         };
 
         // If the pane wasn't found, fall back to splitting the first pane in the tree.
@@ -81,10 +121,16 @@ impl PaneGroup {
             let first_pane = self.root.first_pane();
             match &mut self.root {
                 Member::Pane(_) => {
-                    self.root = Member::new_axis(first_pane, new_pane.clone(), direction);
+                    self.root = Member::new_axis_with_size_hint(
+                        first_pane,
+                        new_pane.clone(),
+                        direction,
+                        size_hint,
+                        None,
+                    );
                 }
                 Member::Axis(axis) => {
-                    let _ = axis.split(&first_pane, new_pane, direction, cx);
+                    let _ = axis.split(&first_pane, new_pane, direction, size_hint, cx);
                 }
             }
         }
@@ -96,6 +142,13 @@ impl PaneGroup {
         match &self.root {
             Member::Pane(_) => None,
             Member::Axis(axis) => axis.bounding_box_for_pane(pane),
+        }
+    }
+
+    pub fn horizontal_size_for_pane(&self, pane: &Entity<Pane>) -> Option<Pixels> {
+        match &self.root {
+            Member::Pane(_) => None,
+            Member::Axis(axis) => axis.horizontal_size_for_pane(pane),
         }
     }
 
@@ -620,7 +673,13 @@ impl PaneLeaderDecorator for PaneRenderContext<'_> {
 }
 
 impl Member {
-    fn new_axis(old_pane: Entity<Pane>, new_pane: Entity<Pane>, direction: SplitDirection) -> Self {
+    fn new_axis_with_size_hint(
+        old_pane: Entity<Pane>,
+        new_pane: Entity<Pane>,
+        direction: SplitDirection,
+        size_hint: Option<SplitSizeHint>,
+        available_size: Option<Pixels>,
+    ) -> Self {
         use Axis::*;
         use SplitDirection::*;
 
@@ -634,7 +693,21 @@ impl Member {
             Down | Right => vec![Member::Pane(old_pane), Member::Pane(new_pane)],
         };
 
-        Member::Axis(PaneAxis::new(axis, members))
+        let flexes = size_hint
+            .filter(|_| axis == Axis::Horizontal)
+            .and_then(|hint| Some((hint, hint.available_size.or(available_size)?)))
+            .and_then(|(hint, available_size)| {
+                split_flexes_for_inserted_size(
+                    available_size,
+                    hint.inserted_size,
+                    direction.increasing(),
+                )
+            });
+
+        match flexes {
+            Some(flexes) => Member::Axis(PaneAxis::load(axis, members, Some(flexes))),
+            None => Member::Axis(PaneAxis::new(axis, members)),
+        }
     }
 
     fn first_pane(&self) -> Entity<Pane> {
@@ -707,6 +780,13 @@ impl Member {
         }
     }
 
+    fn contains_pane(&self, pane: &Entity<Pane>) -> bool {
+        match self {
+            Member::Axis(axis) => axis.members.iter().any(|member| member.contains_pane(pane)),
+            Member::Pane(candidate) => candidate == pane,
+        }
+    }
+
     fn collect_pane_bounds(&self, panes: &mut Vec<(Entity<Pane>, Bounds<Pixels>)>) {
         match self {
             Member::Axis(axis) => axis.collect_pane_bounds(panes),
@@ -772,12 +852,14 @@ impl PaneAxis {
         old_pane: &Entity<Pane>,
         new_pane: &Entity<Pane>,
         direction: SplitDirection,
+        size_hint: Option<SplitSizeHint>,
         cx: &App,
     ) -> bool {
+        let bounding_boxes = self.bounding_boxes.lock().clone();
         for (idx, member) in self.members.iter_mut().enumerate() {
             match member {
                 Member::Axis(axis) => {
-                    if axis.split(old_pane, new_pane, direction, cx) {
+                    if axis.split(old_pane, new_pane, direction, size_hint, cx) {
                         return true;
                     }
                 }
@@ -785,10 +867,21 @@ impl PaneAxis {
                     if pane == old_pane {
                         if direction.axis() == self.axis {
                             let insertion_ix = if direction.increasing() { idx + 1 } else { idx };
-                            self.insert_pane(insertion_ix, idx, new_pane, cx);
+                            self.insert_pane(insertion_ix, idx, new_pane, size_hint, cx);
                         } else {
-                            *member =
-                                Member::new_axis(old_pane.clone(), new_pane.clone(), direction);
+                            let available_size = bounding_boxes
+                                .get(idx)
+                                .and_then(|bounds| {
+                                    bounds.map(|bounds| bounds.size.along(direction.axis()))
+                                })
+                                .map(|size| Pixels::max(size - workspace_card_gap(cx), px(0.)));
+                            *member = Member::new_axis_with_size_hint(
+                                old_pane.clone(),
+                                new_pane.clone(),
+                                direction,
+                                size_hint,
+                                available_size,
+                            );
                         }
                         return true;
                     }
@@ -798,13 +891,27 @@ impl PaneAxis {
         false
     }
 
-    fn insert_pane(&mut self, idx: usize, split_ix: usize, new_pane: &Entity<Pane>, cx: &App) {
+    fn insert_pane(
+        &mut self,
+        idx: usize,
+        split_ix: usize,
+        new_pane: &Entity<Pane>,
+        size_hint: Option<SplitSizeHint>,
+        cx: &App,
+    ) {
         let visible_members_are_distributed = self.visible_members_are_distributed(cx);
         let mut flexes = normalize_flexes(self.members.len(), self.flexes.lock().clone());
 
         self.members.insert(idx, Member::Pane(new_pane.clone()));
 
-        if visible_members_are_distributed {
+        if let Some((old_flex, inserted_flex)) =
+            self.split_flex_for_inserted_size(split_ix, size_hint, &flexes, cx)
+        {
+            if let Some(flex) = flexes.get_mut(split_ix) {
+                *flex = old_flex;
+            }
+            flexes.insert(idx, inserted_flex);
+        } else if visible_members_are_distributed {
             flexes.insert(idx, 1.);
             for ix in self.visible_member_indices(cx) {
                 flexes[ix] = 1.;
@@ -824,6 +931,31 @@ impl PaneAxis {
 
         *self.flexes.lock() = flexes;
         *self.bounding_boxes.lock() = vec![None; self.members.len()];
+    }
+
+    fn split_flex_for_inserted_size(
+        &self,
+        split_ix: usize,
+        size_hint: Option<SplitSizeHint>,
+        flexes: &[f32],
+        cx: &App,
+    ) -> Option<(f32, f32)> {
+        if self.axis != Axis::Horizontal {
+            return None;
+        }
+
+        let hint = size_hint?;
+        let split_size = hint.available_size.or_else(|| {
+            self.bounding_boxes
+                .lock()
+                .get(split_ix)
+                .and_then(|bounds| *bounds)
+                .map(|bounds| bounds.size.width - workspace_card_gap(cx))
+        })?;
+        let (old_ratio, inserted_ratio) =
+            split_ratios_for_inserted_size(split_size, hint.inserted_size)?;
+        let split_flex = flexes.get(split_ix).copied()?.max(f32::EPSILON);
+        Some((split_flex * old_ratio, split_flex * inserted_ratio))
     }
 
     fn insert_moved_pane(&mut self, idx: usize, pane: &Entity<Pane>) {
@@ -850,6 +982,26 @@ impl PaneAxis {
             Member::Pane(pane) => Some(pane),
             Member::Axis(_) => None,
         })
+    }
+
+    fn horizontal_size_for_pane(&self, pane: &Entity<Pane>) -> Option<Pixels> {
+        let bounding_boxes = self.bounding_boxes.lock();
+
+        for (idx, member) in self.members.iter().enumerate() {
+            if self.axis == Axis::Horizontal && member.contains_pane(pane) {
+                return bounding_boxes
+                    .get(idx)
+                    .and_then(|bounds| bounds.map(|bounds| bounds.size.width));
+            }
+
+            if let Member::Axis(axis) = member
+                && let Some(size) = axis.horizontal_size_for_pane(pane)
+            {
+                return Some(size);
+            }
+        }
+
+        None
     }
 
     fn remove(&mut self, pane_to_remove: &Entity<Pane>, cx: &App) -> Result<Option<Member>> {
@@ -1319,6 +1471,43 @@ fn normalize_flexes(member_count: usize, flexes: Vec<f32>) -> Vec<f32> {
 
     let scale = member_count as f32 / total_flex;
     flexes.into_iter().map(|flex| flex * scale).collect()
+}
+
+fn split_flexes_for_inserted_size(
+    available_size: Pixels,
+    inserted_size: Pixels,
+    insert_after: bool,
+) -> Option<Vec<f32>> {
+    let (old_ratio, inserted_ratio) =
+        split_ratios_for_inserted_size(available_size, inserted_size)?;
+    let old_flex = old_ratio * 2.;
+    let inserted_flex = inserted_ratio * 2.;
+    Some(if insert_after {
+        vec![old_flex, inserted_flex]
+    } else {
+        vec![inserted_flex, old_flex]
+    })
+}
+
+fn split_ratios_for_inserted_size(
+    available_size: Pixels,
+    inserted_size: Pixels,
+) -> Option<(f32, f32)> {
+    let available_size = available_size.as_f32();
+    if !available_size.is_finite() || available_size <= 0. {
+        return None;
+    }
+
+    let min_size = HORIZONTAL_MIN_SIZE;
+    let max_inserted_size = available_size - min_size;
+    if max_inserted_size < min_size {
+        return None;
+    }
+
+    let inserted_size = inserted_size.as_f32().clamp(min_size, max_inserted_size);
+    let old_size = available_size - inserted_size;
+
+    Some((old_size / available_size, inserted_size / available_size))
 }
 
 fn resize_adjacent_visible_pair(

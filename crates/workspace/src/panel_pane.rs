@@ -2,13 +2,13 @@ use crate::{
     Panel,
     dock::PanelHandle,
     item::{Item, TabContentParams},
-    pane::{Pane, PaneKind},
+    pane::{Pane, PaneKind, render_toggle_zoom_button},
 };
 use gpui::{
     App, Context, EventEmitter, FocusHandle, Focusable, IntoElement, Render, SharedString, Window,
 };
 use std::sync::Arc;
-use ui::{Icon, IconButton, IconSize, Label, LabelCommon, Tab, Tooltip, prelude::*};
+use ui::{Icon, IconButton, IconSize, Label, LabelCommon, TabBar, Tooltip, prelude::*};
 
 pub const PROJECT_PANEL_KEYS: &[&str] = &[
     "ProjectPanel",
@@ -164,23 +164,18 @@ fn render_project_pane_header(
                 .icon_tooltip(window, cx)
                 .unwrap_or_else(|| panel.persistent_name());
 
-            let icon_color = if is_active {
-                Color::Default
-            } else {
-                Color::Muted
-            };
-
-            Some((panel_order, ix, panel.panel_id(), icon, tooltip, icon_color))
+            Some((panel_order, ix, panel.panel_id(), icon, tooltip, is_active))
         })
         .collect::<Vec<_>>();
     buttons.sort_by_key(|(panel_order, _, _, _, _, _)| *panel_order);
 
     let buttons = buttons
         .into_iter()
-        .map(|(_, ix, panel_id, icon, tooltip, icon_color)| {
+        .map(|(_, ix, panel_id, icon, tooltip, is_active)| {
             IconButton::new(("project-pane-panel", panel_id), icon)
                 .icon_size(IconSize::Small)
-                .icon_color(icon_color)
+                .icon_color(Color::Muted)
+                .toggle_state(is_active)
                 .tooltip(Tooltip::text(tooltip))
                 .on_click(cx.listener(move |pane, _, window, cx| {
                     pane.activate_item(ix, true, true, window, cx);
@@ -188,17 +183,10 @@ fn render_project_pane_header(
         })
         .collect::<Vec<_>>();
 
-    h_flex()
-        .id("project_pane_header")
-        .flex_none()
-        .w_full()
-        .h(Tab::container_height(cx))
-        .px_1p5()
-        .gap_1()
-        .bg(cx.theme().colors().tab_bar_background)
-        .border_b_1()
-        .border_color(cx.theme().colors().border)
-        .child(div().flex_1())
-        .children(buttons)
+    TabBar::new("project_pane_header")
+        .child(h_flex().h_full().px_1p5().gap_1().children(buttons))
+        .when(pane.is_zoomed(), |tab_bar| {
+            tab_bar.end_child(render_toggle_zoom_button(pane, cx))
+        })
         .into_any_element()
 }

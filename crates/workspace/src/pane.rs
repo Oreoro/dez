@@ -488,6 +488,7 @@ pub struct Pane {
     reserve_traffic_light_space: bool,
     pane_kind: PaneKind,
     visible: bool,
+    preferred_horizontal_split_size: Option<Pixels>,
 }
 
 pub struct ActivationHistoryEntry {
@@ -670,6 +671,7 @@ impl Pane {
             reserve_traffic_light_space: false,
             pane_kind: PaneKind::Tabs,
             visible: true,
+            preferred_horizontal_split_size: None,
         }
     }
 
@@ -905,6 +907,16 @@ impl Pane {
 
     pub fn is_visible(&self) -> bool {
         self.visible
+    }
+
+    pub fn preferred_horizontal_split_size(&self) -> Option<Pixels> {
+        self.preferred_horizontal_split_size
+    }
+
+    pub fn remember_horizontal_split_size(&mut self, size: Pixels) {
+        if size > Pixels::ZERO {
+            self.preferred_horizontal_split_size = Some(size);
+        }
     }
 
     pub fn set_reserve_traffic_light_space(
@@ -4929,7 +4941,7 @@ fn default_render_tab_bar_buttons(
     (None, right_children)
 }
 
-fn render_toggle_zoom_button(pane: &Pane, cx: &mut Context<Pane>) -> IconButton {
+pub(crate) fn render_toggle_zoom_button(pane: &Pane, cx: &mut Context<Pane>) -> IconButton {
     let zoomed = pane.is_zoomed();
     IconButton::new("toggle_zoom", IconName::Maximize)
         .icon_size(IconSize::Small)

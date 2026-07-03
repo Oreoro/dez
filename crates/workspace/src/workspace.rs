@@ -83,7 +83,7 @@ use notifications::{
 pub use pane::*;
 pub use pane_group::{
     ActivePaneDecorator, HANDLE_HITBOX_SIZE, Member, PaneAxis, PaneGroup, PaneRenderContext,
-    SplitDirection,
+    SplitDirection, SplitSizeHint,
 };
 use panel_pane::{PanelItem, PanelPaneKind, configure_agent_pane, configure_project_pane};
 pub use persistence::{
@@ -6179,6 +6179,47 @@ impl Workspace {
         new_pane
     }
 
+    fn split_size_hint_for_inserted_pane(
+        &mut self,
+        pane: &Entity<Pane>,
+        target_pane: &Entity<Pane>,
+        split_direction: SplitDirection,
+        cx: &mut Context<Self>,
+    ) -> Option<SplitSizeHint> {
+        if pane.read(cx).pane_kind() != PaneKind::Project {
+            return None;
+        }
+
+        if let Some(width) = self.center.horizontal_size_for_pane(pane) {
+            pane.update(cx, |pane, _| {
+                pane.remember_horizontal_split_size(width);
+            });
+        }
+
+        if split_direction.axis() != Axis::Horizontal {
+            return None;
+        }
+
+        let inserted_size = pane.read(cx).preferred_horizontal_split_size()?;
+        let available_size = self
+            .center
+            .horizontal_size_for_pane(target_pane)
+            .map(|target_size| {
+                target_size
+                    + self
+                        .center
+                        .horizontal_size_for_pane(pane)
+                        .unwrap_or(Pixels::ZERO)
+            });
+
+        Some(match available_size {
+            Some(available_size) => {
+                SplitSizeHint::inserted_size_in_available_space(inserted_size, available_size)
+            }
+            None => SplitSizeHint::inserted_size(inserted_size),
+        })
+    }
+
     pub fn move_pane_to_pane(
         &mut self,
         pane_to_move: Entity<Pane>,
@@ -6192,9 +6233,20 @@ impl Workspace {
         }
 
         if let Some(split_direction) = split_direction {
+            let size_hint = self.split_size_hint_for_inserted_pane(
+                &pane_to_move,
+                &target_pane,
+                split_direction,
+                cx,
+            );
             if self.center.remove(&pane_to_move, cx).unwrap_or(false) {
-                self.center
-                    .split(&target_pane, &pane_to_move, split_direction, cx);
+                self.center.split_with_size_hint(
+                    &target_pane,
+                    &pane_to_move,
+                    split_direction,
+                    size_hint,
+                    cx,
+                );
             }
         } else {
             self.center.swap(&pane_to_move, &target_pane, cx);
