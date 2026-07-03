@@ -73,7 +73,7 @@ impl PaneGroup {
                     false
                 }
             }
-            Member::Axis(axis) => axis.split(old_pane, new_pane, direction),
+            Member::Axis(axis) => axis.split(old_pane, new_pane, direction, cx),
         };
 
         // If the pane wasn't found, fall back to splitting the first pane in the tree.
@@ -84,7 +84,7 @@ impl PaneGroup {
                     self.root = Member::new_axis(first_pane, new_pane.clone(), direction);
                 }
                 Member::Axis(axis) => {
-                    let _ = axis.split(&first_pane, new_pane, direction);
+                    let _ = axis.split(&first_pane, new_pane, direction, cx);
                 }
             }
         }
@@ -129,7 +129,7 @@ impl PaneGroup {
             return Ok(false);
         }
 
-        if !self.remove_internal(active_pane)? {
+        if !self.remove_internal(active_pane, cx)? {
             return Ok(false);
         }
 
@@ -141,7 +141,7 @@ impl PaneGroup {
             } else {
                 0
             };
-            root.insert_pane(idx, active_pane);
+            root.insert_moved_pane(idx, active_pane);
             self.mark_positions(cx);
             return Ok(true);
         }
@@ -168,18 +168,18 @@ impl PaneGroup {
     /// - Ok(false) if it found but did not remove the pane
     /// - Err(_) if it did not find the pane
     pub fn remove(&mut self, pane: &Entity<Pane>, cx: &mut App) -> Result<bool> {
-        let result = self.remove_internal(pane);
+        let result = self.remove_internal(pane, cx);
         if let Ok(true) = result {
             self.mark_positions(cx);
         }
         result
     }
 
-    fn remove_internal(&mut self, pane: &Entity<Pane>) -> Result<bool> {
+    fn remove_internal(&mut self, pane: &Entity<Pane>, cx: &App) -> Result<bool> {
         match &mut self.root {
             Member::Pane(_) => Ok(false),
             Member::Axis(axis) => {
-                if let Some(last_pane) = axis.remove(pane)? {
+                if let Some(last_pane) = axis.remove(pane, cx)? {
                     self.root = last_pane;
                 }
                 Ok(true)
@@ -772,21 +772,20 @@ impl PaneAxis {
         old_pane: &Entity<Pane>,
         new_pane: &Entity<Pane>,
         direction: SplitDirection,
+        cx: &App,
     ) -> bool {
-        for (mut idx, member) in self.members.iter_mut().enumerate() {
+        for (idx, member) in self.members.iter_mut().enumerate() {
             match member {
                 Member::Axis(axis) => {
-                    if axis.split(old_pane, new_pane, direction) {
+                    if axis.split(old_pane, new_pane, direction, cx) {
                         return true;
                     }
                 }
                 Member::Pane(pane) => {
                     if pane == old_pane {
                         if direction.axis() == self.axis {
-                            if direction.increasing() {
-                                idx += 1;
-                            }
-                            self.insert_pane(idx, new_pane);
+                            let insertion_ix = if direction.increasing() { idx + 1 } else { idx };
+                            self.insert_pane(insertion_ix, idx, new_pane, cx);
                         } else {
                             *member =
                                 Member::new_axis(old_pane.clone(), new_pane.clone(), direction);
@@ -799,9 +798,43 @@ impl PaneAxis {
         false
     }
 
-    fn insert_pane(&mut self, idx: usize, new_pane: &Entity<Pane>) {
+    fn insert_pane(&mut self, idx: usize, split_ix: usize, new_pane: &Entity<Pane>, cx: &App) {
+        let visible_members_are_distributed = self.visible_members_are_distributed(cx);
+        let mut flexes = normalize_flexes(self.members.len(), self.flexes.lock().clone());
+
         self.members.insert(idx, Member::Pane(new_pane.clone()));
-        *self.flexes.lock() = vec![1.; self.members.len()];
+
+        if visible_members_are_distributed {
+            flexes.insert(idx, 1.);
+            for ix in self.visible_member_indices(cx) {
+                flexes[ix] = 1.;
+            }
+        } else {
+            let split_flex = flexes
+                .get(split_ix)
+                .copied()
+                .unwrap_or(1.)
+                .max(f32::EPSILON)
+                / 2.;
+            if let Some(flex) = flexes.get_mut(split_ix) {
+                *flex = split_flex;
+            }
+            flexes.insert(idx, split_flex);
+        }
+
+        *self.flexes.lock() = flexes;
+        *self.bounding_boxes.lock() = vec![None; self.members.len()];
+    }
+
+    fn insert_moved_pane(&mut self, idx: usize, pane: &Entity<Pane>) {
+        self.members.insert(idx, Member::Pane(pane.clone()));
+        let mut flexes = normalize_flexes(
+            self.members.len().saturating_sub(1),
+            self.flexes.lock().clone(),
+        );
+        flexes.insert(idx, 1.);
+        *self.flexes.lock() = flexes;
+        *self.bounding_boxes.lock() = vec![None; self.members.len()];
     }
 
     fn find_pane_at_border(&self, direction: SplitDirection) -> Option<&Entity<Pane>> {
@@ -819,13 +852,13 @@ impl PaneAxis {
         })
     }
 
-    fn remove(&mut self, pane_to_remove: &Entity<Pane>) -> Result<Option<Member>> {
+    fn remove(&mut self, pane_to_remove: &Entity<Pane>, cx: &App) -> Result<Option<Member>> {
         let mut found_pane = false;
         let mut remove_member = None;
         for (idx, member) in self.members.iter_mut().enumerate() {
             match member {
                 Member::Axis(axis) => {
-                    if let Ok(last_pane) = axis.remove(pane_to_remove) {
+                    if let Ok(last_pane) = axis.remove(pane_to_remove, cx) {
                         if let Some(last_pane) = last_pane {
                             *member = last_pane;
                         }
@@ -845,8 +878,49 @@ impl PaneAxis {
 
         if found_pane {
             if let Some(idx) = remove_member {
+                let visible_members_are_distributed = self.visible_members_are_distributed(cx);
+                let visible_indices = self.visible_member_indices(cx);
+                let removed_was_visible = visible_indices.contains(&idx);
+                let mut flexes = normalize_flexes(self.members.len(), self.flexes.lock().clone());
+                let removed_flex = flexes.get(idx).copied().unwrap_or(1.);
+                let recipient_ix = if removed_was_visible && !visible_members_are_distributed {
+                    visible_indices
+                        .iter()
+                        .rev()
+                        .copied()
+                        .find(|visible_ix| *visible_ix < idx)
+                        .or_else(|| {
+                            visible_indices
+                                .iter()
+                                .copied()
+                                .find(|visible_ix| *visible_ix > idx)
+                        })
+                } else {
+                    None
+                };
+
                 self.members.remove(idx);
-                *self.flexes.lock() = vec![1.; self.members.len()];
+                if idx < flexes.len() {
+                    flexes.remove(idx);
+                }
+
+                if visible_members_are_distributed {
+                    for ix in self.visible_member_indices(cx) {
+                        flexes[ix] = 1.;
+                    }
+                } else if let Some(recipient_ix) = recipient_ix {
+                    let recipient_ix = if recipient_ix > idx {
+                        recipient_ix - 1
+                    } else {
+                        recipient_ix
+                    };
+                    if let Some(flex) = flexes.get_mut(recipient_ix) {
+                        *flex += removed_flex;
+                    }
+                }
+
+                *self.flexes.lock() = flexes;
+                *self.bounding_boxes.lock() = vec![None; self.members.len()];
             }
 
             if self.members.len() == 1 {
@@ -868,6 +942,52 @@ impl PaneAxis {
                 axis.reset_pane_sizes();
             }
         }
+    }
+
+    fn visible_member_indices(&self, cx: &App) -> Vec<usize> {
+        self.members
+            .iter()
+            .enumerate()
+            .filter_map(|(ix, member)| member.is_visible(cx).then_some(ix))
+            .collect()
+    }
+
+    fn visible_members_are_distributed(&self, cx: &App) -> bool {
+        const DISTRIBUTED_SIZE_TOLERANCE: f32 = 2.;
+
+        let visible_indices = self.visible_member_indices(cx);
+        if visible_indices.len() <= 1 {
+            return true;
+        }
+
+        let bounding_boxes = self.bounding_boxes.lock();
+        let rendered_sizes = visible_indices
+            .iter()
+            .map(|ix| {
+                bounding_boxes
+                    .get(*ix)
+                    .and_then(|bounds| bounds.map(|bounds| bounds.size.along(self.axis).as_f32()))
+            })
+            .collect::<Option<Vec<_>>>();
+
+        if let Some(rendered_sizes) = rendered_sizes {
+            let (min_size, max_size) = rendered_sizes
+                .iter()
+                .fold((f32::INFINITY, f32::NEG_INFINITY), |(min, max), size| {
+                    (min.min(*size), max.max(*size))
+                });
+            return max_size - min_size <= DISTRIBUTED_SIZE_TOLERANCE;
+        }
+
+        let flexes = normalize_flexes(self.members.len(), self.flexes.lock().clone());
+        let (min_flex, max_flex) = visible_indices
+            .iter()
+            .filter_map(|ix| flexes.get(*ix))
+            .fold((f32::INFINITY, f32::NEG_INFINITY), |(min, max), flex| {
+                (min.min(*flex), max.max(*flex))
+            });
+
+        (max_flex - min_flex).abs() <= f32::EPSILON
     }
 
     fn normalize_same_axis(&mut self) {

@@ -65,6 +65,8 @@ pub struct SelectedEntry {
 pub struct DraggedSelection {
     pub active_selection: SelectedEntry,
     pub marked_selections: Arc<[SelectedEntry]>,
+    pub source_pane: Option<WeakEntity<Pane>>,
+    pub active_selection_is_file: bool,
 }
 
 impl DraggedSelection {
@@ -89,6 +91,19 @@ impl PaneKind {
     pub fn is_tabbed(self) -> bool {
         self == Self::Tabs
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TabInsertionSide {
+    Left,
+    Right,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TabInsertionTarget {
+    Tab { ix: usize, side: TabInsertionSide },
+    UnpinnedEnd,
+    PinnedEnd,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Deserialize, JsonSchema)]
@@ -427,6 +442,9 @@ pub struct Pane {
     pub(crate) workspace: WeakEntity<Workspace>,
     project: WeakEntity<Project>,
     pub drag_split_direction: Option<SplitDirection>,
+    drag_swap_target: bool,
+    drag_tab_target: bool,
+    drag_tab_insertion_target: Option<TabInsertionTarget>,
     can_drop_predicate: Option<Arc<dyn Fn(&dyn Any, &mut Window, &mut App) -> bool>>,
     can_split_predicate:
         Option<Arc<dyn Fn(&mut Self, &dyn Any, &mut Window, &mut Context<Self>) -> bool>>,
@@ -619,6 +637,9 @@ impl Pane {
             tab_bar_scroll_handle: ScrollHandle::new(),
             suppress_scroll: false,
             drag_split_direction: None,
+            drag_swap_target: false,
+            drag_tab_target: false,
+            drag_tab_insertion_target: None,
             workspace,
             project: project.downgrade(),
             can_drop_predicate,
@@ -3059,42 +3080,52 @@ impl Pane {
                 },
                 |tab, _, _, cx| cx.new(|_| tab.clone()),
             )
-            .drag_over::<DraggedTab>(move |tab, dragged_tab: &DraggedTab, _, cx| {
-                let mut styled_tab = tab
-                    .bg(cx.theme().colors().drop_target_background)
-                    .border_color(cx.theme().colors().drop_target_border)
-                    .border_0();
-
-                if ix < dragged_tab.ix {
-                    styled_tab = styled_tab.border_l_2();
-                } else if ix > dragged_tab.ix {
-                    styled_tab = styled_tab.border_r_2();
-                }
-
-                styled_tab
-            })
-            .drag_over::<DraggedSelection>(|tab, _, _, cx| {
-                tab.bg(cx.theme().colors().drop_target_background)
-            })
+            .on_drag_move::<DraggedTab>(cx.listener(
+                move |this, event: &DragMoveEvent<DraggedTab>, _, cx| {
+                    this.handle_dragged_tab_over_tab(ix, event, cx);
+                },
+            ))
+            .on_drag_move::<DraggedSelection>(cx.listener(
+                move |this, event: &DragMoveEvent<DraggedSelection>, _, cx| {
+                    this.handle_dragged_selection_over_tab(ix, event, cx);
+                },
+            ))
             .when_some(self.can_drop_predicate.clone(), |this, p| {
                 this.can_drop(move |a, window, cx| p(a, window, cx))
             })
             .on_drop(
                 cx.listener(move |this, dragged_tab: &DraggedTab, window, cx| {
-                    this.drag_split_direction = None;
+                    this.clear_drag_drop_target(cx);
                     this.handle_tab_drop(dragged_tab, ix, false, window, cx)
                 }),
             )
             .on_drop(
                 cx.listener(move |this, selection: &DraggedSelection, window, cx| {
-                    this.drag_split_direction = None;
+                    this.clear_drag_drop_target(cx);
                     this.handle_dragged_selection_drop(selection, Some(ix), window, cx)
                 }),
             )
             .on_drop(cx.listener(move |this, paths, window, cx| {
-                this.drag_split_direction = None;
+                this.clear_drag_drop_target(cx);
                 this.handle_external_paths_drop(paths, window, cx)
             }))
+            .map(|tab| {
+                if !cx.has_active_drag() {
+                    return tab;
+                }
+
+                match self.drag_tab_insertion_target {
+                    Some(TabInsertionTarget::Tab {
+                        ix: target_ix,
+                        side: TabInsertionSide::Left,
+                    }) if target_ix == ix => tab.insertion_indicator_left(),
+                    Some(TabInsertionTarget::Tab {
+                        ix: target_ix,
+                        side: TabInsertionSide::Right,
+                    }) if target_ix == ix => tab.insertion_indicator_right(),
+                    _ => tab,
+                }
+            })
             .map(|this| {
                 let end_slot_action: &'static dyn Action;
                 let end_slot_tooltip_text: &'static str;
@@ -3783,37 +3814,51 @@ impl Pane {
     ) -> impl IntoElement {
         div()
             .id("tab_bar_drop_target")
+            .relative()
             .min_w_6()
             .h(Tab::container_height(cx))
             .flex_grow_1()
             // HACK: This empty child is currently necessary to force the drop target to appear
             // despite us setting a min width above.
             .child("")
-            .drag_over::<DraggedTab>(|bar, _, _, cx| {
-                bar.bg(cx.theme().colors().drop_target_background)
-            })
-            .drag_over::<DraggedSelection>(|bar, _, _, cx| {
-                bar.bg(cx.theme().colors().drop_target_background)
-            })
+            .when(
+                (self.drag_tab_target
+                    || self.drag_tab_insertion_target == Some(TabInsertionTarget::UnpinnedEnd))
+                    && cx.has_active_drag(),
+                |bar| bar.child(Self::render_tab_bar_insertion_indicator(cx)),
+            )
+            .on_drag_move::<DraggedTab>(cx.listener(
+                move |this, event: &DragMoveEvent<DraggedTab>, _, cx| {
+                    this.handle_dragged_tab_over_tab_bar_end(
+                        TabInsertionTarget::UnpinnedEnd,
+                        event,
+                        cx,
+                    );
+                },
+            ))
+            .on_drag_move::<DraggedSelection>(cx.listener(
+                move |this, event: &DragMoveEvent<DraggedSelection>, _, cx| {
+                    this.handle_dragged_selection_over_tab_bar_end(
+                        TabInsertionTarget::UnpinnedEnd,
+                        event,
+                        cx,
+                    );
+                },
+            ))
             .on_drop(
                 cx.listener(move |this, dragged_tab: &DraggedTab, window, cx| {
-                    this.drag_split_direction = None;
+                    this.clear_drag_drop_target(cx);
                     this.handle_tab_drop(dragged_tab, this.items.len(), false, window, cx)
                 }),
             )
             .on_drop(
                 cx.listener(move |this, selection: &DraggedSelection, window, cx| {
-                    this.drag_split_direction = None;
-                    this.handle_project_entry_drop(
-                        &selection.active_selection.entry_id,
-                        Some(tab_count),
-                        window,
-                        cx,
-                    )
+                    this.clear_drag_drop_target(cx);
+                    this.handle_dragged_selection_drop(selection, Some(tab_count), window, cx)
                 }),
             )
             .on_drop(cx.listener(move |this, paths, window, cx| {
-                this.drag_split_direction = None;
+                this.clear_drag_drop_target(cx);
                 this.handle_external_paths_drop(paths, window, cx)
             }))
             .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
@@ -3823,10 +3868,21 @@ impl Pane {
             }))
     }
 
+    fn render_tab_bar_insertion_indicator(cx: &mut Context<Pane>) -> impl IntoElement {
+        div()
+            .absolute()
+            .top(px(4.))
+            .bottom(px(4.))
+            .left_0()
+            .w(px(2.))
+            .bg(cx.theme().colors().drop_target_border)
+    }
+
     fn render_pinned_tab_bar_drop_target(&self, cx: &mut Context<Pane>) -> impl IntoElement {
         div()
             .id("pinned_tabs_border")
             .debug_selector(|| "pinned_tabs_border".into())
+            .relative()
             .min_w_6()
             .h(Tab::container_height(cx))
             .flex_grow_1()
@@ -3835,23 +3891,40 @@ impl Pane {
             // HACK: This empty child is currently necessary to force the drop target to appear
             // despite us setting a min width above.
             .child("")
-            .drag_over::<DraggedTab>(|bar, _, _, cx| {
-                bar.bg(cx.theme().colors().drop_target_background)
-            })
-            .drag_over::<DraggedSelection>(|bar, _, _, cx| {
-                bar.bg(cx.theme().colors().drop_target_background)
-            })
+            .when(
+                self.drag_tab_insertion_target == Some(TabInsertionTarget::PinnedEnd)
+                    && cx.has_active_drag(),
+                |bar| bar.child(Self::render_tab_bar_insertion_indicator(cx)),
+            )
+            .on_drag_move::<DraggedTab>(cx.listener(
+                move |this, event: &DragMoveEvent<DraggedTab>, _, cx| {
+                    this.handle_dragged_tab_over_tab_bar_end(
+                        TabInsertionTarget::PinnedEnd,
+                        event,
+                        cx,
+                    );
+                },
+            ))
+            .on_drag_move::<DraggedSelection>(cx.listener(
+                move |this, event: &DragMoveEvent<DraggedSelection>, _, cx| {
+                    this.handle_dragged_selection_over_tab_bar_end(
+                        TabInsertionTarget::PinnedEnd,
+                        event,
+                        cx,
+                    );
+                },
+            ))
             .on_drop(
                 cx.listener(move |this, dragged_tab: &DraggedTab, window, cx| {
-                    this.drag_split_direction = None;
+                    this.clear_drag_drop_target(cx);
                     this.handle_pinned_tab_bar_drop(dragged_tab, window, cx)
                 }),
             )
             .on_drop(
                 cx.listener(move |this, selection: &DraggedSelection, window, cx| {
-                    this.drag_split_direction = None;
-                    this.handle_project_entry_drop(
-                        &selection.active_selection.entry_id,
+                    this.clear_drag_drop_target(cx);
+                    this.handle_dragged_selection_drop(
+                        selection,
                         Some(this.pinned_tab_count),
                         window,
                         cx,
@@ -3859,7 +3932,7 @@ impl Pane {
                 }),
             )
             .on_drop(cx.listener(move |this, paths, window, cx| {
-                this.drag_split_direction = None;
+                this.clear_drag_drop_target(cx);
                 this.handle_external_paths_drop(paths, window, cx)
             }))
             .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
@@ -3875,6 +3948,64 @@ impl Pane {
         )
     }
 
+    fn render_split_drop_overlay(
+        direction: SplitDirection,
+        accepts_dragged_selection: bool,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let size = DefiniteLength::Fraction(0.5);
+        div()
+            .absolute()
+            .bg(cx.theme().colors().drop_target_background)
+            .border_2()
+            .border_color(cx.theme().colors().drop_target_border)
+            .rounded_lg()
+            .map(|div| match direction {
+                SplitDirection::Up => div.top_0().left_0().right_0().h(size),
+                SplitDirection::Down => div.left_0().bottom_0().right_0().h(size),
+                SplitDirection::Left => div.top_0().left_0().bottom_0().w(size),
+                SplitDirection::Right => div.top_0().bottom_0().right_0().w(size),
+            })
+            .on_drop(
+                cx.listener(move |this, dragged_tab: &DraggedTab, window, cx| {
+                    this.handle_tab_drop(dragged_tab, this.active_item_index(), true, window, cx)
+                }),
+            )
+            .when(accepts_dragged_selection, |div| {
+                div.on_drop(
+                    cx.listener(move |this, selection: &DraggedSelection, window, cx| {
+                        this.handle_dragged_selection_drop(selection, None, window, cx)
+                    }),
+                )
+            })
+            .on_drop(
+                cx.listener(move |this, dragged_pane: &DraggedPane, window, cx| {
+                    this.handle_pane_drop(dragged_pane, window, cx)
+                }),
+            )
+            .on_drop(cx.listener(move |this, paths, window, cx| {
+                this.handle_external_paths_drop(paths, window, cx)
+            }))
+    }
+
+    fn render_swap_drop_overlay(cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .absolute()
+            .top_0()
+            .right_0()
+            .bottom_0()
+            .left_0()
+            .bg(cx.theme().colors().drop_target_background)
+            .border_2()
+            .border_color(cx.theme().colors().drop_target_border)
+            .rounded_lg()
+            .on_drop(
+                cx.listener(move |this, dragged_pane: &DraggedPane, window, cx| {
+                    this.handle_pane_drop(dragged_pane, window, cx)
+                }),
+            )
+    }
+
     pub fn set_zoomed(&mut self, zoomed: bool, cx: &mut Context<Self>) {
         self.zoomed = zoomed;
         cx.notify();
@@ -3884,12 +4015,189 @@ impl Pane {
         self.zoomed
     }
 
+    fn clear_drag_drop_target(&mut self, cx: &mut Context<Self>) {
+        if self.drag_split_direction.take().is_some()
+            || mem::take(&mut self.drag_swap_target)
+            || mem::take(&mut self.drag_tab_target)
+            || self.drag_tab_insertion_target.take().is_some()
+        {
+            cx.notify();
+        }
+    }
+
+    fn clear_body_drag_drop_target(&mut self, cx: &mut Context<Self>) {
+        if self.drag_split_direction.take().is_some()
+            || mem::take(&mut self.drag_swap_target)
+            || mem::take(&mut self.drag_tab_target)
+        {
+            cx.notify();
+        }
+    }
+
+    fn is_over_tab_bar_above_body<T>(event: &DragMoveEvent<T>, cx: &App) -> bool {
+        let position = event.event.position;
+        let tab_bar_height = Tab::container_height(cx) * 2.;
+
+        position.x >= event.bounds.left()
+            && position.x <= event.bounds.right()
+            && position.y < event.bounds.top()
+            && position.y >= event.bounds.top() - tab_bar_height
+    }
+
+    fn set_tab_insertion_target(
+        &mut self,
+        target: Option<TabInsertionTarget>,
+        cx: &mut Context<Self>,
+    ) {
+        let changed = self.drag_split_direction.take().is_some()
+            || mem::take(&mut self.drag_swap_target)
+            || mem::take(&mut self.drag_tab_target)
+            || self.drag_tab_insertion_target != target;
+
+        self.drag_tab_insertion_target = target;
+
+        if changed {
+            cx.notify();
+        }
+    }
+
+    fn set_drag_drop_target(
+        &mut self,
+        split_direction: Option<SplitDirection>,
+        swap: bool,
+        tab_target: bool,
+        cx: &mut Context<Self>,
+    ) {
+        if self.drag_split_direction != split_direction
+            || self.drag_swap_target != swap
+            || self.drag_tab_target != tab_target
+            || self.drag_tab_insertion_target.is_some()
+        {
+            self.drag_split_direction = split_direction;
+            self.drag_swap_target = swap;
+            self.drag_tab_target = tab_target;
+            self.drag_tab_insertion_target = None;
+            cx.notify();
+        }
+    }
+
+    fn take_drag_split_direction(&mut self) -> Option<SplitDirection> {
+        self.drag_swap_target = false;
+        self.drag_tab_target = false;
+        self.drag_tab_insertion_target = None;
+        self.drag_split_direction.take()
+    }
+
+    fn can_drop_as_tab_target(target_pane: &Entity<Pane>, dragged_item: &dyn Any) -> bool {
+        if let Some(dragged_tab) = dragged_item.downcast_ref::<DraggedTab>() {
+            return dragged_tab.pane != *target_pane;
+        }
+
+        dragged_item
+            .downcast_ref::<DraggedSelection>()
+            .is_some_and(|selection| selection.active_selection_is_file)
+    }
+
+    fn handle_dragged_tab_over_tab(
+        &mut self,
+        ix: usize,
+        event: &DragMoveEvent<DraggedTab>,
+        cx: &mut Context<Self>,
+    ) {
+        if !event.bounds.contains(&event.event.position) {
+            return;
+        }
+
+        let dragged_tab = event.drag(cx);
+        let target = if dragged_tab.pane != cx.entity() || ix < dragged_tab.ix {
+            Some(TabInsertionTarget::Tab {
+                ix,
+                side: TabInsertionSide::Left,
+            })
+        } else if ix > dragged_tab.ix {
+            Some(TabInsertionTarget::Tab {
+                ix,
+                side: TabInsertionSide::Right,
+            })
+        } else {
+            None
+        };
+
+        self.set_tab_insertion_target(target, cx);
+    }
+
+    fn handle_dragged_selection_over_tab(
+        &mut self,
+        ix: usize,
+        event: &DragMoveEvent<DraggedSelection>,
+        cx: &mut Context<Self>,
+    ) {
+        if !event.bounds.contains(&event.event.position) {
+            return;
+        }
+
+        let target = event
+            .drag(cx)
+            .active_selection_is_file
+            .then_some(TabInsertionTarget::Tab {
+                ix,
+                side: TabInsertionSide::Left,
+            });
+
+        self.set_tab_insertion_target(target, cx);
+    }
+
+    fn handle_dragged_tab_over_tab_bar_end(
+        &mut self,
+        target: TabInsertionTarget,
+        event: &DragMoveEvent<DraggedTab>,
+        cx: &mut Context<Self>,
+    ) {
+        if event.bounds.contains(&event.event.position) {
+            self.set_tab_insertion_target(Some(target), cx);
+        }
+    }
+
+    fn handle_dragged_selection_over_tab_bar_end(
+        &mut self,
+        target: TabInsertionTarget,
+        event: &DragMoveEvent<DraggedSelection>,
+        cx: &mut Context<Self>,
+    ) {
+        if !event.bounds.contains(&event.event.position) {
+            return;
+        }
+
+        let target = event.drag(cx).active_selection_is_file.then_some(target);
+        self.set_tab_insertion_target(target, cx);
+    }
+
     fn handle_drag_move<T: 'static>(
         &mut self,
         event: &DragMoveEvent<T>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        let target_pane = cx.entity();
+        if !event.bounds.contains(&event.event.position) {
+            if Self::is_over_tab_bar_above_body(event, cx) {
+                self.clear_body_drag_drop_target(cx);
+            } else {
+                self.clear_drag_drop_target(cx);
+            }
+            return;
+        }
+
+        if !Self::can_drop_on_body_target(
+            &target_pane,
+            self.items.len(),
+            self.pane_kind,
+            event.dragged_item(),
+        ) {
+            self.clear_drag_drop_target(cx);
+            return;
+        }
+
         let can_split_predicate = self.can_split_predicate.take();
         let can_split = match &can_split_predicate {
             Some(can_split_predicate) => {
@@ -3899,45 +4207,92 @@ impl Pane {
         };
         self.can_split_predicate = can_split_predicate;
         if !can_split {
+            self.clear_drag_drop_target(cx);
             return;
         }
 
-        let rect = event.bounds.size;
-
-        let size = event.bounds.size.width.min(event.bounds.size.height)
-            * WorkspaceSettings::get_global(cx).drop_target_size;
+        let size = event.bounds.size;
+        let horizontal_edge = (size.width * 0.25).max(px(80.)).min(size.width * 0.45);
+        let vertical_edge = (size.height * 0.25).max(px(80.)).min(size.height * 0.45);
 
         let relative_cursor = Point::new(
             event.event.position.x - event.bounds.left(),
             event.event.position.y - event.bounds.top(),
         );
 
-        let direction = if relative_cursor.x < size
-            || relative_cursor.x > rect.width - size
-            || relative_cursor.y < size
-            || relative_cursor.y > rect.height - size
-        {
-            [
-                SplitDirection::Up,
-                SplitDirection::Right,
-                SplitDirection::Down,
-                SplitDirection::Left,
-            ]
-            .iter()
-            .min_by_key(|side| match side {
-                SplitDirection::Up => relative_cursor.y,
-                SplitDirection::Right => rect.width - relative_cursor.x,
-                SplitDirection::Down => rect.height - relative_cursor.y,
-                SplitDirection::Left => relative_cursor.x,
-            })
-            .cloned()
+        let split_direction = if relative_cursor.x < horizontal_edge {
+            Some(SplitDirection::Left)
+        } else if relative_cursor.x > size.width - horizontal_edge {
+            Some(SplitDirection::Right)
+        } else if relative_cursor.y < vertical_edge {
+            Some(SplitDirection::Up)
+        } else if relative_cursor.y > size.height - vertical_edge {
+            Some(SplitDirection::Down)
         } else {
             None
         };
 
-        if direction != self.drag_split_direction {
-            self.drag_split_direction = direction;
+        self.set_drag_drop_target(
+            split_direction,
+            split_direction.is_none() && event.dragged_item().is::<DraggedPane>(),
+            split_direction.is_none()
+                && Self::can_drop_as_tab_target(&target_pane, event.dragged_item())
+                && self.is_tabbed(),
+            cx,
+        );
+    }
+
+    fn can_drop_on_body_target(
+        target_pane: &Entity<Pane>,
+        target_items_len: usize,
+        target_pane_kind: PaneKind,
+        dragged_item: &dyn Any,
+    ) -> bool {
+        if let Some(dragged_pane) = dragged_item.downcast_ref::<DraggedPane>() {
+            return dragged_pane.pane != *target_pane;
         }
+
+        if let Some(dragged_tab) = dragged_item.downcast_ref::<DraggedTab>() {
+            return dragged_tab.pane != *target_pane || target_items_len > 1;
+        }
+
+        if let Some(dragged_selection) = dragged_item.downcast_ref::<DraggedSelection>()
+            && let Some(source_pane) = dragged_selection
+                .source_pane
+                .as_ref()
+                .and_then(|source_pane| source_pane.upgrade())
+        {
+            if !dragged_selection.active_selection_is_file {
+                return false;
+            }
+            return source_pane != *target_pane || target_pane_kind != PaneKind::Project;
+        }
+
+        if let Some(dragged_selection) = dragged_item.downcast_ref::<DraggedSelection>() {
+            return dragged_selection.active_selection_is_file;
+        }
+
+        true
+    }
+
+    fn can_drop_on_body(
+        &self,
+        dragged_item: &dyn Any,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if !Self::can_drop_on_body_target(
+            &cx.entity(),
+            self.items.len(),
+            self.pane_kind,
+            dragged_item,
+        ) {
+            return false;
+        }
+
+        self.can_drop_predicate
+            .as_ref()
+            .is_none_or(|predicate| predicate(dragged_item, window, cx))
     }
 
     pub fn handle_tab_drop(
@@ -3948,6 +4303,11 @@ impl Pane {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if is_pane_target && !self.can_drop_on_body(dragged_tab, window, cx) {
+            self.clear_drag_drop_target(cx);
+            return;
+        }
+
         if !self.is_tabbed() && self.drag_split_direction.is_none() {
             return;
         }
@@ -3957,11 +4317,12 @@ impl Pane {
             && let Some(active_item) = self.active_item()
             && active_item.handle_drop(self, dragged_tab, window, cx)
         {
+            self.clear_drag_drop_target(cx);
             return;
         }
 
         let mut to_pane = cx.entity();
-        let split_direction = self.drag_split_direction;
+        let split_direction = self.take_drag_split_direction();
         let item_id = dragged_tab.item.item_id();
         self.unpreview_item_if_preview(item_id);
 
@@ -3973,6 +4334,23 @@ impl Pane {
         self.workspace
             .update(cx, |_, cx| {
                 cx.defer_in(window, move |workspace, window, cx| {
+                    if let Some(split_direction) = split_direction
+                        && !is_clone
+                        && from_pane != to_pane
+                        && from_pane.read_with(cx, |pane, _| {
+                            pane.items_len() == 1 && pane.index_for_item_id(item_id).is_some()
+                        })
+                    {
+                        workspace.move_pane_to_pane(
+                            from_pane.clone(),
+                            to_pane.clone(),
+                            Some(split_direction),
+                            window,
+                            cx,
+                        );
+                        return;
+                    }
+
                     if let Some(split_direction) = split_direction {
                         to_pane = workspace.split_pane(to_pane, split_direction, window, cx);
                     }
@@ -4104,9 +4482,23 @@ impl Pane {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if let Some(active_item) = self.active_item()
+        let is_pane_target = dragged_selection.active_selection_is_file
+            && (dragged_onto.is_some()
+                || self.drag_split_direction.is_some()
+                || self.drag_tab_target);
+
+        if !is_pane_target
+            && let Some(active_item) = self.active_item()
             && active_item.handle_drop(self, dragged_selection, window, cx)
         {
+            self.clear_drag_drop_target(cx);
+            return;
+        }
+
+        if (dragged_onto.is_none() && !self.can_drop_on_body(dragged_selection, window, cx))
+            || !dragged_selection.active_selection_is_file
+        {
+            self.clear_drag_drop_target(cx);
             return;
         }
 
@@ -4129,14 +4521,8 @@ impl Pane {
             return;
         }
 
-        if let Some(active_item) = self.active_item()
-            && active_item.handle_drop(self, project_entry_id, window, cx)
-        {
-            return;
-        }
-
         let mut to_pane = cx.entity();
-        let split_direction = self.drag_split_direction;
+        let split_direction = self.take_drag_split_direction();
         let project_entry_id = *project_entry_id;
         self.workspace
             .update(cx, |_, cx| {
@@ -4206,6 +4592,11 @@ impl Pane {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if !self.can_drop_on_body(paths, window, cx) {
+            self.clear_drag_drop_target(cx);
+            return;
+        }
+
         if !self.is_tabbed() && self.drag_split_direction.is_none() {
             return;
         }
@@ -4213,11 +4604,12 @@ impl Pane {
         if let Some(active_item) = self.active_item()
             && active_item.handle_drop(self, paths, window, cx)
         {
+            self.clear_drag_drop_target(cx);
             return;
         }
 
         let mut to_pane = cx.entity();
-        let mut split_direction = self.drag_split_direction;
+        let mut split_direction = self.take_drag_split_direction();
         let paths = paths.paths().to_vec();
         let is_remote = self
             .workspace
@@ -4299,8 +4691,13 @@ impl Pane {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if !self.can_drop_on_body(dragged_pane, window, cx) {
+            self.clear_drag_drop_target(cx);
+            return;
+        }
+
         let target_pane = cx.entity();
-        let split_direction = self.drag_split_direction.take();
+        let split_direction = self.take_drag_split_direction();
         let pane_to_move = dragged_pane.pane.clone();
         self.workspace
             .update(cx, |_, cx| {
@@ -4574,6 +4971,7 @@ impl Render for Pane {
         v_flex()
             .key_context(key_context)
             .track_focus(&self.focus_handle(cx))
+            .relative()
             .size_full()
             .flex_none()
             .overflow_hidden()
@@ -4737,6 +5135,7 @@ impl Render for Pane {
             })
             .child({
                 let has_worktrees = project.read(cx).visible_worktrees(cx).next().is_some();
+                let body_accepts_dragged_selection = self.pane_kind != PaneKind::Project;
                 // main content
                 div()
                     .flex_1()
@@ -4793,31 +5192,40 @@ impl Render for Pane {
                         // drag target
                         div()
                             .invisible()
+                            .when(self.drag_tab_target && cx.has_active_drag(), |div| {
+                                div.visible()
+                                    .bg(cx.theme().colors().drop_target_background)
+                                    .border_2()
+                                    .border_color(cx.theme().colors().drop_target_border)
+                                    .rounded_lg()
+                            })
                             .absolute()
-                            .bg(cx.theme().colors().drop_target_background)
-                            .group_drag_over::<DraggedTab>("", |style| style.visible())
-                            .group_drag_over::<DraggedSelection>("", |style| style.visible())
-                            .group_drag_over::<DraggedPane>("", |style| style.visible())
-                            .when(is_local, |div| {
-                                div.group_drag_over::<ExternalPaths>("", |style| style.visible())
-                            })
-                            .when_some(self.can_drop_predicate.clone(), |this, p| {
-                                this.can_drop(move |a, window, cx| p(a, window, cx))
-                            })
+                            .top_0()
+                            .right_0()
+                            .bottom_0()
+                            .left_0()
                             .on_drop(cx.listener(move |this, dragged_tab, window, cx| {
-                                this.handle_tab_drop(
-                                    dragged_tab,
-                                    this.active_item_index(),
-                                    true,
-                                    window,
-                                    cx,
-                                )
+                                let target_ix = if this.drag_tab_target {
+                                    this.items.len()
+                                } else {
+                                    this.active_item_index()
+                                };
+                                this.handle_tab_drop(dragged_tab, target_ix, true, window, cx)
                             }))
-                            .on_drop(cx.listener(
-                                move |this, selection: &DraggedSelection, window, cx| {
-                                    this.handle_dragged_selection_drop(selection, None, window, cx)
-                                },
-                            ))
+                            .when(body_accepts_dragged_selection, |div| {
+                                div.on_drop(cx.listener(
+                                    move |this, selection: &DraggedSelection, window, cx| {
+                                        let target_ix = if this.drag_tab_target {
+                                            Some(this.items.len())
+                                        } else {
+                                            None
+                                        };
+                                        this.handle_dragged_selection_drop(
+                                            selection, target_ix, window, cx,
+                                        )
+                                    },
+                                ))
+                            })
                             .on_drop(cx.listener(
                                 move |this, dragged_pane: &DraggedPane, window, cx| {
                                     this.handle_pane_drop(dragged_pane, window, cx)
@@ -4845,6 +5253,19 @@ impl Render for Pane {
                                 }
                             }),
                     )
+            })
+            .when_some(
+                self.drag_split_direction.filter(|_| cx.has_active_drag()),
+                |this, direction| {
+                    this.child(Self::render_split_drop_overlay(
+                        direction,
+                        self.pane_kind != PaneKind::Project,
+                        cx,
+                    ))
+                },
+            )
+            .when(self.drag_swap_target && cx.has_active_drag(), |this| {
+                this.child(Self::render_swap_drop_overlay(cx))
             })
             .child(self.render_pane_drag_handle(cx))
             .on_mouse_down(

@@ -4536,6 +4536,8 @@ async fn test_multiple_marked_entries(cx: &mut gpui::TestAppContext) {
             let drag = DraggedSelection {
                 active_selection: this.selection.unwrap(),
                 marked_selections: this.marked_entries.clone().into(),
+                source_pane: None,
+                active_selection_is_file: true,
             };
             let target_entry = this
                 .project
@@ -4678,6 +4680,8 @@ async fn test_dragged_selection_resolve_entry(cx: &mut gpui::TestAppContext) {
         let drag = DraggedSelection {
             active_selection: *panel.selection.as_ref().unwrap(),
             marked_selections: Arc::new([*panel.selection.as_ref().unwrap()]),
+            source_pane: None,
+            active_selection_is_file: true,
         };
         let target_entry = panel
             .project
@@ -4708,6 +4712,8 @@ async fn test_dragged_selection_resolve_entry(cx: &mut gpui::TestAppContext) {
         let drag = DraggedSelection {
             active_selection: *panel.selection.as_ref().unwrap(),
             marked_selections: Arc::new([*panel.selection.as_ref().unwrap()]),
+            source_pane: None,
+            active_selection_is_file: true,
         };
         let target_entry = panel
             .project
@@ -4728,6 +4734,8 @@ async fn test_dragged_selection_resolve_entry(cx: &mut gpui::TestAppContext) {
         let drag = DraggedSelection {
             active_selection: *panel.selection.as_ref().unwrap(),
             marked_selections: Arc::new([*panel.selection.as_ref().unwrap()]),
+            source_pane: None,
+            active_selection_is_file: true,
         };
         let target_entry = panel
             .project
@@ -4754,6 +4762,8 @@ async fn test_dragged_selection_resolve_entry(cx: &mut gpui::TestAppContext) {
         let drag = DraggedSelection {
             active_selection: *panel.selection.as_ref().unwrap(),
             marked_selections: Arc::new([*panel.selection.as_ref().unwrap()]),
+            source_pane: None,
+            active_selection_is_file: true,
         };
         let target_entry = panel
             .project
@@ -4774,6 +4784,8 @@ async fn test_dragged_selection_resolve_entry(cx: &mut gpui::TestAppContext) {
         let drag = DraggedSelection {
             active_selection: *panel.selection.as_ref().unwrap(),
             marked_selections: Arc::new([*panel.selection.as_ref().unwrap()]),
+            source_pane: None,
+            active_selection_is_file: true,
         };
         let target_entry = panel
             .project
@@ -4851,6 +4863,8 @@ async fn test_drag_marked_entries_in_folded_directories(cx: &mut gpui::TestAppCo
         let drag = DraggedSelection {
             active_selection: *panel.selection.as_ref().unwrap(),
             marked_selections: panel.marked_entries.clone().into(),
+            source_pane: None,
+            active_selection_is_file: true,
         };
         let target_entry = panel
             .project
@@ -4941,6 +4955,8 @@ async fn test_dragging_same_named_files_preserves_one_source_on_conflict(
                     entry_id: entry_b_id,
                 },
             ]),
+            source_pane: None,
+            active_selection_is_file: true,
         };
 
         panel.drag_onto(&drag, root_entry_id, false, window, cx);
@@ -9032,6 +9048,8 @@ async fn test_highlight_entry_for_selection_drag(cx: &mut gpui::TestAppContext) 
                 worktree_id,
                 entry_id: child_file.id,
             }]),
+            source_pane: None,
+            active_selection_is_file: true,
         };
         let result =
             panel.highlight_entry_for_selection_drag(parent_dir, worktree, &dragged_selection, cx);
@@ -9080,6 +9098,8 @@ async fn test_highlight_entry_for_selection_drag(cx: &mut gpui::TestAppContext) 
                     entry_id: sibling_file.id,
                 },
             ]),
+            source_pane: None,
+            active_selection_is_file: true,
         };
         let result =
             panel.highlight_entry_for_selection_drag(parent_dir, worktree, &dragged_selection, cx);
@@ -9171,6 +9191,8 @@ async fn test_highlight_entry_for_selection_drag_cross_worktree(cx: &mut gpui::T
                 worktree_id: worktree_a.read(cx).id(),
                 entry_id: main_rs_from_a.id,
             }]),
+            source_pane: None,
+            active_selection_is_file: true,
         };
 
         let result = panel.highlight_entry_for_selection_drag(
@@ -9273,6 +9295,8 @@ async fn test_should_highlight_background_for_selection_drag(cx: &mut gpui::Test
                     entry_id: nested_file.id,
                 },
             ]),
+            source_pane: None,
+            active_selection_is_file: true,
         };
 
         let result = panel.should_highlight_background_for_selection_drag(
@@ -9292,6 +9316,8 @@ async fn test_should_highlight_background_for_selection_drag(cx: &mut gpui::Test
                 worktree_id: worktree1_id,
                 entry_id: nested_file.id,
             }]),
+            source_pane: None,
+            active_selection_is_file: true,
         };
 
         let result = panel.should_highlight_background_for_selection_drag(
@@ -9311,6 +9337,8 @@ async fn test_should_highlight_background_for_selection_drag(cx: &mut gpui::Test
                 worktree_id: worktree1_id,
                 entry_id: root_file.id,
             }]),
+            source_pane: None,
+            active_selection_is_file: true,
         };
 
         let result = panel.should_highlight_background_for_selection_drag(
@@ -9344,6 +9372,8 @@ async fn test_should_highlight_background_for_selection_drag(cx: &mut gpui::Test
                 worktree_id: worktree1_id,
                 entry_id: child_file.id,
             }]),
+            source_pane: None,
+            active_selection_is_file: true,
         };
 
         let result = panel.should_highlight_background_for_selection_drag(
@@ -10063,6 +10093,8 @@ pub(crate) fn drag_selection_to(
                 entry_id: panel.resolve_entry(selection.entry_id),
             },
             marked_selections: Arc::from(panel.marked_entries.clone()),
+            source_pane: None,
+            active_selection_is_file: true,
         };
         panel.drag_onto(&drag, target_entry, is_file, window, cx);
     });

@@ -3192,6 +3192,8 @@ mod tests {
                             entry_id: second_entry.id,
                         },
                     ]),
+                    source_pane: None,
+                    active_selection_is_file: true,
                 };
                 assert_drop_writes_to_terminal(
                     &active_pane,

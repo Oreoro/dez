@@ -73,8 +73,8 @@ use util::{
     rel_path::{RelPath, RelPathBuf},
 };
 use workspace::{
-    DraggedSelection, OpenInTerminal, OpenMode, OpenOptions, OpenVisible, PreviewTabsSettings,
-    SelectedEntry, SplitDirection, Workspace,
+    DraggedSelection, OpenInTerminal, OpenMode, OpenOptions, OpenVisible, PaneKind,
+    PreviewTabsSettings, SelectedEntry, SplitDirection, Workspace,
     dock::{DockPosition, Panel, PanelEvent},
     notifications::{DetachAndPromptErr, NotifyResultExt, NotifyTaskExt},
 };
@@ -5620,9 +5620,17 @@ impl ProjectPanel {
                 .when(settings.drag_and_drop, |this| {
                     let path_for_external_paths = path.clone();
                     let path_for_dragged_selection = path.clone();
+                    let source_pane = self.workspace.upgrade().and_then(|workspace| {
+                        workspace
+                            .read(cx)
+                            .panel_pane_for_kind(PaneKind::Project, cx)
+                            .map(|pane| pane.downgrade())
+                    });
                     let dragged_selection = DraggedSelection {
                         active_selection: selection,
                         marked_selections: marked_selections.clone(),
+                        source_pane,
+                        active_selection_is_file: kind.is_file(),
                     };
 
                     this.on_drag_move::<ExternalPaths>(cx.listener(

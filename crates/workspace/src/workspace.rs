@@ -4683,7 +4683,7 @@ impl Workspace {
             .any(|center_pane| center_pane == pane)
     }
 
-    fn panel_pane_for_kind(&self, pane_kind: PaneKind, cx: &App) -> Option<Entity<Pane>> {
+    pub fn panel_pane_for_kind(&self, pane_kind: PaneKind, cx: &App) -> Option<Entity<Pane>> {
         self.center
             .panes()
             .into_iter()

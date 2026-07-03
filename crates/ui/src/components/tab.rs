@@ -29,12 +29,19 @@ pub enum TabCloseSide {
     End,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum TabInsertionIndicator {
+    Left,
+    Right,
+}
+
 #[derive(IntoElement, RegisterComponent)]
 pub struct Tab {
     div: Stateful<Div>,
     selected: bool,
     position: TabPosition,
     close_side: TabCloseSide,
+    insertion_indicator: Option<TabInsertionIndicator>,
     start_slot: Option<AnyElement>,
     end_slot: Option<AnyElement>,
     children: SmallVec<[AnyElement; 2]>,
@@ -50,6 +57,7 @@ impl Tab {
             selected: false,
             position: TabPosition::First,
             close_side: TabCloseSide::End,
+            insertion_indicator: None,
             start_slot: None,
             end_slot: None,
             children: SmallVec::new(),
@@ -63,6 +71,16 @@ impl Tab {
 
     pub fn close_side(mut self, close_side: TabCloseSide) -> Self {
         self.close_side = close_side;
+        self
+    }
+
+    pub fn insertion_indicator_left(mut self) -> Self {
+        self.insertion_indicator = Some(TabInsertionIndicator::Left);
+        self
+    }
+
+    pub fn insertion_indicator_right(mut self) -> Self {
+        self.insertion_indicator = Some(TabInsertionIndicator::Right);
         self
     }
 
@@ -109,6 +127,7 @@ impl ParentElement for Tab {
 impl RenderOnce for Tab {
     #[allow(refining_impl_trait)]
     fn render(self, _: &mut Window, cx: &mut App) -> Stateful<Div> {
+        let insertion_indicator = self.insertion_indicator;
         let (text_color, tab_bg, _tab_hover_bg, _tab_active_bg) = match self.selected {
             false => (
                 cx.theme().colors().text_muted,
@@ -146,6 +165,7 @@ impl RenderOnce for Tab {
         };
 
         self.div
+            .relative()
             .h(Tab::container_height(cx))
             .bg(tab_bg)
             .border_color(cx.theme().colors().border)
@@ -182,6 +202,20 @@ impl RenderOnce for Tab {
                     .children(self.children)
                     .children(end_slot),
             )
+            .when_some(insertion_indicator, |this, insertion_indicator| {
+                this.child(
+                    div()
+                        .absolute()
+                        .top(px(4.))
+                        .bottom(px(4.))
+                        .w(px(2.))
+                        .bg(cx.theme().colors().drop_target_border)
+                        .map(|indicator| match insertion_indicator {
+                            TabInsertionIndicator::Left => indicator.left_0(),
+                            TabInsertionIndicator::Right => indicator.right_0(),
+                        }),
+                )
+            })
     }
 }
 
