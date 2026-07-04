@@ -120,6 +120,10 @@ pub struct SidebarSettingsContent {
     ///
     /// Default: true
     pub starts_open: Option<bool>,
+    /// Whether to show the project pane toggle button in the sidebar header.
+    ///
+    /// Default: true
+    pub show_project_pane_button: Option<bool>,
     /// Whether to show git status indicators on the branch icon in the sidebar.
     /// When enabled, the branch icon changes to reflect the current repository
     /// status (e.g. modified, added, deleted, or conflict).

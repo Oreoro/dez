@@ -22,7 +22,7 @@ use zed_actions::sidebar::ToggleThreadSwitcher;
 
 use crate::workspace_settings::SidebarSettings;
 use settings::SidebarDockPosition;
-use ui::{ContextMenu, right_click_menu};
+use ui::{ContextMenu, Tooltip, right_click_menu};
 
 const SIDEBAR_RESIZE_HANDLE_SIZE: Pixels = px(6.0);
 #[cfg(target_os = "macos")]
@@ -31,7 +31,7 @@ const TRAFFIC_LIGHT_INSET: Pixels = px(9.0);
 use crate::open_remote_project_with_existing_connection;
 use crate::{
     CloseIntent, CloseWindow, DockPosition, Event as WorkspaceEvent, Item, ModalView, OpenMode,
-    Panel, Workspace, WorkspaceId, client_side_decorations,
+    PaneKind, Panel, ToggleProjectPane, Workspace, WorkspaceId, client_side_decorations,
     persistence::model::MultiWorkspaceState, workspace_card_gap,
 };
 
@@ -63,7 +63,7 @@ actions!(
     ]
 );
 
-#[derive(Default)]
+#[derive(Clone, Copy, Default)]
 pub struct SidebarRenderState {
     pub open: bool,
     pub side: SidebarSide,
@@ -103,6 +103,170 @@ pub fn sidebar_side_context_menu(
             menu
         })
     })
+}
+
+pub fn render_sidebar_header_controls(
+    multi_workspace: Entity<MultiWorkspace>,
+    cx: &mut App,
+) -> Option<AnyElement> {
+    let (enabled, sidebar, active_workspace) =
+        multi_workspace.read_with(cx, |multi_workspace, cx| {
+            (
+                multi_workspace.multi_workspace_enabled(cx),
+                multi_workspace.sidebar_render_state(cx),
+                multi_workspace.workspace().clone(),
+            )
+        });
+
+    render_sidebar_header_controls_for_state(
+        multi_workspace,
+        enabled,
+        sidebar,
+        Some(active_workspace),
+        None,
+        cx,
+    )
+}
+
+pub fn render_sidebar_header_controls_with_state(
+    multi_workspace: Entity<MultiWorkspace>,
+    sidebar: SidebarRenderState,
+    cx: &mut App,
+) -> Option<AnyElement> {
+    let (enabled, active_workspace) = multi_workspace.read_with(cx, |multi_workspace, cx| {
+        (
+            multi_workspace.multi_workspace_enabled(cx),
+            multi_workspace.workspace().clone(),
+        )
+    });
+
+    render_sidebar_header_controls_for_state(
+        multi_workspace,
+        enabled,
+        sidebar,
+        Some(active_workspace),
+        None,
+        cx,
+    )
+}
+
+pub fn render_sidebar_header_controls_with_project_pane_visibility(
+    multi_workspace: Entity<MultiWorkspace>,
+    sidebar: SidebarRenderState,
+    project_pane_visible: bool,
+    cx: &mut App,
+) -> Option<AnyElement> {
+    let enabled = multi_workspace.read_with(cx, |multi_workspace, cx| {
+        multi_workspace.multi_workspace_enabled(cx)
+    });
+
+    render_sidebar_header_controls_for_state(
+        multi_workspace,
+        enabled,
+        sidebar,
+        None,
+        Some(project_pane_visible),
+        cx,
+    )
+}
+
+fn render_sidebar_header_controls_for_state(
+    multi_workspace: Entity<MultiWorkspace>,
+    enabled: bool,
+    sidebar: SidebarRenderState,
+    active_workspace: Option<Entity<Workspace>>,
+    project_pane_visible: Option<bool>,
+    cx: &mut App,
+) -> Option<AnyElement> {
+    if !enabled {
+        return None;
+    }
+
+    let sidebar_open = sidebar.open;
+    let sidebar_side = sidebar.side;
+    let sidebar_icon = match (sidebar_open, sidebar_side) {
+        (true, SidebarSide::Left) => IconName::SidebarLeftOpen,
+        (true, SidebarSide::Right) => IconName::SidebarRightOpen,
+        (false, SidebarSide::Left) => IconName::SidebarLeftClosed,
+        (false, SidebarSide::Right) => IconName::SidebarRightClosed,
+    };
+    let sidebar_label = if sidebar_open {
+        "Hide Sidebar"
+    } else {
+        "Open Sidebar"
+    };
+    let on_right = sidebar_side == SidebarSide::Right;
+    let sidebar_multi_workspace = multi_workspace.clone();
+
+    let sidebar_toggle_button = sidebar_side_context_menu("sidebar-toggle-menu", cx)
+        .anchor(if on_right {
+            gpui::Anchor::BottomRight
+        } else {
+            gpui::Anchor::BottomLeft
+        })
+        .attach(if on_right {
+            gpui::Anchor::TopRight
+        } else {
+            gpui::Anchor::TopLeft
+        })
+        .trigger(move |_is_active, _window, _cx| {
+            IconButton::new("sidebar-toggle", sidebar_icon)
+                .icon_size(IconSize::Small)
+                .icon_color(Color::Muted)
+                .tooltip(move |_, cx| Tooltip::for_action(sidebar_label, &ToggleSidebar, cx))
+                .on_click(move |_, window, cx| {
+                    sidebar_multi_workspace.update(cx, |multi_workspace, cx| {
+                        if sidebar_open {
+                            multi_workspace.close_sidebar(window, cx);
+                        } else {
+                            multi_workspace.toggle_sidebar(window, cx);
+                        }
+                    });
+                })
+        })
+        .into_any_element();
+
+    let project_pane_toggle_button = if SidebarSettings::get_global(cx).show_project_pane_button {
+        let is_visible = project_pane_visible.or_else(|| {
+            active_workspace
+                .as_ref()
+                .map(|workspace| workspace.read(cx).panel_pane_visible(PaneKind::Project, cx))
+        })?;
+        let label = if is_visible {
+            "Hide Project Pane"
+        } else {
+            "Show Project Pane"
+        };
+
+        Some(
+            IconButton::new("project-pane-toggle", IconName::Compass)
+                .icon_size(IconSize::Small)
+                .icon_color(if is_visible {
+                    Color::Default
+                } else {
+                    Color::Muted
+                })
+                .toggle_state(is_visible)
+                .tooltip(move |_, cx| Tooltip::for_action(label, &ToggleProjectPane, cx))
+                .on_click(|_, window, cx| {
+                    window.dispatch_action(Box::new(ToggleProjectPane), cx);
+                })
+                .into_any_element(),
+        )
+    } else {
+        None
+    };
+
+    Some(
+        h_flex()
+            .h_full()
+            .gap_1()
+            .child(sidebar_toggle_button)
+            .when_some(project_pane_toggle_button, |this, button| {
+                this.child(button)
+            })
+            .into_any_element(),
+    )
 }
 
 pub enum MultiWorkspaceEvent {

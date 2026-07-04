@@ -66,8 +66,8 @@ use util::path_list::PathList;
 use workspace::{
     CloseWindow, MultiWorkspace, MultiWorkspaceEvent, NextProject, NextThread, Open, OpenMode,
     PreviousProject, PreviousThread, ProjectGroupKey, SaveIntent, Sidebar as WorkspaceSidebar,
-    SidebarSettings, SidebarSide, Toast, ToggleSidebar, Workspace, notifications::NotificationId,
-    sidebar_side_context_menu,
+    SidebarRenderState, SidebarSettings, SidebarSide, Toast, ToggleSidebar, Workspace,
+    notifications::NotificationId, render_sidebar_header_controls_with_state,
 };
 
 use git_ui::worktree_service::{RemoteBranchName, worktree_create_targets};
@@ -7510,15 +7510,39 @@ impl Sidebar {
     }
 
     fn render_sidebar_header(&self, window: &Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let sidebar_on_left = self.side(cx) == SidebarSide::Left;
-        let sidebar_on_right = self.side(cx) == SidebarSide::Right;
+        let sidebar_side = self.side(cx);
+        let sidebar_state = SidebarRenderState {
+            open: true,
+            side: sidebar_side,
+        };
+        let sidebar_on_left = sidebar_side == SidebarSide::Left;
+        let sidebar_on_right = sidebar_side == SidebarSide::Right;
         let not_fullscreen = !window.is_fullscreen();
         let traffic_lights = cfg!(target_os = "macos") && not_fullscreen && sidebar_on_left;
         let left_window_controls = !cfg!(target_os = "macos") && not_fullscreen && sidebar_on_left;
         let right_window_controls =
             !cfg!(target_os = "macos") && not_fullscreen && sidebar_on_right;
-        let traffic_light_toggle_button =
-            traffic_lights.then(|| self.render_sidebar_toggle_button(cx));
+        let traffic_light_buttons = if traffic_lights {
+            self.multi_workspace.upgrade().and_then(|multi_workspace| {
+                render_sidebar_header_controls_with_state(multi_workspace, sidebar_state, cx)
+            })
+        } else {
+            None
+        };
+        let left_header_buttons = if !traffic_lights && !sidebar_on_right {
+            self.multi_workspace.upgrade().and_then(|multi_workspace| {
+                render_sidebar_header_controls_with_state(multi_workspace, sidebar_state, cx)
+            })
+        } else {
+            None
+        };
+        let right_header_buttons = if !traffic_lights && sidebar_on_right {
+            self.multi_workspace.upgrade().and_then(|multi_workspace| {
+                render_sidebar_header_controls_with_state(multi_workspace, sidebar_state, cx)
+            })
+        } else {
+            None
+        };
 
         h_flex()
             .relative()
@@ -7532,7 +7556,7 @@ impl Sidebar {
                 this.child(ui::utils::traffic_light_spacer_with_child(
                     cx,
                     false,
-                    traffic_light_toggle_button,
+                    traffic_light_buttons,
                 ))
             })
             .map(|this| {
@@ -7553,13 +7577,9 @@ impl Sidebar {
                     .border_b_1()
                     .border_color(cx.theme().colors().border),
             )
-            .when(!traffic_lights && !sidebar_on_right, |this| {
-                this.child(self.render_sidebar_toggle_button(cx))
-            })
+            .when_some(left_header_buttons, |this, buttons| this.child(buttons))
             .child(div().flex_1())
-            .when(!traffic_lights && sidebar_on_right, |this| {
-                this.child(self.render_sidebar_toggle_button(cx))
-            })
+            .when_some(right_header_buttons, |this, buttons| this.child(buttons))
             .when(right_window_controls, |this| {
                 this.children(Self::render_right_window_controls(window, cx))
             })
@@ -7579,41 +7599,6 @@ impl Sidebar {
             Box::new(CloseWindow),
             window,
         )
-    }
-
-    fn render_sidebar_toggle_button(&self, _cx: &mut Context<Self>) -> AnyElement {
-        let on_right = SidebarSettings::get_global(_cx).side() == SidebarSide::Right;
-
-        sidebar_side_context_menu("sidebar-toggle-menu", _cx)
-            .anchor(if on_right {
-                gpui::Anchor::BottomRight
-            } else {
-                gpui::Anchor::BottomLeft
-            })
-            .attach(if on_right {
-                gpui::Anchor::TopRight
-            } else {
-                gpui::Anchor::TopLeft
-            })
-            .trigger(move |_is_active, _window, _cx| {
-                let icon = if on_right {
-                    IconName::SidebarRightOpen
-                } else {
-                    IconName::SidebarLeftOpen
-                };
-                IconButton::new("sidebar-close-toggle", icon)
-                    .icon_size(IconSize::Small)
-                    .icon_color(Color::Muted)
-                    .tooltip(|_, cx| Tooltip::for_action("Hide Sidebar", &ToggleSidebar, cx))
-                    .on_click(|_, window, cx| {
-                        if let Some(multi_workspace) = window.root::<MultiWorkspace>().flatten() {
-                            multi_workspace.update(cx, |multi_workspace, cx| {
-                                multi_workspace.close_sidebar(window, cx);
-                            });
-                        }
-                    })
-            })
-            .into_any_element()
     }
 
     fn active_agent_conversation_view(&self, cx: &App) -> Option<Entity<ConversationView>> {

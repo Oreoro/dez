@@ -35,7 +35,9 @@ pub use multi_workspace::{
     CloseSidebar, DraggedSidebar, FocusSidebar, MoveProjectToNewWindow, MultiWorkspace,
     MultiWorkspaceEvent, NextProject, NextThread, PreviousProject, PreviousThread, ProjectGroup,
     ProjectGroupKey, SerializedProjectGroupState, Sidebar, SidebarEvent, SidebarHandle,
-    SidebarRenderState, SidebarSide, ToggleSidebar, sidebar_side_context_menu,
+    SidebarRenderState, SidebarSide, ToggleSidebar, render_sidebar_header_controls,
+    render_sidebar_header_controls_with_project_pane_visibility,
+    render_sidebar_header_controls_with_state, sidebar_side_context_menu,
 };
 pub use path_list::{PathList, SerializedPathList};
 pub use remote::{
@@ -120,8 +122,8 @@ use sqlez::{
     bindable::{Bind, Column, StaticColumnCount},
     statement::Statement,
 };
+use status_bar::StatusBar;
 pub use status_bar::{HideStatusItem, StatusItemView, add_hide_button_entry};
-use status_bar::{PaneVisibilityToggle, StatusBar};
 use std::{
     any::TypeId,
     borrow::Cow,
@@ -1683,15 +1685,8 @@ impl Workspace {
             .root::<MultiWorkspace>()
             .flatten()
             .map(|mw| mw.downgrade());
-        let workspace_handle = cx.entity();
-        let project_pane_toggle =
-            cx.new(|cx| PaneVisibilityToggle::new(workspace_handle.clone(), PaneKind::Project, cx));
-        let status_bar = cx.new(|cx| {
-            let mut status_bar =
-                StatusBar::new(&center_pane.clone(), multi_workspace.clone(), window, cx);
-            status_bar.add_right_item(project_pane_toggle, window, cx);
-            status_bar
-        });
+        let status_bar =
+            cx.new(|cx| StatusBar::new(&center_pane.clone(), multi_workspace.clone(), window, cx));
 
         let session_id = app_state.session.read(cx).id().to_owned();
 
@@ -4693,6 +4688,19 @@ impl Workspace {
 
     pub fn panel_pane_visible(&self, pane_kind: PaneKind, cx: &App) -> bool {
         self.panel_pane_for_kind(pane_kind, cx)
+            .is_some_and(|pane| pane.read(cx).is_visible())
+    }
+
+    pub fn panel_pane_visible_except(
+        &self,
+        pane_kind: PaneKind,
+        excluded_pane: &Entity<Pane>,
+        cx: &App,
+    ) -> bool {
+        self.center
+            .panes()
+            .into_iter()
+            .find(|pane| *pane != excluded_pane && pane.read(cx).pane_kind() == pane_kind)
             .is_some_and(|pane| pane.read(cx).is_visible())
     }
 

@@ -5383,6 +5383,7 @@ Visit [AI Quick Start](../ai/quick-start.md) under the AI section to learn more 
 
 - `side`: Which side of the window the sidebar appears on. Default: `"left"`
 - `starts_open`: Whether the sidebar should start open in new windows. Default: `true`
+- `show_project_pane_button`: Whether to show the project pane toggle button in the sidebar header. Default: `true`
 
 ## Collaboration Panel
 

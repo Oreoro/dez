@@ -762,7 +762,7 @@
   // Can be a combination of "left", "right" and "bottom".
   "resize_all_panels_in_dock": ["left"],
   "project_panel": {
-    // Whether to show the project panel button in the status bar
+    // Whether to show the file tree button in the project pane header.
     "button": true,
     // Whether to hide the gitignore entries in the project panel.
     "hide_gitignore": false,
@@ -1022,6 +1022,8 @@
     "side": "left",
     // Whether the sidebar should start open in new windows.
     "starts_open": true,
+    // Whether to show the project pane toggle button in the sidebar header.
+    "show_project_pane_button": true,
     // Whether to show git status indicators on the branch icon in the sidebar.
     "show_branch_status_icon": false,
     // Whether to show the branch name button in the sidebar.

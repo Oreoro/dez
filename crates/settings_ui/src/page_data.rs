@@ -3827,28 +3827,9 @@ fn search_and_files_page() -> SettingsPage {
 }
 
 fn window_and_layout_page() -> SettingsPage {
-    fn status_bar_section() -> [SettingsPageItem; 11] {
+    fn status_bar_section() -> [SettingsPageItem; 10] {
         [
             SettingsPageItem::SectionHeader("Status Bar"),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Project Panel Button",
-                description: "Show the project panel button in the status bar.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("project_panel.button"),
-                    pick: |settings_content| {
-                        settings_content.project_panel.as_ref()?.button.as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .project_panel
-                            .get_or_insert_default()
-                            .button = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Active Language Button",
                 description: "Show the active language button in the status bar.",
@@ -4029,9 +4010,32 @@ fn window_and_layout_page() -> SettingsPage {
         ]
     }
 
-    fn sidebar_chrome_section() -> [SettingsPageItem; 10] {
+    fn sidebar_chrome_section() -> [SettingsPageItem; 11] {
         [
             SettingsPageItem::SectionHeader("Sidebar"),
+            SettingsPageItem::SettingItem(SettingItem {
+                title: "Project Pane Button",
+                description: "Show the project pane toggle button in the sidebar header.",
+                field: Box::new(SettingField {
+                    organization_override: None,
+                    json_path: Some("sidebar.show_project_pane_button"),
+                    pick: |settings_content| {
+                        settings_content
+                            .sidebar
+                            .as_ref()?
+                            .show_project_pane_button
+                            .as_ref()
+                    },
+                    write: |settings_content, value, _| {
+                        settings_content
+                            .sidebar
+                            .get_or_insert_default()
+                            .show_project_pane_button = value;
+                    },
+                }),
+                metadata: None,
+                files: USER,
+            }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Branch Status Icon",
                 description: "Show git status indicators on the branch icon in the sidebar.",

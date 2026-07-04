@@ -1,7 +1,7 @@
 use crate::{
     CloseWindow, NewCenterTerminal, NewFile, NewTerminal, OpenInTerminal, OpenOptions,
     OpenTerminal, OpenVisible, SidebarSide, SplitDirection, ToggleFileFinder, ToggleProjectSymbols,
-    ToggleSidebar, ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
+    ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
     focus_follows_mouse::FocusFollowsMouse as _,
     invalid_item_view::InvalidItemView,
     item::{
@@ -11,6 +11,7 @@ use crate::{
     },
     move_item,
     notifications::NotifyResultExt,
+    render_sidebar_header_controls_with_project_pane_visibility,
     toolbar::Toolbar,
     workspace_settings::{AutosaveSetting, FocusFollowsMouse, TabBarSettings, WorkspaceSettings},
 };
@@ -4811,7 +4812,7 @@ impl Pane {
             return header;
         }
 
-        let hidden_sidebar_toggle_button = self.render_hidden_sidebar_toggle_button(cx);
+        let hidden_sidebar_controls = self.render_hidden_sidebar_header_controls(cx);
 
         h_flex()
             .h(Tab::container_height(cx))
@@ -4821,42 +4822,37 @@ impl Pane {
             .child(ui::utils::traffic_light_spacer_with_child(
                 cx,
                 true,
-                hidden_sidebar_toggle_button,
+                hidden_sidebar_controls,
             ))
             .child(div().h_full().min_w_0().flex_1().child(header))
             .into_any_element()
     }
 
-    fn render_hidden_sidebar_toggle_button(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
-        let multi_workspace = self
-            .workspace
-            .upgrade()
-            .and_then(|workspace| workspace.read(cx).multi_workspace().cloned())
+    fn render_hidden_sidebar_header_controls(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let workspace = self.workspace.upgrade()?;
+        let multi_workspace = workspace
+            .read(cx)
+            .multi_workspace()
+            .cloned()
             .and_then(|multi_workspace| multi_workspace.upgrade())?;
-        let multi_workspace = multi_workspace.read(cx);
-        if !multi_workspace.multi_workspace_enabled(cx) {
-            return None;
-        }
-
-        let sidebar = multi_workspace.sidebar_render_state(cx);
+        let sidebar = multi_workspace.read(cx).sidebar_render_state(cx);
         if sidebar.open {
             return None;
         }
-
-        let icon = match sidebar.side {
-            SidebarSide::Left => IconName::SidebarLeftClosed,
-            SidebarSide::Right => IconName::SidebarRightClosed,
+        let current_pane = cx.entity();
+        let project_pane_visible = if self.pane_kind == PaneKind::Project {
+            self.is_visible()
+        } else {
+            workspace
+                .read(cx)
+                .panel_pane_visible_except(PaneKind::Project, &current_pane, cx)
         };
 
-        Some(
-            IconButton::new("toggle-workspace-sidebar", icon)
-                .icon_size(IconSize::Small)
-                .icon_color(Color::Muted)
-                .tooltip(|_, cx| Tooltip::for_action("Open Sidebar", &ToggleSidebar, cx))
-                .on_click(|_, window, cx| {
-                    window.dispatch_action(Box::new(ToggleSidebar), cx);
-                })
-                .into_any_element(),
+        render_sidebar_header_controls_with_project_pane_visibility(
+            multi_workspace,
+            sidebar,
+            project_pane_visible,
+            cx,
         )
     }
 

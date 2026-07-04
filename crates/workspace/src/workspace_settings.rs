@@ -51,6 +51,7 @@ pub struct FocusFollowsMouse {
 pub struct SidebarSettings {
     pub side: SidebarDockPosition,
     pub starts_open: bool,
+    pub show_project_pane_button: bool,
 }
 
 impl SidebarSettings {
@@ -169,6 +170,7 @@ impl Settings for SidebarSettings {
         Self {
             side: sidebar.side.unwrap(),
             starts_open: sidebar.starts_open.unwrap(),
+            show_project_pane_button: sidebar.show_project_pane_button.unwrap(),
         }
     }
 }

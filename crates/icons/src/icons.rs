@@ -76,6 +76,7 @@ pub enum IconName {
     Codeberg,
     Command,
     Compact,
+    Compass,
     Control,
     Copilot,
     CopilotDisabled,
