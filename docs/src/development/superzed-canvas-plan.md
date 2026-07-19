@@ -257,6 +257,9 @@ Refine the existing sidebar direction into Session Rail:
   thread/terminal labels and metadata hidden, and `detailed` enforces a wider
   minimum rail width. `compact`, `auto`, `always`, and `overlay` keep the
   current rail surface until distinct renderers exist.
+- Runtime rail placement now honors `session_rail.position` for the effective
+  left/right side. The sidebar side menu writes both the legacy `sidebar.side`
+  compatibility setting and the Canvas `session_rail.position` setting.
 
 ## Agents and terminal sessions {#agents-and-terminal-sessions}
 

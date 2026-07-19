@@ -202,8 +202,16 @@ impl Settings for WorkspaceSettings {
 impl Settings for SidebarSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
         let sidebar = content.sidebar.clone().unwrap();
+        let session_rail_side = content
+            .session_rail
+            .as_ref()
+            .and_then(|session_rail| session_rail.position)
+            .map(|side| match side {
+                settings::CanvasSide::Left => SidebarDockPosition::Left,
+                settings::CanvasSide::Right => SidebarDockPosition::Right,
+            });
         Self {
-            side: sidebar.side.unwrap(),
+            side: session_rail_side.unwrap_or_else(|| sidebar.side.unwrap()),
             starts_open: sidebar.starts_open.unwrap(),
             show_project_pane_button: sidebar.show_project_pane_button.unwrap(),
         }

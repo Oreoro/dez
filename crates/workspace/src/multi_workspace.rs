@@ -21,7 +21,7 @@ use util::path_list::PathList;
 use zed_actions::sidebar::ToggleThreadSwitcher;
 
 use crate::workspace_settings::SidebarSettings;
-use settings::SidebarDockPosition;
+use settings::{CanvasSide, SidebarDockPosition};
 use ui::{ContextMenu, Tooltip, right_click_menu};
 
 const SIDEBAR_RESIZE_HANDLE_SIZE: Pixels = px(6.0);
@@ -96,6 +96,11 @@ pub fn sidebar_side_context_menu(
                         telemetry::event!("Sidebar Side Changed", side = side);
                         settings::update_settings_file(fs.clone(), cx, move |settings, _cx| {
                             settings.sidebar.get_or_insert_default().set_side(position);
+                            settings.session_rail.get_or_insert_default().position =
+                                Some(match position {
+                                    SidebarDockPosition::Left => CanvasSide::Left,
+                                    SidebarDockPosition::Right => CanvasSide::Right,
+                                });
                         });
                     },
                 );

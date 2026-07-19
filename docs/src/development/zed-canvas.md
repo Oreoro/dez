@@ -185,6 +185,10 @@ while `session_rail.mode = "detailed"` keeps a wider minimum width. The first
 pass keeps the same row component so status and attention icons remain
 consistent across modes.
 
+`session_rail.position` is the effective left/right side for Canvas rail
+placement. The existing sidebar side menu writes both `sidebar.side` and
+`session_rail.position` for compatibility.
+
 Automatic rail sorting must not move a click or drag target while the user is
 interacting with it.
 
