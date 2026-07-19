@@ -8,8 +8,8 @@
   // - "dark": Use the theme indicated by the "dark" field
   "theme": {
     "mode": "system",
-    "light": "One Light",
-    "dark": "One Dark",
+    "light": "Lumin Light",
+    "dark": "Lumin Blur",
   },
   "icon_theme": "Zed (Default)",
   // The name of a base set of key bindings to use.
@@ -26,7 +26,7 @@
   // The name of a font to use for rendering text in the editor
   // ".ZedMono" currently aliases to Lilex
   // but this may change in the future.
-  "buffer_font_family": ".ZedMono",
+  "buffer_font_family": "JetBrains Mono",
   // Set the buffer text's font fallbacks, this will be merged with
   // the platform's default fallbacks.
   "buffer_font_fallbacks": null,
@@ -80,7 +80,7 @@
   // The font family for the markdown preview. Falls back to the UI font family if unset.
   "markdown_preview_font_family": null,
   // The font family for code blocks in the markdown preview. Falls back to the editor font family if unset.
-  "markdown_preview_code_font_family": null,
+  "markdown_preview_code_font_family": "JetBrains Mono",
   // How much to fade out unused code.
   "unnecessary_code_fade": 0.3,
   // Active pane styling settings.
@@ -113,6 +113,9 @@
   },
   // Markdown preview settings
   "markdown_preview": {
+    // How Markdown files should open by default.
+    // Choices: source, preview, split
+    "default_open_mode": "preview",
     // Whether to limit the width of the rendered markdown content. When
     // enabled, content is constrained to `max_width` and centered
     // horizontally within the preview pane.
@@ -120,6 +123,8 @@
     // The maximum width, in pixels, of the rendered markdown content when
     // limit_content_width is enabled.
     "max_width": 800,
+    // Whether preview-first Markdown surfaces should expose an Edit Source action.
+    "show_edit_source_action": true,
   },
   // Determines the modifier to be used to add multiple cursors with the mouse. The open hover link mouse gestures will adapt such that it do not conflict with the multicursor modifier.
   //
@@ -1100,6 +1105,9 @@
     "auto_reflow": true,
     "layout_history": true,
     "focus_indicator": "border_and_title",
+    "panel_surface": "pane_tab",
+    "show_legacy_docks": false,
+    "draggable_panel_tabs": true,
     "attention_ring": true,
     "tab_overflow": "searchable",
     "auto_hide_single_tab_bar": false,
@@ -1113,6 +1121,12 @@
     "keep_permissions_expanded": true,
     "show_detection_confidence": true,
     "fleet_view": "lanes",
+    "allow_multiple_visible_agents": true,
+    "detect_terminal_agents": true,
+    "show_terminal_agents_in_session_rail": true,
+    "resume_sessions_on_restart": true,
+    "connect_hooks": true,
+    "notify_on_attention": true,
   },
   // Settings for multiplexer-style workspace behavior.
   "multiplexer": {
@@ -2084,7 +2098,7 @@
     // "font_size": 15,
     // Set the terminal's font family. If this option is not included,
     // the terminal will default to matching the buffer's font family.
-    // "font_family": ".ZedMono",
+    "font_family": "JetBrains Mono",
     // Set the terminal's font fallbacks. If this option is not included,
     // the terminal will default to matching the buffer's font fallbacks.
     // This will be merged with the platform's default font fallbacks

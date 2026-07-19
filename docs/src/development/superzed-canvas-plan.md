@@ -6,7 +6,24 @@ product and design-system specifications:
 - [Zed Canvas](./zed-canvas.md)
 - [Zed Canvas design system](./zed-canvas-design-system.md)
 
-Current phase: first implementation slice. Do not build until the user asks.
+Current phase: Canvas foundation and native defaults. Do not build until the
+user asks.
+
+Implemented in this phase:
+
+- Merged latest `zed-industries/zed:main` into the Superzed work branch.
+- Added Canvas settings families:
+  `design_system`, `workspace_bar`, `session_rail`, `pane_grid`, `agent_ui`,
+  `multiplexer`, and `accessibility`.
+- Added the Canvas layout action that syncs dock panels into regular pane tabs
+  and closes legacy dock chrome.
+- Added native Lumin theme assets and made `Lumin Blur` / `Lumin Light` the
+  default dark/light pair.
+- Added native JetBrains Mono font assets for editor, terminal, Markdown code,
+  and code-like agent surfaces.
+- Added schema/default switches for pane-tab panel hosting, terminal-agent
+  detection, multiple visible agents, session restoration, agent attention
+  notifications, and preview-first Markdown.
 
 ## Ground truth {#ground-truth}
 
@@ -116,6 +133,9 @@ Apply Lumin carefully:
 
 Use the existing panel-as-pane bridge as the migration path:
 
+- Proper Pane Layout means the visible workspace is the pane grid. Side and
+  bottom docks are compatibility plumbing and should not be visible in the
+  default Canvas layout.
 - Keep panel registration internally so actions, persistence, and plugins keep
   working.
 - Host project, Git, outline, collaboration, agent, terminal, and future tool
@@ -128,6 +148,9 @@ Use the existing panel-as-pane bridge as the migration path:
 - Hide legacy left, right, and bottom dock UI in the default Canvas layout.
 - Keep a compatibility setting or action to restore the traditional panel model
   during migration.
+- Default `pane_grid.panel_surface` to `pane_tab`, default
+  `pane_grid.show_legacy_docks` to `false`, and keep
+  `pane_grid.draggable_panel_tabs` enabled.
 - Remove the one-visible-agent bottleneck. Multiple agent tabs and terminal
   agents can be visible across panes and windows.
 - Support direct pane/tab dragging, keyboard movement, context-menu movement,
@@ -170,6 +193,13 @@ Terminal-agent detection:
   state.
 - Store detection confidence and show labels such as `Agent detected`,
   `Possibly waiting`, or `Disconnected`.
+- Default `agent_ui.detect_terminal_agents` and
+  `agent_ui.show_terminal_agents_in_session_rail` to `true`.
+- Default `agent_ui.allow_multiple_visible_agents` to `true` so agents can live
+  in normal tabs across multiple panes.
+- Default `agent_ui.connect_hooks`, `agent_ui.resume_sessions_on_restart`, and
+  `agent_ui.notify_on_attention` to `true`; runtime code must still distinguish
+  authoritative provider hooks from terminal-observed heuristics.
 
 Restoration:
 
@@ -193,6 +223,10 @@ Markdown should align with Canvas document composition:
 
 - Open `.md` files as rendered preview first by default.
 - Keep source editing one action away through Edit Source or split source.
+- Default `markdown_preview.default_open_mode` to `preview` and keep
+  `markdown_preview.show_edit_source_action` enabled.
+- Runtime open routing still needs the final hook that converts Markdown editor
+  opens into preview items after the source editor is available.
 - Persist preview tabs and follow-preview mode.
 - Use ContentSheet alignment and readable-width modes.
 - Use JetBrains Mono for code blocks and prose-friendly UI font/line height for

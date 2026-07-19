@@ -172,9 +172,10 @@ font.numeric
 Recommended defaults:
 
 - Interface: configured UI font or system sans serif.
-- Editor: configured buffer font.
-- Terminal: configured terminal font.
+- Editor: JetBrains Mono in the native Superzed default profile.
+- Terminal: JetBrains Mono in the native Superzed default profile.
 - Prose: UI font with more generous line height.
+- Markdown code blocks and other code-like metadata: JetBrains Mono.
 - Numeric: tabular figures where alignment matters.
 
 Restrained type scale:

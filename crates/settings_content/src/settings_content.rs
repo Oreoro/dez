@@ -1218,9 +1218,35 @@ pub enum LineIndicatorFormat {
 }
 
 /// The settings for the markdown preview.
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    JsonSchema,
+    MergeFrom,
+    strum::VariantArray,
+    strum::VariantNames,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum MarkdownPreviewOpenMode {
+    Source,
+    #[default]
+    Preview,
+    Split,
+}
+
 #[with_fallible_options]
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema, MergeFrom, Default, PartialEq)]
 pub struct MarkdownPreviewSettingsContent {
+    /// How Markdown files should open by default.
+    ///
+    /// Default: preview
+    pub default_open_mode: Option<MarkdownPreviewOpenMode>,
     /// Whether to limit the width of the rendered markdown content. When
     /// enabled, content is constrained to `max_width` and centered
     /// horizontally within the preview pane, for optimal readability.
@@ -1232,6 +1258,11 @@ pub struct MarkdownPreviewSettingsContent {
     ///
     /// Default: 800
     pub max_width: Option<f32>,
+    /// Whether preview-first Markdown surfaces should expose an Edit Source
+    /// affordance.
+    ///
+    /// Default: true
+    pub show_edit_source_action: Option<bool>,
 }
 
 /// The settings for the image viewer.

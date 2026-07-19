@@ -176,6 +176,13 @@ The Pane Canvas is the main work surface.
 
 Rules:
 
+- Project, Git, outline, collaboration, agents, terminals, Markdown previews,
+  diffs, diagnostics, settings, and future tool surfaces should be regular pane
+  tabs by default.
+- The visible default workspace should not reserve fixed left, right, or bottom
+  content docks. Compatibility docks may exist internally for migration,
+  actions, extensions, and restoration, but Canvas should host their contents as
+  movable pane items.
 - No item type owns a privileged location.
 - Focused pane receives keyboard actions first.
 - Pane borders stay subtle except for focus, drag target, or attention.

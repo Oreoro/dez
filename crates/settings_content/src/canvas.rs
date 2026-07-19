@@ -314,6 +314,27 @@ pub enum PaneGridFocusIndicator {
     strum::VariantNames,
 )]
 #[serde(rename_all = "snake_case")]
+pub enum CanvasPanelSurface {
+    Dock,
+    #[default]
+    PaneTab,
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    JsonSchema,
+    MergeFrom,
+    strum::VariantArray,
+    strum::VariantNames,
+)]
+#[serde(rename_all = "snake_case")]
 pub enum TabOverflowBehavior {
     Scroll,
     #[default]
@@ -536,6 +557,19 @@ pub struct PaneGridSettingsContent {
     ///
     /// Default: border_and_title
     pub focus_indicator: Option<PaneGridFocusIndicator>,
+    /// Where traditional panel surfaces are hosted by default.
+    ///
+    /// Default: pane_tab
+    pub panel_surface: Option<CanvasPanelSurface>,
+    /// Whether legacy left, right, or bottom dock chrome is visible by default.
+    ///
+    /// Default: false
+    pub show_legacy_docks: Option<bool>,
+    /// Whether project, agent, Git, outline, and collaboration panel tabs can be
+    /// dragged and arranged like regular pane tabs.
+    ///
+    /// Default: true
+    pub draggable_panel_tabs: Option<bool>,
     /// Whether pane attention rings are enabled.
     ///
     /// Default: true
@@ -581,6 +615,30 @@ pub struct AgentUiSettingsContent {
     ///
     /// Default: lanes
     pub fleet_view: Option<AgentFleetView>,
+    /// Whether multiple agent surfaces can be visible in one workspace.
+    ///
+    /// Default: true
+    pub allow_multiple_visible_agents: Option<bool>,
+    /// Whether terminals should be inspected for known agent processes.
+    ///
+    /// Default: true
+    pub detect_terminal_agents: Option<bool>,
+    /// Whether detected terminal agents should surface in the Session Rail.
+    ///
+    /// Default: true
+    pub show_terminal_agents_in_session_rail: Option<bool>,
+    /// Whether agent session metadata should be restored on restart.
+    ///
+    /// Default: true
+    pub resume_sessions_on_restart: Option<bool>,
+    /// Whether provider and terminal lifecycle hooks are connected when available.
+    ///
+    /// Default: true
+    pub connect_hooks: Option<bool>,
+    /// Whether agent attention changes produce notifications.
+    ///
+    /// Default: true
+    pub notify_on_attention: Option<bool>,
 }
 
 #[with_fallible_options]
