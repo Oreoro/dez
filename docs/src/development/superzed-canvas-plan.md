@@ -210,8 +210,10 @@ Branch audit status, 2026-07-19:
   and style internals, Metal/WGPU/HLSL shader paths, terminal rendering, and
   scrollbars. Treat it as a dedicated renderer integration, not a blind
   experimental merge.
-- `upstream/grid-auto-tracks` and `upstream/text-min-content` remain candidates
-  for later pane/grid layout polish after Canvas pane shell behavior is stable.
+- `upstream/text-min-content` is merged into the Canvas branch for more honest
+  text minimum sizing in GPUI layout.
+- `upstream/grid-auto-tracks` remains a candidate for later pane/grid layout
+  polish after Canvas pane shell behavior is stable.
 - `upstream/fix-agent-focus-issues` is merged into the Canvas branch, preserving
   the current pane-render signature while adding the upstream focus tracking.
 - `upstream/settings-ui-add-subagent-model-setting` is merged into the Canvas
