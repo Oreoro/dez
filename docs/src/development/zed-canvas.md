@@ -532,6 +532,8 @@ Toolchain Selector uses Canvas picker and modal-shell tokens for toolchain
 search, add-toolchain path browsing, scope selection rows, and action footers.
 Snippets scope selection uses Canvas picker shell tokens plus density-driven
 row rhythm and label/file spacing.
+Generic UI prompts use Canvas density, radius, and contrast for modal padding,
+button rhythm, shell contrast, border strength, and backdrop intensity.
 
 ## Layout system {#layout-system}
 

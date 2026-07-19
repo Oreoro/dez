@@ -10,6 +10,8 @@ use theme_settings::ThemeSettings;
 use ui::{FluentBuilder, TintColor, prelude::*};
 use workspace::WorkspaceSettings;
 
+mod canvas;
+
 pub fn init(cx: &mut App) {
     process_settings(cx);
 
@@ -123,8 +125,12 @@ impl Render for ZedPromptRenderer {
             .on_action(cx.listener(Self::select_first))
             .on_action(cx.listener(Self::select_last))
             .w_80()
-            .p_4()
-            .gap_4()
+            .p(canvas::prompt_padding(cx))
+            .gap(canvas::prompt_gap(cx))
+            .bg(canvas::prompt_background(cx))
+            .border_1()
+            .border_color(canvas::prompt_border(cx))
+            .map(|dialog| canvas::prompt_radius(dialog, cx))
             .elevation_3(cx)
             .overflow_hidden()
             .font_family(settings.ui_font.family.clone())
@@ -138,22 +144,20 @@ impl Render for ZedPromptRenderer {
                     markdown_style(false, window, cx),
                 ))
             }))
-            .child(
-                v_flex()
-                    .gap_1()
-                    .children(self.actions.iter().enumerate().map(|(ix, action)| {
-                        Button::new(ix, action.clone())
-                            .full_width()
-                            .style(ButtonStyle::Outlined)
-                            .when(ix == self.active_action_id, |s| {
-                                s.style(ButtonStyle::Tinted(TintColor::Accent))
-                            })
-                            .tab_index(ix as isize)
-                            .on_click(cx.listener(move |_, _, _window, cx| {
-                                cx.emit(PromptResponse(ix));
-                            }))
-                    })),
-            );
+            .child(v_flex().gap(canvas::prompt_action_gap(cx)).children(
+                self.actions.iter().enumerate().map(|(ix, action)| {
+                    Button::new(ix, action.clone())
+                        .full_width()
+                        .style(ButtonStyle::Outlined)
+                        .when(ix == self.active_action_id, |s| {
+                            s.style(ButtonStyle::Tinted(TintColor::Accent))
+                        })
+                        .tab_index(ix as isize)
+                        .on_click(cx.listener(move |_, _, _window, cx| {
+                            cx.emit(PromptResponse(ix));
+                        }))
+                }),
+            ));
 
         let decorations = window.window_decorations();
         let inset = window.client_inset().unwrap_or(Pixels::ZERO);
@@ -163,7 +167,7 @@ impl Render for ZedPromptRenderer {
                 .occlude()
                 .absolute()
                 .inset_0()
-                .bg(gpui::black().opacity(0.2))
+                .bg(canvas::prompt_backdrop(cx))
                 .map(|this| match decorations {
                     Decorations::Server => this,
                     Decorations::Client { tiling } => this
