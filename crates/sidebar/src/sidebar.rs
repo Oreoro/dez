@@ -92,6 +92,10 @@ gpui::actions!(
     [
         /// Creates a new thread in the currently selected or active project group.
         NewThreadInGroup,
+        /// Moves the selected session rail row up within its project group.
+        MoveSelectedEntryUp,
+        /// Moves the selected session rail row down within its project group.
+        MoveSelectedEntryDown,
         /// Toggles between the thread list and the thread history.
         ToggleThreadHistory,
     ]
@@ -253,6 +257,8 @@ struct SerializedSidebar {
     width: Option<f32>,
     #[serde(default)]
     active_view: SerializedSidebarView,
+    #[serde(default)]
+    manual_entry_order: Vec<ManualEntryOrderKey>,
 }
 
 #[derive(Debug, Default)]
@@ -755,17 +761,22 @@ enum EntryShape {
     Terminal(TerminalId),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "id", rename_all = "snake_case")]
 enum ManualEntryOrderKey {
-    Thread(ThreadId),
-    Terminal(TerminalId),
+    Thread(String),
+    Terminal(String),
 }
 
 impl ManualEntryOrderKey {
     fn from_entry(entry: &ListEntry) -> Option<Self> {
         match entry {
-            ListEntry::Thread(thread) => Some(Self::Thread(thread.metadata.thread_id)),
-            ListEntry::Terminal(terminal) => Some(Self::Terminal(terminal.metadata.terminal_id)),
+            ListEntry::Thread(thread) => {
+                Some(Self::Thread(thread.metadata.thread_id.to_key_string()))
+            }
+            ListEntry::Terminal(terminal) => {
+                Some(Self::Terminal(terminal.metadata.terminal_id.to_string()))
+            }
             ListEntry::ProjectHeader { .. } => None,
         }
     }
@@ -1032,6 +1043,7 @@ pub struct Sidebar {
     /// background data changes. Used to sort the thread switcher popup.
     thread_last_accessed: HashMap<ThreadId, DateTime<Utc>>,
     terminal_last_accessed: HashMap<TerminalId, DateTime<Utc>>,
+    manual_entry_order: Vec<ManualEntryOrderKey>,
     standalone_terminal_created_at: HashMap<TerminalId, DateTime<Utc>>,
     thread_switcher: Option<Entity<ThreadSwitcher>>,
     _thread_switcher_subscriptions: Vec<gpui::Subscription>,
@@ -1199,6 +1211,7 @@ impl Sidebar {
 
             thread_last_accessed: HashMap::new(),
             terminal_last_accessed: HashMap::new(),
+            manual_entry_order: Vec::new(),
             standalone_terminal_created_at: HashMap::new(),
             thread_switcher: None,
             _thread_switcher_subscriptions: Vec::new(),
@@ -1725,14 +1738,21 @@ impl Sidebar {
         let query = "";
 
         let previous = mem::take(&mut self.contents);
-        let manual_entry_order: HashMap<_, _> = previous
-            .entries
+        let mut manual_entry_order: HashMap<ManualEntryOrderKey, usize> = self
+            .manual_entry_order
             .iter()
+            .cloned()
             .enumerate()
-            .filter_map(|(index, entry)| {
-                ManualEntryOrderKey::from_entry(entry).map(|key| (key, index))
-            })
+            .map(|(index, key)| (key, index))
             .collect();
+        let manual_entry_order_len = manual_entry_order.len();
+        for (index, entry) in previous.entries.iter().enumerate() {
+            if let Some(key) = ManualEntryOrderKey::from_entry(entry) {
+                manual_entry_order
+                    .entry(key)
+                    .or_insert(manual_entry_order_len + index);
+            }
+        }
 
         let old_statuses = &self.live_thread_statuses;
 
@@ -3959,6 +3979,103 @@ impl Sidebar {
         self.select_previous(&SelectPrevious, window, cx);
         if self.selection.is_some() {
             self.focus_handle.focus(window, cx);
+        }
+    }
+
+    fn move_selected_entry_up(
+        &mut self,
+        _: &MoveSelectedEntryUp,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.move_selected_entry_in_manual_order(true, cx);
+    }
+
+    fn move_selected_entry_down(
+        &mut self,
+        _: &MoveSelectedEntryDown,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.move_selected_entry_in_manual_order(false, cx);
+    }
+
+    fn move_selected_entry_in_manual_order(&mut self, up: bool, cx: &mut Context<Self>) {
+        let Some(selected_index) = self.selection else {
+            return;
+        };
+        let Some(selected_key) = self
+            .contents
+            .entries
+            .get(selected_index)
+            .and_then(ManualEntryOrderKey::from_entry)
+        else {
+            return;
+        };
+        let Some(target_index) = self.manual_order_target_index(selected_index, up) else {
+            return;
+        };
+        let Some(target_key) = self
+            .contents
+            .entries
+            .get(target_index)
+            .and_then(ManualEntryOrderKey::from_entry)
+        else {
+            return;
+        };
+
+        self.ensure_manual_entry_order_contains_visible_entries();
+        let Some(selected_order_index) = self
+            .manual_entry_order
+            .iter()
+            .position(|key| key == &selected_key)
+        else {
+            return;
+        };
+        let Some(target_order_index) = self
+            .manual_entry_order
+            .iter()
+            .position(|key| key == &target_key)
+        else {
+            return;
+        };
+
+        self.manual_entry_order
+            .swap(selected_order_index, target_order_index);
+        self.selection = Some(target_index);
+        self.update_entries(cx);
+        self.serialize(cx);
+    }
+
+    fn manual_order_target_index(&self, selected_index: usize, up: bool) -> Option<usize> {
+        if up {
+            for index in (0..selected_index).rev() {
+                match self.contents.entries.get(index) {
+                    Some(ListEntry::Thread(_) | ListEntry::Terminal(_)) => return Some(index),
+                    Some(ListEntry::ProjectHeader { .. }) | None => return None,
+                }
+            }
+            None
+        } else {
+            for index in selected_index + 1..self.contents.entries.len() {
+                match self.contents.entries.get(index) {
+                    Some(ListEntry::Thread(_) | ListEntry::Terminal(_)) => return Some(index),
+                    Some(ListEntry::ProjectHeader { .. }) | None => return None,
+                }
+            }
+            None
+        }
+    }
+
+    fn ensure_manual_entry_order_contains_visible_entries(&mut self) {
+        let mut seen: HashSet<ManualEntryOrderKey> =
+            self.manual_entry_order.iter().cloned().collect();
+        for entry in &self.contents.entries {
+            if let Some(key) = ManualEntryOrderKey::from_entry(entry)
+                && seen.insert(key.clone())
+            {
+                self.manual_entry_order.push(key);
+            }
         }
     }
 
@@ -8916,6 +9033,7 @@ impl WorkspaceSidebar for Sidebar {
                 SidebarView::ThreadList => SerializedSidebarView::ThreadList,
                 SidebarView::Archive(_) => SerializedSidebarView::History,
             },
+            manual_entry_order: self.manual_entry_order.clone(),
         };
         serde_json::to_string(&serialized).ok()
     }
@@ -8930,6 +9048,7 @@ impl WorkspaceSidebar for Sidebar {
             if let Some(width) = serialized.width {
                 self.width = px(width).clamp(MIN_WIDTH, MAX_WIDTH);
             }
+            self.manual_entry_order = serialized.manual_entry_order;
             if serialized.active_view == SerializedSidebarView::History {
                 cx.defer_in(window, |this, window, cx| {
                     this.show_archive(window, cx);
@@ -8985,6 +9104,8 @@ impl Render for Sidebar {
             .on_action(cx.listener(Self::cancel))
             .on_action(cx.listener(Self::archive_selected_thread))
             .on_action(cx.listener(Self::rename_selected_thread))
+            .on_action(cx.listener(Self::move_selected_entry_up))
+            .on_action(cx.listener(Self::move_selected_entry_down))
             .on_action(cx.listener(Self::new_thread_in_group))
             .on_action(cx.listener(Self::new_terminal_thread))
             .on_action(cx.listener(Self::toggle_archive))
