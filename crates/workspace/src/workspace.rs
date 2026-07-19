@@ -171,6 +171,48 @@ pub(crate) fn workspace_card_gap(cx: &App) -> Pixels {
     gpui::px(WorkspaceSettings::get_global(cx).card_gap.max(0.0))
 }
 
+fn canvas_layout_modal_width(cx: &App, compact: f32, balanced: f32, spacious: f32) -> Rems {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => rems(compact),
+        settings::CanvasDensity::Balanced => rems(balanced),
+        settings::CanvasDensity::Spacious => rems(spacious),
+    }
+}
+
+fn canvas_layout_modal_gap(cx: &App) -> Rems {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => rems(0.5),
+        settings::CanvasDensity::Balanced => rems(0.75),
+        settings::CanvasDensity::Spacious => rems(1.0),
+    }
+}
+
+fn canvas_layout_modal_row_padding(cx: &App) -> (Pixels, Pixels) {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => (px(10.), px(8.)),
+        settings::CanvasDensity::Balanced => (px(12.), px(10.)),
+        settings::CanvasDensity::Spacious => (px(16.), px(14.)),
+    }
+}
+
+fn canvas_layout_modal_row_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.editor_background,
+        settings::CanvasContrast::Standard => colors.editor_background.opacity(0.72),
+        settings::CanvasContrast::High => colors.element_background,
+    }
+}
+
+fn canvas_layout_modal_row_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border.opacity(0.45),
+        settings::CanvasContrast::Standard => colors.border,
+        settings::CanvasContrast::High => colors.border_variant,
+    }
+}
+
 pub(crate) fn title_bar_visible(_cx: &App) -> bool {
     false
 }
@@ -925,12 +967,18 @@ impl Focusable for CanvasSavedLayoutNameModal {
 
 impl Render for CanvasSavedLayoutNameModal {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let canvas_radius = DesignSystemSettings::get_global(cx).radius;
+        let modal_width = canvas_layout_modal_width(cx, 31., 34., 38.);
+        let (row_padding_x, row_padding_y) = canvas_layout_modal_row_padding(cx);
+        let row_background = canvas_layout_modal_row_background(cx);
+        let row_border = canvas_layout_modal_row_border(cx);
+
         v_flex()
             .key_context("CanvasSavedLayoutNameModal")
             .on_action(cx.listener(Self::cancel))
             .on_action(cx.listener(Self::confirm))
             .elevation_2(cx)
-            .w(rems(34.))
+            .w(modal_width)
             .child(
                 Modal::new("canvas-saved-layout-name-modal", None)
                     .show_dismiss(true)
@@ -941,10 +989,25 @@ impl Render for CanvasSavedLayoutNameModal {
                     )
                     .section(
                         Section::new().child(self.input.clone()).child(
-                            Label::new(
-                                "Saved pane geometry and restored project tabs are unchanged.",
-                            )
-                            .color(Color::Muted),
+                            div()
+                                .border_1()
+                                .border_color(row_border)
+                                .bg(row_background)
+                                .px(row_padding_x)
+                                .py(row_padding_y)
+                                .when(canvas_radius == settings::CanvasRadius::Subtle, |this| {
+                                    this.rounded_sm()
+                                })
+                                .when(canvas_radius == settings::CanvasRadius::Rounded, |this| {
+                                    this.rounded_md()
+                                })
+                                .child(
+                                    Label::new(
+                                        "Saved pane geometry and restored project tabs are unchanged.",
+                                    )
+                                    .size(LabelSize::Small)
+                                    .color(Color::Muted),
+                                ),
                         ),
                     )
                     .footer(
@@ -1187,6 +1250,12 @@ impl Focusable for CanvasSavedLayoutManagerModal {
 
 impl Render for CanvasSavedLayoutManagerModal {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let canvas_radius = DesignSystemSettings::get_global(cx).radius;
+        let modal_width = canvas_layout_modal_width(cx, 48., 56., 64.);
+        let row_gap = canvas_layout_modal_gap(cx);
+        let (row_padding_x, row_padding_y) = canvas_layout_modal_row_padding(cx);
+        let row_background = canvas_layout_modal_row_background(cx);
+        let row_border = canvas_layout_modal_row_border(cx);
         let entries = self.entries(cx);
         let saved_layout_count = entries.iter().filter(|entry| entry.saved).count();
         let rows = entries
@@ -1203,8 +1272,19 @@ impl Render for CanvasSavedLayoutManagerModal {
                 h_flex()
                     .id(("canvas-saved-layout-manager-row", index))
                     .w_full()
-                    .gap_2()
+                    .gap(row_gap)
                     .justify_between()
+                    .border_1()
+                    .border_color(row_border)
+                    .bg(row_background)
+                    .px(row_padding_x)
+                    .py(row_padding_y)
+                    .when(canvas_radius == settings::CanvasRadius::Subtle, |this| {
+                        this.rounded_sm()
+                    })
+                    .when(canvas_radius == settings::CanvasRadius::Rounded, |this| {
+                        this.rounded_md()
+                    })
                     .child(
                         v_flex()
                             .gap_0p5()
@@ -1269,7 +1349,7 @@ impl Render for CanvasSavedLayoutManagerModal {
             .key_context("CanvasSavedLayoutManagerModal")
             .on_action(cx.listener(Self::cancel))
             .elevation_2(cx)
-            .w(rems(56.))
+            .w(modal_width)
             .child(
                 Modal::new("canvas-saved-layout-manager-modal", None)
                     .show_dismiss(true)

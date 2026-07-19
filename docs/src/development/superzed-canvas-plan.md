@@ -274,6 +274,9 @@ Current consumers:
   theme selector, and language selector opt the shared picker component into
   Canvas density, radius, and contrast for modal chrome, search input rows,
   empty states, and documentation asides where present.
+- Saved-layout modals: Canvas layout naming and manager modals use Canvas
+  density for width, row padding, and row rhythm; radius for inline callout and
+  saved-layout row corners; and contrast for row backgrounds and borders.
 
 Broader rollout should apply the same runtime model to additional command-like
 pickers as they opt into Canvas-specific workflows.
