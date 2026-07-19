@@ -226,7 +226,9 @@ Branch audit status, 2026-07-19:
 - `upstream/terminal-restore`, `upstream/terminal-restore-2`, and
   `upstream/ghostty` remain terminal-session candidates, but they require the
   Canvas resume/session model to distinguish metadata restoration from live
-  process restoration.
+  process restoration. A direct `terminal-restore-2` merge conflicts through
+  the newer Agent Panel serialization, active-entry, and terminal metadata
+  restoration paths.
 - Stable/preview release branches are skipped unless they contain a specific
   fix not already present through `main`.
 
