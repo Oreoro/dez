@@ -212,8 +212,8 @@ Branch audit status, 2026-07-19:
   experimental merge.
 - `upstream/text-min-content` is merged into the Canvas branch for more honest
   text minimum sizing in GPUI layout.
-- `upstream/grid-auto-tracks` remains a candidate for later pane/grid layout
-  polish after Canvas pane shell behavior is stable.
+- `upstream/grid-auto-tracks` is merged into the Canvas branch for GPUI
+  auto-grid-track sizing primitives that can support table-like layout polish.
 - `upstream/fix-agent-focus-issues` is merged into the Canvas branch, preserving
   the current pane-render signature while adding the upstream focus tracking.
 - `upstream/settings-ui-add-subagent-model-setting` is merged into the Canvas
