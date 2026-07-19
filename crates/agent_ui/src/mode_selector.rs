@@ -3,15 +3,42 @@ use agent_client_protocol::schema::v1 as acp;
 use agent_servers::AgentServer;
 
 use fs::Fs;
-use gpui::{Context, Entity, WeakEntity, Window, prelude::*};
+use gpui::{Context, Entity, Hsla, Pixels, WeakEntity, Window, prelude::*};
+use settings::Settings;
 
 use std::{rc::Rc, sync::Arc};
 use ui::{
     Button, ContextMenu, ContextMenuEntry, KeyBinding, PopoverMenu, PopoverMenuHandle, Tooltip,
     prelude::*,
 };
+use workspace::DesignSystemSettings;
 
 use crate::{CycleModeSelector, ToggleProfileSelector, ui::documentation_aside_side};
+
+fn mode_selector_tooltip_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
+fn mode_selector_tooltip_padding_top(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
+fn mode_selector_tooltip_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border_variant.opacity(0.42),
+        settings::CanvasContrast::Standard => colors.border_variant,
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
 
 pub struct ModeSelector {
     connection: Rc<dyn AgentSessionModes>,
@@ -160,20 +187,20 @@ impl Render for ModeSelector {
                 Tooltip::element({
                     move |_window, cx| {
                         v_flex()
-                            .gap_1()
+                            .gap(mode_selector_tooltip_gap(cx))
                             .child(
                                 h_flex()
-                                    .gap_2()
+                                    .gap(mode_selector_tooltip_gap(cx))
                                     .justify_between()
                                     .child(Label::new("Change Mode"))
                                     .child(KeyBinding::for_action(&ToggleProfileSelector, cx)),
                             )
                             .child(
                                 h_flex()
-                                    .pt_1()
-                                    .gap_2()
+                                    .pt(mode_selector_tooltip_padding_top(cx))
+                                    .gap(mode_selector_tooltip_gap(cx))
                                     .border_t_1()
-                                    .border_color(cx.theme().colors().border_variant)
+                                    .border_color(mode_selector_tooltip_border(cx))
                                     .justify_between()
                                     .child(Label::new("Cycle Through Modes"))
                                     .child(KeyBinding::for_action(&CycleModeSelector, cx)),

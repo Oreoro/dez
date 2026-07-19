@@ -554,6 +554,8 @@ radius.
 Agent model selector components use Canvas density and contrast for section
 header rhythm, model row density, chip/action gaps, footer padding, tooltip
 rhythm, and separator contrast.
+The agent mode selector tooltip uses Canvas density and contrast for row
+rhythm, shortcut spacing, separator padding, and separator contrast.
 
 ## Layout system {#layout-system}
 
