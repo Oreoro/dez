@@ -3720,6 +3720,7 @@ impl Pane {
                 tab_count,
                 navigate_backward,
                 navigate_forward,
+                show_searchable_overflow_menu,
                 window,
                 cx,
             )
