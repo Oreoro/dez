@@ -114,6 +114,7 @@ struct SessionRailSettings {
     show_worktree_metadata: bool,
     show_agent_state_metadata: bool,
     show_latest_attention_metadata: bool,
+    sort_by: settings::SessionRailSorting,
 }
 
 #[derive(Clone, Debug, settings::RegisterSetting)]
@@ -134,6 +135,7 @@ impl settings::Settings for SessionRailSettings {
                 &metadata,
                 "latest_attention",
             ),
+            sort_by: session_rail.sort_by.unwrap(),
         }
     }
 }
@@ -1617,6 +1619,7 @@ impl Sidebar {
         let show_terminal_agents = agent_ui_settings.show_terminal_agents_in_session_rail;
         let detect_terminal_agents = agent_ui_settings.detect_terminal_agents;
         let notify_on_terminal_attention = agent_ui_settings.notify_on_attention;
+        let session_rail_sort_by = SessionRailSettings::get_global(cx).sort_by;
 
         let agent_server_store = workspaces
             .first()
@@ -2213,10 +2216,13 @@ impl Sidebar {
                     has_threads,
                 });
 
-                Self::push_entries_by_display_time(
+                Self::push_entries_by_session_rail_sort(
                     &mut entries,
                     matched_terminals,
                     matched_threads,
+                    session_rail_sort_by,
+                    &notified_threads,
+                    &notified_terminals,
                     &mut current_session_ids,
                     &mut current_thread_ids,
                 );
@@ -2263,10 +2269,13 @@ impl Sidebar {
                     continue;
                 }
 
-                Self::push_entries_by_display_time(
+                Self::push_entries_by_session_rail_sort(
                     &mut entries,
                     terminals,
                     threads,
+                    session_rail_sort_by,
+                    &notified_threads,
+                    &notified_terminals,
                     &mut current_session_ids,
                     &mut current_thread_ids,
                 );
@@ -6278,10 +6287,17 @@ impl Sidebar {
         metadata.interacted_at.unwrap_or(metadata.updated_at)
     }
 
-    fn push_entries_by_display_time(
+    fn thread_creation_time(metadata: &ThreadMetadata) -> DateTime<Utc> {
+        metadata.created_at.unwrap_or(metadata.updated_at)
+    }
+
+    fn push_entries_by_session_rail_sort(
         entries: &mut Vec<ListEntry>,
         terminals: Vec<TerminalEntry>,
         threads: Vec<Arc<ThreadEntry>>,
+        sort_by: settings::SessionRailSorting,
+        notified_threads: &HashSet<agent_ui::ThreadId>,
+        notified_terminals: &HashSet<TerminalId>,
         current_session_ids: &mut HashSet<acp::SessionId>,
         current_thread_ids: &mut HashSet<agent_ui::ThreadId>,
     ) {
@@ -6296,11 +6312,71 @@ impl Sidebar {
             }
         }
 
+        fn creation_time(entry: &ListEntry) -> DateTime<Utc> {
+            match entry {
+                ListEntry::Thread(thread) if thread.draft == Some(DraftKind::Empty) => {
+                    DateTime::<Utc>::MAX_UTC
+                }
+                ListEntry::Thread(thread) => Sidebar::thread_creation_time(&thread.metadata),
+                ListEntry::Terminal(terminal) => terminal.metadata.created_at,
+                ListEntry::ProjectHeader { .. } => unreachable!(),
+            }
+        }
+
+        fn has_attention(
+            entry: &ListEntry,
+            notified_threads: &HashSet<agent_ui::ThreadId>,
+            notified_terminals: &HashSet<TerminalId>,
+        ) -> bool {
+            match entry {
+                ListEntry::Thread(thread) => {
+                    notified_threads.contains(&thread.metadata.thread_id)
+                        || thread.status == AgentThreadStatus::WaitingForConfirmation
+                }
+                ListEntry::Terminal(terminal) => {
+                    terminal.has_notification
+                        || notified_terminals.contains(&terminal.metadata.terminal_id)
+                }
+                ListEntry::ProjectHeader { .. } => unreachable!(),
+            }
+        }
+
+        fn agent_state_rank(entry: &ListEntry) -> u8 {
+            match entry {
+                ListEntry::Thread(thread) => match thread.status {
+                    AgentThreadStatus::WaitingForConfirmation => 0,
+                    AgentThreadStatus::Running => 1,
+                    AgentThreadStatus::Error => 2,
+                    AgentThreadStatus::Completed => 3,
+                },
+                ListEntry::Terminal(terminal) if terminal.has_notification => 0,
+                ListEntry::Terminal(_) => 1,
+                ListEntry::ProjectHeader { .. } => unreachable!(),
+            }
+        }
+
         let row_entries = terminals
             .into_iter()
             .map(ListEntry::Terminal)
             .chain(threads.into_iter().map(ListEntry::Thread))
-            .sorted_by_key(|right| std::cmp::Reverse(display_time(right)));
+            .sorted_by(|left, right| match sort_by {
+                settings::SessionRailSorting::Attention => {
+                    has_attention(right, notified_threads, notified_terminals)
+                        .cmp(&has_attention(left, notified_threads, notified_terminals))
+                        .then_with(|| display_time(right).cmp(&display_time(left)))
+                }
+                settings::SessionRailSorting::AgentState => agent_state_rank(left)
+                    .cmp(&agent_state_rank(right))
+                    .then_with(|| display_time(right).cmp(&display_time(left))),
+                settings::SessionRailSorting::CreationTime => {
+                    creation_time(right).cmp(&creation_time(left))
+                }
+                settings::SessionRailSorting::RecentActivity
+                | settings::SessionRailSorting::Manual
+                | settings::SessionRailSorting::Project => {
+                    display_time(right).cmp(&display_time(left))
+                }
+            });
 
         for entry in row_entries {
             if let ListEntry::Thread(thread) = &entry {

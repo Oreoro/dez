@@ -171,6 +171,11 @@ Rail modes:
 - Overlay.
 - Auto.
 
+`session_rail.sort_by` supports attention-first, agent-state, creation-time,
+and recent-activity row ordering. Manual/project ordering still need persisted
+manual order and cross-group sorting before they can behave differently from the
+current recent-first order.
+
 Automatic rail sorting must not move a click or drag target while the user is
 interacting with it.
 

@@ -233,6 +233,10 @@ Refine the existing sidebar direction into Session Rail:
 - `workspace_bar.show_agent_attention` gates the visual attention layer on top
   of that metadata: workspace-level badges, row notification dots, and
   collapsed-project waiting/notification markers.
+- Runtime row ordering now honors `session_rail.sort_by` for
+  `attention`, `agent_state`, `creation_time`, and `recent_activity`. `manual`
+  and `project` currently preserve the previous recent-first in-group ordering
+  until persisted manual row order and cross-group project sorting exist.
 
 ## Agents and terminal sessions {#agents-and-terminal-sessions}
 
