@@ -47,6 +47,9 @@ Implemented in this phase:
   Matrix.
 - `workspace_bar.show_layout` now controls whether Canvas layout commands show
   in the Command Palette and Panel Layout chrome.
+- `workspace_bar.show_agent_attention` now controls workspace-level attention
+  badges plus Session Rail thread, terminal, and collapsed-project attention
+  markers; `session_rail.metadata` still controls latest-attention timestamps.
 
 ## Ground truth {#ground-truth}
 
@@ -220,6 +223,9 @@ Refine the existing sidebar direction into Session Rail:
 - Runtime row rendering now honors `session_rail.metadata` for worktree/branch
   labels, agent-state labels, and latest-attention timestamps/badges while
   keeping the Ctrl-Tab thread switcher independent of rail display density.
+- `workspace_bar.show_agent_attention` gates the visual attention layer on top
+  of that metadata: workspace-level badges, row notification dots, and
+  collapsed-project waiting/notification markers.
 
 ## Agents and terminal sessions {#agents-and-terminal-sessions}
 

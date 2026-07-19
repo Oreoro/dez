@@ -116,6 +116,11 @@ struct SessionRailSettings {
     show_latest_attention_metadata: bool,
 }
 
+#[derive(Clone, Debug, settings::RegisterSetting)]
+struct WorkspaceBarAttentionSettings {
+    show_agent_attention: bool,
+}
+
 impl settings::Settings for SessionRailSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
         let session_rail = content.session_rail.clone().unwrap();
@@ -129,6 +134,15 @@ impl settings::Settings for SessionRailSettings {
                 &metadata,
                 "latest_attention",
             ),
+        }
+    }
+}
+
+impl settings::Settings for WorkspaceBarAttentionSettings {
+    fn from_settings(content: &settings::SettingsContent) -> Self {
+        let workspace_bar = content.workspace_bar.clone().unwrap();
+        Self {
+            show_agent_attention: workspace_bar.show_agent_attention.unwrap(),
         }
     }
 }
@@ -2591,6 +2605,9 @@ impl Sidebar {
         let host = key.host();
 
         let has_filter = self.has_filter_query(cx);
+        let session_rail_settings = SessionRailSettings::get_global(cx);
+        let show_agent_attention =
+            WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
 
         let id_prefix = if is_sticky { "sticky-" } else { "" };
         let id = SharedString::from(format!("{id_prefix}project-header-{ix}"));
@@ -2681,7 +2698,7 @@ impl Sidebar {
                                     .with_rotate_animation(2),
                             )
                         })
-                        .when(waiting_thread_count > 0, |this| {
+                        .when(show_agent_attention && waiting_thread_count > 0, |this| {
                             let tooltip_text = if waiting_thread_count == 1 {
                                 "1 thread is waiting for confirmation".to_string()
                             } else {
@@ -2701,7 +2718,11 @@ impl Sidebar {
                             )
                         })
                         .when(
-                            has_notifications && !has_running_threads && waiting_thread_count == 0,
+                            show_agent_attention
+                                && session_rail_settings.show_latest_attention_metadata
+                                && has_notifications
+                                && !has_running_threads
+                                && waiting_thread_count == 0,
                             |this| {
                                 this.child(
                                     Icon::new(IconName::Circle)
@@ -6718,6 +6739,8 @@ impl Sidebar {
         let color = cx.theme().colors();
         let sidebar_bg = color.editor_background;
         let session_rail_settings = SessionRailSettings::get_global(cx);
+        let show_agent_attention =
+            WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
 
         let timestamp: SharedString = if is_empty_draft {
             SharedString::default()
@@ -6769,7 +6792,11 @@ impl Sidebar {
             .timestamp(timestamp)
             .highlight_positions(thread.highlight_positions.to_vec())
             .title_generating(title_generating)
-            .notified(session_rail_settings.show_latest_attention_metadata && has_notification)
+            .notified(
+                show_agent_attention
+                    && session_rail_settings.show_latest_attention_metadata
+                    && has_notification,
+            )
             .when(thread.diff_stats.lines_added > 0, |this| {
                 this.added(thread.diff_stats.lines_added as usize)
             })
@@ -7086,6 +7113,8 @@ impl Sidebar {
 
         let display_title = terminal.metadata.display_title();
         let agent_ui_settings = CanvasAgentUiSettings::get_global(cx);
+        let show_agent_attention =
+            WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
         let terminal_agent_kind = agent_ui_settings
             .detect_terminal_agents
             .then(|| terminal.metadata.detected_agent_kind())
@@ -7123,7 +7152,11 @@ impl Sidebar {
                     .then_some(timestamp)
                     .unwrap_or_default(),
             )
-            .notified(session_rail_settings.show_latest_attention_metadata && has_notification)
+            .notified(
+                show_agent_attention
+                    && session_rail_settings.show_latest_attention_metadata
+                    && has_notification,
+            )
             .highlight_positions(highlight_positions)
             .selected(is_active)
             .focused(is_focused)
@@ -8530,8 +8563,10 @@ impl WorkspaceSidebar for Sidebar {
         cx.notify();
     }
 
-    fn has_notifications(&self, _cx: &App) -> bool {
-        !self.contents.notified_threads.is_empty() || !self.contents.notified_terminals.is_empty()
+    fn has_notifications(&self, cx: &App) -> bool {
+        WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention
+            && (!self.contents.notified_threads.is_empty()
+                || !self.contents.notified_terminals.is_empty())
     }
 
     fn is_threads_list_view_active(&self) -> bool {

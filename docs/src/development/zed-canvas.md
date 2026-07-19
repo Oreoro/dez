@@ -158,6 +158,10 @@ Workspace entries may show configurable metadata:
 - Participants.
 - Latest attention or notification.
 
+`workspace_bar.show_agent_attention` controls whether visual agent-attention
+badges appear at the workspace and rail levels. `session_rail.metadata` remains
+the source of truth for whether latest-attention timestamps are shown.
+
 Rail modes:
 
 - Hidden.
