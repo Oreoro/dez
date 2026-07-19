@@ -193,6 +193,10 @@ fn normalized_canvas_layout_recipe_name(name: &str) -> String {
     normalized
 }
 
+fn canvas_layout_recipe_from_persisted(recipe_id: Option<String>) -> Option<CanvasLayoutRecipe> {
+    recipe_id.as_deref().and_then(CanvasLayoutRecipe::from_name)
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum CanvasLayoutRecipe {
     Full,
@@ -2042,6 +2046,9 @@ impl Workspace {
             } else {
                 db.next_id().await.unwrap_or_else(|_| Default::default())
             };
+            let active_canvas_layout_recipe = serialized_workspace.as_ref().and_then(|_| {
+                canvas_layout_recipe_from_persisted(db.active_canvas_layout_recipe(workspace_id))
+            });
 
             let toolchains = db.toolchains(workspace_id).await?;
 
@@ -2103,6 +2110,7 @@ impl Workspace {
                             );
 
                             workspace.centered_layout = centered_layout;
+                            workspace.active_canvas_layout_recipe = active_canvas_layout_recipe;
 
                             // Call init callback to add items before window renders
                             if let Some(init) = init {
@@ -2166,6 +2174,7 @@ impl Workspace {
                                     cx,
                                 );
                                 workspace.centered_layout = centered_layout;
+                                workspace.active_canvas_layout_recipe = active_canvas_layout_recipe;
 
                                 // Call init callback to add items before window renders
                                 if let Some(init) = init {
@@ -8577,6 +8586,9 @@ impl Workspace {
                 let docks = build_serialized_docks(self, window, cx);
                 let window_bounds = Some(SerializedWindowBounds(window.window_bounds()));
                 let identity_paths_hint = self.project_group_key(cx).path_list().clone();
+                let active_canvas_layout_recipe = self
+                    .active_canvas_layout_recipe
+                    .map(|layout_recipe| layout_recipe.id().to_string());
 
                 let serialized_workspace = SerializedWorkspace {
                     id: database_id,
@@ -8598,6 +8610,9 @@ impl Workspace {
                 let db = WorkspaceDb::global(cx);
                 window.spawn(cx, async move |_| {
                     db.save_workspace(serialized_workspace).await;
+                    db.set_active_canvas_layout_recipe(database_id, active_canvas_layout_recipe)
+                        .await
+                        .log_err();
                 })
             }
             WorkspaceLocation::DetachFromSession => {
@@ -11336,6 +11351,8 @@ pub fn open_workspace_by_id(
             .with_context(|| format!("Workspace {workspace_id:?} not found"))?;
 
         let centered_layout = serialized_workspace.centered_layout;
+        let active_canvas_layout_recipe =
+            canvas_layout_recipe_from_persisted(db.active_canvas_layout_recipe(workspace_id));
 
         let (window, workspace) = if let Some(window) = requesting_window {
             let workspace = window.update(cx, |multi_workspace, window, cx| {
@@ -11348,6 +11365,7 @@ pub fn open_workspace_by_id(
                         cx,
                     );
                     workspace.centered_layout = centered_layout;
+                    workspace.active_canvas_layout_recipe = active_canvas_layout_recipe;
                     workspace
                 });
                 multi_workspace.add(workspace.clone(), &*window, cx);
@@ -11388,6 +11406,7 @@ pub fn open_workspace_by_id(
                             cx,
                         );
                         workspace.centered_layout = centered_layout;
+                        workspace.active_canvas_layout_recipe = active_canvas_layout_recipe;
                         workspace
                     });
                     cx.new(|cx| MultiWorkspace::new(workspace, window, cx))
@@ -11708,7 +11727,7 @@ pub fn open_remote_project_with_new_connection(
     cx: &mut App,
 ) -> Task<Result<Vec<Option<Box<dyn ItemHandle>>>>> {
     cx.spawn(async move |cx| {
-        let (workspace_id, serialized_workspace) =
+        let (workspace_id, serialized_workspace, active_canvas_layout_recipe) =
             deserialize_remote_project(remote_connection.connection_options(), paths.clone(), cx)
                 .await?;
 
@@ -11746,6 +11765,7 @@ pub fn open_remote_project_with_new_connection(
             paths,
             workspace_id,
             serialized_workspace,
+            active_canvas_layout_recipe,
             app_state,
             window,
             None,
@@ -11767,7 +11787,7 @@ pub fn open_remote_project_with_existing_connection(
     cx: &mut AsyncApp,
 ) -> Task<Result<Vec<Option<Box<dyn ItemHandle>>>>> {
     cx.spawn(async move |cx| {
-        let (workspace_id, serialized_workspace) =
+        let (workspace_id, serialized_workspace, active_canvas_layout_recipe) =
             deserialize_remote_project(connection_options.clone(), paths.clone(), cx).await?;
 
         open_remote_project_inner(
@@ -11775,6 +11795,7 @@ pub fn open_remote_project_with_existing_connection(
             paths,
             workspace_id,
             serialized_workspace,
+            active_canvas_layout_recipe,
             app_state,
             window,
             provisional_project_group_key,
@@ -11790,6 +11811,7 @@ async fn open_remote_project_inner(
     paths: Vec<PathBuf>,
     workspace_id: WorkspaceId,
     serialized_workspace: Option<SerializedWorkspace>,
+    active_canvas_layout_recipe: Option<CanvasLayoutRecipe>,
     app_state: Arc<AppState>,
     window: WindowHandle<MultiWorkspace>,
     provisional_project_group_key: Option<ProjectGroupKey>,
@@ -11833,6 +11855,7 @@ async fn open_remote_project_inner(
             if let Some(ref serialized) = serialized_workspace {
                 workspace.centered_layout = serialized.centered_layout;
             }
+            workspace.active_canvas_layout_recipe = active_canvas_layout_recipe;
 
             workspace
         });
@@ -11901,7 +11924,13 @@ fn deserialize_remote_project(
     connection_options: RemoteConnectionOptions,
     paths: Vec<PathBuf>,
     cx: &AsyncApp,
-) -> Task<Result<(WorkspaceId, Option<SerializedWorkspace>)>> {
+) -> Task<
+    Result<(
+        WorkspaceId,
+        Option<SerializedWorkspace>,
+        Option<CanvasLayoutRecipe>,
+    )>,
+> {
     let db = cx.update(|cx| WorkspaceDb::global(cx));
     cx.background_spawn(async move {
         let remote_connection_id = db
@@ -11917,8 +11946,15 @@ fn deserialize_remote_project(
         } else {
             db.next_id().await?
         };
+        let active_canvas_layout_recipe = serialized_workspace.as_ref().and_then(|_| {
+            canvas_layout_recipe_from_persisted(db.active_canvas_layout_recipe(workspace_id))
+        });
 
-        Ok((workspace_id, serialized_workspace))
+        Ok((
+            workspace_id,
+            serialized_workspace,
+            active_canvas_layout_recipe,
+        ))
     })
 }
 

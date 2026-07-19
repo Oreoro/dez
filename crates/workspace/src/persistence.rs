@@ -1093,6 +1093,9 @@ impl Domain for WorkspaceDb {
         sql!(
             ALTER TABLE panes ADD COLUMN visible INTEGER NOT NULL DEFAULT 1;
         ),
+        sql!(
+            ALTER TABLE workspaces ADD COLUMN active_canvas_layout_recipe TEXT;
+        ),
     ];
 
     // Allow recovering from bad migration that was initially shipped to nightly
@@ -2514,6 +2517,27 @@ impl WorkspaceDb {
         pub(crate) async fn set_centered_layout(workspace_id: WorkspaceId, centered_layout: bool) -> Result<()> {
             UPDATE workspaces
             SET centered_layout = ?2
+            WHERE workspace_id = ?1
+        }
+    }
+
+    pub(crate) fn active_canvas_layout_recipe(&self, workspace_id: WorkspaceId) -> Option<String> {
+        self.select_row_bound::<_, Option<String>>(sql!(
+            SELECT active_canvas_layout_recipe
+            FROM workspaces
+            WHERE workspace_id = ?
+        ))
+        .and_then(|mut prepared_statement| (prepared_statement)(workspace_id))
+        .context("No active Canvas layout recipe found")
+        .warn_on_err()
+        .flatten()
+        .flatten()
+    }
+
+    query! {
+        pub(crate) async fn set_active_canvas_layout_recipe(workspace_id: WorkspaceId, active_canvas_layout_recipe: Option<String>) -> Result<()> {
+            UPDATE workspaces
+            SET active_canvas_layout_recipe = ?2
             WHERE workspace_id = ?1
         }
     }

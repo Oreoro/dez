@@ -259,10 +259,11 @@ Use the existing panel-as-pane bridge as the migration path:
   policy as a disabled status row; actual prefix key handling remains future
   work.
 - Canvas recipes now share one canonical runtime recipe-name mapping. The
-  workspace records the last applied Canvas recipe in memory, layout history
-  snapshots restore that recipe identity with pane visibility/focus, and the
-  Panel Layout menu checks the active recipe entry while the window is in
-  Canvas mode. Durable named layouts remain future work.
+  workspace records the last applied Canvas recipe, layout history snapshots
+  restore that recipe identity with pane visibility/focus, persisted workspace
+  metadata restores recognized recipe identity across restart, and the Panel
+  Layout menu checks the active recipe entry while the window is in Canvas mode.
+  Durable named layouts remain future work.
 - Manual structural layout changes now clear the active Canvas recipe identity
   so the Panel Layout menu reports `Custom Canvas Layout` after pane splits,
   pane moves, pane joins, pane removal, pane-size changes, or explicit
@@ -291,9 +292,9 @@ Proper Pane Layout is the Canvas migration target, not just a visual skin:
 - Layout history records pane visibility/focus immediately and evolves toward
   durable semantic snapshots: recipe name, pane tree, tab identities, process
   restoration metadata, and user-authored saved layout names.
-- The first recipe-identity slice is implemented in memory for the active
-  workspace and the immediate layout-history stack. It does not persist recipe
-  identity across restart yet.
+- The first recipe-identity slice persists the active recipe id separately from
+  process lifetime. Restart restore can recover the active recipe label without
+  claiming terminal, agent, or browser processes were resumed.
 - `pane_grid.auto_reflow` should eventually choose semantic variants for
   narrow, portrait, ultrawide, and many-agent states without closing items.
 
@@ -309,6 +310,8 @@ Implementation order:
    their semantic pane kind.
 3. Add durable layout metadata separately from process lifetime so restart
    restore can recreate layout intent without claiming processes are alive.
+   Active recipe identity now persists as workspace metadata; durable named
+   layout snapshots remain future work.
 4. Add resize-driven `auto_reflow` using semantic recipe variants rather than
    raw pixel snapshots. Initial recipe-application reflow for narrow/portrait
    workspaces is implemented; resize-driven reflow and ultrawide variants are

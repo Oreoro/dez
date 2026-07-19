@@ -241,7 +241,8 @@ Rules:
   Canvas layout recipes. `Restore Previous Canvas Layout` restores visibility
   and focus for panes that still exist, without deserializing workspace items or
   killing live processes. Runtime snapshots also retain the last applied
-  Canvas recipe identity so menu state can follow restores. Persisted semantic
+  Canvas recipe identity so menu state can follow restores. Recognized active
+  recipe ids persist as workspace metadata across restart; persisted semantic
   layout history is still required.
 - Manual structural layout changes clear the active recipe identity and show
   `Custom Canvas Layout` in the Panel Layout menu while keeping the pane tree
@@ -259,8 +260,8 @@ Implementation boundary:
 
 - Current recipes are geometry-only and reveal existing pane-hosted surfaces.
   They must not spawn agents, terminals, browsers, or external processes.
-- Proper persisted layouts still need semantic snapshots containing recipe
-  identity, pane tree, tab identities, and process restoration metadata.
+- Proper persisted layouts still need semantic snapshots containing pane tree,
+  tab identities, process restoration metadata, and named layout data.
 - Process lifetime stays separate from tab lifetime so closing a tab is not
   silently treated as killing or resuming a process.
 
