@@ -111,6 +111,7 @@ const MAX_WIDTH: Pixels = px(800.0);
 
 #[derive(Clone, Debug, settings::RegisterSetting)]
 struct SessionRailSettings {
+    visibility: settings::CanvasVisibility,
     show_worktree_metadata: bool,
     show_agent_state_metadata: bool,
     show_latest_attention_metadata: bool,
@@ -127,6 +128,7 @@ impl settings::Settings for SessionRailSettings {
         let session_rail = content.session_rail.clone().unwrap();
         let metadata = session_rail.metadata.clone().unwrap();
         Self {
+            visibility: session_rail.visibility.unwrap(),
             show_worktree_metadata: session_rail_metadata_contains(&metadata, "worktree")
                 || session_rail_metadata_contains(&metadata, "branch"),
             show_agent_state_metadata: session_rail_metadata_contains(&metadata, "agent_state")
@@ -137,6 +139,12 @@ impl settings::Settings for SessionRailSettings {
             ),
             sort_by: session_rail.sort_by.unwrap(),
         }
+    }
+}
+
+impl SessionRailSettings {
+    fn is_hidden(&self) -> bool {
+        self.visibility == settings::CanvasVisibility::Hidden
     }
 }
 
@@ -8625,7 +8633,10 @@ fn render_import_onboarding_banner(
 }
 
 impl WorkspaceSidebar for Sidebar {
-    fn width(&self, _cx: &App) -> Pixels {
+    fn width(&self, cx: &App) -> Pixels {
+        if SessionRailSettings::get_global(cx).is_hidden() {
+            return Pixels::ZERO;
+        }
         self.width
     }
 
@@ -8751,6 +8762,13 @@ impl Focusable for Sidebar {
 
 impl Render for Sidebar {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if SessionRailSettings::get_global(cx).is_hidden() {
+            return div()
+                .id("workspace-sidebar-hidden")
+                .size_0()
+                .into_any_element();
+        }
+
         let ui_font = theme_settings::setup_ui_font(window, cx);
         let sticky_header = self.render_sticky_header(window, cx);
 
@@ -8890,6 +8908,7 @@ impl Render for Sidebar {
                 })
             })
             .child(self.render_sidebar_bottom_bar(cx))
+            .into_any_element()
     }
 }
 

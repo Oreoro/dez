@@ -176,6 +176,10 @@ and recent-activity row ordering. Manual/project ordering still need persisted
 manual order and cross-group sorting before they can behave differently from the
 current recent-first order.
 
+`session_rail.visibility = "hidden"` removes the rail from layout. Icon,
+compact, detailed, overlay, always, and auto modes share the current rail
+surface until distinct render modes are added.
+
 Automatic rail sorting must not move a click or drag target while the user is
 interacting with it.
 

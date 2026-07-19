@@ -2472,7 +2472,9 @@ impl Render for MultiWorkspace {
                     .w(sidebar_width)
                     .flex_shrink_0()
                     .child(sidebar_handle.to_any())
-                    .child(resize_handle)
+                    .when(sidebar_width > Pixels::ZERO, |this| {
+                        this.child(resize_handle)
+                    })
                     .into_any_element()
             })
         } else {

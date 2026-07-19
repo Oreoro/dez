@@ -237,6 +237,9 @@ Refine the existing sidebar direction into Session Rail:
   `attention`, `agent_state`, `creation_time`, and `recent_activity`. `manual`
   and `project` currently preserve the previous recent-first in-group ordering
   until persisted manual row order and cross-group project sorting exist.
+- Runtime rail hosting now honors `session_rail.visibility = "hidden"` by
+  reporting zero sidebar width, rendering an empty rail, and suppressing the
+  resize hitbox. Other visibility modes remain future UI work.
 
 ## Agents and terminal sessions {#agents-and-terminal-sessions}
 
