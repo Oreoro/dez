@@ -484,7 +484,10 @@ and the panel shell background when project surfaces are pane-hosted. Outline
 Panel rows and scrollbar tracks use the same settings for outline, file,
 folded-directory, and search results. Git Panel change-list rows use Canvas
 density, radius, and contrast for section headers, empty sections, changed
-files, tree directories, and the panel shell background.
+files, tree directories, and the panel shell background. Settings UI surfaces
+use the same density, radius, and contrast tokens for shared setting rows,
+nested dynamic-setting cards, section headers, search field, navigation rail,
+and content backgrounds.
 
 ## Layout system {#layout-system}
 

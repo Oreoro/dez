@@ -328,6 +328,9 @@ Current consumers:
 - Git Panel: section headers, empty sections, changed files, and tree
   directories use Canvas density, radius, and contrast so Git panes align with
   the project/outline pane treatment.
+- Settings UI: the shared settings row renderer, nested dynamic-setting cards,
+  section headers, search field, navigation rail, and root content backgrounds
+  now consume Canvas density, radius, and contrast.
 
 Broader rollout should apply the same runtime model to additional command-like
 pickers and panel-hosted tools as they opt into Canvas-specific workflows.

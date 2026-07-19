@@ -12,7 +12,7 @@ use futures::{StreamExt, channel::mpsc};
 use fuzzy::StringMatchCandidate;
 use gpui::{
     Action, App, AsyncApp, ClipboardItem, DEFAULT_ADDITIONAL_WINDOW_SIZE, Div, Entity, FocusHandle,
-    Focusable, Global, KeyContext, ListState, ReadGlobal as _, Role, ScrollHandle, Stateful,
+    Focusable, Global, Hsla, KeyContext, ListState, ReadGlobal as _, Role, ScrollHandle, Stateful,
     Subscription, Task, TitlebarOptions, UniformListScrollHandle, WeakEntity, Window, WindowBounds,
     WindowHandle, WindowOptions, actions, div, list, point, prelude::*, px, uniform_list,
 };
@@ -42,15 +42,15 @@ use std::{
 };
 use theme_settings::ThemeSettings;
 use ui::{
-    Banner, ContextMenu, Divider, DropdownMenu, DropdownStyle, IconButtonShape, IconPosition,
-    KeyBinding, KeybindingHint, PopoverMenu, Scrollbars, Switch, Tooltip, TreeViewItem,
-    WithScrollbar, prelude::*,
+    Banner, ContextMenu, DropdownMenu, DropdownStyle, IconButtonShape, IconPosition, KeyBinding,
+    KeybindingHint, PopoverMenu, Scrollbars, Switch, Tooltip, TreeViewItem, WithScrollbar,
+    prelude::*,
 };
 
 use util::{ResultExt as _, paths::PathStyle, rel_path::RelPath};
 use workspace::{
-    AppState, MultiWorkspace, OpenOptions, OpenVisible, Workspace, WorkspaceSettings,
-    client_side_decorations,
+    AppState, DesignSystemSettings, MultiWorkspace, OpenOptions, OpenVisible, Workspace,
+    WorkspaceSettings, client_side_decorations,
 };
 use zed_actions::{
     AGENT_SKILLS_SETTINGS_PATH, OpenProjectSettings, OpenSettings, OpenSettingsAt,
@@ -78,6 +78,160 @@ const CONTENT_GROUP_TAB_INDEX: isize = 5;
 
 const SIDEBAR_WIDTH: Pixels = px(226.);
 const CONTENT_MIN_WIDTH: Pixels = px(400.);
+
+fn canvas_settings_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.background,
+        settings::CanvasContrast::Standard => colors.background,
+        settings::CanvasContrast::High => colors.editor_background,
+    }
+}
+
+fn canvas_settings_nav_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.panel_background,
+        settings::CanvasContrast::Standard => colors.panel_background,
+        settings::CanvasContrast::High => colors.element_background,
+    }
+}
+
+fn canvas_settings_search_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.editor_background,
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors.element_background,
+    }
+}
+
+fn canvas_settings_row_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.background,
+        settings::CanvasContrast::Standard => colors.background,
+        settings::CanvasContrast::High => colors.element_background.opacity(0.66),
+    }
+}
+
+fn canvas_settings_row_hover_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.element_hover.opacity(0.55),
+        settings::CanvasContrast::Standard => colors.element_hover.opacity(0.72),
+        settings::CanvasContrast::High => colors
+            .element_hover
+            .blend(colors.border_focused.opacity(0.14)),
+    }
+}
+
+fn canvas_settings_row_border_color(
+    background: Hsla,
+    contrast: settings::CanvasContrast,
+    cx: &App,
+) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => background,
+        settings::CanvasContrast::Standard => colors.border.opacity(0.18),
+        settings::CanvasContrast::High => colors.border_variant,
+    }
+}
+
+fn canvas_settings_row_hover_border_color(
+    background: Hsla,
+    contrast: settings::CanvasContrast,
+    cx: &App,
+) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => background,
+        settings::CanvasContrast::Standard => colors.border.opacity(0.32),
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn canvas_settings_sub_field_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.element_background.opacity(0.14),
+        settings::CanvasContrast::Standard => colors.element_background.opacity(0.24),
+        settings::CanvasContrast::High => colors.element_background.opacity(0.72),
+    }
+}
+
+fn canvas_settings_row_padding_x(density: settings::CanvasDensity) -> Pixels {
+    match density {
+        settings::CanvasDensity::Compact => px(18.),
+        settings::CanvasDensity::Balanced => px(24.),
+        settings::CanvasDensity::Spacious => px(30.),
+    }
+}
+
+fn canvas_settings_inline_padding(density: settings::CanvasDensity) -> Pixels {
+    match density {
+        settings::CanvasDensity::Compact => px(10.),
+        settings::CanvasDensity::Balanced => px(12.),
+        settings::CanvasDensity::Spacious => px(16.),
+    }
+}
+
+fn canvas_settings_item_padding_y(
+    density: settings::CanvasDensity,
+    extra_bottom_padding: bool,
+) -> (Pixels, Pixels) {
+    let top = match density {
+        settings::CanvasDensity::Compact => px(10.),
+        settings::CanvasDensity::Balanced => px(14.),
+        settings::CanvasDensity::Spacious => px(18.),
+    };
+    let bottom = if extra_bottom_padding {
+        match density {
+            settings::CanvasDensity::Compact => px(20.),
+            settings::CanvasDensity::Balanced => px(28.),
+            settings::CanvasDensity::Spacious => px(36.),
+        }
+    } else {
+        top
+    };
+
+    (top, bottom)
+}
+
+fn canvas_settings_nav_padding(density: settings::CanvasDensity) -> Pixels {
+    match density {
+        settings::CanvasDensity::Compact => px(8.),
+        settings::CanvasDensity::Balanced => px(10.),
+        settings::CanvasDensity::Spacious => px(14.),
+    }
+}
+
+fn canvas_settings_radius(element: Stateful<Div>, radius: settings::CanvasRadius) -> Stateful<Div> {
+    match radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_sm(),
+        settings::CanvasRadius::Rounded => element.rounded_md(),
+    }
+}
+
+fn canvas_settings_item_surface(
+    element: Stateful<Div>,
+    radius: settings::CanvasRadius,
+    background: Hsla,
+    border_color: Hsla,
+    hover_background: Hsla,
+    hover_border_color: Hsla,
+) -> Stateful<Div> {
+    canvas_settings_radius(
+        element
+            .border_1()
+            .border_color(border_color)
+            .bg(background)
+            .hover(move |this| this.bg(hover_background).border_color(hover_border_color)),
+        radius,
+    )
+}
 
 actions!(
     settings_editor,
@@ -1107,14 +1261,28 @@ impl SettingsPageItem {
         cx: &mut Context<SettingsWindow>,
     ) -> AnyElement {
         let file = settings_window.current_file.clone();
+        let design_system = DesignSystemSettings::get_global(cx);
+        let canvas_density = design_system.density;
+        let canvas_radius = design_system.radius;
+        let canvas_contrast = design_system.contrast;
+        let row_padding_x = canvas_settings_row_padding_x(canvas_density);
+        let inline_padding = canvas_settings_inline_padding(canvas_density);
+        let row_background = canvas_settings_row_background(canvas_contrast, cx);
+        let row_hover_background = canvas_settings_row_hover_background(canvas_contrast, cx);
+        let row_border_color =
+            canvas_settings_row_border_color(row_background, canvas_contrast, cx);
+        let row_hover_border_color =
+            canvas_settings_row_hover_border_color(row_background, canvas_contrast, cx);
+        let sub_field_background = canvas_settings_sub_field_background(canvas_contrast, cx);
+        let sub_field_border_color =
+            canvas_settings_row_border_color(sub_field_background, canvas_contrast, cx);
+        let sub_field_hover_border_color =
+            canvas_settings_row_hover_border_color(sub_field_background, canvas_contrast, cx);
+        let (item_padding_top, item_padding_bottom) =
+            canvas_settings_item_padding_y(canvas_density, extra_bottom_padding);
 
         let apply_padding = |element: Stateful<Div>| -> Stateful<Div> {
-            let element = element.pt_4();
-            if extra_bottom_padding {
-                element.pb_10()
-            } else {
-                element.pb_4()
-            }
+            element.pt(item_padding_top).pb(item_padding_bottom)
         };
 
         let mut render_setting_item_inner =
@@ -1185,14 +1353,36 @@ impl SettingsPageItem {
 
                 v_flex()
                     .group("setting-item")
-                    .px_8()
+                    .mx_6()
+                    .px(row_padding_x)
+                    .map(|this| {
+                        canvas_settings_item_surface(
+                            this,
+                            canvas_radius,
+                            row_background,
+                            row_border_color,
+                            row_hover_background,
+                            row_hover_border_color,
+                        )
+                    })
                     .child(field_with_padding)
-                    .when(bottom_border, |this| this.child(Divider::horizontal()))
+                    .when(bottom_border, |this| this.mb_1())
                     .into_any_element()
             }
             SettingsPageItem::SubPageLink(sub_page_link) => v_flex()
                 .group("setting-item")
-                .px_8()
+                .mx_6()
+                .px(row_padding_x)
+                .map(|this| {
+                    canvas_settings_item_surface(
+                        this,
+                        canvas_radius,
+                        row_background,
+                        row_border_color,
+                        row_hover_background,
+                        row_hover_border_color,
+                    )
+                })
                 .child(
                     h_flex()
                         .id(sub_page_link.title.clone())
@@ -1267,7 +1457,7 @@ impl SettingsPageItem {
                             cx,
                         )),
                 )
-                .when(bottom_border, |this| this.child(Divider::horizontal()))
+                .when(bottom_border, |this| this.mb_1())
                 .into_any_element(),
             SettingsPageItem::DynamicItem(DynamicItem {
                 discriminant: discriminant_setting_item,
@@ -1290,12 +1480,21 @@ impl SettingsPageItem {
                     .child(
                         div()
                             .group("setting-item")
-                            .px_8()
+                            .mx_6()
+                            .px(row_padding_x)
+                            .map(|this| {
+                                canvas_settings_item_surface(
+                                    this,
+                                    canvas_radius,
+                                    row_background,
+                                    row_border_color,
+                                    row_hover_background,
+                                    row_hover_border_color,
+                                )
+                            })
                             .child(discriminant_element.when(has_sub_fields, |this| this.pb_4())),
                     )
-                    .when(!has_sub_fields && bottom_border, |this| {
-                        this.child(h_flex().px_8().child(Divider::horizontal()))
-                    });
+                    .when(!has_sub_fields && bottom_border, |this| this.mb_1());
 
                 if rendered_ok {
                     let discriminant =
@@ -1311,15 +1510,16 @@ impl SettingsPageItem {
                             raw_field
                                 .group("setting-sub-item")
                                 .mx_8()
-                                .p_4()
-                                .border_t_1()
-                                .when(is_last_sub_field, |this| this.border_b_1())
+                                .p(inline_padding)
+                                .border_1()
                                 .when(is_last_sub_field && extra_bottom_padding, |this| {
                                     this.mb_8()
                                 })
                                 .border_dashed()
-                                .border_color(cx.theme().colors().border_variant)
-                                .bg(cx.theme().colors().element_background.opacity(0.2)),
+                                .border_color(sub_field_border_color)
+                                .bg(sub_field_background)
+                                .hover(move |this| this.border_color(sub_field_hover_border_color))
+                                .map(|this| canvas_settings_radius(this, canvas_radius)),
                         );
                     }
                 }
@@ -1328,7 +1528,18 @@ impl SettingsPageItem {
             }
             SettingsPageItem::ActionLink(action_link) => v_flex()
                 .group("setting-item")
-                .px_8()
+                .mx_6()
+                .px(row_padding_x)
+                .map(|this| {
+                    canvas_settings_item_surface(
+                        this,
+                        canvas_radius,
+                        row_background,
+                        row_border_color,
+                        row_hover_background,
+                        row_hover_border_color,
+                    )
+                })
                 .child(
                     h_flex()
                         .id(action_link.title.clone())
@@ -1374,7 +1585,7 @@ impl SettingsPageItem {
                             }),
                         ),
                 )
-                .when(bottom_border, |this| this.child(Divider::horizontal()))
+                .when(bottom_border, |this| this.mb_1())
                 .into_any_element(),
         }
     }
@@ -2985,6 +3196,30 @@ impl SettingsWindow {
     fn render_search(&self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let (a11y_value, a11y_text_runs) =
             text_field_a11y_state("settings-ui-search", &self.search_bar, window, cx);
+        let design_system = DesignSystemSettings::get_global(cx);
+        let canvas_density = design_system.density;
+        let canvas_radius = design_system.radius;
+        let canvas_contrast = design_system.contrast;
+        let search_background = canvas_settings_search_background(canvas_contrast, cx);
+        let search_border_color =
+            canvas_settings_row_border_color(search_background, canvas_contrast, cx);
+        let search_focus_border_color =
+            canvas_settings_row_hover_border_color(search_background, canvas_contrast, cx);
+        let search_padding_x = match canvas_density {
+            settings::CanvasDensity::Compact => px(6.),
+            settings::CanvasDensity::Balanced => px(8.),
+            settings::CanvasDensity::Spacious => px(10.),
+        };
+        let search_padding_y = match canvas_density {
+            settings::CanvasDensity::Compact => px(4.),
+            settings::CanvasDensity::Balanced => px(5.),
+            settings::CanvasDensity::Spacious => px(7.),
+        };
+        let search_margin_bottom = match canvas_density {
+            settings::CanvasDensity::Compact => px(8.),
+            settings::CanvasDensity::Balanced => px(12.),
+            settings::CanvasDensity::Spacious => px(16.),
+        };
 
         h_flex()
             .id("settings-ui-search")
@@ -2993,14 +3228,15 @@ impl SettingsWindow {
             .aria_value(a11y_value)
             .track_focus(&self.search_bar.focus_handle(cx))
             .a11y_synthetic_children(a11y_text_runs)
-            .py_1()
-            .px_1p5()
-            .mb_3()
+            .py(search_padding_y)
+            .px(search_padding_x)
+            .mb(search_margin_bottom)
             .gap_1p5()
-            .rounded_sm()
-            .bg(cx.theme().colors().editor_background)
             .border_1()
-            .border_color(cx.theme().colors().border)
+            .border_color(search_border_color)
+            .bg(search_background)
+            .focus(move |this| this.border_color(search_focus_border_color))
+            .map(|this| canvas_settings_radius(this, canvas_radius))
             .child(Icon::new(IconName::MagnifyingGlass).color(Color::Muted))
             .child(self.search_bar.clone())
     }
@@ -3032,6 +3268,12 @@ impl SettingsWindow {
         if self.search_bar.focus_handle(cx).is_focused(window) {
             key_context.add("search");
         }
+        let design_system = DesignSystemSettings::get_global(cx);
+        let canvas_density = design_system.density;
+        let canvas_contrast = design_system.contrast;
+        let nav_background = canvas_settings_nav_background(canvas_contrast, cx);
+        let nav_border_color =
+            canvas_settings_row_border_color(nav_background, canvas_contrast, cx);
 
         v_flex()
             .key_context(key_context)
@@ -3153,12 +3395,12 @@ impl SettingsWindow {
             }))
             .w(SIDEBAR_WIDTH)
             .h_full()
-            .p_2p5()
+            .p(canvas_settings_nav_padding(canvas_density))
             .when(cfg!(target_os = "macos"), |this| this.pt_10())
             .flex_none()
             .border_r_1()
-            .border_color(cx.theme().colors().border)
-            .bg(cx.theme().colors().panel_background)
+            .border_color(nav_border_color)
+            .bg(nav_background)
             .child(self.render_search(window, cx))
             .child(
                 v_flex()
@@ -3246,7 +3488,7 @@ impl SettingsWindow {
                     .pb_0p5()
                     .flex_shrink_0()
                     .border_t_1()
-                    .border_color(cx.theme().colors().border_variant)
+                    .border_color(nav_border_color)
                     .child(
                         KeybindingHint::new(
                             KeyBinding::for_action_in(
@@ -3940,6 +4182,26 @@ impl SettingsWindow {
             }
         }
 
+        let design_system = DesignSystemSettings::get_global(cx);
+        let canvas_density = design_system.density;
+        let canvas_contrast = design_system.contrast;
+        let content_background = canvas_settings_search_background(canvas_contrast, cx);
+        let content_padding_top = match canvas_density {
+            settings::CanvasDensity::Compact => px(16.),
+            settings::CanvasDensity::Balanced => px(24.),
+            settings::CanvasDensity::Spacious => px(32.),
+        };
+        let content_gap = match canvas_density {
+            settings::CanvasDensity::Compact => px(12.),
+            settings::CanvasDensity::Balanced => px(16.),
+            settings::CanvasDensity::Spacious => px(22.),
+        };
+        let header_gap = match canvas_density {
+            settings::CanvasDensity::Compact => px(6.),
+            settings::CanvasDensity::Balanced => px(8.),
+            settings::CanvasDensity::Spacious => px(11.),
+        };
+
         v_flex()
             .id("settings-ui-page")
             .on_action(cx.listener(|this, _: &menu::SelectNext, window, cx| {
@@ -4029,15 +4291,15 @@ impl SettingsWindow {
                 )
             })
             .track_focus(&self.content_focus_handle.focus_handle(cx))
-            .pt_6()
-            .gap_4()
+            .pt(content_padding_top)
+            .gap(content_gap)
             .flex_1()
             .min_w_0()
-            .bg(cx.theme().colors().editor_background)
+            .bg(content_background)
             .child(
                 v_flex()
-                    .px_8()
-                    .gap_2()
+                    .px(canvas_settings_row_padding_x(canvas_density))
+                    .gap(header_gap)
                     .child(page_header)
                     .child(warning_banner)
                     .child(restricted_banner),
@@ -4480,6 +4742,8 @@ impl SettingsWindow {
 impl Render for SettingsWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let ui_font = theme_settings::setup_ui_font(window, cx);
+        let canvas_contrast = DesignSystemSettings::get_global(cx).contrast;
+        let settings_background = canvas_settings_background(canvas_contrast, cx);
 
         client_side_decorations(
             v_flex()
@@ -4552,7 +4816,7 @@ impl Render for SettingsWindow {
                         .flex_1()
                         .min_h_0()
                         .font(ui_font)
-                        .bg(cx.theme().colors().background)
+                        .bg(settings_background)
                         .text_color(cx.theme().colors().text)
                         .when(!cfg!(target_os = "macos"), |this| {
                             this.border_t_1().border_color(cx.theme().colors().border)

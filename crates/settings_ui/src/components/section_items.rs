@@ -1,5 +1,31 @@
-use gpui::{IntoElement, ParentElement, Role, Styled};
+use gpui::{App, IntoElement, ParentElement, Pixels, Role, Styled, px};
+use settings::Settings;
 use ui::{Divider, DividerColor, prelude::*};
+use workspace::DesignSystemSettings;
+
+fn canvas_section_padding_x(density: settings::CanvasDensity) -> Pixels {
+    match density {
+        settings::CanvasDensity::Compact => px(18.),
+        settings::CanvasDensity::Balanced => px(24.),
+        settings::CanvasDensity::Spacious => px(30.),
+    }
+}
+
+fn canvas_section_gap(density: settings::CanvasDensity) -> Pixels {
+    match density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
+fn canvas_section_divider_color(contrast: settings::CanvasContrast) -> DividerColor {
+    match contrast {
+        settings::CanvasContrast::Low => DividerColor::BorderFaded,
+        settings::CanvasContrast::Standard => DividerColor::BorderFaded,
+        settings::CanvasContrast::High => DividerColor::Border,
+    }
+}
 
 #[derive(IntoElement)]
 pub struct SettingsSectionHeader {
@@ -30,6 +56,7 @@ impl SettingsSectionHeader {
 
 impl RenderOnce for SettingsSectionHeader {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        let design_system = DesignSystemSettings::get_global(cx);
         let label_text = self.label.clone();
         let label = Label::new(self.label)
             .size(LabelSize::Small)
@@ -42,8 +69,10 @@ impl RenderOnce for SettingsSectionHeader {
             .aria_level(2)
             .aria_label(label_text)
             .w_full()
-            .when(!self.no_padding, |this| this.px_8())
-            .gap_1p5()
+            .when(!self.no_padding, |this| {
+                this.px(canvas_section_padding_x(design_system.density))
+            })
+            .gap(canvas_section_gap(design_system.density))
             .map(|this| {
                 if let Some(icon) = self.icon {
                     this.child(
@@ -56,6 +85,8 @@ impl RenderOnce for SettingsSectionHeader {
                     this.child(label)
                 }
             })
-            .child(Divider::horizontal().color(DividerColor::BorderFaded))
+            .child(
+                Divider::horizontal().color(canvas_section_divider_color(design_system.contrast)),
+            )
     }
 }
