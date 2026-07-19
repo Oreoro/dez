@@ -130,8 +130,16 @@ actions!(
         CycleCanvasLayout,
         /// Saves the current Canvas layout visibility and focus snapshot.
         SaveCurrentCanvasLayout,
+        /// Saves the current Canvas layout visibility and focus snapshot to slot 2.
+        SaveCurrentCanvasLayoutSlot2,
+        /// Saves the current Canvas layout visibility and focus snapshot to slot 3.
+        SaveCurrentCanvasLayoutSlot3,
         /// Restores the saved Canvas layout visibility and focus snapshot.
         RestoreSavedCanvasLayout,
+        /// Restores Canvas saved layout slot 2.
+        RestoreSavedCanvasLayoutSlot2,
+        /// Restores Canvas saved layout slot 3.
+        RestoreSavedCanvasLayoutSlot3,
         /// Restores the previous Canvas layout visibility and focus snapshot.
         RestorePreviousCanvasLayout,
     ]
@@ -294,9 +302,27 @@ pub fn init(cx: &mut App) {
             workspace.save_current_canvas_layout(window, cx);
         });
 
+        workspace.register_action(|workspace, _: &SaveCurrentCanvasLayoutSlot2, window, cx| {
+            workspace.save_current_canvas_layout_slot(2, window, cx);
+        });
+
+        workspace.register_action(|workspace, _: &SaveCurrentCanvasLayoutSlot3, window, cx| {
+            workspace.save_current_canvas_layout_slot(3, window, cx);
+        });
+
         workspace.register_action(|workspace, _: &RestoreSavedCanvasLayout, window, cx| {
             set_window_layout(WindowLayout::Agent(None), cx);
             workspace.restore_saved_canvas_layout(window, cx);
+        });
+
+        workspace.register_action(|workspace, _: &RestoreSavedCanvasLayoutSlot2, window, cx| {
+            set_window_layout(WindowLayout::Agent(None), cx);
+            workspace.restore_saved_canvas_layout_slot(2, window, cx);
+        });
+
+        workspace.register_action(|workspace, _: &RestoreSavedCanvasLayoutSlot3, window, cx| {
+            set_window_layout(WindowLayout::Agent(None), cx);
+            workspace.restore_saved_canvas_layout_slot(3, window, cx);
         });
 
         workspace.register_action(|workspace, _: &RestorePreviousCanvasLayout, window, cx| {
@@ -385,7 +411,11 @@ fn update_layout_action_filter(cx: &mut App) {
         TypeId::of::<ApplyCanvasPortraitDisplayLayout>(),
         TypeId::of::<CycleCanvasLayout>(),
         TypeId::of::<SaveCurrentCanvasLayout>(),
+        TypeId::of::<SaveCurrentCanvasLayoutSlot2>(),
+        TypeId::of::<SaveCurrentCanvasLayoutSlot3>(),
         TypeId::of::<RestoreSavedCanvasLayout>(),
+        TypeId::of::<RestoreSavedCanvasLayoutSlot2>(),
+        TypeId::of::<RestoreSavedCanvasLayoutSlot3>(),
         TypeId::of::<RestorePreviousCanvasLayout>(),
     ];
     CommandPaletteFilter::update_global(cx, |filter, _| {
@@ -1523,16 +1553,20 @@ impl SidebarChrome {
                 let (
                     active_canvas_layout_recipe,
                     canvas_layout_history_len,
-                    has_saved_canvas_layout,
+                    has_saved_canvas_layout_slot_1,
+                    has_saved_canvas_layout_slot_2,
+                    has_saved_canvas_layout_slot_3,
                     saved_canvas_layout_count,
                 ) = workspace
                     .upgrade()
-                    .map_or((None, 0, false, 0), |workspace| {
+                    .map_or((None, 0, false, false, false, 0), |workspace| {
                         let workspace = workspace.read(cx);
                         (
                             workspace.active_canvas_layout_recipe_id(),
                             workspace.canvas_layout_history_len(),
-                            workspace.has_saved_canvas_layout(),
+                            workspace.has_saved_canvas_layout_slot(1),
+                            workspace.has_saved_canvas_layout_slot(2),
+                            workspace.has_saved_canvas_layout_slot(3),
                             workspace.saved_canvas_layout_count(),
                         )
                     });
@@ -1954,7 +1988,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .entry(
-                                    "Save Current Canvas Layout",
+                                    "Save Canvas Layout: Slot 1",
                                     Some(SaveCurrentCanvasLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1964,10 +1998,42 @@ impl SidebarChrome {
                                     },
                                 )
                                 .action_checked_with_disabled(
-                                    "Restore Saved Canvas Layout",
+                                    "Restore Canvas Layout: Slot 1",
                                     RestoreSavedCanvasLayout.boxed_clone(),
                                     false,
-                                    !has_saved_canvas_layout,
+                                    !has_saved_canvas_layout_slot_1,
+                                )
+                                .entry(
+                                    "Save Canvas Layout: Slot 2",
+                                    Some(SaveCurrentCanvasLayoutSlot2.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            SaveCurrentCanvasLayoutSlot2.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .action_checked_with_disabled(
+                                    "Restore Canvas Layout: Slot 2",
+                                    RestoreSavedCanvasLayoutSlot2.boxed_clone(),
+                                    false,
+                                    !has_saved_canvas_layout_slot_2,
+                                )
+                                .entry(
+                                    "Save Canvas Layout: Slot 3",
+                                    Some(SaveCurrentCanvasLayoutSlot3.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            SaveCurrentCanvasLayoutSlot3.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .action_checked_with_disabled(
+                                    "Restore Canvas Layout: Slot 3",
+                                    RestoreSavedCanvasLayoutSlot3.boxed_clone(),
+                                    false,
+                                    !has_saved_canvas_layout_slot_3,
                                 )
                                 .action_checked_with_disabled(
                                     "Restore Previous Canvas Layout",

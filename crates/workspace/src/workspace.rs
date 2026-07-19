@@ -364,6 +364,8 @@ use crate::{
 pub const SERIALIZATION_THROTTLE_TIME: Duration = Duration::from_millis(200);
 const CANVAS_LAYOUT_HISTORY_LIMIT: usize = 24;
 const DEFAULT_CANVAS_SAVED_LAYOUT_NAME: &str = "Saved Layout";
+const CANVAS_SAVED_LAYOUT_SLOT_2_NAME: &str = "Saved Layout 2";
+const CANVAS_SAVED_LAYOUT_SLOT_3_NAME: &str = "Saved Layout 3";
 
 static ZED_WINDOW_SIZE: LazyLock<Option<Size<Pixels>>> = LazyLock::new(|| {
     env::var("ZED_WINDOW_SIZE")
@@ -446,6 +448,15 @@ fn canvas_saved_layouts_to_persisted(
     }
 
     serde_json::to_string(saved_layouts).log_err()
+}
+
+fn canvas_saved_layout_slot_name(slot: usize) -> Option<&'static str> {
+    match slot {
+        1 => Some(DEFAULT_CANVAS_SAVED_LAYOUT_NAME),
+        2 => Some(CANVAS_SAVED_LAYOUT_SLOT_2_NAME),
+        3 => Some(CANVAS_SAVED_LAYOUT_SLOT_3_NAME),
+        _ => None,
+    }
 }
 
 pub trait TerminalProvider {
@@ -2454,6 +2465,11 @@ impl Workspace {
 
     pub fn saved_canvas_layout_count(&self) -> usize {
         self.saved_canvas_layouts.len()
+    }
+
+    pub fn has_saved_canvas_layout_slot(&self, slot: usize) -> bool {
+        canvas_saved_layout_slot_name(slot)
+            .is_some_and(|name| self.saved_canvas_layouts.contains_key(name))
     }
 
     fn mark_canvas_layout_custom(&mut self) {
@@ -5191,22 +5207,42 @@ impl Workspace {
     }
 
     pub fn save_current_canvas_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.save_current_canvas_layout_slot(1, window, cx);
+    }
+
+    pub fn save_current_canvas_layout_slot(
+        &mut self,
+        slot: usize,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(slot_name) = canvas_saved_layout_slot_name(slot) else {
+            return;
+        };
         let Some(snapshot) = self.current_canvas_saved_layout_snapshot(cx) else {
             return;
         };
 
         self.saved_canvas_layouts
-            .insert(DEFAULT_CANVAS_SAVED_LAYOUT_NAME.to_string(), snapshot);
+            .insert(slot_name.to_string(), snapshot);
         self.serialize_workspace(window, cx);
         cx.notify();
     }
 
     pub fn restore_saved_canvas_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(snapshot) = self
-            .saved_canvas_layouts
-            .get(DEFAULT_CANVAS_SAVED_LAYOUT_NAME)
-            .cloned()
-        else {
+        self.restore_saved_canvas_layout_slot(1, window, cx);
+    }
+
+    pub fn restore_saved_canvas_layout_slot(
+        &mut self,
+        slot: usize,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(slot_name) = canvas_saved_layout_slot_name(slot) else {
+            return;
+        };
+        let Some(snapshot) = self.saved_canvas_layouts.get(slot_name).cloned() else {
             return;
         };
 
