@@ -282,10 +282,24 @@ impl CanvasLayoutRecipe {
                 SplitDirection::Left | SplitDirection::Right => SplitDirection::Down,
                 SplitDirection::Up | SplitDirection::Down => direction,
             }
+        } else if self.should_reflow_vertical_to_horizontal_on_ultrawide()
+            && canvas_size_is_ultrawide(size)
+        {
+            match direction {
+                SplitDirection::Up | SplitDirection::Down => SplitDirection::Right,
+                SplitDirection::Left | SplitDirection::Right => direction,
+            }
         } else {
             direction
         };
         Some(direction.axis())
+    }
+
+    fn should_reflow_vertical_to_horizontal_on_ultrawide(self) -> bool {
+        matches!(
+            self,
+            Self::MainTop | Self::CodeRunObserve | Self::Debug | Self::EvenRows
+        )
     }
 
     fn from_name(name: &str) -> Option<Self> {
@@ -328,6 +342,14 @@ fn canvas_size_is_narrow_or_portrait(size: Size<Pixels>) -> bool {
     }
 
     size.width < px(900.) || size.width < size.height
+}
+
+fn canvas_size_is_ultrawide(size: Size<Pixels>) -> bool {
+    if size.width <= Pixels::ZERO || size.height <= Pixels::ZERO {
+        return false;
+    }
+
+    size.width >= px(1600.) && size.width >= size.height * 1.6
 }
 
 use crate::{dock::PanelSizeState, item::ItemBufferKind, notifications::NotificationId};
@@ -5480,29 +5502,57 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let panes =
-            self.prepare_canvas_recipe(false, false, 3, &[SplitDirection::Right], window, cx);
+        let panes = self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::EvenColumns,
+            false,
+            false,
+            3,
+            &[SplitDirection::Right],
+            window,
+            cx,
+        );
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
         self.finish_canvas_recipe(Some(CanvasLayoutRecipe::EvenColumns), window, cx);
     }
 
     pub fn apply_canvas_even_rows_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let panes =
-            self.prepare_canvas_recipe(false, false, 3, &[SplitDirection::Down], window, cx);
+        let panes = self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::EvenRows,
+            false,
+            false,
+            3,
+            &[SplitDirection::Down],
+            window,
+            cx,
+        );
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
         self.finish_canvas_recipe(Some(CanvasLayoutRecipe::EvenRows), window, cx);
     }
 
     pub fn apply_canvas_main_stack_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let panes =
-            self.prepare_canvas_recipe(false, false, 2, &[SplitDirection::Right], window, cx);
+        let panes = self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::MainStack,
+            false,
+            false,
+            2,
+            &[SplitDirection::Right],
+            window,
+            cx,
+        );
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
         self.finish_canvas_recipe(Some(CanvasLayoutRecipe::MainStack), window, cx);
     }
 
     pub fn apply_canvas_main_top_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let panes =
-            self.prepare_canvas_recipe(false, false, 2, &[SplitDirection::Down], window, cx);
+        let panes = self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::MainTop,
+            false,
+            false,
+            2,
+            &[SplitDirection::Down],
+            window,
+            cx,
+        );
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
         self.finish_canvas_recipe(Some(CanvasLayoutRecipe::MainTop), window, cx);
     }
@@ -5513,6 +5563,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let panes = self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::GoldenSplit,
             false,
             false,
             3,
@@ -5530,6 +5581,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let panes = self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::CodeRunObserve,
             true,
             false,
             3,
@@ -5543,6 +5595,7 @@ impl Workspace {
 
     pub fn apply_canvas_review_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let panes = self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::Review,
             true,
             false,
             3,
@@ -5556,6 +5609,7 @@ impl Workspace {
 
     pub fn apply_canvas_debug_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let panes = self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::Debug,
             true,
             false,
             4,
@@ -5576,8 +5630,15 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let panes =
-            self.prepare_canvas_recipe(false, false, 3, &[SplitDirection::Right], window, cx);
+        let panes = self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::DocumentationStudio,
+            false,
+            false,
+            3,
+            &[SplitDirection::Right],
+            window,
+            cx,
+        );
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
         self.finish_canvas_recipe(Some(CanvasLayoutRecipe::DocumentationStudio), window, cx);
     }
@@ -5588,6 +5649,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let panes = self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::BrowserDevelopment,
             false,
             false,
             3,
@@ -5604,7 +5666,15 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.prepare_canvas_recipe(true, true, 2, &[SplitDirection::Right], window, cx);
+        self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::AgentOperations,
+            true,
+            true,
+            2,
+            &[SplitDirection::Right],
+            window,
+            cx,
+        );
         if let Some(agent_pane) = self.panel_pane_for_kind(PaneKind::Agent, cx) {
             self.focus_canvas_pane(&agent_pane, window, cx);
         }
@@ -5617,6 +5687,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let panes = self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::FourAgentMatrix,
             false,
             false,
             4,
@@ -5638,6 +5709,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let panes = self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::SixAgentSupervisor,
             false,
             false,
             6,
@@ -5661,6 +5733,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let panes = self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::WorktreeMatrix,
             true,
             false,
             4,
@@ -5682,6 +5755,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let panes = self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::RemoteOperations,
             true,
             true,
             3,
@@ -5698,7 +5772,15 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let panes = self.prepare_canvas_recipe(true, true, 2, &[SplitDirection::Right], window, cx);
+        let panes = self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::PairProgramming,
+            true,
+            true,
+            2,
+            &[SplitDirection::Right],
+            window,
+            cx,
+        );
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
         self.finish_canvas_recipe(Some(CanvasLayoutRecipe::PairProgramming), window, cx);
     }
@@ -5709,6 +5791,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let panes = self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::IncidentResponse,
             true,
             true,
             4,
@@ -5729,8 +5812,15 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let panes =
-            self.prepare_canvas_recipe(false, false, 3, &[SplitDirection::Down], window, cx);
+        let panes = self.prepare_canvas_recipe(
+            CanvasLayoutRecipe::PortraitDisplay,
+            false,
+            false,
+            3,
+            &[SplitDirection::Down],
+            window,
+            cx,
+        );
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
         self.finish_canvas_recipe(Some(CanvasLayoutRecipe::PortraitDisplay), window, cx);
     }
@@ -5751,6 +5841,7 @@ impl Workspace {
 
     fn prepare_canvas_recipe(
         &mut self,
+        layout_recipe: CanvasLayoutRecipe,
         show_project_pane: bool,
         show_agent_pane: bool,
         tabbed_pane_count: usize,
@@ -5773,7 +5864,8 @@ impl Workspace {
             self.close_legacy_docks_for_canvas(window, cx);
         }
 
-        let split_directions = self.reflow_canvas_split_directions(split_directions, cx);
+        let split_directions =
+            self.reflow_canvas_split_directions(layout_recipe, split_directions, cx);
         self.ensure_visible_tabbed_panes(tabbed_pane_count, &split_directions, window, cx)
     }
 
@@ -5785,26 +5877,43 @@ impl Workspace {
 
     fn reflow_canvas_split_directions(
         &self,
+        layout_recipe: CanvasLayoutRecipe,
         split_directions: &[SplitDirection],
         cx: &App,
     ) -> Vec<SplitDirection> {
-        if !PaneGridSettings::get_global(cx).auto_reflow
-            || !self.canvas_workspace_is_narrow_or_portrait()
-        {
+        if !PaneGridSettings::get_global(cx).auto_reflow {
+            return split_directions.to_vec();
+        }
+
+        let should_reflow_to_vertical = self.canvas_workspace_is_narrow_or_portrait();
+        let should_reflow_to_horizontal = !should_reflow_to_vertical
+            && layout_recipe.should_reflow_vertical_to_horizontal_on_ultrawide()
+            && self.canvas_workspace_is_ultrawide();
+
+        if !should_reflow_to_vertical && !should_reflow_to_horizontal {
             return split_directions.to_vec();
         }
 
         split_directions
             .iter()
             .map(|direction| match direction {
-                SplitDirection::Left | SplitDirection::Right => SplitDirection::Down,
-                SplitDirection::Up | SplitDirection::Down => *direction,
+                SplitDirection::Left | SplitDirection::Right if should_reflow_to_vertical => {
+                    SplitDirection::Down
+                }
+                SplitDirection::Up | SplitDirection::Down if should_reflow_to_horizontal => {
+                    SplitDirection::Right
+                }
+                _ => *direction,
             })
             .collect()
     }
 
     fn canvas_workspace_is_narrow_or_portrait(&self) -> bool {
         canvas_size_is_narrow_or_portrait(self.bounds.size)
+    }
+
+    fn canvas_workspace_is_ultrawide(&self) -> bool {
+        canvas_size_is_ultrawide(self.bounds.size)
     }
 
     fn reflow_active_canvas_layout_for_bounds_change(

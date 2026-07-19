@@ -256,8 +256,11 @@ Rules:
   resize, narrow or portrait workspaces reflow horizontal recipe splits into
   vertical splits without closing workspace items. Resize-driven reflow only
   acts on active Canvas recipes and preserves tabs/live processes by inverting
-  pane axes when the recipe's desired root orientation changes. Broader
-  ultrawide/many-agent variants still need to be implemented.
+  pane axes when the recipe's desired root orientation changes. Ultrawide
+  workspaces reflow vertical-first recipes such as Main Top, Code/Run/Observe,
+  Debug, and Even Rows into horizontal-first layouts while preserving the
+  explicit Portrait Display recipe. Broader many-agent variants still need to
+  be implemented.
 - Empty panes offer quick item creation and restore actions.
 - Zoom preserves underlying layout.
 - Layout modifications persist continuously.

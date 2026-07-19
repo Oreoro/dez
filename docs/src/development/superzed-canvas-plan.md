@@ -241,6 +241,9 @@ Use the existing panel-as-pane bridge as the migration path:
   recipe splits reflow into vertical splits. Active Canvas recipes invert the
   pane tree axes on resize only when the recipe's desired root orientation
   changes, preserving tabs and live processes while avoiding squeezed columns.
+  Ultrawide workspaces now reflow vertical-first recipes such as Main Top,
+  Code/Run/Observe, Debug, and Even Rows into horizontal-first layouts while
+  preserving the explicit Portrait Display recipe.
 - Remove the one-visible-agent bottleneck. Multiple agent tabs and terminal
   agents can be visible across panes and windows.
 - Support direct pane/tab dragging, keyboard movement, context-menu movement,
@@ -304,8 +307,9 @@ Proper Pane Layout is the Canvas migration target, not just a visual skin:
 - The first recipe-identity slice persists the active recipe id separately from
   process lifetime. Restart restore can recover the active recipe label without
   claiming terminal, agent, or browser processes were resumed.
-- `pane_grid.auto_reflow` should eventually choose semantic variants for
-  narrow, portrait, ultrawide, and many-agent states without closing items.
+- `pane_grid.auto_reflow` should choose semantic variants for narrow,
+  portrait, ultrawide, and many-agent states without closing items. Narrow,
+  portrait, and first ultrawide orientation variants are implemented.
 
 Implementation order:
 
@@ -323,8 +327,9 @@ Implementation order:
    metadata; durable multi-name layout management remains future work.
 4. Add resize-driven `auto_reflow` using semantic recipe variants rather than
    raw pixel snapshots. Initial recipe-application reflow and resize-triggered
-   root-orientation reflow for active recipes are implemented; ultrawide and
-   many-agent variants are still pending.
+   root-orientation reflow for active recipes are implemented. First ultrawide
+   orientation variants are implemented for vertical-first recipes; many-agent
+   variants are still pending.
 5. Add UI for named saved layouts and layout history once the underlying
    metadata is stable. A first durable `Saved Layout` slot is implemented in the
    Panel Layout menu, and manual structural changes mark the active recipe as
