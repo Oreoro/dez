@@ -5,6 +5,8 @@ use theme_settings::ThemeSettings;
 use ui::{IconButton, IconButtonShape};
 use ui::{Tooltip, prelude::*};
 
+use crate::canvas;
+
 pub(super) enum HistoryNavigationDirection {
     Previous,
     Next,
@@ -66,30 +68,30 @@ pub(super) fn render_action_button(
     })
 }
 
-pub(crate) fn input_base_styles(border_color: Hsla, map: impl FnOnce(Div) -> Div) -> Div {
+pub(crate) fn input_base_styles(border_color: Hsla, map: impl FnOnce(Div) -> Div, cx: &App) -> Div {
     h_flex()
         .map(map)
         .min_w_32()
-        .min_h_8()
-        .pl_2()
-        .pr_1()
+        .min_h(canvas::search_input_min_height(cx))
+        .pl(canvas::search_input_padding_left(cx))
+        .pr(canvas::search_input_padding_right(cx))
         .border_1()
         .border_color(border_color)
-        .rounded_md()
+        .map(|input| canvas::search_radius(input, cx))
 }
 pub(crate) fn filter_search_results_input(
     border_color: Hsla,
     map: impl FnOnce(Div) -> Div,
     cx: &App,
 ) -> Div {
-    input_base_styles(border_color, map).pl_0().child(
+    input_base_styles(border_color, map, cx).pl_0().child(
         h_flex()
             .mr_2()
             .px_2()
             .h_full()
             .border_r_1()
-            .border_color(cx.theme().colors().border)
-            .bg(cx.theme().colors().text_accent.opacity(0.05))
+            .border_color(canvas::search_border(cx))
+            .bg(canvas::search_accent_background(cx))
             .child(Label::new("Find in Results").color(Color::Muted)),
     )
 }

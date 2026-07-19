@@ -5,6 +5,7 @@ use crate::{
     SearchOptions, SearchSource, SelectAllMatches, SelectNextMatch, SelectPreviousMatch,
     ToggleCaseSensitive, ToggleRegex, ToggleReplace, ToggleSelection, ToggleWholeWord,
     buffer_search::registrar::WithResultsOrExternalQuery,
+    canvas,
     search_bar::{
         ActionButtonState, HistoryNavigationDirection, alignment_element,
         filter_search_results_input, input_base_styles, render_action_button, render_text_input,
@@ -209,19 +210,18 @@ impl Render for BufferSearchBar {
         let should_show_replace_input = self.replace_enabled && replacement;
         let in_replace = self.replacement_editor.focus_handle(cx).is_focused(window);
 
-        let theme_colors = cx.theme().colors();
         let query_border = if self.query_error.is_some() {
             Color::Error.color(cx)
         } else {
-            theme_colors.border
+            canvas::search_border(cx)
         };
-        let replacement_border = theme_colors.border;
+        let replacement_border = canvas::search_border(cx);
 
         let container_width = window.viewport_size().width;
         let input_width = SearchInputWidth::calc_width(container_width);
 
         let input_base_styles =
-            |border_color| input_base_styles(border_color, |div| div.w(input_width));
+            |border_color| input_base_styles(border_color, |div| div.w(input_width), cx);
 
         let input_style = if find_in_results {
             filter_search_results_input(query_border, |div| div.w(input_width), cx)
@@ -309,7 +309,7 @@ impl Render for BufferSearchBar {
                     .pl_2()
                     .ml_2()
                     .border_l_1()
-                    .border_color(theme_colors.border_variant)
+                    .border_color(canvas::search_subtle_border(cx))
                     .child(render_action_button(
                         "buffer-search-nav-button",
                         ui::IconName::ChevronLeft,
@@ -440,7 +440,7 @@ impl Render for BufferSearchBar {
                             .when(has_collapse_button, |this| {
                                 this.pr_2()
                                     .border_r_1()
-                                    .border_color(cx.theme().colors().border_variant)
+                                    .border_color(canvas::search_subtle_border(cx))
                             })
                             .child(render_action_button(
                                 "buffer-search",

@@ -505,7 +505,10 @@ Preview uses them for the settings toolbar, table background, cell gutters,
 header fades, and debug overlay; Image Viewer uses them for the viewport,
 checkerboard backdrop, image border, and image radius. SVG Preview uses them
 for its viewport and empty/error cards. Diagnostics uses Canvas contrast for
-project and buffer diagnostics roots plus empty states.
+project and buffer diagnostics roots plus empty states. Search surfaces use
+Canvas density, radius, and contrast for project-search landing backgrounds,
+project/buffer search input shells, filter-in-results labels, and match
+navigation separators.
 
 ## Layout system {#layout-system}
 

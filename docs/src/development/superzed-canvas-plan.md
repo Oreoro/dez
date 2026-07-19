@@ -39,6 +39,10 @@ Implemented in this phase:
   Preview now reads Canvas background, border, density, and radius tokens for
   its viewport and empty/error cards; Project and Buffer Diagnostics use Canvas
   contrast for their root and empty-state backgrounds.
+- Applied Canvas design-system tokens to Search: project-search landing pages,
+  project and buffer search input shells, filter-in-results labels, and match
+  navigation separators now read `design_system.density`,
+  `design_system.radius`, and `design_system.contrast`.
 - Added schema/default switches for pane-tab panel hosting, terminal-agent
   detection, multiple visible agents, session restoration, agent attention
   notifications, and preview-first Markdown.

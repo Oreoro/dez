@@ -4,6 +4,7 @@ use crate::{
     SearchOption, SearchOptions, SearchSource, SelectNextMatch, SelectPreviousMatch,
     ToggleCaseSensitive, ToggleIncludeIgnored, ToggleRegex, ToggleReplace, ToggleWholeWord,
     buffer_search::Deploy,
+    canvas,
     search_bar::{
         ActionButtonState, HistoryNavigationDirection, alignment_element, input_base_styles,
         render_action_button, render_text_input, should_navigate_history,
@@ -659,7 +660,7 @@ impl Render for ProjectSearchView {
                 .items_center()
                 .justify_center()
                 .overflow_hidden()
-                .bg(cx.theme().colors().editor_background)
+                .bg(canvas::search_background(cx))
                 .track_focus(&self.focus_handle(cx))
                 .child(
                     v_flex()
@@ -1875,7 +1876,7 @@ impl ProjectSearchView {
         if self.panels_with_errors.contains_key(&panel) {
             Color::Error.color(cx)
         } else {
-            cx.theme().colors().border
+            canvas::search_border(cx)
         }
     }
 
@@ -2298,12 +2299,15 @@ impl Render for ProjectSearchBar {
         let input_width = SearchInputWidth::calc_width(container_width);
 
         let input_base_styles = |panel: InputPanel| {
-            input_base_styles(search.border_color_for(panel, cx), |div| match panel {
-                InputPanel::Query | InputPanel::Replacement => div.w(input_width),
-                InputPanel::Include | InputPanel::Exclude => div.flex_grow_1(),
-            })
+            input_base_styles(
+                search.border_color_for(panel, cx),
+                |div| match panel {
+                    InputPanel::Query | InputPanel::Replacement => div.w(input_width),
+                    InputPanel::Include | InputPanel::Exclude => div.flex_grow_1(),
+                },
+                cx,
+            )
         };
-        let theme_colors = cx.theme().colors();
         let project_search = search.entity.read(cx);
         let limit_reached = project_search.search_state.limit_reached();
         let is_search_underway = project_search.pending_search.is_some();
@@ -2378,7 +2382,7 @@ impl Render for ProjectSearchBar {
             .ml_1()
             .pl_1p5()
             .border_l_1()
-            .border_color(theme_colors.border_variant)
+            .border_color(canvas::search_subtle_border(cx))
             .child(render_action_button(
                 "project-search-nav-button",
                 IconName::ChevronLeft,
