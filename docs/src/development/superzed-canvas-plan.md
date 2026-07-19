@@ -55,6 +55,9 @@ Implemented in this phase:
 - `workspace_bar.show_agent_attention` now controls workspace-level attention
   badges plus Session Rail thread, terminal, and collapsed-project attention
   markers; `session_rail.metadata` still controls latest-attention timestamps.
+- Runtime workspace bar settings now expose `visibility`, `height`, and
+  `center_command_search`; `workspace_bar.visibility = "hidden"` gates the
+  existing layout command/menu affordances and workspace/rail attention chrome.
 
 ## Ground truth {#ground-truth}
 

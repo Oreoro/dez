@@ -324,7 +324,7 @@ pub fn init(cx: &mut App) {
 /// whether AI is currently disabled.
 fn update_layout_action_filter(cx: &mut App) {
     let disable_ai = project::DisableAiSettings::get_global(cx).disable_ai;
-    let show_layout = WorkspaceBarSettings::get_global(cx).show_layout;
+    let show_layout = WorkspaceBarSettings::get_global(cx).show_layout();
     let layout_actions = [
         TypeId::of::<UseClassicLayout>(),
         TypeId::of::<UseAgenticLayout>(),
@@ -1407,7 +1407,7 @@ impl SidebarChrome {
             .collect();
 
         let show_user_picture = SidebarChromeSettings::get_global(cx).show_user_picture;
-        let show_layout = WorkspaceBarSettings::get_global(cx).show_layout;
+        let show_layout = WorkspaceBarSettings::get_global(cx).show_layout();
 
         let trigger = if is_signed_in && show_user_picture {
             let avatar = user_avatar.map(|avatar| Avatar::new(avatar)).map(|avatar| {

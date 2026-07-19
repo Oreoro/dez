@@ -16,8 +16,21 @@ pub struct SidebarChromeSettings {
 
 #[derive(Copy, Clone, Debug, RegisterSetting)]
 pub struct WorkspaceBarSettings {
+    pub visibility: settings::CanvasVisibility,
+    pub height: settings::WorkspaceBarHeight,
+    pub center_command_search: bool,
     pub show_layout: bool,
     pub show_agent_attention: bool,
+}
+
+impl WorkspaceBarSettings {
+    pub fn is_visible(&self) -> bool {
+        self.visibility != settings::CanvasVisibility::Hidden
+    }
+
+    pub fn show_layout(&self) -> bool {
+        self.is_visible() && self.show_layout
+    }
 }
 
 impl Settings for SidebarChromeSettings {
@@ -41,6 +54,9 @@ impl Settings for WorkspaceBarSettings {
     fn from_settings(s: &SettingsContent) -> Self {
         let content = s.workspace_bar.clone().unwrap();
         WorkspaceBarSettings {
+            visibility: content.visibility.unwrap(),
+            height: content.height.unwrap(),
+            center_command_search: content.center_command_search.unwrap(),
             show_layout: content.show_layout.unwrap(),
             show_agent_attention: content.show_agent_attention.unwrap(),
         }

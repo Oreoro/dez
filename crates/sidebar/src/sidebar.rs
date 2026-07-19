@@ -172,8 +172,11 @@ impl SessionRailSettings {
 impl settings::Settings for WorkspaceBarAttentionSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
         let workspace_bar = content.workspace_bar.clone().unwrap();
+        let workspace_bar_visible =
+            workspace_bar.visibility.unwrap() != settings::CanvasVisibility::Hidden;
         Self {
-            show_agent_attention: workspace_bar.show_agent_attention.unwrap(),
+            show_agent_attention: workspace_bar_visible
+                && workspace_bar.show_agent_attention.unwrap(),
         }
     }
 }
