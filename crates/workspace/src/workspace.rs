@@ -569,11 +569,34 @@ struct CanvasSavedProjectPathTabRestore {
     preview: bool,
 }
 
-struct CanvasSavedPaneProjectPathRestore {
+struct CanvasSavedSerializableTabRestore {
+    serialized_item_kind: String,
+    item_id: ItemId,
+    tab_index: usize,
+    active: bool,
+    preview: bool,
+}
+
+enum CanvasSavedTabRestore {
+    ProjectPath(CanvasSavedProjectPathTabRestore),
+    Serializable(CanvasSavedSerializableTabRestore),
+}
+
+impl CanvasSavedTabRestore {
+    fn tab_index(&self) -> usize {
+        match self {
+            Self::ProjectPath(tab) => tab.tab_index,
+            Self::Serializable(tab) => tab.tab_index,
+        }
+    }
+}
+
+struct CanvasSavedPaneTabRestore {
     pane: WeakEntity<Pane>,
+    pane_kind: PaneKind,
     pinned_count: usize,
     active_tab_index: Option<usize>,
-    tabs: Vec<CanvasSavedProjectPathTabRestore>,
+    tabs: Vec<CanvasSavedTabRestore>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -6527,7 +6550,7 @@ impl Workspace {
             }
         }
 
-        self.restore_canvas_saved_project_path_tabs(&snapshot.panes, &panes_by_id, window, cx);
+        self.restore_canvas_saved_tabs(&snapshot.panes, &panes_by_id, window, cx);
 
         let focus_pane = focus_pane
             .filter(|pane| pane.read(cx).is_visible())
@@ -6545,13 +6568,16 @@ impl Workspace {
         self.finish_canvas_recipe(None, window, cx);
     }
 
-    fn restore_canvas_saved_project_path_tabs(
+    fn restore_canvas_saved_tabs(
         &mut self,
         pane_snapshots: &[CanvasSavedPaneSnapshot],
         panes_by_id: &BTreeMap<CanvasSavedPaneId, Entity<Pane>>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        let workspace_id = self.database_id();
+        let project = self.project.clone();
+        let workspace = self.weak_handle();
         let pane_restores = pane_snapshots
             .iter()
             .filter_map(|pane_snapshot| {
@@ -6560,30 +6586,72 @@ impl Workspace {
                     return None;
                 }
 
-                let mut restored_project_paths = pane
-                    .read(cx)
+                let pane_state = pane.read(cx);
+                let mut restored_project_paths = pane_state
                     .items()
                     .filter_map(|item| item.project_path(cx))
                     .collect::<HashSet<_>>();
-                let tabs = pane_snapshot
+                let mut restored_serializable_items = pane_state
+                    .items()
+                    .filter_map(|item| {
+                        let item = item.to_serializable_item_handle(cx)?;
+                        Some((
+                            item.serialized_item_kind().to_string(),
+                            item.item_id().as_u64(),
+                        ))
+                    })
+                    .collect::<HashSet<_>>();
+                let pane_kind = pane_state.pane_kind();
+                drop(pane_state);
+
+                let mut tabs = pane_snapshot
                     .tabs
                     .iter()
                     .enumerate()
                     .filter_map(|(tab_index, tab_snapshot)| {
-                        let project_path = tab_snapshot.project_path_restore()?;
-                        restored_project_paths
-                            .insert(project_path.clone())
-                            .then_some(CanvasSavedProjectPathTabRestore {
-                                project_path,
-                                tab_index,
-                                active: tab_snapshot.active,
-                                preview: tab_snapshot.preview,
-                            })
+                        if let Some(project_path) = tab_snapshot.project_path_restore() {
+                            return restored_project_paths
+                                .insert(project_path.clone())
+                                .then_some(CanvasSavedTabRestore::ProjectPath(
+                                    CanvasSavedProjectPathTabRestore {
+                                        project_path,
+                                        tab_index,
+                                        active: tab_snapshot.active,
+                                        preview: tab_snapshot.preview,
+                                    },
+                                ));
+                        }
+
+                        workspace_id?;
+                        let (serialized_item_kind, item_id) =
+                            match tab_snapshot.restore_plan.as_ref() {
+                                Some(CanvasSavedTabRestorePlan::SerializableItem {
+                                    serialized_item_kind,
+                                    item_id,
+                                }) => (serialized_item_kind.clone(), *item_id),
+                                _ => (
+                                    tab_snapshot.serialized_item_kind.clone()?,
+                                    tab_snapshot.item_id?,
+                                ),
+                            };
+                        restored_serializable_items
+                            .insert((serialized_item_kind.clone(), item_id))
+                            .then_some(CanvasSavedTabRestore::Serializable(
+                                CanvasSavedSerializableTabRestore {
+                                    serialized_item_kind,
+                                    item_id,
+                                    tab_index,
+                                    active: tab_snapshot.active,
+                                    preview: tab_snapshot.preview,
+                                },
+                            ))
                     })
                     .collect::<Vec<_>>();
+                tabs.sort_by_key(CanvasSavedTabRestore::tab_index);
 
-                (!tabs.is_empty()).then_some(CanvasSavedPaneProjectPathRestore {
+                (!tabs.is_empty()).then_some(CanvasSavedPaneTabRestore {
                     pane: pane.downgrade(),
+                    pane_kind,
                     pinned_count: pane_snapshot.pinned_count,
                     active_tab_index: pane_snapshot.active_tab_index,
                     tabs,
@@ -6597,50 +6665,112 @@ impl Workspace {
 
         cx.spawn_in(window, async move |this, cx| -> Result<()> {
             for pane_restore in pane_restores {
-                let CanvasSavedPaneProjectPathRestore {
+                let CanvasSavedPaneTabRestore {
                     pane,
+                    pane_kind,
                     pinned_count,
                     active_tab_index,
                     tabs,
                 } = pane_restore;
 
                 for tab_restore in tabs {
-                    let project_path = tab_restore.project_path.clone();
-                    let Ok(load_task) = this.update_in(cx, |workspace, window, cx| {
-                        workspace.load_path(project_path.clone(), window, cx)
-                    }) else {
-                        continue;
-                    };
-                    let Some((project_entry_id, build_item)) = load_task.await.log_err() else {
-                        continue;
-                    };
+                    match tab_restore {
+                        CanvasSavedTabRestore::ProjectPath(tab_restore) => {
+                            let project_path = tab_restore.project_path.clone();
+                            let Ok(load_task) = this.update_in(cx, |workspace, window, cx| {
+                                workspace.load_path(project_path.clone(), window, cx)
+                            }) else {
+                                continue;
+                            };
+                            let Some((project_entry_id, build_item)) = load_task.await.log_err()
+                            else {
+                                continue;
+                            };
 
-                    let Some(pane) = pane.upgrade() else {
-                        continue;
-                    };
-                    pane.update_in(cx, |pane, window, cx| {
-                        if pane.item_for_path(project_path.clone(), cx).is_some() {
-                            return;
+                            let Some(pane) = pane.upgrade() else {
+                                continue;
+                            };
+                            pane.update_in(cx, |pane, window, cx| {
+                                if pane.item_for_path(project_path.clone(), cx).is_some() {
+                                    return;
+                                }
+
+                                pane.open_item(
+                                    project_entry_id,
+                                    project_path,
+                                    false,
+                                    tab_restore.preview,
+                                    tab_restore.active,
+                                    Some(tab_restore.tab_index),
+                                    window,
+                                    cx,
+                                    build_item,
+                                );
+                            })?;
                         }
+                        CanvasSavedTabRestore::Serializable(tab_restore) => {
+                            let Some(workspace_id) = workspace_id else {
+                                continue;
+                            };
+                            let Some(pane) = pane.upgrade() else {
+                                continue;
+                            };
+                            let serialized_item_kind = tab_restore.serialized_item_kind.clone();
+                            let item_id = tab_restore.item_id;
+                            let Ok(deserialize_task) = pane.update_in(cx, |_, window, cx| {
+                                SerializableItemRegistry::deserialize(
+                                    &serialized_item_kind,
+                                    project.clone(),
+                                    workspace.clone(),
+                                    workspace_id,
+                                    item_id,
+                                    window,
+                                    cx,
+                                )
+                            }) else {
+                                continue;
+                            };
+                            let Some(item_handle) = deserialize_task.await.log_err() else {
+                                continue;
+                            };
+                            let restored_item_id = item_handle.item_id();
 
-                        pane.open_item(
-                            project_entry_id,
-                            project_path,
-                            false,
-                            tab_restore.preview,
-                            tab_restore.active,
-                            Some(tab_restore.tab_index),
-                            window,
-                            cx,
-                            build_item,
-                        );
-                    })?;
+                            pane.update_in(cx, |pane, window, cx| {
+                                if pane
+                                    .items()
+                                    .filter_map(|item| item.to_serializable_item_handle(cx))
+                                    .any(|item| {
+                                        item.serialized_item_kind()
+                                            == tab_restore.serialized_item_kind
+                                            && item.item_id().as_u64() == tab_restore.item_id
+                                    })
+                                {
+                                    return;
+                                }
+
+                                pane.add_item(
+                                    item_handle,
+                                    tab_restore.active,
+                                    tab_restore.active,
+                                    Some(tab_restore.tab_index),
+                                    window,
+                                    cx,
+                                );
+                                if tab_restore.preview {
+                                    pane.set_preview_item_id(Some(restored_item_id), cx);
+                                }
+                            })?;
+                        }
+                    }
                 }
 
                 let Some(pane) = pane.upgrade() else {
                     continue;
                 };
                 pane.update_in(cx, |pane, window, cx| {
+                    if pane.pane_kind() != pane_kind {
+                        return;
+                    }
                     pane.set_pinned_count(pinned_count.min(pane.items_len()));
                     if let Some(active_tab_index) = active_tab_index
                         .filter(|active_tab_index| *active_tab_index < pane.items_len())

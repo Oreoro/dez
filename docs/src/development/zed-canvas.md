@@ -263,11 +263,12 @@ Rules:
   project-path, or live-only tabs. The Panel Layout menu shows the derived
   label on restore actions. Restore applies the saved pane-tree shape when
   every saved center pane still exists, without closing panes or relaunching
-  processes. Restore now also reopens missing project-path-backed tabs into
-  their saved panes in saved order, then reapplies saved pinned and active-tab
-  metadata. The Panel Layout menu can rename or clear stale fixed slots, save
-  the current layout under a free-form name, and restore, rename, or clear
-  free-form named layouts. A basic saved-layout manager modal lists all fixed
+  processes. Restore now also reopens missing project-path-backed tabs and
+  missing serializable tabs into their saved panes in saved order, then
+  reapplies saved pinned and active-tab metadata. The Panel Layout menu can
+  rename or clear stale fixed slots, save the current layout under a free-form
+  name, and restore, rename, or clear free-form named layouts. A basic
+  saved-layout manager modal lists all fixed
   slots plus named layouts with save-to-slot, restore, rename, and clear
   controls.
   `workspace::RenameSavedCanvasLayoutSlot`,
@@ -305,8 +306,8 @@ Implementation boundary:
   free-form named layouts with built-in text entry and a basic manager modal.
   Richer manager features and actual process restoration remain future work.
   Saved layouts use pane-tree metadata to reshape existing panes, reopen
-  project-path-backed tabs, and store restore-planning intent for
-  live-only/process-backed tabs.
+  project-path-backed and serializable tabs, and store restore-planning intent
+  for live-only/process-backed tabs.
 - Process lifetime stays separate from tab lifetime so closing a tab is not
   silently treated as killing or resuming a process.
 

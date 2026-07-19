@@ -314,12 +314,13 @@ Use the existing panel-as-pane bridge as the migration path:
   a derived display label shown by the Panel Layout restore actions, pane-tree
   shape metadata, tab-role metadata, and explicit serializable/project-path/
   live-only restore intent. Restore now uses the pane-tree shape when every
-  saved center pane still exists, reopens missing project-path-backed tabs into
-  saved panes, reapplies pinned/active tab metadata, and the Panel Layout menu
-  can rename or clear stale fixed slots, save the current layout under a
-  free-form name, and restore, rename, or clear free-form named layouts. A
-  basic saved-layout manager modal lists all fixed slots plus named layouts
-  with save-to-slot, restore, rename, and clear controls. `workspace::RenameSavedCanvasLayoutSlot`,
+  saved center pane still exists, reopens missing project-path-backed and
+  serializable tabs into saved panes, reapplies pinned/active tab metadata, and
+  the Panel Layout menu can rename or clear stale fixed slots, save the current
+  layout under a free-form name, and restore, rename, or clear free-form named
+  layouts. A basic saved-layout manager modal lists all fixed slots plus named
+  layouts with save-to-slot, restore, rename, and clear controls.
+  `workspace::RenameSavedCanvasLayoutSlot`,
   `workspace::SaveCurrentCanvasLayoutAs`, and
   `workspace::ManageSavedCanvasLayouts` provide the text-entry and manager
   surfaces. Richer manager features and live process/session restoration remain
@@ -400,9 +401,10 @@ Implementation order:
    in the Panel Layout menu with derived restore labels plus clear actions, and
    manual structural changes mark the active recipe as custom. Tab-role
    metadata and user-authored slot-label metadata are captured in saved slots,
-   project-path-backed tabs now reopen during restore, and built-in fixed-slot
-   plus free-form named-layout UI and a basic save/restore manager are implemented, while
-   richer manager features and actual process restoration remain future work.
+   project-path-backed and serializable tabs now reopen during restore, and
+   built-in fixed-slot plus free-form named-layout UI and a basic save/restore
+   manager are implemented, while richer manager features and actual process
+   restoration remain future work.
 
 ## Session Rail {#session-rail}
 
