@@ -214,6 +214,10 @@ Rules:
   content docks. Compatibility docks may exist internally for migration,
   actions, extensions, and restoration, but Canvas should host their contents as
   movable pane items.
+- Runtime Canvas layout flows close every dock returned by the workspace dock
+  list after migrating panel contents into pane-hosted tabs. Current bottom
+  panel compatibility maps through the existing dock model until a distinct
+  bottom-dock entity exists.
 - Automatic dock-to-pane migration is controlled by `pane_grid.panel_surface`,
   `pane_grid.draggable_panel_tabs`, and `pane_grid.show_legacy_docks`.
 - No item type owns a privileged location.
@@ -237,6 +241,15 @@ Rules:
 - Zoom preserves underlying layout.
 - Layout modifications persist continuously.
 - Narrow windows reflow without closing workspace items.
+
+Implementation boundary:
+
+- Current recipes are geometry-only and reveal existing pane-hosted surfaces.
+  They must not spawn agents, terminals, browsers, or external processes.
+- Proper persisted layouts still need semantic snapshots containing recipe
+  identity, pane tree, tab identities, and process restoration metadata.
+- Process lifetime stays separate from tab lifetime so closing a tab is not
+  silently treated as killing or resuming a process.
 
 ### Status Strip {#status-strip}
 

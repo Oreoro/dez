@@ -6,8 +6,8 @@ product and design-system specifications:
 - [Zed Canvas](./zed-canvas.md)
 - [Zed Canvas design system](./zed-canvas-design-system.md)
 
-Current phase: Canvas foundation and native defaults. Do not build until the
-user asks.
+Current phase: Canvas foundation and native defaults. Avoid full builds until
+the user asks.
 
 Implemented in this phase:
 
@@ -17,6 +17,9 @@ Implemented in this phase:
   `multiplexer`, and `accessibility`.
 - Added the Canvas layout action that syncs dock panels into regular pane tabs
   and closes legacy dock chrome.
+- Canvas recipes and pane-grid application now close legacy dock chrome through
+  the workspace dock list instead of special-casing left/right docks, keeping
+  the default Canvas surface pane-first as bottom-dock support evolves.
 - Added native Lumin theme assets and made `Lumin Blur` / `Lumin Light` the
   default dark/light pair.
 - Added native JetBrains Mono font assets for editor, terminal, Markdown code,
@@ -240,6 +243,44 @@ Use the existing panel-as-pane bridge as the migration path:
   `agent_control` recipe names, with tolerant matching for label-style names.
 - Add explicit close, restore, and "detach process" behavior so closing a tab
   is not confused with killing a process.
+
+### Proper Panes Layout implementation contract {#proper-panes-layout-implementation-contract}
+
+Proper Pane Layout is the Canvas migration target, not just a visual skin:
+
+- The visible work surface is the center pane grid plus optional Session Rail.
+  Legacy side or bottom docks remain internal compatibility hosts only.
+- Project, Git, outline, collaboration, agent, terminal, Markdown, browser,
+  diagnostics, settings, and future tool surfaces must be addressable as
+  WorkspaceItems inside pane tabs.
+- A recipe may create geometry and reveal existing pane-hosted surfaces, but it
+  must not start background processes, kill live terminals/agents, or overwrite
+  tab contents.
+- Process-backed items need an explicit lifetime policy: close tab, hide tab,
+  detach process, terminate process, and restore placeholder are separate user
+  outcomes.
+- Agent surfaces are not singleton panels. Multiple structured agent threads,
+  terminal-native agent tabs, inspectors, timelines, and fleet views can be
+  visible in separate panes at the same time.
+- Layout history records pane visibility/focus immediately and evolves toward
+  durable semantic snapshots: recipe name, pane tree, tab identities, process
+  restoration metadata, and user-authored saved layout names.
+- `pane_grid.auto_reflow` should eventually choose semantic variants for
+  narrow, portrait, ultrawide, and many-agent states without closing items.
+
+Implementation order:
+
+1. Keep closing all known legacy docks through `Workspace::all_docks()` in
+   Canvas flows. This is implemented for current recipes and pane-grid
+   application.
+2. Replace any remaining privileged project/agent pane behavior with normal tab
+   affordances: drag, close, context menu, keyboard movement, and overflow.
+3. Add durable layout metadata separately from process lifetime so restart
+   restore can recreate layout intent without claiming processes are alive.
+4. Add resize-driven `auto_reflow` using semantic recipe variants rather than
+   raw pixel snapshots.
+5. Add UI for named saved layouts and layout history once the underlying
+   metadata is stable.
 
 ## Session Rail {#session-rail}
 

@@ -4942,9 +4942,7 @@ impl Workspace {
                 pane.update(cx, |pane, cx| pane.set_visible(true, cx));
             }
 
-            for dock in [&self.left_dock, &self.right_dock] {
-                dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
-            }
+            self.close_legacy_docks_for_canvas(window, cx);
         }
 
         let center_pane = self
@@ -4974,9 +4972,7 @@ impl Workspace {
             let agent_pane = self.ensure_panel_pane(PanelPaneKind::Agent, window, cx);
             agent_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
 
-            for dock in [&self.left_dock, &self.right_dock] {
-                dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
-            }
+            self.close_legacy_docks_for_canvas(window, cx);
 
             self.set_active_pane(&agent_pane, window, cx);
             agent_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
@@ -5009,9 +5005,7 @@ impl Workspace {
                 }
             }
 
-            for dock in [&self.left_dock, &self.right_dock] {
-                dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
-            }
+            self.close_legacy_docks_for_canvas(window, cx);
         }
 
         let center_pane = self
@@ -5414,9 +5408,7 @@ impl Workspace {
 
         self.sync_panel_panes_from_docks(window, cx);
 
-        for dock in [&self.left_dock, &self.right_dock] {
-            dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
-        }
+        self.close_legacy_docks_for_canvas(window, cx);
 
         self.center.mark_positions(cx);
         self.serialize_workspace(window, cx);
@@ -5444,12 +5436,16 @@ impl Workspace {
             );
             self.set_canvas_panel_pane_visible(PanelPaneKind::Agent, show_agent_pane, window, cx);
 
-            for dock in [&self.left_dock, &self.right_dock] {
-                dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
-            }
+            self.close_legacy_docks_for_canvas(window, cx);
         }
 
         self.ensure_visible_tabbed_panes(tabbed_pane_count, split_directions, window, cx)
+    }
+
+    fn close_legacy_docks_for_canvas(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        for dock in self.all_docks() {
+            dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
+        }
     }
 
     fn set_canvas_panel_pane_visible(
