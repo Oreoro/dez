@@ -106,12 +106,15 @@ gpui::actions!(
 );
 
 const DEFAULT_WIDTH: Pixels = px(300.0);
+const ICON_WIDTH: Pixels = px(56.0);
+const DETAILED_MIN_WIDTH: Pixels = px(380.0);
 const MIN_WIDTH: Pixels = px(200.0);
 const MAX_WIDTH: Pixels = px(800.0);
 
 #[derive(Clone, Debug, settings::RegisterSetting)]
 struct SessionRailSettings {
     visibility: settings::CanvasVisibility,
+    mode: settings::CanvasVisibility,
     show_worktree_metadata: bool,
     show_agent_state_metadata: bool,
     show_latest_attention_metadata: bool,
@@ -129,6 +132,7 @@ impl settings::Settings for SessionRailSettings {
         let metadata = session_rail.metadata.clone().unwrap();
         Self {
             visibility: session_rail.visibility.unwrap(),
+            mode: session_rail.mode.unwrap(),
             show_worktree_metadata: session_rail_metadata_contains(&metadata, "worktree")
                 || session_rail_metadata_contains(&metadata, "branch"),
             show_agent_state_metadata: session_rail_metadata_contains(&metadata, "agent_state")
@@ -145,6 +149,23 @@ impl settings::Settings for SessionRailSettings {
 impl SessionRailSettings {
     fn is_hidden(&self) -> bool {
         self.visibility == settings::CanvasVisibility::Hidden
+            || self.mode == settings::CanvasVisibility::Hidden
+    }
+
+    fn is_icon_mode(&self) -> bool {
+        self.mode == settings::CanvasVisibility::Icon
+    }
+
+    fn width(&self, configured_width: Pixels) -> Pixels {
+        if self.is_hidden() {
+            Pixels::ZERO
+        } else if self.is_icon_mode() {
+            ICON_WIDTH
+        } else if self.mode == settings::CanvasVisibility::Detailed {
+            Pixels::max(configured_width, DETAILED_MIN_WIDTH)
+        } else {
+            configured_width
+        }
     }
 }
 
@@ -2623,6 +2644,7 @@ impl Sidebar {
 
         let has_filter = self.has_filter_query(cx);
         let session_rail_settings = SessionRailSettings::get_global(cx);
+        let labels_visible = !session_rail_settings.is_icon_mode();
         let show_agent_attention =
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
 
@@ -2701,7 +2723,14 @@ impl Sidebar {
                     .min_w_0()
                     .w_full()
                     .gap_1()
-                    .child(label)
+                    .when(!labels_visible, |this| {
+                        this.child(
+                            Icon::new(IconName::FolderOpen)
+                                .size(IconSize::Small)
+                                .color(Color::Muted),
+                        )
+                    })
+                    .when(labels_visible, |this| this.child(label))
                     .when_some(
                         self.render_remote_project_icon(ix, host.as_ref()),
                         |this, icon| this.child(icon),
@@ -6823,6 +6852,7 @@ impl Sidebar {
         let color = cx.theme().colors();
         let sidebar_bg = color.editor_background;
         let session_rail_settings = SessionRailSettings::get_global(cx);
+        let labels_visible = !session_rail_settings.is_icon_mode();
         let show_agent_attention =
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
 
@@ -6876,6 +6906,7 @@ impl Sidebar {
             .timestamp(timestamp)
             .highlight_positions(thread.highlight_positions.to_vec())
             .title_generating(title_generating)
+            .labels_visible(labels_visible)
             .notified(
                 show_agent_attention
                     && session_rail_settings.show_latest_attention_metadata
@@ -7197,6 +7228,7 @@ impl Sidebar {
 
         let display_title = terminal.metadata.display_title();
         let agent_ui_settings = CanvasAgentUiSettings::get_global(cx);
+        let labels_visible = !session_rail_settings.is_icon_mode();
         let show_agent_attention =
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
         let terminal_agent_kind = agent_ui_settings
@@ -7236,6 +7268,7 @@ impl Sidebar {
                     .then_some(timestamp)
                     .unwrap_or_default(),
             )
+            .labels_visible(labels_visible)
             .notified(
                 show_agent_attention
                     && session_rail_settings.show_latest_attention_metadata
@@ -8634,10 +8667,7 @@ fn render_import_onboarding_banner(
 
 impl WorkspaceSidebar for Sidebar {
     fn width(&self, cx: &App) -> Pixels {
-        if SessionRailSettings::get_global(cx).is_hidden() {
-            return Pixels::ZERO;
-        }
-        self.width
+        SessionRailSettings::get_global(cx).width(self.width)
     }
 
     fn set_width(&mut self, width: Option<Pixels>, cx: &mut Context<Self>) {

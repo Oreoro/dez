@@ -240,6 +240,11 @@ Refine the existing sidebar direction into Session Rail:
 - Runtime rail hosting now honors `session_rail.visibility = "hidden"` by
   reporting zero sidebar width, rendering an empty rail, and suppressing the
   resize hitbox. Other visibility modes remain future UI work.
+- Runtime rail layout now honors `session_rail.mode` for the first concrete
+  modes: `hidden` removes the rail, `icon` uses a narrow icon-only rail with
+  thread/terminal labels and metadata hidden, and `detailed` enforces a wider
+  minimum rail width. `compact`, `auto`, `always`, and `overlay` keep the
+  current rail surface until distinct renderers exist.
 
 ## Agents and terminal sessions {#agents-and-terminal-sessions}
 

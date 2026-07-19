@@ -51,6 +51,7 @@ pub struct ThreadItem {
     selected: bool,
     focused: bool,
     hovered: bool,
+    labels_visible: bool,
     rounded: bool,
     is_truncated: bool,
     added: Option<usize>,
@@ -86,6 +87,7 @@ impl ThreadItem {
             selected: false,
             focused: false,
             hovered: false,
+            labels_visible: true,
             rounded: false,
             is_truncated: true,
             added: None,
@@ -211,6 +213,11 @@ impl ThreadItem {
 
     pub fn hovered(mut self, hovered: bool) -> Self {
         self.hovered = hovered;
+        self
+    }
+
+    pub fn labels_visible(mut self, visible: bool) -> Self {
+        self.labels_visible = visible;
         self
     }
 
@@ -418,11 +425,13 @@ impl RenderOnce for ThreadItem {
 
         let has_worktree = !linked_worktrees.is_empty();
 
-        let has_metadata = has_project_name
-            || has_project_paths
-            || has_worktree
-            || has_diff_stats
-            || has_timestamp;
+        let labels_visible = self.labels_visible;
+        let has_metadata = labels_visible
+            && (has_project_name
+                || has_project_paths
+                || has_worktree
+                || has_diff_stats
+                || has_timestamp);
 
         v_flex()
             .id(self.id.clone())
@@ -455,11 +464,12 @@ impl RenderOnce for ThreadItem {
                             .flex_1()
                             .gap_1p5()
                             .child(icon)
-                            .child(title_label),
+                            .when(labels_visible, |this| this.child(title_label)),
                     )
-                    .when(self.is_truncated && opaque_window, |this| {
-                        this.child(gradient_overlay)
-                    })
+                    .when(
+                        labels_visible && self.is_truncated && opaque_window,
+                        |this| this.child(gradient_overlay),
+                    )
                     .when(self.hovered, |this| {
                         this.when_some(self.action_slot, |this, slot| {
                             this.child(
