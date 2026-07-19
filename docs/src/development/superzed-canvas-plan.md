@@ -263,6 +263,10 @@ Use the existing panel-as-pane bridge as the migration path:
   snapshots restore that recipe identity with pane visibility/focus, and the
   Panel Layout menu checks the active recipe entry while the window is in
   Canvas mode. Durable named layouts remain future work.
+- Manual structural layout changes now clear the active Canvas recipe identity
+  so the Panel Layout menu reports `Custom Canvas Layout` after pane splits,
+  pane moves, pane joins, pane removal, pane-size changes, or explicit
+  project/agent pane visibility toggles.
 - Add explicit close, restore, and "detach process" behavior so closing a tab
   is not confused with killing a process.
 
@@ -310,7 +314,8 @@ Implementation order:
    workspaces is implemented; resize-driven reflow and ultrawide variants are
    still pending.
 5. Add UI for named saved layouts and layout history once the underlying
-   metadata is stable.
+   metadata is stable. The active in-memory recipe now becomes custom after
+   manual structural changes, which is the runtime basis for that UI.
 
 ## Session Rail {#session-rail}
 

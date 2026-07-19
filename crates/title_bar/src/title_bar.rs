@@ -1930,6 +1930,13 @@ impl SidebarChrome {
                                     menu.separator()
                                         .item(ContextMenuEntry::new(hint).disabled(true))
                                 })
+                                .when(is_agent && active_canvas_layout_recipe.is_none(), |menu| {
+                                    menu.item(
+                                        ContextMenuEntry::new("Custom Canvas Layout")
+                                            .toggleable(IconPosition::Start, true)
+                                            .disabled(true),
+                                    )
+                                })
                                 .when(is_custom, |menu| {
                                     menu.item(
                                         ContextMenuEntry::new("Custom")

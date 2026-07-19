@@ -240,6 +240,9 @@ Rules:
   killing live processes. Runtime snapshots also retain the last applied
   Canvas recipe identity so menu state can follow restores. Persisted semantic
   layout history is still required.
+- Manual structural layout changes clear the active recipe identity and show
+  `Custom Canvas Layout` in the Panel Layout menu while keeping the pane tree
+  and tabs intact.
 - `pane_grid.auto_reflow` is available at runtime. On recipe application,
   narrow or portrait workspaces reflow horizontal recipe splits into vertical
   splits without closing workspace items. Resize-driven live reflow and broader

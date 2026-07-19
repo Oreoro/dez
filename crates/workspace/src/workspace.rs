@@ -2296,6 +2296,10 @@ impl Workspace {
         self.active_canvas_layout_recipe.map(CanvasLayoutRecipe::id)
     }
 
+    fn mark_canvas_layout_custom(&mut self) {
+        self.active_canvas_layout_recipe = None;
+    }
+
     pub fn left_dock(&self) -> &Entity<Dock> {
         &self.left_dock
     }
@@ -4896,6 +4900,7 @@ impl Workspace {
         };
 
         let visible = pane.read(cx).is_visible();
+        self.mark_canvas_layout_custom();
         let fallback_pane = if visible {
             self.last_tabbed_pane(cx).or_else(|| {
                 self.center
@@ -6482,6 +6487,7 @@ impl Workspace {
                     .find_pane_in_direction(direction, cx)
                     .unwrap_or_else(|| self.active_pane.clone());
                 let new_pane = self.add_pane(window, cx);
+                self.mark_canvas_layout_custom();
                 self.center.split(&split_off_pane, &new_pane, direction, cx);
                 new_pane
             }
@@ -6775,6 +6781,7 @@ impl Workspace {
 
     pub fn swap_pane_in_direction(&mut self, direction: SplitDirection, cx: &mut Context<Self>) {
         if let Some(to) = self.find_pane_in_direction(direction, cx) {
+            self.mark_canvas_layout_custom();
             self.center.swap(&self.active_pane, &to, cx);
             cx.notify();
         }
@@ -6786,6 +6793,7 @@ impl Workspace {
             .move_to_border(&self.active_pane, direction, cx)
             .unwrap()
         {
+            self.mark_canvas_layout_custom();
             cx.notify();
         }
     }
@@ -6813,6 +6821,7 @@ impl Workspace {
                 DockPosition::Bottom => {}
             }
         } else {
+            self.mark_canvas_layout_custom();
             self.center
                 .resize(&self.active_pane, axis, amount, &self.bounds, cx);
         }
@@ -6821,6 +6830,7 @@ impl Workspace {
     }
 
     pub fn reset_pane_sizes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.mark_canvas_layout_custom();
         self.center.reset_pane_sizes(cx);
         self.serialize_workspace(window, cx);
         cx.notify();
@@ -7055,6 +7065,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> Entity<Pane> {
         let new_pane = self.add_pane(window, cx);
+        self.mark_canvas_layout_custom();
         self.center
             .split(&pane_to_split, &new_pane, split_direction, cx);
         cx.notify();
@@ -7114,6 +7125,7 @@ impl Workspace {
             return;
         }
 
+        self.mark_canvas_layout_custom();
         if let Some(split_direction) = split_direction {
             let size_hint = self.split_size_hint_for_inserted_pane(
                 &pane_to_move,
@@ -7154,6 +7166,7 @@ impl Workspace {
         new_pane.update(cx, |pane, cx| {
             pane.add_item(item, true, true, None, window, cx)
         });
+        self.mark_canvas_layout_custom();
         self.center.split(&pane, &new_pane, direction, cx);
         cx.notify();
     }
@@ -7181,6 +7194,7 @@ impl Workspace {
                         pane.set_nav_history(nav_history, cx);
                         pane.add_item(clone, true, true, None, window, cx)
                     });
+                    this.mark_canvas_layout_custom();
                     this.center.split(&pane, &new_pane, direction, cx);
                     cx.notify();
                     new_pane
@@ -7194,6 +7208,7 @@ impl Workspace {
 
     pub fn join_all_panes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let active_item = self.active_pane.read(cx).active_item();
+        self.mark_canvas_layout_custom();
         for pane in &self.panes {
             join_pane_into_active(&self.active_pane, pane, window, cx);
         }
@@ -7217,6 +7232,7 @@ impl Workspace {
         let Some(next_pane) = next_pane else {
             return;
         };
+        self.mark_canvas_layout_custom();
         move_all_items(&pane, &next_pane, window, cx);
         cx.notify();
     }
@@ -7229,6 +7245,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         if self.center.remove(&pane, cx).unwrap() {
+            self.mark_canvas_layout_custom();
             if self
                 .maximized_pane
                 .as_ref()
