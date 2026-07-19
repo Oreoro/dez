@@ -57,11 +57,11 @@ use workspace::{
     CopySavedCanvasLayoutsToClipboard, DesignSystemSettings, DuplicateSavedCanvasLayoutNamed,
     DuplicateSavedCanvasLayoutSlot, ImportSavedCanvasLayoutsFromClipboard,
     ManageSavedCanvasLayouts, MovePaneDown, MovePaneLeft, MovePaneRight, MovePaneUp,
-    MultiWorkspace, MultiplexerSettings, RenameSavedCanvasLayoutNamed, RenameSavedCanvasLayoutSlot,
-    ResetPaneSizes, ResizePaneDown, ResizePaneLeft, ResizePaneRight, ResizePaneUp,
-    RestoreSavedCanvasLayoutNamed, SaveCurrentCanvasLayoutAs, SaveCurrentCanvasLayoutNamed,
-    SendKeystrokes, SplitDown, SplitRight, SwapPaneDown, SwapPaneLeft, SwapPaneRight, SwapPaneUp,
-    ToggleWorktreeSecurity, Workspace,
+    MultiWorkspace, MultiplexerSettings, PaneGridSettings, RenameSavedCanvasLayoutNamed,
+    RenameSavedCanvasLayoutSlot, ResetPaneSizes, ResizePaneDown, ResizePaneLeft, ResizePaneRight,
+    ResizePaneUp, RestoreSavedCanvasLayoutNamed, SaveCurrentCanvasLayoutAs,
+    SaveCurrentCanvasLayoutNamed, SendKeystrokes, SplitDown, SplitRight, SwapPaneDown,
+    SwapPaneLeft, SwapPaneRight, SwapPaneUp, ToggleWorktreeSecurity, Workspace,
     notifications::{NotifyResultExt, NotifyTaskExt as _},
 };
 
@@ -73,6 +73,57 @@ const MAX_PROJECT_NAME_LENGTH: usize = 40;
 const MAX_BRANCH_NAME_LENGTH: usize = 40;
 const MAX_SHORT_SHA_LENGTH: usize = 8;
 const CANVAS_MULTIPLEXER_CONTEXT: &str = "Workspace && canvas_prefix_mode";
+
+fn canvas_density_label(density: settings::CanvasDensity) -> &'static str {
+    match density {
+        settings::CanvasDensity::Compact => "compact",
+        settings::CanvasDensity::Balanced => "balanced",
+        settings::CanvasDensity::Spacious => "spacious",
+    }
+}
+
+fn canvas_radius_label(radius: settings::CanvasRadius) -> &'static str {
+    match radius {
+        settings::CanvasRadius::None => "square",
+        settings::CanvasRadius::Subtle => "subtle radius",
+        settings::CanvasRadius::Rounded => "rounded",
+    }
+}
+
+fn canvas_contrast_label(contrast: settings::CanvasContrast) -> &'static str {
+    match contrast {
+        settings::CanvasContrast::Low => "low contrast",
+        settings::CanvasContrast::Standard => "standard contrast",
+        settings::CanvasContrast::High => "high contrast",
+    }
+}
+
+fn canvas_label_visibility_label(visibility: settings::CanvasLabelVisibility) -> &'static str {
+    match visibility {
+        settings::CanvasLabelVisibility::Hidden => "labels hidden",
+        settings::CanvasLabelVisibility::Contextual => "contextual labels",
+        settings::CanvasLabelVisibility::Always => "labels always visible",
+    }
+}
+
+fn canvas_panel_surface_label(pane_grid_settings: &PaneGridSettings) -> String {
+    let surface = match pane_grid_settings.panel_surface {
+        settings::CanvasPanelSurface::Dock => "legacy docks",
+        settings::CanvasPanelSurface::PaneTab => "pane tabs",
+    };
+    let legacy_docks = if pane_grid_settings.show_legacy_docks {
+        "legacy docks visible"
+    } else {
+        "legacy docks hidden"
+    };
+    let draggable_tabs = if pane_grid_settings.draggable_panel_tabs {
+        "draggable tabs"
+    } else {
+        "fixed tabs"
+    };
+
+    format!("Panel hosting: {surface} · {legacy_docks} · {draggable_tabs}")
+}
 
 actions!(
     collab,
@@ -1591,21 +1642,9 @@ impl SidebarChrome {
         } else {
             cx.theme().colors().border_focused
         };
-        let density_label = match design_system.density {
-            settings::CanvasDensity::Compact => "compact",
-            settings::CanvasDensity::Balanced => "balanced",
-            settings::CanvasDensity::Spacious => "spacious",
-        };
-        let radius_label = match design_system.radius {
-            settings::CanvasRadius::None => "square",
-            settings::CanvasRadius::Subtle => "subtle radius",
-            settings::CanvasRadius::Rounded => "rounded",
-        };
-        let contrast_label = match design_system.contrast {
-            settings::CanvasContrast::Low => "low contrast",
-            settings::CanvasContrast::Standard => "standard contrast",
-            settings::CanvasContrast::High => "high contrast",
-        };
+        let density_label = canvas_density_label(design_system.density);
+        let radius_label = canvas_radius_label(design_system.radius);
+        let contrast_label = canvas_contrast_label(design_system.contrast);
 
         Some(
             h_flex()
@@ -1774,6 +1813,23 @@ impl SidebarChrome {
                 let is_editor = matches!(current_layout, WindowLayout::Editor(_));
                 let is_agent = matches!(current_layout, WindowLayout::Agent(_));
                 let is_custom = matches!(current_layout, WindowLayout::Custom(_));
+                let design_system = DesignSystemSettings::get_global(cx);
+                let pane_grid_settings = PaneGridSettings::get_global(cx);
+                let layout_menu_label = if pane_grid_settings.panels_as_pane_tabs() {
+                    "Canvas Layout"
+                } else {
+                    "Panel Layout"
+                };
+                let canvas_design_system_label = format!(
+                    "Canvas UI: {} · {} · {} · {} · {}",
+                    design_system.family,
+                    canvas_density_label(design_system.density),
+                    canvas_radius_label(design_system.radius),
+                    canvas_contrast_label(design_system.contrast),
+                    canvas_label_visibility_label(design_system.show_labels),
+                );
+                let canvas_panel_surface_status_label =
+                    canvas_panel_surface_label(&pane_grid_settings);
                 let (
                     active_canvas_layout_recipe,
                     canvas_layout_history_len,
@@ -1984,7 +2040,7 @@ impl SidebarChrome {
                     )
                     .when(ai_enabled && show_layout, |menu| {
                         menu.separator()
-                            .submenu("Panel Layout", move |menu, _window, _cx| {
+                            .submenu(layout_menu_label, move |menu, _window, _cx| {
                                 menu.toggleable_entry(
                                     "Classic",
                                     is_editor,
@@ -2447,6 +2503,16 @@ impl SidebarChrome {
                                             .disabled(true),
                                     )
                                 })
+                                .item(
+                                    ContextMenuEntry::new(canvas_design_system_label.clone())
+                                        .disabled(true),
+                                )
+                                .item(
+                                    ContextMenuEntry::new(
+                                        canvas_panel_surface_status_label.clone(),
+                                    )
+                                    .disabled(true),
+                                )
                                 .when_some(multiplexer_hint.clone(), |menu, hints| {
                                     let mut menu = menu.separator();
                                     for hint in hints {

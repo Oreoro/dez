@@ -119,6 +119,10 @@ Implemented in this phase:
 - Pane tabs and pane tab bars now consume Canvas density and contrast, with tab
   radius applied to active tab chrome and matching drag-preview/drop-target
   heights.
+- The workspace layout menu now presents as `Canvas Layout` when panel surfaces
+  are pane-hosted, and includes disabled Canvas UI/panel-hosting status rows so
+  density, radius, contrast, label visibility, and dock-vs-pane state are
+  discoverable from the menu itself.
 
 ## Ground truth {#ground-truth}
 
@@ -244,9 +248,12 @@ Current consumers:
 - Pane tab bars: tab height, tab content padding, start/end control spacing,
   active tab radius, tab border strength, drag previews, and drop-target
   hitboxes read Canvas density, radius, and contrast.
+- Layout menu: the user menu names the layout submenu according to the active
+  Canvas panel-hosting mode and shows disabled status rows for Canvas UI
+  density, radius, contrast, label visibility, and pane-vs-dock hosting.
 
-Broader rollout should apply the same runtime model to layout menus, agent
-surfaces, Markdown sheets, and command surfaces.
+Broader rollout should apply the same runtime model to agent surfaces, Markdown
+sheets, and command surfaces.
 
 ## Pane-first workspace {#pane-first-workspace}
 
