@@ -55,7 +55,7 @@ use workspace::{
     notifications::{NotifyResultExt, NotifyTaskExt as _},
 };
 
-use zed_actions::OpenRemote;
+use zed_actions::{OpenRemote, command_palette};
 
 pub use onboarding_banner::restore_banner;
 
@@ -398,6 +398,7 @@ impl Render for SidebarChrome {
         }
 
         let sidebar_settings = *SidebarChromeSettings::get_global(cx);
+        let workspace_bar_settings = *WorkspaceBarSettings::get_global(cx);
         let is_git_enabled = ProjectSettings::get_global(cx).git.enabled.status;
         let show_menus = show_menus(cx);
 
@@ -547,6 +548,10 @@ impl Render for SidebarChrome {
                     .justify_between()
                     .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                     .child(div().flex_1())
+                    .when(workspace_bar_settings.center_command_search(), |this| {
+                        this.child(self.render_command_search_button(cx))
+                            .child(div().flex_1())
+                    })
                     .children(self.render_connection_status(status, cx))
                     .child(self.update_version.clone())
                     .when(
@@ -1377,6 +1382,21 @@ impl SidebarChrome {
                             .notify_workspace_async_err(workspace, &mut cx);
                     })
                     .detach();
+            })
+    }
+
+    pub fn render_command_search_button(&mut self, _: &mut Context<Self>) -> Button {
+        Button::new("workspace-command-search", "Command Search")
+            .label_size(LabelSize::Small)
+            .color(Color::Muted)
+            .start_icon(
+                Icon::new(IconName::MagnifyingGlass)
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
+            )
+            .tooltip(Tooltip::text("Open Command Palette"))
+            .on_click(|_, window, cx| {
+                window.dispatch_action(command_palette::Toggle.boxed_clone(), cx);
             })
     }
 

@@ -163,8 +163,10 @@ badges appear at the workspace and rail levels. `session_rail.metadata` remains
 the source of truth for whether latest-attention timestamps are shown.
 
 `workspace_bar.visibility = "hidden"` suppresses the existing layout
-command/menu affordances and workspace/rail attention chrome. `height` and
-`center_command_search` are available to runtime settings for the dedicated
+command/menu affordances, the centered command-search trigger, and workspace/rail
+attention chrome. `workspace_bar.center_command_search` renders a compact
+Command Search button that opens the Command Palette when the workspace bar is
+visible. `height` remains available to runtime settings for the dedicated
 workspace-bar renderer.
 
 Rail modes:

@@ -31,6 +31,10 @@ impl WorkspaceBarSettings {
     pub fn show_layout(&self) -> bool {
         self.is_visible() && self.show_layout
     }
+
+    pub fn center_command_search(&self) -> bool {
+        self.is_visible() && self.center_command_search
+    }
 }
 
 impl Settings for SidebarChromeSettings {
