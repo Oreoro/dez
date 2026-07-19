@@ -152,6 +152,11 @@ Implemented in this phase:
   tab instead of spawning or restoring an Agent Panel terminal.
 - Standalone agent terminal bell state now marks the Session Rail row as
   notified and clears when the row is activated.
+- Command Palette rows now label matching commands by workflow family—layout,
+  agent, terminal, pane, workspace, project, Git, editor, search, settings,
+  collaboration, debug, and preview—using the same Canvas picker shell
+  density/contrast so command discovery reads as part of the Canvas workflow
+  system before full grouped sections land.
 - Added command-palette/menu actions for Canvas layout recipes:
   `Canvas: Full`, `Canvas: Agent Control`, `Canvas: Focus Editor`, and
   `Cycle Canvas Layout`.
@@ -918,6 +923,9 @@ Add semantic command surfaces:
 
 - Command Palette groups: recommended, recent, current pane, workspace, layout,
   agent, terminal, collaboration, settings, and media.
+- Implemented first command-discovery polish: palette result rows classify
+  commands into Canvas workflow families and show compact family badges without
+  changing dispatch behavior.
 - Optional Command Bar with commands like `:split right`, `:layout tiled`,
   `:agent next`, and `:workspace detach`.
 - Command chaining for safe semantic actions only. Destructive chains require

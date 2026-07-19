@@ -485,6 +485,10 @@ should consume the same runtime settings rather than duplicating hard-coded
 visual constants. The workspace-bar command search also reads
 `show_labels`: `hidden` renders an icon-only command button with an
 accessibility label, while `contextual` and `always` keep the visible label.
+Command Palette results show compact workflow-family badges for layout, agent,
+terminal, pane, workspace, project, Git, editor, search, settings,
+collaboration, debug, and preview commands, using Canvas density/contrast tokens
+from the shared picker shell while preserving existing command dispatch.
 Markdown preview uses `design_system.content_width` for its default ContentSheet
 readable width when `markdown_preview.max_width` is unset; explicit
 `markdown_preview.max_width` continues to override the Canvas width. Project

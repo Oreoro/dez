@@ -92,6 +92,139 @@ fn picker_surface_contrast(cx: &App) -> PickerSurfaceContrast {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CommandCategory {
+    Layout,
+    Agent,
+    Terminal,
+    Pane,
+    Workspace,
+    Project,
+    Git,
+    Editor,
+    Search,
+    Settings,
+    Collaboration,
+    Debug,
+    Preview,
+}
+
+impl CommandCategory {
+    fn for_action_name(action_name: &str) -> Option<Self> {
+        let action_name = action_name.to_ascii_lowercase();
+        let namespace = action_name.split("::").next().unwrap_or_default();
+
+        if action_name.contains("canvas") || action_name.contains("layout") {
+            return Some(Self::Layout);
+        }
+
+        match namespace {
+            "agent" | "agent_panel" | "agent_ui" | "assistant" | "copilot" | "copilot_chat" => {
+                return Some(Self::Agent);
+            }
+            "terminal" | "terminal_panel" | "terminal_view" => return Some(Self::Terminal),
+            "pane" => return Some(Self::Pane),
+            "workspace" | "multi_workspace" | "worktree" => return Some(Self::Workspace),
+            "project" | "project_panel" => return Some(Self::Project),
+            "git" | "git_ui" | "buffer_diff" => return Some(Self::Git),
+            "editor" | "vim" => return Some(Self::Editor),
+            "search" | "project_search" | "buffer_search" | "file_finder" | "go_to_line"
+            | "project_symbols" => return Some(Self::Search),
+            "settings"
+            | "settings_ui"
+            | "settings_profile_selector"
+            | "keymap_editor"
+            | "theme_selector"
+            | "icon_theme_selector" => return Some(Self::Settings),
+            "collab" | "collab_ui" | "call" | "channel" => return Some(Self::Collaboration),
+            "debugger" | "debugger_ui" | "dap" => return Some(Self::Debug),
+            "component_preview" | "csv_preview" | "image_viewer" | "svg_preview"
+            | "markdown_preview" | "browser" => return Some(Self::Preview),
+            _ => {}
+        }
+
+        if action_name.contains("agent") {
+            Some(Self::Agent)
+        } else if action_name.contains("terminal") {
+            Some(Self::Terminal)
+        } else if action_name.contains("pane") && !action_name.contains("panel") {
+            Some(Self::Pane)
+        } else if action_name.contains("workspace") || action_name.contains("worktree") {
+            Some(Self::Workspace)
+        } else if action_name.contains("project") {
+            Some(Self::Project)
+        } else if action_name.contains("git") || action_name.contains("diff") {
+            Some(Self::Git)
+        } else if action_name.contains("search") || action_name.contains("finder") {
+            Some(Self::Search)
+        } else if action_name.contains("settings") || action_name.contains("keybinding") {
+            Some(Self::Settings)
+        } else if action_name.contains("debug") || action_name.contains("breakpoint") {
+            Some(Self::Debug)
+        } else if action_name.contains("preview") {
+            Some(Self::Preview)
+        } else {
+            None
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Layout => "layout",
+            Self::Agent => "agent",
+            Self::Terminal => "terminal",
+            Self::Pane => "pane",
+            Self::Workspace => "workspace",
+            Self::Project => "project",
+            Self::Git => "git",
+            Self::Editor => "editor",
+            Self::Search => "search",
+            Self::Settings => "settings",
+            Self::Collaboration => "collab",
+            Self::Debug => "debug",
+            Self::Preview => "preview",
+        }
+    }
+}
+
+fn command_category_badge(category: CommandCategory, selected: bool, cx: &App) -> impl IntoElement {
+    let design_system = DesignSystemSettings::get_global(cx);
+    let colors = cx.theme().colors();
+    let background = if selected {
+        colors.element_selected.opacity(0.5)
+    } else if design_system.is_high_contrast() {
+        colors.element_background.opacity(0.9)
+    } else if design_system.is_low_contrast() {
+        colors.element_background.opacity(0.4)
+    } else {
+        colors.element_background.opacity(0.65)
+    };
+    let border = if design_system.is_high_contrast() {
+        colors.border
+    } else {
+        colors.border_variant.opacity(0.65)
+    };
+
+    div()
+        .flex_none()
+        .px_1()
+        .py_0p5()
+        .rounded_sm()
+        .border_1()
+        .border_color(border)
+        .bg(background)
+        .child(
+            Label::new(category.label())
+                .size(LabelSize::XSmall)
+                .line_height_style(LineHeightStyle::UiLabel)
+                .color(if selected {
+                    Color::Default
+                } else {
+                    Color::Muted
+                }),
+        )
+}
+
 impl CommandPalette {
     fn register(
         workspace: &mut Workspace,
@@ -136,8 +269,10 @@ impl CommandPalette {
                     return None;
                 }
 
+                let action_name = action.name();
                 Some(Command {
-                    name: humanize_action_name(action.name()),
+                    name: humanize_action_name(action_name),
+                    category: CommandCategory::for_action_name(action_name),
                     action,
                 })
             })
@@ -204,6 +339,7 @@ pub struct CommandPaletteDelegate {
 
 struct Command {
     name: String,
+    category: Option<CommandCategory>,
     action: Box<dyn Action>,
 }
 
@@ -296,6 +432,7 @@ impl Clone for Command {
     fn clone(&self) -> Self {
         Self {
             name: self.name.clone(),
+            category: self.category,
             action: self.action.boxed_clone(),
         }
     }
@@ -349,6 +486,7 @@ impl CommandPaletteDelegate {
             }
             commands.push(Command {
                 name: string.clone(),
+                category: CommandCategory::for_action_name(action.name()),
                 action,
             });
             new_matches.push(StringMatch {
@@ -661,16 +799,30 @@ impl PickerDelegate for CommandPaletteDelegate {
                     h_flex()
                         .w_full()
                         .py_px()
+                        .gap_2()
                         .justify_between()
-                        .child(HighlightedLabel::new(
-                            command.name.clone(),
-                            matching_command.positions.clone(),
-                        ))
-                        .child(KeyBinding::for_action_in(
+                        .child(
+                            h_flex()
+                                .min_w_0()
+                                .flex_1()
+                                .gap_2()
+                                .child(
+                                    HighlightedLabel::new(
+                                        command.name.clone(),
+                                        matching_command.positions.clone(),
+                                    )
+                                    .flex_1()
+                                    .truncate(),
+                                )
+                                .when_some(command.category, |this, category| {
+                                    this.child(command_category_badge(category, selected, cx))
+                                }),
+                        )
+                        .child(h_flex().flex_none().child(KeyBinding::for_action_in(
                             &*command.action,
                             &self.previous_focus_handle,
                             cx,
-                        )),
+                        ))),
                 ),
         )
     }
@@ -800,6 +952,7 @@ impl std::fmt::Debug for Command {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Command")
             .field("name", &self.name)
+            .field("category", &self.category)
             .finish_non_exhaustive()
     }
 }
@@ -879,6 +1032,34 @@ mod tests {
         assert_eq!(
             normalize_action_query("project_panel::ToggleFocus"),
             "project panel:ToggleFocus"
+        );
+    }
+
+    #[test]
+    fn test_command_category_for_action_name() {
+        assert_eq!(
+            CommandCategory::for_action_name("zed::ApplyCanvasFourAgentMatrixLayout"),
+            Some(CommandCategory::Layout)
+        );
+        assert_eq!(
+            CommandCategory::for_action_name("agent::NewThread"),
+            Some(CommandCategory::Agent)
+        );
+        assert_eq!(
+            CommandCategory::for_action_name("terminal_panel::ToggleFocus"),
+            Some(CommandCategory::Terminal)
+        );
+        assert_eq!(
+            CommandCategory::for_action_name("pane::SplitRight"),
+            Some(CommandCategory::Pane)
+        );
+        assert_eq!(
+            CommandCategory::for_action_name("workspace::ToggleZoom"),
+            Some(CommandCategory::Workspace)
+        );
+        assert_eq!(
+            CommandCategory::for_action_name("markdown_preview::OpenPreview"),
+            Some(CommandCategory::Preview)
         );
     }
 
