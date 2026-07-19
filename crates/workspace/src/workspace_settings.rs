@@ -87,6 +87,7 @@ pub struct ActivePanelModifiers {
 #[derive(Clone, Debug, RegisterSetting)]
 pub struct PaneGridSettings {
     pub show_legacy_docks: bool,
+    pub focus_indicator: settings::PaneGridFocusIndicator,
     pub panel_surface: settings::CanvasPanelSurface,
     pub draggable_panel_tabs: bool,
     pub auto_hide_single_tab_bar: bool,
@@ -97,6 +98,15 @@ impl PaneGridSettings {
         !self.show_legacy_docks
             && self.draggable_panel_tabs
             && matches!(self.panel_surface, settings::CanvasPanelSurface::PaneTab)
+    }
+
+    pub fn shows_active_pane_border(&self) -> bool {
+        matches!(
+            self.focus_indicator,
+            settings::PaneGridFocusIndicator::Border
+                | settings::PaneGridFocusIndicator::BorderAndTitle
+                | settings::PaneGridFocusIndicator::Ring
+        )
     }
 }
 
@@ -204,6 +214,7 @@ impl Settings for PaneGridSettings {
         let pane_grid = content.pane_grid.clone().unwrap();
         Self {
             show_legacy_docks: pane_grid.show_legacy_docks.unwrap(),
+            focus_indicator: pane_grid.focus_indicator.unwrap(),
             panel_surface: pane_grid.panel_surface.unwrap(),
             draggable_panel_tabs: pane_grid.draggable_panel_tabs.unwrap(),
             auto_hide_single_tab_bar: pane_grid.auto_hide_single_tab_bar.unwrap(),

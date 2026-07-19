@@ -192,6 +192,8 @@ Rules:
 - No item type owns a privileged location.
 - Focused pane receives keyboard actions first.
 - Pane borders stay subtle except for focus, drag target, or attention.
+- `pane_grid.focus_indicator` controls whether active-pane focus uses the
+  existing border treatment or relies on the active tab/title state only.
 - Empty panes offer quick item creation and restore actions.
 - Zoom preserves underlying layout.
 - Layout modifications persist continuously.

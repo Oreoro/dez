@@ -1,6 +1,6 @@
 use crate::{
-    AnyActiveCall, AppState, CollaboratorId, FollowerState, Pane, ParticipantLocation, Workspace,
-    WorkspaceSettings,
+    AnyActiveCall, AppState, CollaboratorId, FollowerState, Pane, PaneGridSettings,
+    ParticipantLocation, Workspace, WorkspaceSettings,
     notifications::DetachAndPromptErr,
     pane_group::element::pane_axis,
     workspace_card_gap,
@@ -2050,10 +2050,15 @@ mod element {
                 overlay_background.fade_out(opacity);
             }
 
-            let overlay_border = WorkspaceSettings::get(None, cx)
-                .active_pane_modifiers
-                .border_size
-                .and_then(|val| (val >= 0.).then_some(val));
+            let overlay_border = PaneGridSettings::get(None, cx)
+                .shows_active_pane_border()
+                .then(|| {
+                    WorkspaceSettings::get(None, cx)
+                        .active_pane_modifiers
+                        .border_size
+                        .and_then(|val| (val >= 0.).then_some(val))
+                })
+                .flatten();
 
             let card_gap = workspace_card_gap(cx);
 

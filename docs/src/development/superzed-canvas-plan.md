@@ -187,6 +187,9 @@ Use the existing panel-as-pane bridge as the migration path:
   `pane_grid.panel_surface = "pane_tab"`, `pane_grid.draggable_panel_tabs =
   true`, and `pane_grid.show_legacy_docks = false`; opting out disables
   automatic panel-pane creation without deleting existing manual pane state.
+- Runtime active-pane border rendering now honors `pane_grid.focus_indicator`:
+  `title` suppresses the border, while `border`, `border_and_title`, and
+  `ring` use the existing active-pane border treatment.
 - Runtime pane rendering now honors `pane_grid.auto_hide_single_tab_bar`; the
   Canvas default remains `false` so single-tab panes still advertise their
   draggable tab surface.
