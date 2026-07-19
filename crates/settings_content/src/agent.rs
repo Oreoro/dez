@@ -193,9 +193,10 @@ pub struct AgentSettingsContent {
     /// Default: true
     pub limit_content_width: Option<bool>,
     /// Maximum content width in pixels for the agent panel. Content will be
-    /// centered when the panel is wider than this value.
+    /// centered when the panel is wider than this value. When unset, Canvas
+    /// `design_system.content_width` chooses the readable width.
     ///
-    /// Default: 850
+    /// Default: null
     #[serde(serialize_with = "crate::serialize_optional_f32_with_two_decimal_places")]
     pub max_content_width: Option<f32>,
     /// The default model to use when creating new chats and for other features when a specific model is not specified.

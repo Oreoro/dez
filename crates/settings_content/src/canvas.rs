@@ -161,6 +161,17 @@ pub enum CanvasContentWidth {
     Full,
 }
 
+impl CanvasContentWidth {
+    pub fn readable_width_px(self) -> Option<f32> {
+        match self {
+            Self::Narrow => Some(680.),
+            Self::Comfortable => Some(800.),
+            Self::Wide => Some(1040.),
+            Self::Full => None,
+        }
+    }
+}
+
 #[derive(
     Clone,
     Copy,

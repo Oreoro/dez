@@ -734,6 +734,15 @@ pub fn normalize_path(raw: &str) -> String {
     }
 }
 
+fn canvas_content_width(content: &settings::SettingsContent) -> Option<Pixels> {
+    content
+        .design_system
+        .as_ref()
+        .and_then(|design_system| design_system.content_width)
+        .and_then(|content_width| content_width.readable_width_px())
+        .map(px)
+}
+
 impl Settings for AgentSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
         let agent = content.agent.clone().unwrap();
@@ -744,7 +753,10 @@ impl Settings for AgentSettings {
             default_width: px(agent.default_width.unwrap()),
             default_height: px(agent.default_height.unwrap()),
             max_content_width: if agent.limit_content_width.unwrap() {
-                Some(px(agent.max_content_width.unwrap()))
+                agent
+                    .max_content_width
+                    .map(px)
+                    .or_else(|| canvas_content_width(content))
             } else {
                 None
             },

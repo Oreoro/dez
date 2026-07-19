@@ -123,6 +123,10 @@ Implemented in this phase:
   are pane-hosted, and includes disabled Canvas UI/panel-hosting status rows so
   density, radius, contrast, label visibility, and dock-vs-pane state are
   discoverable from the menu itself.
+- Agent content width now falls back to Canvas
+  `design_system.content_width` when `agent.max_content_width` is unset, and
+  the native default leaves the agent override unset so agent conversations
+  share the same readable-width model as Markdown previews.
 
 ## Ground truth {#ground-truth}
 
@@ -251,9 +255,13 @@ Current consumers:
 - Layout menu: the user menu names the layout submenu according to the active
   Canvas panel-hosting mode and shows disabled status rows for Canvas UI
   density, radius, contrast, label visibility, and pane-vs-dock hosting.
+- Agent surfaces: `agent.max_content_width = null` now uses the shared Canvas
+  readable-width mapping, so conversation entries, draft editors, activity
+  bars, subagent title bars, and toolbars stay aligned with
+  `design_system.content_width`.
 
-Broader rollout should apply the same runtime model to agent surfaces, Markdown
-sheets, and command surfaces.
+Broader rollout should apply the same runtime model to Markdown sheets and
+command surfaces.
 
 ## Pane-first workspace {#pane-first-workspace}
 

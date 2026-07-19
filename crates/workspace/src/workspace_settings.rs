@@ -149,12 +149,7 @@ impl DesignSystemSettings {
     }
 
     pub fn content_width_pixels_for(content_width: settings::CanvasContentWidth) -> Option<Pixels> {
-        match content_width {
-            settings::CanvasContentWidth::Narrow => Some(px(680.)),
-            settings::CanvasContentWidth::Comfortable => Some(px(800.)),
-            settings::CanvasContentWidth::Wide => Some(px(1040.)),
-            settings::CanvasContentWidth::Full => None,
-        }
+        content_width.readable_width_px().map(px)
     }
 }
 
