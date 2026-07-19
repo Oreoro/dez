@@ -37,6 +37,7 @@ actions!(
 );
 
 pub fn init(cx: &mut App) {
+    workspace::register_project_item::<MarkdownPreviewView>(cx);
     workspace::register_serializable_item::<MarkdownPreviewView>(cx);
 
     cx.observe_new(|workspace: &mut Workspace, window, cx| {

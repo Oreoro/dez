@@ -1237,7 +1237,6 @@ pub enum MarkdownPreviewOpenMode {
     Source,
     #[default]
     Preview,
-    Split,
 }
 
 #[with_fallible_options]

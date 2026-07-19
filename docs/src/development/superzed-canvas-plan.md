@@ -24,6 +24,9 @@ Implemented in this phase:
 - Added schema/default switches for pane-tab panel hosting, terminal-agent
   detection, multiple visible agents, session restoration, agent attention
   notifications, and preview-first Markdown.
+- Registered Markdown preview as the default project item opener for Markdown
+  files while preserving source access through the embedded editor and source
+  return action.
 
 ## Ground truth {#ground-truth}
 
@@ -225,8 +228,9 @@ Markdown should align with Canvas document composition:
 - Keep source editing one action away through Edit Source or split source.
 - Default `markdown_preview.default_open_mode` to `preview` and keep
   `markdown_preview.show_edit_source_action` enabled.
-- Runtime open routing still needs the final hook that converts Markdown editor
-  opens into preview items after the source editor is available.
+- Runtime open routing registers Markdown preview as a Markdown-only project
+  item opener. Setting `markdown_preview.default_open_mode` to `source` returns
+  `.md` opens to the regular editor path.
 - Persist preview tabs and follow-preview mode.
 - Use ContentSheet alignment and readable-width modes.
 - Use JetBrains Mono for code blocks and prose-friendly UI font/line height for

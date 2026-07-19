@@ -1506,6 +1506,10 @@ impl Pane {
         self.items.get(self.active_item_index).cloned()
     }
 
+    pub fn workspace(&self) -> WeakEntity<Workspace> {
+        self.workspace.clone()
+    }
+
     fn active_item_id(&self) -> EntityId {
         self.items[self.active_item_index].item_id()
     }

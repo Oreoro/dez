@@ -114,7 +114,7 @@
   // Markdown preview settings
   "markdown_preview": {
     // How Markdown files should open by default.
-    // Choices: source, preview, split
+    // Choices: source, preview
     "default_open_mode": "preview",
     // Whether to limit the width of the rendered markdown content. When
     // enabled, content is constrained to `max_width` and centered
