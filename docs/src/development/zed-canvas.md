@@ -422,6 +422,7 @@ while a multi-stroke prefix sequence is pending:
 - `ctrl-b r` restores Canvas layout slot 1.
 - `ctrl-b shift-1/2/3` saves Canvas layout slots 1/2/3.
 - `ctrl-b 1/2/3` restores Canvas layout slots 1/2/3.
+- `ctrl-b n 1/2/3` renames Canvas layout slots 1/2/3.
 - `ctrl-b p` restores the previous Canvas layout snapshot.
 - `ctrl-b left/down/up/right` focuses adjacent panes.
 - `ctrl-b shift-left/down/up/right` swaps adjacent panes.
