@@ -215,6 +215,9 @@ Refine the existing sidebar direction into Session Rail:
 - Modes: hidden, icon, compact, detailed, overlay, and auto.
 - Automatic grouping and sorting must not move interaction targets while the
   user clicks or drags.
+- Runtime row rendering now honors `session_rail.metadata` for worktree/branch
+  labels, agent-state labels, and latest-attention timestamps/badges while
+  keeping the Ctrl-Tab thread switcher independent of rail display density.
 
 ## Agents and terminal sessions {#agents-and-terminal-sessions}
 

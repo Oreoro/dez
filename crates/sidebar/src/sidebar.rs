@@ -109,6 +109,36 @@ const DEFAULT_WIDTH: Pixels = px(300.0);
 const MIN_WIDTH: Pixels = px(200.0);
 const MAX_WIDTH: Pixels = px(800.0);
 
+#[derive(Clone, Debug, settings::RegisterSetting)]
+struct SessionRailSettings {
+    show_worktree_metadata: bool,
+    show_agent_state_metadata: bool,
+    show_latest_attention_metadata: bool,
+}
+
+impl settings::Settings for SessionRailSettings {
+    fn from_settings(content: &settings::SettingsContent) -> Self {
+        let session_rail = content.session_rail.clone().unwrap();
+        let metadata = session_rail.metadata.clone().unwrap();
+        Self {
+            show_worktree_metadata: session_rail_metadata_contains(&metadata, "worktree")
+                || session_rail_metadata_contains(&metadata, "branch"),
+            show_agent_state_metadata: session_rail_metadata_contains(&metadata, "agent_state")
+                || session_rail_metadata_contains(&metadata, "running_agents"),
+            show_latest_attention_metadata: session_rail_metadata_contains(
+                &metadata,
+                "latest_attention",
+            ),
+        }
+    }
+}
+
+fn session_rail_metadata_contains(metadata: &[String], field: &str) -> bool {
+    metadata
+        .iter()
+        .any(|candidate| candidate.eq_ignore_ascii_case(field))
+}
+
 #[derive(Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 enum SerializedSidebarView {
     #[default]
@@ -6687,8 +6717,11 @@ impl Sidebar {
 
         let color = cx.theme().colors();
         let sidebar_bg = color.editor_background;
+        let session_rail_settings = SessionRailSettings::get_global(cx);
 
         let timestamp: SharedString = if is_empty_draft {
+            SharedString::default()
+        } else if !session_rail_settings.show_latest_attention_metadata {
             SharedString::default()
         } else {
             format_history_entry_timestamp(Self::thread_display_time(&thread.metadata)).into()
@@ -6696,10 +6729,14 @@ impl Sidebar {
 
         let is_remote = thread.workspace.is_remote(cx);
 
-        let worktrees = apply_worktree_label_mode(
-            thread.worktrees.clone(),
-            cx.flag_value::<AgentThreadWorktreeLabelFlag>(),
-        );
+        let worktrees = if session_rail_settings.show_worktree_metadata {
+            apply_worktree_label_mode(
+                thread.worktrees.clone(),
+                cx.flag_value::<AgentThreadWorktreeLabelFlag>(),
+            )
+        } else {
+            Vec::new()
+        };
 
         let (icon, icon_svg) = if is_draft {
             (IconName::Circle, None)
@@ -6718,7 +6755,12 @@ impl Sidebar {
             .when(is_draft, |this| {
                 this.icon_color(Color::Custom(cx.theme().colors().icon_muted.opacity(0.2)))
             })
-            .status(thread.status)
+            .status(
+                session_rail_settings
+                    .show_agent_state_metadata
+                    .then_some(thread.status)
+                    .unwrap_or_default(),
+            )
             .is_remote(is_remote)
             .when_some(icon_svg, |this, svg| {
                 this.custom_icon_from_external_svg(svg)
@@ -6727,7 +6769,7 @@ impl Sidebar {
             .timestamp(timestamp)
             .highlight_positions(thread.highlight_positions.to_vec())
             .title_generating(title_generating)
-            .notified(has_notification)
+            .notified(session_rail_settings.show_latest_attention_metadata && has_notification)
             .when(thread.diff_stats.lines_added > 0, |this| {
                 this.added(thread.diff_stats.lines_added as usize)
             })
@@ -7031,10 +7073,15 @@ impl Sidebar {
         let workspace = terminal.workspace.clone();
         let source = terminal.source.clone();
         let focus_handle = self.focus_handle.clone();
-        let worktrees = apply_worktree_label_mode(
-            terminal.worktrees.clone(),
-            cx.flag_value::<AgentThreadWorktreeLabelFlag>(),
-        );
+        let session_rail_settings = SessionRailSettings::get_global(cx);
+        let worktrees = if session_rail_settings.show_worktree_metadata {
+            apply_worktree_label_mode(
+                terminal.worktrees.clone(),
+                cx.flag_value::<AgentThreadWorktreeLabelFlag>(),
+            )
+        } else {
+            Vec::new()
+        };
         let is_remote = terminal.workspace.is_remote(cx);
 
         let display_title = terminal.metadata.display_title();
@@ -7060,16 +7107,23 @@ impl Sidebar {
             )
             .when_some(icon_char, |this, icon_char| this.icon_char(icon_char))
             .is_remote(is_remote)
-            .when_some(terminal_agent_kind, |this, agent_kind| {
-                this.project_name(terminal_agent_metadata_label(
-                    agent_kind,
-                    has_notification,
-                    show_detection_confidence,
-                ))
+            .when(session_rail_settings.show_agent_state_metadata, |this| {
+                this.when_some(terminal_agent_kind, |this, agent_kind| {
+                    this.project_name(terminal_agent_metadata_label(
+                        agent_kind,
+                        has_notification,
+                        show_detection_confidence,
+                    ))
+                })
             })
             .worktrees(worktrees)
-            .timestamp(timestamp)
-            .notified(has_notification)
+            .timestamp(
+                session_rail_settings
+                    .show_latest_attention_metadata
+                    .then_some(timestamp)
+                    .unwrap_or_default(),
+            )
+            .notified(session_rail_settings.show_latest_attention_metadata && has_notification)
             .highlight_positions(highlight_positions)
             .selected(is_active)
             .focused(is_focused)
