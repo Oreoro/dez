@@ -212,8 +212,9 @@ Branch audit status, 2026-07-19:
   experimental merge.
 - `upstream/grid-auto-tracks` and `upstream/text-min-content` remain candidates
   for later pane/grid layout polish after Canvas pane shell behavior is stable.
-- `upstream/settings-ui-add-subagent-model-setting`,
-  `upstream/fix-agent-focus-issues`, and
+- `upstream/fix-agent-focus-issues` is merged into the Canvas branch, preserving
+  the current pane-render signature while adding the upstream focus tracking.
+- `upstream/settings-ui-add-subagent-model-setting` and
   `upstream/fix-agent-path-hyperlinks` remain targeted agent UX candidates.
 - `upstream/terminal-restore`, `upstream/terminal-restore-2`, and
   `upstream/ghostty` remain terminal-session candidates, but they require the
