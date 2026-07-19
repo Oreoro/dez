@@ -271,10 +271,11 @@ Use the existing panel-as-pane bridge as the migration path:
   policy as a disabled status row. Workspace key context now exposes
   `canvas_prefix_mode`, and the default keymaps bind the default `ctrl-b`
   prefix to core Canvas commands: cycle layout, Agent Control, Focus Editor,
-  Four-Agent Matrix, save slot 1, restore slot 1, and restore previous layout.
+  Four-Agent Matrix, save slot 1, restore slot 1, restore previous layout,
+  fixed-step pane resizing with `h/j/k/l`, and pane equalization with `=`.
   The Panel Layout menu also shows disabled discovery rows for those prefix
-  commands. Custom prefix strings, timeout behavior, and repeatable resizing
-  remain future work.
+  commands. Custom prefix strings, timeout behavior, and single-prefix repeat
+  mode remain future work.
 - Canvas recipes now share one canonical runtime recipe-name mapping. The
   workspace records the last applied Canvas recipe, layout history snapshots
   restore that recipe identity with pane visibility/focus, persisted workspace
@@ -570,10 +571,11 @@ recipe slices now implement `Full Canvas`, `Agent Control`, `Focus Editor`,
 `Cycle Canvas Layout` reads `multiplexer.layout_cycle` so users can choose the
 order of named recipes without changing keybindings. When
 `multiplexer.prefix_mode = true`, the default `ctrl-b` prefix can trigger the
-core Canvas command set from workspace focus; custom prefixes can be expressed
-through user keymap overrides while dynamic prefix remapping remains future
-work. The Panel Layout menu exposes the default prefix command set as
-discoverable disabled rows while prefix mode is enabled.
+core Canvas command set from workspace focus, including fixed-step pane
+resizing and pane equalization; custom prefixes can be expressed through user
+keymap overrides while dynamic prefix remapping remains future work. The Panel
+Layout menu exposes the default prefix command set as discoverable disabled
+rows while prefix mode is enabled.
 
 ## Accessibility and performance requirements {#accessibility-and-performance}
 

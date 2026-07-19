@@ -770,6 +770,14 @@ actions!(
         ReloadActiveItem,
         /// Reopens the most recently dismissed picker in the current window.
         ReopenLastPicker,
+        /// Resizes the active pane one step to the left.
+        ResizePaneLeft,
+        /// Resizes the active pane one step to the right.
+        ResizePaneRight,
+        /// Resizes the active pane one step upward.
+        ResizePaneUp,
+        /// Resizes the active pane one step downward.
+        ResizePaneDown,
         /// Resets all panes in the center group to equal sizes, preserving the split layout.
         ResetPaneSizes,
         /// Reloads the application
@@ -9818,6 +9826,26 @@ impl Workspace {
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ResetPaneSizes, window, cx| {
                     workspace.reset_pane_sizes(window, cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &ResizePaneLeft, window, cx| {
+                    workspace.resize_pane(Axis::Horizontal, -px(80.), window, cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &ResizePaneRight, window, cx| {
+                    workspace.resize_pane(Axis::Horizontal, px(80.), window, cx);
+                },
+            ))
+            .on_action(
+                cx.listener(|workspace: &mut Workspace, _: &ResizePaneUp, window, cx| {
+                    workspace.resize_pane(Axis::Vertical, px(48.), window, cx);
+                }),
+            )
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &ResizePaneDown, window, cx| {
+                    workspace.resize_pane(Axis::Vertical, -px(48.), window, cx);
                 },
             ))
             .on_action(cx.listener(

@@ -368,7 +368,8 @@ tab::Search
 
 An optional tmux-style Prefix Mode may exist for experts, but ordinary users
 must not need it. Prefix Mode needs a visible mode indicator, configurable
-prefix, timeout, repeatable resize behavior, and command discovery.
+prefix, timeout, fixed-step resize commands, eventual single-prefix repeat
+mode, and command discovery.
 
 The runtime settings model now reads `multiplexer.prefix_mode`,
 `multiplexer.prefix`, and `multiplexer.broadcast_confirmation`; the Panel Layout
@@ -385,9 +386,11 @@ for the default prefix command set:
 - `ctrl-b s` saves Canvas layout slot 1.
 - `ctrl-b r` restores Canvas layout slot 1.
 - `ctrl-b p` restores the previous Canvas layout snapshot.
+- `ctrl-b h/j/k/l` resizes the active pane left/down/up/right in fixed steps.
+- `ctrl-b =` equalizes pane sizes without changing the split tree.
 
 Custom prefix strings still require user keymap overrides; timeout and
-repeatable resize behavior remain future work.
+single-prefix repeat mode remain future work.
 
 ## Layout system {#layout-system}
 

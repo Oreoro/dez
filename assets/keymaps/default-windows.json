@@ -1624,6 +1624,11 @@
       "ctrl-b s": "workspace::SaveCurrentCanvasLayout",
       "ctrl-b r": "workspace::RestoreSavedCanvasLayout",
       "ctrl-b p": "workspace::RestorePreviousCanvasLayout",
+      "ctrl-b h": "workspace::ResizePaneLeft",
+      "ctrl-b j": "workspace::ResizePaneDown",
+      "ctrl-b k": "workspace::ResizePaneUp",
+      "ctrl-b l": "workspace::ResizePaneRight",
+      "ctrl-b =": "workspace::ResetPaneSizes",
     },
   },
 ]
