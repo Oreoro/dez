@@ -63,11 +63,12 @@ use futures::{
 };
 use gpui::{
     Action, AnyEntity, AnyView, AnyWeakView, App, AsyncApp, AsyncWindowContext, Axis, Bounds,
-    Context, CursorStyle, Decorations, DragMoveEvent, Entity, EntityId, EventEmitter, FocusHandle,
-    Focusable, Global, HitboxBehavior, Hsla, KeyContext, Keystroke, ManagedView, MouseButton,
-    PathPromptOptions, Point, PromptLevel, Render, ResizeEdge, Size, Stateful, Subscription,
-    SystemWindowTabController, Task, TaskExt, Tiling, WeakEntity, WindowBounds, WindowHandle,
-    WindowId, WindowOptions, actions, canvas, point, relative, size, transparent_black,
+    Context, CursorStyle, Decorations, DismissEvent, DragMoveEvent, Entity, EntityId, EventEmitter,
+    FocusHandle, Focusable, Global, HitboxBehavior, Hsla, KeyContext, Keystroke, ManagedView,
+    MouseButton, PathPromptOptions, Point, PromptLevel, Render, ResizeEdge, Size, Stateful,
+    Subscription, SystemWindowTabController, Task, TaskExt, Tiling, WeakEntity, WindowBounds,
+    WindowHandle, WindowId, WindowOptions, actions, canvas, point, relative, size,
+    transparent_black,
 };
 pub use history_manager::*;
 pub use item::{
@@ -149,6 +150,7 @@ pub use toolbar::{
 };
 pub use ui;
 use ui::{Window, prelude::*};
+use ui_input::InputField;
 use url::Url;
 use util::{
     ResultExt, TryFutureExt,
@@ -664,6 +666,117 @@ fn canvas_saved_layout_slot_name(slot: usize) -> Option<&'static str> {
     }
 }
 
+struct CanvasSavedLayoutSlotLabelModal {
+    slot: usize,
+    workspace: WeakEntity<Workspace>,
+    input: Entity<InputField>,
+}
+
+impl CanvasSavedLayoutSlotLabelModal {
+    fn new(
+        slot: usize,
+        current_label: String,
+        workspace: WeakEntity<Workspace>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
+        let input = cx.new(|cx| {
+            let input = InputField::new(window, cx, "Layout name").label("Name");
+            input.set_text(&current_label, window, cx);
+            input
+        });
+
+        Self {
+            slot,
+            workspace,
+            input,
+        }
+    }
+
+    fn dismiss(&mut self, cx: &mut Context<Self>) {
+        cx.emit(DismissEvent);
+    }
+
+    fn save_label(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let slot = self.slot;
+        let label = self.input.read(cx).text(cx);
+        self.workspace
+            .update(cx, |workspace, cx| {
+                workspace.set_saved_canvas_layout_slot_label(slot, label, window, cx);
+            })
+            .log_err();
+        self.dismiss(cx);
+    }
+
+    fn cancel(&mut self, _: &menu::Cancel, _: &mut Window, cx: &mut Context<Self>) {
+        self.dismiss(cx);
+    }
+
+    fn confirm(&mut self, _: &menu::Confirm, window: &mut Window, cx: &mut Context<Self>) {
+        self.save_label(window, cx);
+    }
+}
+
+impl EventEmitter<DismissEvent> for CanvasSavedLayoutSlotLabelModal {}
+impl ModalView for CanvasSavedLayoutSlotLabelModal {}
+impl Focusable for CanvasSavedLayoutSlotLabelModal {
+    fn focus_handle(&self, cx: &App) -> FocusHandle {
+        self.input.focus_handle(cx)
+    }
+}
+
+impl Render for CanvasSavedLayoutSlotLabelModal {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        v_flex()
+            .key_context("CanvasSavedLayoutSlotLabelModal")
+            .on_action(cx.listener(Self::cancel))
+            .on_action(cx.listener(Self::confirm))
+            .elevation_2(cx)
+            .w(rems(34.))
+            .child(
+                Modal::new("canvas-saved-layout-slot-label-modal", None)
+                    .show_dismiss(true)
+                    .header(
+                        ModalHeader::new()
+                            .headline(format!("Rename Canvas Layout: Slot {}", self.slot))
+                            .description(
+                                "Leave the name blank to return to the generated layout label.",
+                            ),
+                    )
+                    .section(
+                        Section::new().child(self.input.clone()).child(
+                            Label::new(
+                                "Saved pane geometry and restored project tabs are unchanged.",
+                            )
+                            .color(Color::Muted),
+                        ),
+                    )
+                    .footer(
+                        ModalFooter::new().end_slot(
+                            h_flex()
+                                .gap_1()
+                                .child(
+                                    Button::new("cancel-canvas-layout-label", "Cancel").on_click(
+                                        cx.listener(|this, _, _, cx| {
+                                            this.dismiss(cx);
+                                            cx.stop_propagation();
+                                        }),
+                                    ),
+                                )
+                                .child(
+                                    Button::new("save-canvas-layout-label", "Save")
+                                        .style(ButtonStyle::Filled)
+                                        .on_click(cx.listener(|this, _, window, cx| {
+                                            this.save_label(window, cx);
+                                            cx.stop_propagation();
+                                        })),
+                                ),
+                        ),
+                    ),
+            )
+    }
+}
+
 fn canvas_saved_pane_tree_snapshot(
     member: &Member,
     pane_ids_by_entity_id: &HashMap<EntityId, CanvasSavedPaneId>,
@@ -1092,6 +1205,14 @@ pub struct SendKeystrokes(pub String);
 pub struct SetSavedCanvasLayoutSlotLabel {
     pub slot: usize,
     pub label: String,
+}
+
+/// Opens a prompt for renaming a saved Canvas layout slot.
+#[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct RenameSavedCanvasLayoutSlot {
+    pub slot: usize,
 }
 
 /// Removes a saved Canvas layout slot.
@@ -2881,6 +3002,27 @@ impl Workspace {
         snapshot.label = (!label.is_empty()).then(|| label.to_string());
         self.serialize_workspace(window, cx);
         cx.notify();
+        true
+    }
+
+    pub fn rename_saved_canvas_layout_slot(
+        &mut self,
+        slot: usize,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(slot_name) = canvas_saved_layout_slot_name(slot) else {
+            return false;
+        };
+        let Some(snapshot) = self.saved_canvas_layouts.get(slot_name) else {
+            return false;
+        };
+
+        let current_label = snapshot.display_label().to_string();
+        let workspace = self.weak_handle();
+        self.toggle_modal(window, cx, |window, cx| {
+            CanvasSavedLayoutSlotLabelModal::new(slot, current_label, workspace, window, cx)
+        });
         true
     }
 
@@ -10281,6 +10423,11 @@ impl Workspace {
                         window,
                         cx,
                     );
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, action: &RenameSavedCanvasLayoutSlot, window, cx| {
+                    workspace.rename_saved_canvas_layout_slot(action.slot, window, cx);
                 },
             ))
             .on_action(cx.listener(

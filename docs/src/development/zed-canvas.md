@@ -265,10 +265,10 @@ Rules:
   every saved center pane still exists, without closing panes or relaunching
   processes. Restore now also reopens missing project-path-backed tabs into
   their saved panes in saved order, then reapplies saved pinned and active-tab
-  metadata. The Panel Layout menu can clear stale fixed slots, and
-  `workspace::SetSavedCanvasLayoutSlotLabel` can assign a user-authored label
-  to an existing saved slot; built-in text entry, free-form multi-name
-  management, and live process/session restoration are still future work.
+  metadata. The Panel Layout menu can rename or clear stale fixed slots, and
+  `workspace::RenameSavedCanvasLayoutSlot` opens built-in text entry for
+  assigning a user-authored slot label. Free-form multi-name management and
+  live process/session restoration are still future work.
 - Manual structural layout changes clear the active recipe identity and show
   `Custom Canvas Layout` in the Panel Layout menu while keeping the pane tree
   and tabs intact.
@@ -296,8 +296,8 @@ Implementation boundary:
 - Current recipes are geometry-only and reveal existing pane-hosted surfaces.
   They must not spawn agents, terminals, browsers, or external processes.
 - Saved-layout support currently provides three fixed durable slots with
-  derived display labels plus a parameterized action for user-authored slot
-  labels, not built-in text entry or free-form multi-name layout management.
+  derived display labels plus built-in text entry for user-authored slot
+  labels, not free-form multi-name layout management.
 - Proper persisted layouts still need a saved-layout manager UI and actual
   process restoration. Saved layout slots now use pane-tree metadata to reshape
   existing panes, reopen project-path-backed tabs, and store restore-planning
