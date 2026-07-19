@@ -183,6 +183,10 @@ Use the existing panel-as-pane bridge as the migration path:
 - Runtime startup applies `pane_grid.show_legacy_docks = false` after session
   restore by migrating dock-hosted panels into pane tabs and closing legacy dock
   chrome.
+- Runtime panel migration and Canvas recipes now require
+  `pane_grid.panel_surface = "pane_tab"`, `pane_grid.draggable_panel_tabs =
+  true`, and `pane_grid.show_legacy_docks = false`; opting out disables
+  automatic panel-pane creation without deleting existing manual pane state.
 - Runtime pane rendering now honors `pane_grid.auto_hide_single_tab_bar`; the
   Canvas default remains `false` so single-tab panes still advertise their
   draggable tab surface.

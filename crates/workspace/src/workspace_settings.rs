@@ -87,7 +87,17 @@ pub struct ActivePanelModifiers {
 #[derive(Clone, Debug, RegisterSetting)]
 pub struct PaneGridSettings {
     pub show_legacy_docks: bool,
+    pub panel_surface: settings::CanvasPanelSurface,
+    pub draggable_panel_tabs: bool,
     pub auto_hide_single_tab_bar: bool,
+}
+
+impl PaneGridSettings {
+    pub fn panels_as_pane_tabs(&self) -> bool {
+        !self.show_legacy_docks
+            && self.draggable_panel_tabs
+            && matches!(self.panel_surface, settings::CanvasPanelSurface::PaneTab)
+    }
 }
 
 #[derive(Clone, Debug, RegisterSetting)]
@@ -194,6 +204,8 @@ impl Settings for PaneGridSettings {
         let pane_grid = content.pane_grid.clone().unwrap();
         Self {
             show_legacy_docks: pane_grid.show_legacy_docks.unwrap(),
+            panel_surface: pane_grid.panel_surface.unwrap(),
+            draggable_panel_tabs: pane_grid.draggable_panel_tabs.unwrap(),
             auto_hide_single_tab_bar: pane_grid.auto_hide_single_tab_bar.unwrap(),
         }
     }

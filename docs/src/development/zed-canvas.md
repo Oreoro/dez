@@ -187,6 +187,8 @@ Rules:
   content docks. Compatibility docks may exist internally for migration,
   actions, extensions, and restoration, but Canvas should host their contents as
   movable pane items.
+- Automatic dock-to-pane migration is controlled by `pane_grid.panel_surface`,
+  `pane_grid.draggable_panel_tabs`, and `pane_grid.show_legacy_docks`.
 - No item type owns a privileged location.
 - Focused pane receives keyboard actions first.
 - Pane borders stay subtle except for focus, drag target, or attention.

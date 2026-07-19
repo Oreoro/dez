@@ -4824,15 +4824,17 @@ impl Workspace {
     }
 
     pub fn apply_canvas_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        self.sync_panel_panes_from_docks(window, cx);
+        if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
+            self.sync_panel_panes_from_docks(window, cx);
 
-        for panel_pane_kind in [PanelPaneKind::Agent, PanelPaneKind::Project] {
-            let pane = self.ensure_panel_pane(panel_pane_kind, window, cx);
-            pane.update(cx, |pane, cx| pane.set_visible(true, cx));
-        }
+            for panel_pane_kind in [PanelPaneKind::Agent, PanelPaneKind::Project] {
+                let pane = self.ensure_panel_pane(panel_pane_kind, window, cx);
+                pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+            }
 
-        for dock in [&self.left_dock, &self.right_dock] {
-            dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
+            for dock in [&self.left_dock, &self.right_dock] {
+                dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
+            }
         }
 
         let center_pane = self
@@ -4851,20 +4853,28 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.sync_panel_panes_from_docks(window, cx);
+        if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
+            self.sync_panel_panes_from_docks(window, cx);
 
-        let project_pane = self.ensure_panel_pane(PanelPaneKind::Project, window, cx);
-        project_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+            let project_pane = self.ensure_panel_pane(PanelPaneKind::Project, window, cx);
+            project_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
 
-        let agent_pane = self.ensure_panel_pane(PanelPaneKind::Agent, window, cx);
-        agent_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+            let agent_pane = self.ensure_panel_pane(PanelPaneKind::Agent, window, cx);
+            agent_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
 
-        for dock in [&self.left_dock, &self.right_dock] {
-            dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
+            for dock in [&self.left_dock, &self.right_dock] {
+                dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
+            }
+
+            self.set_active_pane(&agent_pane, window, cx);
+            agent_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
+        } else {
+            let center_pane = self
+                .last_tabbed_pane(cx)
+                .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
+            self.set_active_pane(&center_pane, window, cx);
+            center_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
         }
-
-        self.set_active_pane(&agent_pane, window, cx);
-        agent_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
 
         self.center.mark_positions(cx);
         self.serialize_workspace(window, cx);
@@ -4876,16 +4886,18 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.sync_panel_panes_from_docks(window, cx);
+        if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
+            self.sync_panel_panes_from_docks(window, cx);
 
-        for pane_kind in [PaneKind::Project, PaneKind::Agent] {
-            if let Some(pane) = self.panel_pane_for_kind(pane_kind, cx) {
-                pane.update(cx, |pane, cx| pane.set_visible(false, cx));
+            for pane_kind in [PaneKind::Project, PaneKind::Agent] {
+                if let Some(pane) = self.panel_pane_for_kind(pane_kind, cx) {
+                    pane.update(cx, |pane, cx| pane.set_visible(false, cx));
+                }
             }
-        }
 
-        for dock in [&self.left_dock, &self.right_dock] {
-            dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
+            for dock in [&self.left_dock, &self.right_dock] {
+                dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
+            }
         }
 
         let center_pane = self
@@ -5081,7 +5093,7 @@ impl Workspace {
     }
 
     fn apply_pane_grid_settings(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if PaneGridSettings::get_global(cx).show_legacy_docks {
+        if !PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
             return;
         }
 
@@ -5105,12 +5117,19 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Vec<Entity<Pane>> {
-        self.sync_panel_panes_from_docks(window, cx);
-        self.set_canvas_panel_pane_visible(PanelPaneKind::Project, show_project_pane, window, cx);
-        self.set_canvas_panel_pane_visible(PanelPaneKind::Agent, show_agent_pane, window, cx);
+        if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
+            self.sync_panel_panes_from_docks(window, cx);
+            self.set_canvas_panel_pane_visible(
+                PanelPaneKind::Project,
+                show_project_pane,
+                window,
+                cx,
+            );
+            self.set_canvas_panel_pane_visible(PanelPaneKind::Agent, show_agent_pane, window, cx);
 
-        for dock in [&self.left_dock, &self.right_dock] {
-            dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
+            for dock in [&self.left_dock, &self.right_dock] {
+                dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
+            }
         }
 
         self.ensure_visible_tabbed_panes(tabbed_pane_count, split_directions, window, cx)
@@ -5288,6 +5307,10 @@ impl Workspace {
     }
 
     fn sync_panel_panes_from_docks(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
+            return;
+        }
+
         self.enforce_singleton_panel_panes(window, cx);
 
         let mut panels = Vec::new();
