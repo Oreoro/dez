@@ -63,11 +63,11 @@ use futures::{
 };
 use gpui::{
     Action, AnyEntity, AnyView, AnyWeakView, App, AsyncApp, AsyncWindowContext, Axis, Bounds,
-    Context, CursorStyle, Decorations, DismissEvent, DragMoveEvent, Entity, EntityId, EventEmitter,
-    FocusHandle, Focusable, Global, HitboxBehavior, Hsla, KeyContext, Keystroke, ManagedView,
-    MouseButton, PathPromptOptions, Point, PromptLevel, Render, ResizeEdge, Size, Stateful,
-    Subscription, SystemWindowTabController, Task, TaskExt, Tiling, WeakEntity, WindowBounds,
-    WindowHandle, WindowId, WindowOptions, actions, canvas, point, relative, size,
+    ClipboardItem, Context, CursorStyle, Decorations, DismissEvent, DragMoveEvent, Entity,
+    EntityId, EventEmitter, FocusHandle, Focusable, Global, HitboxBehavior, Hsla, KeyContext,
+    Keystroke, ManagedView, MouseButton, PathPromptOptions, Point, PromptLevel, Render, ResizeEdge,
+    Size, Stateful, Subscription, SystemWindowTabController, Task, TaskExt, Tiling, WeakEntity,
+    WindowBounds, WindowHandle, WindowId, WindowOptions, actions, canvas, point, relative, size,
     transparent_black,
 };
 pub use history_manager::*;
@@ -1102,6 +1102,14 @@ impl CanvasSavedLayoutManagerModal {
         self.dismiss(cx);
     }
 
+    fn copy_layouts_to_clipboard(&mut self, cx: &mut Context<Self>) {
+        self.workspace
+            .update(cx, |workspace, cx| {
+                workspace.copy_saved_canvas_layouts_to_clipboard(cx);
+            })
+            .log_err();
+    }
+
     fn entries(&self, cx: &App) -> Vec<CanvasSavedLayoutManagerEntry> {
         let Some(workspace) = self.workspace.upgrade() else {
             return Vec::new();
@@ -1280,13 +1288,29 @@ impl Render for CanvasSavedLayoutManagerModal {
                     .footer(
                         ModalFooter::new()
                             .start_slot(
-                                Button::new("clear-all-canvas-saved-layouts", "Clear All…")
-                                    .color(Color::Muted)
-                                    .disabled(saved_layout_count == 0)
-                                    .on_click(cx.listener(|this, _, window, cx| {
-                                        this.clear_all_layouts(window, cx);
-                                        cx.stop_propagation();
-                                    })),
+                                h_flex()
+                                    .gap_1()
+                                    .child(
+                                        Button::new(
+                                            "copy-canvas-saved-layouts-json",
+                                            "Copy JSON",
+                                        )
+                                        .color(Color::Muted)
+                                        .disabled(saved_layout_count == 0)
+                                        .on_click(cx.listener(|this, _, _, cx| {
+                                            this.copy_layouts_to_clipboard(cx);
+                                            cx.stop_propagation();
+                                        })),
+                                    )
+                                    .child(
+                                        Button::new("clear-all-canvas-saved-layouts", "Clear All…")
+                                            .color(Color::Muted)
+                                            .disabled(saved_layout_count == 0)
+                                            .on_click(cx.listener(|this, _, window, cx| {
+                                                this.clear_all_layouts(window, cx);
+                                                cx.stop_propagation();
+                                            })),
+                                    ),
                             )
                             .end_slot(
                                 Button::new("close-canvas-layout-manager", "Close").on_click(
@@ -1796,6 +1820,12 @@ pub struct ManageSavedCanvasLayouts;
 #[action(namespace = workspace)]
 #[serde(deny_unknown_fields)]
 pub struct ClearAllSavedCanvasLayouts;
+
+/// Copies all saved Canvas layouts as JSON to the clipboard.
+#[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct CopySavedCanvasLayoutsToClipboard;
 
 /// Opens a prompt for duplicating a saved Canvas layout slot.
 #[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
@@ -3925,6 +3955,25 @@ impl Workspace {
             Ok(())
         })
         .detach_and_log_err(cx);
+    }
+
+    pub fn copy_saved_canvas_layouts_to_clipboard(&mut self, cx: &mut Context<Self>) -> bool {
+        let Some(saved_layouts) = canvas_saved_layouts_to_persisted(&self.saved_canvas_layouts)
+        else {
+            return false;
+        };
+
+        cx.write_to_clipboard(ClipboardItem::new_string(saved_layouts));
+        struct CanvasSavedLayoutsCopiedToast;
+        self.show_toast(
+            Toast::new(
+                NotificationId::unique::<CanvasSavedLayoutsCopiedToast>(),
+                "Saved Canvas layouts copied as JSON",
+            )
+            .autohide(),
+            cx,
+        );
+        true
     }
 
     fn mark_canvas_layout_custom(&mut self) {
@@ -11432,6 +11481,11 @@ impl Workspace {
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ClearAllSavedCanvasLayouts, window, cx| {
                     workspace.clear_all_saved_canvas_layouts(window, cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &CopySavedCanvasLayoutsToClipboard, _, cx| {
+                    workspace.copy_saved_canvas_layouts_to_clipboard(cx);
                 },
             ))
             .on_action(cx.listener(

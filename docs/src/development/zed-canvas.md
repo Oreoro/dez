@@ -273,12 +273,13 @@ Rules:
   plus restore coverage for project-path, serializable, live-only, pinned, and
   dirty tabs.
   The manager and Panel Layout menu can also clear all saved Canvas layouts
-  after a warning confirmation.
+  after a warning confirmation, and copy the saved-layout JSON to the
+  clipboard for manual export.
   `workspace::RenameSavedCanvasLayoutSlot`,
   `workspace::SaveCurrentCanvasLayoutAs`, and
   `workspace::ManageSavedCanvasLayouts` provide the text-entry and manager
-  surfaces. Bulk import/export workflows and live process/session restoration
-  are still future work.
+  surfaces. Import/merge workflows and live process/session restoration are
+  still future work.
 - Manual structural layout changes clear the active recipe identity and show
   `Custom Canvas Layout` in the Panel Layout menu while keeping the pane tree
   and tabs intact.
@@ -307,8 +308,9 @@ Implementation boundary:
   They must not spawn agents, terminals, browsers, or external processes.
 - Saved-layout support currently provides three fixed durable slots plus
   free-form named layouts with built-in text entry and an inspectable manager
-  modal with duplicate and confirmation-backed clear-all workflows. Bulk
-  import/export workflows plus actual process restoration remain future work.
+  modal with duplicate, confirmation-backed clear-all, and copy-to-clipboard
+  JSON export workflows. Import/merge workflows plus actual process
+  restoration remain future work.
   Saved layouts use pane-tree metadata to reshape existing panes, reopen
   project-path-backed and serializable tabs, and store restore-planning intent
   for live-only/process-backed tabs.

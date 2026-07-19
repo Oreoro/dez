@@ -52,10 +52,10 @@ use update_version::UpdateVersion;
 use util::ResultExt;
 use workspace::{
     AccessibleMode, ClearAllSavedCanvasLayouts, ClearSavedCanvasLayoutNamed,
-    ClearSavedCanvasLayoutSlot, DuplicateSavedCanvasLayoutNamed, DuplicateSavedCanvasLayoutSlot,
-    ManageSavedCanvasLayouts, MultiWorkspace, MultiplexerSettings, RenameSavedCanvasLayoutNamed,
-    RenameSavedCanvasLayoutSlot, RestoreSavedCanvasLayoutNamed, SaveCurrentCanvasLayoutAs,
-    SaveCurrentCanvasLayoutNamed, ToggleWorktreeSecurity, Workspace,
+    ClearSavedCanvasLayoutSlot, CopySavedCanvasLayoutsToClipboard, DuplicateSavedCanvasLayoutNamed,
+    DuplicateSavedCanvasLayoutSlot, ManageSavedCanvasLayouts, MultiWorkspace, MultiplexerSettings,
+    RenameSavedCanvasLayoutNamed, RenameSavedCanvasLayoutSlot, RestoreSavedCanvasLayoutNamed,
+    SaveCurrentCanvasLayoutAs, SaveCurrentCanvasLayoutNamed, ToggleWorktreeSecurity, Workspace,
     notifications::{NotifyResultExt, NotifyTaskExt as _},
 };
 
@@ -425,6 +425,7 @@ fn update_layout_action_filter(cx: &mut App) {
         TypeId::of::<SaveCurrentCanvasLayoutNamed>(),
         TypeId::of::<ManageSavedCanvasLayouts>(),
         TypeId::of::<ClearAllSavedCanvasLayouts>(),
+        TypeId::of::<CopySavedCanvasLayoutsToClipboard>(),
         TypeId::of::<RestoreSavedCanvasLayoutNamed>(),
         TypeId::of::<RenameSavedCanvasLayoutNamed>(),
         TypeId::of::<DuplicateSavedCanvasLayoutNamed>(),
@@ -2101,6 +2102,12 @@ impl SidebarChrome {
                                 .action_checked_with_disabled(
                                     "Clear All Canvas Saved Layouts…",
                                     ClearAllSavedCanvasLayouts.boxed_clone(),
+                                    false,
+                                    saved_canvas_layout_count == 0,
+                                )
+                                .action_checked_with_disabled(
+                                    "Copy Canvas Saved Layouts JSON",
+                                    CopySavedCanvasLayoutsToClipboard.boxed_clone(),
                                     false,
                                     saved_canvas_layout_count == 0,
                                 )

@@ -323,11 +323,12 @@ Use the existing panel-as-pane bridge as the migration path:
   and shows pane/tab counts plus restore coverage for project-path,
   serializable, live-only, pinned, and dirty tabs. The manager and Panel Layout
   menu can also clear all saved Canvas layouts after a warning confirmation.
+  Saved-layout JSON can be copied to the clipboard for manual export.
   `workspace::RenameSavedCanvasLayoutSlot`,
   `workspace::SaveCurrentCanvasLayoutAs`, and
   `workspace::ManageSavedCanvasLayouts` provide the text-entry and manager
-  surfaces. Bulk import/export workflows and live process/session restoration
-  remain future work.
+  surfaces. Import/merge workflows and live process/session restoration remain
+  future work.
 - Manual structural layout changes now clear the active Canvas recipe identity
   so the Panel Layout menu reports `Custom Canvas Layout` after pane splits,
   pane moves, pane joins, pane removal, pane-size changes, or explicit
@@ -389,7 +390,8 @@ Implementation order:
    saved center panes still exist. User-authored fixed-slot labels,
    free-form named layouts, and a saved-layout manager with save-to-slot
    controls plus restore metadata, duplication, and confirmation-backed
-   clear-all are available; bulk import/export workflows remain future work.
+   clear-all plus copy-to-clipboard JSON export are available; import/merge
+   workflows remain future work.
 4. Add resize-driven `auto_reflow` using semantic recipe variants rather than
    raw pixel snapshots. Initial recipe-application reflow and resize-triggered
    root-orientation reflow for active recipes are implemented. First ultrawide
@@ -406,9 +408,9 @@ Implementation order:
    metadata and user-authored slot-label metadata are captured in saved slots,
    project-path-backed and serializable tabs now reopen during restore, and
    built-in fixed-slot plus free-form named-layout UI and an inspectable
-   save/restore manager with duplication and clear-all are implemented, while
-   bulk import/export workflows and actual process restoration remain future
-   work.
+   save/restore manager with duplication, clear-all, and JSON export are
+   implemented, while import/merge workflows and actual process restoration
+   remain future work.
 
 ## Session Rail {#session-rail}
 
