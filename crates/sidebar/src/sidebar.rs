@@ -156,18 +156,31 @@ impl SessionRailSettings {
             || self.mode == settings::CanvasVisibility::Hidden
     }
 
+    fn display_mode(&self) -> settings::CanvasVisibility {
+        match self.visibility {
+            settings::CanvasVisibility::Icon
+            | settings::CanvasVisibility::Compact
+            | settings::CanvasVisibility::Detailed => self.visibility,
+            settings::CanvasVisibility::Hidden
+            | settings::CanvasVisibility::Overlay
+            | settings::CanvasVisibility::Always
+            | settings::CanvasVisibility::Auto => self.mode,
+        }
+    }
+
     fn is_icon_mode(&self) -> bool {
-        self.mode == settings::CanvasVisibility::Icon
+        self.display_mode() == settings::CanvasVisibility::Icon
     }
 
     fn width(&self, configured_width: Pixels) -> Pixels {
+        let display_mode = self.display_mode();
         if self.is_hidden() {
             Pixels::ZERO
         } else if self.is_icon_mode() {
             ICON_WIDTH
-        } else if self.mode == settings::CanvasVisibility::Compact {
+        } else if display_mode == settings::CanvasVisibility::Compact {
             configured_width.min(COMPACT_MAX_WIDTH)
-        } else if self.mode == settings::CanvasVisibility::Detailed {
+        } else if display_mode == settings::CanvasVisibility::Detailed {
             Pixels::max(configured_width, DETAILED_MIN_WIDTH)
         } else {
             configured_width

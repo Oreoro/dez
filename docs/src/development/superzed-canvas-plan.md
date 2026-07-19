@@ -372,14 +372,16 @@ Refine the existing sidebar direction into Session Rail:
   ordering until persisted manual row order exists.
 - Runtime rail hosting now honors `session_rail.visibility = "hidden"` by
   reporting zero sidebar width, rendering an empty rail, and suppressing the
-  resize hitbox. Other visibility modes remain future UI work.
+  resize hitbox. `visibility = "icon"`, `"compact"`, or `"detailed"` now acts
+  as the concrete rail density override while `auto` and `overlay` keep the
+  current rail surface until distinct renderers exist.
 - Runtime rail layout now honors `session_rail.mode` for the first concrete
   modes: `hidden` removes the rail, `icon` uses a narrow icon-only rail with
   thread/terminal labels and metadata hidden, `compact` clamps the rail to a
   narrower readable width, `detailed` enforces a wider minimum rail width, and
   `always` keeps the rail open across startup, restore, toggle, and close
-  actions unless the rail is explicitly hidden. `auto` and `overlay` keep the
-  current rail surface until distinct renderers exist.
+  actions unless the rail is explicitly hidden. Concrete `visibility` values
+  take precedence over `mode` for rail density.
 - Runtime rail placement now honors `session_rail.position` for the effective
   left/right side. The sidebar side menu writes both the legacy `sidebar.side`
   compatibility setting and the Canvas `session_rail.position` setting.

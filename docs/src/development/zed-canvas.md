@@ -188,13 +188,16 @@ terminal rows by their first worktree label or path inside each project group,
 then falls back to recent activity. Manual ordering still needs persisted row
 order before it can behave differently from the current recent-first order.
 
-`session_rail.visibility = "hidden"` removes the rail from layout. Overlay and
-auto modes share the current rail surface until distinct render modes are added.
+`session_rail.visibility = "hidden"` removes the rail from layout. Setting
+`visibility` to `icon`, `compact`, or `detailed` overrides the rail display
+density directly. Overlay and auto modes share the current rail surface until
+distinct render modes are added.
 
-`session_rail.mode = "icon"` narrows the rail and hides row labels/metadata,
-`compact` clamps it to a narrower readable width, and `detailed` keeps a wider
-minimum width. The first pass keeps the same row component so status and
-attention icons remain consistent across modes.
+`session_rail.mode = "icon"` narrows the rail and hides row labels/metadata
+unless a concrete visibility mode overrides it, `compact` clamps it to a
+narrower readable width, and `detailed` keeps a wider minimum width. The first
+pass keeps the same row component so status and attention icons remain
+consistent across modes.
 
 `session_rail.mode = "always"` keeps the rail open on startup, restore, toggle,
 and close actions unless the rail is explicitly hidden.
