@@ -2,7 +2,7 @@ use std::{num::NonZeroUsize, time::Duration};
 
 use crate::DockPosition;
 use collections::HashMap;
-use gpui::{App, Subscription, set_pending_input_timeout};
+use gpui::{App, Pixels, Subscription, px, set_pending_input_timeout};
 use serde::Deserialize;
 pub use settings::{
     AutosaveSetting, EncodingDisplayOptions, InactiveOpacity, PaneSplitDirectionHorizontal,
@@ -142,6 +142,19 @@ impl DesignSystemSettings {
 
     pub fn show_contextual_labels(&self) -> bool {
         self.show_labels != settings::CanvasLabelVisibility::Hidden
+    }
+
+    pub fn content_width_pixels(&self) -> Option<Pixels> {
+        Self::content_width_pixels_for(self.content_width)
+    }
+
+    pub fn content_width_pixels_for(content_width: settings::CanvasContentWidth) -> Option<Pixels> {
+        match content_width {
+            settings::CanvasContentWidth::Narrow => Some(px(680.)),
+            settings::CanvasContentWidth::Comfortable => Some(px(800.)),
+            settings::CanvasContentWidth::Wide => Some(px(1040.)),
+            settings::CanvasContentWidth::Full => None,
+        }
     }
 }
 
