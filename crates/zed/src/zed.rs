@@ -5453,18 +5453,7 @@ mod tests {
 
     #[gpui::test]
     fn test_bundled_settings_and_themes(cx: &mut App) {
-        cx.text_system()
-            .add_fonts(vec![
-                Assets
-                    .load("fonts/lilex/Lilex-Regular.ttf")
-                    .unwrap()
-                    .unwrap(),
-                Assets
-                    .load("fonts/ibm-plex-sans/IBMPlexSans-Regular.ttf")
-                    .unwrap()
-                    .unwrap(),
-            ])
-            .unwrap();
+        Assets.load_fonts(cx).unwrap();
         let themes = ThemeRegistry::default();
         settings::init(cx);
         theme_settings::init(theme::LoadThemes::JustBase, cx);

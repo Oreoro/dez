@@ -26,7 +26,9 @@ Implemented in this phase:
 - Added native Lumin theme assets and made `Lumin Blur` / `Lumin Light` the
   default dark/light pair.
 - Added native JetBrains Mono font assets for editor, terminal, Markdown code,
-  and code-like agent surfaces.
+  and code-like agent surfaces. Bundled-font test loaders now register all
+  packaged TTFs so JetBrains defaults are covered without relying on system
+  fonts.
 - Added schema/default switches for pane-tab panel hosting, terminal-agent
   detection, multiple visible agents, session restoration, agent attention
   notifications, and preview-first Markdown.
