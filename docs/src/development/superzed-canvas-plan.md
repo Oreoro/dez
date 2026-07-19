@@ -272,6 +272,7 @@ Use the existing panel-as-pane bridge as the migration path:
   `canvas_prefix_mode`, and the default keymaps bind the default `ctrl-b`
   prefix to core Canvas commands: cycle layout, Agent Control, Focus Editor,
   Four-Agent Matrix, save slot 1, restore slot 1, restore previous layout,
+  save/restore all three fixed slots with `shift-1/2/3` and `1/2/3`,
   fixed-step pane resizing with `h/j/k/l`, and pane equalization with `=`.
   The Panel Layout menu also shows disabled discovery rows for those prefix
   commands, and the title bar shows a compact `PREFIX …` chip while a

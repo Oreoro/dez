@@ -392,6 +392,8 @@ while a multi-stroke prefix sequence is pending:
 - `ctrl-b m` applies Four-Agent Matrix.
 - `ctrl-b s` saves Canvas layout slot 1.
 - `ctrl-b r` restores Canvas layout slot 1.
+- `ctrl-b shift-1/2/3` saves Canvas layout slots 1/2/3.
+- `ctrl-b 1/2/3` restores Canvas layout slots 1/2/3.
 - `ctrl-b p` restores the previous Canvas layout snapshot.
 - `ctrl-b h/j/k/l` resizes the active pane left/down/up/right in fixed steps.
 - `ctrl-b =` equalizes pane sizes without changing the split tree.

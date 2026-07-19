@@ -1665,6 +1665,8 @@ impl SidebarChrome {
                             "Prefix commands: ctrl-b f · Focus Editor".to_string(),
                             "Prefix commands: ctrl-b m · Four-Agent Matrix".to_string(),
                             "Prefix commands: ctrl-b s/r/p · Save, Restore, Previous".to_string(),
+                            "Prefix commands: ctrl-b 1/2/3 · Restore saved slots".to_string(),
+                            "Prefix commands: ctrl-b shift-1/2/3 · Save slots".to_string(),
                             "Prefix commands: ctrl-b h/j/k/l/= · Resize, Equalize".to_string(),
                         ]
                     })
