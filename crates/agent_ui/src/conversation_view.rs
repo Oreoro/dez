@@ -48,7 +48,9 @@ use crate::conversation_view::elicitation::{
     ElicitationCard, ElicitationCardHandlers, ElicitationFormState, should_render_elicitation,
 };
 use crate::message_editor::SessionCapabilities;
-use crate::{AgentThreadSource, DEFAULT_THREAD_TITLE, resolve_agent_image};
+use crate::{
+    AgentThreadSource, DEFAULT_THREAD_TITLE, request_agent_window_attention, resolve_agent_image,
+};
 use lru::LruCache;
 use rope::Point;
 use settings::{NotifyWhenAgentWaiting, Settings as _, SettingsStore};
@@ -3252,7 +3254,7 @@ impl ConversationView {
 
         match settings.notify_when_agent_waiting {
             NotifyWhenAgentWaiting::PrimaryScreen => {
-                window.request_attention();
+                request_agent_window_attention(window, cx);
                 if let Some(primary) = cx.primary_display() {
                     self.pop_up(
                         icon,
@@ -3268,7 +3270,7 @@ impl ConversationView {
                 }
             }
             NotifyWhenAgentWaiting::AllScreens => {
-                window.request_attention();
+                request_agent_window_attention(window, cx);
                 let caption = caption.into();
                 for screen in cx.displays() {
                     self.pop_up(

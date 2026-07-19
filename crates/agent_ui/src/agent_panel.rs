@@ -45,7 +45,7 @@ use crate::terminal_thread_metadata_store::{
 use crate::thread_metadata_store::{ThreadId, ThreadMetadataStore, ThreadMetadataStoreEvent};
 use crate::{
     Agent, AgentInitialContent, AgentThreadSource, CanvasAgentUiSettings, ExternalSourcePrompt,
-    NewExternalAgentThread, NewNativeAgentThreadFromSummary,
+    NewExternalAgentThread, NewNativeAgentThreadFromSummary, request_agent_window_attention,
 };
 use crate::{
     AgentDiffPane, ConversationView, CopyThreadToClipboard, Follow, LoadThreadFromClipboard,
@@ -2691,13 +2691,13 @@ impl AgentPanel {
         let settings = AgentSettings::get_global(cx);
         match settings.notify_when_agent_waiting {
             NotifyWhenAgentWaiting::PrimaryScreen => {
-                window.request_attention();
+                request_agent_window_attention(window, cx);
                 if let Some(primary) = cx.primary_display() {
                     self.pop_up_terminal_notification(terminal_id, &title, primary, window, cx);
                 }
             }
             NotifyWhenAgentWaiting::AllScreens => {
-                window.request_attention();
+                request_agent_window_attention(window, cx);
                 for screen in cx.displays() {
                     self.pop_up_terminal_notification(terminal_id, &title, screen, window, cx);
                 }

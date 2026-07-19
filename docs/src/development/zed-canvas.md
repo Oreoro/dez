@@ -592,6 +592,9 @@ configured close policy says so.
 - Synchronized input is visibly indicated.
 - Components use semantic tokens.
 - State is never communicated by color alone.
+- `accessibility.announce_agent_attention` controls OS/window attention
+  requests from structured agents and detected terminal agents. In-app
+  notification popups remain controlled by agent notification settings.
 - Motion respects reduced-motion settings. `accessibility.reduced_motion`
   overrides the root motion setting for Canvas: `reduced` forces reduced
   motion, `full` permits full motion, and `system` follows the existing

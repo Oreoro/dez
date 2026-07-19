@@ -112,6 +112,7 @@ pub struct CanvasAgentUiSettings {
     pub resume_sessions_on_restart: bool,
     pub connect_hooks: bool,
     pub notify_on_attention: bool,
+    pub announce_agent_attention: bool,
 }
 
 impl settings::Settings for CanvasAgentUiSettings {
@@ -133,7 +134,18 @@ impl settings::Settings for CanvasAgentUiSettings {
             resume_sessions_on_restart: agent_ui.resume_sessions_on_restart.unwrap(),
             connect_hooks: agent_ui.connect_hooks.unwrap(),
             notify_on_attention: agent_ui.notify_on_attention.unwrap(),
+            announce_agent_attention: content
+                .accessibility
+                .as_ref()
+                .and_then(|accessibility| accessibility.announce_agent_attention)
+                .unwrap_or(true),
         }
+    }
+}
+
+pub(crate) fn request_agent_window_attention(window: &mut Window, cx: &App) {
+    if CanvasAgentUiSettings::get_global(cx).announce_agent_attention {
+        window.request_attention();
     }
 }
 

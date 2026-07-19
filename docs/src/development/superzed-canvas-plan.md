@@ -421,6 +421,10 @@ Accessibility:
 - Focus remains visible and spatially understandable.
 - Pane switching announces the active WorkspaceItem.
 - Agent attention is announced once, not repeatedly.
+- Runtime agent and terminal-agent notification paths now honor
+  `accessibility.announce_agent_attention` for OS/window attention requests;
+  in-app notification popups remain controlled by `agent_ui.notify_on_attention`
+  and the existing agent waiting notification setting.
 - State is not color-only.
 - High-contrast and reduced-motion modes are supported.
 - Runtime motion now honors `accessibility.reduced_motion`: `reduced` forces
