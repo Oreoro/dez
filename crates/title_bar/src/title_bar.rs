@@ -84,6 +84,14 @@ actions!(
         UseClassicLayout,
         /// Switches to the Canvas pane-first agentic layout.
         UseAgenticLayout,
+        /// Applies the full Canvas layout with project and agent panes visible.
+        ApplyCanvasFullLayout,
+        /// Applies the Canvas agent-control layout and focuses the agent pane.
+        ApplyCanvasAgentControlLayout,
+        /// Applies the Canvas focus-editor layout and hides panel panes.
+        ApplyCanvasEditorFocusLayout,
+        /// Cycles between Canvas agent-control and focus-editor layouts.
+        CycleCanvasLayout,
     ]
 );
 
@@ -106,6 +114,26 @@ pub fn init(cx: &mut App) {
         workspace.register_action(|workspace, _: &UseAgenticLayout, window, cx| {
             set_window_layout(WindowLayout::Agent(None), cx);
             workspace.apply_canvas_layout(window, cx);
+        });
+
+        workspace.register_action(|workspace, _: &ApplyCanvasFullLayout, window, cx| {
+            set_window_layout(WindowLayout::Agent(None), cx);
+            workspace.apply_canvas_layout(window, cx);
+        });
+
+        workspace.register_action(|workspace, _: &ApplyCanvasAgentControlLayout, window, cx| {
+            set_window_layout(WindowLayout::Agent(None), cx);
+            workspace.apply_canvas_agent_control_layout(window, cx);
+        });
+
+        workspace.register_action(|workspace, _: &ApplyCanvasEditorFocusLayout, window, cx| {
+            set_window_layout(WindowLayout::Agent(None), cx);
+            workspace.apply_canvas_editor_focus_layout(window, cx);
+        });
+
+        workspace.register_action(|workspace, _: &CycleCanvasLayout, window, cx| {
+            set_window_layout(WindowLayout::Agent(None), cx);
+            workspace.cycle_canvas_layout(window, cx);
         });
 
         workspace.register_action(|workspace, _: &SimulateUpdateAvailable, _window, cx| {
@@ -165,6 +193,10 @@ fn update_layout_action_filter(cx: &mut App) {
     let layout_actions = [
         TypeId::of::<UseClassicLayout>(),
         TypeId::of::<UseAgenticLayout>(),
+        TypeId::of::<ApplyCanvasFullLayout>(),
+        TypeId::of::<ApplyCanvasAgentControlLayout>(),
+        TypeId::of::<ApplyCanvasEditorFocusLayout>(),
+        TypeId::of::<CycleCanvasLayout>(),
     ];
     CommandPaletteFilter::update_global(cx, |filter, _| {
         if disable_ai {
@@ -1400,6 +1432,44 @@ impl SidebarChrome {
                                     Some(UseAgenticLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(UseAgenticLayout.boxed_clone(), cx);
+                                    },
+                                )
+                                .separator()
+                                .entry(
+                                    "Canvas: Full",
+                                    Some(ApplyCanvasFullLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasFullLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Canvas: Agent Control",
+                                    Some(ApplyCanvasAgentControlLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasAgentControlLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Canvas: Focus Editor",
+                                    Some(ApplyCanvasEditorFocusLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasEditorFocusLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Cycle Canvas Layout",
+                                    Some(CycleCanvasLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(CycleCanvasLayout.boxed_clone(), cx);
                                     },
                                 )
                                 .when(is_custom, |menu| {

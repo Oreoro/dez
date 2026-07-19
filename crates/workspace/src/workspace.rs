@@ -4815,6 +4815,70 @@ impl Workspace {
         cx.notify();
     }
 
+    pub fn apply_canvas_agent_control_layout(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.sync_panel_panes_from_docks(window, cx);
+
+        let project_pane = self.ensure_panel_pane(PanelPaneKind::Project, window, cx);
+        project_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+
+        let agent_pane = self.ensure_panel_pane(PanelPaneKind::Agent, window, cx);
+        agent_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+
+        for dock in [&self.left_dock, &self.right_dock] {
+            dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
+        }
+
+        self.set_active_pane(&agent_pane, window, cx);
+        agent_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
+
+        self.center.mark_positions(cx);
+        self.serialize_workspace(window, cx);
+        cx.notify();
+    }
+
+    pub fn apply_canvas_editor_focus_layout(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.sync_panel_panes_from_docks(window, cx);
+
+        for pane_kind in [PaneKind::Project, PaneKind::Agent] {
+            if let Some(pane) = self.panel_pane_for_kind(pane_kind, cx) {
+                pane.update(cx, |pane, cx| pane.set_visible(false, cx));
+            }
+        }
+
+        for dock in [&self.left_dock, &self.right_dock] {
+            dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
+        }
+
+        let center_pane = self
+            .last_tabbed_pane(cx)
+            .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
+        self.set_active_pane(&center_pane, window, cx);
+        center_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
+
+        self.center.mark_positions(cx);
+        self.serialize_workspace(window, cx);
+        cx.notify();
+    }
+
+    pub fn cycle_canvas_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let has_visible_panel_pane = self.panel_pane_visible(PaneKind::Project, cx)
+            || self.panel_pane_visible(PaneKind::Agent, cx);
+
+        if has_visible_panel_pane {
+            self.apply_canvas_editor_focus_layout(window, cx);
+        } else {
+            self.apply_canvas_agent_control_layout(window, cx);
+        }
+    }
+
     fn ensure_panel_pane(
         &mut self,
         panel_pane_kind: PanelPaneKind,

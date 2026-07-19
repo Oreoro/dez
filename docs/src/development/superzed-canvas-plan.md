@@ -37,6 +37,9 @@ Implemented in this phase:
   in the Session Rail. Activating the rail row focuses the existing terminal
   tab, and closing the row closes that tab instead of spawning or restoring an
   Agent Panel terminal.
+- Added command-palette/menu actions for Canvas layout recipes:
+  `Canvas: Full`, `Canvas: Agent Control`, `Canvas: Focus Editor`, and
+  `Cycle Canvas Layout`.
 
 ## Ground truth {#ground-truth}
 
@@ -171,6 +174,12 @@ Use the existing panel-as-pane bridge as the migration path:
   agents can be visible across panes and windows.
 - Support direct pane/tab dragging, keyboard movement, context-menu movement,
   and Command Palette movement.
+- Implemented first layout recipe actions:
+  - Full Canvas shows both project and agent panel panes and hides legacy dock
+    chrome.
+  - Agent Control shows project and agent panes and focuses the agent pane.
+  - Focus Editor hides project and agent panes and focuses the editor/tab pane.
+  - Cycle Canvas Layout toggles between agent-control and focus-editor modes.
 - Add explicit close, restore, and "detach process" behavior so closing a tab
   is not confused with killing a process.
 
@@ -311,7 +320,9 @@ Ship purpose-based starter layouts:
 - Portrait Display.
 
 Layouts are semantic recipes. They preserve pane IDs and tab contents where
-possible and reflow instead of overwriting saved desktop geometry.
+possible and reflow instead of overwriting saved desktop geometry. The first
+runtime slice implements Full Canvas, Agent Control, Focus Editor, and Cycle
+Canvas Layout against the existing pane/panel bridge.
 
 ## Accessibility and performance requirements {#accessibility-and-performance}
 
