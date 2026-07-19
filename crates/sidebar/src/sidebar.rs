@@ -107,6 +107,7 @@ gpui::actions!(
 
 const DEFAULT_WIDTH: Pixels = px(300.0);
 const ICON_WIDTH: Pixels = px(56.0);
+const COMPACT_MAX_WIDTH: Pixels = px(240.0);
 const DETAILED_MIN_WIDTH: Pixels = px(380.0);
 const MIN_WIDTH: Pixels = px(200.0);
 const MAX_WIDTH: Pixels = px(800.0);
@@ -161,6 +162,8 @@ impl SessionRailSettings {
             Pixels::ZERO
         } else if self.is_icon_mode() {
             ICON_WIDTH
+        } else if self.mode == settings::CanvasVisibility::Compact {
+            configured_width.min(COMPACT_MAX_WIDTH)
         } else if self.mode == settings::CanvasVisibility::Detailed {
             Pixels::max(configured_width, DETAILED_MIN_WIDTH)
         } else {
