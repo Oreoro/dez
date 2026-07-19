@@ -556,6 +556,9 @@ header rhythm, model row density, chip/action gaps, footer padding, tooltip
 rhythm, and separator contrast.
 The agent mode selector tooltip uses Canvas density and contrast for row
 rhythm, shortcut spacing, separator padding, and separator contrast.
+The agent profile selector uses Canvas density and contrast for trigger tooltip
+rhythm, section headers, profile row density, warning/action spacing,
+documentation-aside rhythm, footer padding, and separator contrast.
 
 ## Layout system {#layout-system}
 

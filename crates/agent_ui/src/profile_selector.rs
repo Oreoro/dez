@@ -8,7 +8,8 @@ use fs::Fs;
 use fuzzy::{StringMatch, StringMatchCandidate, match_strings};
 use gpui::{
     Action, AnyElement, AnyView, App, BackgroundExecutor, Context, DismissEvent, Empty, Entity,
-    FocusHandle, Focusable, ForegroundExecutor, SharedString, Subscription, Task, Window,
+    FocusHandle, Focusable, ForegroundExecutor, Hsla, Pixels, SharedString, Subscription, Task,
+    Window,
 };
 use picker::{Picker, PickerDelegate, popover_menu::PickerPopoverMenu};
 use settings::{Settings as _, SettingsStore, update_settings_file};
@@ -20,7 +21,88 @@ use ui::{
     DocumentationAside, HighlightedLabel, KeyBinding, LabelSize, ListItem, ListItemSpacing,
     PopoverMenuHandle, TintColor, Tooltip, prelude::*,
 };
-use workspace::ToggleWorktreeSecurity;
+use workspace::{DesignSystemSettings, ToggleWorktreeSecurity};
+
+fn profile_selector_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border_variant.opacity(0.42),
+        settings::CanvasContrast::Standard => colors.border_variant,
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn profile_selector_row_spacing(cx: &App) -> ListItemSpacing {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => ListItemSpacing::ExtraDense,
+        settings::CanvasDensity::Balanced => ListItemSpacing::Dense,
+        settings::CanvasDensity::Spacious => ListItemSpacing::Sparse,
+    }
+}
+
+fn profile_selector_header_padding_x(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(10.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn profile_selector_header_padding_bottom(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(2.),
+        settings::CanvasDensity::Balanced => px(2.),
+        settings::CanvasDensity::Spacious => px(4.),
+    }
+}
+
+fn profile_selector_section_margin_top(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
+fn profile_selector_section_padding_top(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(10.),
+    }
+}
+
+fn profile_selector_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
+fn profile_selector_compact_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(2.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn profile_selector_end_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(10.),
+    }
+}
+
+fn profile_selector_footer_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(10.),
+    }
+}
 
 /// Trait for types that can provide and manage agent profiles
 pub trait ProfileProvider {
@@ -226,19 +308,19 @@ impl Render for ProfileSelector {
 
         let tooltip: Box<dyn Fn(&mut Window, &mut App) -> AnyView> = Box::new(Tooltip::element({
             move |_window, cx| {
-                let container = || h_flex().gap_1().justify_between();
+                let container = |cx: &App| h_flex().gap(profile_selector_gap(cx)).justify_between();
                 v_flex()
-                    .gap_1()
+                    .gap(profile_selector_gap(cx))
                     .child(
-                        container()
+                        container(cx)
                             .child(Label::new("Change Profile"))
                             .child(KeyBinding::for_action(&ToggleProfileSelector, cx)),
                     )
                     .child(
-                        container()
-                            .pt_1()
+                        container(cx)
+                            .pt(profile_selector_footer_padding(cx))
                             .border_t_1()
-                            .border_color(cx.theme().colors().border_variant)
+                            .border_color(profile_selector_border(cx))
                             .child(Label::new("Cycle Through Profiles"))
                             .child(KeyBinding::for_action(&CycleModeSelector, cx)),
                     )
@@ -620,13 +702,13 @@ impl PickerDelegate for ProfilePickerDelegate {
         match self.filtered_entries.get(ix)? {
             ProfilePickerEntry::Header(label) => Some(
                 div()
-                    .px_2p5()
-                    .pb_0p5()
+                    .px(profile_selector_header_padding_x(cx))
+                    .pb(profile_selector_header_padding_bottom(cx))
                     .when(ix > 0, |this| {
-                        this.mt_1p5()
-                            .pt_2()
+                        this.mt(profile_selector_section_margin_top(cx))
+                            .pt(profile_selector_section_padding_top(cx))
                             .border_t_1()
-                            .border_color(cx.theme().colors().border_variant)
+                            .border_color(profile_selector_border(cx))
                     })
                     .child(
                         Label::new(label.clone())
@@ -664,7 +746,7 @@ impl PickerDelegate for ProfilePickerDelegate {
                         .child(
                             ListItem::new(candidate.id.0.clone())
                                 .inset(true)
-                                .spacing(ListItemSpacing::Sparse)
+                                .spacing(profile_selector_row_spacing(cx))
                                 .toggle_state(selected)
                                 .child(HighlightedLabel::new(
                                     candidate.name.clone(),
@@ -673,8 +755,8 @@ impl PickerDelegate for ProfilePickerDelegate {
                                 .when(has_end_slot, |this| {
                                     this.end_slot(
                                         h_flex()
-                                            .gap_1()
-                                            .pr_2()
+                                            .gap(profile_selector_gap(cx))
+                                            .pr(profile_selector_end_padding(cx))
                                             .when(has_warning, |this| {
                                                 this.child(
                                                     Icon::new(IconName::Warning)
@@ -728,24 +810,20 @@ impl PickerDelegate for ProfilePickerDelegate {
             side,
             render: Rc::new(move |cx| {
                 v_flex()
-                    .gap_1p5()
+                    .gap(profile_selector_gap(cx))
                     .when_some(description.clone(), |this, description| {
                         this.child(Label::new(description))
                     })
                     .when(!forbidden_tools.is_empty(), |this| {
                         this.when(description.is_some(), |this| {
-                            this.child(
-                                div()
-                                    .border_t_1()
-                                    .border_color(cx.theme().colors().border_variant),
-                            )
+                            this.child(div().border_t_1().border_color(profile_selector_border(cx)))
                         })
                         .child(
                             v_flex()
-                                .gap_0p5()
+                                .gap(profile_selector_compact_gap(cx))
                                 .child(
                                     h_flex()
-                                        .gap_1()
+                                        .gap(profile_selector_gap(cx))
                                         .child(
                                             Icon::new(IconName::Warning)
                                                 .size(IconSize::XSmall)
@@ -787,8 +865,8 @@ impl PickerDelegate for ProfilePickerDelegate {
                     h_flex()
                         .w_full()
                         .border_t_1()
-                        .border_color(cx.theme().colors().border_variant)
-                        .p_1p5()
+                        .border_color(profile_selector_border(cx))
+                        .p(profile_selector_footer_padding(cx))
                         .child(
                             Button::new("configure", "Configure")
                                 .full_width()
@@ -814,8 +892,8 @@ impl PickerDelegate for ProfilePickerDelegate {
                         h_flex()
                             .w_full()
                             .border_t_1()
-                            .border_color(cx.theme().colors().border_variant)
-                            .p_1p5()
+                            .border_color(profile_selector_border(cx))
+                            .p(profile_selector_footer_padding(cx))
                             .child(
                                 Button::new("restricted-mode", "Restricted Mode")
                                     .full_width()

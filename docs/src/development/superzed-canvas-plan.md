@@ -115,6 +115,10 @@ Implemented in this phase:
 - Applied Canvas design-system tokens to the agent mode selector tooltip:
   tooltip row rhythm, shortcut spacing, separator padding, and separator
   contrast now read `design_system.density` and `design_system.contrast`.
+- Applied Canvas design-system tokens to the agent profile selector: trigger
+  tooltip rhythm, section headers, profile row density, warning/action spacing,
+  documentation-aside rhythm, footer padding, and separator contrast now read
+  `design_system.density` and `design_system.contrast`.
 - Added schema/default switches for pane-tab panel hosting, terminal-agent
   detection, multiple visible agents, session restoration, agent attention
   notifications, and preview-first Markdown.
@@ -427,6 +431,9 @@ Current consumers:
   chip/action gaps, footer padding, tooltip rhythm, and separator contrast
   consume Canvas density and contrast.
 - Agent mode selector tooltip: row rhythm, shortcut spacing, separator padding,
+  and separator contrast consume Canvas density and contrast.
+- Agent profile selector: trigger tooltip rhythm, section headers, profile row
+  density, warning/action spacing, documentation-aside rhythm, footer padding,
   and separator contrast consume Canvas density and contrast.
 - Go To Line: the modal shell, input divider, help row spacing, and elevated
   navigation surface consume Canvas density, radius, and contrast.
