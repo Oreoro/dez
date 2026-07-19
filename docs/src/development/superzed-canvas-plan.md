@@ -283,10 +283,10 @@ Use the existing panel-as-pane bridge as the migration path:
   Layout menu checks the active recipe entry while the window is in Canvas mode.
   Three durable saved-layout slots are available now; each saved snapshot stores
   a derived display label shown by the Panel Layout restore actions, pane-tree
-  shape metadata, and tab-role metadata for restore planning. Restore now uses
-  the pane-tree shape when every saved center pane still exists. Free-form
-  user-authored layout names and process restoration metadata remain future
-  work.
+  shape metadata, tab-role metadata, and explicit serializable/project-path/
+  live-only restore intent. Restore now uses the pane-tree shape when every
+  saved center pane still exists. Free-form user-authored layout names and
+  actual process restoration remain future work.
 - Manual structural layout changes now clear the active Canvas recipe identity
   so the Panel Layout menu reports `Custom Canvas Layout` after pane splits,
   pane moves, pane joins, pane removal, pane-size changes, or explicit
@@ -338,9 +338,10 @@ Implementation order:
    Active recipe identity and three fixed saved layout slots now persist as
    workspace metadata, including derived saved-layout display labels, pane-tree
    split axes and flex weights, plus tab title, serializable item kind/id,
-   active, preview, dirty, pinned, and project-path metadata for restore
-   planning. Restore applies saved pane-tree shape when all saved center panes
-   still exist; free-form saved layout naming remains future work.
+   active, preview, dirty, pinned, project-path metadata, and explicit
+   restore-planning intent. Restore applies saved pane-tree shape when all
+   saved center panes still exist; free-form saved layout naming remains future
+   work.
 4. Add resize-driven `auto_reflow` using semantic recipe variants rather than
    raw pixel snapshots. Initial recipe-application reflow and resize-triggered
    root-orientation reflow for active recipes are implemented. First ultrawide
@@ -352,7 +353,7 @@ Implementation order:
    metadata is stable. Three fixed durable saved-layout slots are implemented
    in the Panel Layout menu with derived restore labels, and manual structural
    changes mark the active recipe as custom. Tab-role metadata is captured in
-   saved slots, while free-form naming and process restoration intent remain
+   saved slots, while free-form naming and actual process restoration remain
    future work.
 
 ## Session Rail {#session-rail}

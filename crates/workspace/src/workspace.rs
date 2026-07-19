@@ -456,6 +456,22 @@ struct CanvasSavedTabProjectPath {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+enum CanvasSavedTabRestorePlan {
+    SerializableItem {
+        serialized_item_kind: String,
+        item_id: u64,
+    },
+    ProjectPath {
+        path: CanvasSavedTabProjectPath,
+    },
+    LiveOnly {
+        #[serde(default)]
+        reason: Option<String>,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct CanvasSavedTabSnapshot {
     title: String,
     #[serde(default)]
@@ -470,6 +486,8 @@ struct CanvasSavedTabSnapshot {
     dirty: bool,
     #[serde(default)]
     project_path: Option<CanvasSavedTabProjectPath>,
+    #[serde(default)]
+    restore_plan: Option<CanvasSavedTabRestorePlan>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -5401,6 +5419,21 @@ impl Workspace {
                                 worktree_id: project_path.worktree_id.to_proto(),
                                 path: project_path.path.as_unix_str().to_string(),
                             });
+                    let restore_plan =
+                        match (serialized_item_kind.as_ref(), item_id, project_path.clone()) {
+                            (Some(serialized_item_kind), Some(item_id), _) => {
+                                Some(CanvasSavedTabRestorePlan::SerializableItem {
+                                    serialized_item_kind: serialized_item_kind.clone(),
+                                    item_id,
+                                })
+                            }
+                            (_, _, Some(path)) => {
+                                Some(CanvasSavedTabRestorePlan::ProjectPath { path })
+                            }
+                            _ => Some(CanvasSavedTabRestorePlan::LiveOnly {
+                                reason: Some("tab has no serialized item or project path".into()),
+                            }),
+                        };
 
                     CanvasSavedTabSnapshot {
                         title: item.tab_content_text(0, cx).to_string(),
@@ -5410,6 +5443,7 @@ impl Workspace {
                         preview: preview_item_id == Some(item.item_id()),
                         dirty: item.is_dirty(cx),
                         project_path,
+                        restore_plan,
                     }
                 })
                 .collect();
@@ -13568,6 +13602,13 @@ mod tests {
                 path: "agent.md".to_string(),
             })
         );
+        assert_eq!(
+            pane.tabs[0].restore_plan.as_ref(),
+            Some(&CanvasSavedTabRestorePlan::SerializableItem {
+                serialized_item_kind: "TestItem".to_string(),
+                item_id: item1.entity_id().as_u64(),
+            })
+        );
         assert_eq!(pane.tabs[1].title.as_str(), "terminal.rs");
         assert_eq!(
             pane.tabs[1].serialized_item_kind.as_deref(),
@@ -13576,6 +13617,13 @@ mod tests {
         assert_eq!(pane.tabs[1].item_id, Some(item2.entity_id().as_u64()));
         assert!(pane.tabs[1].active);
         assert!(!pane.tabs[1].dirty);
+        assert_eq!(
+            pane.tabs[1].restore_plan.as_ref(),
+            Some(&CanvasSavedTabRestorePlan::SerializableItem {
+                serialized_item_kind: "TestItem".to_string(),
+                item_id: item2.entity_id().as_u64(),
+            })
+        );
 
         let mut saved_layouts = std::collections::BTreeMap::new();
         saved_layouts.insert("slot-1".to_string(), snapshot.clone());
