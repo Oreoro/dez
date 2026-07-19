@@ -3,11 +3,66 @@ use std::{collections::BTreeMap, sync::Arc};
 use agent::ContextServerRegistry;
 use agent_settings::{AgentProfileId, AgentProfileSettings};
 use fs::Fs;
-use gpui::{App, Context, DismissEvent, Entity, EventEmitter, Focusable, Task, WeakEntity, Window};
+use gpui::{
+    App, Context, DismissEvent, Entity, EventEmitter, Focusable, Hsla, Pixels, Task, WeakEntity,
+    Window,
+};
 use picker::{Picker, PickerDelegate};
-use settings::{AgentProfileContent, ContextServerPresetContent, update_settings_file};
+use settings::{
+    AgentProfileContent, ContextServerPresetContent, Settings as _, update_settings_file,
+};
 use ui::{ListItem, ListItemSpacing, prelude::*};
 use util::ResultExt as _;
+use workspace::DesignSystemSettings;
+
+fn tool_picker_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border_variant.opacity(0.42),
+        settings::CanvasContrast::Standard => colors.border_variant,
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn tool_picker_row_spacing(cx: &App) -> ListItemSpacing {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => ListItemSpacing::ExtraDense,
+        settings::CanvasDensity::Balanced => ListItemSpacing::Dense,
+        settings::CanvasDensity::Spacious => ListItemSpacing::Sparse,
+    }
+}
+
+fn tool_picker_header_padding_x(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn tool_picker_header_padding_bottom(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(2.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn tool_picker_section_margin_top(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(2.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn tool_picker_section_padding_top(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(10.),
+    }
+}
 
 pub struct ToolPicker {
     picker: Entity<Picker<ToolPickerDelegate>>,
@@ -341,13 +396,13 @@ impl PickerDelegate for ToolPickerDelegate {
         match item {
             PickerItem::ContextServer { server_id, .. } => Some(
                 div()
-                    .px_2()
-                    .pb_1()
+                    .px(tool_picker_header_padding_x(cx))
+                    .pb(tool_picker_header_padding_bottom(cx))
                     .when(ix > 1, |this| {
-                        this.mt_1()
-                            .pt_2()
+                        this.mt(tool_picker_section_margin_top(cx))
+                            .pt(tool_picker_section_padding_top(cx))
                             .border_t_1()
-                            .border_color(cx.theme().colors().border_variant)
+                            .border_color(tool_picker_border(cx))
                     })
                     .child(
                         Label::new(server_id)
@@ -375,7 +430,7 @@ impl PickerDelegate for ToolPickerDelegate {
                 Some(
                     ListItem::new(ix)
                         .inset(true)
-                        .spacing(ListItemSpacing::Sparse)
+                        .spacing(tool_picker_row_spacing(cx))
                         .toggle_state(selected)
                         .child(Label::new(name.clone()))
                         .end_slot::<Icon>(is_enabled.then(|| {

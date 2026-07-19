@@ -562,6 +562,8 @@ documentation-aside rhythm, footer padding, and separator contrast.
 The agent profile manager modal uses Canvas density, radius, and contrast for
 modal shell chrome, profile/action row density, section padding, editor
 padding, and nested picker wrapper padding.
+The agent tool picker uses Canvas density and contrast for context-server
+section header padding, tool row density, and separator contrast.
 
 ## Layout system {#layout-system}
 

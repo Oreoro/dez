@@ -124,6 +124,9 @@ Implemented in this phase:
   section padding, editor padding, and nested picker wrapper padding now read
   `design_system.density`, `design_system.radius`, and
   `design_system.contrast`.
+- Applied Canvas design-system tokens to the agent tool picker: context-server
+  section header padding, tool row density, and separator contrast now read
+  `design_system.density` and `design_system.contrast`.
 - Added schema/default switches for pane-tab panel hosting, terminal-agent
   detection, multiple visible agents, session restoration, agent attention
   notifications, and preview-first Markdown.
@@ -443,6 +446,8 @@ Current consumers:
 - Agent profile manager modal: modal shell background, border strength, radius,
   profile/action row density, section padding, editor padding, and nested picker
   wrapper padding consume Canvas density, radius, and contrast.
+- Agent tool picker: context-server section header padding, tool row density,
+  and separator contrast consume Canvas density and contrast.
 - Go To Line: the modal shell, input divider, help row spacing, and elevated
   navigation surface consume Canvas density, radius, and contrast.
 - Tasks UI: the task picker shell, search row, empty state, task rows,
