@@ -1110,6 +1110,19 @@ impl CanvasSavedLayoutManagerModal {
             .log_err();
     }
 
+    fn import_layouts_from_clipboard(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let prompt_opened = self
+            .workspace
+            .update(cx, |workspace, cx| {
+                workspace.import_saved_canvas_layouts_from_clipboard(window, cx)
+            })
+            .log_err()
+            .unwrap_or(false);
+        if prompt_opened {
+            self.dismiss(cx);
+        }
+    }
+
     fn entries(&self, cx: &App) -> Vec<CanvasSavedLayoutManagerEntry> {
         let Some(workspace) = self.workspace.upgrade() else {
             return Vec::new();
@@ -1302,6 +1315,15 @@ impl Render for CanvasSavedLayoutManagerModal {
                                             cx.stop_propagation();
                                         })),
                                     )
+                                    .child(Button::new(
+                                        "import-canvas-saved-layouts-json",
+                                        "Import JSON…",
+                                    ).color(Color::Muted).on_click(
+                                        cx.listener(|this, _, window, cx| {
+                                            this.import_layouts_from_clipboard(window, cx);
+                                            cx.stop_propagation();
+                                        }),
+                                    ))
                                     .child(
                                         Button::new("clear-all-canvas-saved-layouts", "Clear All…")
                                             .color(Color::Muted)
@@ -1826,6 +1848,12 @@ pub struct ClearAllSavedCanvasLayouts;
 #[action(namespace = workspace)]
 #[serde(deny_unknown_fields)]
 pub struct CopySavedCanvasLayoutsToClipboard;
+
+/// Imports saved Canvas layouts from clipboard JSON without overwriting existing layouts.
+#[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct ImportSavedCanvasLayoutsFromClipboard;
 
 /// Opens a prompt for duplicating a saved Canvas layout slot.
 #[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
@@ -3973,6 +4001,166 @@ impl Workspace {
             .autohide(),
             cx,
         );
+        true
+    }
+
+    pub fn import_saved_canvas_layouts_from_clipboard(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(clipboard) = cx.read_from_clipboard() else {
+            struct CanvasSavedLayoutsImportToast;
+            self.show_toast(
+                Toast::new(
+                    NotificationId::unique::<CanvasSavedLayoutsImportToast>(),
+                    "Clipboard does not contain saved Canvas layout JSON",
+                )
+                .autohide(),
+                cx,
+            );
+            return false;
+        };
+        let Some(clipboard_text) = clipboard.text() else {
+            struct CanvasSavedLayoutsImportToast;
+            self.show_toast(
+                Toast::new(
+                    NotificationId::unique::<CanvasSavedLayoutsImportToast>(),
+                    "Clipboard does not contain text",
+                )
+                .autohide(),
+                cx,
+            );
+            return false;
+        };
+        let imported_layouts = match serde_json::from_str::<
+            BTreeMap<String, CanvasSavedLayoutSnapshot>,
+        >(&clipboard_text)
+        {
+            Ok(imported_layouts) if !imported_layouts.is_empty() => imported_layouts,
+            _ => {
+                struct CanvasSavedLayoutsImportToast;
+                self.show_toast(
+                    Toast::new(
+                        NotificationId::unique::<CanvasSavedLayoutsImportToast>(),
+                        "Clipboard saved Canvas layout JSON is invalid",
+                    )
+                    .autohide(),
+                    cx,
+                );
+                return false;
+            }
+        };
+
+        let mut pending_imports = BTreeMap::new();
+        let mut skipped_count = 0;
+        for (name, snapshot) in imported_layouts {
+            let Some(layout_name) = canvas_existing_saved_layout_name(&name) else {
+                skipped_count += 1;
+                continue;
+            };
+            if self.saved_canvas_layouts.contains_key(&layout_name)
+                || pending_imports.contains_key(&layout_name)
+            {
+                skipped_count += 1;
+                continue;
+            }
+            pending_imports.insert(layout_name, snapshot);
+        }
+
+        if pending_imports.is_empty() {
+            struct CanvasSavedLayoutsImportToast;
+            self.show_toast(
+                Toast::new(
+                    NotificationId::unique::<CanvasSavedLayoutsImportToast>(),
+                    "No new saved Canvas layouts to import",
+                )
+                .autohide(),
+                cx,
+            );
+            return false;
+        }
+
+        let import_count = pending_imports.len();
+        let detail = format!(
+            "This imports {import_count} saved Canvas {}. Existing layouts are not overwritten. {skipped_count} {} skipped.",
+            if import_count == 1 {
+                "layout"
+            } else {
+                "layouts"
+            },
+            if skipped_count == 1 {
+                "layout was"
+            } else {
+                "layouts were"
+            },
+        );
+        let prompt = window.prompt(
+            PromptLevel::Warning,
+            "Import saved Canvas layouts from clipboard?",
+            Some(&detail),
+            &["Import", "Cancel"],
+            cx,
+        );
+
+        cx.spawn_in(window, async move |workspace, cx| -> Result<()> {
+            if prompt.await.log_err() != Some(0) {
+                return Ok(());
+            }
+
+            workspace.update_in(cx, |workspace, window, cx| {
+                let mut imported_count = 0;
+                let mut skipped_count = skipped_count;
+                for (name, snapshot) in pending_imports {
+                    if workspace.saved_canvas_layouts.contains_key(&name) {
+                        skipped_count += 1;
+                        continue;
+                    }
+                    workspace.saved_canvas_layouts.insert(name, snapshot);
+                    imported_count += 1;
+                }
+
+                struct CanvasSavedLayoutsImportToast;
+                if imported_count == 0 {
+                    workspace.show_toast(
+                        Toast::new(
+                            NotificationId::unique::<CanvasSavedLayoutsImportToast>(),
+                            "No new saved Canvas layouts to import",
+                        )
+                        .autohide(),
+                        cx,
+                    );
+                    return;
+                }
+
+                workspace.serialize_workspace(window, cx);
+                let message = format!(
+                    "Imported {imported_count} saved Canvas {}{}",
+                    if imported_count == 1 {
+                        "layout"
+                    } else {
+                        "layouts"
+                    },
+                    if skipped_count == 0 {
+                        String::new()
+                    } else {
+                        format!(" ({skipped_count} skipped)")
+                    }
+                );
+                workspace.show_toast(
+                    Toast::new(
+                        NotificationId::unique::<CanvasSavedLayoutsImportToast>(),
+                        message,
+                    )
+                    .autohide(),
+                    cx,
+                );
+            })?;
+
+            Ok(())
+        })
+        .detach_and_log_err(cx);
+
         true
     }
 
@@ -11486,6 +11674,14 @@ impl Workspace {
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &CopySavedCanvasLayoutsToClipboard, _, cx| {
                     workspace.copy_saved_canvas_layouts_to_clipboard(cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace,
+                 _: &ImportSavedCanvasLayoutsFromClipboard,
+                 window,
+                 cx| {
+                    workspace.import_saved_canvas_layouts_from_clipboard(window, cx);
                 },
             ))
             .on_action(cx.listener(

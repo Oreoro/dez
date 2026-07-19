@@ -53,9 +53,10 @@ use util::ResultExt;
 use workspace::{
     AccessibleMode, ClearAllSavedCanvasLayouts, ClearSavedCanvasLayoutNamed,
     ClearSavedCanvasLayoutSlot, CopySavedCanvasLayoutsToClipboard, DuplicateSavedCanvasLayoutNamed,
-    DuplicateSavedCanvasLayoutSlot, ManageSavedCanvasLayouts, MultiWorkspace, MultiplexerSettings,
-    RenameSavedCanvasLayoutNamed, RenameSavedCanvasLayoutSlot, RestoreSavedCanvasLayoutNamed,
-    SaveCurrentCanvasLayoutAs, SaveCurrentCanvasLayoutNamed, ToggleWorktreeSecurity, Workspace,
+    DuplicateSavedCanvasLayoutSlot, ImportSavedCanvasLayoutsFromClipboard,
+    ManageSavedCanvasLayouts, MultiWorkspace, MultiplexerSettings, RenameSavedCanvasLayoutNamed,
+    RenameSavedCanvasLayoutSlot, RestoreSavedCanvasLayoutNamed, SaveCurrentCanvasLayoutAs,
+    SaveCurrentCanvasLayoutNamed, ToggleWorktreeSecurity, Workspace,
     notifications::{NotifyResultExt, NotifyTaskExt as _},
 };
 
@@ -426,6 +427,7 @@ fn update_layout_action_filter(cx: &mut App) {
         TypeId::of::<ManageSavedCanvasLayouts>(),
         TypeId::of::<ClearAllSavedCanvasLayouts>(),
         TypeId::of::<CopySavedCanvasLayoutsToClipboard>(),
+        TypeId::of::<ImportSavedCanvasLayoutsFromClipboard>(),
         TypeId::of::<RestoreSavedCanvasLayoutNamed>(),
         TypeId::of::<RenameSavedCanvasLayoutNamed>(),
         TypeId::of::<DuplicateSavedCanvasLayoutNamed>(),
@@ -2110,6 +2112,10 @@ impl SidebarChrome {
                                     CopySavedCanvasLayoutsToClipboard.boxed_clone(),
                                     false,
                                     saved_canvas_layout_count == 0,
+                                )
+                                .action(
+                                    "Import Canvas Saved Layouts JSON from Clipboard…",
+                                    ImportSavedCanvasLayoutsFromClipboard.boxed_clone(),
                                 )
                                 .entry(
                                     "Save Canvas Layout: Slot 1",

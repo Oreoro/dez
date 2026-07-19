@@ -274,12 +274,13 @@ Rules:
   dirty tabs.
   The manager and Panel Layout menu can also clear all saved Canvas layouts
   after a warning confirmation, and copy the saved-layout JSON to the
-  clipboard for manual export.
+  clipboard for manual export. Saved-layout JSON can be imported from the
+  clipboard as a non-overwriting merge.
   `workspace::RenameSavedCanvasLayoutSlot`,
   `workspace::SaveCurrentCanvasLayoutAs`, and
   `workspace::ManageSavedCanvasLayouts` provide the text-entry and manager
-  surfaces. Import/merge workflows and live process/session restoration are
-  still future work.
+  surfaces. Overwrite/conflict import workflows and live process/session
+  restoration are still future work.
 - Manual structural layout changes clear the active recipe identity and show
   `Custom Canvas Layout` in the Panel Layout menu while keeping the pane tree
   and tabs intact.
@@ -309,8 +310,8 @@ Implementation boundary:
 - Saved-layout support currently provides three fixed durable slots plus
   free-form named layouts with built-in text entry and an inspectable manager
   modal with duplicate, confirmation-backed clear-all, and copy-to-clipboard
-  JSON export workflows. Import/merge workflows plus actual process
-  restoration remain future work.
+  JSON export/import workflows. Overwrite/conflict import workflows plus actual
+  process restoration remain future work.
   Saved layouts use pane-tree metadata to reshape existing panes, reopen
   project-path-backed and serializable tabs, and store restore-planning intent
   for live-only/process-backed tabs.
