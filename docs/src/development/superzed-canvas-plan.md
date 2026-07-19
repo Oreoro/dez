@@ -23,8 +23,8 @@ Implemented in this phase:
 - Canvas recipes and pane-grid application now close legacy dock chrome through
   the workspace dock list instead of special-casing left/right docks, keeping
   the default Canvas surface pane-first as bottom-dock support evolves.
-- Added native Lumin theme assets and made `Lumin Blur` / `Lumin Light` the
-  default dark/light pair.
+- Added native Lumin theme assets, aggregate license attribution, and made
+  `Lumin Blur` / `Lumin Light` the default dark/light pair.
 - Added native JetBrains Mono font assets for editor, terminal, Markdown code,
   and code-like agent surfaces. Bundled-font test loaders now register all
   packaged TTFs so JetBrains defaults are covered without relying on system
