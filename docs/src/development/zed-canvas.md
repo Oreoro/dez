@@ -279,8 +279,10 @@ Rules:
   Debug, and Even Rows into horizontal-first layouts while preserving the
   explicit Portrait Display recipe. Four-Agent Matrix, Six-Agent Supervisor,
   and Worktree Matrix also prefer column-first split directions when newly
-  applied on ultrawide workspaces. Richer many-agent variants that reshape
-  already-live pane trees remain future work.
+  applied on ultrawide workspaces, and already-open many-agent layouts flatten
+  nested rows into existing horizontal columns on ultrawide resize without
+  closing panes or tabs. Richer non-ultrawide many-agent reshape variants remain
+  future work.
 - Empty panes offer quick item creation and restore actions.
 - Zoom preserves underlying layout.
 - Layout modifications persist continuously.

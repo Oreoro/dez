@@ -222,6 +222,20 @@ enum CanvasLayoutRecipe {
     EvenRows,
 }
 
+const FOUR_AGENT_MATRIX_SPLIT_DIRECTIONS: &[SplitDirection] = &[
+    SplitDirection::Right,
+    SplitDirection::Down,
+    SplitDirection::Right,
+];
+const SIX_AGENT_SUPERVISOR_SPLIT_DIRECTIONS: &[SplitDirection] = &[
+    SplitDirection::Right,
+    SplitDirection::Down,
+    SplitDirection::Right,
+    SplitDirection::Down,
+    SplitDirection::Right,
+];
+const WORKTREE_MATRIX_SPLIT_DIRECTIONS: &[SplitDirection] = FOUR_AGENT_MATRIX_SPLIT_DIRECTIONS;
+
 impl CanvasLayoutRecipe {
     fn id(self) -> &'static str {
         match self {
@@ -333,6 +347,15 @@ impl CanvasLayoutRecipe {
             self,
             Self::FourAgentMatrix | Self::SixAgentSupervisor | Self::WorktreeMatrix
         )
+    }
+
+    fn agent_matrix_split_directions(self) -> Option<&'static [SplitDirection]> {
+        match self {
+            Self::FourAgentMatrix => Some(FOUR_AGENT_MATRIX_SPLIT_DIRECTIONS),
+            Self::SixAgentSupervisor => Some(SIX_AGENT_SUPERVISOR_SPLIT_DIRECTIONS),
+            Self::WorktreeMatrix => Some(WORKTREE_MATRIX_SPLIT_DIRECTIONS),
+            _ => None,
+        }
     }
 
     fn from_name(name: &str) -> Option<Self> {
@@ -6143,11 +6166,7 @@ impl Workspace {
             false,
             false,
             4,
-            &[
-                SplitDirection::Right,
-                SplitDirection::Down,
-                SplitDirection::Right,
-            ],
+            FOUR_AGENT_MATRIX_SPLIT_DIRECTIONS,
             window,
             cx,
         );
@@ -6165,13 +6184,7 @@ impl Workspace {
             false,
             false,
             6,
-            &[
-                SplitDirection::Right,
-                SplitDirection::Down,
-                SplitDirection::Right,
-                SplitDirection::Down,
-                SplitDirection::Right,
-            ],
+            SIX_AGENT_SUPERVISOR_SPLIT_DIRECTIONS,
             window,
             cx,
         );
@@ -6189,11 +6202,7 @@ impl Workspace {
             true,
             false,
             4,
-            &[
-                SplitDirection::Right,
-                SplitDirection::Down,
-                SplitDirection::Right,
-            ],
+            WORKTREE_MATRIX_SPLIT_DIRECTIONS,
             window,
             cx,
         );
@@ -6376,6 +6385,44 @@ impl Workspace {
         canvas_size_is_ultrawide(self.bounds.size)
     }
 
+    fn center_root_is_flat_axis(&self, axis: Axis) -> bool {
+        let Member::Axis(root) = &self.center.root else {
+            return false;
+        };
+
+        root.axis == axis
+            && root
+                .members
+                .iter()
+                .all(|member| matches!(member, Member::Pane(_)))
+    }
+
+    fn reshape_center_pane_tree_with_split_directions(
+        &mut self,
+        split_directions: &[SplitDirection],
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if split_directions.is_empty() {
+            return false;
+        }
+
+        let panes = self.center.panes().into_iter().cloned().collect::<Vec<_>>();
+        if panes.len() < 2 {
+            return false;
+        }
+
+        let mut center = PaneGroup::new(panes[0].clone());
+        center.set_is_center(self.center.is_center);
+        for (index, pane) in panes.iter().enumerate().skip(1) {
+            let target = &panes[index - 1];
+            let direction = split_directions[(index - 1) % split_directions.len()];
+            center.split(target, pane, direction, cx);
+        }
+        self.center.root = center.root;
+        self.center.mark_positions(cx);
+        true
+    }
+
     fn reflow_active_canvas_layout_for_bounds_change(
         &mut self,
         window: &mut Window,
@@ -6388,6 +6435,22 @@ impl Workspace {
         let Some(active_layout_recipe) = self.active_canvas_layout_recipe else {
             return;
         };
+
+        if active_layout_recipe.should_reflow_agent_matrix_to_columns_on_ultrawide()
+            && self.canvas_workspace_is_ultrawide()
+            && !self.center_root_is_flat_axis(Axis::Horizontal)
+            && let Some(split_directions) = active_layout_recipe.agent_matrix_split_directions()
+        {
+            let split_directions =
+                self.reflow_canvas_split_directions(active_layout_recipe, split_directions, cx);
+            self.push_canvas_layout_snapshot(cx);
+            if self.reshape_center_pane_tree_with_split_directions(&split_directions, cx) {
+                self.serialize_workspace(window, cx);
+                cx.notify();
+                return;
+            }
+        }
+
         let Some(desired_axis) = active_layout_recipe.root_axis_for_size(self.bounds.size) else {
             return;
         };
@@ -13660,7 +13723,7 @@ mod tests {
     use fs::FakeFs;
     use gpui::{
         DismissEvent, Empty, EventEmitter, FocusHandle, Focusable, Render, TestAppContext,
-        UpdateGlobal, VisualTestContext, px,
+        UpdateGlobal, VisualTestContext, px, size,
     };
     use project::{Project, ProjectEntryId, WorktreeId};
     use serde_json::json;
@@ -13681,6 +13744,63 @@ mod tests {
             CanvasLayoutRecipe::SixAgentSupervisor
                 .should_reflow_agent_matrix_to_columns_on_ultrawide()
         );
+    }
+
+    #[gpui::test]
+    async fn test_active_many_agent_layout_reflows_to_ultrawide_columns(cx: &mut TestAppContext) {
+        init_test(cx);
+
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        let initial_pane_order = workspace.update_in(cx, |workspace, window, cx| {
+            workspace.bounds.size = size(px(1200.), px(900.));
+            workspace.apply_canvas_four_agent_matrix_layout(window, cx);
+
+            {
+                let Member::Axis(root) = &workspace.center.root else {
+                    panic!("four-agent matrix should create a root axis");
+                };
+                assert_eq!(root.axis, Axis::Horizontal);
+                assert!(
+                    root.members.iter().any(
+                        |member| matches!(member, Member::Axis(axis) if axis.axis == Axis::Vertical)
+                    ),
+                    "non-ultrawide matrix should keep a nested row"
+                );
+            }
+
+            let initial_pane_order = workspace
+                .center
+                .panes()
+                .into_iter()
+                .map(|pane| pane.entity_id())
+                .collect::<Vec<_>>();
+
+            workspace.bounds.size = size(px(2400.), px(1000.));
+            workspace.reflow_active_canvas_layout_for_bounds_change(window, cx);
+            initial_pane_order
+        });
+
+        workspace.read_with(cx, |workspace, _| {
+            let Member::Axis(root) = &workspace.center.root else {
+                panic!("ultrawide matrix should keep a root axis");
+            };
+            assert_eq!(root.axis, Axis::Horizontal);
+            assert_eq!(root.members.len(), initial_pane_order.len());
+
+            let root_panes = root
+                .members
+                .iter()
+                .map(|member| match member {
+                    Member::Pane(pane) => pane.entity_id(),
+                    Member::Axis(_) => panic!("ultrawide matrix should flatten nested rows"),
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(root_panes, initial_pane_order);
+        });
     }
 
     #[gpui::test]
