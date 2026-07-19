@@ -268,8 +268,12 @@ Use the existing panel-as-pane bridge as the migration path:
 - Runtime multiplexer settings now read `prefix_mode`, `prefix`,
   `layout_cycle`, and `broadcast_confirmation`. When prefix mode is enabled,
   the Panel Layout menu shows the configured prefix and broadcast confirmation
-  policy as a disabled status row; actual prefix key handling remains future
-  work.
+  policy as a disabled status row. Workspace key context now exposes
+  `canvas_prefix_mode`, and the default keymaps bind the default `ctrl-b`
+  prefix to core Canvas commands: cycle layout, Agent Control, Focus Editor,
+  Four-Agent Matrix, save slot 1, restore slot 1, and restore previous layout.
+  Custom prefix strings, timeout behavior, repeatable resizing, and prefix
+  command discovery remain future work.
 - Canvas recipes now share one canonical runtime recipe-name mapping. The
   workspace records the last applied Canvas recipe, layout history snapshots
   restore that recipe identity with pane visibility/focus, persisted workspace
@@ -557,7 +561,11 @@ recipe slices now implement `Full Canvas`, `Agent Control`, `Focus Editor`,
 `Incident Response`, `Portrait Display`, `Even Columns`, `Even Rows`, and
 `Cycle Canvas Layout` against the existing pane/panel bridge.
 `Cycle Canvas Layout` reads `multiplexer.layout_cycle` so users can choose the
-order of named recipes without changing keybindings.
+order of named recipes without changing keybindings. When
+`multiplexer.prefix_mode = true`, the default `ctrl-b` prefix can trigger the
+core Canvas command set from workspace focus; custom prefixes can be expressed
+through user keymap overrides while dynamic prefix remapping remains future
+work.
 
 ## Accessibility and performance requirements {#accessibility-and-performance}
 

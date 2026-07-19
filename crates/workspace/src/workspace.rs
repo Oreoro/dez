@@ -9377,6 +9377,17 @@ impl Workspace {
         let mut context = KeyContext::new_with_defaults();
         context.add("Workspace");
         context.set("keyboard_layout", cx.keyboard_layout().name().to_string());
+
+        if self.active_canvas_layout_recipe.is_some() {
+            context.add("canvas");
+        }
+        let multiplexer_settings = MultiplexerSettings::get_global(cx);
+        if multiplexer_settings.prefix_mode {
+            context.add("canvas");
+            context.add("canvas_prefix_mode");
+            context.set("canvas_prefix", multiplexer_settings.prefix.clone());
+        }
+
         if let Some(status) = self
             .debugger_provider
             .as_ref()

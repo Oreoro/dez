@@ -1689,4 +1689,16 @@
       "shift-tab": "skill_creator::FocusPreviousField",
     },
   },
+  {
+    "context": "Workspace && canvas_prefix_mode",
+    "bindings": {
+      "ctrl-b space": "workspace::CycleCanvasLayout",
+      "ctrl-b a": "workspace::ApplyCanvasAgentControlLayout",
+      "ctrl-b f": "workspace::ApplyCanvasEditorFocusLayout",
+      "ctrl-b m": "workspace::ApplyCanvasFourAgentMatrixLayout",
+      "ctrl-b s": "workspace::SaveCurrentCanvasLayout",
+      "ctrl-b r": "workspace::RestoreSavedCanvasLayout",
+      "ctrl-b p": "workspace::RestorePreviousCanvasLayout",
+    },
+  },
 ]
