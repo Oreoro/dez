@@ -509,6 +509,9 @@ project and buffer diagnostics roots plus empty states. Search surfaces use
 Canvas density, radius, and contrast for project-search landing backgrounds,
 project/buffer search input shells, filter-in-results labels, and match
 navigation separators.
+Extensions UI uses the same tokens for page, header, and list backgrounds,
+search input chrome, category filter rows, extension cards, and dev-extension
+override overlays.
 
 ## Layout system {#layout-system}
 

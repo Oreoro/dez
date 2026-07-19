@@ -43,6 +43,10 @@ Implemented in this phase:
   project and buffer search input shells, filter-in-results labels, and match
   navigation separators now read `design_system.density`,
   `design_system.radius`, and `design_system.contrast`.
+- Applied Canvas design-system tokens to Extensions UI: page, header, and list
+  backgrounds, search input chrome, category filter rows, extension cards, and
+  dev-extension override overlays now read `design_system.density`,
+  `design_system.radius`, and `design_system.contrast`.
 - Added schema/default switches for pane-tab panel hosting, terminal-agent
   detection, multiple visible agents, session restoration, agent attention
   notifications, and preview-first Markdown.

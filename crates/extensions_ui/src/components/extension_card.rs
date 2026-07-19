@@ -2,6 +2,8 @@ use gpui::{AnyElement, prelude::*};
 use smallvec::SmallVec;
 use ui::prelude::*;
 
+use crate::canvas;
+
 #[derive(IntoElement)]
 pub struct ExtensionCard {
     overridden_by_dev_extension: bool,
@@ -35,12 +37,12 @@ impl RenderOnce for ExtensionCard {
                 .mt_4()
                 .w_full()
                 .h(rems_from_px(110.))
-                .p_3()
-                .gap_2()
-                .bg(cx.theme().colors().elevated_surface_background.opacity(0.5))
+                .p(canvas::extensions_card_padding(cx))
+                .gap(canvas::extensions_gap(cx))
+                .bg(canvas::extensions_card_background(cx))
                 .border_1()
-                .border_color(cx.theme().colors().border_variant)
-                .rounded_md()
+                .border_color(canvas::extensions_border(cx))
+                .map(|card| canvas::extensions_radius(card, cx))
                 .children(self.children)
                 .when(self.overridden_by_dev_extension, |card| {
                     card.child(
@@ -52,7 +54,7 @@ impl RenderOnce for ExtensionCard {
                             .cursor_default()
                             .size_full()
                             .justify_center()
-                            .bg(cx.theme().colors().elevated_surface_background.alpha(0.8))
+                            .bg(canvas::extensions_card_overlay_background(cx))
                             .child(Label::new("Overridden by dev extension.")),
                     )
                 }),

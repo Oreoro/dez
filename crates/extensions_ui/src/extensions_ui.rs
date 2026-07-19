@@ -1,3 +1,4 @@
+mod canvas;
 mod components;
 mod extension_suggest;
 mod extension_version_selector;
@@ -1313,12 +1314,12 @@ impl ExtensionsPage {
         let editor_border = if self.query_contains_error {
             Color::Error.color(cx)
         } else {
-            cx.theme().colors().border
+            canvas::extensions_border(cx)
         };
 
         h_flex()
             .key_context(key_context)
-            .h_8()
+            .h(canvas::extensions_search_height(cx))
             .min_w(rems_from_px(384.))
             .flex_1()
             .pl_1p5()
@@ -1326,7 +1327,7 @@ impl ExtensionsPage {
             .gap_2()
             .border_1()
             .border_color(editor_border)
-            .rounded_md()
+            .map(|input| canvas::extensions_radius(input, cx))
             .child(Icon::new(IconName::MagnifyingGlass).color(Color::Muted))
             .child(self.render_text_input(&self.query_editor, cx))
     }
@@ -1355,7 +1356,7 @@ impl ExtensionsPage {
         EditorElement::new(
             editor,
             EditorStyle {
-                background: cx.theme().colors().editor_background,
+                background: canvas::extensions_panel_background(cx),
                 local_player: cx.theme().players().local(),
                 text: text_style,
                 ..Default::default()
@@ -1919,13 +1920,13 @@ impl Render for ExtensionsPage {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         v_flex()
             .size_full()
-            .bg(cx.theme().colors().editor_background)
+            .bg(canvas::extensions_background(cx))
             .child(
                 v_flex()
-                    .gap_4()
-                    .pt_4()
-                    .px_4()
-                    .bg(cx.theme().colors().editor_background)
+                    .gap(canvas::extensions_gap(cx))
+                    .pt(canvas::extensions_padding(cx))
+                    .px(canvas::extensions_padding(cx))
+                    .bg(canvas::extensions_background(cx))
                     .child(
                         h_flex()
                             .w_full()
@@ -1997,9 +1998,10 @@ impl Render for ExtensionsPage {
                     .id("filter-row")
                     .gap_2()
                     .py_2p5()
-                    .px_4()
+                    .px(canvas::extensions_padding(cx))
+                    .bg(canvas::extensions_panel_background(cx))
                     .border_b_1()
-                    .border_color(cx.theme().colors().border_variant)
+                    .border_color(canvas::extensions_border(cx))
                     .overflow_x_scroll()
                     .child(
                         Button::new("filter-all-categories", "All")
@@ -2044,26 +2046,36 @@ impl Render for ExtensionsPage {
                     ),
             )
             .child(self.render_feature_upsells(cx))
-            .child(v_flex().px_4().size_full().overflow_y_hidden().map(|this| {
-                let mut count = self.filtered_remote_extension_indices.len();
-                if self.filter.include_dev_extensions() {
-                    count += self.filtered_dev_extension_indices.len();
-                }
+            .child(
+                v_flex()
+                    .px(canvas::extensions_padding(cx))
+                    .size_full()
+                    .overflow_y_hidden()
+                    .map(|this| {
+                        let mut count = self.filtered_remote_extension_indices.len();
+                        if self.filter.include_dev_extensions() {
+                            count += self.filtered_dev_extension_indices.len();
+                        }
 
-                if count == 0 {
-                    this.child(self.render_empty_state(cx)).into_any_element()
-                } else {
-                    let scroll_handle = &self.list;
-                    this.child(
-                        uniform_list("entries", count, cx.processor(Self::render_extensions))
-                            .flex_grow_1()
-                            .pb_4()
-                            .track_scroll(scroll_handle),
-                    )
-                    .vertical_scrollbar_for(scroll_handle, window, cx)
-                    .into_any_element()
-                }
-            }))
+                        if count == 0 {
+                            this.child(self.render_empty_state(cx)).into_any_element()
+                        } else {
+                            let scroll_handle = &self.list;
+                            this.child(
+                                uniform_list(
+                                    "entries",
+                                    count,
+                                    cx.processor(Self::render_extensions),
+                                )
+                                .flex_grow_1()
+                                .pb_4()
+                                .track_scroll(scroll_handle),
+                            )
+                            .vertical_scrollbar_for(scroll_handle, window, cx)
+                            .into_any_element()
+                        }
+                    }),
+            )
     }
 }
 
