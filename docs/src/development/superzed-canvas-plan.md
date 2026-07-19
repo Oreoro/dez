@@ -294,7 +294,8 @@ Use the existing panel-as-pane bridge as the migration path:
   prefix to core Canvas commands: cycle layout, Agent Control, Focus Editor,
   Four-Agent Matrix, save slot 1, restore slot 1, restore previous layout,
   save/restore all three fixed slots with `shift-1/2/3` and `1/2/3`,
-  save a free-form named layout with `n s`, rename fixed slots with `n 1/2/3`,
+  open the saved-layout manager with `n m`, save a free-form named layout with
+  `n s`, rename fixed slots with `n 1/2/3`,
   adjacent-pane focus with arrow keys, adjacent-pane swapping with shift-arrow
   keys, move-to-edge commands with alt-arrow keys, split-right/split-down with
   `v`/`enter`, fixed-step pane resizing with `h/j/k/l`, and pane equalization
@@ -316,11 +317,13 @@ Use the existing panel-as-pane bridge as the migration path:
   saved center pane still exists, reopens missing project-path-backed tabs into
   saved panes, reapplies pinned/active tab metadata, and the Panel Layout menu
   can rename or clear stale fixed slots, save the current layout under a
-  free-form name, and restore, rename, or clear free-form named layouts.
-  `workspace::RenameSavedCanvasLayoutSlot` and
-  `workspace::SaveCurrentCanvasLayoutAs` open built-in text entry for assigning
-  user-authored names. A fuller saved-layout manager and live process/session
-  restoration remain future work.
+  free-form name, and restore, rename, or clear free-form named layouts. A
+  basic saved-layout manager modal lists saved fixed slots and named layouts
+  with restore, rename, and clear controls. `workspace::RenameSavedCanvasLayoutSlot`,
+  `workspace::SaveCurrentCanvasLayoutAs`, and
+  `workspace::ManageSavedCanvasLayouts` provide the text-entry and manager
+  surfaces. Richer manager features and live process/session restoration remain
+  future work.
 - Manual structural layout changes now clear the active Canvas recipe identity
   so the Panel Layout menu reports `Custom Canvas Layout` after pane splits,
   pane moves, pane joins, pane removal, pane-size changes, or explicit
@@ -379,9 +382,9 @@ Implementation order:
    split axes and flex weights, plus tab title, serializable item kind/id,
    active, preview, dirty, pinned, project-path metadata, and explicit
    restore-planning intent. Restore applies saved pane-tree shape when all
-   saved center panes still exist. User-authored fixed-slot labels and
-   free-form named layouts are available through built-in text entry; a fuller
-   saved-layout manager remains future work.
+   saved center panes still exist. User-authored fixed-slot labels,
+   free-form named layouts, and a basic saved-layout manager are available;
+   richer manager features remain future work.
 4. Add resize-driven `auto_reflow` using semantic recipe variants rather than
    raw pixel snapshots. Initial recipe-application reflow and resize-triggered
    root-orientation reflow for active recipes are implemented. First ultrawide
@@ -397,8 +400,8 @@ Implementation order:
    manual structural changes mark the active recipe as custom. Tab-role
    metadata and user-authored slot-label metadata are captured in saved slots,
    project-path-backed tabs now reopen during restore, and built-in fixed-slot
-   plus free-form named-layout UI is implemented, while a fuller saved-layout
-   manager and actual process restoration remain future work.
+   plus free-form named-layout UI and a basic manager are implemented, while
+   richer manager features and actual process restoration remain future work.
 
 ## Session Rail {#session-rail}
 

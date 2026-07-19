@@ -51,10 +51,10 @@ use ui::{
 use update_version::UpdateVersion;
 use util::ResultExt;
 use workspace::{
-    AccessibleMode, ClearSavedCanvasLayoutNamed, ClearSavedCanvasLayoutSlot, MultiWorkspace,
-    MultiplexerSettings, RenameSavedCanvasLayoutNamed, RenameSavedCanvasLayoutSlot,
-    RestoreSavedCanvasLayoutNamed, SaveCurrentCanvasLayoutAs, SaveCurrentCanvasLayoutNamed,
-    ToggleWorktreeSecurity, Workspace,
+    AccessibleMode, ClearSavedCanvasLayoutNamed, ClearSavedCanvasLayoutSlot,
+    ManageSavedCanvasLayouts, MultiWorkspace, MultiplexerSettings, RenameSavedCanvasLayoutNamed,
+    RenameSavedCanvasLayoutSlot, RestoreSavedCanvasLayoutNamed, SaveCurrentCanvasLayoutAs,
+    SaveCurrentCanvasLayoutNamed, ToggleWorktreeSecurity, Workspace,
     notifications::{NotifyResultExt, NotifyTaskExt as _},
 };
 
@@ -422,6 +422,7 @@ fn update_layout_action_filter(cx: &mut App) {
         TypeId::of::<RenameSavedCanvasLayoutSlot>(),
         TypeId::of::<SaveCurrentCanvasLayoutAs>(),
         TypeId::of::<SaveCurrentCanvasLayoutNamed>(),
+        TypeId::of::<ManageSavedCanvasLayouts>(),
         TypeId::of::<RestoreSavedCanvasLayoutNamed>(),
         TypeId::of::<RenameSavedCanvasLayoutNamed>(),
         TypeId::of::<ClearSavedCanvasLayoutNamed>(),
@@ -1682,7 +1683,7 @@ impl SidebarChrome {
                             "Prefix commands: ctrl-b s/r/p · Save, Restore, Previous".to_string(),
                             "Prefix commands: ctrl-b 1/2/3 · Restore saved slots".to_string(),
                             "Prefix commands: ctrl-b shift-1/2/3 · Save slots".to_string(),
-                            "Prefix commands: ctrl-b n s/1/2/3 · Save as, Rename saved slots"
+                            "Prefix commands: ctrl-b n m/s/1/2/3 · Manage, Save as, Rename slots"
                                 .to_string(),
                             "Prefix commands: ctrl-b arrows · Focus adjacent panes".to_string(),
                             "Prefix commands: ctrl-b shift-arrows · Swap adjacent panes"
@@ -2087,6 +2088,10 @@ impl SidebarChrome {
                                 .action(
                                     "Save Canvas Layout As…",
                                     SaveCurrentCanvasLayoutAs.boxed_clone(),
+                                )
+                                .action(
+                                    "Manage Canvas Saved Layouts…",
+                                    ManageSavedCanvasLayouts.boxed_clone(),
                                 )
                                 .entry(
                                     "Save Canvas Layout: Slot 1",

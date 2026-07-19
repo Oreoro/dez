@@ -1632,6 +1632,7 @@
       "ctrl-b n 1": ["workspace::RenameSavedCanvasLayoutSlot", { "slot": 1 }],
       "ctrl-b n 2": ["workspace::RenameSavedCanvasLayoutSlot", { "slot": 2 }],
       "ctrl-b n 3": ["workspace::RenameSavedCanvasLayoutSlot", { "slot": 3 }],
+      "ctrl-b n m": "workspace::ManageSavedCanvasLayouts",
       "ctrl-b n s": "workspace::SaveCurrentCanvasLayoutAs",
       "ctrl-b p": "workspace::RestorePreviousCanvasLayout",
       "ctrl-b left": "workspace::ActivatePaneLeft",

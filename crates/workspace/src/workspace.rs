@@ -836,6 +836,243 @@ impl Render for CanvasSavedLayoutNameModal {
     }
 }
 
+#[derive(Clone)]
+enum CanvasSavedLayoutManagerEntryKind {
+    Slot(usize),
+    Named(String),
+}
+
+#[derive(Clone)]
+struct CanvasSavedLayoutManagerEntry {
+    label: String,
+    kind: CanvasSavedLayoutManagerEntryKind,
+}
+
+struct CanvasSavedLayoutManagerModal {
+    workspace: WeakEntity<Workspace>,
+    focus_handle: FocusHandle,
+}
+
+impl CanvasSavedLayoutManagerModal {
+    fn new(workspace: WeakEntity<Workspace>, cx: &mut Context<Self>) -> Self {
+        Self {
+            workspace,
+            focus_handle: cx.focus_handle(),
+        }
+    }
+
+    fn dismiss(&mut self, cx: &mut Context<Self>) {
+        cx.emit(DismissEvent);
+    }
+
+    fn cancel(&mut self, _: &menu::Cancel, _: &mut Window, cx: &mut Context<Self>) {
+        self.dismiss(cx);
+    }
+
+    fn save_named_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.workspace
+            .update(cx, |workspace, cx| {
+                workspace.save_current_canvas_layout_as(window, cx);
+            })
+            .log_err();
+    }
+
+    fn restore_layout(
+        &mut self,
+        kind: CanvasSavedLayoutManagerEntryKind,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.workspace
+            .update(cx, |workspace, cx| match kind {
+                CanvasSavedLayoutManagerEntryKind::Slot(slot) => {
+                    workspace.restore_saved_canvas_layout_slot(slot, window, cx);
+                }
+                CanvasSavedLayoutManagerEntryKind::Named(name) => {
+                    workspace.restore_saved_canvas_layout_named(name, window, cx);
+                }
+            })
+            .log_err();
+        self.dismiss(cx);
+    }
+
+    fn rename_layout(
+        &mut self,
+        kind: CanvasSavedLayoutManagerEntryKind,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.workspace
+            .update(cx, |workspace, cx| match kind {
+                CanvasSavedLayoutManagerEntryKind::Slot(slot) => {
+                    workspace.rename_saved_canvas_layout_slot(slot, window, cx);
+                }
+                CanvasSavedLayoutManagerEntryKind::Named(name) => {
+                    workspace.prompt_rename_saved_canvas_layout_named(name, window, cx);
+                }
+            })
+            .log_err();
+    }
+
+    fn clear_layout(
+        &mut self,
+        kind: CanvasSavedLayoutManagerEntryKind,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.workspace
+            .update(cx, |workspace, cx| match kind {
+                CanvasSavedLayoutManagerEntryKind::Slot(slot) => {
+                    workspace.clear_saved_canvas_layout_slot(slot, window, cx);
+                }
+                CanvasSavedLayoutManagerEntryKind::Named(name) => {
+                    workspace.clear_saved_canvas_layout_named(name, window, cx);
+                }
+            })
+            .log_err();
+        cx.notify();
+    }
+
+    fn entries(&self, cx: &App) -> Vec<CanvasSavedLayoutManagerEntry> {
+        let Some(workspace) = self.workspace.upgrade() else {
+            return Vec::new();
+        };
+        let workspace = workspace.read(cx);
+        let mut entries = Vec::new();
+        for slot in 1..=3 {
+            if let Some(label) = workspace.saved_canvas_layout_slot_label(slot) {
+                entries.push(CanvasSavedLayoutManagerEntry {
+                    label: format!("Slot {slot} — {label}"),
+                    kind: CanvasSavedLayoutManagerEntryKind::Slot(slot),
+                });
+            }
+        }
+        entries.extend(
+            workspace
+                .saved_canvas_named_layouts()
+                .into_iter()
+                .map(|(name, label)| CanvasSavedLayoutManagerEntry {
+                    label,
+                    kind: CanvasSavedLayoutManagerEntryKind::Named(name),
+                }),
+        );
+        entries
+    }
+}
+
+impl EventEmitter<DismissEvent> for CanvasSavedLayoutManagerModal {}
+impl ModalView for CanvasSavedLayoutManagerModal {}
+impl Focusable for CanvasSavedLayoutManagerModal {
+    fn focus_handle(&self, _: &App) -> FocusHandle {
+        self.focus_handle.clone()
+    }
+}
+
+impl Render for CanvasSavedLayoutManagerModal {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let entries = self.entries(cx);
+        let rows =
+            entries
+                .into_iter()
+                .enumerate()
+                .map(|(index, entry)| {
+                    let restore_kind = entry.kind.clone();
+                    let rename_kind = entry.kind.clone();
+                    let clear_kind = entry.kind.clone();
+                    h_flex()
+                        .id(("canvas-saved-layout-manager-row", index))
+                        .w_full()
+                        .gap_2()
+                        .justify_between()
+                        .child(
+                            Label::new(entry.label)
+                                .single_line()
+                                .color(Color::Muted)
+                                .flex_1(),
+                        )
+                        .child(
+                            h_flex()
+                                .gap_1()
+                                .child(Button::new(("restore", index), "Restore").on_click(
+                                    cx.listener(move |this, _, window, cx| {
+                                        this.restore_layout(restore_kind.clone(), window, cx);
+                                        cx.stop_propagation();
+                                    }),
+                                ))
+                                .child(Button::new(("rename", index), "Rename").on_click(
+                                    cx.listener(move |this, _, window, cx| {
+                                        this.rename_layout(rename_kind.clone(), window, cx);
+                                        cx.stop_propagation();
+                                    }),
+                                ))
+                                .child(Button::new(("clear", index), "Clear").on_click(
+                                    cx.listener(move |this, _, window, cx| {
+                                        this.clear_layout(clear_kind.clone(), window, cx);
+                                        cx.stop_propagation();
+                                    }),
+                                )),
+                        )
+                        .into_any_element()
+                })
+                .collect::<Vec<_>>();
+
+        v_flex()
+            .key_context("CanvasSavedLayoutManagerModal")
+            .on_action(cx.listener(Self::cancel))
+            .elevation_2(cx)
+            .w(rems(46.))
+            .child(
+                Modal::new("canvas-saved-layout-manager-modal", None)
+                    .show_dismiss(true)
+                    .header(
+                        ModalHeader::new()
+                            .headline("Manage Canvas Saved Layouts")
+                            .description(
+                                "Save named layouts and restore, rename, or clear existing saved layouts.",
+                            ),
+                    )
+                    .section(
+                        Section::new()
+                            .child(
+                                h_flex()
+                                    .justify_between()
+                                    .gap_2()
+                                    .child(
+                                        Label::new("Saved layouts are semantic pane snapshots.")
+                                            .color(Color::Muted),
+                                    )
+                                    .child(
+                                        Button::new("save-canvas-layout-as", "Save As…")
+                                            .style(ButtonStyle::Filled)
+                                            .on_click(cx.listener(|this, _, window, cx| {
+                                                this.save_named_layout(window, cx);
+                                                cx.stop_propagation();
+                                            })),
+                                    ),
+                            )
+                            .child(
+                                v_flex()
+                                    .gap_1()
+                                    .when(rows.is_empty(), |this| {
+                                        this.child(
+                                            Label::new("No saved Canvas layouts yet.")
+                                                .color(Color::Muted),
+                                        )
+                                    })
+                                    .children(rows),
+                            ),
+                    )
+                    .footer(ModalFooter::new().end_slot(Button::new(
+                        "close-canvas-layout-manager",
+                        "Close",
+                    ).on_click(cx.listener(|this, _, _, cx| {
+                        this.dismiss(cx);
+                        cx.stop_propagation();
+                    })))),
+            )
+    }
+}
+
 fn canvas_saved_pane_tree_snapshot(
     member: &Member,
     pane_ids_by_entity_id: &HashMap<EntityId, CanvasSavedPaneId>,
@@ -1311,6 +1548,12 @@ pub struct RenameSavedCanvasLayoutNamed {
 pub struct ClearSavedCanvasLayoutNamed {
     pub name: String,
 }
+
+/// Opens the basic Canvas saved-layout manager.
+#[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct ManageSavedCanvasLayouts;
 
 /// Removes a saved Canvas layout slot.
 #[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
@@ -3147,6 +3390,13 @@ impl Workspace {
                 window,
                 cx,
             )
+        });
+    }
+
+    pub fn manage_saved_canvas_layouts(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let workspace = self.weak_handle();
+        self.toggle_modal(window, cx, |_, cx| {
+            CanvasSavedLayoutManagerModal::new(workspace, cx)
         });
     }
 
@@ -10686,6 +10936,11 @@ impl Workspace {
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &SaveCurrentCanvasLayoutAs, window, cx| {
                     workspace.save_current_canvas_layout_as(window, cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &ManageSavedCanvasLayouts, window, cx| {
+                    workspace.manage_saved_canvas_layouts(window, cx);
                 },
             ))
             .on_action(cx.listener(
