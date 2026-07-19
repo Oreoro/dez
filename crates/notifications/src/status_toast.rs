@@ -1,9 +1,79 @@
 use std::rc::Rc;
 
-use gpui::{DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, IntoElement};
+use gpui::{
+    DismissEvent, Div, Entity, EventEmitter, FocusHandle, Focusable, Hsla, IntoElement, Pixels,
+    Stateful,
+};
+use settings::Settings;
 use ui::{Tooltip, prelude::*};
-use workspace::{ToastAction, ToastView};
+use workspace::{DesignSystemSettings, ToastAction, ToastView};
 use zed_actions::toast;
+
+fn status_toast_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.surface_background.opacity(0.94),
+        settings::CanvasContrast::Standard => colors.surface_background,
+        settings::CanvasContrast::High => colors
+            .elevated_surface_background
+            .blend(colors.border_focused.opacity(0.08)),
+    }
+}
+
+fn status_toast_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border.opacity(0.42),
+        settings::CanvasContrast::Standard => colors.border_variant,
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn status_toast_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn status_toast_padding_y(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
+fn status_toast_padding_x(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(8.),
+        settings::CanvasDensity::Balanced => px(10.),
+        settings::CanvasDensity::Spacious => px(14.),
+    }
+}
+
+fn status_toast_trailing_padding(has_action_or_dismiss: bool, cx: &App) -> Pixels {
+    let base = match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(10.),
+        settings::CanvasDensity::Spacious => px(14.),
+    };
+
+    if has_action_or_dismiss {
+        base
+    } else {
+        status_toast_padding_x(cx)
+    }
+}
+
+fn status_toast_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_md(),
+        settings::CanvasRadius::Rounded => element.rounded_lg(),
+    }
+}
 
 #[derive(RegisterComponent)]
 pub struct StatusToast {
@@ -81,18 +151,15 @@ impl Render for StatusToast {
         h_flex()
             .id("status-toast")
             .elevation_3(cx)
-            .gap_2()
-            .py_1p5()
-            .pl_2p5()
-            .map(|this| {
-                if has_action_or_dismiss {
-                    this.pr_1p5()
-                } else {
-                    this.pr_2p5()
-                }
-            })
+            .gap(status_toast_gap(cx))
+            .py(status_toast_padding_y(cx))
+            .pl(status_toast_padding_x(cx))
+            .pr(status_toast_trailing_padding(has_action_or_dismiss, cx))
             .flex_none()
-            .bg(cx.theme().colors().surface_background)
+            .bg(status_toast_background(cx))
+            .border_1()
+            .border_color(status_toast_border(cx))
+            .map(|this| status_toast_radius(this, cx))
             .shadow_lg()
             .when_some(self.icon.clone(), |this, icon| this.child(icon))
             .child(Label::new(self.text.clone()).color(Color::Default))
