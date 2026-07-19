@@ -330,6 +330,11 @@ An optional tmux-style Prefix Mode may exist for experts, but ordinary users
 must not need it. Prefix Mode needs a visible mode indicator, configurable
 prefix, timeout, repeatable resize behavior, and command discovery.
 
+The runtime settings model now reads `multiplexer.prefix_mode`,
+`multiplexer.prefix`, and `multiplexer.broadcast_confirmation`; the Panel Layout
+menu shows the configured prefix and broadcast policy when prefix mode is
+enabled. Actual prefix-key capture remains a separate interaction layer.
+
 ## Layout system {#layout-system}
 
 Built-in named layouts should include:

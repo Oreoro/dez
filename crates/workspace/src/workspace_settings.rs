@@ -118,7 +118,10 @@ impl PaneGridSettings {
 
 #[derive(Clone, Debug, RegisterSetting)]
 pub struct MultiplexerSettings {
+    pub prefix_mode: bool,
+    pub prefix: String,
     pub layout_cycle: Vec<String>,
+    pub broadcast_confirmation: settings::BroadcastConfirmation,
 }
 
 #[derive(Deserialize, RegisterSetting)]
@@ -260,7 +263,10 @@ impl Settings for MultiplexerSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
         let multiplexer = content.multiplexer.clone().unwrap();
         Self {
+            prefix_mode: multiplexer.prefix_mode.unwrap(),
+            prefix: multiplexer.prefix.clone().unwrap(),
             layout_cycle: multiplexer.layout_cycle.clone().unwrap(),
+            broadcast_confirmation: multiplexer.broadcast_confirmation.unwrap(),
         }
     }
 }

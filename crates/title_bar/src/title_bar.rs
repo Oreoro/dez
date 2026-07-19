@@ -51,7 +51,7 @@ use ui::{
 use update_version::UpdateVersion;
 use util::ResultExt;
 use workspace::{
-    AccessibleMode, MultiWorkspace, ToggleWorktreeSecurity, Workspace,
+    AccessibleMode, MultiWorkspace, MultiplexerSettings, ToggleWorktreeSecurity, Workspace,
     notifications::{NotifyResultExt, NotifyTaskExt as _},
 };
 
@@ -1512,6 +1512,20 @@ impl SidebarChrome {
                 } else {
                     None
                 };
+                let multiplexer_hint = {
+                    let multiplexer_settings = MultiplexerSettings::get_global(cx);
+                    multiplexer_settings.prefix_mode.then(|| {
+                        let confirmation = match multiplexer_settings.broadcast_confirmation {
+                            settings::BroadcastConfirmation::Always => "always",
+                            settings::BroadcastConfirmation::Risky => "risky",
+                            settings::BroadcastConfirmation::Never => "never",
+                        };
+                        format!(
+                            "Prefix mode: {} · broadcast confirmation: {}",
+                            multiplexer_settings.prefix, confirmation
+                        )
+                    })
+                };
 
                 ContextMenu::build(window, cx, |menu, _, _cx| {
                     menu.when(is_signed_in, |this| {
@@ -1912,6 +1926,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
+                                .when_some(multiplexer_hint.clone(), |menu, hint| {
+                                    menu.separator()
+                                        .item(ContextMenuEntry::new(hint).disabled(true))
+                                })
                                 .when(is_custom, |menu| {
                                     menu.item(
                                         ContextMenuEntry::new("Custom")

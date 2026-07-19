@@ -248,6 +248,11 @@ Use the existing panel-as-pane bridge as the migration path:
 - `Cycle Canvas Layout` now honors `multiplexer.layout_cycle`, including the
   default `even_columns`, `even_rows`, `main_left`, `main_top`, `tiled`, and
   `agent_control` recipe names, with tolerant matching for label-style names.
+- Runtime multiplexer settings now read `prefix_mode`, `prefix`,
+  `layout_cycle`, and `broadcast_confirmation`. When prefix mode is enabled,
+  the Panel Layout menu shows the configured prefix and broadcast confirmation
+  policy as a disabled status row; actual prefix key handling remains future
+  work.
 - Canvas recipes now share one canonical runtime recipe-name mapping. The
   workspace records the last applied Canvas recipe in memory, layout history
   snapshots restore that recipe identity with pane visibility/focus, and the
@@ -447,6 +452,9 @@ Add semantic command surfaces:
   preview and confirmation.
 - Optional Prefix Mode that coexists with Vim, VS Code, JetBrains, and existing
   Zed keymaps.
+- Runtime prefix settings are now available through `MultiplexerSettings`, and
+  the layout menu surfaces the configured prefix/broadcast policy when prefix
+  mode is enabled. Key-dispatch prefix capture is not implemented yet.
 
 Automation API:
 
