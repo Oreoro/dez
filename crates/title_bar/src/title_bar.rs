@@ -124,6 +124,8 @@ actions!(
         ApplyCanvasPortraitDisplayLayout,
         /// Cycles between Canvas agent-control and focus-editor layouts.
         CycleCanvasLayout,
+        /// Restores the previous Canvas layout visibility and focus snapshot.
+        RestorePreviousCanvasLayout,
     ]
 );
 
@@ -270,6 +272,11 @@ pub fn init(cx: &mut App) {
             workspace.cycle_canvas_layout(window, cx);
         });
 
+        workspace.register_action(|workspace, _: &RestorePreviousCanvasLayout, window, cx| {
+            set_window_layout(WindowLayout::Agent(None), cx);
+            workspace.restore_previous_canvas_layout(window, cx);
+        });
+
         workspace.register_action(|workspace, _: &SimulateUpdateAvailable, _window, cx| {
             if let Some(multi_workspace) = workspace.multi_workspace().cloned() {
                 multi_workspace
@@ -348,6 +355,7 @@ fn update_layout_action_filter(cx: &mut App) {
         TypeId::of::<ApplyCanvasIncidentResponseLayout>(),
         TypeId::of::<ApplyCanvasPortraitDisplayLayout>(),
         TypeId::of::<CycleCanvasLayout>(),
+        TypeId::of::<RestorePreviousCanvasLayout>(),
     ];
     CommandPaletteFilter::update_global(cx, |filter, _| {
         if disable_ai || !show_layout {
@@ -1802,6 +1810,16 @@ impl SidebarChrome {
                                     Some(CycleCanvasLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(CycleCanvasLayout.boxed_clone(), cx);
+                                    },
+                                )
+                                .entry(
+                                    "Restore Previous Canvas Layout",
+                                    Some(RestorePreviousCanvasLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            RestorePreviousCanvasLayout.boxed_clone(),
+                                            cx,
+                                        );
                                     },
                                 )
                                 .when(is_custom, |menu| {

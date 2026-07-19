@@ -86,6 +86,8 @@ pub struct ActivePanelModifiers {
 
 #[derive(Clone, Debug, RegisterSetting)]
 pub struct PaneGridSettings {
+    pub auto_reflow: bool,
+    pub layout_history: bool,
     pub show_legacy_docks: bool,
     pub focus_indicator: settings::PaneGridFocusIndicator,
     pub panel_surface: settings::CanvasPanelSurface,
@@ -224,6 +226,8 @@ impl Settings for PaneGridSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
         let pane_grid = content.pane_grid.clone().unwrap();
         Self {
+            auto_reflow: pane_grid.auto_reflow.unwrap(),
+            layout_history: pane_grid.layout_history.unwrap(),
             show_legacy_docks: pane_grid.show_legacy_docks.unwrap(),
             focus_indicator: pane_grid.focus_indicator.unwrap(),
             panel_surface: pane_grid.panel_surface.unwrap(),

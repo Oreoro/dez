@@ -210,6 +210,12 @@ Use the existing panel-as-pane bridge as the migration path:
   pinned tabs plus the active unpinned tab with a tab menu for direct
   activation, while `scroll` and `searchable` retain the existing scrollable
   strip until a dedicated searchable tab affordance lands.
+- Runtime pane-grid settings now read `layout_history` and `auto_reflow`.
+  `layout_history` captures a bounded in-memory snapshot before each Canvas
+  recipe and exposes `Restore Previous Canvas Layout`, which restores visibility
+  and focus for still-existing panes without recreating items or terminating
+  live processes. Full persisted semantic layout history and responsive reflow
+  remain future work.
 - Remove the one-visible-agent bottleneck. Multiple agent tabs and terminal
   agents can be visible across panes and windows.
 - Support direct pane/tab dragging, keyboard movement, context-menu movement,

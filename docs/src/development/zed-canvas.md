@@ -224,6 +224,12 @@ Rules:
 - `pane_grid.tab_overflow = "stack"` compacts a pane to pinned tabs plus the
   active unpinned tab and an overflow tab menu; `scroll` and `searchable`
   currently use the existing scrollable tab strip.
+- `pane_grid.layout_history = true` captures a bounded in-memory snapshot before
+  Canvas layout recipes. `Restore Previous Canvas Layout` restores visibility
+  and focus for panes that still exist, without deserializing workspace items or
+  killing live processes. Persisted semantic layout history is still required.
+- `pane_grid.auto_reflow` is available at runtime; dedicated responsive reflow
+  rules still need to be implemented.
 - Empty panes offer quick item creation and restore actions.
 - Zoom preserves underlying layout.
 - Layout modifications persist continuously.

@@ -203,6 +203,7 @@ use crate::{
 };
 
 pub const SERIALIZATION_THROTTLE_TIME: Duration = Duration::from_millis(200);
+const CANVAS_LAYOUT_HISTORY_LIMIT: usize = 24;
 
 static ZED_WINDOW_SIZE: LazyLock<Option<Size<Pixels>>> = LazyLock::new(|| {
     env::var("ZED_WINDOW_SIZE")
@@ -217,6 +218,19 @@ static ZED_WINDOW_POSITION: LazyLock<Option<Point<Pixels>>> = LazyLock::new(|| {
         .as_deref()
         .and_then(parse_pixel_position_env_var)
 });
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CanvasPaneSnapshot {
+    pane_id: EntityId,
+    pane_kind: PaneKind,
+    visible: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CanvasLayoutSnapshot {
+    active_pane_id: Option<EntityId>,
+    panes: Vec<CanvasPaneSnapshot>,
+}
 
 pub trait TerminalProvider {
     fn spawn(
@@ -1416,6 +1430,7 @@ pub struct Workspace {
     active_worktree_creation: ActiveWorktreeCreation,
     deferred_save_items: Vec<Box<dyn WeakItemHandle>>,
     canvas_layout_cycle_index: usize,
+    canvas_layout_history: VecDeque<CanvasLayoutSnapshot>,
 }
 
 impl EventEmitter<Event> for Workspace {}
@@ -1858,6 +1873,7 @@ impl Workspace {
             _dev_container_task: None,
             deferred_save_items: Vec::new(),
             canvas_layout_cycle_index: 0,
+            canvas_layout_history: VecDeque::new(),
         }
     }
 
@@ -4823,7 +4839,101 @@ impl Workspace {
         cx.notify();
     }
 
+    fn current_canvas_layout_snapshot(&self, cx: &App) -> Option<CanvasLayoutSnapshot> {
+        let panes = self
+            .center
+            .panes()
+            .into_iter()
+            .filter(|pane| self.pane_is_in_center(pane))
+            .map(|pane| {
+                let pane_state = pane.read(cx);
+                CanvasPaneSnapshot {
+                    pane_id: pane.entity_id(),
+                    pane_kind: pane_state.pane_kind(),
+                    visible: pane_state.is_visible(),
+                }
+            })
+            .collect::<Vec<_>>();
+
+        if panes.is_empty() {
+            return None;
+        }
+
+        let active_pane_id = self
+            .pane_is_in_center(&self.active_pane)
+            .then(|| self.active_pane.entity_id());
+
+        Some(CanvasLayoutSnapshot {
+            active_pane_id,
+            panes,
+        })
+    }
+
+    fn push_canvas_layout_snapshot(&mut self, cx: &App) {
+        if !PaneGridSettings::get_global(cx).layout_history {
+            return;
+        }
+
+        let Some(snapshot) = self.current_canvas_layout_snapshot(cx) else {
+            return;
+        };
+
+        if self.canvas_layout_history.back() == Some(&snapshot) {
+            return;
+        }
+
+        self.canvas_layout_history.push_back(snapshot);
+        while self.canvas_layout_history.len() > CANVAS_LAYOUT_HISTORY_LIMIT {
+            self.canvas_layout_history.pop_front();
+        }
+    }
+
+    pub fn restore_previous_canvas_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(snapshot) = self.canvas_layout_history.pop_back() else {
+            return;
+        };
+
+        let panes_by_id = self
+            .center
+            .panes()
+            .into_iter()
+            .map(|pane| (pane.entity_id(), pane.clone()))
+            .collect::<HashMap<_, _>>();
+        let mut focus_pane = None;
+
+        for pane_snapshot in snapshot.panes {
+            let Some(pane) = panes_by_id.get(&pane_snapshot.pane_id) else {
+                continue;
+            };
+            if pane.read(cx).pane_kind() != pane_snapshot.pane_kind {
+                continue;
+            }
+
+            pane.update(cx, |pane, cx| pane.set_visible(pane_snapshot.visible, cx));
+            if Some(pane_snapshot.pane_id) == snapshot.active_pane_id {
+                focus_pane = Some(pane.clone());
+            }
+        }
+
+        let focus_pane = focus_pane
+            .filter(|pane| pane.read(cx).is_visible())
+            .or_else(|| self.last_focusable_center_pane(cx))
+            .or_else(|| {
+                self.center
+                    .panes()
+                    .into_iter()
+                    .find(|pane| pane.read(cx).is_visible())
+                    .cloned()
+            })
+            .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
+
+        self.focus_canvas_pane(&focus_pane, window, cx);
+        self.finish_canvas_recipe(window, cx);
+    }
+
     pub fn apply_canvas_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.push_canvas_layout_snapshot(cx);
+
         if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
             self.sync_panel_panes_from_docks(window, cx);
 
@@ -4853,6 +4963,8 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.push_canvas_layout_snapshot(cx);
+
         if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
             self.sync_panel_panes_from_docks(window, cx);
 
@@ -4886,6 +4998,8 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.push_canvas_layout_snapshot(cx);
+
         if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
             self.sync_panel_panes_from_docks(window, cx);
 
@@ -5318,6 +5432,8 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Vec<Entity<Pane>> {
+        self.push_canvas_layout_snapshot(cx);
+
         if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
             self.sync_panel_panes_from_docks(window, cx);
             self.set_canvas_panel_pane_visible(
