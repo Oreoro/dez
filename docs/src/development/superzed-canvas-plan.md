@@ -198,11 +198,17 @@ Apply Lumin carefully:
 
 Runtime design-system state now exposes `family`, `density`, `radius`,
 `motion`, `contrast`, `content_width`, `icon_style`, and `show_labels`.
-The first consumer is the Canvas prefix indicator: compact/balanced/spacious
-density changes chip height and spacing, radius controls corner treatment, and
-contrast adjusts border/background strength. Broader rollout should apply the
-same runtime model to Session Rail rows, pane tabs, layout menus, agent
-surfaces, Markdown sheets, and command surfaces.
+Current consumers:
+
+- Canvas prefix indicator: compact/balanced/spacious density changes chip
+  height and spacing, radius controls corner treatment, and contrast adjusts
+  border/background strength.
+- Workspace-bar command search: `show_labels = "hidden"` renders an icon-only
+  command surface with an accessibility label; contextual/always keeps the
+  visible label.
+
+Broader rollout should apply the same runtime model to Session Rail rows, pane
+tabs, layout menus, agent surfaces, Markdown sheets, and command surfaces.
 
 ## Pane-first workspace {#pane-first-workspace}
 

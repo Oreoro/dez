@@ -1667,19 +1667,35 @@ impl SidebarChrome {
             })
     }
 
-    pub fn render_command_search_button(&mut self, _: &mut Context<Self>) -> Button {
-        Button::new("workspace-command-search", "Command Search")
-            .label_size(LabelSize::Small)
-            .color(Color::Muted)
-            .start_icon(
-                Icon::new(IconName::MagnifyingGlass)
-                    .size(IconSize::Small)
-                    .color(Color::Muted),
-            )
-            .tooltip(Tooltip::text("Open Command Palette"))
-            .on_click(|_, window, cx| {
-                window.dispatch_action(command_palette::Toggle.boxed_clone(), cx);
-            })
+    pub fn render_command_search_button(&mut self, cx: &mut Context<Self>) -> AnyElement {
+        let design_system = DesignSystemSettings::get_global(cx);
+
+        if design_system.show_contextual_labels() {
+            Button::new("workspace-command-search", "Command Search")
+                .aria_label("Open Command Palette")
+                .label_size(LabelSize::Small)
+                .color(Color::Muted)
+                .start_icon(
+                    Icon::new(IconName::MagnifyingGlass)
+                        .size(IconSize::Small)
+                        .color(Color::Muted),
+                )
+                .tooltip(Tooltip::text("Open Command Palette"))
+                .on_click(|_, window, cx| {
+                    window.dispatch_action(command_palette::Toggle.boxed_clone(), cx);
+                })
+                .into_any_element()
+        } else {
+            IconButton::new("workspace-command-search", IconName::MagnifyingGlass)
+                .aria_label("Open Command Palette")
+                .icon_size(IconSize::Small)
+                .icon_color(Color::Muted)
+                .tooltip(Tooltip::text("Open Command Palette"))
+                .on_click(|_, window, cx| {
+                    window.dispatch_action(command_palette::Toggle.boxed_clone(), cx);
+                })
+                .into_any_element()
+        }
     }
 
     pub fn render_user_menu_button(&mut self, cx: &mut Context<Self>) -> impl Element {

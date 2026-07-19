@@ -461,7 +461,9 @@ first Canvas consumer is the prefix indicator: `density` changes its height,
 spacing, and label size; `radius` chooses square/subtle/rounded corners; and
 `contrast` adjusts border and background strength. Remaining Canvas surfaces
 should consume the same runtime settings rather than duplicating hard-coded
-visual constants.
+visual constants. The workspace-bar command search also reads
+`show_labels`: `hidden` renders an icon-only command button with an
+accessibility label, while `contextual` and `always` keep the visible label.
 
 ## Layout system {#layout-system}
 

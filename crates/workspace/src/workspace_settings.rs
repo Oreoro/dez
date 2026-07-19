@@ -139,6 +139,10 @@ impl DesignSystemSettings {
     pub fn is_low_contrast(&self) -> bool {
         self.contrast == settings::CanvasContrast::Low
     }
+
+    pub fn show_contextual_labels(&self) -> bool {
+        self.show_labels != settings::CanvasLabelVisibility::Hidden
+    }
 }
 
 #[derive(Clone, Debug, RegisterSetting)]
