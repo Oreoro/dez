@@ -193,8 +193,9 @@
   "close_on_file_delete": false,
   // Whether toggling a panel (e.g. with its keyboard shortcut) also closes
   // the panel when it is already focused, instead of just moving focus back
-  // to the editor.
-  "close_panel_on_toggle": false,
+  // to the editor. Enabled by default so compatibility panels behave like
+  // dismissible Canvas panes during the pane-first migration.
+  "close_panel_on_toggle": true,
   // Relative size of the drop target in the editor that will open dropped file as a split pane (0-0.5)
   // E.g. 0.25 == If you drop onto the top/bottom quarter of the pane a new vertical split will be used
   //              If you drop onto the left/right quarter of the pane a new horizontal split will be used

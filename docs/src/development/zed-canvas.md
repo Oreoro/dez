@@ -237,6 +237,9 @@ Rules:
   including when legacy Terminal Panel compatibility handlers are registered.
   Dock-target task spawning and restored serialized terminal-panel geometry stay
   compatibility paths until live process/session migration is implemented.
+- Focused compatibility panels close when toggled by default, so existing panel
+  shortcuts act as dismissal commands while panel contents migrate into
+  pane-hosted tabs.
 - Automatic dock-to-pane migration is controlled by `pane_grid.panel_surface`,
   `pane_grid.draggable_panel_tabs`, and `pane_grid.show_legacy_docks`.
 - No item type owns a privileged location.

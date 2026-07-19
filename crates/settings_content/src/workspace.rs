@@ -132,7 +132,7 @@ pub struct WorkspaceSettingsContent {
     /// the panel when it is already focused, instead of just moving focus back
     /// to the editor.
     ///
-    /// Default: false
+    /// Default: true
     pub close_panel_on_toggle: Option<bool>,
     /// What draws window decorations/titlebar, the client application (Zed) or display server
     /// Default: client

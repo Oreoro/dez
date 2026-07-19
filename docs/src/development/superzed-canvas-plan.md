@@ -383,6 +383,9 @@ Use the existing panel-as-pane bridge as the migration path:
   activation, `searchable` keeps the scrollable tab strip and adds the same
   direct tab selector as a stable vertical overflow affordance, and `scroll`
   retains the existing scrollable strip.
+- Focused compatibility panels now close when toggled by default through
+  `close_panel_on_toggle = true`, keeping legacy panel shortcuts dismissible
+  while their contents continue moving into pane tabs.
 - Runtime pane-grid settings now read `layout_history` and `auto_reflow`.
   `layout_history` captures a bounded in-memory snapshot before each Canvas
   recipe and exposes `Restore Previous Canvas Layout`, which restores visibility
