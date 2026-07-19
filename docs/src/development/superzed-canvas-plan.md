@@ -110,6 +110,9 @@ Implemented in this phase:
 - The View menu now uses pane-tab labels for project, outline, collaboration,
   terminal, debugger, agent, and Git surfaces when
   `pane_grid.panel_surface = "pane_tab"` with legacy docks disabled.
+- The thread switcher overlay now applies Canvas density, radius, and contrast
+  settings to its result surface and thread/terminal rows, reusing the same row
+  styling path as the Session Rail while preserving visible result labels.
 
 ## Ground truth {#ground-truth}
 
