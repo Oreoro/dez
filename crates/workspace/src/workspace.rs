@@ -1057,6 +1057,14 @@ pub struct SetSavedCanvasLayoutSlotLabel {
     pub label: String,
 }
 
+/// Removes a saved Canvas layout slot.
+#[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct ClearSavedCanvasLayoutSlot {
+    pub slot: usize,
+}
+
 actions!(
     project_symbols,
     [
@@ -2834,6 +2842,25 @@ impl Workspace {
 
         let label = label.trim();
         snapshot.label = (!label.is_empty()).then(|| label.to_string());
+        self.serialize_workspace(window, cx);
+        cx.notify();
+        true
+    }
+
+    pub fn clear_saved_canvas_layout_slot(
+        &mut self,
+        slot: usize,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(slot_name) = canvas_saved_layout_slot_name(slot) else {
+            return false;
+        };
+
+        if self.saved_canvas_layouts.remove(slot_name).is_none() {
+            return false;
+        }
+
         self.serialize_workspace(window, cx);
         cx.notify();
         true
@@ -10108,6 +10135,11 @@ impl Workspace {
                 },
             ))
             .on_action(cx.listener(
+                |workspace: &mut Workspace, action: &ClearSavedCanvasLayoutSlot, window, cx| {
+                    workspace.clear_saved_canvas_layout_slot(action.slot, window, cx);
+                },
+            ))
+            .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ResetPaneSizes, window, cx| {
                     workspace.reset_pane_sizes(window, cx);
                 },
@@ -14044,6 +14076,12 @@ mod tests {
                 workspace.saved_canvas_layout_slot_label(1),
                 Some("Custom Canvas Layout")
             );
+
+            assert!(workspace.clear_saved_canvas_layout_slot(1, window, cx));
+            assert!(!workspace.has_saved_canvas_layout_slot(1));
+            assert_eq!(workspace.saved_canvas_layout_slot_label(1), None);
+            assert!(!workspace.clear_saved_canvas_layout_slot(1, window, cx));
+            assert!(!workspace.clear_saved_canvas_layout_slot(4, window, cx));
         });
     }
 

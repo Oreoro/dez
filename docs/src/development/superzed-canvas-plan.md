@@ -311,10 +311,11 @@ Use the existing panel-as-pane bridge as the migration path:
   a derived display label shown by the Panel Layout restore actions, pane-tree
   shape metadata, tab-role metadata, and explicit serializable/project-path/
   live-only restore intent. Restore now uses the pane-tree shape when every
-  saved center pane still exists. `workspace::SetSavedCanvasLayoutSlotLabel`
-  can assign a user-authored label to an existing saved slot; built-in text
-  entry, free-form multi-name layout management, and actual process restoration
-  remain future work.
+  saved center pane still exists, and the Panel Layout menu can clear stale
+  fixed slots. `workspace::SetSavedCanvasLayoutSlotLabel` can assign a
+  user-authored label to an existing saved slot; built-in text entry,
+  free-form multi-name layout management, and actual process restoration remain
+  future work.
 - Manual structural layout changes now clear the active Canvas recipe identity
   so the Panel Layout menu reports `Custom Canvas Layout` after pane splits,
   pane moves, pane joins, pane removal, pane-size changes, or explicit
@@ -387,11 +388,11 @@ Implementation order:
    workspace leaves ultrawide.
 5. Add UI for named saved layouts and layout history once the underlying
    metadata is stable. Three fixed durable saved-layout slots are implemented
-   in the Panel Layout menu with derived restore labels, and manual structural
-   changes mark the active recipe as custom. Tab-role metadata and
-   user-authored slot-label metadata are captured in saved slots, while a
-   built-in naming UI, free-form multi-name layout management, and actual
-   process restoration remain future work.
+   in the Panel Layout menu with derived restore labels plus clear actions, and
+   manual structural changes mark the active recipe as custom. Tab-role
+   metadata and user-authored slot-label metadata are captured in saved slots,
+   while a built-in naming UI, free-form multi-name layout management, and
+   actual process restoration remain future work.
 
 ## Session Rail {#session-rail}
 

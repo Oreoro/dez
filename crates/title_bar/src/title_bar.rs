@@ -51,7 +51,8 @@ use ui::{
 use update_version::UpdateVersion;
 use util::ResultExt;
 use workspace::{
-    AccessibleMode, MultiWorkspace, MultiplexerSettings, ToggleWorktreeSecurity, Workspace,
+    AccessibleMode, ClearSavedCanvasLayoutSlot, MultiWorkspace, MultiplexerSettings,
+    ToggleWorktreeSecurity, Workspace,
     notifications::{NotifyResultExt, NotifyTaskExt as _},
 };
 
@@ -2086,6 +2087,12 @@ impl SidebarChrome {
                                     false,
                                     !has_saved_canvas_layout_slot_1,
                                 )
+                                .action_checked_with_disabled(
+                                    "Clear Canvas Layout: Slot 1",
+                                    ClearSavedCanvasLayoutSlot { slot: 1 }.boxed_clone(),
+                                    false,
+                                    !has_saved_canvas_layout_slot_1,
+                                )
                                 .entry(
                                     "Save Canvas Layout: Slot 2",
                                     Some(SaveCurrentCanvasLayoutSlot2.boxed_clone()),
@@ -2102,6 +2109,12 @@ impl SidebarChrome {
                                     false,
                                     !has_saved_canvas_layout_slot_2,
                                 )
+                                .action_checked_with_disabled(
+                                    "Clear Canvas Layout: Slot 2",
+                                    ClearSavedCanvasLayoutSlot { slot: 2 }.boxed_clone(),
+                                    false,
+                                    !has_saved_canvas_layout_slot_2,
+                                )
                                 .entry(
                                     "Save Canvas Layout: Slot 3",
                                     Some(SaveCurrentCanvasLayoutSlot3.boxed_clone()),
@@ -2115,6 +2128,12 @@ impl SidebarChrome {
                                 .action_checked_with_disabled(
                                     restore_saved_canvas_layout_slot_3_label,
                                     RestoreSavedCanvasLayoutSlot3.boxed_clone(),
+                                    false,
+                                    !has_saved_canvas_layout_slot_3,
+                                )
+                                .action_checked_with_disabled(
+                                    "Clear Canvas Layout: Slot 3",
+                                    ClearSavedCanvasLayoutSlot { slot: 3 }.boxed_clone(),
                                     false,
                                     !has_saved_canvas_layout_slot_3,
                                 )
