@@ -1557,9 +1557,12 @@ impl SidebarChrome {
                     has_saved_canvas_layout_slot_2,
                     has_saved_canvas_layout_slot_3,
                     saved_canvas_layout_count,
-                ) = workspace
-                    .upgrade()
-                    .map_or((None, 0, false, false, false, 0), |workspace| {
+                    saved_canvas_layout_slot_1_label,
+                    saved_canvas_layout_slot_2_label,
+                    saved_canvas_layout_slot_3_label,
+                ) = workspace.upgrade().map_or(
+                    (None, 0, false, false, false, 0, None, None, None),
+                    |workspace| {
                         let workspace = workspace.read(cx);
                         (
                             workspace.active_canvas_layout_recipe_id(),
@@ -1568,8 +1571,18 @@ impl SidebarChrome {
                             workspace.has_saved_canvas_layout_slot(2),
                             workspace.has_saved_canvas_layout_slot(3),
                             workspace.saved_canvas_layout_count(),
+                            workspace
+                                .saved_canvas_layout_slot_label(1)
+                                .map(str::to_string),
+                            workspace
+                                .saved_canvas_layout_slot_label(2)
+                                .map(str::to_string),
+                            workspace
+                                .saved_canvas_layout_slot_label(3)
+                                .map(str::to_string),
                         )
-                    });
+                    },
+                );
                 let active_canvas_layout_recipe =
                     is_agent.then_some(active_canvas_layout_recipe).flatten();
                 let has_previous_canvas_layout = canvas_layout_history_len > 0;
@@ -1583,6 +1596,21 @@ impl SidebarChrome {
                 } else {
                     format!("Saved Layouts: {saved_canvas_layout_count} saved slots")
                 };
+                let restore_saved_canvas_layout_slot_1_label = saved_canvas_layout_slot_1_label
+                    .map_or_else(
+                        || "Restore Canvas Layout: Slot 1".to_string(),
+                        |label| format!("Restore Canvas Layout: Slot 1 — {label}"),
+                    );
+                let restore_saved_canvas_layout_slot_2_label = saved_canvas_layout_slot_2_label
+                    .map_or_else(
+                        || "Restore Canvas Layout: Slot 2".to_string(),
+                        |label| format!("Restore Canvas Layout: Slot 2 — {label}"),
+                    );
+                let restore_saved_canvas_layout_slot_3_label = saved_canvas_layout_slot_3_label
+                    .map_or_else(
+                        || "Restore Canvas Layout: Slot 3".to_string(),
+                        |label| format!("Restore Canvas Layout: Slot 3 — {label}"),
+                    );
                 let multiplexer_hint = {
                     let multiplexer_settings = MultiplexerSettings::get_global(cx);
                     multiplexer_settings.prefix_mode.then(|| {
@@ -1998,7 +2026,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .action_checked_with_disabled(
-                                    "Restore Canvas Layout: Slot 1",
+                                    restore_saved_canvas_layout_slot_1_label,
                                     RestoreSavedCanvasLayout.boxed_clone(),
                                     false,
                                     !has_saved_canvas_layout_slot_1,
@@ -2014,7 +2042,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .action_checked_with_disabled(
-                                    "Restore Canvas Layout: Slot 2",
+                                    restore_saved_canvas_layout_slot_2_label,
                                     RestoreSavedCanvasLayoutSlot2.boxed_clone(),
                                     false,
                                     !has_saved_canvas_layout_slot_2,
@@ -2030,7 +2058,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .action_checked_with_disabled(
-                                    "Restore Canvas Layout: Slot 3",
+                                    restore_saved_canvas_layout_slot_3_label,
                                     RestoreSavedCanvasLayoutSlot3.boxed_clone(),
                                     false,
                                     !has_saved_canvas_layout_slot_3,

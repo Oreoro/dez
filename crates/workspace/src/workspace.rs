@@ -249,6 +249,32 @@ impl CanvasLayoutRecipe {
         }
     }
 
+    fn label(self) -> &'static str {
+        match self {
+            Self::Full => "Full",
+            Self::AgentControl => "Agent Control",
+            Self::EditorFocus => "Focus Editor",
+            Self::MainStack => "Main + Stack",
+            Self::MainTop => "Main Top",
+            Self::GoldenSplit => "Golden Split",
+            Self::CodeRunObserve => "Code, Run, Observe",
+            Self::Review => "Review",
+            Self::Debug => "Debug",
+            Self::DocumentationStudio => "Documentation Studio",
+            Self::BrowserDevelopment => "Browser Development",
+            Self::AgentOperations => "Agent Operations",
+            Self::FourAgentMatrix => "Four-Agent Matrix",
+            Self::SixAgentSupervisor => "Six-Agent Supervisor",
+            Self::WorktreeMatrix => "Worktree Matrix",
+            Self::RemoteOperations => "Remote Operations",
+            Self::PairProgramming => "Pair Programming",
+            Self::IncidentResponse => "Incident Response",
+            Self::PortraitDisplay => "Portrait Display",
+            Self::EvenColumns => "Even Columns",
+            Self::EvenRows => "Even Rows",
+        }
+    }
+
     fn primary_split_direction(self) -> Option<SplitDirection> {
         Some(match self {
             Self::Full => SplitDirection::Right,
@@ -431,9 +457,25 @@ struct CanvasSavedPaneSnapshot {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct CanvasSavedLayoutSnapshot {
+    #[serde(default)]
+    label: Option<String>,
     active_pane: Option<CanvasSavedPaneId>,
     active_layout_recipe: Option<String>,
     panes: Vec<CanvasSavedPaneSnapshot>,
+}
+
+impl CanvasSavedLayoutSnapshot {
+    fn display_label(&self) -> &str {
+        self.label
+            .as_deref()
+            .or_else(|| {
+                self.active_layout_recipe
+                    .as_deref()
+                    .and_then(CanvasLayoutRecipe::from_name)
+                    .map(CanvasLayoutRecipe::label)
+            })
+            .unwrap_or("Custom Canvas Layout")
+    }
 }
 
 fn canvas_saved_layouts_from_persisted(
@@ -2474,6 +2516,12 @@ impl Workspace {
     pub fn has_saved_canvas_layout_slot(&self, slot: usize) -> bool {
         canvas_saved_layout_slot_name(slot)
             .is_some_and(|name| self.saved_canvas_layouts.contains_key(name))
+    }
+
+    pub fn saved_canvas_layout_slot_label(&self, slot: usize) -> Option<&str> {
+        canvas_saved_layout_slot_name(slot)
+            .and_then(|name| self.saved_canvas_layouts.get(name))
+            .map(CanvasSavedLayoutSnapshot::display_label)
     }
 
     fn mark_canvas_layout_custom(&mut self) {
@@ -5183,6 +5231,12 @@ impl Workspace {
         }
 
         Some(CanvasSavedLayoutSnapshot {
+            label: Some(
+                self.active_canvas_layout_recipe
+                    .map(CanvasLayoutRecipe::label)
+                    .unwrap_or("Custom Canvas Layout")
+                    .to_string(),
+            ),
             active_pane,
             active_layout_recipe: self
                 .active_canvas_layout_recipe

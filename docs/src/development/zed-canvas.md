@@ -255,8 +255,11 @@ Rules:
 - `Save Canvas Layout: Slot 1/2/3` stores durable saved-layout snapshots with
   pane visibility, focus, and active recipe identity. Each slot persists pane
   intent by pane kind and occurrence order, and the matching restore action
-  applies that snapshot to panes that still exist. This does not yet support
-  free-form user-authored names or recreate closed items/processes.
+  applies that snapshot to panes that still exist. Saved snapshots now include
+  a display label derived from the active Canvas recipe or `Custom Canvas
+  Layout`, and the Panel Layout menu shows that label on restore actions. This
+  does not yet support free-form user-authored naming or recreate closed
+  items/processes.
 - Manual structural layout changes clear the active recipe identity and show
   `Custom Canvas Layout` in the Panel Layout menu while keeping the pane tree
   and tabs intact.
@@ -280,10 +283,11 @@ Implementation boundary:
 
 - Current recipes are geometry-only and reveal existing pane-hosted surfaces.
   They must not spawn agents, terminals, browsers, or external processes.
-- Saved-layout support currently provides three fixed durable slots, not
-  free-form multi-name layout management.
+- Saved-layout support currently provides three fixed durable slots with
+  derived display labels, not free-form multi-name layout management.
 - Proper persisted layouts still need semantic snapshots containing pane tree,
-  tab identities, process restoration metadata, and named layout data.
+  tab identities, process restoration metadata, and user-authored layout naming
+  data.
 - Process lifetime stays separate from tab lifetime so closing a tab is not
   silently treated as killing or resuming a process.
 
