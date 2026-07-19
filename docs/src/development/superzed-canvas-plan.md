@@ -326,7 +326,9 @@ Terminal-agent detection:
   cards honor `agent_ui.keep_failures_expanded`; permission prompts keep
   approval actions visible while `agent_ui.keep_permissions_expanded` controls
   whether generic permission detail sections default open. Sandbox and
-  confusable-warning permission details stay expanded for safety.
+  confusable-warning permission details stay expanded for safety. When
+  `agent_ui.group_tool_calls` is enabled, adjacent visible tool-call cards share
+  a subtle transcript rail so bursts of tool activity read as one operation.
   `event_verbosity = "summary"` now hides completed generic tool-call events
   that have no content or raw input, while preserving subagents, terminal tools,
   edits, pending work, permission prompts, failures, cancellations, and rejected

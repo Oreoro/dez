@@ -6527,22 +6527,8 @@ impl ThreadView {
                 }
             }
             AgentThreadEntry::ToolCall(tool_call) => {
-                if !self.should_render_tool_call_event(tool_call, cx) {
+                if !self.should_render_standalone_tool_call(tool_call, cx) {
                     return Empty.into_any();
-                }
-
-                // A canceled tool call that produced visible output is still worth
-                // showing, but one that was canceled before producing anything just
-                // renders as a useless "Canceled" card — hide those entirely.
-                if matches!(tool_call.status, ToolCallStatus::Canceled) {
-                    let has_visible_content =
-                        tool_call.content.iter().any(|content| match content {
-                            ToolCallContent::ContentBlock(block) => block.visible_content(cx),
-                            ToolCallContent::Diff(_) | ToolCallContent::Terminal(_) => true,
-                        });
-                    if !has_visible_content {
-                        return Empty.into_any();
-                    }
                 }
 
                 let tool_call = self.render_any_tool_call(
@@ -6630,6 +6616,8 @@ impl ThreadView {
         } else {
             primary
         };
+
+        let primary = self.apply_tool_call_grouping(entry_ix, entry, primary, cx);
 
         let thread = self.thread.clone();
 
@@ -6813,6 +6801,86 @@ impl ThreadView {
         }
 
         tool_call.raw_input.is_some() || !tool_call.content.is_empty()
+    }
+
+    fn should_render_standalone_tool_call(&self, tool_call: &ToolCall, cx: &Context<Self>) -> bool {
+        if !self.should_render_tool_call_event(tool_call, cx) {
+            return false;
+        }
+
+        // A canceled tool call that produced visible output is still worth
+        // showing, but one that was canceled before producing anything just
+        // renders as a useless "Canceled" card.
+        if matches!(tool_call.status, ToolCallStatus::Canceled) {
+            return tool_call.content.iter().any(|content| match content {
+                ToolCallContent::ContentBlock(block) => block.visible_content(cx),
+                ToolCallContent::Diff(_) | ToolCallContent::Terminal(_) => true,
+            });
+        }
+
+        true
+    }
+
+    fn apply_tool_call_grouping(
+        &self,
+        entry_ix: usize,
+        entry: &AgentThreadEntry,
+        element: AnyElement,
+        cx: &Context<Self>,
+    ) -> AnyElement {
+        if !CanvasAgentUiSettings::get_global(cx).group_tool_calls
+            || !matches!(entry, AgentThreadEntry::ToolCall(_))
+        {
+            return element;
+        }
+
+        let entries = self.thread.read(cx).entries();
+        let has_previous_tool_call = entry_ix
+            .checked_sub(1)
+            .and_then(|index| entries.get(index))
+            .is_some_and(|entry| self.is_groupable_tool_call_entry(entry, cx));
+        let has_next_tool_call = entries
+            .get(entry_ix + 1)
+            .is_some_and(|entry| self.is_groupable_tool_call_entry(entry, cx));
+
+        if !has_previous_tool_call && !has_next_tool_call {
+            return element;
+        }
+
+        let line_top = if has_previous_tool_call {
+            rems(0.)
+        } else {
+            rems_from_px(12.)
+        };
+        let line_bottom = if has_next_tool_call {
+            rems(0.)
+        } else {
+            rems_from_px(12.)
+        };
+
+        div()
+            .relative()
+            .w_full()
+            .pl_3()
+            .child(
+                div()
+                    .absolute()
+                    .left(rems_from_px(10.))
+                    .top(line_top)
+                    .bottom(line_bottom)
+                    .w_px()
+                    .bg(cx.theme().colors().border.opacity(0.65)),
+            )
+            .child(element)
+            .into_any_element()
+    }
+
+    fn is_groupable_tool_call_entry(&self, entry: &AgentThreadEntry, cx: &Context<Self>) -> bool {
+        if let AgentThreadEntry::ToolCall(tool_call) = entry {
+            self.should_render_standalone_tool_call(tool_call, cx)
+        } else {
+            false
+        }
     }
 
     fn should_keep_permission_details_expanded(
