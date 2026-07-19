@@ -39,7 +39,7 @@ use project::{
 use remote::RemoteConnectionOptions;
 use settings::{Settings as _, SettingsStore};
 
-use sidebar_chrome_settings::SidebarChromeSettings;
+use sidebar_chrome_settings::{SidebarChromeSettings, WorkspaceBarSettings};
 use std::any::TypeId;
 use std::sync::Arc;
 use std::time::Duration;
@@ -238,6 +238,7 @@ pub fn init(cx: &mut App) {
 /// whether AI is currently disabled.
 fn update_layout_action_filter(cx: &mut App) {
     let disable_ai = project::DisableAiSettings::get_global(cx).disable_ai;
+    let show_layout = WorkspaceBarSettings::get_global(cx).show_layout;
     let layout_actions = [
         TypeId::of::<UseClassicLayout>(),
         TypeId::of::<UseAgenticLayout>(),
@@ -253,7 +254,7 @@ fn update_layout_action_filter(cx: &mut App) {
         TypeId::of::<CycleCanvasLayout>(),
     ];
     CommandPaletteFilter::update_global(cx, |filter, _| {
-        if disable_ai {
+        if disable_ai || !show_layout {
             filter.hide_action_types(&layout_actions);
         } else {
             filter.show_action_types(layout_actions.iter());
@@ -1310,6 +1311,7 @@ impl SidebarChrome {
             .collect();
 
         let show_user_picture = SidebarChromeSettings::get_global(cx).show_user_picture;
+        let show_layout = WorkspaceBarSettings::get_global(cx).show_layout;
 
         let trigger = if is_signed_in && show_user_picture {
             let avatar = user_avatar.map(|avatar| Avatar::new(avatar)).map(|avatar| {
@@ -1467,7 +1469,7 @@ impl SidebarChrome {
                         "Extensions",
                         zed_actions::Extensions::default().boxed_clone(),
                     )
-                    .when(ai_enabled, |menu| {
+                    .when(ai_enabled && show_layout, |menu| {
                         menu.separator()
                             .submenu("Panel Layout", move |menu, _window, _cx| {
                                 menu.toggleable_entry(

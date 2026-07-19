@@ -14,6 +14,12 @@ pub struct SidebarChromeSettings {
     pub button_layout: Option<WindowButtonLayout>,
 }
 
+#[derive(Copy, Clone, Debug, RegisterSetting)]
+pub struct WorkspaceBarSettings {
+    pub show_layout: bool,
+    pub show_agent_attention: bool,
+}
+
 impl Settings for SidebarChromeSettings {
     fn from_settings(s: &SettingsContent) -> Self {
         let content = s.sidebar.clone().unwrap();
@@ -27,6 +33,16 @@ impl Settings for SidebarChromeSettings {
             show_user_menu: content.show_user_menu.unwrap(),
             show_menus: content.show_menus.unwrap(),
             button_layout: content.button_layout.unwrap_or_default().into_layout(),
+        }
+    }
+}
+
+impl Settings for WorkspaceBarSettings {
+    fn from_settings(s: &SettingsContent) -> Self {
+        let content = s.workspace_bar.clone().unwrap();
+        WorkspaceBarSettings {
+            show_layout: content.show_layout.unwrap(),
+            show_agent_attention: content.show_agent_attention.unwrap(),
         }
     }
 }

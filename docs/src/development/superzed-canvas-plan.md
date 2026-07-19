@@ -45,6 +45,8 @@ Implemented in this phase:
 - Added additional named Canvas recipe actions for Main + Stack, Main Top,
   Golden Split, Code/Run/Observe, Agent Operations Center, and Four-Agent
   Matrix.
+- `workspace_bar.show_layout` now controls whether Canvas layout commands show
+  in the Command Palette and Panel Layout chrome.
 
 ## Ground truth {#ground-truth}
 
