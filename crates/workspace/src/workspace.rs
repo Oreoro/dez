@@ -450,9 +450,38 @@ struct CanvasSavedPaneId {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+struct CanvasSavedTabProjectPath {
+    worktree_id: u64,
+    path: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+struct CanvasSavedTabSnapshot {
+    title: String,
+    #[serde(default)]
+    serialized_item_kind: Option<String>,
+    #[serde(default)]
+    item_id: Option<u64>,
+    #[serde(default)]
+    active: bool,
+    #[serde(default)]
+    preview: bool,
+    #[serde(default)]
+    dirty: bool,
+    #[serde(default)]
+    project_path: Option<CanvasSavedTabProjectPath>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct CanvasSavedPaneSnapshot {
     pane: CanvasSavedPaneId,
     visible: bool,
+    #[serde(default)]
+    active_tab_index: Option<usize>,
+    #[serde(default)]
+    pinned_count: usize,
+    #[serde(default)]
+    tabs: Vec<CanvasSavedTabSnapshot>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -5220,9 +5249,47 @@ impl Workspace {
                 active_pane = Some(pane_id);
             }
 
+            let active_item_id = pane_state.active_item().map(|item| item.item_id());
+            let preview_item_id = pane_state.preview_item_id();
+            let tabs = pane_state
+                .items()
+                .map(|item| {
+                    let serializable_item = item.to_serializable_item_handle(cx);
+                    let (serialized_item_kind, item_id) =
+                        if let Some(serializable_item) = serializable_item.as_ref() {
+                            (
+                                Some(serializable_item.serialized_item_kind().to_string()),
+                                Some(serializable_item.item_id().as_u64()),
+                            )
+                        } else {
+                            (None, None)
+                        };
+                    let project_path =
+                        item.project_path(cx)
+                            .map(|project_path| CanvasSavedTabProjectPath {
+                                worktree_id: project_path.worktree_id.to_proto(),
+                                path: project_path.path.as_unix_str().to_string(),
+                            });
+
+                    CanvasSavedTabSnapshot {
+                        title: item.tab_content_text(0, cx).to_string(),
+                        serialized_item_kind,
+                        item_id,
+                        active: active_item_id == Some(item.item_id()),
+                        preview: preview_item_id == Some(item.item_id()),
+                        dirty: item.is_dirty(cx),
+                        project_path,
+                    }
+                })
+                .collect();
+
             panes.push(CanvasSavedPaneSnapshot {
                 pane: pane_id,
                 visible: pane_state.is_visible(),
+                active_tab_index: (pane_state.items_len() > 0)
+                    .then(|| pane_state.active_item_index()),
+                pinned_count: pane_state.pinned_count(),
+                tabs,
             });
         }
 
@@ -13254,6 +13321,86 @@ mod tests {
         item1.read_with(cx, |item, _| assert_eq!(item.tab_detail.get(), Some(1)));
         item2.read_with(cx, |item, _| assert_eq!(item.tab_detail.get(), Some(3)));
         item3.read_with(cx, |item, _| assert_eq!(item.tab_detail.get(), Some(3)));
+    }
+
+    #[gpui::test]
+    async fn test_canvas_saved_layout_snapshots_include_tab_metadata(cx: &mut TestAppContext) {
+        init_test(cx);
+
+        cx.update(|cx| {
+            register_serializable_item::<TestItem>(cx);
+        });
+
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        let item1 = cx.new(|cx| {
+            let mut item = TestItem::new(cx)
+                .with_dirty(true)
+                .with_project_items(&[TestProjectItem::new(1, "agent.md", cx)]);
+            item.tab_descriptions = Some(vec!["agent.md"]);
+            item
+        });
+        let item2 = cx.new(|cx| {
+            let mut item =
+                TestItem::new(cx).with_project_items(&[TestProjectItem::new(2, "terminal.rs", cx)]);
+            item.tab_descriptions = Some(vec!["terminal.rs"]);
+            item
+        });
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            workspace.add_item_to_active_pane(Box::new(item1.clone()), None, true, window, cx);
+            workspace.add_item_to_active_pane(Box::new(item2.clone()), None, true, window, cx);
+            workspace
+                .active_pane()
+                .update(cx, |pane, _| pane.set_pinned_count(1));
+        });
+
+        let snapshot = workspace.read_with(cx, |workspace, cx| {
+            workspace
+                .current_canvas_saved_layout_snapshot(cx)
+                .expect("workspace should have a saved layout snapshot")
+        });
+        let pane = snapshot
+            .panes
+            .iter()
+            .find(|pane| pane.pane.kind == CanvasSavedPaneKind::Tabs)
+            .expect("snapshot should include the tabbed pane");
+
+        assert_eq!(pane.active_tab_index, Some(1));
+        assert_eq!(pane.pinned_count, 1);
+        assert_eq!(pane.tabs.len(), 2);
+        assert_eq!(pane.tabs[0].title.as_str(), "agent.md");
+        assert_eq!(
+            pane.tabs[0].serialized_item_kind.as_deref(),
+            Some("TestItem")
+        );
+        assert_eq!(pane.tabs[0].item_id, Some(item1.entity_id().as_u64()));
+        assert!(!pane.tabs[0].active);
+        assert!(pane.tabs[0].dirty);
+        assert_eq!(
+            pane.tabs[0].project_path.as_ref(),
+            Some(&CanvasSavedTabProjectPath {
+                worktree_id: 0,
+                path: "agent.md".to_string(),
+            })
+        );
+        assert_eq!(pane.tabs[1].title.as_str(), "terminal.rs");
+        assert_eq!(
+            pane.tabs[1].serialized_item_kind.as_deref(),
+            Some("TestItem")
+        );
+        assert_eq!(pane.tabs[1].item_id, Some(item2.entity_id().as_u64()));
+        assert!(pane.tabs[1].active);
+        assert!(!pane.tabs[1].dirty);
+
+        let mut saved_layouts = std::collections::BTreeMap::new();
+        saved_layouts.insert("slot-1".to_string(), snapshot.clone());
+        let restored =
+            canvas_saved_layouts_from_persisted(canvas_saved_layouts_to_persisted(&saved_layouts));
+        assert_eq!(restored.get("slot-1"), Some(&snapshot));
     }
 
     #[gpui::test]

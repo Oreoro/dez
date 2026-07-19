@@ -281,9 +281,9 @@ Use the existing panel-as-pane bridge as the migration path:
   metadata restores recognized recipe identity across restart, and the Panel
   Layout menu checks the active recipe entry while the window is in Canvas mode.
   Three durable saved-layout slots are available now; each saved snapshot stores
-  a derived display label shown by the Panel Layout restore actions. Free-form
-  user-authored layout names and tab-role/process restoration metadata remain
-  future work.
+  a derived display label shown by the Panel Layout restore actions plus
+  tab-role metadata for restore planning. Free-form user-authored layout names
+  and process restoration metadata remain future work.
 - Manual structural layout changes now clear the active Canvas recipe identity
   so the Panel Layout menu reports `Custom Canvas Layout` after pane splits,
   pane moves, pane joins, pane removal, pane-size changes, or explicit
@@ -333,8 +333,10 @@ Implementation order:
 3. Add durable layout metadata separately from process lifetime so restart
    restore can recreate layout intent without claiming processes are alive.
    Active recipe identity and three fixed saved layout slots now persist as
-   workspace metadata, including derived saved-layout display labels; free-form
-   saved layout naming remains future work.
+   workspace metadata, including derived saved-layout display labels plus tab
+   title, serializable item kind/id, active, preview, dirty, pinned, and
+   project-path metadata for restore planning; free-form saved layout naming
+   remains future work.
 4. Add resize-driven `auto_reflow` using semantic recipe variants rather than
    raw pixel snapshots. Initial recipe-application reflow and resize-triggered
    root-orientation reflow for active recipes are implemented. First ultrawide
@@ -345,8 +347,9 @@ Implementation order:
 5. Add UI for named saved layouts and layout history once the underlying
    metadata is stable. Three fixed durable saved-layout slots are implemented
    in the Panel Layout menu with derived restore labels, and manual structural
-   changes mark the active recipe as custom. Free-form naming, tab-role
-   metadata, and process restoration intent remain future work.
+   changes mark the active recipe as custom. Tab-role metadata is captured in
+   saved slots, while free-form naming and process restoration intent remain
+   future work.
 
 ## Session Rail {#session-rail}
 

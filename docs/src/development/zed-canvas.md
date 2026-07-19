@@ -257,9 +257,10 @@ Rules:
   intent by pane kind and occurrence order, and the matching restore action
   applies that snapshot to panes that still exist. Saved snapshots now include
   a display label derived from the active Canvas recipe or `Custom Canvas
-  Layout`, and the Panel Layout menu shows that label on restore actions. This
-  does not yet support free-form user-authored naming or recreate closed
-  items/processes.
+  Layout`, tab titles, serializable item kind/id when available, tab active,
+  preview, dirty, pinned, and project-path metadata, and the Panel Layout menu
+  shows the derived label on restore actions. This does not yet support
+  free-form user-authored naming or recreate closed items/processes.
 - Manual structural layout changes clear the active recipe identity and show
   `Custom Canvas Layout` in the Panel Layout menu while keeping the pane tree
   and tabs intact.
@@ -285,9 +286,10 @@ Implementation boundary:
   They must not spawn agents, terminals, browsers, or external processes.
 - Saved-layout support currently provides three fixed durable slots with
   derived display labels, not free-form multi-name layout management.
-- Proper persisted layouts still need semantic snapshots containing pane tree,
-  tab identities, process restoration metadata, and user-authored layout naming
-  data.
+- Proper persisted layouts still need pane tree shape, process restoration
+  metadata, and user-authored layout naming data. Saved layout slots now capture
+  tab identity metadata for restore planning, but do not yet use it to reopen
+  closed tabs.
 - Process lifetime stays separate from tab lifetime so closing a tab is not
   silently treated as killing or resuming a process.
 
