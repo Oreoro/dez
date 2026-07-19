@@ -4013,6 +4013,7 @@ impl Window {
                 self.next_frame.scene.insert_primitive(Quad {
                     content_mask: ContentMask {
                         bounds: content_mask_bounds,
+                        corner_radii: quad.content_mask.corner_radii,
                     },
                     ..quad
                 });
