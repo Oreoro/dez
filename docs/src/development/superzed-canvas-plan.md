@@ -324,12 +324,11 @@ Use the existing panel-as-pane bridge as the migration path:
   serializable, live-only, pinned, and dirty tabs. The manager and Panel Layout
   menu can also clear all saved Canvas layouts after a warning confirmation.
   Saved-layout JSON can be copied to the clipboard for manual export and
-  imported back as a non-overwriting merge.
+  imported back with a choice to skip or replace conflicts.
   `workspace::RenameSavedCanvasLayoutSlot`,
   `workspace::SaveCurrentCanvasLayoutAs`, and
   `workspace::ManageSavedCanvasLayouts` provide the text-entry and manager
-  surfaces. Overwrite/conflict import workflows and live process/session
-  restoration remain future work.
+  surfaces. Live process/session restoration remains future work.
 - Manual structural layout changes now clear the active Canvas recipe identity
   so the Panel Layout menu reports `Custom Canvas Layout` after pane splits,
   pane moves, pane joins, pane removal, pane-size changes, or explicit
@@ -391,8 +390,8 @@ Implementation order:
    saved center panes still exist. User-authored fixed-slot labels,
    free-form named layouts, and a saved-layout manager with save-to-slot
    controls plus restore metadata, duplication, and confirmation-backed
-   clear-all plus copy-to-clipboard JSON export/import are available;
-   overwrite/conflict import workflows remain future work.
+   clear-all plus copy-to-clipboard JSON export/import with conflict handling
+   are available.
 4. Add resize-driven `auto_reflow` using semantic recipe variants rather than
    raw pixel snapshots. Initial recipe-application reflow and resize-triggered
    root-orientation reflow for active recipes are implemented. First ultrawide
@@ -410,8 +409,7 @@ Implementation order:
    project-path-backed and serializable tabs now reopen during restore, and
    built-in fixed-slot plus free-form named-layout UI and an inspectable
    save/restore manager with duplication, clear-all, and JSON export/import are
-   implemented, while overwrite/conflict import workflows and actual process
-   restoration remain future work.
+   implemented, while actual process restoration remains future work.
 
 ## Session Rail {#session-rail}
 

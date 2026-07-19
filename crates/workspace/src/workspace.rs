@@ -4059,9 +4059,7 @@ impl Workspace {
                 skipped_count += 1;
                 continue;
             };
-            if self.saved_canvas_layouts.contains_key(&layout_name)
-                || pending_imports.contains_key(&layout_name)
-            {
+            if pending_imports.contains_key(&layout_name) {
                 skipped_count += 1;
                 continue;
             }
@@ -4082,42 +4080,87 @@ impl Workspace {
         }
 
         let import_count = pending_imports.len();
-        let detail = format!(
-            "This imports {import_count} saved Canvas {}. Existing layouts are not overwritten. {skipped_count} {} skipped.",
-            if import_count == 1 {
-                "layout"
-            } else {
-                "layouts"
-            },
-            if skipped_count == 1 {
-                "layout was"
-            } else {
-                "layouts were"
-            },
-        );
-        let prompt = window.prompt(
-            PromptLevel::Warning,
-            "Import saved Canvas layouts from clipboard?",
-            Some(&detail),
-            &["Import", "Cancel"],
-            cx,
-        );
+        let conflicting_count = pending_imports
+            .keys()
+            .filter(|name| self.saved_canvas_layouts.contains_key(*name))
+            .count();
+        let new_count = import_count.saturating_sub(conflicting_count);
+        let detail = if conflicting_count > 0 {
+            format!(
+                "Clipboard contains {import_count} saved Canvas {}: {new_count} new, {conflicting_count} already saved. {skipped_count} {} skipped.",
+                if import_count == 1 {
+                    "layout"
+                } else {
+                    "layouts"
+                },
+                if skipped_count == 1 {
+                    "layout was"
+                } else {
+                    "layouts were"
+                },
+            )
+        } else {
+            format!(
+                "This imports {import_count} saved Canvas {}. {skipped_count} {} skipped.",
+                if import_count == 1 {
+                    "layout"
+                } else {
+                    "layouts"
+                },
+                if skipped_count == 1 {
+                    "layout was"
+                } else {
+                    "layouts were"
+                },
+            )
+        };
+        let prompt = if conflicting_count > 0 {
+            window.prompt(
+                PromptLevel::Warning,
+                "Import saved Canvas layouts from clipboard?",
+                Some(&detail),
+                &["Import New Only", "Import and Replace", "Cancel"],
+                cx,
+            )
+        } else {
+            window.prompt(
+                PromptLevel::Warning,
+                "Import saved Canvas layouts from clipboard?",
+                Some(&detail),
+                &["Import", "Cancel"],
+                cx,
+            )
+        };
 
         cx.spawn_in(window, async move |workspace, cx| -> Result<()> {
-            if prompt.await.log_err() != Some(0) {
+            let answer = prompt.await.log_err();
+            let replace_existing = if conflicting_count > 0 {
+                match answer {
+                    Some(0) => false,
+                    Some(1) => true,
+                    _ => return Ok(()),
+                }
+            } else if answer == Some(0) {
+                false
+            } else {
                 return Ok(());
-            }
+            };
 
             workspace.update_in(cx, |workspace, window, cx| {
                 let mut imported_count = 0;
+                let mut replaced_count = 0;
                 let mut skipped_count = skipped_count;
                 for (name, snapshot) in pending_imports {
-                    if workspace.saved_canvas_layouts.contains_key(&name) {
+                    let replacing_existing = workspace.saved_canvas_layouts.contains_key(&name);
+                    if replacing_existing && !replace_existing {
                         skipped_count += 1;
                         continue;
                     }
                     workspace.saved_canvas_layouts.insert(name, snapshot);
                     imported_count += 1;
+                    if replacing_existing {
+                        replaced_count += 1;
+                    }
                 }
 
                 struct CanvasSavedLayoutsImportToast;
@@ -4135,11 +4178,16 @@ impl Workspace {
 
                 workspace.serialize_workspace(window, cx);
                 let message = format!(
-                    "Imported {imported_count} saved Canvas {}{}",
+                    "Imported {imported_count} saved Canvas {}{}{}",
                     if imported_count == 1 {
                         "layout"
                     } else {
                         "layouts"
+                    },
+                    if replaced_count == 0 {
+                        String::new()
+                    } else {
+                        format!(" ({replaced_count} replaced)")
                     },
                     if skipped_count == 0 {
                         String::new()
