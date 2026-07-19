@@ -120,6 +120,28 @@ pub struct PaneGridResponsiveProfileOverride {
 }
 
 #[derive(Clone, Debug, RegisterSetting)]
+pub struct DesignSystemSettings {
+    pub family: String,
+    pub density: settings::CanvasDensity,
+    pub radius: settings::CanvasRadius,
+    pub motion: settings::CanvasMotion,
+    pub contrast: settings::CanvasContrast,
+    pub content_width: settings::CanvasContentWidth,
+    pub icon_style: settings::CanvasIconStyle,
+    pub show_labels: settings::CanvasLabelVisibility,
+}
+
+impl DesignSystemSettings {
+    pub fn is_high_contrast(&self) -> bool {
+        self.contrast == settings::CanvasContrast::High
+    }
+
+    pub fn is_low_contrast(&self) -> bool {
+        self.contrast == settings::CanvasContrast::Low
+    }
+}
+
+#[derive(Clone, Debug, RegisterSetting)]
 pub struct PaneGridSettings {
     pub auto_reflow: bool,
     pub layout_history: bool,
@@ -296,6 +318,22 @@ impl Settings for SidebarSettings {
             starts_open: sidebar.starts_open.unwrap() || session_rail_always_open,
             always_open: session_rail_always_open,
             show_project_pane_button: sidebar.show_project_pane_button.unwrap(),
+        }
+    }
+}
+
+impl Settings for DesignSystemSettings {
+    fn from_settings(content: &settings::SettingsContent) -> Self {
+        let design_system = content.design_system.clone().unwrap();
+        Self {
+            family: design_system.family.clone().unwrap(),
+            density: design_system.density.unwrap(),
+            radius: design_system.radius.unwrap(),
+            motion: design_system.motion.unwrap(),
+            contrast: design_system.contrast.unwrap(),
+            content_width: design_system.content_width.unwrap(),
+            icon_style: design_system.icon_style.unwrap(),
+            show_labels: design_system.show_labels.unwrap(),
         }
     }
 }

@@ -456,6 +456,13 @@ discovery rows for the active prefix command set, and the title bar shows a
 prefix sequences. Prefix strings use Zed keymap keystroke syntax; invalid or
 empty prefix strings do not install generated prefix bindings.
 
+The `design_system` settings family is now available to runtime UI code. The
+first Canvas consumer is the prefix indicator: `density` changes its height,
+spacing, and label size; `radius` chooses square/subtle/rounded corners; and
+`contrast` adjusts border and background strength. Remaining Canvas surfaces
+should consume the same runtime settings rather than duplicating hard-coded
+visual constants.
+
 ## Layout system {#layout-system}
 
 Built-in named layouts should include:

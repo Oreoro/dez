@@ -15,6 +15,9 @@ Implemented in this phase:
 - Added Canvas settings families:
   `design_system`, `workspace_bar`, `session_rail`, `pane_grid`, `agent_ui`,
   `multiplexer`, and `accessibility`.
+- Added the first runtime reader for `design_system` and applied density,
+  radius, and contrast to the Canvas prefix indicator so the design-system
+  defaults are executable UI behavior, not only schema.
 - Added the Canvas layout action that syncs dock panels into regular pane tabs
   and closes legacy dock chrome.
 - Canvas recipes and pane-grid application now close legacy dock chrome through
@@ -192,6 +195,14 @@ Apply Lumin carefully:
 - Preserve strong enough focus, attention, diagnostic, Git, and security state.
 - Use semantic tokens for permanent colors.
 - Keep high-contrast and reduced-motion modes first-class.
+
+Runtime design-system state now exposes `family`, `density`, `radius`,
+`motion`, `contrast`, `content_width`, `icon_style`, and `show_labels`.
+The first consumer is the Canvas prefix indicator: compact/balanced/spacious
+density changes chip height and spacing, radius controls corner treatment, and
+contrast adjusts border/background strength. Broader rollout should apply the
+same runtime model to Session Rail rows, pane tabs, layout menus, agent
+surfaces, Markdown sheets, and command surfaces.
 
 ## Pane-first workspace {#pane-first-workspace}
 

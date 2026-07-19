@@ -54,7 +54,7 @@ use util::ResultExt;
 use workspace::{
     AccessibleMode, ActivatePaneDown, ActivatePaneLeft, ActivatePaneRight, ActivatePaneUp,
     ClearAllSavedCanvasLayouts, ClearSavedCanvasLayoutNamed, ClearSavedCanvasLayoutSlot,
-    CopySavedCanvasLayoutsToClipboard, DuplicateSavedCanvasLayoutNamed,
+    CopySavedCanvasLayoutsToClipboard, DesignSystemSettings, DuplicateSavedCanvasLayoutNamed,
     DuplicateSavedCanvasLayoutSlot, ImportSavedCanvasLayoutsFromClipboard,
     ManageSavedCanvasLayouts, MovePaneDown, MovePaneLeft, MovePaneRight, MovePaneUp,
     MultiWorkspace, MultiplexerSettings, RenameSavedCanvasLayoutNamed, RenameSavedCanvasLayoutSlot,
@@ -1573,23 +1573,76 @@ impl SidebarChrome {
             return None;
         }
 
+        let design_system = DesignSystemSettings::get_global(cx);
+        let label_size = if design_system.density == settings::CanvasDensity::Spacious {
+            LabelSize::Small
+        } else {
+            LabelSize::XSmall
+        };
+        let background_opacity = if design_system.is_high_contrast() {
+            0.55
+        } else if design_system.is_low_contrast() {
+            0.24
+        } else {
+            0.35
+        };
+        let border_color = if design_system.is_low_contrast() {
+            cx.theme().colors().border_variant
+        } else {
+            cx.theme().colors().border_focused
+        };
+        let density_label = match design_system.density {
+            settings::CanvasDensity::Compact => "compact",
+            settings::CanvasDensity::Balanced => "balanced",
+            settings::CanvasDensity::Spacious => "spacious",
+        };
+        let radius_label = match design_system.radius {
+            settings::CanvasRadius::None => "square",
+            settings::CanvasRadius::Subtle => "subtle radius",
+            settings::CanvasRadius::Rounded => "rounded",
+        };
+        let contrast_label = match design_system.contrast {
+            settings::CanvasContrast::Low => "low contrast",
+            settings::CanvasContrast::Standard => "standard contrast",
+            settings::CanvasContrast::High => "high contrast",
+        };
+
         Some(
             h_flex()
                 .id("canvas-prefix-indicator")
-                .h_5()
-                .gap_1()
-                .px_1p5()
-                .rounded_sm()
+                .when(
+                    design_system.density == settings::CanvasDensity::Compact,
+                    |this| this.h_4().gap_0p5().px_1(),
+                )
+                .when(
+                    design_system.density == settings::CanvasDensity::Balanced,
+                    |this| this.h_5().gap_1().px_1p5(),
+                )
+                .when(
+                    design_system.density == settings::CanvasDensity::Spacious,
+                    |this| this.h_6().gap_1p5().px_2(),
+                )
+                .when(
+                    design_system.radius == settings::CanvasRadius::Subtle,
+                    |this| this.rounded_sm(),
+                )
+                .when(
+                    design_system.radius == settings::CanvasRadius::Rounded,
+                    |this| this.rounded_lg(),
+                )
                 .border_1()
-                .border_color(cx.theme().colors().border_focused)
-                .bg(cx.theme().colors().element_active.opacity(0.35))
+                .border_color(border_color)
+                .bg(cx.theme().colors().element_active.opacity(background_opacity))
                 .child(Indicator::dot().color(Color::Accent))
                 .child(
                     Label::new(format!("PREFIX {}", multiplexer_settings.prefix))
-                        .size(LabelSize::XSmall)
+                        .size(label_size)
                         .color(Color::Accent),
                 )
-                .tooltip(Tooltip::text("Prefix mode is awaiting the next key"))
+                .tooltip(Tooltip::text(format!(
+                    "Prefix mode is awaiting the next key · {} · {density_label} · {radius_label} · {contrast_label}",
+                    design_system.family
+                )))
                 .into_any_element(),
         )
     }

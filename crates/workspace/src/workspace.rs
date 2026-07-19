@@ -160,10 +160,10 @@ use util::{
 };
 use uuid::Uuid;
 pub use workspace_settings::{
-    AccessibleMode, AutosaveSetting, EncodingDisplayOptions, FocusFollowsMouse,
-    MultiplexerSettings, PaneGridResponsiveProfile, PaneGridSettings, RestoreOnStartupBehavior,
-    SidebarSettings, StatusBarSettings, TabBarSettings, ToolbarSettings, WorkspaceSettings,
-    observe_accessible_mode,
+    AccessibleMode, AutosaveSetting, DesignSystemSettings, EncodingDisplayOptions,
+    FocusFollowsMouse, MultiplexerSettings, PaneGridResponsiveProfile, PaneGridSettings,
+    RestoreOnStartupBehavior, SidebarSettings, StatusBarSettings, TabBarSettings, ToolbarSettings,
+    WorkspaceSettings, observe_accessible_mode,
 };
 use zed_actions::{Spawn, feedback::FileBugReport, theme::ToggleMode};
 
