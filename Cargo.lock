@@ -16846,6 +16846,7 @@ dependencies = [
  "agent",
  "agent_settings",
  "agent_skills",
+ "agent_ui",
  "anyhow",
  "audio",
  "client",

@@ -33,7 +33,7 @@ For the model-access paths and provider-specific setup, see [LLM Providers](./ll
 
 ## Feature-Specific Settings {#feature-specific-settings}
 
-Some Zed AI features have their own model or prompt settings in `settings.json`, including:
+Some Zed AI features have their own model or prompt settings, including:
 
 - `agent.inline_assistant_model`
 - `agent.commit_message_model`
@@ -41,6 +41,8 @@ Some Zed AI features have their own model or prompt settings in `settings.json`,
 - `agent.subagent_model`
 - `agent.commit_message_instructions`
 - `agent.inline_alternatives`
+
+Most are configured in `settings.json`. The default subagent model is also available in the Settings Editor under **AI → Agent Configuration**; models with multiple reasoning-effort levels show an effort picker there. Reset the model to use the parent thread's model.
 
 Use `agent.commit_message_instructions` for instructions that apply only to generated Git commit messages:
 
