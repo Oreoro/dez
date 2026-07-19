@@ -58,6 +58,8 @@ Implemented in this phase:
   Matrix, Remote Operations, Pair Programming, Incident Response, and Portrait
   Display. These recipes create or reuse pane geometry only; they do not spawn
   agents, terminals, browsers, or external processes.
+- Added direct `Canvas: Even Columns` and `Canvas: Even Rows` layout actions so
+  the default cycle recipes are also selectable without cycling.
 - `workspace_bar.show_layout` now controls whether Canvas layout commands show
   in the Command Palette and Panel Layout chrome.
 - `workspace_bar.show_agent_attention` now controls workspace-level attention
@@ -495,8 +497,8 @@ recipe slices now implement `Full Canvas`, `Agent Control`, `Focus Editor`,
 `Review`, `Debug`, `Documentation Studio`, `Browser Development`,
 `Agent Operations Center`, `Four-Agent Matrix`, `Six-Agent Supervisor`,
 `Worktree Matrix`, `Remote Operations`, `Pair Programming`,
-`Incident Response`, `Portrait Display`, and `Cycle Canvas Layout` against the
-existing pane/panel bridge.
+`Incident Response`, `Portrait Display`, `Even Columns`, `Even Rows`, and
+`Cycle Canvas Layout` against the existing pane/panel bridge.
 `Cycle Canvas Layout` reads `multiplexer.layout_cycle` so users can choose the
 order of named recipes without changing keybindings.
 

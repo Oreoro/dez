@@ -5190,32 +5190,30 @@ impl Workspace {
                 self.apply_canvas_portrait_display_layout(window, cx)
             }
             Some(CanvasLayoutRecipe::EvenColumns) => {
-                let panes = self.prepare_canvas_recipe(
-                    false,
-                    false,
-                    3,
-                    &[SplitDirection::Right],
-                    window,
-                    cx,
-                );
-                self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-                self.finish_canvas_recipe(Some(CanvasLayoutRecipe::EvenColumns), window, cx);
+                self.apply_canvas_even_columns_layout(window, cx)
             }
-            Some(CanvasLayoutRecipe::EvenRows) => {
-                let panes = self.prepare_canvas_recipe(
-                    false,
-                    false,
-                    3,
-                    &[SplitDirection::Down],
-                    window,
-                    cx,
-                );
-                self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-                self.finish_canvas_recipe(Some(CanvasLayoutRecipe::EvenRows), window, cx);
-            }
+            Some(CanvasLayoutRecipe::EvenRows) => self.apply_canvas_even_rows_layout(window, cx),
             None => return false,
         }
         true
+    }
+
+    pub fn apply_canvas_even_columns_layout(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let panes =
+            self.prepare_canvas_recipe(false, false, 3, &[SplitDirection::Right], window, cx);
+        self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::EvenColumns), window, cx);
+    }
+
+    pub fn apply_canvas_even_rows_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let panes =
+            self.prepare_canvas_recipe(false, false, 3, &[SplitDirection::Down], window, cx);
+        self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::EvenRows), window, cx);
     }
 
     pub fn apply_canvas_main_stack_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {

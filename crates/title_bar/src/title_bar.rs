@@ -90,6 +90,10 @@ actions!(
         ApplyCanvasAgentControlLayout,
         /// Applies the Canvas focus-editor layout and hides panel panes.
         ApplyCanvasEditorFocusLayout,
+        /// Applies the Canvas even-columns layout.
+        ApplyCanvasEvenColumnsLayout,
+        /// Applies the Canvas even-rows layout.
+        ApplyCanvasEvenRowsLayout,
         /// Applies the Canvas main-and-stack editor layout.
         ApplyCanvasMainStackLayout,
         /// Applies the Canvas main-top editor layout.
@@ -163,6 +167,16 @@ pub fn init(cx: &mut App) {
         workspace.register_action(|workspace, _: &ApplyCanvasEditorFocusLayout, window, cx| {
             set_window_layout(WindowLayout::Agent(None), cx);
             workspace.apply_canvas_editor_focus_layout(window, cx);
+        });
+
+        workspace.register_action(|workspace, _: &ApplyCanvasEvenColumnsLayout, window, cx| {
+            set_window_layout(WindowLayout::Agent(None), cx);
+            workspace.apply_canvas_even_columns_layout(window, cx);
+        });
+
+        workspace.register_action(|workspace, _: &ApplyCanvasEvenRowsLayout, window, cx| {
+            set_window_layout(WindowLayout::Agent(None), cx);
+            workspace.apply_canvas_even_rows_layout(window, cx);
         });
 
         workspace.register_action(|workspace, _: &ApplyCanvasMainStackLayout, window, cx| {
@@ -338,6 +352,8 @@ fn update_layout_action_filter(cx: &mut App) {
         TypeId::of::<ApplyCanvasFullLayout>(),
         TypeId::of::<ApplyCanvasAgentControlLayout>(),
         TypeId::of::<ApplyCanvasEditorFocusLayout>(),
+        TypeId::of::<ApplyCanvasEvenColumnsLayout>(),
+        TypeId::of::<ApplyCanvasEvenRowsLayout>(),
         TypeId::of::<ApplyCanvasMainStackLayout>(),
         TypeId::of::<ApplyCanvasMainTopLayout>(),
         TypeId::of::<ApplyCanvasGoldenSplitLayout>(),
@@ -1659,6 +1675,30 @@ impl SidebarChrome {
                                     move |window, cx| {
                                         window.dispatch_action(
                                             ApplyCanvasEditorFocusLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .toggleable_entry(
+                                    "Canvas: Even Columns",
+                                    active_canvas_layout_recipe == Some("even_columns"),
+                                    IconPosition::Start,
+                                    Some(ApplyCanvasEvenColumnsLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasEvenColumnsLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .toggleable_entry(
+                                    "Canvas: Even Rows",
+                                    active_canvas_layout_recipe == Some("even_rows"),
+                                    IconPosition::Start,
+                                    Some(ApplyCanvasEvenRowsLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasEvenRowsLayout.boxed_clone(),
                                             cx,
                                         );
                                     },

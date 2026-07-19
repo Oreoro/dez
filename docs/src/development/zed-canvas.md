@@ -353,6 +353,10 @@ Saved layouts should store semantic slots, not only exact tabs. A review layout,
 for example, can accept `diff`, `editor`, `git`, `project`, `terminal`, `task`,
 or `agent` items by role.
 
+The first runtime recipe set exposes direct actions for Full, Agent Control,
+Focus Editor, Even Columns, Even Rows, and the broader geometry-only Canvas
+starter layouts, with cycling controlled separately by `multiplexer.layout_cycle`.
+
 Responsive rules:
 
 - Preserve focused pane first.
