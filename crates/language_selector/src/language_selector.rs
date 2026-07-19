@@ -10,13 +10,15 @@ use gpui::{
 };
 use language::{Buffer, LanguageMatcher, LanguageName, LanguageRegistry};
 use open_path_prompt::file_finder_settings::FileFinderSettings;
-use picker::{Picker, PickerDelegate};
+use picker::{
+    Picker, PickerDelegate, PickerSurfaceContrast, PickerSurfaceDensity, PickerSurfaceRadius,
+};
 use project::Project;
 use settings::Settings;
 use std::{ops::Not as _, path::Path, sync::Arc};
 use ui::{HighlightedLabel, ListItem, ListItemSpacing, prelude::*};
 use util::ResultExt;
-use workspace::{ModalView, Workspace};
+use workspace::{DesignSystemSettings, ModalView, Workspace};
 
 actions!(
     language_selector,
@@ -25,6 +27,30 @@ actions!(
         Toggle
     ]
 );
+
+fn picker_surface_density(cx: &App) -> PickerSurfaceDensity {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => PickerSurfaceDensity::Compact,
+        settings::CanvasDensity::Balanced => PickerSurfaceDensity::Balanced,
+        settings::CanvasDensity::Spacious => PickerSurfaceDensity::Spacious,
+    }
+}
+
+fn picker_surface_radius(cx: &App) -> PickerSurfaceRadius {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => PickerSurfaceRadius::None,
+        settings::CanvasRadius::Subtle => PickerSurfaceRadius::Subtle,
+        settings::CanvasRadius::Rounded => PickerSurfaceRadius::Rounded,
+    }
+}
+
+fn picker_surface_contrast(cx: &App) -> PickerSurfaceContrast {
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => PickerSurfaceContrast::Low,
+        settings::CanvasContrast::Standard => PickerSurfaceContrast::Standard,
+        settings::CanvasContrast::High => PickerSurfaceContrast::High,
+    }
+}
 
 pub fn init(cx: &mut App) {
     cx.observe_new(LanguageSelector::register).detach();
@@ -83,7 +109,12 @@ impl LanguageSelector {
             current_language_name,
         );
 
-        let picker = cx.new(|cx| Picker::uniform_list(delegate, window, cx));
+        let picker = cx.new(|cx| {
+            Picker::uniform_list(delegate, window, cx)
+                .surface_density(picker_surface_density(cx))
+                .surface_radius(picker_surface_radius(cx))
+                .surface_contrast(picker_surface_contrast(cx))
+        });
         Self { picker }
     }
 }

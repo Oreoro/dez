@@ -14,6 +14,8 @@ use util::ResultExt;
 use workspace::{ModalView, ui::HighlightedLabel};
 use zed_actions::{ExtensionCategoryFilter, Extensions};
 
+use super::{picker_surface_contrast, picker_surface_density, picker_surface_radius};
+
 pub(crate) struct IconThemeSelector {
     picker: Entity<Picker<IconThemeSelectorDelegate>>,
 }
@@ -45,7 +47,12 @@ impl IconThemeSelector {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let picker = cx.new(|cx| Picker::uniform_list(delegate, window, cx));
+        let picker = cx.new(|cx| {
+            Picker::uniform_list(delegate, window, cx)
+                .surface_density(picker_surface_density(cx))
+                .surface_radius(picker_surface_radius(cx))
+                .surface_contrast(picker_surface_contrast(cx))
+        });
         Self { picker }
     }
 }

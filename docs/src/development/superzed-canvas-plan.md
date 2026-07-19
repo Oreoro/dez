@@ -270,9 +270,10 @@ Current consumers:
 - Markdown sheets: preview scroll padding, readable-sheet padding, sheet radius,
   background, and border strength now read Canvas density, radius, and contrast
   when content width limiting is active.
-- Command surfaces: the command palette opts the shared picker component into
-  Canvas density, radius, and contrast for its modal shell, search input row,
-  empty state, and documentation aside.
+- Command and selector surfaces: the command palette, theme selector, icon
+  theme selector, and language selector opt the shared picker component into
+  Canvas density, radius, and contrast for modal chrome, search input rows,
+  empty states, and documentation asides where present.
 
 Broader rollout should apply the same runtime model to additional command-like
 pickers as they opt into Canvas-specific workflows.

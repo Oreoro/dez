@@ -6,7 +6,9 @@ use gpui::{
     App, Context, DismissEvent, Entity, EventEmitter, Focusable, Render, UpdateGlobal, WeakEntity,
     Window, actions,
 };
-use picker::{Picker, PickerDelegate};
+use picker::{
+    Picker, PickerDelegate, PickerSurfaceContrast, PickerSurfaceDensity, PickerSurfaceRadius,
+};
 use settings::{Settings, SettingsStore, update_settings_file};
 use std::sync::Arc;
 use theme::{Appearance, SystemAppearance, Theme, ThemeMeta, ThemeRegistry};
@@ -15,7 +17,9 @@ use theme_settings::{
 };
 use ui::{ListItem, ListItemSpacing, prelude::*, v_flex};
 use util::ResultExt;
-use workspace::{ModalView, Workspace, ui::HighlightedLabel, with_active_or_new_workspace};
+use workspace::{
+    DesignSystemSettings, ModalView, Workspace, ui::HighlightedLabel, with_active_or_new_workspace,
+};
 use zed_actions::{ExtensionCategoryFilter, Extensions};
 
 use crate::icon_theme_selector::{IconThemeSelector, IconThemeSelectorDelegate};
@@ -27,6 +31,30 @@ actions!(
         Reload
     ]
 );
+
+pub(crate) fn picker_surface_density(cx: &App) -> PickerSurfaceDensity {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => PickerSurfaceDensity::Compact,
+        settings::CanvasDensity::Balanced => PickerSurfaceDensity::Balanced,
+        settings::CanvasDensity::Spacious => PickerSurfaceDensity::Spacious,
+    }
+}
+
+pub(crate) fn picker_surface_radius(cx: &App) -> PickerSurfaceRadius {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => PickerSurfaceRadius::None,
+        settings::CanvasRadius::Subtle => PickerSurfaceRadius::Subtle,
+        settings::CanvasRadius::Rounded => PickerSurfaceRadius::Rounded,
+    }
+}
+
+pub(crate) fn picker_surface_contrast(cx: &App) -> PickerSurfaceContrast {
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => PickerSurfaceContrast::Low,
+        settings::CanvasContrast::Standard => PickerSurfaceContrast::Standard,
+        settings::CanvasContrast::High => PickerSurfaceContrast::High,
+    }
+}
 
 pub fn init(cx: &mut App) {
     cx.on_action(|action: &zed_actions::theme_selector::Toggle, cx| {
@@ -119,7 +147,12 @@ impl ThemeSelector {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let picker = cx.new(|cx| Picker::uniform_list(delegate, window, cx));
+        let picker = cx.new(|cx| {
+            Picker::uniform_list(delegate, window, cx)
+                .surface_density(picker_surface_density(cx))
+                .surface_radius(picker_surface_radius(cx))
+                .surface_contrast(picker_surface_contrast(cx))
+        });
         Self { picker }
     }
 }
