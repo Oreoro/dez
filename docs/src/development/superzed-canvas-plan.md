@@ -448,6 +448,10 @@ Current consumers:
   wrapper padding consume Canvas density, radius, and contrast.
 - Agent tool picker: context-server section header padding, tool row density,
   and separator contrast consume Canvas density and contrast.
+- Context-server configuration modal: modal shell chrome, editor card padding,
+  background, border, radius, footer rhythm, status rows, authentication rows,
+  client-secret rows, and error spacing consume Canvas density, radius, and
+  contrast.
 - Go To Line: the modal shell, input divider, help row spacing, and elevated
   navigation surface consume Canvas density, radius, and contrast.
 - Tasks UI: the task picker shell, search row, empty state, task rows,

@@ -5,8 +5,9 @@ use editor::{Editor, EditorElement, EditorStyle};
 
 use extension_host::ExtensionStore;
 use gpui::{
-    AsyncWindowContext, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, ScrollHandle,
-    Subscription, Task, TextStyle, TextStyleRefinement, UnderlineStyle, WeakEntity, prelude::*,
+    AsyncWindowContext, DismissEvent, Div, Entity, EventEmitter, FocusHandle, Focusable, Hsla,
+    Pixels, ScrollHandle, Stateful, Subscription, Task, TextStyle, TextStyleRefinement,
+    UnderlineStyle, WeakEntity, prelude::*,
 };
 use language::{Language, LanguageRegistry};
 use markdown::{Markdown, MarkdownElement, MarkdownStyle};
@@ -29,7 +30,76 @@ use ui::{
     WithScrollbar, prelude::*,
 };
 use util::ResultExt as _;
-use workspace::{ModalView, Workspace};
+use workspace::{DesignSystemSettings, ModalView, Workspace};
+
+fn context_server_modal_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.elevated_surface_background.opacity(0.94),
+        settings::CanvasContrast::Standard => colors.elevated_surface_background,
+        settings::CanvasContrast::High => colors
+            .elevated_surface_background
+            .blend(colors.border_focused.opacity(0.08)),
+    }
+}
+
+fn context_server_modal_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border_variant.opacity(0.42),
+        settings::CanvasContrast::Standard => colors.border_variant,
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn context_server_editor_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.editor_background.opacity(0.82),
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors.element_background,
+    }
+}
+
+fn context_server_modal_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn context_server_modal_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn context_server_modal_compact_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
+fn context_server_modal_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_md(),
+        settings::CanvasRadius::Rounded => element.rounded_lg(),
+    }
+}
+
+fn context_server_editor_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_sm(),
+        settings::CanvasRadius::Rounded => element.rounded_md(),
+    }
+}
 
 enum ConfigurationTarget {
     Existing {
@@ -836,11 +906,11 @@ impl ConfigureContextServerModal {
         };
 
         div()
-            .p_2()
-            .rounded_md()
+            .p(context_server_modal_padding(cx))
+            .map(|this| context_server_editor_radius(this, cx))
             .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().editor_background)
+            .border_color(context_server_modal_border(cx))
+            .bg(context_server_editor_background(cx))
             .child({
                 let settings = ThemeSettings::get_global(cx);
                 let text_style = TextStyle {
@@ -906,7 +976,7 @@ impl ConfigureContextServerModal {
             )
             .end_slot(
                 h_flex()
-                    .gap_2()
+                    .gap(context_server_modal_gap(cx))
                     .child(
                         Button::new(
                             "cancel",
@@ -938,10 +1008,10 @@ impl ConfigureContextServerModal {
             )
     }
 
-    fn render_loading(&self, label: impl Into<SharedString>) -> Div {
+    fn render_loading(&self, label: impl Into<SharedString>, cx: &App) -> Div {
         h_flex()
             .h_8()
-            .gap_1p5()
+            .gap(context_server_modal_compact_gap(cx))
             .justify_center()
             .child(
                 Icon::new(IconName::LoadCircle)
@@ -957,11 +1027,11 @@ impl ConfigureContextServerModal {
             .h_8()
             .min_w_0()
             .w_full()
-            .gap_2()
+            .gap(context_server_modal_gap(cx))
             .justify_center()
             .child(
                 h_flex()
-                    .gap_1p5()
+                    .gap(context_server_modal_compact_gap(cx))
                     .child(
                         Icon::new(IconName::Info)
                             .size(IconSize::Small)
@@ -1005,13 +1075,13 @@ impl ConfigureContextServerModal {
 
         v_flex()
             .w_full()
-            .gap_2()
+            .gap(context_server_modal_gap(cx))
             .when_some(error, |this, error| {
-                this.child(Self::render_modal_error(error))
+                this.child(Self::render_modal_error(error, cx))
             })
             .child(
                 h_flex()
-                    .gap_1p5()
+                    .gap(context_server_modal_compact_gap(cx))
                     .child(
                         Icon::new(IconName::Info)
                             .size(IconSize::Small)
@@ -1028,7 +1098,7 @@ impl ConfigureContextServerModal {
             .child(
                 h_flex()
                     .w_full()
-                    .gap_2()
+                    .gap(context_server_modal_gap(cx))
                     .capture_action({
                         let server_id = server_id.clone();
                         cx.listener(move |this, _: &editor::actions::Newline, _window, cx| {
@@ -1062,11 +1132,11 @@ impl ConfigureContextServerModal {
     fn render_authenticating(&self, server_id: &ContextServerId, cx: &mut Context<Self>) -> Div {
         h_flex()
             .h_8()
-            .gap_2()
+            .gap(context_server_modal_gap(cx))
             .justify_center()
             .child(
                 h_flex()
-                    .gap_1p5()
+                    .gap(context_server_modal_compact_gap(cx))
                     .child(
                         Icon::new(IconName::LoadCircle)
                             .size(IconSize::XSmall)
@@ -1092,10 +1162,10 @@ impl ConfigureContextServerModal {
             )
     }
 
-    fn render_modal_error(error: SharedString) -> Div {
+    fn render_modal_error(error: SharedString, cx: &App) -> Div {
         h_flex()
             .h_8()
-            .gap_1p5()
+            .gap(context_server_modal_compact_gap(cx))
             .justify_center()
             .child(
                 Icon::new(IconName::Warning)
@@ -1115,6 +1185,11 @@ impl Render for ConfigureContextServerModal {
         div()
             .elevation_3(cx)
             .w(rems(40.))
+            .bg(context_server_modal_background(cx))
+            .border_1()
+            .border_color(context_server_modal_border(cx))
+            .map(|this| context_server_modal_radius(this, cx))
+            .overflow_hidden()
             .key_context("ConfigureContextServerModal")
             .on_action(
                 cx.listener(|this, _: &menu::Cancel, _window, cx| this.cancel(&menu::Cancel, cx)),
@@ -1145,7 +1220,7 @@ impl Render for ConfigureContextServerModal {
                                         .child(match &self.state {
                                             State::Idle => div(),
                                             State::Waiting => {
-                                                self.render_loading("Connecting Server…")
+                                                self.render_loading("Connecting Server…", cx)
                                             }
                                             State::AuthRequired { server_id } => {
                                                 self.render_auth_required(&server_id.clone(), cx)
@@ -1161,7 +1236,7 @@ impl Render for ConfigureContextServerModal {
                                                 self.render_authenticating(&server_id.clone(), cx)
                                             }
                                             State::Error(error) => {
-                                                Self::render_modal_error(error.clone())
+                                                Self::render_modal_error(error.clone(), cx)
                                             }
                                         }),
                                 )
