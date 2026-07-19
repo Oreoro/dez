@@ -517,6 +517,8 @@ row, empty state, task rows, history/source indicators, and custom task footer.
 File Finder uses the shared Canvas picker shell and maps Canvas density into
 its ignored-file control gap, checkbox/icon spacing, result-row rhythm, and
 preview/action footer chrome.
+Tab Switcher uses Canvas picker shell tokens and maps density into recent-tab
+row rhythm plus indicator/close affordance spacing.
 
 ## Layout system {#layout-system}
 
