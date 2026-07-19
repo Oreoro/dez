@@ -273,9 +273,10 @@ Use the existing panel-as-pane bridge as the migration path:
   prefix to core Canvas commands: cycle layout, Agent Control, Focus Editor,
   Four-Agent Matrix, save slot 1, restore slot 1, restore previous layout,
   save/restore all three fixed slots with `shift-1/2/3` and `1/2/3`,
-  fixed-step pane resizing with `h/j/k/l`, and pane equalization with `=`.
-  The Panel Layout menu also shows disabled discovery rows for those prefix
-  commands, and the title bar shows a compact `PREFIX …` chip while a
+  adjacent-pane focus with arrow keys, fixed-step pane resizing with
+  `h/j/k/l`, and pane equalization with `=`. The Panel Layout menu also shows
+  disabled discovery rows for those prefix commands, and the title bar shows a
+  compact `PREFIX …` chip while a
   multi-stroke prefix sequence is pending. Custom prefix strings, dynamic
   remapping, timeout behavior, and single-prefix repeat mode remain future
   work.
