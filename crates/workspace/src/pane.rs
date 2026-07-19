@@ -145,6 +145,7 @@ pub struct ActivateItem(pub usize);
 /// Closes the currently active item in the pane.
 #[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Default, Action)]
 #[action(namespace = pane)]
+#[action(deprecated_aliases = ["pane::Close"])]
 #[serde(deny_unknown_fields)]
 pub struct CloseActiveItem {
     #[serde(default)]
@@ -333,6 +334,7 @@ actions!(
         /// Joins all panes into one.
         JoinAll,
         /// Reopens the most recently closed item.
+        #[action(deprecated_aliases = ["pane::RestoreClosed", "tab::Reopen"])]
         ReopenClosedItem,
         /// Splits the pane to the left, moving the current item.
         SplitAndMoveLeft,

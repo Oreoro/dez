@@ -62,6 +62,9 @@ Implemented in this phase:
   agents, terminals, browsers, or external processes.
 - Added direct `Canvas: Even Columns` and `Canvas: Even Rows` layout actions so
   the default cycle recipes are also selectable without cycling.
+- Canvas/tmux command aliases now resolve for close and reopen workflows:
+  `pane::Close` aliases `pane::CloseActiveItem`, while `pane::RestoreClosed`
+  and `tab::Reopen` alias `pane::ReopenClosedItem`.
 - `workspace_bar.show_layout` now controls whether Canvas layout commands show
   in the Command Palette and Panel Layout chrome.
 - `workspace_bar.show_agent_attention` now controls workspace-level attention

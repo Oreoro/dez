@@ -343,8 +343,8 @@ pane::SplitLeft
 pane::SplitRight
 pane::SplitUp
 pane::SplitDown
-pane::Close
-pane::RestoreClosed
+pane::CloseActiveItem (alias: pane::Close)
+pane::ReopenClosedItem (aliases: pane::RestoreClosed, tab::Reopen)
 pane::Zoom
 pane::Swap
 pane::Move
