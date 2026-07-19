@@ -6,7 +6,8 @@ use agent::{ThreadStore, ZED_AGENT_ID};
 use agent_client_protocol::schema::v1 as acp;
 use agent_settings::{AgentSettings, UserAgentsMd};
 use agent_ui::terminal_thread_metadata_store::{
-    TerminalAgentKind, TerminalThreadMetadata, TerminalThreadMetadataStore, terminal_title_prefix,
+    TerminalAgentKind, TerminalThreadMetadata, TerminalThreadMetadataStore,
+    detect_terminal_agent_command, terminal_title_prefix,
 };
 use agent_ui::thread_metadata_store::{
     ThreadMetadata, ThreadMetadataStore, WorktreePaths, worktree_info_from_thread_paths,
@@ -463,7 +464,7 @@ fn standalone_terminal_metadata(
     terminal_view: &Entity<TerminalView>,
     created_at: DateTime<Utc>,
     cx: &App,
-) -> Option<TerminalThreadMetadata> {
+) -> Option<(TerminalThreadMetadata, TerminalAgentKind)> {
     let terminal_id = standalone_terminal_id(workspace, terminal_view, cx);
     let terminal_view = terminal_view.read(cx);
     let terminal = terminal_view.terminal().read(cx);
@@ -472,6 +473,10 @@ fn standalone_terminal_metadata(
         .custom_title()
         .map(|title| SharedString::from(title.to_string()));
     let working_directory = terminal.working_directory();
+    let detected_agent_command = terminal
+        .foreground_process_command_name()
+        .as_deref()
+        .and_then(detect_terminal_agent_command);
 
     let project = workspace.read(cx).project().clone();
     let project = project.read(cx);
@@ -485,7 +490,10 @@ fn standalone_terminal_metadata(
         working_directory,
     };
 
-    metadata.detected_agent_kind().is_some().then_some(metadata)
+    metadata
+        .detected_agent_kind()
+        .or(detected_agent_command)
+        .map(|detected_agent_kind| (metadata, detected_agent_kind))
 }
 
 /// Picks a single glyph to render as the icon from a detected title prefix.
@@ -590,6 +598,7 @@ struct ThreadEntry {
 #[derive(Clone)]
 struct TerminalEntry {
     metadata: TerminalThreadMetadata,
+    detected_agent_kind: Option<TerminalAgentKind>,
     workspace: ThreadEntryWorkspace,
     source: TerminalEntrySource,
     worktrees: Vec<ThreadItemWorktreeInfo>,
@@ -1871,8 +1880,12 @@ impl Sidebar {
                         worktree_info_from_thread_paths(&metadata.worktree_paths, &branch_by_path);
                     let has_notification =
                         live_notified_terminal_ids.contains(&metadata.terminal_id);
+                    let detected_agent_kind = detect_terminal_agents
+                        .then(|| metadata.detected_agent_kind())
+                        .flatten();
                     TerminalEntry {
                         metadata,
+                        detected_agent_kind,
                         workspace,
                         source: TerminalEntrySource::AgentPanel,
                         worktrees,
@@ -1944,7 +1957,7 @@ impl Sidebar {
                                 .standalone_terminal_created_at
                                 .entry(terminal_id)
                                 .or_insert_with(Utc::now);
-                            let Some(metadata) =
+                            let Some((metadata, detected_agent_kind)) =
                                 standalone_terminal_metadata(ws, &terminal_view, *created_at, cx)
                             else {
                                 continue;
@@ -1961,6 +1974,7 @@ impl Sidebar {
                                 notify_on_terminal_attention && terminal_view.read(cx).has_bell();
                             terminals.push(TerminalEntry {
                                 metadata,
+                                detected_agent_kind: Some(detected_agent_kind),
                                 workspace: ThreadEntryWorkspace::Open(ws.clone()),
                                 source: TerminalEntrySource::WorkspaceItem(terminal_view),
                                 worktrees,
@@ -6798,10 +6812,7 @@ impl Sidebar {
                         metadata: terminal.metadata.clone(),
                         workspace: terminal.workspace.clone(),
                         source: terminal.source.clone(),
-                        detected_agent_kind: CanvasAgentUiSettings::get_global(cx)
-                            .detect_terminal_agents
-                            .then(|| terminal.metadata.detected_agent_kind())
-                            .flatten(),
+                        detected_agent_kind: terminal.detected_agent_kind,
                         project_name: current_header_label.clone(),
                         worktrees: terminal
                             .worktrees
@@ -7513,10 +7524,7 @@ impl Sidebar {
         let labels_visible = !session_rail_settings.is_icon_mode();
         let show_agent_attention =
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
-        let terminal_agent_kind = agent_ui_settings
-            .detect_terminal_agents
-            .then(|| terminal.metadata.detected_agent_kind())
-            .flatten();
+        let terminal_agent_kind = terminal.detected_agent_kind;
         let show_detection_confidence = agent_ui_settings.show_detection_confidence;
         let has_notification = terminal.has_notification;
         let (icon_char, title, highlight_positions) =

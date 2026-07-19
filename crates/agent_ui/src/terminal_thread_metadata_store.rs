@@ -249,6 +249,18 @@ pub fn detect_terminal_agent_kind(title: &str) -> Option<TerminalAgentKind> {
     }
 }
 
+pub fn detect_terminal_agent_command(command: &str) -> Option<TerminalAgentKind> {
+    let command = command.trim();
+    if command.is_empty() {
+        return None;
+    }
+
+    let command = command.rsplit(['/', '\\']).next().unwrap_or(command);
+    let command = command.strip_suffix(".exe").unwrap_or(command);
+
+    detect_terminal_agent_kind(command)
+}
+
 pub struct TerminalThreadMetadataStore {
     db: TerminalThreadMetadataDb,
     terminals: HashMap<TerminalId, TerminalThreadMetadata>,
@@ -827,6 +839,24 @@ mod tests {
         assert_eq!(detect_terminal_agent_kind("api server"), None);
         assert_eq!(detect_terminal_agent_kind("agent"), None);
         assert_eq!(detect_terminal_agent_kind("zsh"), None);
+    }
+
+    #[test]
+    fn test_detect_terminal_agent_command() {
+        assert_eq!(
+            detect_terminal_agent_command("/usr/local/bin/claude"),
+            Some(TerminalAgentKind::Claude)
+        );
+        assert_eq!(
+            detect_terminal_agent_command("C:\\Users\\me\\bin\\codex.exe"),
+            Some(TerminalAgentKind::Codex)
+        );
+        assert_eq!(
+            detect_terminal_agent_command("open-hands"),
+            Some(TerminalAgentKind::OpenHands)
+        );
+        assert_eq!(detect_terminal_agent_command("agent"), None);
+        assert_eq!(detect_terminal_agent_command("python"), None);
     }
 
     #[gpui::test]

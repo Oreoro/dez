@@ -43,9 +43,10 @@ Implemented in this phase:
   Amp, Crush, Devin, Droid, Goose, Grok, OpenHands, Pi, Qwen Code, Cursor
   Agent, and GitHub Copilot.
 - Standalone terminal tabs whose titles identify a known agent CLI now appear
-  in the Session Rail. Activating the rail row focuses the existing terminal
-  tab, and closing the row closes that tab instead of spawning or restoring an
-  Agent Panel terminal.
+  in the Session Rail, and generic-title tabs can also surface when their live
+  foreground command identifies a known non-ambiguous agent CLI. Activating the
+  rail row focuses the existing terminal tab, and closing the row closes that
+  tab instead of spawning or restoring an Agent Panel terminal.
 - Standalone agent terminal bell state now marks the Session Rail row as
   notified and clears when the row is activated.
 - Added command-palette/menu actions for Canvas layout recipes:
@@ -446,10 +447,11 @@ Terminal-agent detection:
   CLI titles and render matching identity in the Session Rail and thread
   switcher. The classifier now covers the same non-ambiguous command families
   as terminal runtime hooks. Standalone `terminal_view::TerminalView` tabs are
-  scanned from open workspaces and surfaced when their title identifies a known
-  agent CLI; activation and close route back to the existing terminal tab.
-  Session Rail terminal rows now label detected agents as `Agent detected` and
-  terminal-bell attention as `Possibly waiting`. Runtime settings now honor
+  scanned from open workspaces and surfaced when their title or live foreground
+  command identifies a known agent CLI; activation and close route back to the
+  existing terminal tab. Session Rail terminal rows now label detected agents as
+  `Agent detected` and terminal-bell attention as `Possibly waiting`. Runtime
+  settings now honor
   `agent_ui.detect_terminal_agents`,
   `agent_ui.show_terminal_agents_in_session_rail`,
   `agent_ui.show_detection_confidence`, and `agent_ui.notify_on_attention`.
