@@ -2,10 +2,53 @@ use collab_ui::collab_panel;
 use gpui::{App, Menu, MenuItem, OsAction};
 use paths::APP_NAME;
 use release_channel::ReleaseChannel;
+use settings::Settings as _;
 use terminal_view::terminal_panel;
 use zed_actions::{Quit, assistant, debug_panel, dev, git_panel, project_panel};
 
 pub fn app_menus(cx: &mut App) -> Vec<Menu> {
+    let panels_as_pane_tabs = workspace::PaneGridSettings::get_global(cx).panels_as_pane_tabs();
+    let project_pane_label = if panels_as_pane_tabs {
+        "Toggle Project Tab"
+    } else {
+        "Toggle Project Pane"
+    };
+    let project_surface_label = if panels_as_pane_tabs {
+        "Project Tab"
+    } else {
+        "Project Panel"
+    };
+    let outline_surface_label = if panels_as_pane_tabs {
+        "Outline Tab"
+    } else {
+        "Outline Panel"
+    };
+    let collab_surface_label = if panels_as_pane_tabs {
+        "Collab Tab"
+    } else {
+        "Collab Panel"
+    };
+    let terminal_surface_label = if panels_as_pane_tabs {
+        "Terminal Tab"
+    } else {
+        "Terminal Panel"
+    };
+    let debugger_surface_label = if panels_as_pane_tabs {
+        "Debugger Tab"
+    } else {
+        "Debugger Panel"
+    };
+    let agent_surface_label = if panels_as_pane_tabs {
+        "Agent Tab"
+    } else {
+        "Agent Panel"
+    };
+    let git_surface_label = if panels_as_pane_tabs {
+        "Git Tab"
+    } else {
+        "Git Panel"
+    };
+
     let mut view_items = vec![
         MenuItem::action(
             "Zoom In",
@@ -24,7 +67,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             zed_actions::ResetAllZoom { persist: false },
         ),
         MenuItem::separator(),
-        MenuItem::action("Toggle Project Pane", workspace::ToggleProjectPane),
+        MenuItem::action(project_pane_label, workspace::ToggleProjectPane),
         MenuItem::submenu(Menu {
             name: "Editor Layout".into(),
             disabled: false,
@@ -36,13 +79,13 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             ],
         }),
         MenuItem::separator(),
-        MenuItem::action("Project Panel", project_panel::ToggleFocus),
-        MenuItem::action("Outline Panel", outline_panel::ToggleFocus),
-        MenuItem::action("Collab Panel", collab_panel::ToggleFocus),
-        MenuItem::action("Terminal Panel", terminal_panel::Toggle),
-        MenuItem::action("Debugger Panel", debug_panel::ToggleFocus),
-        MenuItem::action("Agent Panel", assistant::ToggleFocus),
-        MenuItem::action("Git Panel", git_panel::ToggleFocus),
+        MenuItem::action(project_surface_label, project_panel::ToggleFocus),
+        MenuItem::action(outline_surface_label, outline_panel::ToggleFocus),
+        MenuItem::action(collab_surface_label, collab_panel::ToggleFocus),
+        MenuItem::action(terminal_surface_label, terminal_panel::Toggle),
+        MenuItem::action(debugger_surface_label, debug_panel::ToggleFocus),
+        MenuItem::action(agent_surface_label, assistant::ToggleFocus),
+        MenuItem::action(git_surface_label, git_panel::ToggleFocus),
         MenuItem::separator(),
         MenuItem::action("Diagnostics", diagnostics::Deploy),
         MenuItem::separator(),

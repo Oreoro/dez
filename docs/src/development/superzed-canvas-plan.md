@@ -105,6 +105,9 @@ Implemented in this phase:
 - The global CLI installer affordance is hidden for Superzed builds and the
   direct install action reports that CLI shim installation is disabled for this
   app identity.
+- The View menu now uses pane-tab labels for project, outline, collaboration,
+  terminal, debugger, agent, and Git surfaces when
+  `pane_grid.panel_surface = "pane_tab"` with legacy docks disabled.
 
 ## Ground truth {#ground-truth}
 
