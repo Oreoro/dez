@@ -1489,6 +1489,13 @@ impl SidebarChrome {
                 let is_editor = matches!(current_layout, WindowLayout::Editor(_));
                 let is_agent = matches!(current_layout, WindowLayout::Agent(_));
                 let is_custom = matches!(current_layout, WindowLayout::Custom(_));
+                let active_canvas_layout_recipe = if is_agent {
+                    workspace
+                        .upgrade()
+                        .and_then(|workspace| workspace.read(cx).active_canvas_layout_recipe_id())
+                } else {
+                    None
+                };
 
                 ContextMenu::build(window, cx, |menu, _, _cx| {
                     menu.when(is_signed_in, |this| {
@@ -1620,8 +1627,10 @@ impl SidebarChrome {
                                     },
                                 )
                                 .separator()
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Full",
+                                    active_canvas_layout_recipe == Some("full"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasFullLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1630,8 +1639,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Agent Control",
+                                    active_canvas_layout_recipe == Some("agent_control"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasAgentControlLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1640,8 +1651,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Focus Editor",
+                                    active_canvas_layout_recipe == Some("editor_focus"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasEditorFocusLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1650,8 +1663,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Main + Stack",
+                                    active_canvas_layout_recipe == Some("main_stack"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasMainStackLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1660,8 +1675,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Main Top",
+                                    active_canvas_layout_recipe == Some("main_top"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasMainTopLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1670,8 +1687,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Golden Split",
+                                    active_canvas_layout_recipe == Some("golden_split"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasGoldenSplitLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1680,8 +1699,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Code, Run, Observe",
+                                    active_canvas_layout_recipe == Some("code_run_observe"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasCodeRunObserveLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1690,8 +1711,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Review",
+                                    active_canvas_layout_recipe == Some("review"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasReviewLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1700,8 +1723,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Debug",
+                                    active_canvas_layout_recipe == Some("debug"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasDebugLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1710,8 +1735,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Documentation Studio",
+                                    active_canvas_layout_recipe == Some("documentation_studio"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasDocumentationStudioLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1720,8 +1747,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Browser Development",
+                                    active_canvas_layout_recipe == Some("browser_development"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasBrowserDevelopmentLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1730,8 +1759,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Agent Operations Center",
+                                    active_canvas_layout_recipe == Some("agent_operations"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasAgentOperationsLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1740,8 +1771,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Four-Agent Matrix",
+                                    active_canvas_layout_recipe == Some("four_agent_matrix"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasFourAgentMatrixLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1750,8 +1783,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Six-Agent Supervisor",
+                                    active_canvas_layout_recipe == Some("six_agent_supervisor"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasSixAgentSupervisorLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1760,8 +1795,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Worktree Matrix",
+                                    active_canvas_layout_recipe == Some("worktree_matrix"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasWorktreeMatrixLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1770,8 +1807,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Remote Operations",
+                                    active_canvas_layout_recipe == Some("remote_operations"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasRemoteOperationsLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1780,8 +1819,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Pair Programming",
+                                    active_canvas_layout_recipe == Some("pair_programming"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasPairProgrammingLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1790,8 +1831,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Incident Response",
+                                    active_canvas_layout_recipe == Some("incident_response"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasIncidentResponseLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(
@@ -1800,8 +1843,10 @@ impl SidebarChrome {
                                         );
                                     },
                                 )
-                                .entry(
+                                .toggleable_entry(
                                     "Canvas: Portrait Display",
+                                    active_canvas_layout_recipe == Some("portrait_display"),
+                                    IconPosition::Start,
                                     Some(ApplyCanvasPortraitDisplayLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(

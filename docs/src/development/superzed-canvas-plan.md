@@ -241,6 +241,11 @@ Use the existing panel-as-pane bridge as the migration path:
 - `Cycle Canvas Layout` now honors `multiplexer.layout_cycle`, including the
   default `even_columns`, `even_rows`, `main_left`, `main_top`, `tiled`, and
   `agent_control` recipe names, with tolerant matching for label-style names.
+- Canvas recipes now share one canonical runtime recipe-name mapping. The
+  workspace records the last applied Canvas recipe in memory, layout history
+  snapshots restore that recipe identity with pane visibility/focus, and the
+  Panel Layout menu checks the active recipe entry while the window is in
+  Canvas mode. Durable named layouts remain future work.
 - Add explicit close, restore, and "detach process" behavior so closing a tab
   is not confused with killing a process.
 
@@ -265,6 +270,9 @@ Proper Pane Layout is the Canvas migration target, not just a visual skin:
 - Layout history records pane visibility/focus immediately and evolves toward
   durable semantic snapshots: recipe name, pane tree, tab identities, process
   restoration metadata, and user-authored saved layout names.
+- The first recipe-identity slice is implemented in memory for the active
+  workspace and the immediate layout-history stack. It does not persist recipe
+  identity across restart yet.
 - `pane_grid.auto_reflow` should eventually choose semantic variants for
   narrow, portrait, ultrawide, and many-agent states without closing items.
 

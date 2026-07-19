@@ -234,7 +234,9 @@ Rules:
 - `pane_grid.layout_history = true` captures a bounded in-memory snapshot before
   Canvas layout recipes. `Restore Previous Canvas Layout` restores visibility
   and focus for panes that still exist, without deserializing workspace items or
-  killing live processes. Persisted semantic layout history is still required.
+  killing live processes. Runtime snapshots also retain the last applied
+  Canvas recipe identity so menu state can follow restores. Persisted semantic
+  layout history is still required.
 - `pane_grid.auto_reflow` is available at runtime; dedicated responsive reflow
   rules still need to be implemented.
 - Empty panes offer quick item creation and restore actions.

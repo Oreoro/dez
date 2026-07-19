@@ -193,6 +193,92 @@ fn normalized_canvas_layout_recipe_name(name: &str) -> String {
     normalized
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CanvasLayoutRecipe {
+    Full,
+    AgentControl,
+    EditorFocus,
+    MainStack,
+    MainTop,
+    GoldenSplit,
+    CodeRunObserve,
+    Review,
+    Debug,
+    DocumentationStudio,
+    BrowserDevelopment,
+    AgentOperations,
+    FourAgentMatrix,
+    SixAgentSupervisor,
+    WorktreeMatrix,
+    RemoteOperations,
+    PairProgramming,
+    IncidentResponse,
+    PortraitDisplay,
+    EvenColumns,
+    EvenRows,
+}
+
+impl CanvasLayoutRecipe {
+    fn id(self) -> &'static str {
+        match self {
+            Self::Full => "full",
+            Self::AgentControl => "agent_control",
+            Self::EditorFocus => "editor_focus",
+            Self::MainStack => "main_stack",
+            Self::MainTop => "main_top",
+            Self::GoldenSplit => "golden_split",
+            Self::CodeRunObserve => "code_run_observe",
+            Self::Review => "review",
+            Self::Debug => "debug",
+            Self::DocumentationStudio => "documentation_studio",
+            Self::BrowserDevelopment => "browser_development",
+            Self::AgentOperations => "agent_operations",
+            Self::FourAgentMatrix => "four_agent_matrix",
+            Self::SixAgentSupervisor => "six_agent_supervisor",
+            Self::WorktreeMatrix => "worktree_matrix",
+            Self::RemoteOperations => "remote_operations",
+            Self::PairProgramming => "pair_programming",
+            Self::IncidentResponse => "incident_response",
+            Self::PortraitDisplay => "portrait_display",
+            Self::EvenColumns => "even_columns",
+            Self::EvenRows => "even_rows",
+        }
+    }
+
+    fn from_name(name: &str) -> Option<Self> {
+        match normalized_canvas_layout_recipe_name(name).as_str() {
+            "full" | "canvas" | "canvas_full" => Some(Self::Full),
+            "agent" | "agent_control" | "agentic" => Some(Self::AgentControl),
+            "focus" | "focus_editor" | "editor_focus" => Some(Self::EditorFocus),
+            "main_and_stack" | "main_stack" | "main_left" => Some(Self::MainStack),
+            "main_top" => Some(Self::MainTop),
+            "golden_split" => Some(Self::GoldenSplit),
+            "code_run_observe" => Some(Self::CodeRunObserve),
+            "review" | "code_review" => Some(Self::Review),
+            "debug" => Some(Self::Debug),
+            "documentation" | "documentation_studio" | "docs" | "docs_studio" => {
+                Some(Self::DocumentationStudio)
+            }
+            "browser" | "browser_development" | "web_development" => Some(Self::BrowserDevelopment),
+            "agent_operations" | "agent_operations_center" => Some(Self::AgentOperations),
+            "four_agent_matrix" | "four_agents" | "agent_matrix" | "tiled" => {
+                Some(Self::FourAgentMatrix)
+            }
+            "six_agent_supervisor" | "six_agents" | "six_agent_matrix" => {
+                Some(Self::SixAgentSupervisor)
+            }
+            "worktree_matrix" | "worktrees" => Some(Self::WorktreeMatrix),
+            "remote_operations" | "remote_ops" => Some(Self::RemoteOperations),
+            "pair_programming" | "pairing" => Some(Self::PairProgramming),
+            "incident_response" | "incident" => Some(Self::IncidentResponse),
+            "portrait_display" | "portrait" => Some(Self::PortraitDisplay),
+            "even_columns" => Some(Self::EvenColumns),
+            "even_rows" => Some(Self::EvenRows),
+            _ => None,
+        }
+    }
+}
+
 use crate::{dock::PanelSizeState, item::ItemBufferKind, notifications::NotificationId};
 use crate::{
     persistence::{
@@ -229,6 +315,7 @@ struct CanvasPaneSnapshot {
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct CanvasLayoutSnapshot {
     active_pane_id: Option<EntityId>,
+    active_layout_recipe: Option<CanvasLayoutRecipe>,
     panes: Vec<CanvasPaneSnapshot>,
 }
 
@@ -1430,6 +1517,7 @@ pub struct Workspace {
     active_worktree_creation: ActiveWorktreeCreation,
     deferred_save_items: Vec<Box<dyn WeakItemHandle>>,
     canvas_layout_cycle_index: usize,
+    active_canvas_layout_recipe: Option<CanvasLayoutRecipe>,
     canvas_layout_history: VecDeque<CanvasLayoutSnapshot>,
 }
 
@@ -1873,6 +1961,7 @@ impl Workspace {
             _dev_container_task: None,
             deferred_save_items: Vec::new(),
             canvas_layout_cycle_index: 0,
+            active_canvas_layout_recipe: None,
             canvas_layout_history: VecDeque::new(),
         }
     }
@@ -2201,6 +2290,10 @@ impl Workspace {
 
     pub fn weak_handle(&self) -> WeakEntity<Self> {
         self.weak_self.clone()
+    }
+
+    pub fn active_canvas_layout_recipe_id(&self) -> Option<&'static str> {
+        self.active_canvas_layout_recipe.map(CanvasLayoutRecipe::id)
     }
 
     pub fn left_dock(&self) -> &Entity<Dock> {
@@ -4865,6 +4958,7 @@ impl Workspace {
 
         Some(CanvasLayoutSnapshot {
             active_pane_id,
+            active_layout_recipe: self.active_canvas_layout_recipe,
             panes,
         })
     }
@@ -4892,6 +4986,7 @@ impl Workspace {
         let Some(snapshot) = self.canvas_layout_history.pop_back() else {
             return;
         };
+        self.active_canvas_layout_recipe = snapshot.active_layout_recipe;
 
         let panes_by_id = self
             .center
@@ -4928,7 +5023,7 @@ impl Workspace {
             .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
 
         self.focus_canvas_pane(&focus_pane, window, cx);
-        self.finish_canvas_recipe(window, cx);
+        self.finish_canvas_recipe(None, window, cx);
     }
 
     pub fn apply_canvas_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -4951,9 +5046,7 @@ impl Workspace {
         self.set_active_pane(&center_pane, window, cx);
         center_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
 
-        self.center.mark_positions(cx);
-        self.serialize_workspace(window, cx);
-        cx.notify();
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::Full), window, cx);
     }
 
     pub fn apply_canvas_agent_control_layout(
@@ -4984,9 +5077,7 @@ impl Workspace {
             center_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
         }
 
-        self.center.mark_positions(cx);
-        self.serialize_workspace(window, cx);
-        cx.notify();
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::AgentControl), window, cx);
     }
 
     pub fn apply_canvas_editor_focus_layout(
@@ -5014,9 +5105,7 @@ impl Workspace {
         self.set_active_pane(&center_pane, window, cx);
         center_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
 
-        self.center.mark_positions(cx);
-        self.serialize_workspace(window, cx);
-        cx.notify();
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::EditorFocus), window, cx);
     }
 
     pub fn cycle_canvas_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -5052,84 +5141,55 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> bool {
-        match normalized_canvas_layout_recipe_name(name).as_str() {
-            "full" | "canvas" | "canvas_full" => {
-                self.apply_canvas_layout(window, cx);
-                true
+        match CanvasLayoutRecipe::from_name(name) {
+            Some(CanvasLayoutRecipe::Full) => self.apply_canvas_layout(window, cx),
+            Some(CanvasLayoutRecipe::AgentControl) => {
+                self.apply_canvas_agent_control_layout(window, cx)
             }
-            "agent" | "agent_control" | "agentic" => {
-                self.apply_canvas_agent_control_layout(window, cx);
-                true
+            Some(CanvasLayoutRecipe::EditorFocus) => {
+                self.apply_canvas_editor_focus_layout(window, cx)
             }
-            "focus" | "focus_editor" | "editor_focus" => {
-                self.apply_canvas_editor_focus_layout(window, cx);
-                true
+            Some(CanvasLayoutRecipe::MainStack) => self.apply_canvas_main_stack_layout(window, cx),
+            Some(CanvasLayoutRecipe::MainTop) => self.apply_canvas_main_top_layout(window, cx),
+            Some(CanvasLayoutRecipe::GoldenSplit) => {
+                self.apply_canvas_golden_split_layout(window, cx)
             }
-            "main_and_stack" | "main_stack" | "main_left" => {
-                self.apply_canvas_main_stack_layout(window, cx);
-                true
+            Some(CanvasLayoutRecipe::CodeRunObserve) => {
+                self.apply_canvas_code_run_observe_layout(window, cx)
             }
-            "main_top" => {
-                self.apply_canvas_main_top_layout(window, cx);
-                true
+            Some(CanvasLayoutRecipe::Review) => self.apply_canvas_review_layout(window, cx),
+            Some(CanvasLayoutRecipe::Debug) => self.apply_canvas_debug_layout(window, cx),
+            Some(CanvasLayoutRecipe::DocumentationStudio) => {
+                self.apply_canvas_documentation_studio_layout(window, cx)
             }
-            "golden_split" => {
-                self.apply_canvas_golden_split_layout(window, cx);
-                true
+            Some(CanvasLayoutRecipe::BrowserDevelopment) => {
+                self.apply_canvas_browser_development_layout(window, cx)
             }
-            "code_run_observe" => {
-                self.apply_canvas_code_run_observe_layout(window, cx);
-                true
+            Some(CanvasLayoutRecipe::AgentOperations) => {
+                self.apply_canvas_agent_operations_layout(window, cx)
             }
-            "review" | "code_review" => {
-                self.apply_canvas_review_layout(window, cx);
-                true
+            Some(CanvasLayoutRecipe::FourAgentMatrix) => {
+                self.apply_canvas_four_agent_matrix_layout(window, cx)
             }
-            "debug" => {
-                self.apply_canvas_debug_layout(window, cx);
-                true
+            Some(CanvasLayoutRecipe::SixAgentSupervisor) => {
+                self.apply_canvas_six_agent_supervisor_layout(window, cx)
             }
-            "documentation" | "documentation_studio" | "docs" | "docs_studio" => {
-                self.apply_canvas_documentation_studio_layout(window, cx);
-                true
+            Some(CanvasLayoutRecipe::WorktreeMatrix) => {
+                self.apply_canvas_worktree_matrix_layout(window, cx)
             }
-            "browser" | "browser_development" | "web_development" => {
-                self.apply_canvas_browser_development_layout(window, cx);
-                true
+            Some(CanvasLayoutRecipe::RemoteOperations) => {
+                self.apply_canvas_remote_operations_layout(window, cx)
             }
-            "agent_operations" | "agent_operations_center" => {
-                self.apply_canvas_agent_operations_layout(window, cx);
-                true
+            Some(CanvasLayoutRecipe::PairProgramming) => {
+                self.apply_canvas_pair_programming_layout(window, cx)
             }
-            "four_agent_matrix" | "four_agents" | "agent_matrix" | "tiled" => {
-                self.apply_canvas_four_agent_matrix_layout(window, cx);
-                true
+            Some(CanvasLayoutRecipe::IncidentResponse) => {
+                self.apply_canvas_incident_response_layout(window, cx)
             }
-            "six_agent_supervisor" | "six_agents" | "six_agent_matrix" => {
-                self.apply_canvas_six_agent_supervisor_layout(window, cx);
-                true
+            Some(CanvasLayoutRecipe::PortraitDisplay) => {
+                self.apply_canvas_portrait_display_layout(window, cx)
             }
-            "worktree_matrix" | "worktrees" => {
-                self.apply_canvas_worktree_matrix_layout(window, cx);
-                true
-            }
-            "remote_operations" | "remote_ops" => {
-                self.apply_canvas_remote_operations_layout(window, cx);
-                true
-            }
-            "pair_programming" | "pairing" => {
-                self.apply_canvas_pair_programming_layout(window, cx);
-                true
-            }
-            "incident_response" | "incident" => {
-                self.apply_canvas_incident_response_layout(window, cx);
-                true
-            }
-            "portrait_display" | "portrait" => {
-                self.apply_canvas_portrait_display_layout(window, cx);
-                true
-            }
-            "even_columns" => {
+            Some(CanvasLayoutRecipe::EvenColumns) => {
                 let panes = self.prepare_canvas_recipe(
                     false,
                     false,
@@ -5139,10 +5199,9 @@ impl Workspace {
                     cx,
                 );
                 self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-                self.finish_canvas_recipe(window, cx);
-                true
+                self.finish_canvas_recipe(Some(CanvasLayoutRecipe::EvenColumns), window, cx);
             }
-            "even_rows" => {
+            Some(CanvasLayoutRecipe::EvenRows) => {
                 let panes = self.prepare_canvas_recipe(
                     false,
                     false,
@@ -5152,25 +5211,25 @@ impl Workspace {
                     cx,
                 );
                 self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-                self.finish_canvas_recipe(window, cx);
-                true
+                self.finish_canvas_recipe(Some(CanvasLayoutRecipe::EvenRows), window, cx);
             }
-            _ => false,
+            None => return false,
         }
+        true
     }
 
     pub fn apply_canvas_main_stack_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let panes =
             self.prepare_canvas_recipe(false, false, 2, &[SplitDirection::Right], window, cx);
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-        self.finish_canvas_recipe(window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::MainStack), window, cx);
     }
 
     pub fn apply_canvas_main_top_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let panes =
             self.prepare_canvas_recipe(false, false, 2, &[SplitDirection::Down], window, cx);
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-        self.finish_canvas_recipe(window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::MainTop), window, cx);
     }
 
     pub fn apply_canvas_golden_split_layout(
@@ -5187,7 +5246,7 @@ impl Workspace {
             cx,
         );
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-        self.finish_canvas_recipe(window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::GoldenSplit), window, cx);
     }
 
     pub fn apply_canvas_code_run_observe_layout(
@@ -5204,7 +5263,7 @@ impl Workspace {
             cx,
         );
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-        self.finish_canvas_recipe(window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::CodeRunObserve), window, cx);
     }
 
     pub fn apply_canvas_review_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -5217,7 +5276,7 @@ impl Workspace {
             cx,
         );
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-        self.finish_canvas_recipe(window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::Review), window, cx);
     }
 
     pub fn apply_canvas_debug_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -5234,7 +5293,7 @@ impl Workspace {
             cx,
         );
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-        self.finish_canvas_recipe(window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::Debug), window, cx);
     }
 
     pub fn apply_canvas_documentation_studio_layout(
@@ -5245,7 +5304,7 @@ impl Workspace {
         let panes =
             self.prepare_canvas_recipe(false, false, 3, &[SplitDirection::Right], window, cx);
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-        self.finish_canvas_recipe(window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::DocumentationStudio), window, cx);
     }
 
     pub fn apply_canvas_browser_development_layout(
@@ -5262,7 +5321,7 @@ impl Workspace {
             cx,
         );
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-        self.finish_canvas_recipe(window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::BrowserDevelopment), window, cx);
     }
 
     pub fn apply_canvas_agent_operations_layout(
@@ -5274,7 +5333,7 @@ impl Workspace {
         if let Some(agent_pane) = self.panel_pane_for_kind(PaneKind::Agent, cx) {
             self.focus_canvas_pane(&agent_pane, window, cx);
         }
-        self.finish_canvas_recipe(window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::AgentOperations), window, cx);
     }
 
     pub fn apply_canvas_four_agent_matrix_layout(
@@ -5295,7 +5354,7 @@ impl Workspace {
             cx,
         );
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-        self.finish_canvas_recipe(window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::FourAgentMatrix), window, cx);
     }
 
     pub fn apply_canvas_six_agent_supervisor_layout(
@@ -5318,7 +5377,7 @@ impl Workspace {
             cx,
         );
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-        self.finish_canvas_recipe(window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::SixAgentSupervisor), window, cx);
     }
 
     pub fn apply_canvas_worktree_matrix_layout(
@@ -5339,7 +5398,7 @@ impl Workspace {
             cx,
         );
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-        self.finish_canvas_recipe(window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::WorktreeMatrix), window, cx);
     }
 
     pub fn apply_canvas_remote_operations_layout(
@@ -5356,7 +5415,7 @@ impl Workspace {
             cx,
         );
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-        self.finish_canvas_recipe(window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::RemoteOperations), window, cx);
     }
 
     pub fn apply_canvas_pair_programming_layout(
@@ -5366,7 +5425,7 @@ impl Workspace {
     ) {
         let panes = self.prepare_canvas_recipe(true, true, 2, &[SplitDirection::Right], window, cx);
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-        self.finish_canvas_recipe(window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::PairProgramming), window, cx);
     }
 
     pub fn apply_canvas_incident_response_layout(
@@ -5387,7 +5446,7 @@ impl Workspace {
             cx,
         );
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-        self.finish_canvas_recipe(window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::IncidentResponse), window, cx);
     }
 
     pub fn apply_canvas_portrait_display_layout(
@@ -5398,7 +5457,7 @@ impl Workspace {
         let panes =
             self.prepare_canvas_recipe(false, false, 3, &[SplitDirection::Down], window, cx);
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
-        self.finish_canvas_recipe(window, cx);
+        self.finish_canvas_recipe(Some(CanvasLayoutRecipe::PortraitDisplay), window, cx);
     }
 
     fn apply_pane_grid_settings(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -5527,7 +5586,16 @@ impl Workspace {
         pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
     }
 
-    fn finish_canvas_recipe(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    fn finish_canvas_recipe(
+        &mut self,
+        layout_recipe: Option<CanvasLayoutRecipe>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if let Some(layout_recipe) = layout_recipe {
+            self.active_canvas_layout_recipe = Some(layout_recipe);
+        }
+
         self.center.mark_positions(cx);
         self.serialize_workspace(window, cx);
         cx.notify();
