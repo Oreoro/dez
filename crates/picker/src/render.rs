@@ -10,7 +10,8 @@ use ui::{
 
 use crate::shape::Shape;
 use crate::{
-    ElementContainer, Picker, PickerDelegate, PickerEditorPosition, Preview, ToggleMultiSelect,
+    ElementContainer, Picker, PickerDelegate, PickerEditorPosition, PickerSurfaceContrast,
+    PickerSurfaceRadius, Preview, ToggleMultiSelect,
     head::Head,
     preview::Layout,
     render::window_controls::{Bottom, Left, LeftCorner, Middle, Right, RightCorner},
@@ -68,9 +69,37 @@ impl<D: PickerDelegate> Render for Picker<D> {
         // corners follow the rounded border. Avoid clipping otherwise, so a
         // documentation aside (which is positioned outside the picker) isn't cut
         // off.
+        let colors = cx.theme().colors();
+        let surface_background = match self.surface_contrast {
+            PickerSurfaceContrast::Low | PickerSurfaceContrast::Standard => {
+                colors.elevated_surface_background
+            }
+            PickerSurfaceContrast::High => colors
+                .elevated_surface_background
+                .blend(colors.border_focused.opacity(0.06)),
+        };
+        let surface_border = match self.surface_contrast {
+            PickerSurfaceContrast::Low => colors.border.opacity(0.55),
+            PickerSurfaceContrast::Standard => colors.border_variant,
+            PickerSurfaceContrast::High => colors.border_focused,
+        };
         let has_preview = self.preview.is_some();
         let content = div()
-            .when(self.draws_own_container(), |this| this.elevation_3(cx))
+            .when(self.draws_own_container(), |this| {
+                this.elevation_3(cx)
+                    .bg(surface_background)
+                    .border_color(surface_border)
+                    .when(self.surface_radius == PickerSurfaceRadius::None, |this| {
+                        this.rounded_none()
+                    })
+                    .when(self.surface_radius == PickerSurfaceRadius::Subtle, |this| {
+                        this.rounded_md()
+                    })
+                    .when(
+                        self.surface_radius == PickerSurfaceRadius::Rounded,
+                        |this| this.rounded_lg(),
+                    )
+            })
             .when(has_preview, |this| this.overflow_hidden())
             .child(content);
 
@@ -110,8 +139,8 @@ impl<D: PickerDelegate> Picker<D> {
             })
             .child(
                 h_flex()
-                    .h_9()
-                    .px_2p5()
+                    .h(self.surface_density.editor_height())
+                    .px(self.surface_density.editor_padding_x())
                     .flex_none()
                     .overflow_hidden()
                     .child(div().flex_1().child(editor.render(window, cx)))
@@ -254,13 +283,16 @@ impl<D: PickerDelegate> Picker<D> {
             .when(self.delegate.match_count() == 0, |el| {
                 el.when_some(self.delegate.no_matches_text(window, cx), |el, text| {
                     el.child(
-                        v_flex().flex_grow_1().py_2().child(
-                            ListItem::new("empty_state")
-                                .inset(true)
-                                .spacing(ListItemSpacing::Sparse)
-                                .disabled(true)
-                                .child(Label::new(text).color(Color::Muted)),
-                        ),
+                        v_flex()
+                            .flex_grow_1()
+                            .py(self.surface_density.empty_state_padding_y())
+                            .child(
+                                ListItem::new("empty_state")
+                                    .inset(true)
+                                    .spacing(ListItemSpacing::Sparse)
+                                    .disabled(true)
+                                    .child(Label::new(text).color(Color::Muted)),
+                            ),
                     )
                 })
             })
@@ -281,12 +313,13 @@ impl<D: PickerDelegate> Picker<D> {
             return menu;
         };
 
+        let surface_density = self.surface_density;
         let render_aside = |aside: DocumentationAside, cx: &mut Context<Self>| {
             WithRemSize::new(ui_font_size)
                 .occlude()
                 .elevation_2(cx)
                 .w_full()
-                .p_2()
+                .p(surface_density.aside_padding())
                 .overflow_hidden()
                 .when(is_wide_window, |this| this.max_w_96())
                 .when(!is_wide_window, |this| this.max_w_48())

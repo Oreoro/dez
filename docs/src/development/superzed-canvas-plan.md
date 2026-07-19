@@ -131,6 +131,10 @@ Implemented in this phase:
   padding, Canvas radius for sheet corners, and Canvas contrast for sheet
   background and border strength. Markdown and agent content-width fallbacks now
   share the same settings-level readable-width mapping.
+- Command palette surfaces now map Canvas density, radius, and contrast into
+  picker shell chrome, search-row height/padding, empty-state spacing, and
+  documentation-aside padding while leaving non-command pickers on the existing
+  default style unless they opt in.
 
 ## Ground truth {#ground-truth}
 
@@ -266,8 +270,12 @@ Current consumers:
 - Markdown sheets: preview scroll padding, readable-sheet padding, sheet radius,
   background, and border strength now read Canvas density, radius, and contrast
   when content width limiting is active.
+- Command surfaces: the command palette opts the shared picker component into
+  Canvas density, radius, and contrast for its modal shell, search input row,
+  empty state, and documentation aside.
 
-Broader rollout should apply the same runtime model to command surfaces.
+Broader rollout should apply the same runtime model to additional command-like
+pickers as they opt into Canvas-specific workflows.
 
 ## Pane-first workspace {#pane-first-workspace}
 

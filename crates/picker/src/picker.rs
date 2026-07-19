@@ -114,6 +114,64 @@ enum Presentation {
     Embedded,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum PickerSurfaceDensity {
+    Compact,
+    #[default]
+    Balanced,
+    Spacious,
+}
+
+impl PickerSurfaceDensity {
+    pub(crate) fn editor_height(self) -> Pixels {
+        match self {
+            Self::Compact => px(32.),
+            Self::Balanced => px(36.),
+            Self::Spacious => px(44.),
+        }
+    }
+
+    pub(crate) fn editor_padding_x(self) -> Pixels {
+        match self {
+            Self::Compact => px(8.),
+            Self::Balanced => px(10.),
+            Self::Spacious => px(14.),
+        }
+    }
+
+    pub(crate) fn empty_state_padding_y(self) -> Pixels {
+        match self {
+            Self::Compact => px(6.),
+            Self::Balanced => px(8.),
+            Self::Spacious => px(12.),
+        }
+    }
+
+    pub(crate) fn aside_padding(self) -> Pixels {
+        match self {
+            Self::Compact => px(6.),
+            Self::Balanced => px(8.),
+            Self::Spacious => px(12.),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum PickerSurfaceRadius {
+    None,
+    Subtle,
+    #[default]
+    Rounded,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum PickerSurfaceContrast {
+    Low,
+    #[default]
+    Standard,
+    High,
+}
+
 /// The default size for a given preview layout. With the preview hidden the
 /// picker uses its standard size; showing a preview expands it to the larger
 /// "telescope" size so the results pane isn't cramped beside the preview.
@@ -150,6 +208,9 @@ pub struct Picker<D: PickerDelegate> {
     /// picker open while that menu has focus.
     actions_menu_handle: PopoverMenuHandle<ContextMenu>,
     reopenable: bool,
+    surface_density: PickerSurfaceDensity,
+    surface_radius: PickerSurfaceRadius,
+    surface_contrast: PickerSurfaceContrast,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -589,6 +650,9 @@ impl<D: PickerDelegate> Picker<D> {
             size_bounds,
             actions_menu_handle: PopoverMenuHandle::default(),
             reopenable: true,
+            surface_density: PickerSurfaceDensity::default(),
+            surface_radius: PickerSurfaceRadius::default(),
+            surface_contrast: PickerSurfaceContrast::default(),
         };
         // give delegate the initial preview layout
         this.delegate
@@ -671,6 +735,21 @@ impl<D: PickerDelegate> Picker<D> {
 
     pub fn show_scrollbar(mut self, show_scrollbar: bool) -> Self {
         self.show_scrollbar = show_scrollbar;
+        self
+    }
+
+    pub fn surface_density(mut self, density: PickerSurfaceDensity) -> Self {
+        self.surface_density = density;
+        self
+    }
+
+    pub fn surface_radius(mut self, radius: PickerSurfaceRadius) -> Self {
+        self.surface_radius = radius;
+        self
+    }
+
+    pub fn surface_contrast(mut self, contrast: PickerSurfaceContrast) -> Self {
+        self.surface_contrast = contrast;
         self
     }
 
