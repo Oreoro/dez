@@ -71,6 +71,10 @@ Implemented in this phase:
 - Pane command aliases now resolve for exact zoom and equalize workflows:
   `pane::Zoom` aliases `workspace::ToggleZoom`, and `pane::Equalize` aliases
   `workspace::ResetPaneSizes`.
+- Generic payload-based Canvas pane commands now resolve for directional
+  workflows: `pane::Swap`, `pane::Move`, and `pane::Resize` accept
+  `{"direction":"left|right|up|down"}` and reuse the existing directional pane
+  implementations.
 - `workspace_bar.show_layout` now controls whether Canvas layout commands show
   in the Command Palette and Panel Layout chrome.
 - `workspace_bar.show_agent_attention` now controls workspace-level attention

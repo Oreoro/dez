@@ -881,6 +881,54 @@ pub struct MoveItemToPaneInDirection {
     pub clone: bool,
 }
 
+/// Swaps the active pane with the adjacent pane in the specified direction.
+#[derive(Clone, Deserialize, PartialEq, JsonSchema, Action)]
+#[action(namespace = pane, name = "Swap")]
+#[serde(deny_unknown_fields, default)]
+pub struct PaneSwap {
+    pub direction: SplitDirection,
+}
+
+impl Default for PaneSwap {
+    fn default() -> Self {
+        Self {
+            direction: SplitDirection::Right,
+        }
+    }
+}
+
+/// Moves the active pane to the workspace border in the specified direction.
+#[derive(Clone, Deserialize, PartialEq, JsonSchema, Action)]
+#[action(namespace = pane, name = "Move")]
+#[serde(deny_unknown_fields, default)]
+pub struct PaneMove {
+    pub direction: SplitDirection,
+}
+
+impl Default for PaneMove {
+    fn default() -> Self {
+        Self {
+            direction: SplitDirection::Right,
+        }
+    }
+}
+
+/// Resizes the active pane one fixed step in the specified direction.
+#[derive(Clone, Deserialize, PartialEq, JsonSchema, Action)]
+#[action(namespace = pane, name = "Resize")]
+#[serde(deny_unknown_fields, default)]
+pub struct PaneResize {
+    pub direction: SplitDirection,
+}
+
+impl Default for PaneResize {
+    fn default() -> Self {
+        Self {
+            direction: SplitDirection::Right,
+        }
+    }
+}
+
 /// Creates a new file in a split of the desired direction.
 #[derive(Clone, Deserialize, PartialEq, JsonSchema, Action)]
 #[action(namespace = workspace)]
@@ -9826,6 +9874,9 @@ impl Workspace {
             .on_action(cx.listener(|workspace, _: &SwapPaneDown, _, cx| {
                 workspace.swap_pane_in_direction(SplitDirection::Down, cx)
             }))
+            .on_action(cx.listener(|workspace, action: &PaneSwap, _, cx| {
+                workspace.swap_pane_in_direction(action.direction, cx)
+            }))
             .on_action(cx.listener(|workspace, _: &SwapPaneAdjacent, window, cx| {
                 const DIRECTION_PRIORITY: [SplitDirection; 4] = [
                     SplitDirection::Down,
@@ -9852,6 +9903,9 @@ impl Workspace {
             }))
             .on_action(cx.listener(|workspace, _: &MovePaneDown, _, cx| {
                 workspace.move_pane_to_border(SplitDirection::Down, cx)
+            }))
+            .on_action(cx.listener(|workspace, action: &PaneMove, _, cx| {
+                workspace.move_pane_to_border(action.direction, cx)
             }))
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ClearAllNotifications, _, cx| {
@@ -9929,6 +9983,23 @@ impl Workspace {
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ResizePaneDown, window, cx| {
                     workspace.resize_pane(Axis::Vertical, -px(48.), window, cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, action: &PaneResize, window, cx| match action.direction
+                {
+                    SplitDirection::Left => {
+                        workspace.resize_pane(Axis::Horizontal, -px(80.), window, cx)
+                    }
+                    SplitDirection::Right => {
+                        workspace.resize_pane(Axis::Horizontal, px(80.), window, cx)
+                    }
+                    SplitDirection::Up => {
+                        workspace.resize_pane(Axis::Vertical, px(48.), window, cx)
+                    }
+                    SplitDirection::Down => {
+                        workspace.resize_pane(Axis::Vertical, -px(48.), window, cx)
+                    }
                 },
             ))
             .on_action(cx.listener(

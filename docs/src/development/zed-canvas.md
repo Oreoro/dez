@@ -346,18 +346,19 @@ pane::SplitDown
 pane::CloseActiveItem (alias: pane::Close)
 pane::ReopenClosedItem (aliases: pane::RestoreClosed, tab::Reopen)
 workspace::ToggleZoom (alias: pane::Zoom)
-pane::Swap
-pane::Move
+pane::Swap { direction: "left|right|up|down" }
+pane::Move { direction: "left|right|up|down" }
 pane::Rotate
 workspace::ResetPaneSizes (alias: pane::Equalize)
-pane::Resize
+pane::Resize { direction: "left|right|up|down" }
 pane::BreakToWindow
 pane::JoinFromWindow
 ```
 
-Generic Canvas aliases for `pane::Swap`, `pane::Move`, `pane::Rotate`,
-`pane::Resize`, `pane::BreakToWindow`, and `pane::JoinFromWindow` remain future
-until they have exact action payloads or runtime implementations.
+Generic Canvas aliases for `pane::Rotate`, `pane::BreakToWindow`, and
+`pane::JoinFromWindow` remain future until they have exact action payloads or
+runtime implementations. `pane::Swap`, `pane::Move`, and `pane::Resize` default
+to `"right"` when the direction payload is omitted.
 
 Tab manipulation actions:
 
