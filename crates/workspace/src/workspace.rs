@@ -661,6 +661,89 @@ impl CanvasSavedLayoutSnapshot {
             })
             .unwrap_or("Custom Canvas Layout")
     }
+
+    fn manager_detail(&self) -> String {
+        let pane_count = self.panes.len();
+        let visible_pane_count = self.panes.iter().filter(|pane| pane.visible).count();
+        let tab_count = self.panes.iter().map(|pane| pane.tabs.len()).sum::<usize>();
+        let dirty_tab_count = self
+            .panes
+            .iter()
+            .flat_map(|pane| pane.tabs.iter())
+            .filter(|tab| tab.dirty)
+            .count();
+        let pinned_tab_count = self
+            .panes
+            .iter()
+            .map(|pane| pane.pinned_count.min(pane.tabs.len()))
+            .sum::<usize>();
+
+        let mut project_path_tab_count = 0;
+        let mut serializable_tab_count = 0;
+        let mut live_only_tab_count = 0;
+        for tab in self.panes.iter().flat_map(|pane| pane.tabs.iter()) {
+            match tab.restore_plan.as_ref() {
+                Some(CanvasSavedTabRestorePlan::ProjectPath { .. }) => {
+                    project_path_tab_count += 1;
+                }
+                Some(CanvasSavedTabRestorePlan::SerializableItem { .. }) => {
+                    serializable_tab_count += 1;
+                }
+                Some(CanvasSavedTabRestorePlan::LiveOnly { .. }) => {
+                    live_only_tab_count += 1;
+                }
+                None => {
+                    if tab.project_path.is_some() {
+                        project_path_tab_count += 1;
+                    } else if tab.serialized_item_kind.is_some() && tab.item_id.is_some() {
+                        serializable_tab_count += 1;
+                    } else {
+                        live_only_tab_count += 1;
+                    }
+                }
+            }
+        }
+
+        let mut details = vec![
+            format!(
+                "{} {}",
+                pane_count,
+                if pane_count == 1 { "pane" } else { "panes" }
+            ),
+            format!("{visible_pane_count} visible"),
+            format!(
+                "{} {}",
+                tab_count,
+                if tab_count == 1 { "tab" } else { "tabs" }
+            ),
+        ];
+
+        if project_path_tab_count > 0 {
+            details.push(format!(
+                "{} file {}",
+                project_path_tab_count,
+                if project_path_tab_count == 1 {
+                    "restore"
+                } else {
+                    "restores"
+                }
+            ));
+        }
+        if serializable_tab_count > 0 {
+            details.push(format!("{serializable_tab_count} serializable"));
+        }
+        if live_only_tab_count > 0 {
+            details.push(format!("{live_only_tab_count} live-only"));
+        }
+        if pinned_tab_count > 0 {
+            details.push(format!("{pinned_tab_count} pinned"));
+        }
+        if dirty_tab_count > 0 {
+            details.push(format!("{dirty_tab_count} dirty"));
+        }
+
+        details.join(" · ")
+    }
 }
 
 fn canvas_saved_layouts_from_persisted(
@@ -870,6 +953,7 @@ struct CanvasSavedLayoutManagerEntry {
     label: String,
     kind: CanvasSavedLayoutManagerEntryKind,
     saved: bool,
+    detail: String,
 }
 
 struct CanvasSavedLayoutManagerModal {
@@ -987,6 +1071,12 @@ impl CanvasSavedLayoutManagerModal {
             entries.push(CanvasSavedLayoutManagerEntry {
                 saved: workspace.has_saved_canvas_layout_slot(slot),
                 label,
+                detail: canvas_saved_layout_slot_name(slot)
+                    .and_then(|slot_name| workspace.saved_canvas_layouts.get(slot_name))
+                    .map(CanvasSavedLayoutSnapshot::manager_detail)
+                    .unwrap_or_else(|| {
+                        "Save the current Canvas layout into this slot.".to_string()
+                    }),
                 kind: CanvasSavedLayoutManagerEntryKind::Slot(slot),
             });
         }
@@ -994,10 +1084,14 @@ impl CanvasSavedLayoutManagerModal {
             workspace
                 .saved_canvas_named_layouts()
                 .into_iter()
-                .map(|(name, label)| CanvasSavedLayoutManagerEntry {
-                    label,
-                    kind: CanvasSavedLayoutManagerEntryKind::Named(name),
-                    saved: true,
+                .filter_map(|(name, label)| {
+                    let detail = workspace.saved_canvas_layouts.get(&name)?.manager_detail();
+                    Some(CanvasSavedLayoutManagerEntry {
+                        label,
+                        kind: CanvasSavedLayoutManagerEntryKind::Named(name),
+                        saved: true,
+                        detail,
+                    })
                 }),
         );
         entries
@@ -1031,10 +1125,16 @@ impl Render for CanvasSavedLayoutManagerModal {
                     .gap_2()
                     .justify_between()
                     .child(
-                        Label::new(entry.label)
-                            .single_line()
-                            .color(Color::Muted)
-                            .flex_1(),
+                        v_flex()
+                            .gap_0p5()
+                            .flex_1()
+                            .child(Label::new(entry.label).single_line())
+                            .child(
+                                Label::new(entry.detail)
+                                    .single_line()
+                                    .size(LabelSize::Small)
+                                    .color(Color::Muted),
+                            ),
                     )
                     .child(
                         h_flex()

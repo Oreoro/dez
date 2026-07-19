@@ -267,14 +267,14 @@ Rules:
   missing serializable tabs into their saved panes in saved order, then
   reapplies saved pinned and active-tab metadata. The Panel Layout menu can
   rename or clear stale fixed slots, save the current layout under a free-form
-  name, and restore, rename, or clear free-form named layouts. A basic
-  saved-layout manager modal lists all fixed
-  slots plus named layouts with save-to-slot, restore, rename, and clear
-  controls.
+  name, and restore, rename, or clear free-form named layouts. The saved-layout
+  manager modal lists all fixed slots plus named layouts with save-to-slot,
+  restore, rename, and clear controls, and shows pane/tab counts plus restore
+  coverage for project-path, serializable, live-only, pinned, and dirty tabs.
   `workspace::RenameSavedCanvasLayoutSlot`,
   `workspace::SaveCurrentCanvasLayoutAs`, and
   `workspace::ManageSavedCanvasLayouts` provide the text-entry and manager
-  surfaces. Richer manager features and live process/session restoration are
+  surfaces. Bulk manager workflows and live process/session restoration are
   still future work.
 - Manual structural layout changes clear the active recipe identity and show
   `Custom Canvas Layout` in the Panel Layout menu while keeping the pane tree
@@ -303,8 +303,9 @@ Implementation boundary:
 - Current recipes are geometry-only and reveal existing pane-hosted surfaces.
   They must not spawn agents, terminals, browsers, or external processes.
 - Saved-layout support currently provides three fixed durable slots plus
-  free-form named layouts with built-in text entry and a basic manager modal.
-  Richer manager features and actual process restoration remain future work.
+  free-form named layouts with built-in text entry and an inspectable manager
+  modal. Bulk manager workflows and actual process restoration remain future
+  work.
   Saved layouts use pane-tree metadata to reshape existing panes, reopen
   project-path-backed and serializable tabs, and store restore-planning intent
   for live-only/process-backed tabs.
