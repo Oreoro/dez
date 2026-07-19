@@ -16,11 +16,11 @@ use fuzzy::{StringMatch, StringMatchCandidate, match_strings};
 use gpui::{
     Action, AnyElement, App, AppContext as _, AsyncWindowContext, Bounds, ClipboardItem, Context,
     DismissEvent, Div, ElementId, Entity, EventEmitter, FocusHandle, Focusable, HighlightStyle,
-    InteractiveElement, IntoElement, KeyContext, ListHorizontalSizingBehavior, ListSizingBehavior,
-    MouseButton, MouseDownEvent, ParentElement, Pixels, Point, Render, ScrollStrategy,
-    SharedString, Stateful, StatefulInteractiveElement as _, Styled, Subscription, Task, TaskExt,
-    UniformListScrollHandle, WeakEntity, Window, actions, anchored, deferred, div, point, px, size,
-    uniform_list,
+    Hsla, InteractiveElement, IntoElement, KeyContext, ListHorizontalSizingBehavior,
+    ListSizingBehavior, MouseButton, MouseDownEvent, ParentElement, Pixels, Point, Render,
+    ScrollStrategy, SharedString, Stateful, StatefulInteractiveElement as _, Styled, Subscription,
+    Task, TaskExt, UniformListScrollHandle, WeakEntity, Window, actions, anchored, deferred, div,
+    point, px, size, uniform_list,
 };
 use itertools::Itertools;
 use language::{Anchor, BufferId, BufferSnapshot, OffsetRangeExt, OutlineItem};
@@ -50,12 +50,12 @@ use theme::SyntaxTheme;
 use theme_settings::ThemeSettings;
 use ui::{
     ContextMenu, FluentBuilder, HighlightedLabel, IconButton, IconButtonShape, IndentGuideColors,
-    IndentGuideLayout, KeyBinding, ListItem, ScrollAxes, Scrollbars, Tab, Tooltip, WithScrollbar,
-    prelude::*,
+    IndentGuideLayout, KeyBinding, ListItem, ListItemSpacing, ScrollAxes, Scrollbars, Tab, Tooltip,
+    WithScrollbar, prelude::*,
 };
 use util::{RangeExt, ResultExt, TryFutureExt, debug_panic, rel_path::RelPath};
 use workspace::{
-    OpenInTerminal, WeakItemHandle, Workspace,
+    DesignSystemSettings, OpenInTerminal, WeakItemHandle, Workspace,
     dock::{DockPosition, Panel, PanelEvent},
     item::ItemHandle,
     searchable::{SearchEvent, SearchableItem},
@@ -106,6 +106,85 @@ actions!(
 
 const OUTLINE_PANEL_KEY: &str = "OutlinePanel";
 const UPDATE_DEBOUNCE: Duration = Duration::from_millis(50);
+
+fn canvas_outline_panel_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.editor_background,
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors.element_background,
+    }
+}
+
+fn canvas_outline_panel_row_padding_x(density: settings::CanvasDensity) -> Pixels {
+    match density {
+        settings::CanvasDensity::Compact => px(2.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn canvas_outline_panel_entry_spacing(density: settings::CanvasDensity) -> ListItemSpacing {
+    match density {
+        settings::CanvasDensity::Compact => ListItemSpacing::ExtraDense,
+        settings::CanvasDensity::Balanced => ListItemSpacing::Dense,
+        settings::CanvasDensity::Spacious => ListItemSpacing::Sparse,
+    }
+}
+
+fn canvas_outline_panel_active_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.ghost_element_selected.opacity(0.72),
+        settings::CanvasContrast::Standard => colors.ghost_element_selected,
+        settings::CanvasContrast::High => colors
+            .ghost_element_selected
+            .blend(colors.border_focused.opacity(0.16)),
+    }
+}
+
+fn canvas_outline_panel_hover_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.ghost_element_hover.opacity(0.75),
+        settings::CanvasContrast::Standard => colors.ghost_element_hover,
+        settings::CanvasContrast::High => colors
+            .ghost_element_hover
+            .blend(colors.border_focused.opacity(0.14)),
+    }
+}
+
+fn canvas_outline_panel_idle_border_color(
+    background: Hsla,
+    active: bool,
+    contrast: settings::CanvasContrast,
+    cx: &App,
+) -> Hsla {
+    let colors = cx.theme().colors();
+    match (active, contrast) {
+        (_, settings::CanvasContrast::Low) => background,
+        (true, settings::CanvasContrast::Standard) => colors.border.opacity(0.36),
+        (true, settings::CanvasContrast::High) => colors.border_variant,
+        (false, settings::CanvasContrast::Standard) => background,
+        (false, settings::CanvasContrast::High) => colors.border.opacity(0.28),
+    }
+}
+
+fn canvas_outline_panel_hover_border_color(
+    background: Hsla,
+    active: bool,
+    contrast: settings::CanvasContrast,
+    cx: &App,
+) -> Hsla {
+    let colors = cx.theme().colors();
+    match (active, contrast) {
+        (_, settings::CanvasContrast::Low) => background,
+        (true, settings::CanvasContrast::Standard) => colors.border.opacity(0.46),
+        (true, settings::CanvasContrast::High) => colors.border_focused,
+        (false, settings::CanvasContrast::Standard) => background,
+        (false, settings::CanvasContrast::High) => colors.border_variant,
+    }
+}
 
 type Outline = OutlineItem<language::Anchor>;
 type HighlightStyleData = Arc<OnceLock<Vec<(Range<usize>, HighlightStyle)>>>;
@@ -2629,6 +2708,25 @@ impl OutlinePanel {
         cx: &mut Context<OutlinePanel>,
     ) -> Stateful<Div> {
         let settings = OutlinePanelSettings::get_global(cx);
+        let design_system = DesignSystemSettings::get_global(cx);
+        let canvas_density = design_system.density;
+        let canvas_radius = design_system.radius;
+        let canvas_contrast = design_system.contrast;
+        let row_padding_x = canvas_outline_panel_row_padding_x(canvas_density);
+        let row_background = if is_active {
+            canvas_outline_panel_active_background(canvas_contrast, cx)
+        } else {
+            canvas_outline_panel_background(canvas_contrast, cx)
+        };
+        let hover_background = canvas_outline_panel_hover_background(canvas_contrast, cx);
+        let idle_border_color =
+            canvas_outline_panel_idle_border_color(row_background, is_active, canvas_contrast, cx);
+        let hover_border_color = canvas_outline_panel_hover_border_color(
+            hover_background,
+            is_active,
+            canvas_contrast,
+            cx,
+        );
         div()
             .text_ui(cx)
             .id(item_id.clone())
@@ -2656,6 +2754,7 @@ impl OutlinePanel {
                 ListItem::new(item_id)
                     .indent_level(depth)
                     .indent_step_size(px(settings.indent_size))
+                    .spacing(canvas_outline_panel_entry_spacing(canvas_density))
                     .toggle_state(is_active)
                     .child(
                         h_flex()
@@ -2678,13 +2777,21 @@ impl OutlinePanel {
             )
             .border_1()
             .border_r_2()
-            .rounded_none()
+            .pl(row_padding_x)
+            .pr(row_padding_x)
+            .bg(row_background)
+            .border_color(idle_border_color)
+            .when(canvas_radius == settings::CanvasRadius::Subtle, |this| {
+                this.rounded_sm()
+            })
+            .when(canvas_radius == settings::CanvasRadius::Rounded, |this| {
+                this.rounded_md()
+            })
             .hover(|style| {
                 if is_active {
                     style
                 } else {
-                    let hover_color = cx.theme().colors().ghost_element_hover;
-                    style.bg(hover_color).border_color(hover_color)
+                    style.bg(hover_background).border_color(hover_border_color)
                 }
             })
             .when(
@@ -4618,6 +4725,7 @@ impl OutlinePanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
+        let canvas_contrast = DesignSystemSettings::get_global(cx).contrast;
         let contents = if self.cached_entries.is_empty() {
             let header = if query.is_some() {
                 "No matches for query"
@@ -4789,7 +4897,7 @@ impl OutlinePanel {
                         .tracked_scroll_handle(&self.scroll_handle.clone())
                         .with_track_along(
                             ScrollAxes::Horizontal,
-                            cx.theme().colors().editor_background,
+                            canvas_outline_panel_background(canvas_contrast, cx),
                         )
                         .tracked_entity(cx.entity_id()),
                     window,
@@ -5071,6 +5179,7 @@ impl Render for OutlinePanel {
         let query = self.query(cx);
         let pinned = self.pinned;
         let settings = OutlinePanelSettings::get_global(cx);
+        let canvas_contrast = DesignSystemSettings::get_global(cx).contrast;
         let indent_size = settings.indent_size;
         let show_indent_guides = settings.indent_guides.show == ShowIndentGuides::Always;
 
@@ -5084,7 +5193,7 @@ impl Render for OutlinePanel {
         v_flex()
             .id("outline-panel")
             .size_full()
-            .bg(cx.theme().colors().editor_background)
+            .bg(canvas_outline_panel_background(canvas_contrast, cx))
             .overflow_hidden()
             .relative()
             .key_context(self.dispatch_context(window, cx))
