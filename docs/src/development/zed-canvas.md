@@ -545,6 +545,9 @@ spacing, shell padding, trailing action padding, background, and border
 strength.
 Toast layer placement uses Canvas density for bottom offset and horizontal
 safe-area padding.
+The sandbox status tooltip uses Canvas density, radius, and contrast for
+tooltip width, shell padding, section cards, row rhythm, background, and border
+strength.
 
 ## Layout system {#layout-system}
 

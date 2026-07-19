@@ -100,6 +100,10 @@ Implemented in this phase:
   `design_system.contrast`.
 - Applied Canvas density to toast layer placement: bottom offset and horizontal
   safe-area padding now read `design_system.density`.
+- Applied Canvas design-system tokens to the sandbox status tooltip: tooltip
+  width, shell padding, section cards, row rhythm, radius, background, and
+  border strength now read `design_system.density`, `design_system.radius`, and
+  `design_system.contrast`.
 - Added schema/default switches for pane-tab panel hosting, terminal-agent
   detection, multiple visible agents, session restoration, agent attention
   notifications, and preview-first Markdown.
@@ -402,6 +406,9 @@ Current consumers:
   radius, and contrast.
 - Toast layer placement: bottom offset and horizontal safe-area padding consume
   Canvas density.
+- Sandbox status tooltip: tooltip width, shell padding, section-card treatment,
+  row rhythm, radius, background, and border strength consume Canvas density,
+  radius, and contrast.
 - Go To Line: the modal shell, input divider, help row spacing, and elevated
   navigation surface consume Canvas density, radius, and contrast.
 - Tasks UI: the task picker shell, search row, empty state, task rows,

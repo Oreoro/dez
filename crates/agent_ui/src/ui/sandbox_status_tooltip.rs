@@ -1,8 +1,87 @@
 use std::path::PathBuf;
 
 use file_icons::FileIcons;
-use gpui::{AnyElement, App};
+use gpui::{AnyElement, App, Div, Hsla, Pixels, Stateful};
+use settings::Settings;
 use ui::{Divider, prelude::*};
+use workspace::DesignSystemSettings;
+
+fn sandbox_tooltip_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.elevated_surface_background.opacity(0.94),
+        settings::CanvasContrast::Standard => colors.elevated_surface_background,
+        settings::CanvasContrast::High => colors
+            .elevated_surface_background
+            .blend(colors.border_focused.opacity(0.08)),
+    }
+}
+
+fn sandbox_tooltip_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border.opacity(0.42),
+        settings::CanvasContrast::Standard => colors.border_variant,
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn sandbox_section_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.editor_background.opacity(0.62),
+        settings::CanvasContrast::Standard => colors.editor_background.opacity(0.78),
+        settings::CanvasContrast::High => colors.element_background,
+    }
+}
+
+fn sandbox_tooltip_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(8.),
+        settings::CanvasDensity::Balanced => px(10.),
+        settings::CanvasDensity::Spacious => px(14.),
+    }
+}
+
+fn sandbox_tooltip_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn sandbox_row_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
+fn sandbox_tooltip_width(cx: &App) -> Rems {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => rems_from_px(260.),
+        settings::CanvasDensity::Balanced => rems_from_px(280.),
+        settings::CanvasDensity::Spacious => rems_from_px(340.),
+    }
+}
+
+fn sandbox_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_md(),
+        settings::CanvasRadius::Rounded => element.rounded_lg(),
+    }
+}
+
+fn sandbox_section_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_sm(),
+        settings::CanvasRadius::Rounded => element.rounded_md(),
+    }
+}
 
 #[derive(Clone)]
 pub enum SandboxRow {
@@ -54,7 +133,7 @@ impl SandboxRow {
         h_flex()
             .items_start()
             .min_w_0()
-            .gap_1p5()
+            .gap(sandbox_row_gap(cx))
             .child(icon)
             .child(
                 div()
@@ -93,7 +172,7 @@ impl SandboxGroup {
 
     fn render(self, cx: &App) -> impl IntoElement {
         v_flex()
-            .gap_1p5()
+            .gap(sandbox_row_gap(cx))
             .child(
                 Label::new(self.heading)
                     .size(LabelSize::Small)
@@ -124,11 +203,16 @@ impl SandboxSection {
 
     fn render(self, cx: &App) -> AnyElement {
         v_flex()
-            .gap_2()
+            .gap(sandbox_tooltip_gap(cx))
+            .p(sandbox_tooltip_padding(cx))
+            .bg(sandbox_section_background(cx))
+            .border_1()
+            .border_color(sandbox_tooltip_border(cx))
+            .map(|this| sandbox_section_radius(this, cx))
             .child(Label::new(self.title).size(LabelSize::Small))
             .children(self.groups.into_iter().map(|group| {
                 v_flex()
-                    .gap_2()
+                    .gap(sandbox_tooltip_gap(cx))
                     .child(Divider::horizontal())
                     .child(group.render(cx))
             }))
@@ -173,17 +257,17 @@ impl RenderOnce for SandboxStatusTooltip {
                 )
                 .into_any_element(),
             SandboxStatusTooltip::DisabledForThread { settings } => v_flex()
-                .gap_1()
+                .gap(sandbox_tooltip_gap(cx))
                 .child(div().opacity(0.5).child(settings.render(cx)))
                 .child(Divider::horizontal())
                 .child(Label::new("Sandboxing is disabled for this thread").size(LabelSize::Small))
                 .into_any_element(),
             SandboxStatusTooltip::Enabled { settings, thread } => v_flex()
-                .gap_2()
+                .gap(sandbox_tooltip_gap(cx))
                 .child(settings.render(cx))
                 .children(thread.map(|thread| {
                     v_flex()
-                        .gap_2()
+                        .gap(sandbox_tooltip_gap(cx))
                         .child(Divider::horizontal())
                         .child(thread.render(cx))
                 }))
@@ -191,8 +275,13 @@ impl RenderOnce for SandboxStatusTooltip {
         };
 
         v_flex()
-            .w(rems_from_px(280.))
-            .gap_1()
+            .w(sandbox_tooltip_width(cx))
+            .p(sandbox_tooltip_padding(cx))
+            .gap(sandbox_tooltip_gap(cx))
+            .bg(sandbox_tooltip_background(cx))
+            .border_1()
+            .border_color(sandbox_tooltip_border(cx))
+            .map(|this| sandbox_radius(this, cx))
             .child(Label::new("Sandboxing"))
             .child(content)
     }
