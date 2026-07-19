@@ -521,6 +521,8 @@ Tab Switcher uses Canvas picker shell tokens and maps density into recent-tab
 row rhythm plus indicator/close affordance spacing.
 Project Symbols uses Canvas picker shell tokens and maps density into symbol
 result row rhythm for project-wide code navigation.
+Go To Line uses Canvas density, radius, and contrast for its modal shell,
+input divider, help row spacing, and elevated navigation surface.
 
 ## Layout system {#layout-system}
 

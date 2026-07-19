@@ -62,6 +62,10 @@ Implemented in this phase:
 - Applied Canvas design-system tokens to Project Symbols: its picker shell and
   symbol result row rhythm now read `design_system.density`,
   `design_system.radius`, and `design_system.contrast`.
+- Applied Canvas design-system tokens to Go To Line: its modal shell, input
+  divider, help row spacing, and elevated navigation surface now read
+  `design_system.density`, `design_system.radius`, and
+  `design_system.contrast`.
 - Added schema/default switches for pane-tab panel hosting, terminal-agent
   detection, multiple visible agents, session restoration, agent attention
   notifications, and preview-first Markdown.
@@ -349,6 +353,8 @@ Current consumers:
   selector opt the shared picker component into Canvas density, radius, and
   contrast for modal chrome, search input rows, empty states, preview/action
   footers, and documentation asides where present.
+- Go To Line: the modal shell, input divider, help row spacing, and elevated
+  navigation surface consume Canvas density, radius, and contrast.
 - Tasks UI: the task picker shell, search row, empty state, task rows,
   history/source indicators, and custom task footer now consume Canvas density,
   radius, and contrast.

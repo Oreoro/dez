@@ -1,5 +1,7 @@
 pub mod cursor_position;
 
+mod canvas;
+
 use cursor_position::UserCaretPosition;
 use editor::{
     Anchor, Editor, RowHighlightOptions, SelectionEffects, ToPoint,
@@ -326,6 +328,11 @@ impl Render for GoToLine {
 
         v_flex()
             .w(rems(24.))
+            .bg(canvas::go_to_line_background(cx))
+            .border_1()
+            .border_color(canvas::go_to_line_border(cx))
+            .map(|modal| canvas::go_to_line_radius(modal, cx))
+            .overflow_hidden()
             .elevation_2(cx)
             .key_context("GoToLine")
             .on_action(cx.listener(Self::cancel))
@@ -333,16 +340,16 @@ impl Render for GoToLine {
             .child(
                 div()
                     .border_b_1()
-                    .border_color(cx.theme().colors().border_variant)
-                    .px_2()
-                    .py_1()
+                    .border_color(canvas::go_to_line_border(cx))
+                    .px(canvas::go_to_line_padding_x(cx))
+                    .py(canvas::go_to_line_padding_y(cx))
                     .child(self.line_editor.clone()),
             )
             .child(
                 h_flex()
-                    .px_2()
-                    .py_1()
-                    .gap_1()
+                    .px(canvas::go_to_line_padding_x(cx))
+                    .py(canvas::go_to_line_padding_y(cx))
+                    .gap(canvas::go_to_line_gap(cx))
                     .child(Label::new(help_text).color(Color::Muted)),
             )
     }
