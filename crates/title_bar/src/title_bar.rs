@@ -52,9 +52,10 @@ use update_version::UpdateVersion;
 use util::ResultExt;
 use workspace::{
     AccessibleMode, ClearAllSavedCanvasLayouts, ClearSavedCanvasLayoutNamed,
-    ClearSavedCanvasLayoutSlot, ManageSavedCanvasLayouts, MultiWorkspace, MultiplexerSettings,
-    RenameSavedCanvasLayoutNamed, RenameSavedCanvasLayoutSlot, RestoreSavedCanvasLayoutNamed,
-    SaveCurrentCanvasLayoutAs, SaveCurrentCanvasLayoutNamed, ToggleWorktreeSecurity, Workspace,
+    ClearSavedCanvasLayoutSlot, DuplicateSavedCanvasLayoutNamed, DuplicateSavedCanvasLayoutSlot,
+    ManageSavedCanvasLayouts, MultiWorkspace, MultiplexerSettings, RenameSavedCanvasLayoutNamed,
+    RenameSavedCanvasLayoutSlot, RestoreSavedCanvasLayoutNamed, SaveCurrentCanvasLayoutAs,
+    SaveCurrentCanvasLayoutNamed, ToggleWorktreeSecurity, Workspace,
     notifications::{NotifyResultExt, NotifyTaskExt as _},
 };
 
@@ -426,7 +427,10 @@ fn update_layout_action_filter(cx: &mut App) {
         TypeId::of::<ClearAllSavedCanvasLayouts>(),
         TypeId::of::<RestoreSavedCanvasLayoutNamed>(),
         TypeId::of::<RenameSavedCanvasLayoutNamed>(),
+        TypeId::of::<DuplicateSavedCanvasLayoutNamed>(),
+        TypeId::of::<DuplicateSavedCanvasLayoutSlot>(),
         TypeId::of::<ClearSavedCanvasLayoutNamed>(),
+        TypeId::of::<ClearSavedCanvasLayoutSlot>(),
         TypeId::of::<RestorePreviousCanvasLayout>(),
     ];
     CommandPaletteFilter::update_global(cx, |filter, _| {
@@ -2123,6 +2127,12 @@ impl SidebarChrome {
                                     !has_saved_canvas_layout_slot_1,
                                 )
                                 .action_checked_with_disabled(
+                                    "Duplicate Canvas Layout: Slot 1",
+                                    DuplicateSavedCanvasLayoutSlot { slot: 1 }.boxed_clone(),
+                                    false,
+                                    !has_saved_canvas_layout_slot_1,
+                                )
+                                .action_checked_with_disabled(
                                     "Clear Canvas Layout: Slot 1",
                                     ClearSavedCanvasLayoutSlot { slot: 1 }.boxed_clone(),
                                     false,
@@ -2147,6 +2157,12 @@ impl SidebarChrome {
                                 .action_checked_with_disabled(
                                     "Rename Canvas Layout: Slot 2",
                                     RenameSavedCanvasLayoutSlot { slot: 2 }.boxed_clone(),
+                                    false,
+                                    !has_saved_canvas_layout_slot_2,
+                                )
+                                .action_checked_with_disabled(
+                                    "Duplicate Canvas Layout: Slot 2",
+                                    DuplicateSavedCanvasLayoutSlot { slot: 2 }.boxed_clone(),
                                     false,
                                     !has_saved_canvas_layout_slot_2,
                                 )
@@ -2179,6 +2195,12 @@ impl SidebarChrome {
                                     !has_saved_canvas_layout_slot_3,
                                 )
                                 .action_checked_with_disabled(
+                                    "Duplicate Canvas Layout: Slot 3",
+                                    DuplicateSavedCanvasLayoutSlot { slot: 3 }.boxed_clone(),
+                                    false,
+                                    !has_saved_canvas_layout_slot_3,
+                                )
+                                .action_checked_with_disabled(
                                     "Clear Canvas Layout: Slot 3",
                                     ClearSavedCanvasLayoutSlot { slot: 3 }.boxed_clone(),
                                     false,
@@ -2200,6 +2222,15 @@ impl SidebarChrome {
                                             .action_checked_with_disabled(
                                                 format!("Rename Saved Canvas Layout — {label}"),
                                                 RenameSavedCanvasLayoutNamed {
+                                                    name: name.clone(),
+                                                }
+                                                .boxed_clone(),
+                                                false,
+                                                false,
+                                            )
+                                            .action_checked_with_disabled(
+                                                format!("Duplicate Saved Canvas Layout — {label}"),
+                                                DuplicateSavedCanvasLayoutNamed {
                                                     name: name.clone(),
                                                 }
                                                 .boxed_clone(),

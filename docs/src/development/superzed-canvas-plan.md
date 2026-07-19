@@ -319,15 +319,15 @@ Use the existing panel-as-pane bridge as the migration path:
   the Panel Layout menu can rename or clear stale fixed slots, save the current
   layout under a free-form name, and restore, rename, or clear free-form named
   layouts. The saved-layout manager modal lists all fixed slots plus named
-  layouts with save-to-slot, restore, rename, and clear controls, and shows
-  pane/tab counts plus restore coverage for project-path, serializable,
-  live-only, pinned, and dirty tabs. The manager and Panel Layout menu can also
-  clear all saved Canvas layouts after a warning confirmation.
+  layouts with save-to-slot, restore, rename, duplicate, and clear controls,
+  and shows pane/tab counts plus restore coverage for project-path,
+  serializable, live-only, pinned, and dirty tabs. The manager and Panel Layout
+  menu can also clear all saved Canvas layouts after a warning confirmation.
   `workspace::RenameSavedCanvasLayoutSlot`,
   `workspace::SaveCurrentCanvasLayoutAs`, and
   `workspace::ManageSavedCanvasLayouts` provide the text-entry and manager
-  surfaces. Bulk import/export/duplication workflows and live process/session
-  restoration remain future work.
+  surfaces. Bulk import/export workflows and live process/session restoration
+  remain future work.
 - Manual structural layout changes now clear the active Canvas recipe identity
   so the Panel Layout menu reports `Custom Canvas Layout` after pane splits,
   pane moves, pane joins, pane removal, pane-size changes, or explicit
@@ -388,8 +388,8 @@ Implementation order:
    restore-planning intent. Restore applies saved pane-tree shape when all
    saved center panes still exist. User-authored fixed-slot labels,
    free-form named layouts, and a saved-layout manager with save-to-slot
-   controls plus restore metadata and confirmation-backed clear-all are
-   available; bulk import/export and duplication workflows remain future work.
+   controls plus restore metadata, duplication, and confirmation-backed
+   clear-all are available; bulk import/export workflows remain future work.
 4. Add resize-driven `auto_reflow` using semantic recipe variants rather than
    raw pixel snapshots. Initial recipe-application reflow and resize-triggered
    root-orientation reflow for active recipes are implemented. First ultrawide
@@ -406,9 +406,9 @@ Implementation order:
    metadata and user-authored slot-label metadata are captured in saved slots,
    project-path-backed and serializable tabs now reopen during restore, and
    built-in fixed-slot plus free-form named-layout UI and an inspectable
-   save/restore manager with clear-all are implemented, while bulk
-   import/export/duplication workflows and actual process restoration remain
-   future work.
+   save/restore manager with duplication and clear-all are implemented, while
+   bulk import/export workflows and actual process restoration remain future
+   work.
 
 ## Session Rail {#session-rail}
 

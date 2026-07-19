@@ -792,11 +792,20 @@ fn canvas_named_saved_layout_name(name: &str) -> Option<String> {
         .then(|| format!("{}{}", CANVAS_NAMED_SAVED_LAYOUT_PREFIX, normalized_name))
 }
 
+fn canvas_existing_saved_layout_name(name: &str) -> Option<String> {
+    if is_canvas_saved_layout_slot_name(name) {
+        Some(name.to_string())
+    } else {
+        canvas_named_saved_layout_name(name)
+    }
+}
+
 #[derive(Clone)]
 enum CanvasSavedLayoutNameModalMode {
     SaveNamed,
     RenameSlot { slot: usize },
     RenameNamed { name: String },
+    Duplicate { name: String },
 }
 
 struct CanvasSavedLayoutNameModal {
@@ -844,6 +853,9 @@ impl CanvasSavedLayoutNameModal {
                 CanvasSavedLayoutNameModalMode::RenameNamed { name } => {
                     workspace.rename_saved_canvas_layout_named(name, label, window, cx);
                 }
+                CanvasSavedLayoutNameModalMode::Duplicate { name } => {
+                    workspace.duplicate_saved_canvas_layout_named(name, label, window, cx);
+                }
             })
             .log_err();
         self.dismiss(cx);
@@ -866,6 +878,9 @@ impl CanvasSavedLayoutNameModal {
             CanvasSavedLayoutNameModalMode::RenameNamed { .. } => {
                 "Rename Saved Canvas Layout".to_string()
             }
+            CanvasSavedLayoutNameModalMode::Duplicate { .. } => {
+                "Duplicate Saved Canvas Layout".to_string()
+            }
         }
     }
 
@@ -879,6 +894,9 @@ impl CanvasSavedLayoutNameModal {
             }
             CanvasSavedLayoutNameModalMode::RenameNamed { .. } => {
                 "Enter a new unique name for this saved layout."
+            }
+            CanvasSavedLayoutNameModalMode::Duplicate { .. } => {
+                "Enter a unique name for the duplicated saved layout."
             }
         }
     }
@@ -1038,6 +1056,24 @@ impl CanvasSavedLayoutManagerModal {
             .log_err();
     }
 
+    fn duplicate_layout(
+        &mut self,
+        kind: CanvasSavedLayoutManagerEntryKind,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.workspace
+            .update(cx, |workspace, cx| match kind {
+                CanvasSavedLayoutManagerEntryKind::Slot(slot) => {
+                    workspace.prompt_duplicate_saved_canvas_layout_slot(slot, window, cx);
+                }
+                CanvasSavedLayoutManagerEntryKind::Named(name) => {
+                    workspace.prompt_duplicate_saved_canvas_layout_named(name, window, cx);
+                }
+            })
+            .log_err();
+    }
+
     fn clear_layout(
         &mut self,
         kind: CanvasSavedLayoutManagerEntryKind,
@@ -1127,6 +1163,7 @@ impl Render for CanvasSavedLayoutManagerModal {
                     .then_some(entry.kind.clone());
                 let restore_kind = entry.kind.clone();
                 let rename_kind = entry.kind.clone();
+                let duplicate_kind = entry.kind.clone();
                 let clear_kind = entry.kind.clone();
                 let saved = entry.saved;
                 h_flex()
@@ -1174,6 +1211,14 @@ impl Render for CanvasSavedLayoutManagerModal {
                                     .disabled(!saved),
                             )
                             .child(
+                                Button::new(("duplicate", index), "Duplicate")
+                                    .on_click(cx.listener(move |this, _, window, cx| {
+                                        this.duplicate_layout(duplicate_kind.clone(), window, cx);
+                                        cx.stop_propagation();
+                                    }))
+                                    .disabled(!saved),
+                            )
+                            .child(
                                 Button::new(("clear", index), "Clear")
                                     .on_click(cx.listener(move |this, _, window, cx| {
                                         this.clear_layout(clear_kind.clone(), window, cx);
@@ -1190,7 +1235,7 @@ impl Render for CanvasSavedLayoutManagerModal {
             .key_context("CanvasSavedLayoutManagerModal")
             .on_action(cx.listener(Self::cancel))
             .elevation_2(cx)
-            .w(rems(46.))
+            .w(rems(56.))
             .child(
                 Modal::new("canvas-saved-layout-manager-modal", None)
                     .show_dismiss(true)
@@ -1724,6 +1769,14 @@ pub struct RenameSavedCanvasLayoutNamed {
     pub name: String,
 }
 
+/// Opens a prompt for duplicating a free-form named Canvas layout.
+#[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct DuplicateSavedCanvasLayoutNamed {
+    pub name: String,
+}
+
 /// Removes a free-form named Canvas layout.
 #[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
 #[action(namespace = workspace)]
@@ -1743,6 +1796,14 @@ pub struct ManageSavedCanvasLayouts;
 #[action(namespace = workspace)]
 #[serde(deny_unknown_fields)]
 pub struct ClearAllSavedCanvasLayouts;
+
+/// Opens a prompt for duplicating a saved Canvas layout slot.
+#[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct DuplicateSavedCanvasLayoutSlot {
+    pub slot: usize,
+}
 
 /// Removes a saved Canvas layout slot.
 #[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
@@ -3694,6 +3755,93 @@ impl Workspace {
                 cx,
             )
         });
+        true
+    }
+
+    pub fn prompt_duplicate_saved_canvas_layout_slot(
+        &mut self,
+        slot: usize,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(slot_name) = canvas_saved_layout_slot_name(slot) else {
+            return false;
+        };
+        let Some(snapshot) = self.saved_canvas_layouts.get(slot_name) else {
+            return false;
+        };
+
+        let initial_name = format!("Copy of {}", snapshot.display_label());
+        let workspace = self.weak_handle();
+        self.toggle_modal(window, cx, |window, cx| {
+            CanvasSavedLayoutNameModal::new(
+                CanvasSavedLayoutNameModalMode::Duplicate {
+                    name: slot_name.to_string(),
+                },
+                initial_name,
+                workspace,
+                window,
+                cx,
+            )
+        });
+        true
+    }
+
+    pub fn prompt_duplicate_saved_canvas_layout_named(
+        &mut self,
+        name: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(layout_name) = canvas_named_saved_layout_name(&name) else {
+            return false;
+        };
+        if is_canvas_saved_layout_slot_name(&layout_name) {
+            return false;
+        }
+        let Some(snapshot) = self.saved_canvas_layouts.get(&layout_name) else {
+            return false;
+        };
+
+        let initial_name = format!("Copy of {}", snapshot.display_label());
+        let workspace = self.weak_handle();
+        self.toggle_modal(window, cx, |window, cx| {
+            CanvasSavedLayoutNameModal::new(
+                CanvasSavedLayoutNameModalMode::Duplicate { name: layout_name },
+                initial_name,
+                workspace,
+                window,
+                cx,
+            )
+        });
+        true
+    }
+
+    pub fn duplicate_saved_canvas_layout_named(
+        &mut self,
+        name: String,
+        new_name: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(layout_name) = canvas_existing_saved_layout_name(&name) else {
+            return false;
+        };
+        let label = new_name.trim();
+        let Some(new_layout_name) = canvas_named_saved_layout_name(label) else {
+            return false;
+        };
+        if self.saved_canvas_layouts.contains_key(&new_layout_name) {
+            return false;
+        }
+        let Some(mut snapshot) = self.saved_canvas_layouts.get(&layout_name).cloned() else {
+            return false;
+        };
+
+        snapshot.label = Some(label.to_string());
+        self.saved_canvas_layouts.insert(new_layout_name, snapshot);
+        self.serialize_workspace(window, cx);
+        cx.notify();
         true
     }
 
@@ -11306,8 +11454,25 @@ impl Workspace {
                 },
             ))
             .on_action(cx.listener(
+                |workspace: &mut Workspace,
+                 action: &DuplicateSavedCanvasLayoutNamed,
+                 window,
+                 cx| {
+                    workspace.prompt_duplicate_saved_canvas_layout_named(
+                        action.name.clone(),
+                        window,
+                        cx,
+                    );
+                },
+            ))
+            .on_action(cx.listener(
                 |workspace: &mut Workspace, action: &ClearSavedCanvasLayoutNamed, window, cx| {
                     workspace.clear_saved_canvas_layout_named(action.name.clone(), window, cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, action: &DuplicateSavedCanvasLayoutSlot, window, cx| {
+                    workspace.prompt_duplicate_saved_canvas_layout_slot(action.slot, window, cx);
                 },
             ))
             .on_action(cx.listener(
