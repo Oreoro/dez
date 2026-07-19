@@ -51,10 +51,10 @@ use ui::{
 use update_version::UpdateVersion;
 use util::ResultExt;
 use workspace::{
-    AccessibleMode, ClearSavedCanvasLayoutNamed, ClearSavedCanvasLayoutSlot,
-    ManageSavedCanvasLayouts, MultiWorkspace, MultiplexerSettings, RenameSavedCanvasLayoutNamed,
-    RenameSavedCanvasLayoutSlot, RestoreSavedCanvasLayoutNamed, SaveCurrentCanvasLayoutAs,
-    SaveCurrentCanvasLayoutNamed, ToggleWorktreeSecurity, Workspace,
+    AccessibleMode, ClearAllSavedCanvasLayouts, ClearSavedCanvasLayoutNamed,
+    ClearSavedCanvasLayoutSlot, ManageSavedCanvasLayouts, MultiWorkspace, MultiplexerSettings,
+    RenameSavedCanvasLayoutNamed, RenameSavedCanvasLayoutSlot, RestoreSavedCanvasLayoutNamed,
+    SaveCurrentCanvasLayoutAs, SaveCurrentCanvasLayoutNamed, ToggleWorktreeSecurity, Workspace,
     notifications::{NotifyResultExt, NotifyTaskExt as _},
 };
 
@@ -423,6 +423,7 @@ fn update_layout_action_filter(cx: &mut App) {
         TypeId::of::<SaveCurrentCanvasLayoutAs>(),
         TypeId::of::<SaveCurrentCanvasLayoutNamed>(),
         TypeId::of::<ManageSavedCanvasLayouts>(),
+        TypeId::of::<ClearAllSavedCanvasLayouts>(),
         TypeId::of::<RestoreSavedCanvasLayoutNamed>(),
         TypeId::of::<RenameSavedCanvasLayoutNamed>(),
         TypeId::of::<ClearSavedCanvasLayoutNamed>(),
@@ -2092,6 +2093,12 @@ impl SidebarChrome {
                                 .action(
                                     "Manage Canvas Saved Layouts…",
                                     ManageSavedCanvasLayouts.boxed_clone(),
+                                )
+                                .action_checked_with_disabled(
+                                    "Clear All Canvas Saved Layouts…",
+                                    ClearAllSavedCanvasLayouts.boxed_clone(),
+                                    false,
+                                    saved_canvas_layout_count == 0,
                                 )
                                 .entry(
                                     "Save Canvas Layout: Slot 1",

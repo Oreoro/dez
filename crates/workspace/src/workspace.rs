@@ -1057,6 +1057,15 @@ impl CanvasSavedLayoutManagerModal {
         cx.notify();
     }
 
+    fn clear_all_layouts(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.workspace
+            .update(cx, |workspace, cx| {
+                workspace.clear_all_saved_canvas_layouts(window, cx);
+            })
+            .log_err();
+        self.dismiss(cx);
+    }
+
     fn entries(&self, cx: &App) -> Vec<CanvasSavedLayoutManagerEntry> {
         let Some(workspace) = self.workspace.upgrade() else {
             return Vec::new();
@@ -1109,6 +1118,7 @@ impl Focusable for CanvasSavedLayoutManagerModal {
 impl Render for CanvasSavedLayoutManagerModal {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let entries = self.entries(cx);
+        let saved_layout_count = entries.iter().filter(|entry| entry.saved).count();
         let rows = entries
             .into_iter()
             .enumerate()
@@ -1222,13 +1232,26 @@ impl Render for CanvasSavedLayoutManagerModal {
                                     .children(rows),
                             ),
                     )
-                    .footer(ModalFooter::new().end_slot(Button::new(
-                        "close-canvas-layout-manager",
-                        "Close",
-                    ).on_click(cx.listener(|this, _, _, cx| {
-                        this.dismiss(cx);
-                        cx.stop_propagation();
-                    })))),
+                    .footer(
+                        ModalFooter::new()
+                            .start_slot(
+                                Button::new("clear-all-canvas-saved-layouts", "Clear All…")
+                                    .color(Color::Muted)
+                                    .disabled(saved_layout_count == 0)
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.clear_all_layouts(window, cx);
+                                        cx.stop_propagation();
+                                    })),
+                            )
+                            .end_slot(
+                                Button::new("close-canvas-layout-manager", "Close").on_click(
+                                    cx.listener(|this, _, _, cx| {
+                                        this.dismiss(cx);
+                                        cx.stop_propagation();
+                                    }),
+                                ),
+                            ),
+                    ),
             )
     }
 }
@@ -1709,11 +1732,17 @@ pub struct ClearSavedCanvasLayoutNamed {
     pub name: String,
 }
 
-/// Opens the basic Canvas saved-layout manager.
+/// Opens the Canvas saved-layout manager.
 #[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
 #[action(namespace = workspace)]
 #[serde(deny_unknown_fields)]
 pub struct ManageSavedCanvasLayouts;
+
+/// Removes all saved Canvas layout slots and named layouts after confirmation.
+#[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct ClearAllSavedCanvasLayouts;
 
 /// Removes a saved Canvas layout slot.
 #[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
@@ -3706,6 +3735,48 @@ impl Workspace {
         self.serialize_workspace(window, cx);
         cx.notify();
         true
+    }
+
+    pub fn clear_all_saved_canvas_layouts(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.saved_canvas_layouts.is_empty() {
+            return;
+        }
+
+        let layout_count = self.saved_canvas_layouts.len();
+        let detail = format!(
+            "This removes {layout_count} saved Canvas {}. It does not close panes or tabs.",
+            if layout_count == 1 {
+                "layout"
+            } else {
+                "layouts"
+            },
+        );
+        let prompt = window.prompt(
+            PromptLevel::Warning,
+            "Clear all saved Canvas layouts?",
+            Some(&detail),
+            &["Clear All", "Cancel"],
+            cx,
+        );
+
+        cx.spawn_in(window, async move |workspace, cx| -> Result<()> {
+            if prompt.await.log_err() != Some(0) {
+                return Ok(());
+            }
+
+            workspace.update_in(cx, |workspace, window, cx| {
+                if workspace.saved_canvas_layouts.is_empty() {
+                    return;
+                }
+
+                workspace.saved_canvas_layouts.clear();
+                workspace.serialize_workspace(window, cx);
+                cx.notify();
+            })?;
+
+            Ok(())
+        })
+        .detach_and_log_err(cx);
     }
 
     fn mark_canvas_layout_custom(&mut self) {
@@ -11208,6 +11279,11 @@ impl Workspace {
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ManageSavedCanvasLayouts, window, cx| {
                     workspace.manage_saved_canvas_layouts(window, cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &ClearAllSavedCanvasLayouts, window, cx| {
+                    workspace.clear_all_saved_canvas_layouts(window, cx);
                 },
             ))
             .on_action(cx.listener(
