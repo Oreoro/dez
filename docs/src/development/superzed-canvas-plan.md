@@ -297,11 +297,12 @@ Use the existing panel-as-pane bridge as the migration path:
   adjacent-pane focus with arrow keys, adjacent-pane swapping with shift-arrow
   keys, move-to-edge commands with alt-arrow keys, split-right/split-down with
   `v`/`enter`, fixed-step pane resizing with `h/j/k/l`, and pane equalization
-  with `=`. The Panel Layout menu also shows disabled discovery rows for those
-  prefix commands, and the title bar shows a compact `PREFIX …` chip while a
-  multi-stroke prefix sequence is pending. `prefix_timeout_ms = 0` disables
-  timeout replay. Custom prefix strings, dynamic remapping, and single-prefix
-  repeat mode remain future work.
+  with `=`, plus `ctrl-b ctrl-b` to send the default prefix through to the
+  focused item. The Panel Layout menu also shows disabled discovery rows for
+  those prefix commands, and the title bar shows a compact `PREFIX …` chip
+  while a multi-stroke prefix sequence is pending. `prefix_timeout_ms = 0`
+  disables timeout replay. Custom prefix strings and dynamic remapping remain
+  future work.
 - Canvas recipes now share one canonical runtime recipe-name mapping. The
   workspace records the last applied Canvas recipe, layout history snapshots
   restore that recipe identity with pane visibility/focus, persisted workspace
@@ -624,8 +625,9 @@ core Canvas command set from workspace focus, including fixed-step pane
 resizing and pane equalization; `multiplexer.prefix_timeout_ms` controls
 pending prefix replay and `0` disables it. Custom prefixes can be expressed
 through user keymap overrides while dynamic prefix remapping remains future
-work. The Panel Layout menu exposes the default prefix command set as
-discoverable disabled rows while prefix mode is enabled.
+work. `ctrl-b ctrl-b` sends the default prefix through to the focused item.
+The Panel Layout menu exposes the default prefix command set as discoverable
+disabled rows while prefix mode is enabled.
 
 ## Accessibility and performance requirements {#accessibility-and-performance}
 

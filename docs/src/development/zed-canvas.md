@@ -398,8 +398,8 @@ chrome.
 
 An optional tmux-style Prefix Mode may exist for experts, but ordinary users
 must not need it. Prefix Mode needs a visible mode indicator, configurable
-prefix, timeout, fixed-step resize commands, eventual single-prefix repeat
-mode, and command discovery. The first visible indicator is implemented as a
+prefix, timeout, fixed-step resize commands, prefix pass-through, and command
+discovery. The first visible indicator is implemented as a
 compact title-bar chip that appears while GPUI is waiting for the next
 multi-stroke key.
 
@@ -429,10 +429,11 @@ while a multi-stroke prefix sequence is pending:
 - `ctrl-b enter` splits the active pane downward.
 - `ctrl-b h/j/k/l` resizes the active pane left/down/up/right in fixed steps.
 - `ctrl-b =` equalizes pane sizes without changing the split tree.
+- `ctrl-b ctrl-b` sends the default prefix through to the focused item.
 
 `multiplexer.prefix_timeout_ms = 0` disables timeout replay for incomplete
-prefix sequences. Custom prefix strings still require user keymap overrides;
-dynamic remapping and single-prefix repeat mode remain future work.
+prefix sequences. Custom prefix strings still require user keymap overrides,
+and dynamic remapping remains future work.
 
 ## Layout system {#layout-system}
 

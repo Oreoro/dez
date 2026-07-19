@@ -1678,6 +1678,7 @@ impl SidebarChrome {
                             "Prefix commands: ctrl-b alt-arrows · Move pane to edge".to_string(),
                             "Prefix commands: ctrl-b v/enter · Split right, Split down".to_string(),
                             "Prefix commands: ctrl-b h/j/k/l/= · Resize, Equalize".to_string(),
+                            "Prefix commands: ctrl-b ctrl-b · Send prefix".to_string(),
                         ]
                     })
                 };

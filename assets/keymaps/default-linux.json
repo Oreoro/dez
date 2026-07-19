@@ -1628,6 +1628,7 @@
       "ctrl-b j": "workspace::ResizePaneDown",
       "ctrl-b k": "workspace::ResizePaneUp",
       "ctrl-b l": "workspace::ResizePaneRight",
+      "ctrl-b ctrl-b": ["workspace::SendKeystrokes", "ctrl-b"],
       "ctrl-b =": "workspace::ResetPaneSizes",
     },
   },
