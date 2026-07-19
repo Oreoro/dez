@@ -43,10 +43,11 @@ use git::{
     ViewFile, parse_git_remote_url,
 };
 use gpui::{
-    AbsoluteLength, Action, Anchor, AnyElement, AsyncApp, AsyncWindowContext, ClickEvent,
-    DismissEvent, Empty, Entity, EventEmitter, FocusHandle, Focusable, KeyContext, MouseButton,
-    MouseDownEvent, Pixels, Point, PromptLevel, ScrollStrategy, Subscription, Task, TaskExt,
-    TextStyle, UniformListScrollHandle, WeakEntity, actions, anchored, deferred, uniform_list,
+    AbsoluteLength, Action, Anchor, AnyElement, App, AsyncApp, AsyncWindowContext, ClickEvent,
+    DismissEvent, Empty, Entity, EventEmitter, FocusHandle, Focusable, Hsla, KeyContext,
+    MouseButton, MouseDownEvent, Pixels, Point, PromptLevel, ScrollStrategy, Subscription, Task,
+    TaskExt, TextStyle, UniformListScrollHandle, WeakEntity, actions, anchored, deferred,
+    uniform_list,
 };
 use itertools::Itertools;
 use language::{Buffer, BufferEvent, File};
@@ -92,7 +93,7 @@ use util::paths::PathStyle;
 use util::{ResultExt, TryFutureExt, markdown::MarkdownInlineCode, maybe, rel_path::RelPath};
 use workspace::SERIALIZATION_THROTTLE_TIME;
 use workspace::{
-    Item, Workspace,
+    DesignSystemSettings, Item, Workspace,
     dock::{DockPosition, Panel, PanelEvent},
     notifications::{DetachAndPromptErr, NotificationId, NotifyTaskExt},
 };
@@ -107,6 +108,74 @@ const TREE_INDENT: f32 = 16.0;
 const MAX_HISTORY_TAG_CHIPS: usize = 3;
 // Horizontal offset that aligns the tree indent guides with the row icon column.
 const INDENT_GUIDE_LEFT_OFFSET: gpui::Pixels = gpui::px(19.);
+
+fn canvas_git_panel_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.editor_background,
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors.element_background,
+    }
+}
+
+fn canvas_git_panel_list_item_height(density: settings::CanvasDensity) -> Rems {
+    match density {
+        settings::CanvasDensity::Compact => rems(1.5),
+        settings::CanvasDensity::Balanced => rems(1.75),
+        settings::CanvasDensity::Spacious => rems(2.0),
+    }
+}
+
+fn canvas_git_panel_row_padding(density: settings::CanvasDensity) -> (Pixels, Pixels) {
+    match density {
+        settings::CanvasDensity::Compact => (px(8.), px(4.)),
+        settings::CanvasDensity::Balanced => (px(10.), px(6.)),
+        settings::CanvasDensity::Spacious => (px(14.), px(8.)),
+    }
+}
+
+fn canvas_git_panel_row_border_color(
+    background: Hsla,
+    emphasized: bool,
+    contrast: settings::CanvasContrast,
+    cx: &App,
+) -> Hsla {
+    let colors = cx.theme().colors();
+    match (emphasized, contrast) {
+        (_, settings::CanvasContrast::Low) => background,
+        (true, settings::CanvasContrast::Standard) => colors.border.opacity(0.36),
+        (true, settings::CanvasContrast::High) => colors.border_variant,
+        (false, settings::CanvasContrast::Standard) => background,
+        (false, settings::CanvasContrast::High) => colors.border.opacity(0.28),
+    }
+}
+
+fn canvas_git_panel_row_hover_border_color(
+    background: Hsla,
+    emphasized: bool,
+    contrast: settings::CanvasContrast,
+    cx: &App,
+) -> Hsla {
+    let colors = cx.theme().colors();
+    match (emphasized, contrast) {
+        (_, settings::CanvasContrast::Low) => background,
+        (true, settings::CanvasContrast::Standard) => colors.border.opacity(0.46),
+        (true, settings::CanvasContrast::High) => colors.border_focused,
+        (false, settings::CanvasContrast::Standard) => background,
+        (false, settings::CanvasContrast::High) => colors.border_variant,
+    }
+}
+
+fn canvas_git_panel_hover_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.ghost_element_hover.opacity(0.75),
+        settings::CanvasContrast::Standard => colors.ghost_element_hover,
+        settings::CanvasContrast::High => colors
+            .ghost_element_hover
+            .blend(colors.border_focused.opacity(0.14)),
+    }
+}
 
 actions!(
     git_panel,
@@ -6877,6 +6946,7 @@ impl GitPanel {
             GitPanelViewMode::Tree(state) => (true, state.logical_indices.len()),
             GitPanelViewMode::Flat => (false, self.entries.len()),
         };
+        let canvas_contrast = DesignSystemSettings::get_global(cx).contrast;
         let repo = repo.downgrade();
 
         v_flex()
@@ -6948,7 +7018,7 @@ impl GitPanel {
                                             ));
                                         }
                                         Some(GitListEntry::EmptySection(section)) => {
-                                            items.push(this.render_empty_section(*section));
+                                            items.push(this.render_empty_section(*section, cx));
                                         }
                                         None => {}
                                     }
@@ -6986,7 +7056,7 @@ impl GitPanel {
                             .tracked_scroll_handle(&self.scroll_handle)
                             .with_track_along(
                                 ScrollAxes::Horizontal,
-                                cx.theme().colors().editor_background,
+                                canvas_git_panel_background(canvas_contrast, cx),
                             ),
                         window,
                         cx,
@@ -6998,8 +7068,8 @@ impl GitPanel {
         Label::new(label.into()).single_line().color(color)
     }
 
-    fn list_item_height(&self) -> Rems {
-        rems(1.75)
+    fn list_item_height(&self, cx: &App) -> Rems {
+        canvas_git_panel_list_item_height(DesignSystemSettings::get_global(cx).density)
     }
 
     fn render_list_header(
@@ -7015,6 +7085,17 @@ impl GitPanel {
         let group_name: SharedString = format!("header_{}", ix).into();
         let section = header.header;
         let weak = cx.weak_entity();
+        let design_system = DesignSystemSettings::get_global(cx);
+        let canvas_density = design_system.density;
+        let canvas_radius = design_system.radius;
+        let canvas_contrast = design_system.contrast;
+        let (row_padding_left, row_padding_right) = canvas_git_panel_row_padding(canvas_density);
+        let row_background = canvas_git_panel_background(canvas_contrast, cx);
+        let hover_background = canvas_git_panel_hover_background(canvas_contrast, cx);
+        let row_border =
+            canvas_git_panel_row_border_color(row_background, false, canvas_contrast, cx);
+        let hover_border =
+            canvas_git_panel_row_hover_border_color(hover_background, false, canvas_contrast, cx);
         let stage_intent = StageIntent::for_section(section);
         let toggle_state = stage_intent.checkbox_state(|| self.header_state(header.header));
 
@@ -7030,18 +7111,26 @@ impl GitPanel {
         h_flex()
             .id(id)
             .group(group_name)
-            .h(self.list_item_height())
+            .h(self.list_item_height(cx))
             .w_full()
-            .pl_2p5()
-            .pr_1()
+            .pl(row_padding_left)
+            .pr(row_padding_right)
             .gap_2()
             .justify_between()
             .when(!section_is_empty && !all_conflicts_resolved, |this| {
                 this.cursor_pointer()
-                    .hover(|s| s.bg(cx.theme().colors().ghost_element_hover))
+                    .hover(|s| s.bg(hover_background).border_color(hover_border))
             })
             .border_1()
             .border_r_2()
+            .bg(row_background)
+            .border_color(row_border)
+            .when(canvas_radius == settings::CanvasRadius::Subtle, |this| {
+                this.rounded_sm()
+            })
+            .when(canvas_radius == settings::CanvasRadius::Rounded, |this| {
+                this.rounded_md()
+            })
             .child(
                 Label::new(header.title())
                     .color(Color::Muted)
@@ -7090,17 +7179,20 @@ impl GitPanel {
             .into_any_element()
     }
 
-    fn render_empty_section(&self, section: Section) -> AnyElement {
+    fn render_empty_section(&self, section: Section, cx: &App) -> AnyElement {
         let message = match section {
             Section::Staged => "No staged changes yet",
             Section::Unstaged => "No unstaged changes",
             _ => "No changes",
         };
+        let design_system = DesignSystemSettings::get_global(cx);
+        let (row_padding_left, row_padding_right) =
+            canvas_git_panel_row_padding(design_system.density);
         h_flex()
-            .h(self.list_item_height())
+            .h(self.list_item_height(cx))
             .w_full()
-            .pl_2p5()
-            .pr_1()
+            .pl(row_padding_left)
+            .pr(row_padding_right)
             .opacity(0.8)
             .child(
                 Label::new(message)
@@ -7247,6 +7339,11 @@ impl GitPanel {
         cx: &Context<Self>,
     ) -> AnyElement {
         let settings = GitPanelSettings::get_global(cx);
+        let design_system = DesignSystemSettings::get_global(cx);
+        let canvas_density = design_system.density;
+        let canvas_radius = design_system.radius;
+        let canvas_contrast = design_system.contrast;
+        let (row_padding_left, row_padding_right) = canvas_git_panel_row_padding(canvas_density);
         let tree_view = settings.tree_view;
         let path_style = self.project.read(cx).path_style(cx);
         let git_path_style = ProjectSettings::get_global(cx).git.path_style;
@@ -7313,9 +7410,11 @@ impl GitPanel {
 
         let handle = cx.weak_entity();
 
-        let selected_bg_alpha = 0.08;
-        let marked_bg_alpha = 0.12;
-        let state_opacity_step = 0.04;
+        let (selected_bg_alpha, marked_bg_alpha, state_opacity_step) = match canvas_contrast {
+            settings::CanvasContrast::Low => (0.06, 0.1, 0.03),
+            settings::CanvasContrast::Standard => (0.08, 0.12, 0.04),
+            settings::CanvasContrast::High => (0.12, 0.16, 0.06),
+        };
 
         let info_color = cx.theme().status().info;
 
@@ -7333,10 +7432,24 @@ impl GitPanel {
             )
         } else {
             (
-                cx.theme().colors().ghost_element_hover,
+                canvas_git_panel_hover_background(canvas_contrast, cx),
                 cx.theme().colors().ghost_element_active,
             )
         };
+        let row_border =
+            canvas_git_panel_row_border_color(base_bg, selected || marked, canvas_contrast, cx);
+        let hover_border = canvas_git_panel_row_hover_border_color(
+            hover_bg,
+            selected || marked,
+            canvas_contrast,
+            cx,
+        );
+        let active_border = canvas_git_panel_row_hover_border_color(
+            active_bg,
+            selected || marked,
+            canvas_contrast,
+            cx,
+        );
 
         let name_row = h_flex()
             .min_w_0()
@@ -7384,19 +7497,26 @@ impl GitPanel {
 
         h_flex()
             .id(id)
-            .h(self.list_item_height())
+            .h(self.list_item_height(cx))
             .w_full()
-            .pl_2p5()
-            .pr_1()
+            .pl(row_padding_left)
+            .pr(row_padding_right)
             .gap_1p5()
             .border_1()
             .border_r_2()
+            .border_color(row_border)
+            .when(canvas_radius == settings::CanvasRadius::Subtle, |this| {
+                this.rounded_sm()
+            })
+            .when(canvas_radius == settings::CanvasRadius::Rounded, |this| {
+                this.rounded_md()
+            })
             .when(selected && self.focus_handle.is_focused(window), |el| {
                 el.border_color(cx.theme().colors().panel_focused_border)
             })
             .bg(base_bg)
-            .hover(|s| s.bg(hover_bg))
-            .active(|s| s.bg(active_bg))
+            .hover(|s| s.bg(hover_bg).border_color(hover_border))
+            .active(|s| s.bg(active_bg).border_color(active_border))
             .child(name_row)
             .when(GitPanelSettings::get_global(cx).diff_stats, |el| {
                 el.when_some(entry.diff_stat, move |this, stat| {
@@ -7503,6 +7623,11 @@ impl GitPanel {
         // TODO: Have not yet plugged in self.marked_entries. Not sure when and why we need that
         let selected = self.selected_entry == Some(ix);
         let label_color = Color::Muted;
+        let design_system = DesignSystemSettings::get_global(cx);
+        let canvas_density = design_system.density;
+        let canvas_radius = design_system.radius;
+        let canvas_contrast = design_system.contrast;
+        let (row_padding_left, row_padding_right) = canvas_git_panel_row_padding(canvas_density);
 
         let id: ElementId = ElementId::Name(format!("dir_{}_{}", entry.name, ix).into());
         let checkbox_id: ElementId =
@@ -7510,8 +7635,11 @@ impl GitPanel {
         let checkbox_wrapper_id: ElementId =
             ElementId::Name(format!("dir_checkbox_wrapper_{}_{}", entry.name, ix).into());
 
-        let selected_bg_alpha = 0.08;
-        let state_opacity_step = 0.04;
+        let (selected_bg_alpha, state_opacity_step) = match canvas_contrast {
+            settings::CanvasContrast::Low => (0.06, 0.03),
+            settings::CanvasContrast::Standard => (0.08, 0.04),
+            settings::CanvasContrast::High => (0.12, 0.06),
+        };
 
         let info_color = cx.theme().status().info;
         let colors = cx.theme().colors();
@@ -7525,10 +7653,15 @@ impl GitPanel {
         } else {
             (
                 colors.ghost_element_background,
-                colors.ghost_element_hover,
+                canvas_git_panel_hover_background(canvas_contrast, cx),
                 colors.ghost_element_active,
             )
         };
+        let row_border = canvas_git_panel_row_border_color(base_bg, selected, canvas_contrast, cx);
+        let hover_border =
+            canvas_git_panel_row_hover_border_color(hover_bg, selected, canvas_contrast, cx);
+        let active_border =
+            canvas_git_panel_row_hover_border_color(active_bg, selected, canvas_contrast, cx);
 
         let settings = GitPanelSettings::get_global(cx);
         let folder_icon = if settings.folder_icons {
@@ -7588,21 +7721,28 @@ impl GitPanel {
 
         h_flex()
             .id(id)
-            .h(self.list_item_height())
+            .h(self.list_item_height(cx))
             .min_w_0()
             .w_full()
-            .pl_2p5()
-            .pr_1()
+            .pl(row_padding_left)
+            .pr(row_padding_right)
             .gap_1p5()
             .justify_between()
             .border_1()
             .border_r_2()
+            .border_color(row_border)
+            .when(canvas_radius == settings::CanvasRadius::Subtle, |this| {
+                this.rounded_sm()
+            })
+            .when(canvas_radius == settings::CanvasRadius::Rounded, |this| {
+                this.rounded_md()
+            })
             .when(selected && self.focus_handle.is_focused(window), |el| {
                 el.border_color(cx.theme().colors().panel_focused_border)
             })
             .bg(base_bg)
-            .hover(|s| s.bg(hover_bg))
-            .active(|s| s.bg(active_bg))
+            .hover(|s| s.bg(hover_bg).border_color(hover_border))
+            .active(|s| s.bg(active_bg).border_color(active_border))
             .child(name_row)
             .child(
                 div()
@@ -7919,6 +8059,7 @@ impl Render for GitPanel {
         let project = self.project.read(cx);
         let has_entries = !self.entries.is_empty();
         let has_write_access = self.has_write_access(cx);
+        let canvas_contrast = DesignSystemSettings::get_global(cx).contrast;
 
         #[cfg(feature = "call")]
         let has_co_authors = self
@@ -7995,7 +8136,7 @@ impl Render for GitPanel {
             .on_action(cx.listener(Self::activate_history_tab))
             .size_full()
             .overflow_hidden()
-            .bg(cx.theme().colors().editor_background)
+            .bg(canvas_git_panel_background(canvas_contrast, cx))
             .child(
                 v_flex()
                     .size_full()

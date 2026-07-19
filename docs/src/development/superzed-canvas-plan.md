@@ -142,6 +142,10 @@ Implemented in this phase:
 - Outline Panel rows now consume the same Canvas density, radius, and contrast
   model for outline/file/search row rhythm, selection/hover/focus backgrounds,
   high-contrast borders, and panel shell/scrollbar track color.
+- Git Panel change-list rows now consume Canvas density, radius, and contrast
+  for section headers, empty sections, file/directory row height and padding,
+  selected/marked/hover/focus backgrounds, high-contrast borders, and the panel
+  shell/scrollbar track color.
 
 ## Ground truth {#ground-truth}
 
@@ -321,6 +325,9 @@ Current consumers:
 - Outline Panel: outline, file, folded-directory, and search rows use Canvas
   density, radius, and contrast so outline panes no longer retain the flatter
   legacy dock-panel treatment.
+- Git Panel: section headers, empty sections, changed files, and tree
+  directories use Canvas density, radius, and contrast so Git panes align with
+  the project/outline pane treatment.
 
 Broader rollout should apply the same runtime model to additional command-like
 pickers and panel-hosted tools as they opt into Canvas-specific workflows.

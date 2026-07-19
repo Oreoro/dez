@@ -475,7 +475,9 @@ Panel rows use the same density, radius, and contrast settings for row rhythm,
 hover/selection/focus states, validation callouts, high-contrast row borders,
 and the panel shell background when project surfaces are pane-hosted. Outline
 Panel rows and scrollbar tracks use the same settings for outline, file,
-folded-directory, and search results.
+folded-directory, and search results. Git Panel change-list rows use Canvas
+density, radius, and contrast for section headers, empty sections, changed
+files, tree directories, and the panel shell background.
 
 ## Layout system {#layout-system}
 
