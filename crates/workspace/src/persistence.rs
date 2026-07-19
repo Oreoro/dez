@@ -1096,6 +1096,9 @@ impl Domain for WorkspaceDb {
         sql!(
             ALTER TABLE workspaces ADD COLUMN active_canvas_layout_recipe TEXT;
         ),
+        sql!(
+            ALTER TABLE workspaces ADD COLUMN saved_canvas_layouts TEXT;
+        ),
     ];
 
     // Allow recovering from bad migration that was initially shipped to nightly
@@ -2538,6 +2541,27 @@ impl WorkspaceDb {
         pub(crate) async fn set_active_canvas_layout_recipe(workspace_id: WorkspaceId, active_canvas_layout_recipe: Option<String>) -> Result<()> {
             UPDATE workspaces
             SET active_canvas_layout_recipe = ?2
+            WHERE workspace_id = ?1
+        }
+    }
+
+    pub(crate) fn saved_canvas_layouts(&self, workspace_id: WorkspaceId) -> Option<String> {
+        self.select_row_bound::<_, Option<String>>(sql!(
+            SELECT saved_canvas_layouts
+            FROM workspaces
+            WHERE workspace_id = ?
+        ))
+        .and_then(|mut prepared_statement| (prepared_statement)(workspace_id))
+        .context("No saved Canvas layouts found")
+        .warn_on_err()
+        .flatten()
+        .flatten()
+    }
+
+    query! {
+        pub(crate) async fn set_saved_canvas_layouts(workspace_id: WorkspaceId, saved_canvas_layouts: Option<String>) -> Result<()> {
+            UPDATE workspaces
+            SET saved_canvas_layouts = ?2
             WHERE workspace_id = ?1
         }
     }

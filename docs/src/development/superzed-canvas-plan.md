@@ -230,11 +230,12 @@ Use the existing panel-as-pane bridge as the migration path:
   previous Canvas layout snapshot exists and shows the current in-memory
   snapshot count. Full persisted semantic layout history and advanced
   responsive variants remain future work.
-- The Panel Layout menu now exposes a first runtime saved-layout slot:
+- The Panel Layout menu now exposes a first durable saved-layout slot:
   `Save Current Canvas Layout` records the current pane visibility, focus, and
-  active recipe identity as `Saved Layout`, and `Restore Saved Canvas Layout`
-  restores that snapshot for still-existing panes without recreating items or
-  touching live processes.
+  active recipe identity as `Saved Layout`. It persists that semantic snapshot
+  by pane kind and occurrence order, and `Restore Saved Canvas Layout` restores
+  it for still-existing panes without recreating items or touching live
+  processes.
 - First `pane_grid.auto_reflow` behavior is implemented for Canvas recipe
   application and resize: when the workspace is narrow or portrait, horizontal
   recipe splits reflow into vertical splits. Active Canvas recipes invert the
@@ -270,8 +271,8 @@ Use the existing panel-as-pane bridge as the migration path:
   restore that recipe identity with pane visibility/focus, persisted workspace
   metadata restores recognized recipe identity across restart, and the Panel
   Layout menu checks the active recipe entry while the window is in Canvas mode.
-  One runtime saved-layout slot is available now; durable named layouts remain
-  future work.
+  One durable saved-layout slot is available now; multi-name saved layouts and
+  tab-role/process restoration metadata remain future work.
 - Manual structural layout changes now clear the active Canvas recipe identity
   so the Panel Layout menu reports `Custom Canvas Layout` after pane splits,
   pane moves, pane joins, pane removal, pane-size changes, or explicit
@@ -318,17 +319,17 @@ Implementation order:
    their semantic pane kind.
 3. Add durable layout metadata separately from process lifetime so restart
    restore can recreate layout intent without claiming processes are alive.
-   Active recipe identity now persists as workspace metadata; durable named
-   layout snapshots remain future work.
+   Active recipe identity and one saved layout snapshot now persist as workspace
+   metadata; durable multi-name layout management remains future work.
 4. Add resize-driven `auto_reflow` using semantic recipe variants rather than
    raw pixel snapshots. Initial recipe-application reflow and resize-triggered
    root-orientation reflow for active recipes are implemented; ultrawide and
    many-agent variants are still pending.
 5. Add UI for named saved layouts and layout history once the underlying
-   metadata is stable. A first in-memory `Saved Layout` slot is implemented in
-   the Panel Layout menu, and manual structural changes mark the active recipe
-   as custom. Durable multi-name layout storage still needs semantic snapshots
-   for pane tree, tab roles, and process restoration intent.
+   metadata is stable. A first durable `Saved Layout` slot is implemented in the
+   Panel Layout menu, and manual structural changes mark the active recipe as
+   custom. Durable multi-name layout storage still needs tab-role and process
+   restoration intent.
 
 ## Session Rail {#session-rail}
 

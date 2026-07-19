@@ -111,7 +111,7 @@ use remote::{
     remote_client::ConnectionIdentifier,
 };
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use session::AppSession;
 use settings::{
     CenteredPaddingSettings, DefaultOpenBehavior, Settings, SettingsLocation, SettingsStore,
@@ -369,6 +369,61 @@ struct CanvasLayoutSnapshot {
     active_pane_id: Option<EntityId>,
     active_layout_recipe: Option<CanvasLayoutRecipe>,
     panes: Vec<CanvasPaneSnapshot>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum CanvasSavedPaneKind {
+    Tabs,
+    Project,
+    Agent,
+}
+
+impl CanvasSavedPaneKind {
+    fn from_pane_kind(pane_kind: PaneKind) -> Self {
+        match pane_kind {
+            PaneKind::Tabs => Self::Tabs,
+            PaneKind::Project => Self::Project,
+            PaneKind::Agent => Self::Agent,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+struct CanvasSavedPaneId {
+    kind: CanvasSavedPaneKind,
+    occurrence: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+struct CanvasSavedPaneSnapshot {
+    pane: CanvasSavedPaneId,
+    visible: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+struct CanvasSavedLayoutSnapshot {
+    active_pane: Option<CanvasSavedPaneId>,
+    active_layout_recipe: Option<String>,
+    panes: Vec<CanvasSavedPaneSnapshot>,
+}
+
+fn canvas_saved_layouts_from_persisted(
+    persisted: Option<String>,
+) -> BTreeMap<String, CanvasSavedLayoutSnapshot> {
+    persisted
+        .and_then(|persisted| serde_json::from_str(&persisted).log_err())
+        .unwrap_or_default()
+}
+
+fn canvas_saved_layouts_to_persisted(
+    saved_layouts: &BTreeMap<String, CanvasSavedLayoutSnapshot>,
+) -> Option<String> {
+    if saved_layouts.is_empty() {
+        return None;
+    }
+
+    serde_json::to_string(saved_layouts).log_err()
 }
 
 pub trait TerminalProvider {
@@ -1571,7 +1626,7 @@ pub struct Workspace {
     canvas_layout_cycle_index: usize,
     active_canvas_layout_recipe: Option<CanvasLayoutRecipe>,
     canvas_layout_history: VecDeque<CanvasLayoutSnapshot>,
-    saved_canvas_layouts: BTreeMap<String, CanvasLayoutSnapshot>,
+    saved_canvas_layouts: BTreeMap<String, CanvasSavedLayoutSnapshot>,
 }
 
 impl EventEmitter<Event> for Workspace {}
@@ -2099,6 +2154,10 @@ impl Workspace {
             let active_canvas_layout_recipe = serialized_workspace.as_ref().and_then(|_| {
                 canvas_layout_recipe_from_persisted(db.active_canvas_layout_recipe(workspace_id))
             });
+            let saved_canvas_layouts = serialized_workspace
+                .as_ref()
+                .map(|_| canvas_saved_layouts_from_persisted(db.saved_canvas_layouts(workspace_id)))
+                .unwrap_or_default();
 
             let toolchains = db.toolchains(workspace_id).await?;
 
@@ -2150,6 +2209,7 @@ impl Workspace {
                         .unwrap_or(false);
 
                     let workspace = window.update(cx, |multi_workspace, window, cx| {
+                        let saved_canvas_layouts = saved_canvas_layouts.clone();
                         let workspace = cx.new(|cx| {
                             let mut workspace = Workspace::new(
                                 Some(workspace_id),
@@ -2161,6 +2221,7 @@ impl Workspace {
 
                             workspace.centered_layout = centered_layout;
                             workspace.active_canvas_layout_recipe = active_canvas_layout_recipe;
+                            workspace.saved_canvas_layouts = saved_canvas_layouts.clone();
 
                             // Call init callback to add items before window renders
                             if let Some(init) = init {
@@ -2214,6 +2275,7 @@ impl Workspace {
                     let window = cx.open_window(options, {
                         let app_state = app_state.clone();
                         let project_handle = project_handle.clone();
+                        let saved_canvas_layouts = saved_canvas_layouts.clone();
                         move |window, cx| {
                             let workspace = cx.new(|cx| {
                                 let mut workspace = Workspace::new(
@@ -2225,6 +2287,7 @@ impl Workspace {
                                 );
                                 workspace.centered_layout = centered_layout;
                                 workspace.active_canvas_layout_recipe = active_canvas_layout_recipe;
+                                workspace.saved_canvas_layouts = saved_canvas_layouts.clone();
 
                                 // Call init callback to add items before window renders
                                 if let Some(init) = init {
@@ -5043,6 +5106,49 @@ impl Workspace {
         })
     }
 
+    fn current_canvas_saved_layout_snapshot(&self, cx: &App) -> Option<CanvasSavedLayoutSnapshot> {
+        let mut occurrences_by_kind = BTreeMap::new();
+        let mut active_pane = None;
+        let mut panes = Vec::new();
+
+        for pane in self
+            .center
+            .panes()
+            .into_iter()
+            .filter(|pane| self.pane_is_in_center(pane))
+        {
+            let pane_state = pane.read(cx);
+            let kind = CanvasSavedPaneKind::from_pane_kind(pane_state.pane_kind());
+            let occurrence = occurrences_by_kind.entry(kind).or_insert(0);
+            let pane_id = CanvasSavedPaneId {
+                kind,
+                occurrence: *occurrence,
+            };
+            *occurrence += 1;
+
+            if self.active_pane == pane {
+                active_pane = Some(pane_id);
+            }
+
+            panes.push(CanvasSavedPaneSnapshot {
+                pane: pane_id,
+                visible: pane_state.is_visible(),
+            });
+        }
+
+        if panes.is_empty() {
+            return None;
+        }
+
+        Some(CanvasSavedLayoutSnapshot {
+            active_pane,
+            active_layout_recipe: self
+                .active_canvas_layout_recipe
+                .map(|layout_recipe| layout_recipe.id().to_string()),
+            panes,
+        })
+    }
+
     fn push_canvas_layout_snapshot(&mut self, cx: &App) {
         if !PaneGridSettings::get_global(cx).layout_history {
             return;
@@ -5062,13 +5168,14 @@ impl Workspace {
         }
     }
 
-    pub fn save_current_canvas_layout(&mut self, cx: &mut Context<Self>) {
-        let Some(snapshot) = self.current_canvas_layout_snapshot(cx) else {
+    pub fn save_current_canvas_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(snapshot) = self.current_canvas_saved_layout_snapshot(cx) else {
             return;
         };
 
         self.saved_canvas_layouts
             .insert(DEFAULT_CANVAS_SAVED_LAYOUT_NAME.to_string(), snapshot);
+        self.serialize_workspace(window, cx);
         cx.notify();
     }
 
@@ -5082,7 +5189,7 @@ impl Workspace {
         };
 
         self.push_canvas_layout_snapshot(cx);
-        self.restore_canvas_layout_snapshot(snapshot, window, cx);
+        self.restore_canvas_saved_layout_snapshot(snapshot, window, cx);
     }
 
     pub fn restore_previous_canvas_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -5119,6 +5226,63 @@ impl Workspace {
 
             pane.update(cx, |pane, cx| pane.set_visible(pane_snapshot.visible, cx));
             if Some(pane_snapshot.pane_id) == snapshot.active_pane_id {
+                focus_pane = Some(pane.clone());
+            }
+        }
+
+        let focus_pane = focus_pane
+            .filter(|pane| pane.read(cx).is_visible())
+            .or_else(|| self.last_focusable_center_pane(cx))
+            .or_else(|| {
+                self.center
+                    .panes()
+                    .into_iter()
+                    .find(|pane| pane.read(cx).is_visible())
+                    .cloned()
+            })
+            .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
+
+        self.focus_canvas_pane(&focus_pane, window, cx);
+        self.finish_canvas_recipe(None, window, cx);
+    }
+
+    fn restore_canvas_saved_layout_snapshot(
+        &mut self,
+        snapshot: CanvasSavedLayoutSnapshot,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.active_canvas_layout_recipe = snapshot
+            .active_layout_recipe
+            .as_deref()
+            .and_then(CanvasLayoutRecipe::from_name);
+
+        let mut occurrences_by_kind = BTreeMap::new();
+        let panes_by_id = self
+            .center
+            .panes()
+            .into_iter()
+            .filter(|pane| self.pane_is_in_center(pane))
+            .map(|pane| {
+                let kind = CanvasSavedPaneKind::from_pane_kind(pane.read(cx).pane_kind());
+                let occurrence = occurrences_by_kind.entry(kind).or_insert(0);
+                let pane_id = CanvasSavedPaneId {
+                    kind,
+                    occurrence: *occurrence,
+                };
+                *occurrence += 1;
+                (pane_id, pane.clone())
+            })
+            .collect::<BTreeMap<_, _>>();
+        let mut focus_pane = None;
+
+        for pane_snapshot in snapshot.panes {
+            let Some(pane) = panes_by_id.get(&pane_snapshot.pane) else {
+                continue;
+            };
+
+            pane.update(cx, |pane, cx| pane.set_visible(pane_snapshot.visible, cx));
+            if Some(pane_snapshot.pane) == snapshot.active_pane {
                 focus_pane = Some(pane.clone());
             }
         }
@@ -8708,6 +8872,8 @@ impl Workspace {
                 let active_canvas_layout_recipe = self
                     .active_canvas_layout_recipe
                     .map(|layout_recipe| layout_recipe.id().to_string());
+                let saved_canvas_layouts =
+                    canvas_saved_layouts_to_persisted(&self.saved_canvas_layouts);
 
                 let serialized_workspace = SerializedWorkspace {
                     id: database_id,
@@ -8730,6 +8896,9 @@ impl Workspace {
                 window.spawn(cx, async move |_| {
                     db.save_workspace(serialized_workspace).await;
                     db.set_active_canvas_layout_recipe(database_id, active_canvas_layout_recipe)
+                        .await
+                        .log_err();
+                    db.set_saved_canvas_layouts(database_id, saved_canvas_layouts)
                         .await
                         .log_err();
                 })
@@ -11476,9 +11645,12 @@ pub fn open_workspace_by_id(
         let centered_layout = serialized_workspace.centered_layout;
         let active_canvas_layout_recipe =
             canvas_layout_recipe_from_persisted(db.active_canvas_layout_recipe(workspace_id));
+        let saved_canvas_layouts =
+            canvas_saved_layouts_from_persisted(db.saved_canvas_layouts(workspace_id));
 
         let (window, workspace) = if let Some(window) = requesting_window {
             let workspace = window.update(cx, |multi_workspace, window, cx| {
+                let saved_canvas_layouts = saved_canvas_layouts.clone();
                 let workspace = cx.new(|cx| {
                     let mut workspace = Workspace::new(
                         Some(workspace_id),
@@ -11489,6 +11661,7 @@ pub fn open_workspace_by_id(
                     );
                     workspace.centered_layout = centered_layout;
                     workspace.active_canvas_layout_recipe = active_canvas_layout_recipe;
+                    workspace.saved_canvas_layouts = saved_canvas_layouts.clone();
                     workspace
                 });
                 multi_workspace.add(workspace.clone(), &*window, cx);
@@ -11519,6 +11692,7 @@ pub fn open_workspace_by_id(
             let window = cx.open_window(options, {
                 let app_state = app_state.clone();
                 let project_handle = project_handle.clone();
+                let saved_canvas_layouts = saved_canvas_layouts.clone();
                 move |window, cx| {
                     let workspace = cx.new(|cx| {
                         let mut workspace = Workspace::new(
@@ -11530,6 +11704,7 @@ pub fn open_workspace_by_id(
                         );
                         workspace.centered_layout = centered_layout;
                         workspace.active_canvas_layout_recipe = active_canvas_layout_recipe;
+                        workspace.saved_canvas_layouts = saved_canvas_layouts.clone();
                         workspace
                     });
                     cx.new(|cx| MultiWorkspace::new(workspace, window, cx))
@@ -11850,7 +12025,12 @@ pub fn open_remote_project_with_new_connection(
     cx: &mut App,
 ) -> Task<Result<Vec<Option<Box<dyn ItemHandle>>>>> {
     cx.spawn(async move |cx| {
-        let (workspace_id, serialized_workspace, active_canvas_layout_recipe) =
+        let (
+            workspace_id,
+            serialized_workspace,
+            active_canvas_layout_recipe,
+            saved_canvas_layouts,
+        ) =
             deserialize_remote_project(remote_connection.connection_options(), paths.clone(), cx)
                 .await?;
 
@@ -11889,6 +12069,7 @@ pub fn open_remote_project_with_new_connection(
             workspace_id,
             serialized_workspace,
             active_canvas_layout_recipe,
+            saved_canvas_layouts,
             app_state,
             window,
             None,
@@ -11910,7 +12091,12 @@ pub fn open_remote_project_with_existing_connection(
     cx: &mut AsyncApp,
 ) -> Task<Result<Vec<Option<Box<dyn ItemHandle>>>>> {
     cx.spawn(async move |cx| {
-        let (workspace_id, serialized_workspace, active_canvas_layout_recipe) =
+        let (
+            workspace_id,
+            serialized_workspace,
+            active_canvas_layout_recipe,
+            saved_canvas_layouts,
+        ) =
             deserialize_remote_project(connection_options.clone(), paths.clone(), cx).await?;
 
         open_remote_project_inner(
@@ -11919,6 +12105,7 @@ pub fn open_remote_project_with_existing_connection(
             workspace_id,
             serialized_workspace,
             active_canvas_layout_recipe,
+            saved_canvas_layouts,
             app_state,
             window,
             provisional_project_group_key,
@@ -11935,6 +12122,7 @@ async fn open_remote_project_inner(
     workspace_id: WorkspaceId,
     serialized_workspace: Option<SerializedWorkspace>,
     active_canvas_layout_recipe: Option<CanvasLayoutRecipe>,
+    saved_canvas_layouts: BTreeMap<String, CanvasSavedLayoutSnapshot>,
     app_state: Arc<AppState>,
     window: WindowHandle<MultiWorkspace>,
     provisional_project_group_key: Option<ProjectGroupKey>,
@@ -11979,6 +12167,7 @@ async fn open_remote_project_inner(
                 workspace.centered_layout = serialized.centered_layout;
             }
             workspace.active_canvas_layout_recipe = active_canvas_layout_recipe;
+            workspace.saved_canvas_layouts = saved_canvas_layouts.clone();
 
             workspace
         });
@@ -12052,6 +12241,7 @@ fn deserialize_remote_project(
         WorkspaceId,
         Option<SerializedWorkspace>,
         Option<CanvasLayoutRecipe>,
+        BTreeMap<String, CanvasSavedLayoutSnapshot>,
     )>,
 > {
     let db = cx.update(|cx| WorkspaceDb::global(cx));
@@ -12072,11 +12262,16 @@ fn deserialize_remote_project(
         let active_canvas_layout_recipe = serialized_workspace.as_ref().and_then(|_| {
             canvas_layout_recipe_from_persisted(db.active_canvas_layout_recipe(workspace_id))
         });
+        let saved_canvas_layouts = serialized_workspace
+            .as_ref()
+            .map(|_| canvas_saved_layouts_from_persisted(db.saved_canvas_layouts(workspace_id)))
+            .unwrap_or_default();
 
         Ok((
             workspace_id,
             serialized_workspace,
             active_canvas_layout_recipe,
+            saved_canvas_layouts,
         ))
     })
 }

@@ -290,8 +290,8 @@ pub fn init(cx: &mut App) {
             workspace.cycle_canvas_layout(window, cx);
         });
 
-        workspace.register_action(|workspace, _: &SaveCurrentCanvasLayout, _window, cx| {
-            workspace.save_current_canvas_layout(cx);
+        workspace.register_action(|workspace, _: &SaveCurrentCanvasLayout, window, cx| {
+            workspace.save_current_canvas_layout(window, cx);
         });
 
         workspace.register_action(|workspace, _: &RestoreSavedCanvasLayout, window, cx| {
@@ -1545,9 +1545,9 @@ impl SidebarChrome {
                     format!("Layout History: {canvas_layout_history_len} snapshots")
                 };
                 let saved_canvas_layout_label = if saved_canvas_layout_count == 1 {
-                    "Saved Layouts: 1 runtime slot".to_string()
+                    "Saved Layouts: 1 saved slot".to_string()
                 } else {
-                    format!("Saved Layouts: {saved_canvas_layout_count} runtime slots")
+                    format!("Saved Layouts: {saved_canvas_layout_count} saved slots")
                 };
                 let multiplexer_hint = {
                     let multiplexer_settings = MultiplexerSettings::get_global(cx);
