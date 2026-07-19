@@ -592,7 +592,10 @@ configured close policy says so.
 - Synchronized input is visibly indicated.
 - Components use semantic tokens.
 - State is never communicated by color alone.
-- Motion respects reduced-motion settings.
+- Motion respects reduced-motion settings. `accessibility.reduced_motion`
+  overrides the root motion setting for Canvas: `reduced` forces reduced
+  motion, `full` permits full motion, and `system` follows the existing
+  root-level `reduce_motion` setting.
 - Pane and item operations are scriptable.
 - Automation is authenticated, capability-scoped, and auditable.
 - Shared and private collaboration surfaces are visibly distinct.

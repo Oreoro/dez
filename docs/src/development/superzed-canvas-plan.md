@@ -423,6 +423,9 @@ Accessibility:
 - Agent attention is announced once, not repeatedly.
 - State is not color-only.
 - High-contrast and reduced-motion modes are supported.
+- Runtime motion now honors `accessibility.reduced_motion`: `reduced` forces
+  GPUI reduced motion, `full` disables it, and `system` falls back to the
+  existing root `reduce_motion` setting.
 - Increased font sizes reflow controls without clipping critical actions.
 
 Performance:

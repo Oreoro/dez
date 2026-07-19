@@ -1927,17 +1927,37 @@ fn init_cursor_hide_mode(cx: &mut App) {
 }
 
 #[derive(Copy, Clone, Debug, settings::RegisterSetting)]
-struct ReduceMotionSetting(settings::ReduceMotionMode);
+struct ReduceMotionSetting {
+    reduce_motion: settings::ReduceMotionMode,
+    canvas_reduced_motion: settings::CanvasMotion,
+}
 
 impl Settings for ReduceMotionSetting {
     fn from_settings(content: &settings::SettingsContent) -> Self {
-        Self(content.reduce_motion.unwrap_or_default())
+        Self {
+            reduce_motion: content.reduce_motion.unwrap_or_default(),
+            canvas_reduced_motion: content
+                .accessibility
+                .as_ref()
+                .and_then(|accessibility| accessibility.reduced_motion)
+                .unwrap_or_default(),
+        }
+    }
+}
+
+impl ReduceMotionSetting {
+    fn reduce_motion(self) -> bool {
+        match self.canvas_reduced_motion {
+            settings::CanvasMotion::Reduced => true,
+            settings::CanvasMotion::Full => false,
+            settings::CanvasMotion::System => self.reduce_motion == settings::ReduceMotionMode::On,
+        }
     }
 }
 
 fn init_reduce_motion(cx: &mut App) {
     let apply = |cx: &mut App| {
-        let reduce_motion = ReduceMotionSetting::get_global(cx).0 == settings::ReduceMotionMode::On;
+        let reduce_motion = ReduceMotionSetting::get_global(cx).reduce_motion();
         cx.set_reduce_motion(reduce_motion);
     };
     apply(cx);
