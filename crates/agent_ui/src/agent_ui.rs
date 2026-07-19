@@ -97,6 +97,28 @@ pub use thread_import::{
 use zed_actions;
 pub use zed_actions::{CreateWorktree, NewWorktreeBranchTarget, SwitchWorktree};
 
+#[derive(Clone, Debug, settings::RegisterSetting)]
+pub struct CanvasAgentUiSettings {
+    pub show_detection_confidence: bool,
+    pub detect_terminal_agents: bool,
+    pub show_terminal_agents_in_session_rail: bool,
+    pub notify_on_attention: bool,
+}
+
+impl settings::Settings for CanvasAgentUiSettings {
+    fn from_settings(content: &settings::SettingsContent) -> Self {
+        let agent_ui = content.agent_ui.clone().unwrap();
+        Self {
+            show_detection_confidence: agent_ui.show_detection_confidence.unwrap(),
+            detect_terminal_agents: agent_ui.detect_terminal_agents.unwrap(),
+            show_terminal_agents_in_session_rail: agent_ui
+                .show_terminal_agents_in_session_rail
+                .unwrap(),
+            notify_on_attention: agent_ui.notify_on_attention.unwrap(),
+        }
+    }
+}
+
 pub(crate) fn resolve_agent_image(
     dest_url: &str,
     worktree_roots: &[PathBuf],

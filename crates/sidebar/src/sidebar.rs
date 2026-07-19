@@ -17,9 +17,9 @@ use agent_ui::threads_archive_view::{
 };
 use agent_ui::{
     AcpThreadImportOnboarding, AddContextServer, Agent, AgentPanel, AgentPanelEvent,
-    AgentThreadItem, AgentThreadSource, ArchiveSelectedThread, ConversationView,
-    CrossChannelImportOnboarding, DEFAULT_THREAD_TITLE, ManageProfiles, NewTerminalThread,
-    NewThread, RenameSelectedThread, TerminalId, ThreadId, ThreadImportModal,
+    AgentThreadItem, AgentThreadSource, ArchiveSelectedThread, CanvasAgentUiSettings,
+    ConversationView, CrossChannelImportOnboarding, DEFAULT_THREAD_TITLE, ManageProfiles,
+    NewTerminalThread, NewThread, RenameSelectedThread, TerminalId, ThreadId, ThreadImportModal,
     ThreadTitleRegenerationResult, ToggleOptionsMenu, channels_with_threads,
     connection_store_for_project, create_agent_thread_in_workspace,
     import_threads_from_other_channels, open_agent_thread_in_workspace,
@@ -281,7 +281,15 @@ fn terminal_agent_icon(kind: TerminalAgentKind) -> IconName {
     }
 }
 
-fn terminal_agent_metadata_label(kind: TerminalAgentKind, has_notification: bool) -> SharedString {
+fn terminal_agent_metadata_label(
+    kind: TerminalAgentKind,
+    has_notification: bool,
+    show_detection_confidence: bool,
+) -> SharedString {
+    if !show_detection_confidence {
+        return SharedString::from(kind.display_name());
+    }
+
     let state = if has_notification {
         "Possibly waiting"
     } else {
@@ -1561,6 +1569,10 @@ impl Sidebar {
         let mw = multi_workspace.read(cx);
         let workspaces: Vec<_> = mw.workspaces().cloned().collect();
         let active_workspace = Some(mw.workspace().clone());
+        let agent_ui_settings = CanvasAgentUiSettings::get_global(cx);
+        let show_terminal_agents = agent_ui_settings.show_terminal_agents_in_session_rail;
+        let detect_terminal_agents = agent_ui_settings.detect_terminal_agents;
+        let notify_on_terminal_attention = agent_ui_settings.notify_on_attention;
 
         let agent_server_store = workspaces
             .first()
@@ -1604,15 +1616,19 @@ impl Sidebar {
 
         let groups = mw.project_groups(cx);
         let mut live_notified_terminal_ids: HashSet<TerminalId> = HashSet::new();
-        for workspace in &workspaces {
-            if let Some(agent_panel) = workspace.read(cx).panel::<AgentPanel>(cx) {
-                live_notified_terminal_ids.extend(
-                    agent_panel
-                        .read(cx)
-                        .terminals(cx)
-                        .into_iter()
-                        .filter_map(|terminal| terminal.has_notification.then_some(terminal.id)),
-                );
+        if show_terminal_agents && notify_on_terminal_attention {
+            for workspace in &workspaces {
+                if let Some(agent_panel) = workspace.read(cx).panel::<AgentPanel>(cx) {
+                    live_notified_terminal_ids.extend(
+                        agent_panel
+                            .read(cx)
+                            .terminals(cx)
+                            .into_iter()
+                            .filter_map(|terminal| {
+                                terminal.has_notification.then_some(terminal.id)
+                            }),
+                    );
+                }
             }
         }
 
@@ -1687,86 +1703,93 @@ impl Sidebar {
                 };
 
             let mut terminals = Vec::new();
-            let terminal_store = TerminalThreadMetadataStore::global(cx);
-            let group_host = group_key.host();
-            let mut push_terminal_metadata =
-                |metadata: TerminalThreadMetadata, workspace: ThreadEntryWorkspace| {
-                    if !seen_terminal_ids.insert(metadata.terminal_id) {
-                        return;
-                    }
-                    terminals.push(make_terminal_entry(metadata, workspace));
-                };
-            for row in terminal_store
-                .read(cx)
-                .entries_for_main_worktree_path(group_key.path_list(), group_host.as_ref())
-                .cloned()
-            {
-                let workspace = resolve_workspace(row.folder_paths());
-                push_terminal_metadata(row, workspace);
-            }
-            for row in terminal_store
-                .read(cx)
-                .entries_for_path(group_key.path_list(), group_host.as_ref())
-                .cloned()
-            {
-                let workspace = resolve_workspace(row.folder_paths());
-                push_terminal_metadata(row, workspace);
-            }
-            for ws in group_workspaces {
-                let ws_paths = workspace_path_list(ws, cx);
-                if ws_paths.paths().is_empty() {
-                    continue;
-                }
-                for row in terminal_store
-                    .read(cx)
-                    .entries_for_path(&ws_paths, group_host.as_ref())
-                    .cloned()
-                {
-                    push_terminal_metadata(row, ThreadEntryWorkspace::Open(ws.clone()));
-                }
-            }
-            for worktree_path_list in &linked_worktree_path_lists {
-                for row in terminal_store
-                    .read(cx)
-                    .entries_for_path(worktree_path_list, group_host.as_ref())
-                    .cloned()
-                {
-                    push_terminal_metadata(
-                        row,
-                        ThreadEntryWorkspace::Closed {
-                            folder_paths: worktree_path_list.clone(),
-                            project_group_key: group_key.clone(),
-                        },
-                    );
-                }
-            }
-            for ws in group_workspaces {
-                for terminal_view in ws.read(cx).items_of_type::<TerminalView>(cx) {
-                    let terminal_id = standalone_terminal_id(ws, &terminal_view, cx);
-                    let created_at = self
-                        .standalone_terminal_created_at
-                        .entry(terminal_id)
-                        .or_insert_with(Utc::now);
-                    let Some(metadata) =
-                        standalone_terminal_metadata(ws, &terminal_view, *created_at, cx)
-                    else {
-                        continue;
+            if show_terminal_agents {
+                let terminal_store = TerminalThreadMetadataStore::global(cx);
+                let group_host = group_key.host();
+                let mut push_terminal_metadata =
+                    |metadata: TerminalThreadMetadata, workspace: ThreadEntryWorkspace| {
+                        if !seen_terminal_ids.insert(metadata.terminal_id) {
+                            return;
+                        }
+                        terminals.push(make_terminal_entry(metadata, workspace));
                     };
-                    if !seen_terminal_ids.insert(metadata.terminal_id) {
+                for row in terminal_store
+                    .read(cx)
+                    .entries_for_main_worktree_path(group_key.path_list(), group_host.as_ref())
+                    .cloned()
+                {
+                    let workspace = resolve_workspace(row.folder_paths());
+                    push_terminal_metadata(row, workspace);
+                }
+                for row in terminal_store
+                    .read(cx)
+                    .entries_for_path(group_key.path_list(), group_host.as_ref())
+                    .cloned()
+                {
+                    let workspace = resolve_workspace(row.folder_paths());
+                    push_terminal_metadata(row, workspace);
+                }
+                for ws in group_workspaces {
+                    let ws_paths = workspace_path_list(ws, cx);
+                    if ws_paths.paths().is_empty() {
                         continue;
                     }
+                    for row in terminal_store
+                        .read(cx)
+                        .entries_for_path(&ws_paths, group_host.as_ref())
+                        .cloned()
+                    {
+                        push_terminal_metadata(row, ThreadEntryWorkspace::Open(ws.clone()));
+                    }
+                }
+                for worktree_path_list in &linked_worktree_path_lists {
+                    for row in terminal_store
+                        .read(cx)
+                        .entries_for_path(worktree_path_list, group_host.as_ref())
+                        .cloned()
+                    {
+                        push_terminal_metadata(
+                            row,
+                            ThreadEntryWorkspace::Closed {
+                                folder_paths: worktree_path_list.clone(),
+                                project_group_key: group_key.clone(),
+                            },
+                        );
+                    }
+                }
+                if detect_terminal_agents {
+                    for ws in group_workspaces {
+                        for terminal_view in ws.read(cx).items_of_type::<TerminalView>(cx) {
+                            let terminal_id = standalone_terminal_id(ws, &terminal_view, cx);
+                            let created_at = self
+                                .standalone_terminal_created_at
+                                .entry(terminal_id)
+                                .or_insert_with(Utc::now);
+                            let Some(metadata) =
+                                standalone_terminal_metadata(ws, &terminal_view, *created_at, cx)
+                            else {
+                                continue;
+                            };
+                            if !seen_terminal_ids.insert(metadata.terminal_id) {
+                                continue;
+                            }
 
-                    let worktrees =
-                        worktree_info_from_thread_paths(&metadata.worktree_paths, &branch_by_path);
-                    let has_notification = terminal_view.read(cx).has_bell();
-                    terminals.push(TerminalEntry {
-                        metadata,
-                        workspace: ThreadEntryWorkspace::Open(ws.clone()),
-                        source: TerminalEntrySource::WorkspaceItem(terminal_view),
-                        worktrees,
-                        has_notification,
-                        highlight_positions: Vec::new(),
-                    });
+                            let worktrees = worktree_info_from_thread_paths(
+                                &metadata.worktree_paths,
+                                &branch_by_path,
+                            );
+                            let has_notification =
+                                notify_on_terminal_attention && terminal_view.read(cx).has_bell();
+                            terminals.push(TerminalEntry {
+                                metadata,
+                                workspace: ThreadEntryWorkspace::Open(ws.clone()),
+                                source: TerminalEntrySource::WorkspaceItem(terminal_view),
+                                worktrees,
+                                has_notification,
+                                highlight_positions: Vec::new(),
+                            });
+                        }
+                    }
                 }
             }
             current_terminal_ids.extend(
@@ -6329,6 +6352,10 @@ impl Sidebar {
                         metadata: terminal.metadata.clone(),
                         workspace: terminal.workspace.clone(),
                         source: terminal.source.clone(),
+                        detected_agent_kind: CanvasAgentUiSettings::get_global(cx)
+                            .detect_terminal_agents
+                            .then(|| terminal.metadata.detected_agent_kind())
+                            .flatten(),
                         project_name: current_header_label.clone(),
                         worktrees: terminal
                             .worktrees
@@ -7011,7 +7038,12 @@ impl Sidebar {
         let is_remote = terminal.workspace.is_remote(cx);
 
         let display_title = terminal.metadata.display_title();
-        let terminal_agent_kind = terminal.metadata.detected_agent_kind();
+        let agent_ui_settings = CanvasAgentUiSettings::get_global(cx);
+        let terminal_agent_kind = agent_ui_settings
+            .detect_terminal_agents
+            .then(|| terminal.metadata.detected_agent_kind())
+            .flatten();
+        let show_detection_confidence = agent_ui_settings.show_detection_confidence;
         let has_notification = terminal.has_notification;
         let (icon_char, title, highlight_positions) =
             match split_leading_icon_char(&display_title, &terminal.highlight_positions) {
@@ -7029,7 +7061,11 @@ impl Sidebar {
             .when_some(icon_char, |this, icon_char| this.icon_char(icon_char))
             .is_remote(is_remote)
             .when_some(terminal_agent_kind, |this, agent_kind| {
-                this.project_name(terminal_agent_metadata_label(agent_kind, has_notification))
+                this.project_name(terminal_agent_metadata_label(
+                    agent_kind,
+                    has_notification,
+                    show_detection_confidence,
+                ))
             })
             .worktrees(worktrees)
             .timestamp(timestamp)

@@ -231,7 +231,10 @@ Terminal-agent detection:
   workspaces and surfaced when their title identifies a known agent CLI;
   activation and close route back to the existing terminal tab. Session Rail
   terminal rows now label detected agents as `Agent detected` and terminal-bell
-  attention as `Possibly waiting`.
+  attention as `Possibly waiting`. Runtime settings now honor
+  `agent_ui.detect_terminal_agents`,
+  `agent_ui.show_terminal_agents_in_session_rail`,
+  `agent_ui.show_detection_confidence`, and `agent_ui.notify_on_attention`.
 - Default `agent_ui.allow_multiple_visible_agents` to `true` so agents can live
   in normal tabs across multiple panes.
 - Default `agent_ui.connect_hooks`, `agent_ui.resume_sessions_on_restart`, and

@@ -37,6 +37,7 @@ pub(crate) struct ThreadSwitcherTerminalEntry {
     pub metadata: TerminalThreadMetadata,
     pub(super) workspace: ThreadEntryWorkspace,
     pub(super) source: TerminalEntrySource,
+    pub(super) detected_agent_kind: Option<TerminalAgentKind>,
     pub project_name: Option<SharedString>,
     pub worktrees: Vec<ThreadItemWorktreeInfo>,
     pub notified: bool,
@@ -102,8 +103,7 @@ impl ThreadSwitcherEntry {
             Self::Thread(entry) if entry.is_draft => IconName::Circle,
             Self::Thread(entry) => entry.icon,
             Self::Terminal(entry) => entry
-                .metadata
-                .detected_agent_kind()
+                .detected_agent_kind
                 .map(terminal_agent_icon)
                 .unwrap_or(IconName::Terminal),
         }
