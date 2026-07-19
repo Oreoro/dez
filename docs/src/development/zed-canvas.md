@@ -580,6 +580,9 @@ The agent end-trial upsell banner uses Canvas density, radius, and contrast for
 the shared onboarding-card shell, gradient, plan section rhythm, header
 spacing, description spacing, dismiss placement, and current-plan label
 contrast.
+The agent panel shell uses Canvas density and contrast for toolbar chrome,
+title-edit hover background, action rhythm, panel backgrounds, onboarding and
+trial overlay backgrounds, and terminal-search toolbar chrome.
 
 ## Layout system {#layout-system}
 

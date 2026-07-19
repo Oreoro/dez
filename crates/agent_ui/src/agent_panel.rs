@@ -74,7 +74,7 @@ use fs::Fs;
 use futures::FutureExt as _;
 use gpui::{
     Action, Anchor, Animation, AnimationExt, AnyElement, App, AsyncWindowContext, ClipboardItem,
-    Entity, EventEmitter, ExternalPaths, FocusHandle, Focusable, KeyContext, Pixels,
+    Entity, EventEmitter, ExternalPaths, FocusHandle, Focusable, Hsla, KeyContext, Pixels,
     PlatformDisplay, Subscription, Task, TaskExt, WeakEntity, WindowHandle, prelude::*,
     pulsating_between,
 };
@@ -95,8 +95,8 @@ use ui::{
 };
 use util::ResultExt as _;
 use workspace::{
-    CollaboratorId, DraggedSelection, DraggedTab, MultiWorkspace, PathList, SerializedPathList,
-    ToggleSidebar, ToggleZoom, ToolbarItemView, Workspace, WorkspaceId,
+    CollaboratorId, DesignSystemSettings, DraggedSelection, DraggedTab, MultiWorkspace, PathList,
+    SerializedPathList, ToggleSidebar, ToggleZoom, ToolbarItemView, Workspace, WorkspaceId,
     dock::{DockPosition, Panel, PanelEvent},
     item::{ItemEvent, ItemHandle},
 };
@@ -126,6 +126,92 @@ const KNOWN_TERMINAL_AGENT_COMMANDS: &[&str] = &[
     "pi",
     "qwen",
 ];
+
+fn canvas_agent_panel_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.panel_background.opacity(0.92),
+        settings::CanvasContrast::Standard => colors.panel_background,
+        settings::CanvasContrast::High => colors
+            .panel_background
+            .blend(colors.border_focused.opacity(0.06)),
+    }
+}
+
+fn canvas_agent_panel_toolbar_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.tab_bar_background.opacity(0.88),
+        settings::CanvasContrast::Standard => colors.tab_bar_background,
+        settings::CanvasContrast::High => colors
+            .elevated_surface_background
+            .blend(colors.border_focused.opacity(0.08)),
+    }
+}
+
+fn canvas_agent_panel_toolbar_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border.opacity(0.42),
+        settings::CanvasContrast::Standard => colors.border,
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn canvas_agent_panel_subtoolbar_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.toolbar_background.opacity(0.88),
+        settings::CanvasContrast::Standard => colors.toolbar_background,
+        settings::CanvasContrast::High => colors
+            .toolbar_background
+            .blend(colors.border_focused.opacity(0.08)),
+    }
+}
+
+fn canvas_agent_panel_subtoolbar_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border_variant.opacity(0.42),
+        settings::CanvasContrast::Standard => colors.border_variant,
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn canvas_agent_panel_overlay_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.panel_background.opacity(0.78),
+        settings::CanvasContrast::Standard => colors.panel_background,
+        settings::CanvasContrast::High => colors
+            .panel_background
+            .blend(colors.border_focused.opacity(0.1)),
+    }
+}
+
+fn canvas_agent_panel_action_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(3.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn canvas_agent_panel_subtoolbar_padding_x(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn canvas_agent_panel_subtoolbar_padding_y(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
 
 fn is_known_terminal_agent_command(command: &str) -> bool {
     KNOWN_TERMINAL_AGENT_COMMANDS.contains(&command)
@@ -5487,7 +5573,7 @@ impl AgentPanel {
             VisibleSurface::Uninitialized => Label::new("Agent").truncate().into_any_element(),
         };
 
-        let toolbar_bg = cx.theme().colors().tab_bar_background;
+        let toolbar_bg = canvas_agent_panel_toolbar_background(cx);
         let gradient_overlay = GradientFade::new(toolbar_bg, toolbar_bg, toolbar_bg)
             .width(px(64.0))
             .right(px(0.0))
@@ -5514,7 +5600,7 @@ impl AgentPanel {
                             .absolute()
                             .right_0()
                             .h_full()
-                            .bg(cx.theme().colors().tab_bar_background)
+                            .bg(toolbar_bg)
                             .child(
                                 IconButton::new("edit_tile", IconName::Pencil)
                                     .icon_size(IconSize::Small)
@@ -6157,7 +6243,7 @@ impl AgentPanel {
                         .px_1()
                         .h_full()
                         .flex_none()
-                        .gap_1()
+                        .gap(canvas_agent_panel_action_gap(cx))
                         .children(sandbox_status)
                         .when(can_create_entries, |this| this.child(new_thread_menu))
                         .child(full_screen_button)
@@ -6186,9 +6272,9 @@ impl AgentPanel {
             .h(Tab::container_height(cx))
             .flex_shrink_0()
             .max_w_full()
-            .bg(cx.theme().colors().tab_bar_background)
+            .bg(canvas_agent_panel_toolbar_background(cx))
             .border_b_1()
-            .border_color(cx.theme().colors().border)
+            .border_color(canvas_agent_panel_toolbar_border(cx))
             .when(reserve_traffic_light_space, |this| {
                 this.child(ui::utils::traffic_light_spacer(cx, false))
             })
@@ -6287,7 +6373,7 @@ impl AgentPanel {
 
         Some(
             div()
-                .bg(cx.theme().colors().editor_background)
+                .bg(canvas_agent_panel_background(cx))
                 .child(self.new_user_onboarding.clone()),
         )
     }
@@ -6306,7 +6392,7 @@ impl AgentPanel {
                 .absolute()
                 .inset_0()
                 .size_full()
-                .bg(cx.theme().colors().panel_background)
+                .bg(canvas_agent_panel_overlay_background(cx))
                 .opacity(0.85)
                 .block_mouse_except_scroll()
                 .child(EndTrialUpsell::new(Arc::new({
@@ -6491,7 +6577,7 @@ impl Render for AgentPanel {
             .size_full()
             .justify_between()
             .track_focus(&self.focus_handle)
-            .bg(cx.theme().colors().panel_background)
+            .bg(canvas_agent_panel_background(cx))
             .on_action(cx.listener(|this, action: &NewThread, window, cx| {
                 this.new_thread(action, window, cx);
             }))
@@ -6547,11 +6633,11 @@ impl Render for AgentPanel {
                                     v_flex()
                                         .group("toolbar")
                                         .relative()
-                                        .py(DynamicSpacing::Base06.rems(cx))
-                                        .px(DynamicSpacing::Base08.rems(cx))
+                                        .py(canvas_agent_panel_subtoolbar_padding_y(cx))
+                                        .px(canvas_agent_panel_subtoolbar_padding_x(cx))
                                         .border_b_1()
-                                        .border_color(cx.theme().colors().border_variant)
-                                        .bg(cx.theme().colors().toolbar_background)
+                                        .border_color(canvas_agent_panel_subtoolbar_border(cx))
+                                        .bg(canvas_agent_panel_subtoolbar_background(cx))
                                         .child(search_bar),
                                 )
                             })

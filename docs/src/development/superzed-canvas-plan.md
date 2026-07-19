@@ -467,6 +467,10 @@ Current consumers:
   the end-trial banner applies those values along with plan section rhythm,
   section-header spacing, description spacing, dismiss affordance offset, and
   current-plan label contrast.
+- Agent panel shell: toolbar background/border, title-edit hover patch,
+  toolbar action rhythm, main panel background, onboarding background, trial
+  overlay background, and terminal-search toolbar padding/background/border
+  consume Canvas density and contrast.
 - Go To Line: the modal shell, input divider, help row spacing, and elevated
   navigation surface consume Canvas density, radius, and contrast.
 - Tasks UI: the task picker shell, search row, empty state, task rows,
