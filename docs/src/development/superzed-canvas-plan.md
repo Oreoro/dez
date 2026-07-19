@@ -11,7 +11,8 @@ the user asks.
 
 Implemented in this phase:
 
-- Merged latest `zed-industries/zed:main` into the Superzed work branch.
+- Merged current `zed-industries/zed:main` into the Superzed work branch
+  through upstream commit `0c51c7fd24`.
 - Added Canvas settings families:
   `design_system`, `workspace_bar`, `session_rail`, `pane_grid`, `agent_ui`,
   `multiplexer`, and `accessibility`.
