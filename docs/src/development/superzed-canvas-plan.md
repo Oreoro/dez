@@ -328,6 +328,10 @@ Terminal-agent detection:
   "summary"` now hides completed generic tool-call events that have no content
   or raw input, while preserving subagents, terminal tools, edits, pending work,
   permission prompts, failures, cancellations, and rejected calls.
+  `agent_ui.presentation` now controls transcript density: `compact` uses
+  tighter message padding for side-by-side agent lanes, `chat` uses a
+  conversational middle density, and `document` preserves the roomy default
+  transcript spacing.
 
 Restoration:
 

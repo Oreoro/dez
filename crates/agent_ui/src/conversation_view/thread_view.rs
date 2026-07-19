@@ -6317,9 +6317,7 @@ impl ThreadView {
                             this.pt_2()
                         }
                     })
-                    .pb_3()
-                    .px_2()
-                    .gap_1p5()
+                    .map(|this| self.apply_user_message_spacing(this, cx))
                     .w_full()
                     .when(is_editable && has_checkpoint_button, |this| {
                         this.children(message.client_id.clone().map(|client_id| {
@@ -6345,8 +6343,7 @@ impl ThreadView {
                             .relative()
                             .child(
                                 div()
-                                    .py_3()
-                                    .px_2()
+                                    .map(|this| self.apply_user_message_bubble_spacing(this, cx))
                                     .rounded_md()
                                     .bg(cx.theme().colors().editor_background)
                                     .border_1()
@@ -6515,9 +6512,7 @@ impl ThreadView {
                     Empty.into_any()
                 } else {
                     v_flex()
-                        .px_5()
-                        .py_1p5()
-                        .when(is_last, |this| this.pb_4())
+                        .map(|this| self.apply_assistant_message_spacing(this, is_last, cx))
                         .w_full()
                         .text_ui(cx)
                         .child(self.render_message_context_menu(entry_ix, message_body, cx))
@@ -6745,6 +6740,49 @@ impl ThreadView {
                 .into_any_element()
         } else {
             primary
+        }
+    }
+
+    fn agent_presentation(&self, cx: &Context<Self>) -> settings::AgentPresentation {
+        CanvasAgentUiSettings::get_global(cx).presentation
+    }
+
+    fn apply_user_message_spacing(&self, element: Div, cx: &Context<Self>) -> Div {
+        match self.agent_presentation(cx) {
+            settings::AgentPresentation::Compact => element.pb_2().px_1().gap_1(),
+            settings::AgentPresentation::Chat => element.pb_2().px_2().gap_1p5(),
+            settings::AgentPresentation::Document => element.pb_3().px_2().gap_1p5(),
+        }
+    }
+
+    fn apply_user_message_bubble_spacing(&self, element: Div, cx: &Context<Self>) -> Div {
+        match self.agent_presentation(cx) {
+            settings::AgentPresentation::Compact | settings::AgentPresentation::Chat => {
+                element.py_2().px_2()
+            }
+            settings::AgentPresentation::Document => element.py_3().px_2(),
+        }
+    }
+
+    fn apply_assistant_message_spacing(
+        &self,
+        element: Div,
+        is_last: bool,
+        cx: &Context<Self>,
+    ) -> Div {
+        match self.agent_presentation(cx) {
+            settings::AgentPresentation::Compact => element
+                .px_2()
+                .py_1()
+                .when(is_last, |element| element.pb_2()),
+            settings::AgentPresentation::Chat => element
+                .px_4()
+                .py_1p5()
+                .when(is_last, |element| element.pb_3()),
+            settings::AgentPresentation::Document => element
+                .px_5()
+                .py_1p5()
+                .when(is_last, |element| element.pb_4()),
         }
     }
 

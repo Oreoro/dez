@@ -422,6 +422,11 @@ that have no content or raw input. Safety- or state-bearing events remain
 visible: subagents, terminal tools, edits, pending work, permission prompts,
 failures, cancellations, and rejected calls.
 
+`agent_ui.presentation` controls agent transcript density. `compact` tightens
+user and assistant message spacing for multi-pane agent lanes, `chat` keeps a
+conversational middle density, and `document` preserves the roomier default
+layout.
+
 Agent changes must support file-grouped review, unified or split diffs, hunk
 acceptance, hunk rejection, file acceptance, full rollback, conflict state, test
 linkage, commit preparation, and attribution. Proposed and applied changes must
