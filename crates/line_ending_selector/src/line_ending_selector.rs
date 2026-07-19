@@ -1,3 +1,4 @@
+mod canvas;
 mod line_ending_indicator;
 
 use editor::Editor;
@@ -7,7 +8,7 @@ pub use line_ending_indicator::LineEndingIndicator;
 use picker::{Picker, PickerDelegate};
 use project::Project;
 use std::sync::Arc;
-use ui::{ListItem, ListItemSpacing, prelude::*};
+use ui::{ListItem, prelude::*};
 use util::ResultExt;
 use workspace::ModalView;
 
@@ -65,7 +66,12 @@ impl LineEndingSelector {
         let line_ending = buffer.read(cx).line_ending();
         let delegate =
             LineEndingSelectorDelegate::new(cx.entity().downgrade(), buffer, project, line_ending);
-        let picker = cx.new(|cx| Picker::nonsearchable_uniform_list(delegate, window, cx));
+        let picker = cx.new(|cx| {
+            Picker::nonsearchable_uniform_list(delegate, window, cx)
+                .surface_density(canvas::line_ending_picker_density(cx))
+                .surface_radius(canvas::line_ending_picker_radius(cx))
+                .surface_contrast(canvas::line_ending_picker_contrast(cx))
+        });
         Self { picker }
     }
 }
@@ -176,14 +182,14 @@ impl PickerDelegate for LineEndingSelectorDelegate {
         ix: usize,
         selected: bool,
         _: &mut Window,
-        _: &mut Context<Picker<Self>>,
+        cx: &mut Context<Picker<Self>>,
     ) -> Option<Self::ListItem> {
         let line_ending = self.matches.get(ix)?;
         let label = line_ending.label();
 
         let mut list_item = ListItem::new(ix)
             .inset(true)
-            .spacing(ListItemSpacing::Sparse)
+            .spacing(canvas::line_ending_row_spacing(cx))
             .toggle_state(selected)
             .child(Label::new(label));
 

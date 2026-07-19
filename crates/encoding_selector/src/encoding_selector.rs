@@ -1,4 +1,6 @@
 mod active_buffer_encoding;
+mod canvas;
+
 pub use active_buffer_encoding::ActiveBufferEncoding;
 
 use editor::Editor;
@@ -11,7 +13,7 @@ use gpui::{
 use language::Buffer;
 use picker::{Picker, PickerDelegate};
 use std::sync::Arc;
-use ui::{HighlightedLabel, ListItem, ListItemSpacing, Toggleable, v_flex};
+use ui::{HighlightedLabel, ListItem, Toggleable, v_flex};
 use util::ResultExt;
 use workspace::{ModalView, Toast, Workspace, notifications::NotificationId};
 
@@ -95,7 +97,12 @@ impl EncodingSelector {
 
     fn new(buffer: Entity<Buffer>, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let delegate = EncodingSelectorDelegate::new(cx.entity().downgrade(), buffer);
-        let picker = cx.new(|cx| Picker::uniform_list(delegate, window, cx));
+        let picker = cx.new(|cx| {
+            Picker::uniform_list(delegate, window, cx)
+                .surface_density(canvas::encoding_picker_density(cx))
+                .surface_radius(canvas::encoding_picker_radius(cx))
+                .surface_contrast(canvas::encoding_picker_contrast(cx))
+        });
         Self { picker }
     }
 }
@@ -322,7 +329,7 @@ impl PickerDelegate for EncodingSelectorDelegate {
         Some(
             ListItem::new(ix)
                 .inset(true)
-                .spacing(ListItemSpacing::Sparse)
+                .spacing(canvas::encoding_row_spacing(cx))
                 .toggle_state(selected)
                 .child(HighlightedLabel::new(label, mat.positions.clone())),
         )

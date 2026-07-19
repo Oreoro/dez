@@ -523,6 +523,9 @@ Project Symbols uses Canvas picker shell tokens and maps density into symbol
 result row rhythm for project-wide code navigation.
 Go To Line uses Canvas density, radius, and contrast for its modal shell,
 input divider, help row spacing, and elevated navigation surface.
+Encoding, line-ending, and settings-profile selectors use Canvas picker shell
+tokens and density-driven row rhythm so low-level editor selectors match the
+main command/navigation surfaces.
 
 ## Layout system {#layout-system}
 

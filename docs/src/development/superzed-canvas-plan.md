@@ -66,6 +66,10 @@ Implemented in this phase:
   divider, help row spacing, and elevated navigation surface now read
   `design_system.density`, `design_system.radius`, and
   `design_system.contrast`.
+- Applied Canvas design-system tokens to encoding, line-ending, and
+  settings-profile selectors: their picker shells and selector row rhythm now
+  read `design_system.density`, `design_system.radius`, and
+  `design_system.contrast`.
 - Added schema/default switches for pane-tab panel hosting, terminal-agent
   detection, multiple visible agents, session restoration, agent attention
   notifications, and preview-first Markdown.
@@ -349,7 +353,8 @@ Current consumers:
   background, and border strength now read Canvas density, radius, and contrast
   when content width limiting is active.
 - Command and selector surfaces: the command palette, File Finder, Tab
-  Switcher, Project Symbols, theme selector, icon theme selector, and language
+  Switcher, Project Symbols, encoding selector, line-ending selector,
+  settings-profile selector, theme selector, icon theme selector, and language
   selector opt the shared picker component into Canvas density, radius, and
   contrast for modal chrome, search input rows, empty states, preview/action
   footers, and documentation asides where present.

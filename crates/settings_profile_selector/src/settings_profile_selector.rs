@@ -4,8 +4,10 @@ use gpui::{
 };
 use picker::{Picker, PickerDelegate};
 use settings::{ActiveSettingsProfileName, SettingsStore};
-use ui::{HighlightedLabel, ListItem, ListItemSpacing, prelude::*};
+use ui::{HighlightedLabel, ListItem, prelude::*};
 use workspace::{ModalView, Workspace};
+
+mod canvas;
 
 pub fn init(cx: &mut App) {
     cx.on_action(|_: &zed_actions::settings_profile_selector::Toggle, cx| {
@@ -52,8 +54,13 @@ impl SettingsProfileSelector {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let picker =
-            cx.new(|cx| Picker::uniform_list(delegate, window, cx).initial_width(rems(22.)));
+        let picker = cx.new(|cx| {
+            Picker::uniform_list(delegate, window, cx)
+                .surface_density(canvas::settings_profile_picker_density(cx))
+                .surface_radius(canvas::settings_profile_picker_radius(cx))
+                .surface_contrast(canvas::settings_profile_picker_contrast(cx))
+                .initial_width(rems(22.))
+        });
         Self { picker }
     }
 }
@@ -260,7 +267,7 @@ impl PickerDelegate for SettingsProfileSelectorDelegate {
         ix: usize,
         selected: bool,
         _: &mut Window,
-        _: &mut Context<Picker<Self>>,
+        cx: &mut Context<Picker<Self>>,
     ) -> Option<Self::ListItem> {
         let mat = &self.matches.get(ix)?;
         let profile_name = &self.profile_names.get(mat.candidate_id)?;
@@ -268,7 +275,7 @@ impl PickerDelegate for SettingsProfileSelectorDelegate {
         Some(
             ListItem::new(ix)
                 .inset(true)
-                .spacing(ListItemSpacing::Sparse)
+                .spacing(canvas::settings_profile_row_spacing(cx))
                 .toggle_state(selected)
                 .child(HighlightedLabel::new(
                     display_name(profile_name),
