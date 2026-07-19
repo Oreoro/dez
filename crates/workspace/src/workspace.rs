@@ -158,8 +158,9 @@ use util::{
 };
 use uuid::Uuid;
 pub use workspace_settings::{
-    AutosaveSetting, EncodingDisplayOptions, FocusFollowsMouse, RestoreOnStartupBehavior,
-    SidebarSettings, StatusBarSettings, TabBarSettings, ToolbarSettings, WorkspaceSettings,
+    AccessibleMode, AutosaveSetting, EncodingDisplayOptions, FocusFollowsMouse,
+    RestoreOnStartupBehavior, SidebarSettings, StatusBarSettings, TabBarSettings, ToolbarSettings,
+    WorkspaceSettings, observe_accessible_mode,
 };
 use zed_actions::{Spawn, feedback::FileBugReport, theme::ToggleMode};
 
@@ -264,6 +265,13 @@ actions!(
         ActivatePreviousPane,
         /// Activates the last pane in the workspace.
         ActivateLastPane,
+        /// Moves focus to the next major region of the window (editor, open
+        /// panels, status bar), cycling and wrapping around. Intended as a
+        /// discoverable, screen-reader-friendly way to navigate the window.
+        FocusNextPart,
+        /// Moves focus to the previous major region of the window. See
+        /// [`FocusNextPart`].
+        FocusPreviousPart,
         /// Switches to the next window.
         ActivateNextWindow,
         /// Switches to the previous window.
@@ -324,6 +332,9 @@ actions!(
         ToggleEditPrediction,
         /// Toggles zoom on the active pane.
         ToggleZoom,
+        /// Toggles maximizing the active editor pane within the center area,
+        /// hiding other split panes but leaving docks/panels unaffected.
+        ToggleEditorZoom,
         /// Toggles read-only mode for the active item (if supported by that item).
         ToggleReadOnlyFile,
         /// Zooms in on the active pane.
@@ -463,6 +474,8 @@ actions!(
 pub struct ToggleFileFinder {
     #[serde(default)]
     pub separate_history: bool,
+    #[serde(default)]
+    pub include_ignored: Option<bool>,
 }
 
 /// Opens a new terminal in the center.
@@ -1319,6 +1332,7 @@ pub struct Workspace {
     zoomed: Option<AnyWeakView>,
     previous_dock_drag_coordinates: Option<Point<Pixels>>,
     zoomed_position: Option<DockPosition>,
+    maximized_pane: Option<WeakEntity<Pane>>,
     center: PaneGroup,
     left_dock: Entity<Dock>,
     right_dock: Entity<Dock>,
@@ -1330,6 +1344,9 @@ pub struct Workspace {
     status_bar: Entity<StatusBar>,
     pub(crate) modal_layer: Entity<ModalLayer>,
     toast_layer: Entity<ToastLayer>,
+    titlebar_item: Option<AnyView>,
+    titlebar_focus_handle: FocusHandle,
+    region_focus_handles: RegionFocusHandles,
     notifications: Notifications,
     suppressed_notifications: HashSet<NotificationId>,
     project: Entity<Project>,
@@ -1709,6 +1726,9 @@ impl Workspace {
         let subscriptions = vec![
             cx.observe_window_activation(window, Self::on_window_activation_changed),
             cx.observe_window_bounds(window, move |this, window, cx| {
+                if !window.is_window_active() {
+                    return;
+                }
                 if this.bounds_save_task_queued.is_some() {
                     return;
                 }
@@ -1755,6 +1775,7 @@ impl Workspace {
             weak_self: weak_handle.clone(),
             zoomed: None,
             zoomed_position: None,
+            maximized_pane: None,
             previous_dock_drag_coordinates: None,
             center,
             panes: vec![center_pane.clone()],
@@ -1765,6 +1786,9 @@ impl Workspace {
             status_bar,
             modal_layer,
             toast_layer,
+            titlebar_item: None,
+            titlebar_focus_handle: cx.focus_handle(),
+            region_focus_handles: RegionFocusHandles::new(cx),
             notifications: Notifications::default(),
             suppressed_notifications: HashSet::default(),
             left_dock,
@@ -2833,10 +2857,11 @@ impl Workspace {
                     } else {
                         // If the item is no longer present in this pane, then retrieve its
                         // path info in order to reopen it.
-                        break pane
-                            .nav_history()
-                            .path_for_item(entry.item.id())
-                            .map(|(project_path, abs_path)| (project_path, abs_path, entry));
+                        if let Some((project_path, abs_path)) =
+                            pane.nav_history().path_for_item(entry.item.id())
+                        {
+                            break Some((project_path, abs_path, entry));
+                        }
                     }
                 }
             })
@@ -6020,6 +6045,13 @@ impl Workspace {
             None
         });
 
+        if let Some(maximized) = &self.maximized_pane {
+            let is_center_pane = self.panes.contains(&pane);
+            if is_center_pane && maximized.upgrade().as_ref() != Some(&pane) {
+                self.maximized_pane = None;
+            }
+        }
+
         self.dismiss_zoomed_items_to_reveal(dock_to_preserve, window, cx);
         if pane.read(cx).is_zoomed() {
             self.zoomed = Some(pane.downgrade().into());
@@ -6160,6 +6192,7 @@ impl Workspace {
             }
             pane::Event::ZoomIn => {
                 if *pane == self.active_pane {
+                    self.maximized_pane = None;
                     pane.update(cx, |pane, cx| pane.set_zoomed(true, cx));
                     if pane.read(cx).has_focus(window, cx) {
                         self.zoomed = Some(pane.downgrade().into());
@@ -6378,6 +6411,15 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         if self.center.remove(&pane, cx).unwrap() {
+            if self
+                .maximized_pane
+                .as_ref()
+                .and_then(|weak| weak.upgrade())
+                .as_ref()
+                == Some(&pane)
+            {
+                self.maximized_pane = None;
+            }
             self.force_remove_pane(&pane, &focus_on, window, cx);
             self.unfollow_in_pane(&pane, window, cx);
             self.last_leaders_by_pane.remove(&pane.downgrade());
@@ -6867,7 +6909,7 @@ impl Workspace {
                     .children(
                         self.notifications
                             .iter()
-                            .map(|(_, notification)| notification.clone().into_any()),
+                            .map(|(_, notification)| notification.clone().into_any_element()),
                     ),
             )
         }
@@ -7998,6 +8040,16 @@ impl Workspace {
                 ThreadStatus::Stopped => context.add("debugger_stopped"),
                 ThreadStatus::Exited | ThreadStatus::Ended => {}
             }
+            // A coarse "there is a live debug session" flag (running, stepping,
+            // or stopped at a breakpoint) used to gate debugger controls like
+            // step/pause/stop. Distinct from `debugger_running`, which is only
+            // true while the program is actually executing.
+            if matches!(
+                status,
+                ThreadStatus::Running | ThreadStatus::Stepping | ThreadStatus::Stopped
+            ) {
+                context.add("debugger_session");
+            }
         }
 
         if self.left_dock.read(cx).is_open() {
@@ -8071,6 +8123,12 @@ impl Workspace {
             }))
             .on_action(cx.listener(|workspace, _: &ActivateLastPane, window, cx| {
                 workspace.activate_last_pane(window, cx)
+            }))
+            .on_action(cx.listener(|workspace, _: &FocusNextPart, window, cx| {
+                workspace.move_part_focus(true, window, cx);
+            }))
+            .on_action(cx.listener(|workspace, _: &FocusPreviousPart, window, cx| {
+                workspace.move_part_focus(false, window, cx);
             }))
             .on_action(
                 cx.listener(|workspace, _: &ActivateNextWindow, _window, cx| {
@@ -8197,6 +8255,7 @@ impl Workspace {
                 },
             ))
             .on_action(cx.listener(Workspace::toggle_centered_layout))
+            .on_action(cx.listener(Workspace::toggle_editor_zoom))
             .on_action(cx.listener(
                 |workspace: &mut Workspace, action: &pane::ActivateNextItem, window, cx| {
                     if let Some(active_dock) = workspace.active_dock(window, cx) {
@@ -8461,6 +8520,37 @@ impl Workspace {
             });
     }
 
+    pub fn toggle_editor_zoom(
+        &mut self,
+        _: &ToggleEditorZoom,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.zoomed.is_some() {
+            self.active_pane.update(cx, |pane, cx| {
+                pane.set_zoomed(false, cx);
+            });
+            self.zoomed = None;
+            self.zoomed_position = None;
+            cx.emit(Event::ZoomChanged);
+        }
+
+        if let Some(maximized) = self.maximized_pane.take() {
+            if maximized.upgrade().as_ref() == Some(&self.active_pane) {
+                cx.notify();
+                return;
+            }
+        }
+
+        self.maximized_pane = Some(self.active_pane.downgrade());
+        window.focus(&self.active_pane.focus_handle(cx), cx);
+        cx.notify();
+    }
+
+    pub fn is_pane_maximized(&self) -> bool {
+        self.maximized_pane.is_some()
+    }
+
     fn adjust_padding(padding: Option<f32>) -> f32 {
         padding
             .unwrap_or(CenteredPaddingSettings::default().0)
@@ -8468,6 +8558,262 @@ impl Workspace {
                 CenteredPaddingSettings::MIN_PADDING,
                 CenteredPaddingSettings::MAX_PADDING,
             )
+    }
+
+    fn render_dock(
+        &self,
+        position: DockPosition,
+        dock: &Entity<Dock>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Option<Stateful<Div>> {
+        if self.zoomed_position == Some(position) {
+            return None;
+        }
+
+        let leader_border = dock.read(cx).active_panel().and_then(|panel| {
+            let pane = panel.pane(cx)?;
+            let follower_states = &self.follower_states;
+            leader_border_for_pane(follower_states, &pane, window, cx)
+        });
+
+        // Expose each open dock as a landmark region so assistive technology
+        // can navigate to it, and so region navigation announces it. While a
+        // screen reader is active the wrapper is also the focus target for
+        // region navigation (it carries the landmark role and label), so
+        // focusing it announces the region instead of falling back to the whole
+        // window. We only make it focusable in that case so it never adds a
+        // hitbox or intercepts mouse focus for other users.
+        let (dock_element_id, dock_label) = match position {
+            DockPosition::Left => ("left-dock", "Left dock"),
+            DockPosition::Right => ("right-dock", "Right dock"),
+            DockPosition::Bottom => ("bottom-dock", "Bottom dock"),
+        };
+        let dock_is_open = dock.read(cx).is_open();
+        let a11y_active = window.is_a11y_active();
+
+        let mut container = div()
+            .id(dock_element_id)
+            .when(dock_is_open, |this| {
+                this.role(gpui::Role::Complementary)
+                    .aria_label(dock_label)
+                    .when(a11y_active, |this| {
+                        this.track_focus(self.region_focus_handles.dock(position))
+                    })
+            })
+            .flex()
+            .overflow_hidden()
+            .flex_none()
+            .child(dock.clone())
+            .children(leader_border);
+
+        // Apply sizing only when the dock is open. When closed the dock is still
+        // included in the element tree so its focus handle remains mounted — without
+        // this, toggle_panel_focus cannot focus the panel when the dock is closed.
+        let dock = dock.read(cx);
+        if let Some(panel) = dock.visible_panel() {
+            let size_state = dock.stored_panel_size_state(panel.as_ref());
+            let min_size = panel.min_size(window, cx);
+            if position.axis() == Axis::Horizontal {
+                let use_flexible = panel.has_flexible_size(window, cx);
+                let flex_grow = if use_flexible {
+                    size_state
+                        .and_then(|state| state.flex)
+                        .or_else(|| self.default_dock_flex(position))
+                } else {
+                    None
+                };
+                if let Some(grow) = flex_grow {
+                    let grow = (grow / self.center_full_height_column_count()).max(0.001);
+                    let style = container.style();
+                    style.flex_grow = Some(grow);
+                    style.flex_shrink = Some(1.0);
+                    style.flex_basis = Some(relative(0.).into());
+                } else {
+                    let size = size_state
+                        .and_then(|state| state.size)
+                        .unwrap_or_else(|| panel.default_size(window, cx));
+                    container = container.w(size);
+                    // Allow the fixed-width dock to shrink when there isn't
+                    // enough space (e.g. when the sidebar is open). The
+                    // stored size is preserved so the dock expands back
+                    // when space becomes available.
+                    let style = container.style();
+                    style.flex_shrink = Some(1.0);
+                }
+                if let Some(min) = min_size {
+                    container = container.min_w(min);
+                }
+            } else {
+                let size = size_state
+                    .and_then(|state| state.size)
+                    .unwrap_or_else(|| panel.default_size(window, cx));
+                container = container.h(size);
+            }
+        }
+
+        Some(container)
+    }
+
+    /// Returns the currently-visible major window regions ("parts"), in a stable
+    /// cyclic order: title bar, left dock, editor, right dock, bottom dock,
+    /// status bar. Closed docks are skipped. Used by
+    /// [`FocusNextPart`]/[`FocusPreviousPart`] so keyboard and screen-reader
+    /// users can move between regions without a mouse.
+    fn focusable_parts(&self, cx: &App) -> Vec<FocusablePart> {
+        // The interactive focus target inside an open dock: the active panel, or
+        // the dock itself as a fallback. This is what region navigation focuses
+        // when no screen reader is active (preserving the previous behavior).
+        fn dock_content_handle(dock: &Entity<Dock>, cx: &App) -> FocusHandle {
+            let dock = dock.read(cx);
+            dock.active_panel()
+                .map(|panel| panel.panel_focus_handle(cx))
+                .unwrap_or_else(|| dock.focus_handle(cx))
+        }
+
+        let dock_part = |dock: &Entity<Dock>, wrapper: &FocusHandle| {
+            dock.read(cx)
+                .is_open()
+                .then(|| FocusablePart::landmark(wrapper.clone(), dock_content_handle(dock, cx)))
+        };
+
+        let mut parts = Vec::new();
+        if self.titlebar_item.is_some() {
+            // The title bar is an ARIA toolbar, so region navigation lands on
+            // its first control rather than the toolbar container.
+            parts.push(FocusablePart::toolbar(self.titlebar_focus_handle.clone()));
+        }
+        parts.extend(dock_part(
+            &self.left_dock,
+            &self.region_focus_handles.left_dock,
+        ));
+
+        let center_pane = self
+            .last_active_center_pane
+            .as_ref()
+            .and_then(|pane| pane.upgrade())
+            .unwrap_or_else(|| self.center.first_pane());
+        parts.push(FocusablePart::landmark(
+            self.region_focus_handles.editor.clone(),
+            center_pane.read(cx).focus_handle(cx),
+        ));
+
+        parts.extend(dock_part(
+            &self.right_dock,
+            &self.region_focus_handles.right_dock,
+        ));
+        // The status bar is an ARIA toolbar, so region navigation lands on its
+        // first control rather than the toolbar container.
+        parts.push(FocusablePart::toolbar(
+            self.status_bar.read(cx).focus_handle(cx),
+        ));
+        parts
+    }
+
+    /// Moves focus to the next (or previous) visible window region. See
+    /// [`FocusNextPart`].
+    fn move_part_focus(&mut self, forward: bool, window: &mut Window, cx: &mut Context<Self>) {
+        let parts = self.focusable_parts(cx);
+        if parts.is_empty() {
+            return;
+        }
+        let current = parts
+            .iter()
+            .position(|part| part.contains_focused(window, cx));
+        let next_index = match current {
+            Some(index) if forward => (index + 1) % parts.len(),
+            Some(index) => (index + parts.len() - 1) % parts.len(),
+            None => 0,
+        };
+        let part = &parts[next_index];
+        match &part.behavior {
+            PartBehavior::Toolbar => {
+                // The ARIA toolbar pattern requires focus to rest on the first
+                // control, not the container. Focusing the tab-group container
+                // and advancing descends into its first control; if the toolbar
+                // has no focusable control, restore focus to the container so
+                // navigation doesn't escape into an unrelated region.
+                let container = part.container.clone();
+                window.focus(&container, cx);
+                window.focus_next(cx);
+                let landed_inside = window
+                    .focused(cx)
+                    .is_some_and(|handle| container.contains(&handle, window));
+                if !landed_inside {
+                    window.focus(&container, cx);
+                }
+            }
+            PartBehavior::Landmark { content } => {
+                // Only redirect to the (otherwise non-focusable) wrapper when a
+                // screen reader is active, so it is announced as a landmark.
+                // Without a screen reader, focus the interactive content so
+                // sighted keyboard users land somewhere usable, unchanged from
+                // before this feature existed.
+                if window.is_a11y_active() {
+                    window.focus(&part.container, cx);
+                } else {
+                    window.focus(content, cx);
+                }
+            }
+        }
+        cx.notify();
+    }
+
+    /// Moves focus between the interactive controls within the title bar
+    /// toolbar in response to arrow keys. Navigation is clamped to the title
+    /// bar so arrows move between items and stop at the ends (ARIA toolbar
+    /// semantics); Tab is still used to leave the toolbar.
+    fn move_titlebar_item_focus(
+        &mut self,
+        forward: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let previous = window.focused(cx);
+        if forward {
+            window.focus_next(cx);
+        } else {
+            window.focus_prev(cx);
+        }
+        let landed_in_titlebar = window
+            .focused(cx)
+            .is_some_and(|handle| self.titlebar_focus_handle.contains(&handle, window));
+        // If Tab navigation wandered out of the toolbar, restore the previous
+        // item so the ends of the toolbar act as stops rather than exits.
+        if !landed_in_titlebar && let Some(previous) = previous {
+            window.focus(&previous, cx);
+        }
+        cx.notify();
+    }
+
+    /// Renders the center pane group wrapped in a `Main` landmark so assistive
+    /// technology recognizes the editor as the main region and can navigate to
+    /// it. While a screen reader is active the wrapper is also the focus target
+    /// for region navigation (it carries the landmark role and label), so
+    /// focusing it announces "Editor" instead of falling back to the whole
+    /// window. We only make it focusable in that case so it never adds a hitbox
+    /// or intercepts mouse focus for other users.
+    fn render_center(
+        &self,
+        render_cx: &PaneRenderContext,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> impl IntoElement {
+        div()
+            .id("editor-region")
+            .role(gpui::Role::Main)
+            .aria_label("Editor")
+            .when(window.is_a11y_active(), |this| {
+                this.track_focus(&self.region_focus_handles.editor)
+            })
+            .size_full()
+            .child(self.center.render(
+                self.zoomed.as_ref(),
+                self.maximized_pane.as_ref(),
+                render_cx,
+                window,
+                cx,
+            ))
     }
 
     pub fn for_window(window: &Window, cx: &App) -> Option<Entity<Workspace>> {
@@ -8887,6 +9233,92 @@ fn dock_has_focus_target(dock: &Entity<Dock>, cx: &App) -> bool {
         .is_some_and(|panel| PanelPaneKind::for_panel_key(panel.panel_key()).is_none())
 }
 
+/// A focusable major window region used by region navigation
+/// ([`FocusNextPart`]/[`FocusPreviousPart`]).
+struct FocusablePart {
+    /// The region's container/ancestor handle. For landmark regions this is the
+    /// wrapper that carries the landmark role + label (and is only focusable
+    /// while a screen reader is active); for toolbars it is the toolbar
+    /// container.
+    container: FocusHandle,
+    behavior: PartBehavior,
+}
+
+enum PartBehavior {
+    /// An ARIA toolbar (title bar, status bar). Region navigation focuses the
+    /// container and descends to its first control, which is usable for
+    /// everyone, so this is not gated on assistive technology.
+    Toolbar,
+    /// A landmark region (a dock or the editor). The wrapper carries the
+    /// landmark role + label, so when a screen reader is active we focus it so
+    /// it is announced. Otherwise we focus the interactive `content` so sighted
+    /// keyboard users land on something usable, exactly as before - and the
+    /// wrapper is left non-focusable so it never affects mouse focus.
+    Landmark { content: FocusHandle },
+}
+
+impl FocusablePart {
+    fn toolbar(container: FocusHandle) -> Self {
+        Self {
+            container,
+            behavior: PartBehavior::Toolbar,
+        }
+    }
+
+    fn landmark(wrapper: FocusHandle, content: FocusHandle) -> Self {
+        Self {
+            container: wrapper,
+            behavior: PartBehavior::Landmark { content },
+        }
+    }
+
+    /// Whether focus currently lies within this region. Checks both the wrapper
+    /// (focused/ancestor when a screen reader is active) and, for landmarks, the
+    /// interactive content (focused when a screen reader is not active, since
+    /// the wrapper isn't in the focus tree then).
+    fn contains_focused(&self, window: &Window, cx: &App) -> bool {
+        if self.container.contains_focused(window, cx) {
+            return true;
+        }
+        match &self.behavior {
+            PartBehavior::Landmark { content } => content.contains_focused(window, cx),
+            PartBehavior::Toolbar => false,
+        }
+    }
+}
+
+/// Focus handles for the landmark region wrappers (the docks and the editor).
+/// Region navigation ([`FocusNextPart`]/[`FocusPreviousPart`]) focuses these so
+/// it lands on the wrapper that actually carries the landmark role and label
+/// (e.g. `Main`/"Editor", `Complementary`/"Left dock"). Without them, region
+/// navigation would focus an inner element that has no accessibility node, and
+/// assistive technology would fall back to announcing the whole window.
+struct RegionFocusHandles {
+    left_dock: FocusHandle,
+    right_dock: FocusHandle,
+    bottom_dock: FocusHandle,
+    editor: FocusHandle,
+}
+
+impl RegionFocusHandles {
+    fn new(cx: &mut App) -> Self {
+        Self {
+            left_dock: cx.focus_handle(),
+            right_dock: cx.focus_handle(),
+            bottom_dock: cx.focus_handle(),
+            editor: cx.focus_handle(),
+        }
+    }
+
+    fn dock(&self, position: DockPosition) -> &FocusHandle {
+        match position {
+            DockPosition::Left => &self.left_dock,
+            DockPosition::Right => &self.right_dock,
+            DockPosition::Bottom => &self.bottom_dock,
+        }
+    }
+}
+
 fn notify_if_database_failed(window: WindowHandle<MultiWorkspace>, cx: &mut AsyncApp) {
     window
         .update(cx, |multi_workspace, _, cx| {
@@ -8992,6 +9424,42 @@ impl Render for Workspace {
             .items_start()
             .text_color(colors.text)
             .overflow_hidden()
+            // Expose the title bar as an ARIA toolbar so region navigation
+            // (FocusNextPart) can reach the top bar's controls and assistive
+            // technology announces it as a toolbar. The contained controls form
+            // a tab group: region navigation lands on the first control (per
+            // the ARIA toolbar pattern), Tab steps through them, and arrow keys
+            // move between them once focus is inside.
+            .when_some(self.titlebar_item.clone(), |this, item| {
+                this.child(
+                    div()
+                        .id("titlebar-region")
+                        .track_focus(&self.titlebar_focus_handle)
+                        .tab_group()
+                        .role(gpui::Role::Toolbar)
+                        .aria_label("Title bar")
+                        .on_key_down(cx.listener(
+                            |workspace, event: &gpui::KeyDownEvent, window, cx| {
+                                if event.keystroke.modifiers.modified() {
+                                    return;
+                                }
+                                match event.keystroke.key.as_str() {
+                                    "right" => {
+                                        workspace.move_titlebar_item_focus(true, window, cx);
+                                        cx.stop_propagation();
+                                    }
+                                    "left" => {
+                                        workspace.move_titlebar_item_focus(false, window, cx);
+                                        cx.stop_propagation();
+                                    }
+                                    _ => {}
+                                }
+                            },
+                        ))
+                        .w_full()
+                        .child(item),
+                )
+            })
             .on_modifiers_changed(move |_, _, cx| {
                 for &id in &notification_entities {
                     cx.notify(id);
@@ -9087,12 +9555,7 @@ impl Render for Workspace {
                                         .flex_1()
                                         .overflow_hidden()
                                         .when_some(paddings.0, |this, p| this.child(p.border_r_1()))
-                                        .child(self.center.render(
-                                            self.zoomed.as_ref(),
-                                            &pane_render_context,
-                                            window,
-                                            cx,
-                                        ))
+                                        .child(self.render_center(&pane_render_context, window, cx))
                                         .when_some(paddings.1, |this, p| {
                                             this.child(p.border_l_1())
                                         }),
@@ -9871,11 +10334,18 @@ pub async fn find_existing_workspace(
                 if let Ok(multi_workspace) = window.read(cx) {
                     for workspace in multi_workspace.workspaces() {
                         let project = workspace.read(cx).project.read(cx);
-                        let m = project.visibility_for_paths(
-                            abs_paths,
-                            open_options.workspace_matching != WorkspaceMatching::MatchSubdirectory,
-                            cx,
-                        );
+                        let m = match open_options.workspace_matching {
+                            WorkspaceMatching::None => None,
+                            WorkspaceMatching::MatchExact => {
+                                project.visibility_for_paths(abs_paths, true, cx)
+                            }
+                            WorkspaceMatching::MatchSubpaths => {
+                                project.visibility_for_subpaths(abs_paths, cx)
+                            }
+                            WorkspaceMatching::MatchSubdirectory => {
+                                project.visibility_for_paths(abs_paths, false, cx)
+                            }
+                        };
                         if m > best_match {
                             existing = Some((window, workspace.clone()));
                             best_match = m;
@@ -9942,6 +10412,9 @@ pub enum WorkspaceMatching {
     /// Match paths against existing worktree roots and files within them.
     #[default]
     MatchExact,
+    /// Match files and directories inside existing worktrees, excluding the
+    /// worktree roots themselves.
+    MatchSubpaths,
     /// Match paths against existing worktrees including subdirectories, and
     /// fall back to any existing window if no worktree matched.
     ///
@@ -9984,7 +10457,10 @@ impl Default for OpenOptions {
 
 impl OpenOptions {
     fn should_reuse_existing_window(&self) -> bool {
-        self.workspace_matching != WorkspaceMatching::None && self.open_mode != OpenMode::NewWindow
+        !matches!(
+            self.workspace_matching,
+            WorkspaceMatching::None | WorkspaceMatching::MatchSubpaths
+        ) && self.open_mode != OpenMode::NewWindow
     }
 }
 
@@ -10485,28 +10961,6 @@ async fn open_remote_project_inner(
     source_workspace: Option<WeakEntity<Workspace>>,
     cx: &mut AsyncApp,
 ) -> Result<Vec<Option<Box<dyn ItemHandle>>>> {
-    let db = cx.update(|cx| WorkspaceDb::global(cx));
-    let toolchains = db.toolchains(workspace_id).await?;
-    for (toolchain, worktree_path, path) in toolchains {
-        project
-            .update(cx, |this, cx| {
-                let Some(worktree_id) =
-                    this.find_worktree(&worktree_path, cx)
-                        .and_then(|(worktree, rel_path)| {
-                            if rel_path.is_empty() {
-                                Some(worktree.read(cx).id())
-                            } else {
-                                None
-                            }
-                        })
-                else {
-                    return Task::ready(None);
-                };
-
-                this.activate_toolchain(ProjectPath { worktree_id, path }, toolchain, cx)
-            })
-            .await;
-    }
     let mut project_paths_to_open = vec![];
     let mut project_path_errors = vec![];
 
@@ -10532,8 +10986,13 @@ async fn open_remote_project_inner(
 
     let workspace = window.update(cx, |multi_workspace, window, cx| {
         let new_workspace = cx.new(|cx| {
-            let mut workspace =
-                Workspace::new(Some(workspace_id), project, app_state.clone(), window, cx);
+            let mut workspace = Workspace::new(
+                Some(workspace_id),
+                project.clone(),
+                app_state.clone(),
+                window,
+                cx,
+            );
             workspace.update_history(cx);
 
             if let Some(ref serialized) = serialized_workspace {
@@ -10555,6 +11014,29 @@ async fn open_remote_project_inner(
         }
         new_workspace
     })?;
+
+    let db = cx.update(|cx| WorkspaceDb::global(cx));
+    let toolchains = db.toolchains(workspace_id).await?;
+    for (toolchain, worktree_path, path) in toolchains {
+        project
+            .update(cx, |this, cx| {
+                let Some(worktree_id) =
+                    this.find_worktree(&worktree_path, cx)
+                        .and_then(|(worktree, rel_path)| {
+                            if rel_path.is_empty() {
+                                Some(worktree.read(cx).id())
+                            } else {
+                                None
+                            }
+                        })
+                else {
+                    return Task::ready(None);
+                };
+
+                this.activate_toolchain(ProjectPath { worktree_id, path }, toolchain, cx)
+            })
+            .await;
+    }
 
     let items = window
         .update(cx, |_, window, cx| {
@@ -10768,31 +11250,16 @@ fn parse_pixel_size_env_var(value: &str) -> Option<Size<Pixels>> {
 
 /// Add client-side decorations (rounded corners, shadows, resize handling) when
 /// appropriate.
-///
-/// The `border_radius_tiling` parameter allows overriding which corners get
-/// rounded, independently of the actual window tiling state. This is used
-/// specifically for the workspace switcher sidebar: when the sidebar is open,
-/// we want square corners on the left (so the sidebar appears flush with the
-/// window edge) but we still need the shadow padding for proper visual
-/// appearance. Unlike actual window tiling, this only affects border radius -
-/// not padding or shadows.
 pub fn client_side_decorations(
     element: impl IntoElement,
     window: &mut Window,
     cx: &mut App,
-    border_radius_tiling: Tiling,
 ) -> Stateful<Div> {
     const BORDER_SIZE: Pixels = px(1.0);
     let decorations = window.window_decorations();
     let tiling = match decorations {
         Decorations::Server => Tiling::default(),
         Decorations::Client { tiling } => tiling,
-    };
-    let corner_tiling = Tiling {
-        top: tiling.top || border_radius_tiling.top,
-        bottom: tiling.bottom || border_radius_tiling.bottom,
-        left: tiling.left || border_radius_tiling.left,
-        right: tiling.right || border_radius_tiling.right,
     };
 
     match decorations {
@@ -10809,7 +11276,7 @@ pub fn client_side_decorations(
         .map(|div| match decorations {
             Decorations::Server => div,
             Decorations::Client { .. } => div
-                .rounded_client_corners(corner_tiling)
+                .rounded_client_corners(tiling)
                 .when(!tiling.top, |div| {
                     div.pt(theme::CLIENT_SIDE_DECORATION_SHADOW)
                 })
@@ -10864,7 +11331,7 @@ pub fn client_side_decorations(
                     Decorations::Server => div,
                     Decorations::Client { .. } => div
                         .border_color(cx.theme().colors().border)
-                        .rounded_client_corners(corner_tiling)
+                        .rounded_client_corners(tiling)
                         .when(!tiling.top, |div| div.border_t(BORDER_SIZE))
                         .when(!tiling.bottom, |div| div.border_b(BORDER_SIZE))
                         .when(!tiling.left, |div| div.border_l(BORDER_SIZE))
@@ -13319,6 +13786,157 @@ mod tests {
     }
 
     #[gpui::test]
+    async fn test_toggle_editor_zoom(cx: &mut TestAppContext) {
+        init_test(cx);
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        let pane_a = workspace.update_in(cx, |workspace, _window, _cx| {
+            workspace.active_pane().clone()
+        });
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            let item = cx.new(TestItem::new);
+            workspace.add_item(pane_a.clone(), Box::new(item), None, true, true, window, cx);
+        });
+
+        let pane_b = split_pane(cx, &workspace);
+        workspace.update_in(cx, |workspace, window, cx| {
+            let item = cx.new(TestItem::new);
+            workspace.add_item(pane_b.clone(), Box::new(item), None, true, true, window, cx);
+        });
+
+        // Toggle editor zoom maximizes the active pane
+        workspace.update_in(cx, |workspace, window, cx| {
+            workspace.toggle_editor_zoom(&ToggleEditorZoom, window, cx);
+            assert!(workspace.is_pane_maximized());
+            assert_eq!(
+                workspace.maximized_pane.as_ref().and_then(|w| w.upgrade()),
+                Some(pane_b.clone()),
+            );
+        });
+
+        // Toggle again un-maximizes
+        workspace.update_in(cx, |workspace, window, cx| {
+            workspace.toggle_editor_zoom(&ToggleEditorZoom, window, cx);
+            assert!(!workspace.is_pane_maximized());
+        });
+
+        // Toggle editor zoom while zoomed: should unzoom then maximize
+        pane_b.update_in(cx, |pane, window, cx| {
+            pane.zoom_in(&ZoomIn, window, cx);
+        });
+        workspace.update_in(cx, |_workspace, _window, cx| {
+            assert!(pane_b.read(cx).is_zoomed());
+        });
+        workspace.update_in(cx, |workspace, window, cx| {
+            workspace.toggle_editor_zoom(&ToggleEditorZoom, window, cx);
+            assert!(!pane_b.read(cx).is_zoomed());
+            assert!(workspace.zoomed.is_none());
+            assert!(workspace.is_pane_maximized());
+        });
+
+        // Un-maximize for next test
+        workspace.update_in(cx, |workspace, window, cx| {
+            workspace.toggle_editor_zoom(&ToggleEditorZoom, window, cx);
+        });
+
+        // Maximized pane cleared when it is removed
+        workspace.update_in(cx, |workspace, window, cx| {
+            workspace.toggle_editor_zoom(&ToggleEditorZoom, window, cx);
+            assert!(workspace.is_pane_maximized());
+        });
+        workspace.update_in(cx, |workspace, window, cx| {
+            workspace.remove_pane(pane_b.clone(), None, window, cx);
+            assert!(!workspace.is_pane_maximized());
+        });
+    }
+
+    #[gpui::test]
+    async fn test_toggle_all_docks(cx: &mut gpui::TestAppContext) {
+        init_test(cx);
+        let fs = FakeFs::new(cx.executor());
+
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+        workspace.update_in(cx, |workspace, window, cx| {
+            // Open two docks
+            let left_dock = workspace.dock_at_position(DockPosition::Left);
+            let right_dock = workspace.dock_at_position(DockPosition::Right);
+
+            left_dock.update(cx, |dock, cx| dock.set_open(true, window, cx));
+            right_dock.update(cx, |dock, cx| dock.set_open(true, window, cx));
+
+            assert!(left_dock.read(cx).is_open());
+            assert!(right_dock.read(cx).is_open());
+        });
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            // Toggle all docks - should close both
+            workspace.toggle_all_docks(&ToggleAllDocks, window, cx);
+
+            let left_dock = workspace.dock_at_position(DockPosition::Left);
+            let right_dock = workspace.dock_at_position(DockPosition::Right);
+            assert!(!left_dock.read(cx).is_open());
+            assert!(!right_dock.read(cx).is_open());
+        });
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            // Toggle again - should reopen both
+            workspace.toggle_all_docks(&ToggleAllDocks, window, cx);
+
+            let left_dock = workspace.dock_at_position(DockPosition::Left);
+            let right_dock = workspace.dock_at_position(DockPosition::Right);
+            assert!(left_dock.read(cx).is_open());
+            assert!(right_dock.read(cx).is_open());
+        });
+    }
+
+    #[gpui::test]
+    async fn test_toggle_all_with_manual_close(cx: &mut gpui::TestAppContext) {
+        init_test(cx);
+        let fs = FakeFs::new(cx.executor());
+
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+        workspace.update_in(cx, |workspace, window, cx| {
+            // Open two docks
+            let left_dock = workspace.dock_at_position(DockPosition::Left);
+            let right_dock = workspace.dock_at_position(DockPosition::Right);
+
+            left_dock.update(cx, |dock, cx| dock.set_open(true, window, cx));
+            right_dock.update(cx, |dock, cx| dock.set_open(true, window, cx));
+
+            assert!(left_dock.read(cx).is_open());
+            assert!(right_dock.read(cx).is_open());
+        });
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            // Close them manually
+            workspace.toggle_dock(DockPosition::Left, window, cx);
+            workspace.toggle_dock(DockPosition::Right, window, cx);
+
+            let left_dock = workspace.dock_at_position(DockPosition::Left);
+            let right_dock = workspace.dock_at_position(DockPosition::Right);
+            assert!(!left_dock.read(cx).is_open());
+            assert!(!right_dock.read(cx).is_open());
+        });
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            // Toggle all docks - only last closed (right dock) should reopen
+            workspace.toggle_all_docks(&ToggleAllDocks, window, cx);
+
+            let left_dock = workspace.dock_at_position(DockPosition::Left);
+            let right_dock = workspace.dock_at_position(DockPosition::Right);
+            assert!(!left_dock.read(cx).is_open());
+            assert!(right_dock.read(cx).is_open());
+        });
+    }
+
     async fn test_join_pane_into_next(cx: &mut gpui::TestAppContext) {
         init_test(cx);
 
@@ -14893,6 +15511,84 @@ mod tests {
             !has_item,
             "Navigation history should not contain closed item entries"
         );
+    }
+
+    #[gpui::test]
+    async fn test_reopen_closed_item_skips_items_without_paths(cx: &mut TestAppContext) {
+        init_test(cx);
+
+        let fs = FakeFs::new(cx.background_executor.clone());
+
+        let project = Project::test(fs, [], cx).await;
+
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        let pane = workspace.read_with(cx, |workspace, _| workspace.active_pane().clone());
+        let reopenable_item = cx.new(TestItem::new);
+
+        let active_item = cx.new(TestItem::new);
+        let unreopenable_item = cx.new(TestItem::new);
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            workspace.add_item_to_active_pane(
+                Box::new(reopenable_item.clone()),
+                None,
+                true,
+                window,
+                cx,
+            );
+            workspace.add_item_to_active_pane(
+                Box::new(active_item.clone()),
+                None,
+                true,
+                window,
+                cx,
+            );
+        });
+
+        pane.update(cx, |pane, _| {
+            pane.nav_history_mut().set_mode(NavigationMode::ClosingItem);
+        });
+
+        reopenable_item.update_in(cx, |item, window, cx| {
+            item.deactivated(window, cx);
+        });
+
+        pane.update(cx, |pane, _| {
+            pane.nav_history_mut().set_mode(NavigationMode::Normal);
+        });
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            workspace.add_item_to_active_pane(
+                Box::new(unreopenable_item.clone()),
+                None,
+                true,
+                window,
+                cx,
+            );
+        });
+
+        pane.update_in(cx, |pane, window, cx| {
+            pane.close_item_by_id(unreopenable_item.item_id(), SaveIntent::Skip, window, cx)
+                .detach_and_log_err(cx);
+        });
+
+        cx.run_until_parked();
+
+        workspace
+            .update_in(cx, |workspace, window, cx| {
+                workspace.reopen_closed_item(window, cx)
+            })
+            .await
+            .unwrap();
+
+        pane.read_with(cx, |pane, _| {
+            assert_eq!(
+                pane.active_item().unwrap().item_id(),
+                reopenable_item.item_id()
+            );
+        });
     }
 
     #[gpui::test]
