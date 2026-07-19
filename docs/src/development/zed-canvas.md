@@ -297,7 +297,11 @@ Rules:
   nested rows into existing horizontal columns on ultrawide resize without
   closing panes or tabs. When those already-open layouts leave ultrawide, they
   reshape the same pane entities back into the recipe's nested matrix, or a
-  vertical stack for narrow/portrait workspaces.
+  vertical stack for narrow/portrait workspaces. Global responsive thresholds
+  are configurable with `pane_grid.responsive_narrow_width`,
+  `pane_grid.responsive_portrait_ratio`,
+  `pane_grid.responsive_ultrawide_width`, and
+  `pane_grid.responsive_ultrawide_ratio`.
 - Empty panes offer quick item creation and restore actions.
 - Zoom preserves underlying layout.
 - Layout modifications persist continuously.

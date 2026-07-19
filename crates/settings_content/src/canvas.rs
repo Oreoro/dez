@@ -582,6 +582,28 @@ pub struct PaneGridSettingsContent {
     ///
     /// Default: false
     pub auto_hide_single_tab_bar: Option<bool>,
+    /// Workspace width below which horizontal Canvas recipe splits reflow into
+    /// vertical splits.
+    ///
+    /// Default: 900
+    #[schemars(range(min = 1.0))]
+    pub responsive_narrow_width: Option<f32>,
+    /// Maximum width-to-height ratio treated as portrait for Canvas reflow.
+    ///
+    /// Default: 1.0
+    #[schemars(range(min = 0.1))]
+    pub responsive_portrait_ratio: Option<f32>,
+    /// Workspace width above which eligible Canvas recipes use ultrawide
+    /// variants.
+    ///
+    /// Default: 1600
+    #[schemars(range(min = 1.0))]
+    pub responsive_ultrawide_width: Option<f32>,
+    /// Minimum width-to-height ratio treated as ultrawide for Canvas reflow.
+    ///
+    /// Default: 1.6
+    #[schemars(range(min = 0.1))]
+    pub responsive_ultrawide_ratio: Option<f32>,
 }
 
 #[with_fallible_options]

@@ -245,7 +245,7 @@ Use the existing panel-as-pane bridge as the migration path:
   and focus for still-existing panes without recreating items or terminating
   live processes. The Panel Layout menu disables that restore action until a
   previous Canvas layout snapshot exists and shows the current in-memory
-  snapshot count. Full persisted semantic layout history and user-authored
+  snapshot count. Full persisted semantic layout history and per-recipe
   responsive profile rules remain future work.
 - The Panel Layout menu now exposes three durable saved-layout slots. Each
   `Save Canvas Layout: Slot N` action records the current pane visibility,
@@ -368,7 +368,11 @@ Proper Pane Layout is the Canvas migration target, not just a visual skin:
   portrait, ultrawide, and many-agent states without closing items. Narrow,
   portrait, first ultrawide orientation variants, first many-agent ultrawide
   recipe-application variants, and ultrawide resize reshaping for already-open
-  many-agent layouts are implemented.
+  many-agent layouts are implemented. Users can tune the global responsive
+  profile with `pane_grid.responsive_narrow_width`,
+  `pane_grid.responsive_portrait_ratio`,
+  `pane_grid.responsive_ultrawide_width`, and
+  `pane_grid.responsive_ultrawide_ratio`.
 
 Implementation order:
 
@@ -400,7 +404,11 @@ Implementation order:
    column-first splits when newly applied, and already-open many-agent layouts
    flatten nested rows into existing horizontal columns on ultrawide resize,
    then reshape the same panes back into nested or narrow variants when the
-   workspace leaves ultrawide.
+   workspace leaves ultrawide. Global responsive thresholds are configurable
+   through `pane_grid.responsive_narrow_width`,
+   `pane_grid.responsive_portrait_ratio`,
+   `pane_grid.responsive_ultrawide_width`, and
+   `pane_grid.responsive_ultrawide_ratio`.
 5. Add UI for named saved layouts and layout history once the underlying
    metadata is stable. Three fixed durable saved-layout slots are implemented
    in the Panel Layout menu with derived restore labels plus clear actions, and

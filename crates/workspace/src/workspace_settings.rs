@@ -96,6 +96,10 @@ pub struct PaneGridSettings {
     pub attention_ring: bool,
     pub tab_overflow: settings::TabOverflowBehavior,
     pub auto_hide_single_tab_bar: bool,
+    pub responsive_narrow_width: f32,
+    pub responsive_portrait_ratio: f32,
+    pub responsive_ultrawide_width: f32,
+    pub responsive_ultrawide_ratio: f32,
 }
 
 impl PaneGridSettings {
@@ -113,6 +117,22 @@ impl PaneGridSettings {
                     | settings::PaneGridFocusIndicator::BorderAndTitle
                     | settings::PaneGridFocusIndicator::Ring
             )
+    }
+
+    pub fn responsive_narrow_width(&self) -> f32 {
+        self.responsive_narrow_width.max(1.)
+    }
+
+    pub fn responsive_portrait_ratio(&self) -> f32 {
+        self.responsive_portrait_ratio.max(0.1)
+    }
+
+    pub fn responsive_ultrawide_width(&self) -> f32 {
+        self.responsive_ultrawide_width.max(1.)
+    }
+
+    pub fn responsive_ultrawide_ratio(&self) -> f32 {
+        self.responsive_ultrawide_ratio.max(0.1)
     }
 }
 
@@ -256,6 +276,10 @@ impl Settings for PaneGridSettings {
             attention_ring: pane_grid.attention_ring.unwrap(),
             tab_overflow: pane_grid.tab_overflow.unwrap(),
             auto_hide_single_tab_bar: pane_grid.auto_hide_single_tab_bar.unwrap(),
+            responsive_narrow_width: pane_grid.responsive_narrow_width.unwrap(),
+            responsive_portrait_ratio: pane_grid.responsive_portrait_ratio.unwrap(),
+            responsive_ultrawide_width: pane_grid.responsive_ultrawide_width.unwrap(),
+            responsive_ultrawide_ratio: pane_grid.responsive_ultrawide_ratio.unwrap(),
         }
     }
 }

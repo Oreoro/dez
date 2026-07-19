@@ -1112,6 +1112,10 @@
     "attention_ring": true,
     "tab_overflow": "searchable",
     "auto_hide_single_tab_bar": false,
+    "responsive_narrow_width": 900,
+    "responsive_portrait_ratio": 1.0,
+    "responsive_ultrawide_width": 1600,
+    "responsive_ultrawide_ratio": 1.6,
   },
   // Settings for Canvas-style agent surfaces.
   "agent_ui": {
