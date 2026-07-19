@@ -75,6 +75,8 @@ Implemented in this phase:
   workflows: `pane::Swap`, `pane::Move`, and `pane::Resize` accept
   `{"direction":"left|right|up|down"}` and reuse the existing directional pane
   implementations.
+- `pane::Rotate` now inverts horizontal and vertical axes across the center
+  pane tree while preserving existing panes and tabs.
 - `workspace_bar.show_layout` now controls whether Canvas layout commands show
   in the Command Palette and Panel Layout chrome.
 - `workspace_bar.show_agent_attention` now controls workspace-level attention

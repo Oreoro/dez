@@ -355,10 +355,11 @@ pane::BreakToWindow
 pane::JoinFromWindow
 ```
 
-Generic Canvas aliases for `pane::Rotate`, `pane::BreakToWindow`, and
-`pane::JoinFromWindow` remain future until they have exact action payloads or
-runtime implementations. `pane::Swap`, `pane::Move`, and `pane::Resize` default
-to `"right"` when the direction payload is omitted.
+Generic Canvas aliases for `pane::BreakToWindow` and `pane::JoinFromWindow`
+remain future until they have exact action payloads or runtime implementations.
+`pane::Swap`, `pane::Move`, and `pane::Resize` default to `"right"` when the
+direction payload is omitted. `pane::Rotate` inverts horizontal and vertical
+axes across the center pane tree.
 
 Tab manipulation actions:
 

@@ -930,6 +930,12 @@ impl Default for PaneResize {
     }
 }
 
+/// Rotates the center pane tree by inverting horizontal and vertical split axes.
+#[derive(Clone, Deserialize, PartialEq, JsonSchema, Action)]
+#[action(namespace = pane, name = "Rotate")]
+#[serde(deny_unknown_fields)]
+pub struct PaneRotate;
+
 /// Creates a new file in a split of the desired direction.
 #[derive(Clone, Deserialize, PartialEq, JsonSchema, Action)]
 #[action(namespace = workspace)]
@@ -10003,6 +10009,14 @@ impl Workspace {
                     }
                 },
             ))
+            .on_action(
+                cx.listener(|workspace: &mut Workspace, _: &PaneRotate, window, cx| {
+                    workspace.mark_canvas_layout_custom();
+                    workspace.center.invert_axies(cx);
+                    workspace.serialize_workspace(window, cx);
+                    cx.notify();
+                }),
+            )
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ToggleAgentPane, window, cx| {
                     workspace.toggle_panel_pane_visibility(PaneKind::Agent, window, cx);
