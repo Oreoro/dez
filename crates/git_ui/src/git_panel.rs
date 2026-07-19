@@ -177,6 +177,24 @@ fn canvas_git_panel_hover_background(contrast: settings::CanvasContrast, cx: &Ap
     }
 }
 
+fn canvas_git_panel_commit_editor_padding(
+    density: settings::CanvasDensity,
+) -> (Pixels, Pixels, Pixels) {
+    match density {
+        settings::CanvasDensity::Compact => (px(6.), px(6.), px(4.)),
+        settings::CanvasDensity::Balanced => (px(8.), px(8.), px(6.)),
+        settings::CanvasDensity::Spacious => (px(12.), px(10.), px(8.)),
+    }
+}
+
+fn canvas_git_panel_commit_footer_padding(density: settings::CanvasDensity) -> Pixels {
+    match density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
 actions!(
     git_panel,
     [
@@ -5734,6 +5752,19 @@ impl GitPanel {
         let settings = ThemeSettings::get_global(cx);
         let panel_editor_style =
             git_commit_editor_style(settings.git_commit_buffer_font_size(cx), cx);
+        let design_system = DesignSystemSettings::get_global(cx);
+        let canvas_density = design_system.density;
+        let canvas_radius = design_system.radius;
+        let canvas_contrast = design_system.contrast;
+        let editor_background = canvas_git_panel_background(canvas_contrast, cx);
+        let editor_hover_background = canvas_git_panel_hover_background(canvas_contrast, cx);
+        let editor_border_color =
+            canvas_git_panel_row_border_color(editor_background, false, canvas_contrast, cx);
+        let editor_hover_border_color =
+            canvas_git_panel_row_hover_border_color(editor_background, false, canvas_contrast, cx);
+        let (editor_padding_x, editor_padding_top, editor_padding_bottom) =
+            canvas_git_panel_commit_editor_padding(canvas_density);
+        let footer_padding = canvas_git_panel_commit_footer_padding(canvas_density);
         let enable_coauthors = self.render_co_authors(cx);
         let editor_focus_handle = self.commit_editor.focus_handle(cx);
         let branch = active_repository.read(cx).branch.clone();
@@ -5761,11 +5792,12 @@ impl GitPanel {
         } else {
             false
         };
+        let warning_border_color = cx.theme().status().warning_border;
 
         let vertical_buttons = v_flex()
             .h_full()
             .gap_px()
-            .p_1p5()
+            .p(footer_padding)
             .opacity(0.6)
             .hover(|s| s.opacity(1.0))
             .child(
@@ -5849,11 +5881,26 @@ impl GitPanel {
                     .id("commit-editor-container")
                     .w_full()
                     .when(self.commit_editor_expanded, |this| this.flex_1().min_h_0())
-                    .border_t_1()
+                    .border_1()
                     .border_color(if title_exceeds_limit {
-                        cx.theme().status().warning_border
+                        warning_border_color
                     } else {
-                        cx.theme().colors().border
+                        editor_border_color
+                    })
+                    .bg(editor_background)
+                    .hover(move |this| {
+                        this.bg(editor_hover_background)
+                            .border_color(if title_exceeds_limit {
+                                warning_border_color
+                            } else {
+                                editor_hover_border_color
+                            })
+                    })
+                    .when(canvas_radius == settings::CanvasRadius::Subtle, |this| {
+                        this.rounded_sm()
+                    })
+                    .when(canvas_radius == settings::CanvasRadius::Rounded, |this| {
+                        this.rounded_md()
                     })
                     .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
                         window.focus(&this.commit_editor.focus_handle(cx), cx);
@@ -5863,8 +5910,8 @@ impl GitPanel {
                             .size_full()
                             .child(
                                 div()
-                                    .pt_2()
-                                    .px_2()
+                                    .pt(editor_padding_top)
+                                    .px(editor_padding_x)
                                     .h_full()
                                     .flex_grow_1()
                                     .cursor_text()
@@ -5885,10 +5932,12 @@ impl GitPanel {
                         h_flex()
                             .id("commit-footer")
                             .w_full()
-                            .p_1p5()
+                            .p(footer_padding)
+                            .pb(editor_padding_bottom)
                             .border_t_1()
+                            .border_color(editor_border_color)
                             .when(editor_is_long, |el| {
-                                el.border_color(cx.theme().colors().border_variant)
+                                el.border_color(editor_hover_border_color)
                             })
                             .justify_between()
                             .child(
@@ -8297,16 +8346,27 @@ impl Panel for GitPanel {
 impl PanelHeader for GitPanel {}
 
 pub fn panel_editor_container(_window: &mut Window, cx: &mut App) -> Div {
+    let design_system = DesignSystemSettings::get_global(cx);
+
     v_flex()
         .size_full()
-        .bg(cx.theme().colors().editor_background)
+        .bg(canvas_git_panel_background(design_system.contrast, cx))
+        .when(
+            design_system.radius == settings::CanvasRadius::Subtle,
+            |this| this.rounded_sm(),
+        )
+        .when(
+            design_system.radius == settings::CanvasRadius::Rounded,
+            |this| this.rounded_md(),
+        )
 }
 
 pub(crate) fn git_commit_editor_style(font_size: gpui::Pixels, cx: &App) -> EditorStyle {
     let settings = ThemeSettings::get_global(cx);
+    let canvas_contrast = DesignSystemSettings::get_global(cx).contrast;
 
     EditorStyle {
-        background: cx.theme().colors().editor_background,
+        background: canvas_git_panel_background(canvas_contrast, cx),
         local_player: cx.theme().players().local(),
         text: TextStyle {
             color: cx.theme().colors().text,

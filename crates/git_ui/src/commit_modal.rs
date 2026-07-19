@@ -17,7 +17,7 @@ use editor::{Editor, EditorElement};
 use gpui::*;
 use util::ResultExt;
 use workspace::{
-    ModalView, Workspace,
+    DesignSystemSettings, ModalView, Workspace,
     dock::{Dock, PanelHandle},
 };
 
@@ -242,8 +242,17 @@ impl CommitModal {
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let properties = self.properties;
-        let padding_t = 3.0;
-        let padding_b = 6.0;
+        let design_system = DesignSystemSettings::get_global(cx);
+        let (padding_t, padding_b, padding_x) = match design_system.density {
+            settings::CanvasDensity::Compact => (2.0, 4.0, px(4.)),
+            settings::CanvasDensity::Balanced => (3.0, 6.0, px(6.)),
+            settings::CanvasDensity::Spacious => (5.0, 8.0, px(8.)),
+        };
+        let editor_radius = match design_system.radius {
+            settings::CanvasRadius::None => px(0.),
+            settings::CanvasRadius::Subtle => properties.editor_border_radius(),
+            settings::CanvasRadius::Rounded => px(properties.modal_border_radius),
+        };
         // magic number for editor not to overflow the container??
         let extra_space_hack = 1.5 * window.line_height();
 
@@ -251,9 +260,9 @@ impl CommitModal {
             .h(px(properties.editor_height + padding_b + padding_t) + extra_space_hack)
             .w_full()
             .flex_none()
-            .rounded(properties.editor_border_radius())
+            .rounded(editor_radius)
             .overflow_hidden()
-            .px_1p5()
+            .px(padding_x)
             .pt(px(padding_t))
             .pb(px(padding_b))
             .child(
@@ -586,6 +595,52 @@ impl Render for CommitModal {
         } else {
             false
         };
+        let design_system = DesignSystemSettings::get_global(cx);
+        let colors = cx.theme().colors();
+        let modal_background = match design_system.contrast {
+            settings::CanvasContrast::Low => colors.elevated_surface_background,
+            settings::CanvasContrast::Standard => colors.elevated_surface_background,
+            settings::CanvasContrast::High => colors.element_background,
+        };
+        let editor_background = match design_system.contrast {
+            settings::CanvasContrast::Low => colors.editor_background,
+            settings::CanvasContrast::Standard => colors.editor_background,
+            settings::CanvasContrast::High => colors.element_background,
+        };
+        let modal_border_color = match design_system.contrast {
+            settings::CanvasContrast::Low => colors.border.opacity(0.45),
+            settings::CanvasContrast::Standard => colors.border,
+            settings::CanvasContrast::High => colors.border_focused,
+        };
+        let editor_border_color = if title_exceeds_limit {
+            cx.theme().status().warning_border
+        } else {
+            match design_system.contrast {
+                settings::CanvasContrast::Low => colors.border.opacity(0.35),
+                settings::CanvasContrast::Standard => colors.border_variant,
+                settings::CanvasContrast::High => colors.border_focused,
+            }
+        };
+        let editor_padding = match design_system.density {
+            settings::CanvasDensity::Compact => px(6.),
+            settings::CanvasDensity::Balanced => px(8.),
+            settings::CanvasDensity::Spacious => px(12.),
+        };
+        let editor_gap = match design_system.density {
+            settings::CanvasDensity::Compact => px(6.),
+            settings::CanvasDensity::Balanced => px(8.),
+            settings::CanvasDensity::Spacious => px(12.),
+        };
+        let modal_radius = match design_system.radius {
+            settings::CanvasRadius::None => px(0.),
+            settings::CanvasRadius::Subtle => px(border_radius * 0.66),
+            settings::CanvasRadius::Rounded => px(border_radius),
+        };
+        let editor_radius = match design_system.radius {
+            settings::CanvasRadius::None => px(0.),
+            settings::CanvasRadius::Subtle => properties.editor_border_radius(),
+            settings::CanvasRadius::Rounded => px(border_radius),
+        };
 
         v_flex()
             .id("commit-modal")
@@ -625,27 +680,23 @@ impl Render for CommitModal {
             .overflow_hidden()
             .flex_none()
             .relative()
-            .bg(cx.theme().colors().elevated_surface_background)
-            .rounded(px(border_radius))
+            .bg(modal_background)
+            .rounded(modal_radius)
             .border_1()
-            .border_color(cx.theme().colors().border)
+            .border_color(modal_border_color)
             .child(
                 v_flex()
                     .id("editor-container")
                     .cursor_text()
-                    .p_2()
+                    .p(editor_padding)
                     .size_full()
-                    .gap_2()
+                    .gap(editor_gap)
                     .justify_between()
-                    .rounded(properties.editor_border_radius())
+                    .rounded(editor_radius)
                     .overflow_hidden()
-                    .bg(cx.theme().colors().editor_background)
+                    .bg(editor_background)
                     .border_1()
-                    .border_color(if title_exceeds_limit {
-                        cx.theme().status().warning_border
-                    } else {
-                        cx.theme().colors().border_variant
-                    })
+                    .border_color(editor_border_color)
                     .on_click(cx.listener(move |_, _: &ClickEvent, window, cx| {
                         window.focus(&editor_focus_handle, cx);
                     }))

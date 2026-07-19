@@ -326,8 +326,9 @@ Current consumers:
   density, radius, and contrast so outline panes no longer retain the flatter
   legacy dock-panel treatment.
 - Git Panel: section headers, empty sections, changed files, and tree
-  directories use Canvas density, radius, and contrast so Git panes align with
-  the project/outline pane treatment.
+  directories, commit editor chrome, and the expanded commit modal use Canvas
+  density, radius, and contrast so Git panes align with the project/outline
+  pane treatment.
 - Settings UI: the shared settings row renderer, nested dynamic-setting cards,
   section headers, search field, navigation rail, and root content backgrounds
   now consume Canvas density, radius, and contrast.
