@@ -675,6 +675,14 @@ Terminal-agent detection:
   `agent_ui.detect_terminal_agents`,
   `agent_ui.show_terminal_agents_in_session_rail`,
   `agent_ui.show_detection_confidence`, and `agent_ui.notify_on_attention`.
+- Foreground-command detection now handles absolute executable paths and common
+  wrapper/package-runner forms such as `node`, `python`, `bun`, `deno`, `npx`,
+  `npm exec`, `pnpm dlx`, `yarn dlx`, `bunx`, `uvx`, and `pipx` so scoped agent
+  packages like `@openai/codex` and `@anthropic-ai/claude-code` can classify a
+  regular terminal tab even when the terminal title has not been updated yet.
+  This remains runtime detection only; standalone terminal-agent rows are not
+  written into the agent-panel terminal metadata store until that store records
+  source/disposition separately.
 - Default `agent_ui.allow_multiple_visible_agents` to `true` so agents can live
   in normal tabs across multiple panes.
 - Default `agent_ui.connect_hooks`, `agent_ui.resume_sessions_on_restart`, and

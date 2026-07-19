@@ -169,6 +169,13 @@ Session Rail project headers, thread rows, and terminal rows read
 `design_system.density`, `design_system.radius`, `design_system.contrast`, and
 `design_system.show_labels`. Hidden labels suppress row text and empty-state
 copy for compact vertical activity-bar use while retaining icon targets.
+Detected terminal-agent rows are live observations: regular terminal tabs are
+classified from terminal titles and foreground commands, including absolute
+process paths and common package-runner forms such as `npx @openai/codex`,
+`pnpm dlx @anthropic-ai/claude-code`, `bunx`, `uvx`, and `pipx`. These rows
+activate and close the original terminal tab while it is open. They are not yet
+durable provider sessions; restart/process restoration still requires explicit
+source/disposition metadata.
 
 `workspace_bar.visibility = "hidden"` suppresses the existing layout
 command/menu affordances, the centered command-search trigger, and workspace/rail

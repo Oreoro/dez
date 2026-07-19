@@ -3143,22 +3143,57 @@ fn normalize_path_command_name(command: &str) -> Option<String> {
     Some(command)
 }
 
+fn normalize_process_command_name(command: &str) -> Option<String> {
+    let command = command.trim();
+    if command.is_empty() {
+        return None;
+    }
+
+    let command = command.rsplit(['/', '\\']).next().unwrap_or(command);
+    normalize_path_command_name(command)
+}
+
+fn foreground_process_wrapper_exposes_child_command(command: Option<&str>) -> bool {
+    matches!(
+        command,
+        Some(
+            "node"
+                | "python"
+                | "python3"
+                | "bun"
+                | "deno"
+                | "npx"
+                | "npm"
+                | "pnpm"
+                | "yarn"
+                | "bunx"
+                | "uv"
+                | "uvx"
+                | "pipx"
+        )
+    )
+}
+
+fn should_skip_wrapper_subcommand(command: &str) -> bool {
+    matches!(
+        command,
+        "dlx" | "exec" | "x" | "run" | "tool" | "env" | "create"
+    )
+}
+
 fn foreground_process_command_from_argv(argv: &[String]) -> Option<String> {
     let command = argv
         .first()
-        .and_then(|command| normalize_path_command_name(command));
+        .and_then(|command| normalize_process_command_name(command));
 
-    if !matches!(
-        command.as_deref(),
-        Some("node" | "python" | "python3" | "bun" | "deno")
-    ) {
+    if !foreground_process_wrapper_exposes_child_command(command.as_deref()) {
         return command;
     }
 
     argv.iter()
         .skip(1)
         .filter_map(|argument| normalize_script_command_name(argument))
-        .next()
+        .find(|command| !should_skip_wrapper_subcommand(command))
         .or(command)
 }
 
@@ -3415,7 +3450,7 @@ mod tests {
     fn test_foreground_process_command_from_interpreter_wrapper() {
         assert_eq!(
             foreground_process_command_from_argv(&[
-                "node".to_string(),
+                "/opt/homebrew/bin/node".to_string(),
                 "/opt/homebrew/lib/node_modules/@google/gemini-cli/dist/index.js".to_string(),
             ]),
             Some("gemini".to_string())
@@ -3433,6 +3468,22 @@ mod tests {
                 "/Users/me/private-project/scripts/customer-data-export.js".to_string(),
             ]),
             Some("customer-data-export".to_string())
+        );
+        assert_eq!(
+            foreground_process_command_from_argv(&[
+                "pnpm".to_string(),
+                "dlx".to_string(),
+                "@openai/codex".to_string(),
+            ]),
+            Some("codex".to_string())
+        );
+        assert_eq!(
+            foreground_process_command_from_argv(&[
+                "npx".to_string(),
+                "-y".to_string(),
+                "@anthropic-ai/claude-code".to_string(),
+            ]),
+            Some("claude-code".to_string())
         );
     }
 
