@@ -51,8 +51,10 @@ use ui::{
 use update_version::UpdateVersion;
 use util::ResultExt;
 use workspace::{
-    AccessibleMode, ClearSavedCanvasLayoutSlot, MultiWorkspace, MultiplexerSettings,
-    RenameSavedCanvasLayoutSlot, ToggleWorktreeSecurity, Workspace,
+    AccessibleMode, ClearSavedCanvasLayoutNamed, ClearSavedCanvasLayoutSlot, MultiWorkspace,
+    MultiplexerSettings, RenameSavedCanvasLayoutNamed, RenameSavedCanvasLayoutSlot,
+    RestoreSavedCanvasLayoutNamed, SaveCurrentCanvasLayoutAs, SaveCurrentCanvasLayoutNamed,
+    ToggleWorktreeSecurity, Workspace,
     notifications::{NotifyResultExt, NotifyTaskExt as _},
 };
 
@@ -418,6 +420,11 @@ fn update_layout_action_filter(cx: &mut App) {
         TypeId::of::<RestoreSavedCanvasLayoutSlot2>(),
         TypeId::of::<RestoreSavedCanvasLayoutSlot3>(),
         TypeId::of::<RenameSavedCanvasLayoutSlot>(),
+        TypeId::of::<SaveCurrentCanvasLayoutAs>(),
+        TypeId::of::<SaveCurrentCanvasLayoutNamed>(),
+        TypeId::of::<RestoreSavedCanvasLayoutNamed>(),
+        TypeId::of::<RenameSavedCanvasLayoutNamed>(),
+        TypeId::of::<ClearSavedCanvasLayoutNamed>(),
         TypeId::of::<RestorePreviousCanvasLayout>(),
     ];
     CommandPaletteFilter::update_global(cx, |filter, _| {
@@ -1598,8 +1605,9 @@ impl SidebarChrome {
                     saved_canvas_layout_slot_1_label,
                     saved_canvas_layout_slot_2_label,
                     saved_canvas_layout_slot_3_label,
+                    saved_canvas_named_layouts,
                 ) = workspace.upgrade().map_or(
-                    (None, 0, false, false, false, 0, None, None, None),
+                    (None, 0, false, false, false, 0, None, None, None, Vec::new()),
                     |workspace| {
                         let workspace = workspace.read(cx);
                         (
@@ -1618,6 +1626,7 @@ impl SidebarChrome {
                             workspace
                                 .saved_canvas_layout_slot_label(3)
                                 .map(str::to_string),
+                            workspace.saved_canvas_named_layouts(),
                         )
                     },
                 );
@@ -1630,9 +1639,9 @@ impl SidebarChrome {
                     format!("Layout History: {canvas_layout_history_len} snapshots")
                 };
                 let saved_canvas_layout_label = if saved_canvas_layout_count == 1 {
-                    "Saved Layouts: 1 saved slot".to_string()
+                    "Saved Layouts: 1 saved layout".to_string()
                 } else {
-                    format!("Saved Layouts: {saved_canvas_layout_count} saved slots")
+                    format!("Saved Layouts: {saved_canvas_layout_count} saved layouts")
                 };
                 let restore_saved_canvas_layout_slot_1_label = saved_canvas_layout_slot_1_label
                     .map_or_else(
@@ -1673,7 +1682,8 @@ impl SidebarChrome {
                             "Prefix commands: ctrl-b s/r/p · Save, Restore, Previous".to_string(),
                             "Prefix commands: ctrl-b 1/2/3 · Restore saved slots".to_string(),
                             "Prefix commands: ctrl-b shift-1/2/3 · Save slots".to_string(),
-                            "Prefix commands: ctrl-b n 1/2/3 · Rename saved slots".to_string(),
+                            "Prefix commands: ctrl-b n s/1/2/3 · Save as, Rename saved slots"
+                                .to_string(),
                             "Prefix commands: ctrl-b arrows · Focus adjacent panes".to_string(),
                             "Prefix commands: ctrl-b shift-arrows · Swap adjacent panes"
                                 .to_string(),
@@ -2074,6 +2084,10 @@ impl SidebarChrome {
                                         window.dispatch_action(CycleCanvasLayout.boxed_clone(), cx);
                                     },
                                 )
+                                .action(
+                                    "Save Canvas Layout As…",
+                                    SaveCurrentCanvasLayoutAs.boxed_clone(),
+                                )
                                 .entry(
                                     "Save Canvas Layout: Slot 1",
                                     Some(SaveCurrentCanvasLayout.boxed_clone()),
@@ -2158,6 +2172,37 @@ impl SidebarChrome {
                                     false,
                                     !has_saved_canvas_layout_slot_3,
                                 )
+                                .when(!saved_canvas_named_layouts.is_empty(), |menu| {
+                                    let mut menu = menu.separator();
+                                    for (name, label) in saved_canvas_named_layouts.clone() {
+                                        menu = menu
+                                            .action_checked_with_disabled(
+                                                format!("Restore Saved Canvas Layout — {label}"),
+                                                RestoreSavedCanvasLayoutNamed {
+                                                    name: name.clone(),
+                                                }
+                                                .boxed_clone(),
+                                                false,
+                                                false,
+                                            )
+                                            .action_checked_with_disabled(
+                                                format!("Rename Saved Canvas Layout — {label}"),
+                                                RenameSavedCanvasLayoutNamed {
+                                                    name: name.clone(),
+                                                }
+                                                .boxed_clone(),
+                                                false,
+                                                false,
+                                            )
+                                            .action_checked_with_disabled(
+                                                format!("Clear Saved Canvas Layout — {label}"),
+                                                ClearSavedCanvasLayoutNamed { name }.boxed_clone(),
+                                                false,
+                                                false,
+                                            );
+                                    }
+                                    menu
+                                })
                                 .action_checked_with_disabled(
                                     "Restore Previous Canvas Layout",
                                     RestorePreviousCanvasLayout.boxed_clone(),

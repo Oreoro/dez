@@ -432,6 +432,7 @@ const CANVAS_LAYOUT_HISTORY_LIMIT: usize = 24;
 const DEFAULT_CANVAS_SAVED_LAYOUT_NAME: &str = "Saved Layout";
 const CANVAS_SAVED_LAYOUT_SLOT_2_NAME: &str = "Saved Layout 2";
 const CANVAS_SAVED_LAYOUT_SLOT_3_NAME: &str = "Saved Layout 3";
+const CANVAS_NAMED_SAVED_LAYOUT_PREFIX: &str = "Named Layout/";
 
 static ZED_WINDOW_SIZE: LazyLock<Option<Size<Pixels>>> = LazyLock::new(|| {
     env::var("ZED_WINDOW_SIZE")
@@ -666,28 +667,54 @@ fn canvas_saved_layout_slot_name(slot: usize) -> Option<&'static str> {
     }
 }
 
-struct CanvasSavedLayoutSlotLabelModal {
-    slot: usize,
+fn is_canvas_saved_layout_slot_name(name: &str) -> bool {
+    matches!(
+        name,
+        DEFAULT_CANVAS_SAVED_LAYOUT_NAME
+            | CANVAS_SAVED_LAYOUT_SLOT_2_NAME
+            | CANVAS_SAVED_LAYOUT_SLOT_3_NAME
+    )
+}
+
+fn canvas_named_saved_layout_name(name: &str) -> Option<String> {
+    if name.starts_with(CANVAS_NAMED_SAVED_LAYOUT_PREFIX) {
+        return (name.len() > CANVAS_NAMED_SAVED_LAYOUT_PREFIX.len()).then(|| name.to_string());
+    }
+
+    let normalized_name = normalized_canvas_layout_recipe_name(name);
+    (!normalized_name.is_empty())
+        .then(|| format!("{}{}", CANVAS_NAMED_SAVED_LAYOUT_PREFIX, normalized_name))
+}
+
+#[derive(Clone)]
+enum CanvasSavedLayoutNameModalMode {
+    SaveNamed,
+    RenameSlot { slot: usize },
+    RenameNamed { name: String },
+}
+
+struct CanvasSavedLayoutNameModal {
+    mode: CanvasSavedLayoutNameModalMode,
     workspace: WeakEntity<Workspace>,
     input: Entity<InputField>,
 }
 
-impl CanvasSavedLayoutSlotLabelModal {
+impl CanvasSavedLayoutNameModal {
     fn new(
-        slot: usize,
-        current_label: String,
+        mode: CanvasSavedLayoutNameModalMode,
+        initial_text: String,
         workspace: WeakEntity<Workspace>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
         let input = cx.new(|cx| {
             let input = InputField::new(window, cx, "Layout name").label("Name");
-            input.set_text(&current_label, window, cx);
+            input.set_text(&initial_text, window, cx);
             input
         });
 
         Self {
-            slot,
+            mode,
             workspace,
             input,
         }
@@ -698,11 +725,19 @@ impl CanvasSavedLayoutSlotLabelModal {
     }
 
     fn save_label(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let slot = self.slot;
         let label = self.input.read(cx).text(cx);
+        let mode = self.mode.clone();
         self.workspace
-            .update(cx, |workspace, cx| {
-                workspace.set_saved_canvas_layout_slot_label(slot, label, window, cx);
+            .update(cx, |workspace, cx| match mode {
+                CanvasSavedLayoutNameModalMode::SaveNamed => {
+                    workspace.save_current_canvas_layout_named(label, window, cx);
+                }
+                CanvasSavedLayoutNameModalMode::RenameSlot { slot } => {
+                    workspace.set_saved_canvas_layout_slot_label(slot, label, window, cx);
+                }
+                CanvasSavedLayoutNameModalMode::RenameNamed { name } => {
+                    workspace.rename_saved_canvas_layout_named(name, label, window, cx);
+                }
             })
             .log_err();
         self.dismiss(cx);
@@ -715,33 +750,57 @@ impl CanvasSavedLayoutSlotLabelModal {
     fn confirm(&mut self, _: &menu::Confirm, window: &mut Window, cx: &mut Context<Self>) {
         self.save_label(window, cx);
     }
+
+    fn headline(&self) -> String {
+        match &self.mode {
+            CanvasSavedLayoutNameModalMode::SaveNamed => "Save Canvas Layout As".to_string(),
+            CanvasSavedLayoutNameModalMode::RenameSlot { slot } => {
+                format!("Rename Canvas Layout: Slot {slot}")
+            }
+            CanvasSavedLayoutNameModalMode::RenameNamed { .. } => {
+                "Rename Saved Canvas Layout".to_string()
+            }
+        }
+    }
+
+    fn description(&self) -> &'static str {
+        match &self.mode {
+            CanvasSavedLayoutNameModalMode::SaveNamed => {
+                "Enter a name for this saved layout. Existing named layouts with the same normalized name are left unchanged."
+            }
+            CanvasSavedLayoutNameModalMode::RenameSlot { .. } => {
+                "Leave the name blank to return to the generated layout label."
+            }
+            CanvasSavedLayoutNameModalMode::RenameNamed { .. } => {
+                "Enter a new unique name for this saved layout."
+            }
+        }
+    }
 }
 
-impl EventEmitter<DismissEvent> for CanvasSavedLayoutSlotLabelModal {}
-impl ModalView for CanvasSavedLayoutSlotLabelModal {}
-impl Focusable for CanvasSavedLayoutSlotLabelModal {
+impl EventEmitter<DismissEvent> for CanvasSavedLayoutNameModal {}
+impl ModalView for CanvasSavedLayoutNameModal {}
+impl Focusable for CanvasSavedLayoutNameModal {
     fn focus_handle(&self, cx: &App) -> FocusHandle {
         self.input.focus_handle(cx)
     }
 }
 
-impl Render for CanvasSavedLayoutSlotLabelModal {
+impl Render for CanvasSavedLayoutNameModal {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         v_flex()
-            .key_context("CanvasSavedLayoutSlotLabelModal")
+            .key_context("CanvasSavedLayoutNameModal")
             .on_action(cx.listener(Self::cancel))
             .on_action(cx.listener(Self::confirm))
             .elevation_2(cx)
             .w(rems(34.))
             .child(
-                Modal::new("canvas-saved-layout-slot-label-modal", None)
+                Modal::new("canvas-saved-layout-name-modal", None)
                     .show_dismiss(true)
                     .header(
                         ModalHeader::new()
-                            .headline(format!("Rename Canvas Layout: Slot {}", self.slot))
-                            .description(
-                                "Leave the name blank to return to the generated layout label.",
-                            ),
+                            .headline(self.headline())
+                            .description(self.description()),
                     )
                     .section(
                         Section::new().child(self.input.clone()).child(
@@ -1213,6 +1272,44 @@ pub struct SetSavedCanvasLayoutSlotLabel {
 #[serde(deny_unknown_fields)]
 pub struct RenameSavedCanvasLayoutSlot {
     pub slot: usize,
+}
+
+/// Opens a prompt for saving the current Canvas layout under a free-form name.
+#[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct SaveCurrentCanvasLayoutAs;
+
+/// Saves the current Canvas layout under a free-form name.
+#[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct SaveCurrentCanvasLayoutNamed {
+    pub name: String,
+}
+
+/// Restores a free-form named Canvas layout.
+#[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct RestoreSavedCanvasLayoutNamed {
+    pub name: String,
+}
+
+/// Opens a prompt for renaming a free-form named Canvas layout.
+#[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct RenameSavedCanvasLayoutNamed {
+    pub name: String,
+}
+
+/// Removes a free-form named Canvas layout.
+#[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct ClearSavedCanvasLayoutNamed {
+    pub name: String,
 }
 
 /// Removes a saved Canvas layout slot.
@@ -2973,6 +3070,14 @@ impl Workspace {
         self.saved_canvas_layouts.len()
     }
 
+    pub fn saved_canvas_named_layouts(&self) -> Vec<(String, String)> {
+        self.saved_canvas_layouts
+            .iter()
+            .filter(|(name, _)| !is_canvas_saved_layout_slot_name(name))
+            .map(|(name, snapshot)| (name.clone(), snapshot.display_label().to_string()))
+            .collect()
+    }
+
     pub fn has_saved_canvas_layout_slot(&self, slot: usize) -> bool {
         canvas_saved_layout_slot_name(slot)
             .is_some_and(|name| self.saved_canvas_layouts.contains_key(name))
@@ -3021,8 +3126,156 @@ impl Workspace {
         let current_label = snapshot.display_label().to_string();
         let workspace = self.weak_handle();
         self.toggle_modal(window, cx, |window, cx| {
-            CanvasSavedLayoutSlotLabelModal::new(slot, current_label, workspace, window, cx)
+            CanvasSavedLayoutNameModal::new(
+                CanvasSavedLayoutNameModalMode::RenameSlot { slot },
+                current_label,
+                workspace,
+                window,
+                cx,
+            )
         });
+        true
+    }
+
+    pub fn save_current_canvas_layout_as(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let workspace = self.weak_handle();
+        self.toggle_modal(window, cx, |window, cx| {
+            CanvasSavedLayoutNameModal::new(
+                CanvasSavedLayoutNameModalMode::SaveNamed,
+                String::new(),
+                workspace,
+                window,
+                cx,
+            )
+        });
+    }
+
+    pub fn save_current_canvas_layout_named(
+        &mut self,
+        name: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let label = name.trim();
+        let Some(layout_name) = canvas_named_saved_layout_name(label) else {
+            return false;
+        };
+        if self.saved_canvas_layouts.contains_key(&layout_name) {
+            return false;
+        }
+        let Some(mut snapshot) = self.current_canvas_saved_layout_snapshot(cx) else {
+            return false;
+        };
+
+        snapshot.label = Some(label.to_string());
+        self.saved_canvas_layouts.insert(layout_name, snapshot);
+        self.serialize_workspace(window, cx);
+        cx.notify();
+        true
+    }
+
+    pub fn restore_saved_canvas_layout_named(
+        &mut self,
+        name: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(layout_name) = canvas_named_saved_layout_name(&name) else {
+            return false;
+        };
+        if is_canvas_saved_layout_slot_name(&layout_name) {
+            return false;
+        }
+        let Some(snapshot) = self.saved_canvas_layouts.get(&layout_name).cloned() else {
+            return false;
+        };
+
+        self.push_canvas_layout_snapshot(cx);
+        self.restore_canvas_saved_layout_snapshot(snapshot, window, cx);
+        true
+    }
+
+    pub fn rename_saved_canvas_layout_named(
+        &mut self,
+        name: String,
+        new_name: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(layout_name) = canvas_named_saved_layout_name(&name) else {
+            return false;
+        };
+        if is_canvas_saved_layout_slot_name(&layout_name) {
+            return false;
+        }
+        let label = new_name.trim();
+        let Some(new_layout_name) = canvas_named_saved_layout_name(label) else {
+            return false;
+        };
+        if layout_name != new_layout_name
+            && self.saved_canvas_layouts.contains_key(&new_layout_name)
+        {
+            return false;
+        }
+        let Some(mut snapshot) = self.saved_canvas_layouts.remove(&layout_name) else {
+            return false;
+        };
+
+        snapshot.label = Some(label.to_string());
+        self.saved_canvas_layouts.insert(new_layout_name, snapshot);
+        self.serialize_workspace(window, cx);
+        cx.notify();
+        true
+    }
+
+    pub fn prompt_rename_saved_canvas_layout_named(
+        &mut self,
+        name: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(layout_name) = canvas_named_saved_layout_name(&name) else {
+            return false;
+        };
+        if is_canvas_saved_layout_slot_name(&layout_name) {
+            return false;
+        }
+        let Some(snapshot) = self.saved_canvas_layouts.get(&layout_name) else {
+            return false;
+        };
+
+        let current_label = snapshot.display_label().to_string();
+        let workspace = self.weak_handle();
+        self.toggle_modal(window, cx, |window, cx| {
+            CanvasSavedLayoutNameModal::new(
+                CanvasSavedLayoutNameModalMode::RenameNamed { name: layout_name },
+                current_label,
+                workspace,
+                window,
+                cx,
+            )
+        });
+        true
+    }
+
+    pub fn clear_saved_canvas_layout_named(
+        &mut self,
+        name: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(layout_name) = canvas_named_saved_layout_name(&name) else {
+            return false;
+        };
+        if is_canvas_saved_layout_slot_name(&layout_name) {
+            return false;
+        }
+        if self.saved_canvas_layouts.remove(&layout_name).is_none() {
+            return false;
+        }
+
+        self.serialize_workspace(window, cx);
+        cx.notify();
         true
     }
 
@@ -10428,6 +10681,35 @@ impl Workspace {
             .on_action(cx.listener(
                 |workspace: &mut Workspace, action: &RenameSavedCanvasLayoutSlot, window, cx| {
                     workspace.rename_saved_canvas_layout_slot(action.slot, window, cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &SaveCurrentCanvasLayoutAs, window, cx| {
+                    workspace.save_current_canvas_layout_as(window, cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, action: &SaveCurrentCanvasLayoutNamed, window, cx| {
+                    workspace.save_current_canvas_layout_named(action.name.clone(), window, cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, action: &RestoreSavedCanvasLayoutNamed, window, cx| {
+                    workspace.restore_saved_canvas_layout_named(action.name.clone(), window, cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, action: &RenameSavedCanvasLayoutNamed, window, cx| {
+                    workspace.prompt_rename_saved_canvas_layout_named(
+                        action.name.clone(),
+                        window,
+                        cx,
+                    );
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, action: &ClearSavedCanvasLayoutNamed, window, cx| {
+                    workspace.clear_saved_canvas_layout_named(action.name.clone(), window, cx);
                 },
             ))
             .on_action(cx.listener(

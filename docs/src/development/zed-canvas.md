@@ -265,10 +265,12 @@ Rules:
   every saved center pane still exists, without closing panes or relaunching
   processes. Restore now also reopens missing project-path-backed tabs into
   their saved panes in saved order, then reapplies saved pinned and active-tab
-  metadata. The Panel Layout menu can rename or clear stale fixed slots, and
-  `workspace::RenameSavedCanvasLayoutSlot` opens built-in text entry for
-  assigning a user-authored slot label. Free-form multi-name management and
-  live process/session restoration are still future work.
+  metadata. The Panel Layout menu can rename or clear stale fixed slots, save
+  the current layout under a free-form name, and restore, rename, or clear
+  free-form named layouts. `workspace::RenameSavedCanvasLayoutSlot` and
+  `workspace::SaveCurrentCanvasLayoutAs` open built-in text entry for assigning
+  user-authored names. A fuller saved-layout manager and live process/session
+  restoration are still future work.
 - Manual structural layout changes clear the active recipe identity and show
   `Custom Canvas Layout` in the Panel Layout menu while keeping the pane tree
   and tabs intact.
@@ -295,13 +297,11 @@ Implementation boundary:
 
 - Current recipes are geometry-only and reveal existing pane-hosted surfaces.
   They must not spawn agents, terminals, browsers, or external processes.
-- Saved-layout support currently provides three fixed durable slots with
-  derived display labels plus built-in text entry for user-authored slot
-  labels, not free-form multi-name layout management.
-- Proper persisted layouts still need a saved-layout manager UI and actual
-  process restoration. Saved layout slots now use pane-tree metadata to reshape
-  existing panes, reopen project-path-backed tabs, and store restore-planning
-  intent for live-only/process-backed tabs.
+- Saved-layout support currently provides three fixed durable slots plus
+  free-form named layouts with built-in text entry. A fuller saved-layout
+  manager UI and actual process restoration remain future work. Saved layouts
+  use pane-tree metadata to reshape existing panes, reopen project-path-backed
+  tabs, and store restore-planning intent for live-only/process-backed tabs.
 - Process lifetime stays separate from tab lifetime so closing a tab is not
   silently treated as killing or resuming a process.
 
@@ -423,6 +423,7 @@ while a multi-stroke prefix sequence is pending:
 - `ctrl-b shift-1/2/3` saves Canvas layout slots 1/2/3.
 - `ctrl-b 1/2/3` restores Canvas layout slots 1/2/3.
 - `ctrl-b n 1/2/3` renames Canvas layout slots 1/2/3.
+- `ctrl-b n s` saves the current Canvas layout under a free-form name.
 - `ctrl-b p` restores the previous Canvas layout snapshot.
 - `ctrl-b left/down/up/right` focuses adjacent panes.
 - `ctrl-b shift-left/down/up/right` swaps adjacent panes.
