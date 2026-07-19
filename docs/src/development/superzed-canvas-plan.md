@@ -67,7 +67,7 @@ Implemented in this phase:
   and `tab::Reopen` alias `pane::ReopenClosedItem`.
 - Additional tab command aliases now resolve for the implemented Canvas tab
   workflow: `tab::New`, `tab::Close`, `tab::Pin`, `tab::MoveLeft`,
-  `tab::MoveRight`, and `tab::Search`.
+  `tab::MoveRight`, `tab::MoveToPane`, and `tab::Search`.
 - Pane command aliases now resolve for exact zoom and equalize workflows:
   `pane::Zoom` aliases `workspace::ToggleZoom`, and `pane::Equalize` aliases
   `workspace::ResetPaneSizes`.

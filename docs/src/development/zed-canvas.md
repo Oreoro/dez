@@ -370,7 +370,7 @@ pane::TogglePinTab (alias: tab::Pin)
 pane::SwapItemLeft (alias: tab::MoveLeft)
 pane::SwapItemRight (alias: tab::MoveRight)
 pane::DeploySearch (alias: tab::Search)
-workspace::MoveItemToPane
+workspace::MoveItemToPane (alias: tab::MoveToPane)
 workspace::MoveItemToPaneInDirection
 ```
 

@@ -854,6 +854,7 @@ pub struct ActivatePane(pub usize);
 /// Moves an item to a specific pane by index.
 #[derive(Clone, Deserialize, PartialEq, JsonSchema, Action)]
 #[action(namespace = workspace)]
+#[action(deprecated_aliases = ["tab::MoveToPane"])]
 #[serde(deny_unknown_fields)]
 pub struct MoveItemToPane {
     #[serde(default = "default_1")]
