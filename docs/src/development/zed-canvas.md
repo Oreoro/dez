@@ -444,10 +444,13 @@ The runtime settings model now reads `multiplexer.prefix_mode`,
 `multiplexer.broadcast_confirmation`; the Panel Layout menu shows the
 configured prefix, prefix timeout, and broadcast policy when prefix mode is
 enabled. When `multiplexer.prefix_mode = true`, workspace key context exposes
-`canvas_prefix_mode` and generated default key bindings map the configured
-prefix to core Canvas commands. The Panel Layout menu also shows disabled
-discovery rows for the active prefix command set, and the title bar shows a
-`PREFIX …` chip while a multi-stroke prefix sequence is pending:
+`canvas_prefix_mode`, `canvas_prefix`, and
+`canvas_broadcast_confirmation = "always" | "risky" | "never"` so keymaps and
+future broadcast actions can gate synchronized input from the same runtime
+policy. Generated default key bindings map the configured prefix to core
+Canvas commands. The Panel Layout menu also shows disabled discovery rows for
+the active prefix command set, and the title bar shows a `PREFIX …` chip while
+a multi-stroke prefix sequence is pending:
 
 - `<prefix> space` cycles Canvas layouts.
 - `<prefix> a` applies Agent Control.

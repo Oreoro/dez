@@ -11566,6 +11566,15 @@ impl Workspace {
             context.add("canvas");
             context.add("canvas_prefix_mode");
             context.set("canvas_prefix", multiplexer_settings.prefix.clone());
+            context.set(
+                "canvas_broadcast_confirmation",
+                match multiplexer_settings.broadcast_confirmation {
+                    settings::BroadcastConfirmation::Always => "always",
+                    settings::BroadcastConfirmation::Risky => "risky",
+                    settings::BroadcastConfirmation::Never => "never",
+                }
+                .to_string(),
+            );
         }
 
         if let Some(status) = self
