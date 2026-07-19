@@ -1668,6 +1668,8 @@ impl SidebarChrome {
                             "Prefix commands: ctrl-b 1/2/3 · Restore saved slots".to_string(),
                             "Prefix commands: ctrl-b shift-1/2/3 · Save slots".to_string(),
                             "Prefix commands: ctrl-b arrows · Focus adjacent panes".to_string(),
+                            "Prefix commands: ctrl-b shift-arrows · Swap adjacent panes"
+                                .to_string(),
                             "Prefix commands: ctrl-b h/j/k/l/= · Resize, Equalize".to_string(),
                         ]
                     })
