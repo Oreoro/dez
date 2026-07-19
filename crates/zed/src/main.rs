@@ -93,7 +93,7 @@ fn build_application() -> Application {
 }
 
 fn files_not_created_on_launch(errors: HashMap<io::ErrorKind, Vec<&Path>>) {
-    let message = "Zed failed to launch";
+    let message = format!("{} failed to launch", paths::APP_NAME);
     let error_details = errors
         .into_iter()
         .flat_map(|(kind, paths)| {
@@ -130,7 +130,7 @@ fn files_not_created_on_launch(errors: HashMap<io::ErrorKind, Vec<&Path>>) {
                     .update(cx, |_, window, cx| {
                         let response = window.prompt(
                             gpui::PromptLevel::Critical,
-                            message,
+                            &message,
                             Some(&error_details),
                             &["Exit"],
                             cx,
@@ -155,7 +155,8 @@ fn fail_to_open_window_async(e: anyhow::Error, cx: &mut AsyncApp) {
 
 fn fail_to_open_window(e: anyhow::Error, _cx: &mut App) {
     eprintln!(
-        "Zed failed to open a window: {e:?}. See https://zed.dev/docs/linux for troubleshooting steps."
+        "{} failed to open a window: {e:?}. See https://zed.dev/docs/linux for troubleshooting steps.",
+        paths::APP_NAME
     );
     #[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
     {
@@ -171,11 +172,11 @@ fn fail_to_open_window(e: anyhow::Error, _cx: &mut App) {
                 process::exit(1);
             };
 
-            let notification_id = "dev.zed.Oops";
+            let notification_id = format!("{}.Oops", release_channel::RELEASE_CHANNEL.app_id());
             proxy
                 .add_notification(
-                    notification_id,
-                    Notification::new("Zed failed to launch")
+                    &notification_id,
+                    Notification::new(format!("{} failed to launch", paths::APP_NAME))
                         .body(Some(
                             format!(
                                 "{e:?}. See https://zed.dev/docs/linux for troubleshooting steps."
@@ -316,7 +317,11 @@ fn main() {
             client::telemetry::os_name(),
             client::telemetry::os_version(),
         );
-        println!("Zed System Specs (from CLI):\n{}", system_specs);
+        println!(
+            "{} System Specs (from CLI):\n{}",
+            paths::APP_NAME,
+            system_specs
+        );
         return;
     }
 

@@ -104,6 +104,9 @@ Implemented in this phase:
 - Release-channel display names, runtime app IDs, macOS bundle identifiers,
   URL schemes, single-instance handshakes, and the About-window title now use
   Superzed identities for dev, nightly, preview, and stable builds.
+- Launch failure prompts, desktop notifications, CLI system-spec output, and
+  upstream Help-menu labels now use the Superzed app identity instead of
+  hard-coded Zed product labels.
 - The global CLI installer affordance is hidden for Superzed builds and the
   direct install action reports that CLI shim installation is disabled for this
   app identity.
