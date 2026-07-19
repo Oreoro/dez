@@ -166,8 +166,8 @@ the source of truth for whether latest-attention timestamps are shown.
 command/menu affordances, the centered command-search trigger, and workspace/rail
 attention chrome. `workspace_bar.center_command_search` renders a compact
 Command Search button that opens the Command Palette when the workspace bar is
-visible. `height` remains available to runtime settings for the dedicated
-workspace-bar renderer.
+visible. `workspace_bar.height` controls the rendered workspace-bar row density:
+`minimal`, `compact`, or `comfortable`.
 
 Rail modes:
 

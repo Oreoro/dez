@@ -59,7 +59,8 @@ Implemented in this phase:
   `center_command_search`; `workspace_bar.visibility = "hidden"` gates the
   existing layout command/menu affordances, centered command-search trigger, and
   workspace/rail attention chrome. `center_command_search` now opens the Command
-  Palette from the workspace bar when visible.
+  Palette from the workspace bar when visible, and `height` controls the
+  rendered workspace-bar row density.
 
 ## Ground truth {#ground-truth}
 

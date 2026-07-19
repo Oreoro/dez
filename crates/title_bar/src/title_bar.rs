@@ -552,6 +552,11 @@ impl Render for SidebarChrome {
             .child(
                 h_flex()
                     .w_full()
+                    .map(|this| match workspace_bar_settings.height {
+                        settings::WorkspaceBarHeight::Minimal => this.h_6(),
+                        settings::WorkspaceBarHeight::Compact => this.h_7(),
+                        settings::WorkspaceBarHeight::Comfortable => this.h_8(),
+                    })
                     .gap_1()
                     .justify_between()
                     .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
