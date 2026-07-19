@@ -354,8 +354,9 @@ Refine the existing sidebar direction into Session Rail:
   labels, agent-state labels, active Canvas layout labels, and
   latest-attention timestamps/badges while keeping the Ctrl-Tab thread switcher
   independent of rail display density. The default metadata now includes
-  `layout`; `saved_layout` is accepted as an alias for future durable named
-  layouts.
+  `layout`; layout metadata also shows the saved-layout count for the project
+  group, and `saved_layout` remains accepted as an alias for saved-layout
+  visibility.
 - `workspace_bar.show_agent_attention` gates the visual attention layer on top
   of that metadata: workspace-level badges, row notification dots, and
   collapsed-project waiting/notification markers.

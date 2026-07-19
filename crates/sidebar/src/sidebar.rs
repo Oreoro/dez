@@ -1931,18 +1931,34 @@ impl Sidebar {
                 .is_some_and(|active| group_workspaces.contains(active));
             let layout_label = show_layout_metadata
                 .then(|| {
-                    active_workspace
+                    let active_layout_label = active_workspace
                         .as_ref()
                         .filter(|active| group_workspaces.contains(active))
                         .into_iter()
                         .chain(group_workspaces.iter())
                         .find_map(|workspace| {
                             let recipe_id = workspace.read(cx).active_canvas_layout_recipe_id()?;
-                            Some(SharedString::from(format!(
-                                "Layout: {}",
-                                canvas_layout_recipe_label(recipe_id)?
-                            )))
-                        })
+                            Some(canvas_layout_recipe_label(recipe_id)?.to_string())
+                        });
+                    let saved_layout_count = group_workspaces
+                        .iter()
+                        .map(|workspace| workspace.read(cx).saved_canvas_layout_count())
+                        .sum::<usize>();
+
+                    match (active_layout_label, saved_layout_count) {
+                        (Some(layout), 0) => Some(SharedString::from(format!("Layout: {layout}"))),
+                        (Some(layout), 1) => {
+                            Some(SharedString::from(format!("Layout: {layout} · Saved: 1")))
+                        }
+                        (Some(layout), count) => Some(SharedString::from(format!(
+                            "Layout: {layout} · Saved: {count}"
+                        ))),
+                        (None, 1) => Some(SharedString::from("Saved: 1")),
+                        (None, count) if count > 1 => {
+                            Some(SharedString::from(format!("Saved: {count}")))
+                        }
+                        (None, _) => None,
+                    }
                 })
                 .flatten();
 
