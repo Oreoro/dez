@@ -263,7 +263,8 @@ Use the existing panel-as-pane bridge as the migration path:
   Six-Agent Supervisor, and Worktree Matrix also prefer column-first split
   directions when newly applied on ultrawide workspaces, and already-open
   many-agent layouts flatten nested rows into existing horizontal columns on
-  ultrawide resize.
+  ultrawide resize, then reshape those same panes back into the recipe matrix
+  or narrow vertical stack when the workspace leaves ultrawide.
 - Remove the one-visible-agent bottleneck. Multiple agent tabs and terminal
   agents can be visible across panes and windows.
 - Support direct pane/tab dragging, keyboard movement, context-menu movement,
@@ -381,8 +382,9 @@ Implementation order:
    orientation variants are implemented for vertical-first recipes. Four-Agent
    Matrix, Six-Agent Supervisor, plus Worktree Matrix prefer ultrawide
    column-first splits when newly applied, and already-open many-agent layouts
-   flatten nested rows into existing horizontal columns on ultrawide resize.
-   Non-ultrawide many-agent reshape variants remain future work.
+   flatten nested rows into existing horizontal columns on ultrawide resize,
+   then reshape the same panes back into nested or narrow variants when the
+   workspace leaves ultrawide.
 5. Add UI for named saved layouts and layout history once the underlying
    metadata is stable. Three fixed durable saved-layout slots are implemented
    in the Panel Layout menu with derived restore labels, and manual structural

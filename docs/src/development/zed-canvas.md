@@ -281,8 +281,9 @@ Rules:
   and Worktree Matrix also prefer column-first split directions when newly
   applied on ultrawide workspaces, and already-open many-agent layouts flatten
   nested rows into existing horizontal columns on ultrawide resize without
-  closing panes or tabs. Richer non-ultrawide many-agent reshape variants remain
-  future work.
+  closing panes or tabs. When those already-open layouts leave ultrawide, they
+  reshape the same pane entities back into the recipe's nested matrix, or a
+  vertical stack for narrow/portrait workspaces.
 - Empty panes offer quick item creation and restore actions.
 - Zoom preserves underlying layout.
 - Layout modifications persist continuously.

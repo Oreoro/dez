@@ -408,6 +408,14 @@ fn canvas_size_is_ultrawide(size: Size<Pixels>) -> bool {
     size.width >= px(1600.) && size.width >= size.height * 1.6
 }
 
+fn flat_axis_for_split_directions(split_directions: &[SplitDirection]) -> Option<Axis> {
+    let axis = split_directions.first()?.axis();
+    split_directions
+        .iter()
+        .all(|direction| direction.axis() == axis)
+        .then_some(axis)
+}
+
 use crate::{dock::PanelSizeState, item::ItemBufferKind, notifications::NotificationId};
 use crate::{
     persistence::{
@@ -6437,17 +6445,25 @@ impl Workspace {
         };
 
         if active_layout_recipe.should_reflow_agent_matrix_to_columns_on_ultrawide()
-            && self.canvas_workspace_is_ultrawide()
-            && !self.center_root_is_flat_axis(Axis::Horizontal)
             && let Some(split_directions) = active_layout_recipe.agent_matrix_split_directions()
         {
             let split_directions =
                 self.reflow_canvas_split_directions(active_layout_recipe, split_directions, cx);
-            self.push_canvas_layout_snapshot(cx);
-            if self.reshape_center_pane_tree_with_split_directions(&split_directions, cx) {
-                self.serialize_workspace(window, cx);
-                cx.notify();
-                return;
+            let should_reshape = match flat_axis_for_split_directions(&split_directions) {
+                Some(axis) => !self.center_root_is_flat_axis(axis),
+                None => {
+                    self.center_root_is_flat_axis(Axis::Horizontal)
+                        || self.center_root_is_flat_axis(Axis::Vertical)
+                }
+            };
+
+            if should_reshape {
+                self.push_canvas_layout_snapshot(cx);
+                if self.reshape_center_pane_tree_with_split_directions(&split_directions, cx) {
+                    self.serialize_workspace(window, cx);
+                    cx.notify();
+                    return;
+                }
             }
         }
 
@@ -13800,6 +13816,32 @@ mod tests {
                 })
                 .collect::<Vec<_>>();
             assert_eq!(root_panes, initial_pane_order);
+        });
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            workspace.bounds.size = size(px(1200.), px(900.));
+            workspace.reflow_active_canvas_layout_for_bounds_change(window, cx);
+        });
+
+        workspace.read_with(cx, |workspace, _| {
+            let Member::Axis(root) = &workspace.center.root else {
+                panic!("restored matrix should keep a root axis");
+            };
+            assert_eq!(root.axis, Axis::Horizontal);
+            assert!(
+                root.members.iter().any(
+                    |member| matches!(member, Member::Axis(axis) if axis.axis == Axis::Vertical)
+                ),
+                "matrix should restore its nested row when leaving ultrawide"
+            );
+
+            let restored_pane_order = workspace
+                .center
+                .panes()
+                .into_iter()
+                .map(|pane| pane.entity_id())
+                .collect::<Vec<_>>();
+            assert_eq!(restored_pane_order, initial_pane_order);
         });
     }
 
