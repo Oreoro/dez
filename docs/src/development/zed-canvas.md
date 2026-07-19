@@ -398,6 +398,8 @@ while a multi-stroke prefix sequence is pending:
 - `ctrl-b left/down/up/right` focuses adjacent panes.
 - `ctrl-b shift-left/down/up/right` swaps adjacent panes.
 - `ctrl-b alt-left/down/up/right` moves the active pane to the workspace edge.
+- `ctrl-b v` splits the active pane to the right.
+- `ctrl-b enter` splits the active pane downward.
 - `ctrl-b h/j/k/l` resizes the active pane left/down/up/right in fixed steps.
 - `ctrl-b =` equalizes pane sizes without changing the split tree.
 

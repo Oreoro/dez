@@ -1717,6 +1717,8 @@
       "ctrl-b alt-down": "workspace::MovePaneDown",
       "ctrl-b alt-up": "workspace::MovePaneUp",
       "ctrl-b alt-right": "workspace::MovePaneRight",
+      "ctrl-b v": "pane::SplitRight",
+      "ctrl-b enter": "pane::SplitDown",
       "ctrl-b h": "workspace::ResizePaneLeft",
       "ctrl-b j": "workspace::ResizePaneDown",
       "ctrl-b k": "workspace::ResizePaneUp",
