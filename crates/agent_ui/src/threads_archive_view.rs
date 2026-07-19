@@ -17,30 +17,183 @@ use editor::Editor;
 use fs::Fs;
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
-    AnyElement, App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable,
-    ListState, Render, SharedString, Subscription, Task, TaskExt, WeakEntity, Window, list,
+    AnyElement, App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, Hsla,
+    ListState, Pixels, Render, SharedString, Subscription, Task, TaskExt, WeakEntity, Window, list,
     prelude::*, px,
 };
 use itertools::Itertools as _;
 use menu::{Confirm, SelectFirst, SelectLast, SelectNext, SelectPrevious};
 use picker::{
-    Picker, PickerDelegate,
+    Picker, PickerDelegate, PickerSurfaceContrast, PickerSurfaceDensity, PickerSurfaceRadius,
     highlighted_match_with_paths::{HighlightedMatch, HighlightedMatchWithPaths},
 };
 use project::{AgentId, AgentServerStore};
+use settings::Settings as _;
 use theme::ActiveTheme;
 use ui::{
     AgentThreadStatus, Divider, KeyBinding, ListItem, ListItemSpacing, ListSubHeader, ScrollAxes,
-    Scrollbars, Tab, ThreadItem, Tooltip, WithScrollbar, prelude::*,
+    Scrollbars, Tab, ThreadItem, ThreadItemContrast, ThreadItemDensity, ThreadItemRadius, Tooltip,
+    WithScrollbar, prelude::*,
 };
 use util::ResultExt;
 use util::paths::PathExt;
 use workspace::{
-    ModalView, PathList, RecentWorkspace, SerializedWorkspaceLocation, Workspace, WorkspaceDb,
-    WorkspaceId,
+    DesignSystemSettings, ModalView, PathList, RecentWorkspace, SerializedWorkspaceLocation,
+    Workspace, WorkspaceDb, WorkspaceId,
 };
 
 use zed_actions::editor::{MoveDown, MoveUp};
+
+fn thread_archive_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.editor_background,
+        settings::CanvasContrast::Standard => colors.panel_background,
+        settings::CanvasContrast::High => colors
+            .panel_background
+            .blend(colors.border_focused.opacity(0.06)),
+    }
+}
+
+fn thread_archive_toolbar_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.tab_bar_background.opacity(0.88),
+        settings::CanvasContrast::Standard => colors.tab_bar_background,
+        settings::CanvasContrast::High => colors
+            .elevated_surface_background
+            .blend(colors.border_focused.opacity(0.08)),
+    }
+}
+
+fn thread_archive_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border_variant.opacity(0.42),
+        settings::CanvasContrast::Standard => colors.border,
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn thread_archive_toolbar_padding_start(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(8.),
+        settings::CanvasDensity::Balanced => px(10.),
+        settings::CanvasDensity::Spacious => px(14.),
+    }
+}
+
+fn thread_archive_toolbar_padding_end(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(10.),
+    }
+}
+
+fn thread_archive_toolbar_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
+fn thread_archive_bucket_padding_x(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(10.),
+        settings::CanvasDensity::Spacious => px(14.),
+    }
+}
+
+fn thread_archive_bucket_padding_top(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(8.),
+        settings::CanvasDensity::Balanced => px(12.),
+        settings::CanvasDensity::Spacious => px(16.),
+    }
+}
+
+fn thread_archive_bucket_padding_bottom(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(2.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn thread_archive_item_density(cx: &App) -> ThreadItemDensity {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => ThreadItemDensity::Compact,
+        settings::CanvasDensity::Balanced => ThreadItemDensity::Balanced,
+        settings::CanvasDensity::Spacious => ThreadItemDensity::Spacious,
+    }
+}
+
+fn thread_archive_item_radius(cx: &App) -> ThreadItemRadius {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => ThreadItemRadius::None,
+        settings::CanvasRadius::Subtle => ThreadItemRadius::Subtle,
+        settings::CanvasRadius::Rounded => ThreadItemRadius::Rounded,
+    }
+}
+
+fn thread_archive_item_contrast(cx: &App) -> ThreadItemContrast {
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => ThreadItemContrast::Low,
+        settings::CanvasContrast::Standard => ThreadItemContrast::Standard,
+        settings::CanvasContrast::High => ThreadItemContrast::High,
+    }
+}
+
+fn thread_archive_picker_density(cx: &App) -> PickerSurfaceDensity {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => PickerSurfaceDensity::Compact,
+        settings::CanvasDensity::Balanced => PickerSurfaceDensity::Balanced,
+        settings::CanvasDensity::Spacious => PickerSurfaceDensity::Spacious,
+    }
+}
+
+fn thread_archive_picker_radius(cx: &App) -> PickerSurfaceRadius {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => PickerSurfaceRadius::None,
+        settings::CanvasRadius::Subtle => PickerSurfaceRadius::Subtle,
+        settings::CanvasRadius::Rounded => PickerSurfaceRadius::Rounded,
+    }
+}
+
+fn thread_archive_picker_contrast(cx: &App) -> PickerSurfaceContrast {
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => PickerSurfaceContrast::Low,
+        settings::CanvasContrast::Standard => PickerSurfaceContrast::Standard,
+        settings::CanvasContrast::High => PickerSurfaceContrast::High,
+    }
+}
+
+fn thread_archive_list_item_spacing(cx: &App) -> ListItemSpacing {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => ListItemSpacing::ExtraDense,
+        settings::CanvasDensity::Balanced => ListItemSpacing::Dense,
+        settings::CanvasDensity::Spacious => ListItemSpacing::Sparse,
+    }
+}
+
+fn thread_archive_picker_row_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(8.),
+        settings::CanvasDensity::Balanced => px(12.),
+        settings::CanvasDensity::Spacious => px(16.),
+    }
+}
+
+fn thread_archive_picker_footer_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 enum ThreadFilter {
@@ -589,9 +742,9 @@ impl ThreadsArchiveView {
         match item {
             ArchiveListItem::BucketSeparator(bucket) => div()
                 .w_full()
-                .px_2p5()
-                .pt_3()
-                .pb_1()
+                .px(thread_archive_bucket_padding_x(cx))
+                .pt(thread_archive_bucket_padding_top(cx))
+                .pb(thread_archive_bucket_padding_bottom(cx))
                 .child(
                     Label::new(bucket.label())
                         .size(LabelSize::Small)
@@ -658,6 +811,10 @@ impl ThreadsArchiveView {
                     .highlight_positions(highlight_positions.clone())
                     .project_paths(thread.folder_paths().paths_owned())
                     .worktrees(worktrees)
+                    .density(thread_archive_item_density(cx))
+                    .radius(thread_archive_item_radius(cx))
+                    .contrast(thread_archive_item_contrast(cx))
+                    .base_bg(thread_archive_background(cx))
                     .focused(is_focused)
                     .hovered(is_hovered)
                     .on_hover(cx.listener(move |this, is_hovered, _window, cx| {
@@ -856,10 +1013,10 @@ impl ThreadsArchiveView {
         h_flex()
             .relative()
             .flex_none()
-            .pl_2p5()
-            .pr_1p5()
+            .pl(thread_archive_toolbar_padding_start(cx))
+            .pr(thread_archive_toolbar_padding_end(cx))
             .h(Tab::container_height(cx))
-            .bg(cx.theme().colors().tab_bar_background)
+            .bg(thread_archive_toolbar_background(cx))
             .justify_between()
             .child(
                 div()
@@ -868,7 +1025,7 @@ impl ThreadsArchiveView {
                     .left_0()
                     .size_full()
                     .border_b_1()
-                    .border_color(cx.theme().colors().border),
+                    .border_color(thread_archive_border(cx)),
             )
             .child(
                 Label::new(count_label)
@@ -877,7 +1034,7 @@ impl ThreadsArchiveView {
             )
             .child(
                 h_flex()
-                    .gap_1()
+                    .gap(thread_archive_toolbar_gap(cx))
                     .child(
                         IconButton::new("new-thread", IconName::Plus)
                             .icon_size(IconSize::Small)
@@ -997,6 +1154,7 @@ impl Render for ThreadsArchiveView {
             .on_action(cx.listener(Self::remove_selected_thread))
             .on_action(cx.listener(Self::archive_selected_thread))
             .size_full()
+            .bg(thread_archive_background(cx))
             .child(self.render_toolbar(cx))
             .child(content)
     }
@@ -1030,6 +1188,9 @@ impl ProjectPickerModal {
 
         let picker = cx.new(|cx| {
             Picker::list(delegate, window, cx)
+                .surface_density(thread_archive_picker_density(cx))
+                .surface_radius(thread_archive_picker_radius(cx))
+                .surface_contrast(thread_archive_picker_contrast(cx))
                 .list_measure_all()
                 .embedded()
         });
@@ -1085,6 +1246,22 @@ impl Render for ProjectPickerModal {
         v_flex()
             .key_context("ProjectPickerModal")
             .elevation_3(cx)
+            .bg(thread_archive_toolbar_background(cx))
+            .border_1()
+            .border_color(thread_archive_border(cx))
+            .when(
+                thread_archive_picker_radius(cx) == PickerSurfaceRadius::None,
+                |this| this.rounded_none(),
+            )
+            .when(
+                thread_archive_picker_radius(cx) == PickerSurfaceRadius::Subtle,
+                |this| this.rounded_md(),
+            )
+            .when(
+                thread_archive_picker_radius(cx) == PickerSurfaceRadius::Rounded,
+                |this| this.rounded_lg(),
+            )
+            .overflow_hidden()
             .on_action(cx.listener(|this, _: &workspace::Open, window, cx| {
                 this.picker.update(cx, |picker, cx| {
                     picker.delegate.open_local_folder(window, cx)
@@ -1406,8 +1583,11 @@ impl PickerDelegate for ProjectPickerDelegate {
             ProjectPickerEntry::Header(title) => Some(
                 v_flex()
                     .w_full()
-                    .gap_1()
-                    .when(ix > 0, |this| this.mt_1().child(Divider::horizontal()))
+                    .gap(thread_archive_toolbar_gap(cx))
+                    .when(ix > 0, |this| {
+                        this.mt(thread_archive_toolbar_gap(cx))
+                            .child(Divider::horizontal())
+                    })
                     .child(ListSubHeader::new(title.clone()).inset(true))
                     .into_any_element(),
             ),
@@ -1480,10 +1660,10 @@ impl PickerDelegate for ProjectPickerDelegate {
                     ListItem::new(ix)
                         .toggle_state(selected)
                         .inset(true)
-                        .spacing(ListItemSpacing::Sparse)
+                        .spacing(thread_archive_list_item_spacing(cx))
                         .child(
                             h_flex()
-                                .gap_3()
+                                .gap(thread_archive_picker_row_gap(cx))
                                 .flex_grow_1()
                                 .child(highlighted_match.render(window, cx)),
                         )
@@ -1501,11 +1681,11 @@ impl PickerDelegate for ProjectPickerDelegate {
         Some(
             h_flex()
                 .flex_1()
-                .p_1p5()
-                .gap_1()
+                .p(thread_archive_picker_footer_padding(cx))
+                .gap(thread_archive_toolbar_gap(cx))
                 .justify_end()
                 .border_t_1()
-                .border_color(cx.theme().colors().border_variant)
+                .border_color(thread_archive_border(cx))
                 .child(
                     Button::new("open_local_folder", "Choose from Local Folders")
                         .key_binding(KeyBinding::for_action_in(

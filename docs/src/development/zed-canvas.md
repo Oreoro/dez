@@ -567,6 +567,9 @@ section header padding, tool row density, and separator contrast.
 The context-server configuration modal uses Canvas density, radius, and
 contrast for modal shell chrome, editor card treatment, footer rhythm, status
 rows, authentication rows, client-secret rows, and error spacing.
+The agent thread archive view uses Canvas density, radius, and contrast for
+archive toolbar chrome, time bucket spacing, thread rows, the project-picker
+shell, picker rows, and picker footer rhythm.
 
 ## Layout system {#layout-system}
 
