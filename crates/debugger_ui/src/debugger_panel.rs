@@ -1,3 +1,6 @@
+use crate::canvas::{
+    debugger_background, debugger_panel_background, debugger_panel_padding, debugger_radius,
+};
 use crate::persistence::DebuggerPaneItem;
 use crate::session::DebugSession;
 use crate::session::running::RunningState;
@@ -1702,9 +1705,13 @@ impl Render for DebugPanel {
             self.context_menu.take();
         }
 
+        let panel_background = debugger_background(cx);
+        let secondary_panel_background = debugger_panel_background(cx);
+        let panel_padding = debugger_panel_padding(cx);
+
         v_flex()
             .size_full()
-            .bg(cx.theme().colors().editor_background)
+            .bg(panel_background)
             .key_context("DebugPanel")
             .track_focus(&self.focus_handle(cx))
             .on_action({
@@ -1874,7 +1881,13 @@ impl Render for DebugPanel {
                         v_flex()
                             .size_full()
                             .child(h_flex().children(self.top_controls_strip(window, cx)))
-                            .child(div().flex_1().min_h_0().child(active_session)),
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .min_h_0()
+                                    .p(panel_padding)
+                                    .child(active_session),
+                            ),
                     )
                 } else {
                     let welcome_experience = v_flex()
@@ -1956,11 +1969,14 @@ impl Render for DebugPanel {
                         .group("base-breakpoint-list")
                         .min_w_1_3()
                         .h_full()
+                        .p(panel_padding)
+                        .bg(secondary_panel_background)
+                        .map(|this| debugger_radius(this, cx))
                         .child(
                             h_flex()
                                 .track_focus(&self.breakpoint_list.focus_handle(cx))
                                 .h(Tab::content_height(cx))
-                                .p_1p5()
+                                .p(panel_padding)
                                 .w_full()
                                 .justify_between()
                                 .border_b_1()
@@ -1989,6 +2005,7 @@ impl Render for DebugPanel {
                         .w_2_3()
                         .h_full()
                         .min_w_0()
+                        .bg(panel_background)
                         .child(h_flex().children(self.top_controls_strip(window, cx)))
                         .child(welcome_experience);
 
@@ -1996,7 +2013,8 @@ impl Render for DebugPanel {
                         v_flex()
                             .size_full()
                             .overflow_hidden()
-                            .gap_1()
+                            .gap(panel_padding)
+                            .p(panel_padding)
                             .items_center()
                             .justify_center()
                             .map(|this| {

@@ -1,3 +1,6 @@
+use crate::canvas::{
+    debugger_panel_background, debugger_panel_padding, debugger_row_padding, debugger_row_surface,
+};
 use anyhow::anyhow;
 use dap::Module;
 use gpui::{
@@ -123,10 +126,9 @@ impl ModuleList {
 
     fn render_entry(&mut self, ix: usize, cx: &mut Context<Self>) -> AnyElement {
         let module = self.entries[ix].clone();
+        let selected = Some(ix) == self.selected_ix;
 
-        v_flex()
-            .rounded_md()
-            .w_full()
+        debugger_row_surface(v_flex().w_full(), selected, cx)
             .group("")
             .id(("module-list", ix))
             .on_any_mouse_down(|_, _, cx| {
@@ -147,11 +149,7 @@ impl ModuleList {
                     })
                 })
             })
-            .p_1()
-            .hover(|s| s.bg(cx.theme().colors().element_hover))
-            .when(Some(ix) == self.selected_ix, |s| {
-                s.bg(cx.theme().colors().element_hover)
-            })
+            .p(debugger_row_padding(cx))
             .child(h_flex().gap_0p5().text_ui_sm(cx).child(module.name.clone()))
             .child(
                 h_flex()
@@ -279,7 +277,8 @@ impl Render for ModuleList {
             .on_action(cx.listener(Self::select_previous))
             .on_action(cx.listener(Self::confirm))
             .size_full()
-            .p_1()
+            .p(debugger_panel_padding(cx))
+            .bg(debugger_panel_background(cx))
             .child(self.render_list(window, cx))
             .vertical_scrollbar_for(&self.scroll_handle, window, cx)
     }

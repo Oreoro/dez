@@ -24,7 +24,14 @@ use ui::{
 };
 use workspace::Workspace;
 
-use crate::{ToggleDataBreakpoint, session::running::stack_frame_list::StackFrameList};
+use crate::{
+    ToggleDataBreakpoint,
+    canvas::{
+        debugger_background, debugger_panel_background, debugger_panel_padding, debugger_radius,
+        debugger_row_border_color, debugger_row_hover_border_color,
+    },
+    session::running::stack_frame_list::StackFrameList,
+};
 
 actions!(debugger, [GoToSelectedAddress]);
 
@@ -316,7 +323,7 @@ impl MemoryView {
             ..Default::default()
         };
         EditorStyle {
-            background: theme.colors().editor_background,
+            background: debugger_background(cx),
             local_player: theme.players().local(),
             text: text_style,
             ..Default::default()
@@ -857,12 +864,16 @@ impl Render for MemoryView {
                 "Change Address of Currently Viewed Memory",
             )
         };
+        let background = debugger_background(cx);
+        let border_color = debugger_row_border_color(background, false, cx);
+        let focus_border_color = debugger_row_hover_border_color(background, false, cx);
+        let panel_padding = debugger_panel_padding(cx);
 
         v_flex()
             .id("Memory-view")
             .on_action(cx.listener(Self::cancel))
             .on_action(cx.listener(Self::go_to_address))
-            .p_1()
+            .p(panel_padding)
             .on_action(cx.listener(Self::confirm))
             .on_action(cx.listener(Self::toggle_data_breakpoint))
             .on_action(cx.listener(Self::page_down))
@@ -876,20 +887,20 @@ impl Render for MemoryView {
                     .gap_1()
                     .child(
                         h_flex()
-                            .px_1()
+                            .px(panel_padding)
                             .h_6()
                             .w_full()
-                            .rounded_sm()
                             .gap_1()
                             .border_1()
                             .when_else(
                                 self.query_editor
                                     .focus_handle(cx)
                                     .contains_focused(window, cx),
-                                |this| this.border_color(cx.theme().colors().border_focused),
-                                |this| this.border_color(cx.theme().colors().border_variant),
+                                |this| this.border_color(focus_border_color),
+                                |this| this.border_color(border_color),
                             )
-                            .bg(cx.theme().colors().editor_background)
+                            .bg(background)
+                            .map(|this| debugger_radius(this, cx))
                             .child(
                                 div()
                                     .id("memory-view-editor-icon")
@@ -921,10 +932,7 @@ impl Render for MemoryView {
                     .custom_scrollbars(
                         ui::Scrollbars::new(ui::ScrollAxes::Both)
                             .tracked_scroll_handle(&self.view_state_handle)
-                            .with_track_along(
-                                ui::ScrollAxes::Both,
-                                cx.theme().colors().panel_background,
-                            )
+                            .with_track_along(ui::ScrollAxes::Both, debugger_panel_background(cx))
                             .tracked_entity(cx.entity_id()),
                         window,
                         cx,

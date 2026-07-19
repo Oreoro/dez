@@ -1,3 +1,7 @@
+use crate::canvas::{
+    debugger_panel_background, debugger_panel_padding, debugger_row_background,
+    debugger_row_border_color, debugger_row_hover_background,
+};
 use crate::session::running::{RunningState, memory_view::MemoryView};
 
 use super::stack_frame_list::{StackFrameList, StackFrameListEvent};
@@ -1547,6 +1551,8 @@ impl Render for VariableList {
             .id("variable-list")
             .group("variable-list")
             .size_full()
+            .p(debugger_panel_padding(cx))
+            .bg(debugger_panel_background(cx))
             .on_action(cx.listener(Self::select_first))
             .on_action(cx.listener(Self::select_last))
             .on_action(cx.listener(Self::select_prev))
@@ -1591,7 +1597,7 @@ impl Render for VariableList {
             .custom_scrollbars(
                 ui::Scrollbars::new(ScrollAxes::Both)
                     .tracked_scroll_handle(&self.list_handle)
-                    .with_track_along(ScrollAxes::Both, cx.theme().colors().panel_background)
+                    .with_track_along(ScrollAxes::Both, debugger_panel_background(cx))
                     .tracked_entity(cx.entity_id()),
                 window,
                 cx,
@@ -1606,12 +1612,12 @@ struct EntryColors {
 }
 
 fn get_entry_color(cx: &Context<VariableList>) -> EntryColors {
-    let colors = cx.theme().colors();
+    let selected_background = debugger_row_background(true, cx);
 
     EntryColors {
-        default: colors.panel_background,
-        hover: colors.ghost_element_hover,
-        marked_active: colors.ghost_element_selected,
+        default: debugger_panel_background(cx),
+        hover: debugger_row_hover_background(cx),
+        marked_active: debugger_row_border_color(selected_background, true, cx),
     }
 }
 

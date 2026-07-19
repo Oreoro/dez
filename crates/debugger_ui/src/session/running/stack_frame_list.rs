@@ -16,6 +16,11 @@ use util::{
 };
 
 use crate::ToggleUserFrames;
+use crate::canvas::{
+    debugger_panel_background, debugger_panel_padding, debugger_row_border_color,
+    debugger_row_hover_background, debugger_row_hover_border_color, debugger_row_padding,
+    debugger_row_surface,
+};
 use language::PointUtf16;
 use project::debugger::breakpoint_store::ActiveStackFrame;
 use project::debugger::session::{Session, SessionEvent, StackFrame, ThreadStatus};
@@ -539,15 +544,12 @@ impl StackFrameList {
     fn render_label_entry(
         &self,
         stack_frame: &dap::StackFrame,
-        _cx: &mut Context<Self>,
+        cx: &mut Context<Self>,
     ) -> AnyElement {
-        h_flex()
-            .rounded_md()
-            .justify_between()
-            .w_full()
+        debugger_row_surface(h_flex().justify_between().w_full(), false, cx)
             .group("")
             .id(("label-stack-frame", stack_frame.id))
-            .p_1()
+            .p(debugger_row_padding(cx))
             .on_any_mouse_down(|_, _, cx| {
                 cx.stop_propagation();
             })
@@ -596,16 +598,17 @@ impl StackFrameList {
                     | dap::StackFramePresentationHint::Deemphasize
             )
         );
-        h_flex()
-            .rounded_md()
-            .justify_between()
-            .w_full()
+        let restart_background = debugger_panel_background(cx);
+        let restart_border_color = debugger_row_border_color(restart_background, false, cx);
+        let restart_hover_background = debugger_row_hover_background(cx);
+        let restart_hover_border_color =
+            debugger_row_hover_border_color(restart_background, false, cx);
+
+        debugger_row_surface(h_flex().justify_between().w_full(), is_selected_frame, cx)
             .group("")
             .id(("stack-frame", stack_frame.id))
-            .p_1()
-            .when(is_selected_frame, |this| {
-                this.bg(cx.theme().colors().element_hover)
-            })
+            .p(debugger_row_padding(cx))
+            .cursor_pointer()
             .on_any_mouse_down(|_, _, cx| {
                 cx.stop_propagation();
             })
@@ -613,7 +616,6 @@ impl StackFrameList {
                 this.selected_ix = Some(ix);
                 this.activate_selected_entry(window, cx);
             }))
-            .hover(|style| style.bg(cx.theme().colors().element_hover).cursor_pointer())
             .overflow_x_scroll()
             .child(
                 v_flex()
@@ -636,15 +638,16 @@ impl StackFrameList {
                             .absolute()
                             .right_2()
                             .overflow_hidden()
-                            .rounded_md()
                             .border_1()
-                            .border_color(cx.theme().colors().element_selected)
-                            .bg(cx.theme().colors().element_background)
+                            .border_color(restart_border_color)
+                            .bg(restart_background)
                             .hover(|style| {
                                 style
-                                    .bg(cx.theme().colors().ghost_element_hover)
+                                    .bg(restart_hover_background)
+                                    .border_color(restart_hover_border_color)
                                     .cursor_pointer()
                             })
+                            .map(|this| crate::canvas::debugger_radius(this, cx))
                             .child(
                                 IconButton::new(
                                     ("restart-stack-frame", stack_frame.id),
@@ -699,16 +702,11 @@ impl StackFrameList {
         let first_stack_frame = &stack_frames[0];
         let is_selected = Some(ix) == self.selected_ix;
 
-        h_flex()
-            .rounded_md()
-            .justify_between()
-            .w_full()
+        debugger_row_surface(h_flex().justify_between().w_full(), is_selected, cx)
             .group("")
             .id(("stack-frame", first_stack_frame.id))
-            .p_1()
-            .when(is_selected, |this| {
-                this.bg(cx.theme().colors().element_hover)
-            })
+            .p(debugger_row_padding(cx))
+            .cursor_pointer()
             .on_any_mouse_down(|_, _, cx| {
                 cx.stop_propagation();
             })
@@ -716,7 +714,6 @@ impl StackFrameList {
                 this.selected_ix = Some(ix);
                 this.activate_selected_entry(window, cx);
             }))
-            .hover(|style| style.bg(cx.theme().colors().element_hover).cursor_pointer())
             .child(
                 v_flex()
                     .text_ui_sm(cx)
@@ -895,7 +892,7 @@ impl StackFrameList {
     }
 
     fn render_list(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        div().p_1().size_full().child(
+        div().p(debugger_panel_padding(cx)).size_full().child(
             list(
                 self.list_state.clone(),
                 cx.processor(|this, ix, _window, cx| this.render_entry(ix, cx)),
@@ -934,6 +931,7 @@ impl Render for StackFrameList {
         div()
             .track_focus(&self.focus_handle)
             .size_full()
+            .bg(debugger_panel_background(cx))
             .on_action(cx.listener(Self::select_next))
             .on_action(cx.listener(Self::select_previous))
             .on_action(cx.listener(Self::select_first))

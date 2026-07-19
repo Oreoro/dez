@@ -332,6 +332,10 @@ Current consumers:
 - Settings UI: the shared settings row renderer, nested dynamic-setting cards,
   section headers, search field, navigation rail, and root content backgrounds
   now consume Canvas density, radius, and contrast.
+- Debugger UI: the main Debug Panel shell, empty-state breakpoint/dashboard
+  split, stack frames, variables, breakpoints, modules, loaded sources,
+  console query bar, memory query bar, and debugger scroll tracks now consume
+  Canvas density, radius, and contrast.
 
 Broader rollout should apply the same runtime model to additional command-like
 pickers and panel-hosted tools as they opt into Canvas-specific workflows.

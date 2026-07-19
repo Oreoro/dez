@@ -488,6 +488,10 @@ files, tree directories, commit editor chrome, the expanded commit modal, and
 the panel shell background. Settings UI surfaces use the same density, radius,
 and contrast tokens for shared setting rows, nested dynamic-setting cards,
 section headers, search field, navigation rail, and content backgrounds.
+Debugger UI surfaces use Canvas tokens for the Debug Panel shell, empty-state
+breakpoint/dashboard split, stack frames, variables, breakpoints, modules,
+loaded sources, console query bar, memory query bar, and debugger scroll
+tracks.
 
 ## Layout system {#layout-system}
 

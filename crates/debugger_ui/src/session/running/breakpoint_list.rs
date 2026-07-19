@@ -5,6 +5,10 @@ use std::{
     time::Duration,
 };
 
+use crate::canvas::{
+    debugger_panel_background, debugger_panel_padding, debugger_radius, debugger_row_border_color,
+    debugger_row_hover_border_color,
+};
 use dap::{Capabilities, ExceptionBreakpointsFilter, adapters::DebugAdapterName};
 use db::kvp::KeyValueStore;
 use editor::Editor;
@@ -773,12 +777,13 @@ impl Render for BreakpointList {
             .on_action(cx.listener(Self::next_breakpoint_property))
             .on_action(cx.listener(Self::previous_breakpoint_property))
             .size_full()
-            .pt_1()
+            .p(debugger_panel_padding(cx))
+            .bg(debugger_panel_background(cx))
             .child(self.render_list(cx))
             .custom_scrollbars(
                 ui::Scrollbars::new(ScrollAxes::Both)
                     .tracked_scroll_handle(&self.scroll_handle)
-                    .with_track_along(ScrollAxes::Both, cx.theme().colors().panel_background)
+                    .with_track_along(ScrollAxes::Both, debugger_panel_background(cx))
                     .tracked_entity(cx.entity_id()),
                 window,
                 cx,
@@ -787,10 +792,15 @@ impl Render for BreakpointList {
                 this.child(Divider::horizontal().color(DividerColor::Border))
                     .child(
                         h_flex()
-                            .p_1()
-                            .rounded_sm()
-                            .bg(cx.theme().colors().editor_background)
+                            .p(debugger_panel_padding(cx))
+                            .bg(debugger_panel_background(cx))
                             .border_1()
+                            .border_color(debugger_row_border_color(
+                                debugger_panel_background(cx),
+                                false,
+                                cx,
+                            ))
+                            .map(|this| debugger_radius(this, cx))
                             .when(
                                 self.input.focus_handle(cx).contains_focused(window, cx),
                                 |this| {
@@ -799,7 +809,11 @@ impl Render for BreakpointList {
                                     let border_color = if self.input.read(cx).read_only(cx) {
                                         colors.border_disabled
                                     } else {
-                                        colors.border_transparent
+                                        debugger_row_hover_border_color(
+                                            debugger_panel_background(cx),
+                                            false,
+                                            cx,
+                                        )
                                     };
 
                                     this.border_color(border_color)

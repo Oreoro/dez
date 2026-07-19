@@ -15,6 +15,7 @@ use util::maybe;
 use workspace::{ShutdownDebugAdapters, Workspace};
 
 pub mod attach_modal;
+pub(crate) mod canvas;
 pub mod debugger_panel;
 mod dropdown_menus;
 mod new_process_modal;
