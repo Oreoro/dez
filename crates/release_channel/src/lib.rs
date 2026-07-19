@@ -30,10 +30,10 @@ pub static RELEASE_CHANNEL: LazyLock<ReleaseChannel> =
 #[cfg(target_os = "windows")]
 pub fn app_identifier() -> &'static str {
     match *RELEASE_CHANNEL {
-        ReleaseChannel::Dev => "Zed-Editor-Dev",
-        ReleaseChannel::Nightly => "Zed-Editor-Nightly",
-        ReleaseChannel::Preview => "Zed-Editor-Preview",
-        ReleaseChannel::Stable => "Zed-Editor-Stable",
+        ReleaseChannel::Dev => "Superzed-Dev",
+        ReleaseChannel::Nightly => "Superzed-Nightly",
+        ReleaseChannel::Preview => "Superzed-Preview",
+        ReleaseChannel::Stable => "Superzed",
     }
 }
 
@@ -197,8 +197,8 @@ impl ReleaseChannel {
     pub fn display_name(&self) -> &'static str {
         match self {
             ReleaseChannel::Dev => "Superzed Dev",
-            ReleaseChannel::Nightly => "Zed Nightly",
-            ReleaseChannel::Preview => "Zed Preview",
+            ReleaseChannel::Nightly => "Superzed Nightly",
+            ReleaseChannel::Preview => "Superzed Preview",
             ReleaseChannel::Stable => "Superzed",
         }
     }
@@ -215,13 +215,13 @@ impl ReleaseChannel {
 
     /// Returns the application ID that's used by Wayland as application ID
     /// and WM_CLASS on X11.
-    /// This also has to match the bundle identifier for Zed on macOS.
+    /// This also has to match the bundle identifier for Superzed on macOS.
     pub fn app_id(&self) -> &'static str {
         match self {
-            ReleaseChannel::Dev => "dev.zed.Zed-Dev",
-            ReleaseChannel::Nightly => "dev.zed.Zed-Nightly",
-            ReleaseChannel::Preview => "dev.zed.Zed-Preview",
-            ReleaseChannel::Stable => "dev.zed.Zed",
+            ReleaseChannel::Dev => "superzed.Superzed-Dev",
+            ReleaseChannel::Nightly => "superzed.Superzed-Nightly",
+            ReleaseChannel::Preview => "superzed.Superzed-Preview",
+            ReleaseChannel::Stable => "superzed.Superzed",
         }
     }
 

@@ -99,6 +99,9 @@ Implemented in this phase:
   explicitly gated on the upstream app name, the default `auto_update` setting
   is off, and the application menu hides `Check for Updates` while using
   `paths::APP_NAME` for About/Hide/Quit labels.
+- Release-channel display names, runtime app IDs, macOS bundle identifiers,
+  URL schemes, single-instance handshakes, and the About-window title now use
+  Superzed identities for dev, nightly, preview, and stable builds.
 
 ## Ground truth {#ground-truth}
 
