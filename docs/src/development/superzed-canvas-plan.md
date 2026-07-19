@@ -51,6 +51,10 @@ Implemented in this phase:
   search row, empty state, task rows, history/source indicators, and custom task
   footer now read `design_system.density`, `design_system.radius`, and
   `design_system.contrast`.
+- Applied Canvas design-system tokens to File Finder: its picker shell,
+  ignored-file control gap, checkbox/icon spacing, result-row rhythm, preview
+  footer, and split/open action footer now read `design_system.density`,
+  `design_system.radius`, and `design_system.contrast`.
 - Added schema/default switches for pane-tab panel hosting, terminal-agent
   detection, multiple visible agents, session restoration, agent attention
   notifications, and preview-first Markdown.
@@ -333,10 +337,11 @@ Current consumers:
 - Markdown sheets: preview scroll padding, readable-sheet padding, sheet radius,
   background, and border strength now read Canvas density, radius, and contrast
   when content width limiting is active.
-- Command and selector surfaces: the command palette, theme selector, icon
-  theme selector, and language selector opt the shared picker component into
-  Canvas density, radius, and contrast for modal chrome, search input rows,
-  empty states, and documentation asides where present.
+- Command and selector surfaces: the command palette, File Finder, theme
+  selector, icon theme selector, and language selector opt the shared picker
+  component into Canvas density, radius, and contrast for modal chrome, search
+  input rows, empty states, preview/action footers, and documentation asides
+  where present.
 - Tasks UI: the task picker shell, search row, empty state, task rows,
   history/source indicators, and custom task footer now consume Canvas density,
   radius, and contrast.

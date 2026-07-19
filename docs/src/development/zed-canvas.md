@@ -514,6 +514,9 @@ search input chrome, category filter rows, extension cards, and dev-extension
 override overlays.
 Tasks UI uses Canvas density, radius, and contrast for its picker shell, search
 row, empty state, task rows, history/source indicators, and custom task footer.
+File Finder uses the shared Canvas picker shell and maps Canvas density into
+its ignored-file control gap, checkbox/icon spacing, result-row rhythm, and
+preview/action footer chrome.
 
 ## Layout system {#layout-system}
 

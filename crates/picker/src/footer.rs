@@ -5,6 +5,7 @@ use ui::{ContextMenu, Divider, FluentBuilder, KeyBinding, PopoverMenu, Tooltip, 
 
 use crate::Picker;
 use crate::PickerDelegate;
+use crate::PickerSurfaceContrast;
 use crate::SetPreviewBelow;
 use crate::SetPreviewRight;
 use crate::ToggleActionsMenu;
@@ -104,14 +105,21 @@ impl<D: PickerDelegate> Picker<D> {
         }
 
         let focus_handle = self.focus_handle(cx);
+        let colors = cx.theme().colors();
+        let footer_border = match self.surface_contrast {
+            PickerSurfaceContrast::Low => colors.border_variant.opacity(0.45),
+            PickerSurfaceContrast::Standard => colors.border_variant,
+            PickerSurfaceContrast::High => colors.border_focused,
+        };
 
         Some(
             h_flex()
                 .w_full()
-                .p_1p5()
+                .p(self.surface_density.footer_padding())
+                .gap(self.surface_density.footer_gap())
                 .justify_between()
                 .border_t_1()
-                .border_color(cx.theme().colors().border_variant)
+                .border_color(footer_border)
                 .when(self.preview.is_some(), |this| {
                     this.child(self.render_preview_controls(window, cx))
                 })

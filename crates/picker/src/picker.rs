@@ -154,6 +154,22 @@ impl PickerSurfaceDensity {
             Self::Spacious => px(12.),
         }
     }
+
+    pub(crate) fn footer_padding(self) -> Pixels {
+        match self {
+            Self::Compact => px(6.),
+            Self::Balanced => px(8.),
+            Self::Spacious => px(12.),
+        }
+    }
+
+    pub(crate) fn footer_gap(self) -> Pixels {
+        match self {
+            Self::Compact => px(4.),
+            Self::Balanced => px(6.),
+            Self::Spacious => px(8.),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

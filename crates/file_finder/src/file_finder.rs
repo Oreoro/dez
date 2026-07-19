@@ -3,6 +3,8 @@ mod file_finder_tests;
 #[cfg(test)]
 mod multi_select_tests;
 
+mod canvas;
+
 use futures::future::join_all;
 pub use open_path_prompt::OpenPathDelegate;
 
@@ -40,7 +42,7 @@ use std::{
     },
     time::Duration,
 };
-use ui::{Checkbox, HighlightedLabel, ListItem, ListItemSpacing, Tooltip, prelude::*};
+use ui::{Checkbox, HighlightedLabel, ListItem, Tooltip, prelude::*};
 use util::{
     ResultExt, maybe,
     paths::{PathStyle, PathWithPosition},
@@ -184,6 +186,9 @@ impl FileFinder {
         let preview = picker_preview::editor_preview(project, window, cx);
         let picker = cx.new(|cx| {
             Picker::uniform_list_with_preview(delegate, preview, window, cx)
+                .surface_density(canvas::file_finder_picker_density(cx))
+                .surface_radius(canvas::file_finder_picker_radius(cx))
+                .surface_contrast(canvas::file_finder_picker_contrast(cx))
                 .initial_width(Rems::from_pixels(modal_max_width, window))
         });
         let picker_focus_handle = picker.focus_handle(cx);
@@ -1793,7 +1798,7 @@ impl PickerDelegate for FileFinderDelegate {
             });
         Some(
             h_flex()
-                .gap_1()
+                .gap(canvas::file_finder_gap(cx))
                 .child(filter_button)
                 .children(picker::parts::project_scan_indicator(
                     self.latest_search_query.is_some(),
@@ -2124,7 +2129,7 @@ impl FileFinderDelegate {
         let start_slot: Option<AnyElement> = match (checkbox, start_icon) {
             (Some(checkbox), icon) => Some(
                 h_flex()
-                    .gap_1p5()
+                    .gap(canvas::file_finder_gap(cx))
                     .child(checkbox)
                     .children(icon)
                     .into_any_element(),
@@ -2150,7 +2155,7 @@ impl FileFinderDelegate {
 
         Some(
             ListItem::new(ix)
-                .spacing(ListItemSpacing::Sparse)
+                .spacing(canvas::file_finder_row_spacing(cx))
                 .inset(true)
                 .toggle_state(selected)
                 .start_slot::<AnyElement>(start_slot)
@@ -2158,7 +2163,7 @@ impl FileFinderDelegate {
                     h_flex()
                         .w_full()
                         .min_w_0()
-                        .gap_1p5()
+                        .gap(canvas::file_finder_gap(cx))
                         .child(file_name_label.truncate_middle())
                         .child(full_path_label.truncate_start()),
                 )
