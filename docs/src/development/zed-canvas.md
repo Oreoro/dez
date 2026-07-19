@@ -370,7 +370,8 @@ The runtime settings model now reads `multiplexer.prefix_mode`,
 menu shows the configured prefix and broadcast policy when prefix mode is
 enabled. When `multiplexer.prefix_mode = true`, workspace key context exposes
 `canvas_prefix_mode` and the default keymaps bind the default `ctrl-b` prefix to
-core Canvas commands:
+core Canvas commands. The Panel Layout menu also shows disabled discovery rows
+for the default prefix command set:
 
 - `ctrl-b space` cycles Canvas layouts.
 - `ctrl-b a` applies Agent Control.
@@ -380,8 +381,8 @@ core Canvas commands:
 - `ctrl-b r` restores Canvas layout slot 1.
 - `ctrl-b p` restores the previous Canvas layout snapshot.
 
-Custom prefix strings still require user keymap overrides; timeout, repeatable
-resize behavior, and prefix command discovery remain future work.
+Custom prefix strings still require user keymap overrides; timeout and
+repeatable resize behavior remain future work.
 
 ## Layout system {#layout-system}
 

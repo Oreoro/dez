@@ -1619,10 +1619,17 @@ impl SidebarChrome {
                             settings::BroadcastConfirmation::Risky => "risky",
                             settings::BroadcastConfirmation::Never => "never",
                         };
-                        format!(
-                            "Prefix mode: {} · broadcast confirmation: {}",
-                            multiplexer_settings.prefix, confirmation
-                        )
+                        let prefix = multiplexer_settings.prefix.clone();
+                        vec![
+                            format!(
+                                "Prefix mode: {prefix} · broadcast confirmation: {confirmation}"
+                            ),
+                            "Prefix commands: ctrl-b space · Cycle Layout".to_string(),
+                            "Prefix commands: ctrl-b a · Agent Control".to_string(),
+                            "Prefix commands: ctrl-b f · Focus Editor".to_string(),
+                            "Prefix commands: ctrl-b m · Four-Agent Matrix".to_string(),
+                            "Prefix commands: ctrl-b s/r/p · Save, Restore, Previous".to_string(),
+                        ]
                     })
                 };
 
@@ -2081,9 +2088,13 @@ impl SidebarChrome {
                                             .disabled(true),
                                     )
                                 })
-                                .when_some(multiplexer_hint.clone(), |menu, hint| {
-                                    menu.separator()
-                                        .item(ContextMenuEntry::new(hint).disabled(true))
+                                .when_some(multiplexer_hint.clone(), |menu, hints| {
+                                    let mut menu = menu.separator();
+                                    for hint in hints {
+                                        menu =
+                                            menu.item(ContextMenuEntry::new(hint).disabled(true));
+                                    }
+                                    menu
                                 })
                                 .when(is_agent && active_canvas_layout_recipe.is_none(), |menu| {
                                     menu.item(
