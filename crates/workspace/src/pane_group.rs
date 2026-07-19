@@ -156,6 +156,13 @@ impl PaneGroup {
         self.root.full_height_column_count()
     }
 
+    pub fn root_axis(&self) -> Option<Axis> {
+        match &self.root {
+            Member::Axis(axis) => Some(axis.axis),
+            Member::Pane(_) => None,
+        }
+    }
+
     pub fn pane_at_pixel_position(&self, coordinate: Point<Pixels>) -> Option<&Entity<Pane>> {
         match &self.root {
             Member::Pane(pane) => Some(pane),

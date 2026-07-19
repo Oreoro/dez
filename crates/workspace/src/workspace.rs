@@ -249,6 +249,45 @@ impl CanvasLayoutRecipe {
         }
     }
 
+    fn primary_split_direction(self) -> Option<SplitDirection> {
+        Some(match self {
+            Self::Full => SplitDirection::Right,
+            Self::AgentControl => SplitDirection::Right,
+            Self::EditorFocus => return None,
+            Self::MainStack => SplitDirection::Right,
+            Self::MainTop => SplitDirection::Down,
+            Self::GoldenSplit => SplitDirection::Right,
+            Self::CodeRunObserve => SplitDirection::Down,
+            Self::Review => SplitDirection::Right,
+            Self::Debug => SplitDirection::Down,
+            Self::DocumentationStudio => SplitDirection::Right,
+            Self::BrowserDevelopment => SplitDirection::Right,
+            Self::AgentOperations => SplitDirection::Right,
+            Self::FourAgentMatrix => SplitDirection::Right,
+            Self::SixAgentSupervisor => SplitDirection::Right,
+            Self::WorktreeMatrix => SplitDirection::Right,
+            Self::RemoteOperations => SplitDirection::Right,
+            Self::PairProgramming => SplitDirection::Right,
+            Self::IncidentResponse => SplitDirection::Right,
+            Self::PortraitDisplay => SplitDirection::Down,
+            Self::EvenColumns => SplitDirection::Right,
+            Self::EvenRows => SplitDirection::Down,
+        })
+    }
+
+    fn root_axis_for_size(self, size: Size<Pixels>) -> Option<Axis> {
+        let direction = self.primary_split_direction()?;
+        let direction = if canvas_size_is_narrow_or_portrait(size) {
+            match direction {
+                SplitDirection::Left | SplitDirection::Right => SplitDirection::Down,
+                SplitDirection::Up | SplitDirection::Down => direction,
+            }
+        } else {
+            direction
+        };
+        Some(direction.axis())
+    }
+
     fn from_name(name: &str) -> Option<Self> {
         match normalized_canvas_layout_recipe_name(name).as_str() {
             "full" | "canvas" | "canvas_full" => Some(Self::Full),
@@ -281,6 +320,14 @@ impl CanvasLayoutRecipe {
             _ => None,
         }
     }
+}
+
+fn canvas_size_is_narrow_or_portrait(size: Size<Pixels>) -> bool {
+    if size.width <= Pixels::ZERO || size.height <= Pixels::ZERO {
+        return false;
+    }
+
+    size.width < px(900.) || size.width < size.height
 }
 
 use crate::{dock::PanelSizeState, item::ItemBufferKind, notifications::NotificationId};
@@ -5545,12 +5592,32 @@ impl Workspace {
     }
 
     fn canvas_workspace_is_narrow_or_portrait(&self) -> bool {
-        let size = self.bounds.size;
-        if size.width <= Pixels::ZERO || size.height <= Pixels::ZERO {
-            return false;
+        canvas_size_is_narrow_or_portrait(self.bounds.size)
+    }
+
+    fn reflow_active_canvas_layout_for_bounds_change(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !PaneGridSettings::get_global(cx).auto_reflow {
+            return;
         }
 
-        size.width < px(900.) || size.width < size.height
+        let Some(active_layout_recipe) = self.active_canvas_layout_recipe else {
+            return;
+        };
+        let Some(desired_axis) = active_layout_recipe.root_axis_for_size(self.bounds.size) else {
+            return;
+        };
+        if self.center.root_axis() == Some(desired_axis) {
+            return;
+        }
+
+        self.push_canvas_layout_snapshot(cx);
+        self.center.invert_axies(cx);
+        self.serialize_workspace(window, cx);
+        cx.notify();
     }
 
     fn set_canvas_panel_pane_visible(
@@ -10362,6 +10429,10 @@ impl Render for Workspace {
                                                         cx,
                                                     )
                                                 });
+
+                                                this.reflow_active_canvas_layout_for_bounds_change(
+                                                    window, cx,
+                                                );
                                             }
                                         })
                                     },

@@ -247,9 +247,11 @@ Rules:
 - Manual structural layout changes clear the active recipe identity and show
   `Custom Canvas Layout` in the Panel Layout menu while keeping the pane tree
   and tabs intact.
-- `pane_grid.auto_reflow` is available at runtime. On recipe application,
-  narrow or portrait workspaces reflow horizontal recipe splits into vertical
-  splits without closing workspace items. Resize-driven live reflow and broader
+- `pane_grid.auto_reflow` is available at runtime. On recipe application and
+  resize, narrow or portrait workspaces reflow horizontal recipe splits into
+  vertical splits without closing workspace items. Resize-driven reflow only
+  acts on active Canvas recipes and preserves tabs/live processes by inverting
+  pane axes when the recipe's desired root orientation changes. Broader
   ultrawide/many-agent variants still need to be implemented.
 - Empty panes offer quick item creation and restore actions.
 - Zoom preserves underlying layout.

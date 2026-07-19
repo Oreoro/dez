@@ -228,12 +228,12 @@ Use the existing panel-as-pane bridge as the migration path:
   and focus for still-existing panes without recreating items or terminating
   live processes. The Panel Layout menu disables that restore action until a
   previous Canvas layout snapshot exists. Full persisted semantic layout history
-  and responsive reflow remain future work.
+  and advanced responsive variants remain future work.
 - First `pane_grid.auto_reflow` behavior is implemented for Canvas recipe
-  application: when the workspace is narrow or portrait, horizontal recipe
-  splits reflow into vertical splits. This preserves the recipe's semantic
-  identity and does not close tabs, spawn processes, or live-reflow on every
-  resize yet.
+  application and resize: when the workspace is narrow or portrait, horizontal
+  recipe splits reflow into vertical splits. Active Canvas recipes invert the
+  pane tree axes on resize only when the recipe's desired root orientation
+  changes, preserving tabs and live processes while avoiding squeezed columns.
 - Remove the one-visible-agent bottleneck. Multiple agent tabs and terminal
   agents can be visible across panes and windows.
 - Support direct pane/tab dragging, keyboard movement, context-menu movement,
@@ -314,9 +314,9 @@ Implementation order:
    Active recipe identity now persists as workspace metadata; durable named
    layout snapshots remain future work.
 4. Add resize-driven `auto_reflow` using semantic recipe variants rather than
-   raw pixel snapshots. Initial recipe-application reflow for narrow/portrait
-   workspaces is implemented; resize-driven reflow and ultrawide variants are
-   still pending.
+   raw pixel snapshots. Initial recipe-application reflow and resize-triggered
+   root-orientation reflow for active recipes are implemented; ultrawide and
+   many-agent variants are still pending.
 5. Add UI for named saved layouts and layout history once the underlying
    metadata is stable. The active in-memory recipe now becomes custom after
    manual structural changes, which is the runtime basis for that UI.
