@@ -44,8 +44,8 @@ use crate::terminal_thread_metadata_store::{
 };
 use crate::thread_metadata_store::{ThreadId, ThreadMetadataStore, ThreadMetadataStoreEvent};
 use crate::{
-    Agent, AgentInitialContent, AgentThreadSource, ExternalSourcePrompt, NewExternalAgentThread,
-    NewNativeAgentThreadFromSummary,
+    Agent, AgentInitialContent, AgentThreadSource, CanvasAgentUiSettings, ExternalSourcePrompt,
+    NewExternalAgentThread, NewNativeAgentThreadFromSummary,
 };
 use crate::{
     AgentDiffPane, ConversationView, CopyThreadToClipboard, Follow, LoadThreadFromClipboard,
@@ -1319,7 +1319,13 @@ impl AgentPanel {
             let has_open_project = workspace
                 .read_with(cx, |workspace, cx| !workspace.root_paths(cx).is_empty())
                 .unwrap_or(false);
-            let terminal_id_to_restore = if has_open_project {
+            let resume_sessions_on_restart = cx
+                .update(|_window, cx| {
+                    CanvasAgentUiSettings::get_global(cx).resume_sessions_on_restart
+                })
+                .unwrap_or(true);
+            let should_restore_sessions = has_open_project && resume_sessions_on_restart;
+            let terminal_id_to_restore = if should_restore_sessions {
                 serialized_panel
                     .as_ref()
                     .and_then(|panel| panel.last_active_terminal_id.as_deref())
@@ -1369,7 +1375,7 @@ impl AgentPanel {
                 None
             };
 
-            let thread_to_restore = if has_open_project && terminal_to_restore.is_none() {
+            let thread_to_restore = if should_restore_sessions && terminal_to_restore.is_none() {
                 if let Some(info) = serialized_panel
                     .as_ref()
                     .and_then(|panel| panel.last_active_thread.as_ref())
@@ -2210,10 +2216,16 @@ impl AgentPanel {
                 TerminalEvent::TitleChanged
                 | TerminalEvent::Wakeup
                 | TerminalEvent::BreadcrumbsChanged => {
-                    this.refresh_terminal_metadata(terminal_id, cx);
-                    this.report_terminal_program(terminal_id, source, cx);
+                    if CanvasAgentUiSettings::get_global(cx).connect_hooks {
+                        this.refresh_terminal_metadata(terminal_id, cx);
+                        this.report_terminal_program(terminal_id, source, cx);
+                    }
                 }
-                TerminalEvent::Bell => this.mark_terminal_notification(terminal_id, window, cx),
+                TerminalEvent::Bell => {
+                    if CanvasAgentUiSettings::get_global(cx).connect_hooks {
+                        this.mark_terminal_notification(terminal_id, window, cx);
+                    }
+                }
                 TerminalEvent::CloseTerminal => {
                     this.close_terminal_from_terminal_event(terminal_id, window, cx);
                 }
@@ -2631,6 +2643,9 @@ impl AgentPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if !CanvasAgentUiSettings::get_global(cx).notify_on_attention {
+            return;
+        }
         if self.active_terminal_visible(terminal_id, window, cx) {
             return;
         }

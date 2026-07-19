@@ -100,8 +100,11 @@ pub use zed_actions::{CreateWorktree, NewWorktreeBranchTarget, SwitchWorktree};
 #[derive(Clone, Debug, settings::RegisterSetting)]
 pub struct CanvasAgentUiSettings {
     pub show_detection_confidence: bool,
+    pub allow_multiple_visible_agents: bool,
     pub detect_terminal_agents: bool,
     pub show_terminal_agents_in_session_rail: bool,
+    pub resume_sessions_on_restart: bool,
+    pub connect_hooks: bool,
     pub notify_on_attention: bool,
 }
 
@@ -110,10 +113,13 @@ impl settings::Settings for CanvasAgentUiSettings {
         let agent_ui = content.agent_ui.clone().unwrap();
         Self {
             show_detection_confidence: agent_ui.show_detection_confidence.unwrap(),
+            allow_multiple_visible_agents: agent_ui.allow_multiple_visible_agents.unwrap(),
             detect_terminal_agents: agent_ui.detect_terminal_agents.unwrap(),
             show_terminal_agents_in_session_rail: agent_ui
                 .show_terminal_agents_in_session_rail
                 .unwrap(),
+            resume_sessions_on_restart: agent_ui.resume_sessions_on_restart.unwrap(),
+            connect_hooks: agent_ui.connect_hooks.unwrap(),
             notify_on_attention: agent_ui.notify_on_attention.unwrap(),
         }
     }

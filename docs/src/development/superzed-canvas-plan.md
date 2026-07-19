@@ -240,6 +240,11 @@ Terminal-agent detection:
 - Default `agent_ui.connect_hooks`, `agent_ui.resume_sessions_on_restart`, and
   `agent_ui.notify_on_attention` to `true`; runtime code must still distinguish
   authoritative provider hooks from terminal-observed heuristics.
+- Runtime startup now respects `agent_ui.resume_sessions_on_restart` for
+  automatic active agent-thread and terminal restoration. Terminal title,
+  breadcrumb, program, and bell hooks now respect `agent_ui.connect_hooks`, and
+  Agent Panel terminal attention state/popups respect
+  `agent_ui.notify_on_attention`.
 
 Restoration:
 
