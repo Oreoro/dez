@@ -332,8 +332,11 @@ Refine the existing sidebar direction into Session Rail:
 - Automatic grouping and sorting must not move interaction targets while the
   user clicks or drags.
 - Runtime row rendering now honors `session_rail.metadata` for worktree/branch
-  labels, agent-state labels, and latest-attention timestamps/badges while
-  keeping the Ctrl-Tab thread switcher independent of rail display density.
+  labels, agent-state labels, active Canvas layout labels, and
+  latest-attention timestamps/badges while keeping the Ctrl-Tab thread switcher
+  independent of rail display density. The default metadata now includes
+  `layout`; `saved_layout` is accepted as an alias for future durable named
+  layouts.
 - `workspace_bar.show_agent_attention` gates the visual attention layer on top
   of that metadata: workspace-level badges, row notification dots, and
   collapsed-project waiting/notification markers.

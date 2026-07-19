@@ -708,7 +708,7 @@ Initial settings shape:
     "position": "left",
     "group_by": "project",
     "sort_by": "manual",
-    "metadata": ["branch", "worktree", "agent_state", "latest_attention"]
+    "metadata": ["branch", "worktree", "agent_state", "layout", "latest_attention"]
   },
   "pane_grid": {
     "auto_reflow": true,

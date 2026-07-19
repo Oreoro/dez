@@ -156,11 +156,14 @@ Workspace entries may show configurable metadata:
 - Listening ports.
 - Running agents and tasks.
 - Participants.
+- Active or saved layout.
 - Latest attention or notification.
 
 `workspace_bar.show_agent_attention` controls whether visual agent-attention
 badges appear at the workspace and rail levels. `session_rail.metadata` remains
 the source of truth for whether latest-attention timestamps are shown.
+When `session_rail.metadata` contains `layout` or `saved_layout`, project
+headers show the active Canvas recipe name when row labels are visible.
 
 `workspace_bar.visibility = "hidden"` suppresses the existing layout
 command/menu affordances, the centered command-search trigger, and workspace/rail

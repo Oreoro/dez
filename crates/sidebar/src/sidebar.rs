@@ -118,6 +118,7 @@ struct SessionRailSettings {
     mode: settings::CanvasVisibility,
     show_worktree_metadata: bool,
     show_agent_state_metadata: bool,
+    show_layout_metadata: bool,
     show_latest_attention_metadata: bool,
     sort_by: settings::SessionRailSorting,
 }
@@ -138,6 +139,8 @@ impl settings::Settings for SessionRailSettings {
                 || session_rail_metadata_contains(&metadata, "branch"),
             show_agent_state_metadata: session_rail_metadata_contains(&metadata, "agent_state")
                 || session_rail_metadata_contains(&metadata, "running_agents"),
+            show_layout_metadata: session_rail_metadata_contains(&metadata, "layout")
+                || session_rail_metadata_contains(&metadata, "saved_layout"),
             show_latest_attention_metadata: session_rail_metadata_contains(
                 &metadata,
                 "latest_attention",
@@ -188,6 +191,33 @@ fn session_rail_metadata_contains(metadata: &[String], field: &str) -> bool {
     metadata
         .iter()
         .any(|candidate| candidate.eq_ignore_ascii_case(field))
+}
+
+fn canvas_layout_recipe_label(recipe_id: &str) -> Option<&'static str> {
+    Some(match recipe_id {
+        "full" => "Full",
+        "agent_control" => "Agent Control",
+        "editor_focus" => "Focus Editor",
+        "even_columns" => "Even Columns",
+        "even_rows" => "Even Rows",
+        "main_stack" => "Main + Stack",
+        "main_top" => "Main Top",
+        "golden_split" => "Golden Split",
+        "code_run_observe" => "Code, Run, Observe",
+        "review" => "Review",
+        "debug" => "Debug",
+        "documentation_studio" => "Documentation Studio",
+        "browser_development" => "Browser Development",
+        "agent_operations" => "Agent Operations",
+        "four_agent_matrix" => "Four-Agent Matrix",
+        "six_agent_supervisor" => "Six-Agent Supervisor",
+        "worktree_matrix" => "Worktree Matrix",
+        "remote_operations" => "Remote Operations",
+        "pair_programming" => "Pair Programming",
+        "incident_response" => "Incident Response",
+        "portrait_display" => "Portrait Display",
+        _ => return None,
+    })
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -571,6 +601,7 @@ enum ListEntry {
         key: ProjectGroupKey,
         label: SharedString,
         highlight_positions: Vec<usize>,
+        layout_label: Option<SharedString>,
         has_running_threads: bool,
         waiting_thread_count: usize,
         has_notifications: bool,
@@ -1654,7 +1685,9 @@ impl Sidebar {
         let show_terminal_agents = agent_ui_settings.show_terminal_agents_in_session_rail;
         let detect_terminal_agents = agent_ui_settings.detect_terminal_agents;
         let notify_on_terminal_attention = agent_ui_settings.notify_on_attention;
-        let session_rail_sort_by = SessionRailSettings::get_global(cx).sort_by;
+        let session_rail_settings = SessionRailSettings::get_global(cx);
+        let session_rail_sort_by = session_rail_settings.sort_by;
+        let show_layout_metadata = session_rail_settings.show_layout_metadata;
 
         let agent_server_store = workspaces
             .first()
@@ -1896,6 +1929,22 @@ impl Sidebar {
             let is_active = active_workspace
                 .as_ref()
                 .is_some_and(|active| group_workspaces.contains(active));
+            let layout_label = show_layout_metadata
+                .then(|| {
+                    active_workspace
+                        .as_ref()
+                        .filter(|active| group_workspaces.contains(active))
+                        .into_iter()
+                        .chain(group_workspaces.iter())
+                        .find_map(|workspace| {
+                            let recipe_id = workspace.read(cx).active_canvas_layout_recipe_id()?;
+                            Some(SharedString::from(format!(
+                                "Layout: {}",
+                                canvas_layout_recipe_label(recipe_id)?
+                            )))
+                        })
+                })
+                .flatten();
 
             // Collect live thread infos from all workspaces in this group.
             let live_infos = group_workspaces
@@ -2244,6 +2293,7 @@ impl Sidebar {
                     key: group_key.clone(),
                     label,
                     highlight_positions: workspace_highlight_positions,
+                    layout_label: layout_label.clone(),
                     has_running_threads,
                     waiting_thread_count,
                     has_notifications: has_thread_notifications || has_terminal_notifications,
@@ -2293,6 +2343,7 @@ impl Sidebar {
                     key: group_key.clone(),
                     label,
                     highlight_positions: Vec::new(),
+                    layout_label: layout_label.clone(),
                     has_running_threads,
                     waiting_thread_count,
                     has_notifications: has_thread_notifications || has_terminal_notifications,
@@ -2556,6 +2607,7 @@ impl Sidebar {
                 key,
                 label,
                 highlight_positions,
+                layout_label,
                 has_running_threads,
                 waiting_thread_count,
                 has_notifications,
@@ -2573,6 +2625,7 @@ impl Sidebar {
                     key,
                     label,
                     highlight_positions,
+                    layout_label.as_ref(),
                     *has_running_threads,
                     *waiting_thread_count,
                     *has_notifications,
@@ -2638,6 +2691,7 @@ impl Sidebar {
         key: &ProjectGroupKey,
         label: &SharedString,
         highlight_positions: &[usize],
+        layout_label: Option<&SharedString>,
         has_running_threads: bool,
         waiting_thread_count: usize,
         has_notifications: bool,
@@ -2737,6 +2791,17 @@ impl Sidebar {
                         )
                     })
                     .when(labels_visible, |this| this.child(label))
+                    .when_some(
+                        layout_label.filter(|_| labels_visible),
+                        |this, layout_label| {
+                            this.child(
+                                Label::new(SharedString::from(layout_label.as_ref()))
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Muted)
+                                    .truncate(),
+                            )
+                        },
+                    )
                     .when_some(
                         self.render_remote_project_icon(ix, host.as_ref()),
                         |this, icon| this.child(icon),
@@ -3548,6 +3613,7 @@ impl Sidebar {
             key,
             label,
             highlight_positions,
+            layout_label,
             has_running_threads,
             waiting_thread_count,
             has_notifications,
@@ -3567,6 +3633,7 @@ impl Sidebar {
             key,
             &label,
             &highlight_positions,
+            layout_label.as_ref(),
             *has_running_threads,
             *waiting_thread_count,
             *has_notifications,
