@@ -936,6 +936,12 @@ impl Default for PaneResize {
 #[serde(deny_unknown_fields)]
 pub struct PaneRotate;
 
+/// Duplicates the active tab when the active item supports cloning.
+#[derive(Clone, Deserialize, PartialEq, JsonSchema, Action)]
+#[action(namespace = tab, name = "Duplicate")]
+#[serde(deny_unknown_fields)]
+pub struct TabDuplicate;
+
 /// Creates a new file in a split of the desired direction.
 #[derive(Clone, Deserialize, PartialEq, JsonSchema, Action)]
 #[action(namespace = workspace)]
@@ -6745,6 +6751,43 @@ impl Workspace {
         });
     }
 
+    pub fn duplicate_active_tab(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let pane = self.active_pane.clone();
+        if !pane.read(cx).can_host_tabs() {
+            return;
+        }
+
+        let Some(active_item) = pane.read(cx).active_item() else {
+            return;
+        };
+        if !active_item.can_split(cx) {
+            return;
+        }
+
+        let destination_index = pane.read(cx).active_item_index().saturating_add(1);
+        let task = active_item.clone_on_split(self.database_id(), window, cx);
+        cx.spawn_in(window, async move |this, cx| {
+            let Some(clone) = task.await else {
+                return;
+            };
+
+            this.update_in(cx, |_, window, cx| {
+                pane.update(cx, |pane, cx| {
+                    pane.add_item(
+                        clone,
+                        true,
+                        true,
+                        Some(destination_index.min(pane.items_len())),
+                        window,
+                        cx,
+                    );
+                });
+            })
+            .log_err();
+        })
+        .detach();
+    }
+
     pub fn split_item(
         &mut self,
         split_direction: SplitDirection,
@@ -9957,6 +10000,11 @@ impl Workspace {
                     workspace.reopen_closed_item(window, cx).detach();
                 },
             ))
+            .on_action(
+                cx.listener(|workspace: &mut Workspace, _: &TabDuplicate, window, cx| {
+                    workspace.duplicate_active_tab(window, cx);
+                }),
+            )
             .on_action(cx.listener(
                 |workspace: &mut Workspace, action: &SetSavedCanvasLayoutSlotLabel, window, cx| {
                     workspace.set_saved_canvas_layout_slot_label(

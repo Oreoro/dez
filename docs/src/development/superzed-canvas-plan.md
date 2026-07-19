@@ -316,6 +316,9 @@ Use the existing panel-as-pane bridge as the migration path:
   so the Panel Layout menu reports `Custom Canvas Layout` after pane splits,
   pane moves, pane joins, pane removal, pane-size changes, or explicit
   project/agent pane visibility toggles.
+- `tab::Duplicate` is implemented for tabs whose item type supports the
+  existing clone-on-split path; process-backed or live-only tabs remain under
+  explicit process-lifetime rules.
 - Add explicit close, restore, and "detach process" behavior so closing a tab
   is not confused with killing a process.
 

@@ -373,10 +373,12 @@ pane::SwapItemRight (alias: tab::MoveRight)
 pane::DeploySearch (alias: tab::Search)
 workspace::MoveItemToPane (alias: tab::MoveToPane)
 workspace::MoveItemToPaneInDirection
+tab::Duplicate
 ```
 
-`tab::Duplicate` and `tab::MoveToWorkspace` remain future Canvas command
-aliases until exact runtime behaviors exist.
+`tab::Duplicate` uses the same clone path as split/clone and only duplicates
+tabs whose item type supports cloning. `tab::MoveToWorkspace` remains a future
+Canvas command alias until exact runtime behavior exists.
 
 An optional tmux-style Prefix Mode may exist for experts, but ordinary users
 must not need it. Prefix Mode needs a visible mode indicator, configurable
