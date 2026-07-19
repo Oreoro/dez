@@ -358,17 +358,19 @@ pane::JoinFromWindow
 Tab manipulation actions:
 
 ```text
-tab::New
-tab::Close
-tab::Reopen
-tab::Pin
-tab::Duplicate
-tab::MoveLeft
-tab::MoveRight
-tab::MoveToPane
-tab::MoveToWorkspace
-tab::Search
+workspace::NewFile (alias: tab::New)
+pane::CloseActiveItem (alias: tab::Close)
+pane::ReopenClosedItem (alias: tab::Reopen)
+pane::TogglePinTab (alias: tab::Pin)
+pane::SwapItemLeft (alias: tab::MoveLeft)
+pane::SwapItemRight (alias: tab::MoveRight)
+pane::DeploySearch (alias: tab::Search)
+workspace::MoveItemToPane
+workspace::MoveItemToPaneInDirection
 ```
+
+`tab::Duplicate` and `tab::MoveToWorkspace` remain future Canvas command
+aliases until exact runtime behaviors exist.
 
 An optional tmux-style Prefix Mode may exist for experts, but ordinary users
 must not need it. Prefix Mode needs a visible mode indicator, configurable

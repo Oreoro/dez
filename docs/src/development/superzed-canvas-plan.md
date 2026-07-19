@@ -65,6 +65,9 @@ Implemented in this phase:
 - Canvas/tmux command aliases now resolve for close and reopen workflows:
   `pane::Close` aliases `pane::CloseActiveItem`, while `pane::RestoreClosed`
   and `tab::Reopen` alias `pane::ReopenClosedItem`.
+- Additional tab command aliases now resolve for the implemented Canvas tab
+  workflow: `tab::New`, `tab::Close`, `tab::Pin`, `tab::MoveLeft`,
+  `tab::MoveRight`, and `tab::Search`.
 - `workspace_bar.show_layout` now controls whether Canvas layout commands show
   in the Command Palette and Panel Layout chrome.
 - `workspace_bar.show_agent_attention` now controls workspace-level attention

@@ -145,7 +145,7 @@ pub struct ActivateItem(pub usize);
 /// Closes the currently active item in the pane.
 #[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Default, Action)]
 #[action(namespace = pane)]
-#[action(deprecated_aliases = ["pane::Close"])]
+#[action(deprecated_aliases = ["pane::Close", "tab::Close"])]
 #[serde(deny_unknown_fields)]
 pub struct CloseActiveItem {
     #[serde(default)]
@@ -227,6 +227,7 @@ pub struct RevealInProjectPanel {
 /// Opens the search interface with the specified configuration.
 #[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Default, Action)]
 #[action(namespace = pane)]
+#[action(deprecated_aliases = ["tab::Search"])]
 #[serde(deny_unknown_fields)]
 pub struct DeploySearch {
     #[serde(default)]
@@ -345,12 +346,15 @@ actions!(
         /// Splits the pane downward, moving the current item.
         SplitAndMoveDown,
         /// Swaps the current item with the one to the left.
+        #[action(deprecated_aliases = ["tab::MoveLeft"])]
         SwapItemLeft,
         /// Swaps the current item with the one to the right.
+        #[action(deprecated_aliases = ["tab::MoveRight"])]
         SwapItemRight,
         /// Toggles preview mode for the current tab.
         TogglePreviewTab,
         /// Toggles pin status for the current tab.
+        #[action(deprecated_aliases = ["tab::Pin"])]
         TogglePinTab,
         /// Unpins all tabs in the pane.
         UnpinAllTabs,

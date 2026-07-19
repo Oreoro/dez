@@ -772,6 +772,7 @@ actions!(
         /// Follows the next collaborator in the session.
         FollowNextCollaborator,
         /// Creates a new file.
+        #[action(deprecated_aliases = ["tab::New"])]
         NewFile,
         /// Creates a new file in a vertical split.
         NewFileSplitVertical,
