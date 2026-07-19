@@ -464,6 +464,9 @@ should consume the same runtime settings rather than duplicating hard-coded
 visual constants. The workspace-bar command search also reads
 `show_labels`: `hidden` renders an icon-only command button with an
 accessibility label, while `contextual` and `always` keep the visible label.
+Markdown preview uses `design_system.content_width` for its default ContentSheet
+readable width when `markdown_preview.max_width` is unset; explicit
+`markdown_preview.max_width` continues to override the Canvas width.
 
 ## Layout system {#layout-system}
 

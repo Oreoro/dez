@@ -120,9 +120,10 @@
     // enabled, content is constrained to `max_width` and centered
     // horizontally within the preview pane.
     "limit_content_width": true,
-    // The maximum width, in pixels, of the rendered markdown content when
-    // limit_content_width is enabled.
-    "max_width": 800,
+    // Optional explicit maximum width, in pixels, of rendered markdown content
+    // when limit_content_width is enabled. If null, Canvas
+    // design_system.content_width chooses the default readable width.
+    "max_width": null,
     // Whether preview-first Markdown surfaces should expose an Edit Source action.
     "show_edit_source_action": true,
   },

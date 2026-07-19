@@ -15,18 +15,36 @@ pub struct MarkdownPreviewSettings {
 
 impl Settings for MarkdownPreviewSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
-        let content = content.markdown_preview.clone().unwrap_or_default();
-        let default_open_mode = content.default_open_mode.unwrap_or_default();
-        let max_width = if content.limit_content_width.unwrap_or(true) {
-            content.max_width.map(px)
+        let markdown_preview = content.markdown_preview.clone().unwrap_or_default();
+        let default_open_mode = markdown_preview.default_open_mode.unwrap_or_default();
+        let max_width = if markdown_preview.limit_content_width.unwrap_or(true) {
+            markdown_preview
+                .max_width
+                .map(px)
+                .or_else(|| canvas_content_width(content))
         } else {
             None
         };
-        let show_edit_source_action = content.show_edit_source_action.unwrap_or(true);
+        let show_edit_source_action = markdown_preview.show_edit_source_action.unwrap_or(true);
         Self {
             default_open_mode,
             max_width,
             show_edit_source_action,
         }
+    }
+}
+
+fn canvas_content_width(content: &settings::SettingsContent) -> Option<Pixels> {
+    let content_width = content
+        .design_system
+        .as_ref()
+        .and_then(|design_system| design_system.content_width)
+        .unwrap_or_default();
+
+    match content_width {
+        settings::CanvasContentWidth::Narrow => Some(px(680.)),
+        settings::CanvasContentWidth::Comfortable => Some(px(800.)),
+        settings::CanvasContentWidth::Wide => Some(px(1040.)),
+        settings::CanvasContentWidth::Full => None,
     }
 }

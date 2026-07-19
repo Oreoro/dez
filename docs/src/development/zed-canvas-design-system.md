@@ -750,6 +750,14 @@ Initial settings shape:
 }
 ```
 
+Markdown preview follows `design_system.content_width` when
+`markdown_preview.max_width` is unset:
+
+- `narrow`: 680px.
+- `comfortable`: 800px.
+- `wide`: 1040px.
+- `full`: unconstrained.
+
 ## Implementation order {#implementation-order}
 
 1. Foundation: semantic tokens, density, accessibility mappings, typography,

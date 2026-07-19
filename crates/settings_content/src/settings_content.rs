@@ -1252,10 +1252,11 @@ pub struct MarkdownPreviewSettingsContent {
     ///
     /// Default: true
     pub limit_content_width: Option<bool>,
-    /// The maximum width, in pixels, of the rendered markdown content when
-    /// `limit_content_width` is enabled.
+    /// Optional explicit maximum width, in pixels, of the rendered markdown
+    /// content when `limit_content_width` is enabled. When unset, Canvas
+    /// `design_system.content_width` chooses the readable width.
     ///
-    /// Default: 800
+    /// Default: null
     pub max_width: Option<f32>,
     /// Whether preview-first Markdown surfaces should expose an Edit Source
     /// affordance.

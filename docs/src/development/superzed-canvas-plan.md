@@ -206,6 +206,9 @@ Current consumers:
 - Workspace-bar command search: `show_labels = "hidden"` renders an icon-only
   command surface with an accessibility label; contextual/always keeps the
   visible label.
+- Markdown preview ContentSheet width: `markdown_preview.max_width` is now an
+  explicit override; when it is unset, `design_system.content_width` maps to
+  narrow, comfortable, wide, or full readable widths.
 
 Broader rollout should apply the same runtime model to Session Rail rows, pane
 tabs, layout menus, agent surfaces, Markdown sheets, and command surfaces.
@@ -597,7 +600,9 @@ Markdown should align with Canvas document composition:
   item opener. Setting `markdown_preview.default_open_mode` to `source` returns
   `.md` opens to the regular editor path.
 - Persist preview tabs and follow-preview mode.
-- Use ContentSheet alignment and readable-width modes.
+- Use ContentSheet alignment and readable-width modes. Markdown preview now uses
+  `design_system.content_width` for its default readable width unless
+  `markdown_preview.max_width` is explicitly set.
 - Use JetBrains Mono for code blocks and prose-friendly UI font/line height for
   rendered text.
 - Do not hide raw source or make preview-first irreversible.
