@@ -1596,6 +1596,20 @@ fn install_cli(
     window: &mut Window,
     cx: &mut Context<Workspace>,
 ) {
+    if APP_NAME != "Zed" {
+        let message = format!(
+            "{APP_NAME} does not install a global CLI shim in this build. Use the app bundle directly."
+        );
+        drop(window.prompt(
+            PromptLevel::Info,
+            "CLI install is disabled",
+            Some(&message),
+            &["OK"],
+            cx,
+        ));
+        return;
+    }
+
     install_cli::install_cli_binary(window, cx)
 }
 
