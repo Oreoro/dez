@@ -1749,12 +1749,13 @@ impl Sidebar {
 
                     let worktrees =
                         worktree_info_from_thread_paths(&metadata.worktree_paths, &branch_by_path);
+                    let has_notification = terminal_view.read(cx).has_bell();
                     terminals.push(TerminalEntry {
                         metadata,
                         workspace: ThreadEntryWorkspace::Open(ws.clone()),
                         source: TerminalEntrySource::WorkspaceItem(terminal_view),
                         worktrees,
-                        has_notification: false,
+                        has_notification,
                         highlight_positions: Vec::new(),
                     });
                 }
@@ -4697,6 +4698,7 @@ impl Sidebar {
         workspace.update(cx, |workspace, cx| {
             workspace.activate_item(terminal_view, true, focus_item, window, cx);
         });
+        terminal_view.update(cx, |terminal_view, cx| terminal_view.clear_bell(cx));
 
         self.update_entries(cx);
     }

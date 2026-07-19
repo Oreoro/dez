@@ -37,6 +37,8 @@ Implemented in this phase:
   in the Session Rail. Activating the rail row focuses the existing terminal
   tab, and closing the row closes that tab instead of spawning or restoring an
   Agent Panel terminal.
+- Standalone agent terminal bell state now marks the Session Rail row as
+  notified and clears when the row is activated.
 - Added command-palette/menu actions for Canvas layout recipes:
   `Canvas: Full`, `Canvas: Agent Control`, `Canvas: Focus Editor`, and
   `Cycle Canvas Layout`.
@@ -246,6 +248,9 @@ Notifications:
 - Include session title, project, provenance, and safe next action.
 - Selecting a notification focuses the exact source tab.
 - Do not repeatedly announce streaming output.
+- Implemented first attention slice: standalone agent terminal rows reuse the
+  terminal bell as a notification signal and clear it on Session Rail
+  activation.
 
 ## Markdown and document surfaces {#markdown-and-document-surfaces}
 
