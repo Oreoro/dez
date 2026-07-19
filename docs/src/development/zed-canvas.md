@@ -1,0 +1,562 @@
+# Zed Canvas
+
+Zed Canvas is the product and architecture direction for a pane-first,
+agent-aware workspace. It preserves Zed's existing workspace, pane, tab, and
+workspace item vocabulary while extending the workspace into a persistent
+development multiplexer.
+
+This page is an internal product and architecture specification for Superzed
+work. It should guide UI, agent, terminal, persistence, automation, and design
+system changes that touch the workspace model.
+
+## Product definition {#product-definition}
+
+Zed Canvas is a native development environment for managing code, terminals,
+documentation, browsers, collaboration, and multiple coding agents inside one
+persistent workspace.
+
+It combines these behavioral references:
+
+- Zed for native performance, GPUI architecture, language intelligence,
+  collaboration, extensions, and existing pane semantics.
+- Notion for calm hierarchy, progressive disclosure, readable content, and
+  command discovery.
+- tmux for sessions, directional panes, zoom, named layouts, detach, attach,
+  copy mode, and optional prefix workflows.
+- cmux for workspace metadata, agent attention, browser panes, vertical
+  navigation, and automation.
+- Herdr for real terminal agents, durable sessions, lifecycle visibility,
+  reattachment, hooks, and agent-controlled panes.
+
+Do not copy these products visually or by name. Use them as behavioral
+references.
+
+## Goals and non-goals {#goals-and-non-goals}
+
+Goals:
+
+- Make parallel agent work understandable at a glance.
+- Treat editors, terminals, agents, browsers, documentation, diffs, Git,
+  diagnostics, tasks, and collaboration surfaces as equal workspace items.
+- Replace rigid side and bottom panels with a composable pane grid.
+- Preserve running work across restart, window close, crash, remote changes,
+  and supported detach or attach flows.
+- Keep application chrome quiet and content primary.
+- Support direct manipulation, keyboard workflows, command discovery, and
+  safe automation.
+- Distinguish authoritative agent state from observed or inferred state.
+- Keep Zed's existing editor, language, Git, debugging, task, extension,
+  remote, and collaboration capabilities.
+
+Non-goals:
+
+- Recreate Notion, tmux, cmux, or Herdr pixel for pixel.
+- Replace full browsers.
+- Hide real terminal output behind an agent-specific abstraction.
+- Let agents operate invisibly or without visible permission boundaries.
+- Convert every surface into a card.
+- Require users to understand terminal multiplexers before using the product.
+- Claim agent success or process survival from terminal heuristics alone.
+
+## Design principles {#design-principles}
+
+Use these principles when designing or reviewing Canvas work:
+
+- Content before chrome. Code, terminal output, documents, previews, and agent
+  work are primary. Controls collapse or move to overflow before content becomes
+  unusable.
+- One composable canvas. The workspace center is a recursive pane grid. Any
+  compatible workspace item can move, split, zoom, float, or join a saved layout.
+- Calm by default. Use neutral surfaces and restrained color. Reserve
+  saturation and motion for focus, diagnostics, attention, and security.
+- Dense, not cramped. High density is acceptable only when grouping, hierarchy,
+  hit targets, and readability remain clear.
+- Keyboard and pointer parity. Every important operation needs a semantic
+  action, Command Palette entry, pointer affordance, context menu where useful,
+  and automation API where safe.
+- Reversible manipulation. Pane splits, pane closes, tab movement, layout
+  changes, settings changes, and agent-applied edits should be undoable or
+  restorable where state still exists.
+- Honest agent interfaces. Always label whether state is reported by a
+  provider, observed from a process, inferred from heuristics, or unknown.
+
+## Conceptual model {#conceptual-model}
+
+```text
+Application
+└── Window
+    └── Workspace
+        ├── Session Rail
+        ├── Pane Grid
+        │   └── Pane
+        │       └── Tab
+        │           └── WorkspaceItem
+        ├── Status Strip
+        └── Overlay Layer
+```
+
+Application owns global commands, accounts, themes, providers, sessions,
+notifications, security policy, automation endpoints, and extension registry.
+
+Workspace owns worktrees, pane-tree geometry, tabs, agents, terminals, tasks,
+debugging, browser state, collaboration state, notifications, layout presets,
+workspace settings, and restoration metadata.
+
+Pane Grid is a recursive tree:
+
+```text
+PaneNode =
+  PaneLeaf
+  | HorizontalSplit(children, ratios)
+  | VerticalSplit(children, ratios)
+```
+
+The pane grid must support arbitrary nesting, directional focus, resizing,
+equalization, rotation, mirroring, zoom, swap, move, collapse, restoration, and
+minimum-size enforcement.
+
+Pane is a spatial container with a tab bar, optional context bar, one active
+workspace item, inactive tabs, focus state, attention state, and transient
+overlays.
+
+Tab is a persistent reference to a workspace item. Tab metadata can include
+title, icon, type, dirty state, process state, attention, Git state, remote host,
+agent state, pinned state, and preview state.
+
+WorkspaceItem is the common unit for editor, multibuffer, terminal, structured
+agent thread, terminal agent, browser, Markdown preview, diff, Git view,
+diagnostic view, task, debugger, media, settings, collaboration, and future
+extension-provided items.
+
+## Information architecture {#information-architecture}
+
+### Session Rail {#session-rail}
+
+The Session Rail is a collapsible vertical navigator. It provides orientation
+across workspaces and sessions; it is not a fixed content panel.
+
+Possible sections:
+
+- Current workspace.
+- Favorites and pinned workspaces.
+- Active and recent workspaces.
+- Running agents.
+- Agent attention.
+- Running tasks.
+- Collaboration sessions.
+- Remote hosts.
+- Saved layouts.
+- Utility actions.
+
+Workspace entries may show configurable metadata:
+
+- Name, project, repository, working directory, or worktree.
+- Git branch, pull request, diagnostics, or dirty state.
+- Remote host and connection identity.
+- Listening ports.
+- Running agents and tasks.
+- Participants.
+- Latest attention or notification.
+
+Rail modes:
+
+- Hidden.
+- Icon.
+- Compact.
+- Detailed.
+- Overlay.
+- Auto.
+
+Automatic rail sorting must not move a click or drag target while the user is
+interacting with it.
+
+### Pane Canvas {#pane-canvas}
+
+The Pane Canvas is the main work surface.
+
+Rules:
+
+- No item type owns a privileged location.
+- Focused pane receives keyboard actions first.
+- Pane borders stay subtle except for focus, drag target, or attention.
+- Empty panes offer quick item creation and restore actions.
+- Zoom preserves underlying layout.
+- Layout modifications persist continuously.
+- Narrow windows reflow without closing workspace items.
+
+### Status Strip {#status-strip}
+
+The Status Strip shows workspace-wide or focused-item state only. Examples:
+mode, Git branch, diagnostics, language server state, remote host, collaboration
+state, task progress, agent totals, security boundary, cursor position,
+encoding, and line endings.
+
+Do not duplicate the Pane Context Bar.
+
+### Overlay Layer {#overlay-layer}
+
+The Overlay Layer hosts temporary UI: Command Palette, Quick Open, workspace
+switcher, tab switcher, layout picker, slash menu, notifications, permission
+prompts, context menus, tooltips, and modals.
+
+## Navigation and manipulation {#navigation-and-manipulation}
+
+Focus moves through:
+
+```text
+Application → Window → Workspace → Pane → Tab → WorkspaceItem → Local control
+```
+
+Escape should move outward predictably. It should not close unrelated state.
+
+Pane focus uses spatial adjacency:
+
+```text
+pane::FocusLeft
+pane::FocusRight
+pane::FocusUp
+pane::FocusDown
+pane::FocusPrevious
+pane::FocusLastActive
+```
+
+Pane manipulation actions:
+
+```text
+pane::SplitLeft
+pane::SplitRight
+pane::SplitUp
+pane::SplitDown
+pane::Close
+pane::RestoreClosed
+pane::Zoom
+pane::Swap
+pane::Move
+pane::Rotate
+pane::Equalize
+pane::Resize
+pane::BreakToWindow
+pane::JoinFromWindow
+```
+
+Tab manipulation actions:
+
+```text
+tab::New
+tab::Close
+tab::Reopen
+tab::Pin
+tab::Duplicate
+tab::MoveLeft
+tab::MoveRight
+tab::MoveToPane
+tab::MoveToWorkspace
+tab::Search
+```
+
+An optional tmux-style Prefix Mode may exist for experts, but ordinary users
+must not need it. Prefix Mode needs a visible mode indicator, configurable
+prefix, timeout, repeatable resize behavior, and command discovery.
+
+## Layout system {#layout-system}
+
+Built-in named layouts should include:
+
+| Layout      | Shape                             | Use                    |
+| ----------- | --------------------------------- | ---------------------- |
+| Focus       | One zoomed pane                   | Editing or review      |
+| Columns     | Equal vertical panes              | Parallel agents        |
+| Rows        | Equal horizontal panes            | Logs and tasks         |
+| Main Left   | Large left with stacked right     | Editor plus tools      |
+| Main Right  | Stacked left with large right     | Preview or agent focus |
+| Main Top    | Large top with bottom stack       | Editor over terminals  |
+| Main Bottom | Top stack with large bottom       | Terminal-heavy work    |
+| Grid        | Balanced matrix                   | Agent fleet            |
+| Dashboard   | Summary plus detail panes         | Monitoring             |
+| Review      | Diff, files, tests, agent         | Change review          |
+| Debug       | Editor, stack, variables, console | Debugging              |
+| Research    | Browser, notes, agent, terminal   | Investigation          |
+
+Saved layouts should store semantic slots, not only exact tabs. A review layout,
+for example, can accept `diff`, `editor`, `git`, `project`, `terminal`, `task`,
+or `agent` items by role.
+
+Responsive rules:
+
+- Preserve focused pane first.
+- Collapse the Session Rail before hiding active work.
+- Move low-priority controls into overflow.
+- Stack panes when minimum widths cannot be maintained.
+- Never silently close workspace items.
+- Offer temporary single-pane mode on narrow screens.
+- Restore prior geometry when enough space returns.
+
+Persist:
+
+- Tree structure and split ratios.
+- Active pane and active tabs.
+- Pinned tabs.
+- Zoom state.
+- Item restoration metadata.
+- Scroll positions where safe.
+- Terminal and agent session identifiers.
+- Remote connection metadata.
+
+## Agent experience {#agent-experience}
+
+Canvas supports three agent item types:
+
+- Structured Agent Thread. Use when a provider exposes messages, tools, usage,
+  permissions, and edits as structured events.
+- Agent Terminal. Use for terminal-native agents. It contains a real PTY,
+  session metadata, an adapter layer, attention state, detach controls, and no
+  rewritten terminal output.
+- Agent Dashboard. A compact operational list of many sessions with state,
+  task, provider, workspace, duration, latest event, changes, tests,
+  permissions, and attention.
+
+Agent states:
+
+```text
+starting
+working
+waiting
+blocked
+paused
+idle
+completed
+failed
+disconnected
+restoring
+unknown
+```
+
+Each displayed state must include provenance:
+
+```text
+reported
+observed
+inferred
+unknown
+```
+
+Examples:
+
+- `Waiting for input · Reported by provider`.
+- `Working · Inferred from terminal activity`.
+- `Disconnected · Transport unavailable`.
+
+Attention levels:
+
+| Level    | Meaning                                | Treatment                |
+| -------- | -------------------------------------- | ------------------------ |
+| Quiet    | Background activity                    | No interruption          |
+| Active   | Work is running                        | Stable icon              |
+| Notice   | Useful new output                      | Badge                    |
+| Action   | Input or permission required           | Attention ring and queue |
+| Critical | Security, data loss, or severe failure | Explicit alert           |
+
+Agent composers support multiline instructions, file and symbol references,
+image attachments, terminal-output references, pane references, workspace
+references, reusable prompt commands, permission profile selection, model
+selection, queueing, stop, interrupt, and voice input where supported.
+
+Tool events should be compact, expandable rows. Expanded details may show
+sanitized arguments, output, error, affected files, command, exit status, and
+timing.
+
+Agent changes must support file-grouped review, unified or split diffs, hunk
+acceptance, hunk rejection, file acceptance, full rollback, conflict state, test
+linkage, commit preparation, and attribution. Proposed and applied changes must
+never be mixed without explicit labels.
+
+Permission prompts must show scope and consequence. Decision options include
+allow once, allow for thread, allow for workspace, always allow matching rule,
+deny, deny and explain, and edit command or scope.
+
+## Terminal and TUI behavior {#terminal-and-tui-behavior}
+
+Terminal requirements:
+
+- Real PTY or ConPTY.
+- GPU-accelerated rendering where available.
+- Shell integration.
+- Links, images where supported, search, copy mode, and scrollback.
+- Semantic command blocks.
+- Working-directory tracking.
+- Exit-state reporting.
+- Remote-host identity.
+- Session persistence.
+- Detach and reattach where supported.
+- Safe process termination.
+
+TUI compatibility rules:
+
+- Do not intercept application keystrokes while the terminal owns focus.
+- Support alternate-screen applications.
+- Preserve mouse reporting.
+- Distinguish terminal selection from application selection.
+- Provide an escape action back to pane navigation.
+- Do not paint overlays into terminal cells.
+- Ensure resize sends correct terminal dimensions.
+
+Synchronized input is allowed only through explicit Broadcast Groups. Broadcast
+Mode requires visible target indicators, a previewable target list, environment
+warnings, and immediate cancellation.
+
+## Browser and collaboration {#browser-and-collaboration}
+
+Browser workspace items may include address field, navigation controls,
+security state, viewport controls, DevTools entry, inspect mode, external-open,
+agent-control indicator, and permission state.
+
+Agents may control browser panes only with visible, interruptible activity and
+permission boundaries.
+
+Collaboration extensions should support shared pane focus, present-follow mode,
+shared terminals with explicit host permission, shared agent threads,
+agent-action attribution, per-participant permissions, shared layouts, voice
+indicators, collaboration-aware notifications, local-only private panes, and
+clear filesystem trust boundaries.
+
+## Persistence, automation, security, and performance {#runtime-requirements}
+
+Durable entities:
+
+```text
+WorkspaceSession
+PaneTree
+PaneState
+TabState
+WorkspaceItemState
+TerminalSession
+AgentSession
+BrowserSession
+LayoutPreset
+NotificationRecord
+PermissionGrant
+```
+
+Restoration states:
+
+```text
+restored
+restoring
+partially_restored
+requires_authentication
+provider_unavailable
+remote_unreachable
+process_ended
+incompatible_version
+failed
+```
+
+Recovery rules:
+
+- Save layout changes incrementally.
+- Use atomic snapshots and last-known-good snapshots.
+- Separate visual restoration from process restoration.
+- Never claim a process survived unless its backend confirms it.
+- Show failed items in place with retry, replace, and remove actions.
+- Preserve terminal scrollback where security policy permits.
+- Redact secrets from logs and restoration metadata.
+
+Automation should support querying workspaces and pane trees, splitting and
+focusing panes, opening items, starting terminals and agents, sending bounded
+terminal input, reading bounded terminal output, querying agent state, waiting
+for transitions, opening and inspecting browser panes, reading notifications,
+applying layouts, and capturing workspace metadata.
+
+Automation safety requirements:
+
+- Authenticate local clients.
+- Use explicit capabilities scoped to workspace and action.
+- Log automation mutations.
+- Require consent for credentials, network access, and destructive operations.
+- Limit output size and history.
+- Redact secrets.
+- Prevent background automation from stealing focus unless requested.
+
+Performance expectations:
+
+- Typing must remain independent of agent streaming.
+- Terminal rendering must not block the UI thread.
+- Inactive panes should reduce rendering work.
+- Browser panes hidden from view should throttle.
+- Agent event lists should virtualize.
+- Large scrollback should use bounded memory.
+- Persistence should be incremental.
+- Failed item restoration must not block the workspace.
+
+## Implementation direction {#implementation-direction}
+
+Prefer evolving existing Zed structures before adding parallel models. The
+current workspace already has panes, items, serialization, actions, docks,
+terminal metadata, and agent tabs. Canvas work should unify those surfaces
+behind common contracts.
+
+Suggested entities:
+
+```text
+CanvasWorkspace
+PaneTreeModel
+PaneModel
+TabModel
+WorkspaceItemRegistry
+SessionRegistry
+AgentRuntime
+TerminalRuntime
+BrowserRuntime
+AttentionStore
+LayoutStore
+AutomationServer
+PermissionStore
+```
+
+The common item contract should expose:
+
+```text
+id
+title
+icon
+kind
+focus handle
+serialized state
+attention state
+close disposition
+context actions
+layout hints
+```
+
+Keep these lifetimes separate:
+
+- UI item lifetime.
+- Process lifetime.
+- Provider-session lifetime.
+- Remote-transport lifetime.
+- Restoration-record lifetime.
+
+Closing a tab must not automatically terminate a durable process unless the
+configured close policy says so.
+
+## Acceptance criteria {#acceptance-criteria}
+
+- Any compatible item can occupy any pane.
+- Users can split, resize, move, zoom, and restore panes.
+- Layouts survive restart.
+- Failed item restoration does not block the workspace.
+- Multiple agents can run concurrently.
+- Agent states are visible from the rail and dashboard.
+- Reported, observed, inferred, and unknown states are distinguishable.
+- Permission requests identify scope and consequence.
+- Proposed and applied agent changes remain separate.
+- Full-screen TUIs work correctly.
+- Detach does not terminate durable sessions where the backend supports it.
+- Application shortcuts do not corrupt terminal input.
+- Synchronized input is visibly indicated.
+- Components use semantic tokens.
+- State is never communicated by color alone.
+- Motion respects reduced-motion settings.
+- Pane and item operations are scriptable.
+- Automation is authenticated, capability-scoped, and auditable.
+- Shared and private collaboration surfaces are visibly distinct.

@@ -135,7 +135,7 @@ pub fn configure_project_pane(pane: &mut Pane, cx: &mut Context<Pane>) {
 pub fn configure_agent_pane(pane: &mut Pane, cx: &mut Context<Pane>) {
     pane.set_pane_kind(PaneKind::Agent, cx);
     pane.set_close_pane_if_empty(false, cx);
-    pane.set_should_display_tab_bar(|_, _| false);
+    pane.set_should_display_tab_bar(|_, _| true);
 }
 
 fn render_project_pane_header(

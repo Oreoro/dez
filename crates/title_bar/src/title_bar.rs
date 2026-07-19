@@ -82,7 +82,7 @@ actions!(
     [
         /// Switches to the classic, editor-focused panel layout.
         UseClassicLayout,
-        /// Switches to the agentic panel layout.
+        /// Switches to the Canvas pane-first agentic layout.
         UseAgenticLayout,
     ]
 );
@@ -103,8 +103,9 @@ pub fn init(cx: &mut App) {
             set_window_layout(WindowLayout::Editor(None), cx);
         });
 
-        workspace.register_action(|_workspace, _: &UseAgenticLayout, _window, cx| {
+        workspace.register_action(|workspace, _: &UseAgenticLayout, window, cx| {
             set_window_layout(WindowLayout::Agent(None), cx);
+            workspace.apply_canvas_layout(window, cx);
         });
 
         workspace.register_action(|workspace, _: &SimulateUpdateAvailable, _window, cx| {
@@ -1381,7 +1382,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Agentic",
+                                    "Canvas",
                                     is_agent,
                                     IconPosition::Start,
                                     Some(UseAgenticLayout.boxed_clone()),

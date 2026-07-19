@@ -1043,6 +1043,80 @@
     // The layout of window control buttons in the sidebar (Linux only).
     "button_layout": "platform_default",
   },
+  // Settings for the Zed Canvas design system.
+  "design_system": {
+    "family": "zed_canvas",
+    "density": "balanced",
+    "radius": "subtle",
+    "motion": "system",
+    "contrast": "standard",
+    "content_width": "comfortable",
+    "icon_style": "outline",
+    "show_labels": "contextual",
+  },
+  // Settings for the Canvas workspace bar.
+  "workspace_bar": {
+    "visibility": "always",
+    "height": "compact",
+    "center_command_search": true,
+    "show_layout": true,
+    "show_agent_attention": true,
+  },
+  // Settings for the Canvas session rail.
+  "session_rail": {
+    "visibility": "auto",
+    "mode": "compact",
+    "position": "left",
+    "group_by": "project",
+    "sort_by": "manual",
+    "metadata": [
+      "branch",
+      "worktree",
+      "agent_state",
+      "latest_attention",
+    ],
+  },
+  // Settings for the Canvas pane grid.
+  "pane_grid": {
+    "auto_reflow": true,
+    "layout_history": true,
+    "focus_indicator": "border_and_title",
+    "attention_ring": true,
+    "tab_overflow": "searchable",
+    "auto_hide_single_tab_bar": false,
+  },
+  // Settings for Canvas-style agent surfaces.
+  "agent_ui": {
+    "presentation": "document",
+    "event_verbosity": "normal",
+    "group_tool_calls": true,
+    "keep_failures_expanded": true,
+    "keep_permissions_expanded": true,
+    "show_detection_confidence": true,
+    "fleet_view": "lanes",
+  },
+  // Settings for multiplexer-style workspace behavior.
+  "multiplexer": {
+    "prefix_mode": false,
+    "prefix": "ctrl-b",
+    "layout_cycle": [
+      "even_columns",
+      "even_rows",
+      "main_left",
+      "main_top",
+      "tiled",
+      "agent_control",
+    ],
+    "broadcast_confirmation": "risky",
+  },
+  // Settings for Canvas accessibility behavior.
+  "accessibility": {
+    "visible_focus": "strong",
+    "reduced_motion": "system",
+    "announce_agent_streaming": false,
+    "announce_agent_attention": true,
+    "minimum_target_size": "system",
+  },
   "agent": {
     // Whether the inline assistant should use streaming tools, when available
     "inline_assistant_use_streaming_tools": true,

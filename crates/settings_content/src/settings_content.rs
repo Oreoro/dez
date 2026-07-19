@@ -1,5 +1,6 @@
 mod action;
 mod agent;
+mod canvas;
 mod editor;
 mod extension;
 mod fallible_options;
@@ -15,6 +16,7 @@ mod workspace;
 
 pub use action::{ActionName, ActionWithArguments, CommandAliasTarget};
 pub use agent::*;
+pub use canvas::*;
 pub use editor::*;
 pub use extension::*;
 pub use fallible_options::*;
@@ -144,6 +146,27 @@ pub struct SettingsContent {
     pub preview_tabs: Option<PreviewTabsSettingsContent>,
 
     pub sidebar: Option<SidebarSettingsContent>,
+
+    /// Settings for the Zed Canvas design system.
+    pub design_system: Option<DesignSystemSettingsContent>,
+
+    /// Settings for the Canvas workspace bar.
+    pub workspace_bar: Option<WorkspaceBarSettingsContent>,
+
+    /// Settings for the Canvas session rail.
+    pub session_rail: Option<SessionRailSettingsContent>,
+
+    /// Settings for the Canvas pane grid.
+    pub pane_grid: Option<PaneGridSettingsContent>,
+
+    /// Settings for Canvas-style agent surfaces.
+    pub agent_ui: Option<AgentUiSettingsContent>,
+
+    /// Settings for multiplexer-style workspace behavior.
+    pub multiplexer: Option<MultiplexerSettingsContent>,
+
+    /// Settings for Canvas accessibility behavior.
+    pub accessibility: Option<AccessibilitySettingsContent>,
 
     pub agent: Option<AgentSettingsContent>,
     pub agent_servers: Option<AllAgentServersSettings>,
