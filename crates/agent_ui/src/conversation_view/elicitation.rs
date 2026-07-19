@@ -4,13 +4,155 @@ use collections::{HashMap, HashSet};
 use component::{Component, ComponentScope, example_group_with_title, single_example};
 use editor::Editor;
 use futures::channel::oneshot;
-use gpui::{AnyElement, App, Div, Empty, Entity, Hsla, SharedString, Window, div};
+use gpui::{
+    AnyElement, App, Div, Empty, Entity, Hsla, Pixels, SharedString, Stateful, Window, div,
+};
+use settings::Settings as _;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 use ui::{
     Button, Checkbox, Color, Icon, IconName, IconSize, Indicator, Label, LabelSize, ToggleState,
     prelude::*,
 };
+use workspace::DesignSystemSettings;
+
+fn elicitation_card_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.editor_background.opacity(0.9),
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors
+            .element_background
+            .blend(colors.border_focused.opacity(0.08)),
+    }
+}
+
+fn elicitation_card_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border.opacity(0.42),
+        settings::CanvasContrast::Standard => colors.border.opacity(0.8),
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn elicitation_header_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.element_background.opacity(0.72),
+        settings::CanvasContrast::Standard => colors
+            .element_background
+            .blend(colors.editor_foreground.opacity(0.025)),
+        settings::CanvasContrast::High => colors
+            .elevated_surface_background
+            .blend(colors.border_focused.opacity(0.1)),
+    }
+}
+
+fn elicitation_field_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.editor_background.opacity(0.82),
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors.element_background,
+    }
+}
+
+fn elicitation_card_margin_x(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(12.),
+        settings::CanvasDensity::Balanced => px(20.),
+        settings::CanvasDensity::Spacious => px(28.),
+    }
+}
+
+fn elicitation_card_margin_y(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(10.),
+    }
+}
+
+fn elicitation_body_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(8.),
+        settings::CanvasDensity::Balanced => px(12.),
+        settings::CanvasDensity::Spacious => px(16.),
+    }
+}
+
+fn elicitation_header_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(3.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn elicitation_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn elicitation_compact_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(3.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn elicitation_option_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(5.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
+fn elicitation_option_padding_x(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(10.),
+    }
+}
+
+fn elicitation_option_padding_y(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(3.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn elicitation_preview_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(16.),
+        settings::CanvasDensity::Balanced => px(24.),
+        settings::CanvasDensity::Spacious => px(32.),
+    }
+}
+
+fn elicitation_card_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_sm(),
+        settings::CanvasRadius::Rounded => element.rounded_md(),
+    }
+}
+
+fn elicitation_field_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_xs(),
+        settings::CanvasRadius::Rounded => element.rounded_sm(),
+    }
+}
 
 #[derive(Clone)]
 struct ElicitationOption {
@@ -655,7 +797,7 @@ impl Component for ElicitationCardPreview {
 
     fn preview(window: &mut Window, cx: &mut App) -> AnyElement {
         v_flex()
-            .gap_6()
+            .gap(elicitation_preview_gap(cx))
             .children([
                 example_group_with_title(
                     "Form Requests",
@@ -1212,12 +1354,8 @@ impl<'a> ElicitationCard<'a> {
     }
 
     pub(crate) fn render(self, cx: &App) -> Div {
-        let border_color = cx.theme().colors().border.opacity(0.8);
-        let header_background = cx
-            .theme()
-            .colors()
-            .element_background
-            .blend(cx.theme().colors().editor_foreground.opacity(0.025));
+        let border_color = elicitation_card_border(cx);
+        let header_background = elicitation_header_background(cx);
         let tool_name_font_size = rems_from_px(13.);
         let is_pending = matches!(&self.elicitation.status, ElicitationStatus::Pending { .. });
         let is_accepted_url = matches!(
@@ -1236,38 +1374,39 @@ impl<'a> ElicitationCard<'a> {
         };
 
         let body = v_flex()
-            .gap_2()
-            .p_3()
+            .gap(elicitation_gap(cx))
+            .p(elicitation_body_padding(cx))
             .child(Label::new(self.elicitation.request.message.clone()).size(LabelSize::Small));
         let body = match &self.elicitation.request.mode {
             acp::ElicitationMode::Form(mode) if is_pending => {
                 body.child(self.render_form(mode, cx))
             }
             acp::ElicitationMode::Url(mode) if is_pending || is_accepted_url => {
-                body.child(self.render_url_elicitation(mode))
+                body.child(self.render_url_elicitation(mode, cx))
             }
             _ => body,
         };
 
         v_flex()
-            .mx_5()
-            .my_1p5()
-            .rounded_md()
+            .mx(elicitation_card_margin_x(cx))
+            .my(elicitation_card_margin_y(cx))
+            .map(|this| elicitation_card_radius(this, cx))
             .border_1()
             .border_color(border_color)
+            .bg(elicitation_card_background(cx))
             .overflow_hidden()
             .child(
                 h_flex()
                     .h_8()
-                    .p_1()
+                    .p(elicitation_header_padding(cx))
                     .w_full()
                     .justify_between()
                     .bg(header_background)
                     .child(
                         h_flex()
                             .min_w_0()
-                            .gap_1p5()
-                            .px_1()
+                            .gap(elicitation_option_gap(cx))
+                            .px(elicitation_header_padding(cx))
                             .child(
                                 Icon::new(status_icon)
                                     .size(IconSize::Small)
@@ -1295,7 +1434,7 @@ impl<'a> ElicitationCard<'a> {
         };
 
         v_flex()
-            .gap_2()
+            .gap(elicitation_gap(cx))
             .children(mode.requested_schema.properties.iter().filter_map(
                 |(field_name, property)| {
                     let field = state.fields.get(field_name)?;
@@ -1321,13 +1460,13 @@ impl<'a> ElicitationCard<'a> {
     ) -> AnyElement {
         let label = property_title(field_name, property);
         let description = property_description(property);
-        let border_color = cx.theme().colors().border.opacity(0.8);
+        let border_color = elicitation_card_border(cx);
         let field_border_color = if error.is_some() {
             Color::Error.color(cx)
         } else {
             border_color
         };
-        let editor_background = cx.theme().colors().editor_background;
+        let editor_background = elicitation_field_background(cx);
         let label_color = if error.is_some() {
             Color::Error
         } else {
@@ -1348,13 +1487,13 @@ impl<'a> ElicitationCard<'a> {
             let checkbox_id = format!("elicitation-bool-{}-{field_name}", self.entry_ix);
 
             return v_flex()
-                .gap_1()
+                .gap(elicitation_compact_gap(cx))
                 .child(
                     h_flex()
                         .id(row_id)
                         .w_full()
                         .items_start()
-                        .gap_1()
+                        .gap(elicitation_compact_gap(cx))
                         .cursor_pointer()
                         .on_click(move |_, _window, cx| {
                             on_boolean_change(
@@ -1367,7 +1506,7 @@ impl<'a> ElicitationCard<'a> {
                         .child(div().child(Checkbox::new(checkbox_id, checkbox_state)))
                         .child(
                             v_flex()
-                                .gap_0p5()
+                                .gap(elicitation_compact_gap(cx))
                                 .child(Label::new(label).size(LabelSize::Small).color(label_color))
                                 .when_some(description, |this, description| {
                                     this.child(
@@ -1391,7 +1530,7 @@ impl<'a> ElicitationCard<'a> {
         };
 
         v_flex()
-            .gap_1()
+            .gap(elicitation_compact_gap(cx))
             .child(label)
             .when_some(description, |this, description| {
                 this.child(
@@ -1402,12 +1541,12 @@ impl<'a> ElicitationCard<'a> {
             })
             .child(match field {
                 ElicitationFieldState::Text(editor) => div()
-                    .rounded_sm()
+                    .map(|this| elicitation_field_radius(this, cx))
                     .border_1()
                     .border_color(field_border_color)
                     .bg(editor_background)
-                    .px_1()
-                    .py_0p5()
+                    .px(elicitation_compact_gap(cx))
+                    .py(elicitation_option_padding_y(cx))
                     .text_xs()
                     .child(editor.clone().into_any_element())
                     .into_any_element(),
@@ -1435,7 +1574,7 @@ impl<'a> ElicitationCard<'a> {
                         _ => Vec::new(),
                     };
                     v_flex()
-                        .gap_1()
+                        .gap(elicitation_compact_gap(cx))
                         .children(options.into_iter().map(|option| {
                             let is_selected = selected.contains(&option.value);
                             let checkbox_state = if is_selected {
@@ -1463,13 +1602,13 @@ impl<'a> ElicitationCard<'a> {
                                 .w_full()
                                 .min_h(rems_from_px(28.))
                                 .items_start()
-                                .gap_1p5()
-                                .rounded_sm()
+                                .gap(elicitation_option_gap(cx))
+                                .map(|this| elicitation_field_radius(this, cx))
                                 .border_1()
                                 .border_color(field_border_color.opacity(0.5))
                                 .bg(row_background)
-                                .px_2()
-                                .py_1()
+                                .px(elicitation_option_padding_x(cx))
+                                .py(elicitation_option_padding_y(cx))
                                 .hover(move |this| this.bg(hover_background).cursor_pointer())
                                 .on_click(move |_, _window, cx| {
                                     on_multi_select_change(
@@ -1481,7 +1620,7 @@ impl<'a> ElicitationCard<'a> {
                                     );
                                 })
                                 .child(div().child(Checkbox::new(checkbox_id, checkbox_state)))
-                                .child(Self::render_option_content(option))
+                                .child(Self::render_option_content(option, cx))
                         }))
                         .into_any_element()
                 }
@@ -1504,14 +1643,14 @@ impl<'a> ElicitationCard<'a> {
         let border_color = if has_error {
             Color::Error.color(cx)
         } else {
-            cx.theme().colors().border.opacity(0.8)
+            elicitation_card_border(cx)
         };
         let elicitation_id = self.elicitation.id.clone();
         let field_name = field_name.to_string();
         let on_single_select_change = self.handlers.on_single_select_change.clone();
 
         v_flex()
-            .gap_1()
+            .gap(elicitation_compact_gap(cx))
             .children(options.into_iter().map(move |option| {
                 let option_value = option.value.clone();
                 let option_id =
@@ -1530,13 +1669,13 @@ impl<'a> ElicitationCard<'a> {
                     .w_full()
                     .min_h(rems_from_px(28.))
                     .items_start()
-                    .gap_1p5()
-                    .rounded_sm()
+                    .gap(elicitation_option_gap(cx))
+                    .map(|this| elicitation_field_radius(this, cx))
                     .border_1()
                     .border_color(border_color.opacity(0.5))
                     .bg(row_background)
-                    .px_2()
-                    .py_1()
+                    .px(elicitation_option_padding_x(cx))
+                    .py(elicitation_option_padding_y(cx))
                     .hover(move |this| this.bg(hover_background).cursor_pointer())
                     .on_click(move |_, _window, cx| {
                         on_single_select_change(
@@ -1559,16 +1698,16 @@ impl<'a> ElicitationCard<'a> {
                                 control_background,
                             )),
                     )
-                    .child(Self::render_option_content(option))
+                    .child(Self::render_option_content(option, cx))
             }))
             .into_any_element()
     }
 
-    fn render_option_content(option: ElicitationOption) -> Div {
+    fn render_option_content(option: ElicitationOption, cx: &App) -> Div {
         v_flex()
             .min_w_0()
             .flex_1()
-            .gap_0p5()
+            .gap(elicitation_compact_gap(cx))
             .child(Label::new(option.label).size(LabelSize::Small).truncate())
             .when_some(option.description, |this, description| {
                 this.child(
@@ -1584,12 +1723,12 @@ impl<'a> ElicitationCard<'a> {
         if is_selected {
             editor_background.blend(Color::Accent.color(cx).opacity(0.08))
         } else {
-            editor_background
+            elicitation_field_background(cx)
         }
     }
 
     fn option_row_hover_background(is_selected: bool, cx: &App) -> Hsla {
-        let editor_background = cx.theme().colors().editor_background;
+        let editor_background = elicitation_field_background(cx);
         if is_selected {
             editor_background.blend(Color::Accent.color(cx).opacity(0.1))
         } else {
@@ -1601,7 +1740,7 @@ impl<'a> ElicitationCard<'a> {
     }
 
     fn option_control_background(cx: &App) -> Hsla {
-        cx.theme().colors().editor_background
+        elicitation_field_background(cx)
     }
 
     fn render_radio_indicator(is_selected: bool, border_color: Hsla, background: Hsla) -> Div {
@@ -1619,16 +1758,16 @@ impl<'a> ElicitationCard<'a> {
             })
     }
 
-    fn render_url_elicitation(&self, mode: &acp::ElicitationUrlMode) -> AnyElement {
+    fn render_url_elicitation(&self, mode: &acp::ElicitationUrlMode, cx: &App) -> AnyElement {
         v_flex()
-            .gap_2()
-            .child(Self::render_url_summary(&mode.url))
+            .gap(elicitation_gap(cx))
+            .child(Self::render_url_summary(&mode.url, cx))
             .into_any_element()
     }
 
-    fn render_url_summary(url: &str) -> AnyElement {
+    fn render_url_summary(url: &str, cx: &App) -> AnyElement {
         h_flex()
-            .gap_1()
+            .gap(elicitation_compact_gap(cx))
             .w_full()
             .min_w_0()
             .items_start()
@@ -1659,7 +1798,7 @@ impl<'a> ElicitationCard<'a> {
         } else {
             ("Submit", IconName::Check, Color::Success)
         };
-        let border_color = cx.theme().colors().border.opacity(0.8);
+        let border_color = elicitation_card_border(cx);
         let on_submit = self.handlers.on_submit.clone();
         let on_open_url = self.handlers.on_open_url.clone();
         let on_decline = self.handlers.on_decline.clone();
@@ -1670,8 +1809,8 @@ impl<'a> ElicitationCard<'a> {
 
         h_flex()
             .w_full()
-            .p_1()
-            .gap_1()
+            .p(elicitation_header_padding(cx))
+            .gap(elicitation_compact_gap(cx))
             .justify_end()
             .border_t_1()
             .border_color(border_color)

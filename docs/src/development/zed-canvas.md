@@ -573,6 +573,9 @@ shell, picker rows, and picker footer rhythm.
 The agent thread search bar uses Canvas density, radius, and contrast for the
 search strip, input shell, option controls, navigation controls, and error
 spacing.
+ACP elicitation cards use Canvas density, radius, and contrast for request-card
+shells, header/body rhythm, form field chrome, option rows, URL rows, action
+footers, and component preview spacing.
 
 ## Layout system {#layout-system}
 

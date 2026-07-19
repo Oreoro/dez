@@ -458,6 +458,10 @@ Current consumers:
 - Agent thread search bar: search strip padding/background/border, input shell
   background/border/radius, option-row rhythm, navigation rhythm, and error
   spacing consume Canvas density, radius, and contrast.
+- ACP elicitation cards: request-card margin, shell background/border/radius,
+  header rhythm/background, body padding, form field chrome, single/multi-select
+  option rows, URL rows, action footer, and component preview spacing consume
+  Canvas density, radius, and contrast.
 - Go To Line: the modal shell, input divider, help row spacing, and elevated
   navigation surface consume Canvas density, radius, and contrast.
 - Tasks UI: the task picker shell, search row, empty state, task rows,
