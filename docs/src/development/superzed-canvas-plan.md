@@ -108,6 +108,10 @@ Implemented in this phase:
   background, top/side padding, action rhythm, running-state spacing, and top
   radius now read `design_system.density`, `design_system.radius`, and
   `design_system.contrast`.
+- Applied Canvas design-system tokens to agent model selector components:
+  section header rhythm, model row density, chip/action gaps, footer padding,
+  tooltip rhythm, and separator contrast now read `design_system.density` and
+  `design_system.contrast`.
 - Added schema/default switches for pane-tab panel hosting, terminal-agent
   detection, multiple visible agents, session restoration, agent attention
   notifications, and preview-first Markdown.
@@ -416,6 +420,9 @@ Current consumers:
 - Terminal tool-call headers: header background, top/side padding, action
   rhythm, running-state spacing, and top radius consume Canvas density, radius,
   and contrast.
+- Agent model selector components: section header rhythm, model row density,
+  chip/action gaps, footer padding, tooltip rhythm, and separator contrast
+  consume Canvas density and contrast.
 - Go To Line: the modal shell, input divider, help row spacing, and elevated
   navigation surface consume Canvas density, radius, and contrast.
 - Tasks UI: the task picker shell, search row, empty state, task rows,

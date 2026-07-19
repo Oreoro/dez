@@ -551,6 +551,9 @@ strength.
 Terminal tool-call headers use Canvas density, radius, and contrast for header
 background, top/side padding, action rhythm, running-state spacing, and top
 radius.
+Agent model selector components use Canvas density and contrast for section
+header rhythm, model row density, chip/action gaps, footer padding, tooltip
+rhythm, and separator contrast.
 
 ## Layout system {#layout-system}
 

@@ -1,9 +1,92 @@
-use gpui::{Action, ClickEvent, FocusHandle, prelude::*};
+use gpui::{Action, ClickEvent, FocusHandle, Hsla, Pixels, prelude::*};
 use language_model::DisabledReason;
+use settings::Settings;
 use ui::{Chip, ElevationIndex, KeyBinding, ListItem, ListItemSpacing, Tooltip, prelude::*};
+use workspace::DesignSystemSettings;
 use zed_actions::agent::ToggleModelSelector;
 
 use crate::CycleFavoriteModels;
+
+fn model_selector_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border_variant.opacity(0.42),
+        settings::CanvasContrast::Standard => colors.border_variant,
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn model_selector_row_spacing(cx: &App) -> ListItemSpacing {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => ListItemSpacing::ExtraDense,
+        settings::CanvasDensity::Balanced => ListItemSpacing::Dense,
+        settings::CanvasDensity::Spacious => ListItemSpacing::Sparse,
+    }
+}
+
+fn model_selector_header_padding_x(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn model_selector_header_padding_bottom(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(2.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn model_selector_section_margin_top(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(2.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn model_selector_section_padding_top(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(10.),
+    }
+}
+
+fn model_selector_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
+fn model_selector_end_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(10.),
+    }
+}
+
+fn model_selector_hover_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
+fn model_selector_footer_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(10.),
+    }
+}
 
 enum ModelIcon {
     Name(IconName),
@@ -28,13 +111,13 @@ impl ModelSelectorHeader {
 impl RenderOnce for ModelSelectorHeader {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         div()
-            .px_2()
-            .pb_1()
+            .px(model_selector_header_padding_x(cx))
+            .pb(model_selector_header_padding_bottom(cx))
             .when(self.has_border, |this| {
-                this.mt_1()
-                    .pt_2()
+                this.mt(model_selector_section_margin_top(cx))
+                    .pt(model_selector_section_padding_top(cx))
                     .border_t_1()
-                    .border_color(cx.theme().colors().border_variant)
+                    .border_color(model_selector_border(cx))
             })
             .child(
                 Label::new(self.title)
@@ -124,7 +207,7 @@ impl ModelSelectorListItem {
 }
 
 impl RenderOnce for ModelSelectorListItem {
-    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let is_disabled = self.disabled.is_some();
 
         let model_icon_color = if self.is_selected {
@@ -139,7 +222,7 @@ impl RenderOnce for ModelSelectorListItem {
 
         ListItem::new(self.index)
             .inset(true)
-            .spacing(ListItemSpacing::Sparse)
+            .spacing(model_selector_row_spacing(cx))
             .toggle_state(self.is_focused)
             .when_some(self.disabled, |this, disabled_reason| {
                 this.disabled(true)
@@ -148,7 +231,7 @@ impl RenderOnce for ModelSelectorListItem {
             .child(
                 h_flex()
                     .w_full()
-                    .gap_1p5()
+                    .gap(model_selector_gap(cx))
                     .when_some(self.icon, |this, icon| {
                         this.child(
                             match icon {
@@ -179,8 +262,8 @@ impl RenderOnce for ModelSelectorListItem {
             )
             .end_slot(
                 h_flex()
-                    .pr_2()
-                    .gap_1p5()
+                    .pr(model_selector_end_padding(cx))
+                    .gap(model_selector_gap(cx))
                     .when(self.is_selected, |this| {
                         this.child(Icon::new(IconName::Check).color(Color::Accent))
                     })
@@ -189,25 +272,28 @@ impl RenderOnce for ModelSelectorListItem {
                     }),
             )
             .when(!is_disabled, |this| {
-                this.end_slot_on_hover(div().pr_1p5().when_some(self.on_toggle_favorite, {
-                    |this, handle_click| {
-                        let (icon, color, tooltip) = if is_favorite {
-                            (IconName::StarFilled, Color::Accent, "Unfavorite Model")
-                        } else {
-                            (IconName::Star, Color::Default, "Favorite Model")
-                        };
-                        this.child(
-                            IconButton::new(("toggle-favorite", self.index), icon)
-                                .layer(ElevationIndex::ElevatedSurface)
-                                .icon_color(color)
-                                .icon_size(IconSize::Small)
-                                .tooltip(Tooltip::text(tooltip))
-                                .on_click(move |event, window, cx| {
-                                    (handle_click)(event, window, cx)
-                                }),
-                        )
-                    }
-                }))
+                this.end_slot_on_hover(div().pr(model_selector_hover_padding(cx)).when_some(
+                    self.on_toggle_favorite,
+                    {
+                        |this, handle_click| {
+                            let (icon, color, tooltip) = if is_favorite {
+                                (IconName::StarFilled, Color::Accent, "Unfavorite Model")
+                            } else {
+                                (IconName::Star, Color::Default, "Favorite Model")
+                            };
+                            this.child(
+                                IconButton::new(("toggle-favorite", self.index), icon)
+                                    .layer(ElevationIndex::ElevatedSurface)
+                                    .icon_color(color)
+                                    .icon_size(IconSize::Small)
+                                    .tooltip(Tooltip::text(tooltip))
+                                    .on_click(move |event, window, cx| {
+                                        (handle_click)(event, window, cx)
+                                    }),
+                            )
+                        }
+                    },
+                ))
             })
     }
 }
@@ -234,9 +320,9 @@ impl RenderOnce for ModelSelectorFooter {
 
         h_flex()
             .w_full()
-            .p_1p5()
+            .p(model_selector_footer_padding(cx))
             .border_t_1()
-            .border_color(cx.theme().colors().border_variant)
+            .border_color(model_selector_border(cx))
             .child(
                 Button::new("configure", "Configure")
                     .full_width()
@@ -273,10 +359,10 @@ impl ModelSelectorTooltip {
 impl RenderOnce for ModelSelectorTooltip {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         v_flex()
-            .gap_1()
+            .gap(model_selector_gap(cx))
             .child(
                 h_flex()
-                    .gap_2()
+                    .gap(model_selector_gap(cx))
                     .justify_between()
                     .child(Label::new("Change Model"))
                     .child(KeyBinding::for_action(&ToggleModelSelector, cx)),
@@ -284,10 +370,10 @@ impl RenderOnce for ModelSelectorTooltip {
             .when(self.show_cycle_row, |this| {
                 this.child(
                     h_flex()
-                        .pt_1()
-                        .gap_2()
+                        .pt(model_selector_footer_padding(cx))
+                        .gap(model_selector_gap(cx))
                         .border_t_1()
-                        .border_color(cx.theme().colors().border_variant)
+                        .border_color(model_selector_border(cx))
                         .justify_between()
                         .child(Label::new("Cycle Favorite Models"))
                         .child(KeyBinding::for_action(&CycleFavoriteModels, cx)),
