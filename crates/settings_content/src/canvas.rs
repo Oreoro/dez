@@ -1,6 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use settings_macros::{MergeFrom, with_fallible_options};
+use std::collections::HashMap;
 
 #[derive(
     Clone,
@@ -544,6 +545,25 @@ pub struct SessionRailSettingsContent {
 
 #[with_fallible_options]
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, MergeFrom)]
+pub struct CanvasResponsiveProfileSettingsContent {
+    /// Workspace width below which horizontal Canvas recipe splits reflow into
+    /// vertical splits.
+    #[schemars(range(min = 1.0))]
+    pub narrow_width: Option<f32>,
+    /// Maximum width-to-height ratio treated as portrait for Canvas reflow.
+    #[schemars(range(min = 0.1))]
+    pub portrait_ratio: Option<f32>,
+    /// Workspace width above which eligible Canvas recipes use ultrawide
+    /// variants.
+    #[schemars(range(min = 1.0))]
+    pub ultrawide_width: Option<f32>,
+    /// Minimum width-to-height ratio treated as ultrawide for Canvas reflow.
+    #[schemars(range(min = 0.1))]
+    pub ultrawide_ratio: Option<f32>,
+}
+
+#[with_fallible_options]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, MergeFrom)]
 pub struct PaneGridSettingsContent {
     /// Whether pane layouts can reflow responsively.
     ///
@@ -604,6 +624,13 @@ pub struct PaneGridSettingsContent {
     /// Default: 1.6
     #[schemars(range(min = 0.1))]
     pub responsive_ultrawide_ratio: Option<f32>,
+    /// Per-recipe responsive profile overrides, keyed by Canvas recipe id.
+    /// Supported ids match `workspace::ApplyCanvasLayoutRecipe`, such as
+    /// `main_top`, `debug`, `four_agent_matrix`, or `worktree_matrix`.
+    ///
+    /// Default: {}
+    pub responsive_recipe_overrides:
+        Option<HashMap<String, CanvasResponsiveProfileSettingsContent>>,
 }
 
 #[with_fallible_options]

@@ -85,6 +85,40 @@ pub struct ActivePanelModifiers {
     pub inactive_opacity: Option<InactiveOpacity>,
 }
 
+#[derive(Clone, Debug)]
+pub struct PaneGridResponsiveProfile {
+    pub narrow_width: f32,
+    pub portrait_ratio: f32,
+    pub ultrawide_width: f32,
+    pub ultrawide_ratio: f32,
+}
+
+impl PaneGridResponsiveProfile {
+    pub fn narrow_width(&self) -> f32 {
+        self.narrow_width.max(1.)
+    }
+
+    pub fn portrait_ratio(&self) -> f32 {
+        self.portrait_ratio.max(0.1)
+    }
+
+    pub fn ultrawide_width(&self) -> f32 {
+        self.ultrawide_width.max(1.)
+    }
+
+    pub fn ultrawide_ratio(&self) -> f32 {
+        self.ultrawide_ratio.max(0.1)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct PaneGridResponsiveProfileOverride {
+    pub narrow_width: Option<f32>,
+    pub portrait_ratio: Option<f32>,
+    pub ultrawide_width: Option<f32>,
+    pub ultrawide_ratio: Option<f32>,
+}
+
 #[derive(Clone, Debug, RegisterSetting)]
 pub struct PaneGridSettings {
     pub auto_reflow: bool,
@@ -100,6 +134,7 @@ pub struct PaneGridSettings {
     pub responsive_portrait_ratio: f32,
     pub responsive_ultrawide_width: f32,
     pub responsive_ultrawide_ratio: f32,
+    pub responsive_recipe_overrides: HashMap<String, PaneGridResponsiveProfileOverride>,
 }
 
 impl PaneGridSettings {
@@ -119,20 +154,22 @@ impl PaneGridSettings {
             )
     }
 
-    pub fn responsive_narrow_width(&self) -> f32 {
-        self.responsive_narrow_width.max(1.)
-    }
-
-    pub fn responsive_portrait_ratio(&self) -> f32 {
-        self.responsive_portrait_ratio.max(0.1)
-    }
-
-    pub fn responsive_ultrawide_width(&self) -> f32 {
-        self.responsive_ultrawide_width.max(1.)
-    }
-
-    pub fn responsive_ultrawide_ratio(&self) -> f32 {
-        self.responsive_ultrawide_ratio.max(0.1)
+    pub fn responsive_profile(&self, recipe_id: &str) -> PaneGridResponsiveProfile {
+        let override_profile = self.responsive_recipe_overrides.get(recipe_id);
+        PaneGridResponsiveProfile {
+            narrow_width: override_profile
+                .and_then(|profile| profile.narrow_width)
+                .unwrap_or(self.responsive_narrow_width),
+            portrait_ratio: override_profile
+                .and_then(|profile| profile.portrait_ratio)
+                .unwrap_or(self.responsive_portrait_ratio),
+            ultrawide_width: override_profile
+                .and_then(|profile| profile.ultrawide_width)
+                .unwrap_or(self.responsive_ultrawide_width),
+            ultrawide_ratio: override_profile
+                .and_then(|profile| profile.ultrawide_ratio)
+                .unwrap_or(self.responsive_ultrawide_ratio),
+        }
     }
 }
 
@@ -280,6 +317,22 @@ impl Settings for PaneGridSettings {
             responsive_portrait_ratio: pane_grid.responsive_portrait_ratio.unwrap(),
             responsive_ultrawide_width: pane_grid.responsive_ultrawide_width.unwrap(),
             responsive_ultrawide_ratio: pane_grid.responsive_ultrawide_ratio.unwrap(),
+            responsive_recipe_overrides: pane_grid
+                .responsive_recipe_overrides
+                .unwrap()
+                .into_iter()
+                .map(|(recipe_id, profile)| {
+                    (
+                        recipe_id,
+                        PaneGridResponsiveProfileOverride {
+                            narrow_width: profile.narrow_width,
+                            portrait_ratio: profile.portrait_ratio,
+                            ultrawide_width: profile.ultrawide_width,
+                            ultrawide_ratio: profile.ultrawide_ratio,
+                        },
+                    )
+                })
+                .collect(),
         }
     }
 }

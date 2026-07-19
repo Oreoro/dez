@@ -161,8 +161,9 @@ use util::{
 use uuid::Uuid;
 pub use workspace_settings::{
     AccessibleMode, AutosaveSetting, EncodingDisplayOptions, FocusFollowsMouse,
-    MultiplexerSettings, PaneGridSettings, RestoreOnStartupBehavior, SidebarSettings,
-    StatusBarSettings, TabBarSettings, ToolbarSettings, WorkspaceSettings, observe_accessible_mode,
+    MultiplexerSettings, PaneGridResponsiveProfile, PaneGridSettings, RestoreOnStartupBehavior,
+    SidebarSettings, StatusBarSettings, TabBarSettings, ToolbarSettings, WorkspaceSettings,
+    observe_accessible_mode,
 };
 use zed_actions::{Spawn, feedback::FileBugReport, theme::ToggleMode};
 
@@ -320,16 +321,16 @@ impl CanvasLayoutRecipe {
     fn root_axis_for_size(
         self,
         size: Size<Pixels>,
-        pane_grid_settings: &PaneGridSettings,
+        responsive_profile: &PaneGridResponsiveProfile,
     ) -> Option<Axis> {
         let direction = self.primary_split_direction()?;
-        let direction = if canvas_size_is_narrow_or_portrait(size, pane_grid_settings) {
+        let direction = if canvas_size_is_narrow_or_portrait(size, responsive_profile) {
             match direction {
                 SplitDirection::Left | SplitDirection::Right => SplitDirection::Down,
                 SplitDirection::Up | SplitDirection::Down => direction,
             }
         } else if self.should_reflow_vertical_to_horizontal_on_ultrawide()
-            && canvas_size_is_ultrawide(size, pane_grid_settings)
+            && canvas_size_is_ultrawide(size, responsive_profile)
         {
             match direction {
                 SplitDirection::Up | SplitDirection::Down => SplitDirection::Right,
@@ -400,23 +401,26 @@ impl CanvasLayoutRecipe {
 
 fn canvas_size_is_narrow_or_portrait(
     size: Size<Pixels>,
-    pane_grid_settings: &PaneGridSettings,
+    responsive_profile: &PaneGridResponsiveProfile,
 ) -> bool {
     if size.width <= Pixels::ZERO || size.height <= Pixels::ZERO {
         return false;
     }
 
-    size.width < px(pane_grid_settings.responsive_narrow_width())
-        || size.width < size.height * pane_grid_settings.responsive_portrait_ratio()
+    size.width < px(responsive_profile.narrow_width())
+        || size.width < size.height * responsive_profile.portrait_ratio()
 }
 
-fn canvas_size_is_ultrawide(size: Size<Pixels>, pane_grid_settings: &PaneGridSettings) -> bool {
+fn canvas_size_is_ultrawide(
+    size: Size<Pixels>,
+    responsive_profile: &PaneGridResponsiveProfile,
+) -> bool {
     if size.width <= Pixels::ZERO || size.height <= Pixels::ZERO {
         return false;
     }
 
-    size.width >= px(pane_grid_settings.responsive_ultrawide_width())
-        && size.width >= size.height * pane_grid_settings.responsive_ultrawide_ratio()
+    size.width >= px(responsive_profile.ultrawide_width())
+        && size.width >= size.height * responsive_profile.ultrawide_ratio()
 }
 
 fn flat_axis_for_split_directions(split_directions: &[SplitDirection]) -> Option<Axis> {
@@ -7963,15 +7967,16 @@ impl Workspace {
         if !pane_grid_settings.auto_reflow {
             return split_directions.to_vec();
         }
+        let responsive_profile = pane_grid_settings.responsive_profile(layout_recipe.id());
 
         let should_reflow_to_vertical =
-            self.canvas_workspace_is_narrow_or_portrait(pane_grid_settings);
+            self.canvas_workspace_is_narrow_or_portrait(&responsive_profile);
         let should_reflow_to_horizontal = !should_reflow_to_vertical
             && layout_recipe.should_reflow_vertical_to_horizontal_on_ultrawide()
-            && self.canvas_workspace_is_ultrawide(pane_grid_settings);
+            && self.canvas_workspace_is_ultrawide(&responsive_profile);
         let should_reflow_agent_matrix_to_columns = !should_reflow_to_vertical
             && layout_recipe.should_reflow_agent_matrix_to_columns_on_ultrawide()
-            && self.canvas_workspace_is_ultrawide(pane_grid_settings);
+            && self.canvas_workspace_is_ultrawide(&responsive_profile);
 
         if !should_reflow_to_vertical
             && !should_reflow_to_horizontal
@@ -7998,13 +8003,16 @@ impl Workspace {
 
     fn canvas_workspace_is_narrow_or_portrait(
         &self,
-        pane_grid_settings: &PaneGridSettings,
+        responsive_profile: &PaneGridResponsiveProfile,
     ) -> bool {
-        canvas_size_is_narrow_or_portrait(self.bounds.size, pane_grid_settings)
+        canvas_size_is_narrow_or_portrait(self.bounds.size, responsive_profile)
     }
 
-    fn canvas_workspace_is_ultrawide(&self, pane_grid_settings: &PaneGridSettings) -> bool {
-        canvas_size_is_ultrawide(self.bounds.size, pane_grid_settings)
+    fn canvas_workspace_is_ultrawide(
+        &self,
+        responsive_profile: &PaneGridResponsiveProfile,
+    ) -> bool {
+        canvas_size_is_ultrawide(self.bounds.size, responsive_profile)
     }
 
     fn center_root_is_flat_axis(&self, axis: Axis) -> bool {
@@ -8058,6 +8066,7 @@ impl Workspace {
         let Some(active_layout_recipe) = self.active_canvas_layout_recipe else {
             return;
         };
+        let responsive_profile = pane_grid_settings.responsive_profile(active_layout_recipe.id());
 
         if active_layout_recipe.should_reflow_agent_matrix_to_columns_on_ultrawide()
             && let Some(split_directions) = active_layout_recipe.agent_matrix_split_directions()
@@ -8083,7 +8092,7 @@ impl Workspace {
         }
 
         let Some(desired_axis) =
-            active_layout_recipe.root_axis_for_size(self.bounds.size, pane_grid_settings)
+            active_layout_recipe.root_axis_for_size(self.bounds.size, &responsive_profile)
         else {
             return;
         };

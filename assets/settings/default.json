@@ -1116,6 +1116,7 @@
     "responsive_portrait_ratio": 1.0,
     "responsive_ultrawide_width": 1600,
     "responsive_ultrawide_ratio": 1.6,
+    "responsive_recipe_overrides": {},
   },
   // Settings for Canvas-style agent surfaces.
   "agent_ui": {

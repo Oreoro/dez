@@ -301,7 +301,8 @@ Rules:
   are configurable with `pane_grid.responsive_narrow_width`,
   `pane_grid.responsive_portrait_ratio`,
   `pane_grid.responsive_ultrawide_width`, and
-  `pane_grid.responsive_ultrawide_ratio`.
+  `pane_grid.responsive_ultrawide_ratio`. Recipe-specific thresholds can be set
+  with `pane_grid.responsive_recipe_overrides`, keyed by Canvas recipe id.
 - Empty panes offer quick item creation and restore actions.
 - Zoom preserves underlying layout.
 - Layout modifications persist continuously.

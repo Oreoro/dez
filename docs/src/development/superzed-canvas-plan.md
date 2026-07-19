@@ -245,8 +245,7 @@ Use the existing panel-as-pane bridge as the migration path:
   and focus for still-existing panes without recreating items or terminating
   live processes. The Panel Layout menu disables that restore action until a
   previous Canvas layout snapshot exists and shows the current in-memory
-  snapshot count. Full persisted semantic layout history and per-recipe
-  responsive profile rules remain future work.
+  snapshot count. Full persisted semantic layout history remains future work.
 - The Panel Layout menu now exposes three durable saved-layout slots. Each
   `Save Canvas Layout: Slot N` action records the current pane visibility,
   focus, and active recipe identity as a semantic snapshot by pane kind and
@@ -372,7 +371,22 @@ Proper Pane Layout is the Canvas migration target, not just a visual skin:
   profile with `pane_grid.responsive_narrow_width`,
   `pane_grid.responsive_portrait_ratio`,
   `pane_grid.responsive_ultrawide_width`, and
-  `pane_grid.responsive_ultrawide_ratio`.
+  `pane_grid.responsive_ultrawide_ratio`. Per-recipe threshold overrides are
+  available through `pane_grid.responsive_recipe_overrides`, keyed by Canvas
+  recipe id, for example:
+
+  ```json
+  {
+    "pane_grid": {
+      "responsive_recipe_overrides": {
+        "four_agent_matrix": {
+          "ultrawide_width": 1800,
+          "ultrawide_ratio": 1.8
+        }
+      }
+    }
+  }
+  ```
 
 Implementation order:
 
@@ -408,7 +422,8 @@ Implementation order:
    through `pane_grid.responsive_narrow_width`,
    `pane_grid.responsive_portrait_ratio`,
    `pane_grid.responsive_ultrawide_width`, and
-   `pane_grid.responsive_ultrawide_ratio`.
+   `pane_grid.responsive_ultrawide_ratio`; recipe-specific thresholds can be
+   set under `pane_grid.responsive_recipe_overrides`.
 5. Add UI for named saved layouts and layout history once the underlying
    metadata is stable. Three fixed durable saved-layout slots are implemented
    in the Panel Layout menu with derived restore labels plus clear actions, and
