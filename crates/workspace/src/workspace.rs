@@ -846,6 +846,7 @@ enum CanvasSavedLayoutManagerEntryKind {
 struct CanvasSavedLayoutManagerEntry {
     label: String,
     kind: CanvasSavedLayoutManagerEntryKind,
+    saved: bool,
 }
 
 struct CanvasSavedLayoutManagerModal {
@@ -875,6 +876,22 @@ impl CanvasSavedLayoutManagerModal {
                 workspace.save_current_canvas_layout_as(window, cx);
             })
             .log_err();
+    }
+
+    fn save_layout(
+        &mut self,
+        kind: CanvasSavedLayoutManagerEntryKind,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.workspace
+            .update(cx, |workspace, cx| {
+                if let CanvasSavedLayoutManagerEntryKind::Slot(slot) = kind {
+                    workspace.save_current_canvas_layout_slot(slot, window, cx);
+                }
+            })
+            .log_err();
+        cx.notify();
     }
 
     fn restore_layout(
@@ -940,12 +957,15 @@ impl CanvasSavedLayoutManagerModal {
         let workspace = workspace.read(cx);
         let mut entries = Vec::new();
         for slot in 1..=3 {
-            if let Some(label) = workspace.saved_canvas_layout_slot_label(slot) {
-                entries.push(CanvasSavedLayoutManagerEntry {
-                    label: format!("Slot {slot} — {label}"),
-                    kind: CanvasSavedLayoutManagerEntryKind::Slot(slot),
-                });
-            }
+            let label = workspace.saved_canvas_layout_slot_label(slot).map_or_else(
+                || format!("Slot {slot} — Empty"),
+                |label| format!("Slot {slot} — {label}"),
+            );
+            entries.push(CanvasSavedLayoutManagerEntry {
+                saved: workspace.has_saved_canvas_layout_slot(slot),
+                label,
+                kind: CanvasSavedLayoutManagerEntryKind::Slot(slot),
+            });
         }
         entries.extend(
             workspace
@@ -954,6 +974,7 @@ impl CanvasSavedLayoutManagerModal {
                 .map(|(name, label)| CanvasSavedLayoutManagerEntry {
                     label,
                     kind: CanvasSavedLayoutManagerEntryKind::Named(name),
+                    saved: true,
                 }),
         );
         entries
@@ -971,50 +992,66 @@ impl Focusable for CanvasSavedLayoutManagerModal {
 impl Render for CanvasSavedLayoutManagerModal {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let entries = self.entries(cx);
-        let rows =
-            entries
-                .into_iter()
-                .enumerate()
-                .map(|(index, entry)| {
-                    let restore_kind = entry.kind.clone();
-                    let rename_kind = entry.kind.clone();
-                    let clear_kind = entry.kind.clone();
-                    h_flex()
-                        .id(("canvas-saved-layout-manager-row", index))
-                        .w_full()
-                        .gap_2()
-                        .justify_between()
-                        .child(
-                            Label::new(entry.label)
-                                .single_line()
-                                .color(Color::Muted)
-                                .flex_1(),
-                        )
-                        .child(
-                            h_flex()
-                                .gap_1()
-                                .child(Button::new(("restore", index), "Restore").on_click(
+        let rows = entries
+            .into_iter()
+            .enumerate()
+            .map(|(index, entry)| {
+                let save_kind = matches!(entry.kind, CanvasSavedLayoutManagerEntryKind::Slot(_))
+                    .then_some(entry.kind.clone());
+                let restore_kind = entry.kind.clone();
+                let rename_kind = entry.kind.clone();
+                let clear_kind = entry.kind.clone();
+                let saved = entry.saved;
+                h_flex()
+                    .id(("canvas-saved-layout-manager-row", index))
+                    .w_full()
+                    .gap_2()
+                    .justify_between()
+                    .child(
+                        Label::new(entry.label)
+                            .single_line()
+                            .color(Color::Muted)
+                            .flex_1(),
+                    )
+                    .child(
+                        h_flex()
+                            .gap_1()
+                            .when_some(save_kind, |this, save_kind| {
+                                this.child(Button::new(("save", index), "Save").on_click(
                                     cx.listener(move |this, _, window, cx| {
+                                        this.save_layout(save_kind.clone(), window, cx);
+                                        cx.stop_propagation();
+                                    }),
+                                ))
+                            })
+                            .child(
+                                Button::new(("restore", index), "Restore")
+                                    .on_click(cx.listener(move |this, _, window, cx| {
                                         this.restore_layout(restore_kind.clone(), window, cx);
                                         cx.stop_propagation();
-                                    }),
-                                ))
-                                .child(Button::new(("rename", index), "Rename").on_click(
-                                    cx.listener(move |this, _, window, cx| {
+                                    }))
+                                    .disabled(!saved),
+                            )
+                            .child(
+                                Button::new(("rename", index), "Rename")
+                                    .on_click(cx.listener(move |this, _, window, cx| {
                                         this.rename_layout(rename_kind.clone(), window, cx);
                                         cx.stop_propagation();
-                                    }),
-                                ))
-                                .child(Button::new(("clear", index), "Clear").on_click(
-                                    cx.listener(move |this, _, window, cx| {
+                                    }))
+                                    .disabled(!saved),
+                            )
+                            .child(
+                                Button::new(("clear", index), "Clear")
+                                    .on_click(cx.listener(move |this, _, window, cx| {
                                         this.clear_layout(clear_kind.clone(), window, cx);
                                         cx.stop_propagation();
-                                    }),
-                                )),
-                        )
-                        .into_any_element()
-                })
-                .collect::<Vec<_>>();
+                                    }))
+                                    .disabled(!saved),
+                            ),
+                    )
+                    .into_any_element()
+            })
+            .collect::<Vec<_>>();
 
         v_flex()
             .key_context("CanvasSavedLayoutManagerModal")

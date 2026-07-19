@@ -267,8 +267,9 @@ Rules:
   their saved panes in saved order, then reapplies saved pinned and active-tab
   metadata. The Panel Layout menu can rename or clear stale fixed slots, save
   the current layout under a free-form name, and restore, rename, or clear
-  free-form named layouts. A basic saved-layout manager modal lists saved
-  fixed slots and named layouts with restore, rename, and clear controls.
+  free-form named layouts. A basic saved-layout manager modal lists all fixed
+  slots plus named layouts with save-to-slot, restore, rename, and clear
+  controls.
   `workspace::RenameSavedCanvasLayoutSlot`,
   `workspace::SaveCurrentCanvasLayoutAs`, and
   `workspace::ManageSavedCanvasLayouts` provide the text-entry and manager

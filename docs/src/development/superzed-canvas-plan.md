@@ -318,8 +318,8 @@ Use the existing panel-as-pane bridge as the migration path:
   saved panes, reapplies pinned/active tab metadata, and the Panel Layout menu
   can rename or clear stale fixed slots, save the current layout under a
   free-form name, and restore, rename, or clear free-form named layouts. A
-  basic saved-layout manager modal lists saved fixed slots and named layouts
-  with restore, rename, and clear controls. `workspace::RenameSavedCanvasLayoutSlot`,
+  basic saved-layout manager modal lists all fixed slots plus named layouts
+  with save-to-slot, restore, rename, and clear controls. `workspace::RenameSavedCanvasLayoutSlot`,
   `workspace::SaveCurrentCanvasLayoutAs`, and
   `workspace::ManageSavedCanvasLayouts` provide the text-entry and manager
   surfaces. Richer manager features and live process/session restoration remain
@@ -383,7 +383,8 @@ Implementation order:
    active, preview, dirty, pinned, project-path metadata, and explicit
    restore-planning intent. Restore applies saved pane-tree shape when all
    saved center panes still exist. User-authored fixed-slot labels,
-   free-form named layouts, and a basic saved-layout manager are available;
+   free-form named layouts, and a basic saved-layout manager with save-to-slot
+   controls are available;
    richer manager features remain future work.
 4. Add resize-driven `auto_reflow` using semantic recipe variants rather than
    raw pixel snapshots. Initial recipe-application reflow and resize-triggered
@@ -400,7 +401,7 @@ Implementation order:
    manual structural changes mark the active recipe as custom. Tab-role
    metadata and user-authored slot-label metadata are captured in saved slots,
    project-path-backed tabs now reopen during restore, and built-in fixed-slot
-   plus free-form named-layout UI and a basic manager are implemented, while
+   plus free-form named-layout UI and a basic save/restore manager are implemented, while
    richer manager features and actual process restoration remain future work.
 
 ## Session Rail {#session-rail}
