@@ -12,8 +12,8 @@ use editor::{
     scroll::Autoscroll,
 };
 use gpui::{
-    Action, Entity, EntityId, EventEmitter, FocusHandle, Focusable, KeyContext, Subscription, Task,
-    TextStyle, WeakEntity, actions, prelude::*,
+    Action, Div, Entity, EntityId, EventEmitter, FocusHandle, Focusable, Hsla, KeyContext, Pixels,
+    Stateful, Subscription, Task, TextStyle, WeakEntity, actions, prelude::*,
 };
 use markdown::Markdown;
 use multi_buffer::{Anchor, MultiBufferOffset, MultiBufferSnapshot};
@@ -23,8 +23,79 @@ use settings::Settings as _;
 use theme_settings::ThemeSettings;
 use ui::{IconButtonShape, Tooltip, prelude::*};
 use util::paths::PathMatcher;
+use workspace::DesignSystemSettings;
 
 use crate::entry_view_state::EntryViewState;
+
+fn thread_search_bar_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.panel_background.opacity(0.9),
+        settings::CanvasContrast::Standard => colors.panel_background,
+        settings::CanvasContrast::High => colors
+            .elevated_surface_background
+            .blend(colors.border_focused.opacity(0.08)),
+    }
+}
+
+fn thread_search_bar_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border.opacity(0.38),
+        settings::CanvasContrast::Standard => colors.border.opacity(0.6),
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn thread_search_input_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.editor_background.opacity(0.86),
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors.element_background,
+    }
+}
+
+fn thread_search_input_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border.opacity(0.42),
+        settings::CanvasContrast::Standard => colors.border,
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn thread_search_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
+fn thread_search_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn thread_search_compact_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(3.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn thread_search_input_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_sm(),
+        settings::CanvasRadius::Rounded => element.rounded_md(),
+    }
+}
 
 actions!(
     agent,
@@ -711,7 +782,6 @@ impl ThreadSearchBar {
 impl Render for ThreadSearchBar {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let focus_handle = self.query_editor.focus_handle(cx);
-        let theme = cx.theme().colors();
 
         let has_matches = !self.matches.is_empty();
         let query_empty = self.query_editor.read(cx).text(cx).is_empty();
@@ -733,26 +803,31 @@ impl Render for ThreadSearchBar {
             .on_action(cx.listener(Self::toggle_regex))
             .on_action(cx.listener(Self::focus_search))
             .w_full()
-            .gap_2()
+            .gap(thread_search_gap(cx))
             .child(
                 h_flex()
                     .min_h_8()
                     .min_w_32()
                     .flex_1()
-                    .px_1p5()
+                    .px(thread_search_padding(cx))
                     .border_1()
-                    .border_color(theme.border)
-                    .bg(theme.editor_background)
-                    .rounded_md()
-                    .child(div().px_1().flex_1().child(render_query_input(
-                        &self.query_editor,
-                        in_error_state,
-                        cx,
-                    )))
+                    .border_color(if in_error_state {
+                        cx.theme().status().error_border
+                    } else {
+                        thread_search_input_border(cx)
+                    })
+                    .bg(thread_search_input_background(cx))
+                    .map(|this| thread_search_input_radius(this, cx))
+                    .child(
+                        div()
+                            .px(thread_search_compact_gap(cx))
+                            .flex_1()
+                            .child(render_query_input(&self.query_editor, in_error_state, cx)),
+                    )
                     .child(
                         h_flex()
                             .flex_none()
-                            .gap_1()
+                            .gap(thread_search_compact_gap(cx))
                             .child(SearchOption::CaseSensitive.as_button(
                                 self.options,
                                 SearchSource::Buffer,
@@ -773,7 +848,7 @@ impl Render for ThreadSearchBar {
             .child(
                 h_flex()
                     .flex_none()
-                    .gap_1()
+                    .gap(thread_search_compact_gap(cx))
                     .child(nav_button(
                         "thread-search-prev",
                         IconName::ChevronLeft,
@@ -814,10 +889,11 @@ impl Render for ThreadSearchBar {
 
         v_flex()
             .w_full()
-            .p_1p5()
-            .bg(theme.panel_background)
+            .p(thread_search_padding(cx))
+            .gap(thread_search_compact_gap(cx))
+            .bg(thread_search_bar_background(cx))
             .border_b_1()
-            .border_color(theme.border.opacity(0.6))
+            .border_color(thread_search_bar_border(cx))
             .child(bar_row)
             .children(error_row)
     }

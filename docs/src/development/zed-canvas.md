@@ -570,6 +570,9 @@ rows, authentication rows, client-secret rows, and error spacing.
 The agent thread archive view uses Canvas density, radius, and contrast for
 archive toolbar chrome, time bucket spacing, thread rows, the project-picker
 shell, picker rows, and picker footer rhythm.
+The agent thread search bar uses Canvas density, radius, and contrast for the
+search strip, input shell, option controls, navigation controls, and error
+spacing.
 
 ## Layout system {#layout-system}
 
