@@ -3,6 +3,8 @@ pub mod file_finder_settings;
 #[cfg(test)]
 mod open_path_prompt_tests;
 
+mod canvas;
+
 use file_finder_settings::FileFinderSettings;
 use file_icons::FileIcons;
 use futures::channel::oneshot;
@@ -20,7 +22,7 @@ use std::{
     },
 };
 use ui::{Context, LabelLike, ListItem, Window};
-use ui::{HighlightedLabel, ListItemSpacing, prelude::*};
+use ui::{HighlightedLabel, prelude::*};
 use util::{
     maybe,
     paths::{PathStyle, compare_paths},
@@ -233,7 +235,10 @@ impl OpenPathPrompt {
         workspace.toggle_modal(window, cx, |window, cx| {
             let delegate =
                 OpenPathDelegate::new(tx, lister.clone(), creating_path, cx).show_hidden();
-            let picker = Picker::uniform_list(delegate, window, cx);
+            let picker = Picker::uniform_list(delegate, window, cx)
+                .surface_density(canvas::open_path_picker_density(cx))
+                .surface_radius(canvas::open_path_picker_radius(cx))
+                .surface_contrast(canvas::open_path_picker_contrast(cx));
             let mut query = lister.default_query(cx);
             if let Some(suggested_name) = suggested_name {
                 query.push_str(&suggested_name);
@@ -781,7 +786,7 @@ impl PickerDelegate for OpenPathDelegate {
                 };
                 Some(
                     ListItem::new(ix)
-                        .spacing(ListItemSpacing::Sparse)
+                        .spacing(canvas::open_path_row_spacing(cx))
                         .start_slot::<Icon>(file_icon)
                         .inset(true)
                         .toggle_state(selected)
@@ -844,7 +849,7 @@ impl PickerDelegate for OpenPathDelegate {
 
                 Some(
                     ListItem::new(ix)
-                        .spacing(ListItemSpacing::Sparse)
+                        .spacing(canvas::open_path_row_spacing(cx))
                         .start_slot::<Icon>(file_icon)
                         .inset(true)
                         .toggle_state(selected)
