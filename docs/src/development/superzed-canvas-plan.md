@@ -198,6 +198,10 @@ Use the existing panel-as-pane bridge as the migration path:
 - Runtime pane rendering now honors `pane_grid.auto_hide_single_tab_bar`; the
   Canvas default remains `false` so single-tab panes still advertise their
   draggable tab surface.
+- Runtime tab-bar rendering now reads `pane_grid.tab_overflow`: `stack` shows
+  pinned tabs plus the active unpinned tab with a tab menu for direct
+  activation, while `scroll` and `searchable` retain the existing scrollable
+  strip until a dedicated searchable tab affordance lands.
 - Remove the one-visible-agent bottleneck. Multiple agent tabs and terminal
   agents can be visible across panes and windows.
 - Support direct pane/tab dragging, keyboard movement, context-menu movement,

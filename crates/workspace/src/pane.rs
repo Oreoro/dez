@@ -479,6 +479,7 @@ pub struct Pane {
     close_pane_if_empty: bool,
     pub new_item_context_menu_handle: PopoverMenuHandle<ContextMenu>,
     pub split_item_context_menu_handle: PopoverMenuHandle<ContextMenu>,
+    pub tab_overflow_context_menu_handle: PopoverMenuHandle<ContextMenu>,
     pinned_tab_count: usize,
     diagnostics: HashMap<ProjectPath, DiagnosticSeverity>,
     zoom_out_on_close: bool,
@@ -671,6 +672,7 @@ impl Pane {
             close_pane_if_empty: true,
             split_item_context_menu_handle: Default::default(),
             new_item_context_menu_handle: Default::default(),
+            tab_overflow_context_menu_handle: Default::default(),
             pinned_tab_count: 0,
             diagnostics: Default::default(),
             zoom_out_on_close: true,
@@ -3676,8 +3678,28 @@ impl Pane {
 
         let tab_bar_settings = TabBarSettings::get_global(cx);
         let use_separate_rows = tab_bar_settings.show_pinned_tabs_in_separate_row;
+        let tab_overflow = PaneGridSettings::get_global(cx).tab_overflow;
 
-        if use_separate_rows && !pinned_tabs.is_empty() && !unpinned_tabs.is_empty() {
+        if matches!(tab_overflow, settings::TabOverflowBehavior::Stack) {
+            let active_unpinned_tab = if self.active_item_index >= self.pinned_tab_count {
+                unpinned_tabs
+                    .into_iter()
+                    .nth(self.active_item_index - self.pinned_tab_count)
+                    .into_iter()
+                    .collect()
+            } else {
+                Vec::new()
+            };
+            self.render_stacked_tab_bar(
+                pinned_tabs,
+                active_unpinned_tab,
+                tab_count,
+                navigate_backward,
+                navigate_forward,
+                window,
+                cx,
+            )
+        } else if use_separate_rows && !pinned_tabs.is_empty() && !unpinned_tabs.is_empty() {
             self.render_two_row_tab_bar(
                 pinned_tabs,
                 unpinned_tabs,
@@ -3770,6 +3792,40 @@ impl Pane {
         tab_bar.into_any_element()
     }
 
+    fn render_stacked_tab_bar(
+        &mut self,
+        pinned_tabs: Vec<AnyElement>,
+        active_unpinned_tab: Vec<AnyElement>,
+        tab_count: usize,
+        navigate_backward: IconButton,
+        navigate_forward: IconButton,
+        window: &mut Window,
+        cx: &mut Context<Pane>,
+    ) -> AnyElement {
+        let tab_overflow_menu_button = self
+            .render_tab_overflow_menu_button(window, cx)
+            .into_any_element();
+
+        let tab_bar = self
+            .configure_tab_bar_start(
+                TabBar::new("stacked_tab_bar"),
+                navigate_backward,
+                navigate_forward,
+                window,
+                cx,
+            )
+            .children(pinned_tabs.len().ne(&0).then(|| {
+                h_flex()
+                    .children(pinned_tabs)
+                    .border_r_1()
+                    .border_color(cx.theme().colors().border)
+            }))
+            .child(self.render_unpinned_tabs_container(active_unpinned_tab, tab_count, cx))
+            .end_child(tab_overflow_menu_button);
+
+        tab_bar.into_any_element()
+    }
+
     fn render_two_row_tab_bar(
         &mut self,
         pinned_tabs: Vec<AnyElement>,
@@ -3827,6 +3883,60 @@ impl Pane {
             }))
             .children(unpinned_tabs)
             .child(self.render_tab_bar_drop_target(tab_count, cx))
+    }
+
+    fn render_tab_overflow_menu_button(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Pane>,
+    ) -> impl IntoElement + use<> {
+        let tab_entries = self
+            .items
+            .iter()
+            .enumerate()
+            .zip(tab_details(&self.items, window, cx))
+            .map(|((ix, item), detail)| {
+                let label = item.tab_content_text(detail, cx);
+                let is_active = ix == self.active_item_index;
+                (ix, label, is_active)
+            })
+            .collect::<Vec<_>>();
+        let pane = cx.entity();
+
+        PopoverMenu::new("pane-tab-overflow-menu")
+            .trigger_with_tooltip(
+                IconButton::new("pane-tab-overflow-menu-button", IconName::ListTree)
+                    .icon_size(IconSize::Small),
+                Tooltip::text("Open Tab"),
+            )
+            .anchor(Anchor::TopRight)
+            .with_handle(self.tab_overflow_context_menu_handle.clone())
+            .menu(move |window, cx| {
+                let tab_entries = tab_entries.clone();
+                let pane = pane.clone();
+                Some(ContextMenu::build(
+                    window,
+                    cx,
+                    move |mut menu, window, _cx| {
+                        menu = menu.header("Tabs");
+
+                        for (ix, label, is_active) in tab_entries.clone() {
+                            let pane = pane.clone();
+                            menu = menu.toggleable_entry(
+                                label,
+                                is_active,
+                                IconPosition::Start,
+                                None,
+                                window.handler_for(&pane, move |pane, window, cx| {
+                                    pane.activate_item(ix, true, true, window, cx);
+                                }),
+                            );
+                        }
+
+                        menu
+                    },
+                ))
+            })
     }
 
     fn render_tab_bar_drop_target(
