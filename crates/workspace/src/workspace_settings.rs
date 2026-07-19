@@ -84,6 +84,11 @@ pub struct ActivePanelModifiers {
     pub inactive_opacity: Option<InactiveOpacity>,
 }
 
+#[derive(Clone, Debug, RegisterSetting)]
+pub struct PaneGridSettings {
+    pub show_legacy_docks: bool,
+}
+
 #[derive(Deserialize, RegisterSetting)]
 pub struct TabBarSettings {
     pub show: bool,
@@ -174,6 +179,15 @@ impl Settings for SidebarSettings {
             side: sidebar.side.unwrap(),
             starts_open: sidebar.starts_open.unwrap(),
             show_project_pane_button: sidebar.show_project_pane_button.unwrap(),
+        }
+    }
+}
+
+impl Settings for PaneGridSettings {
+    fn from_settings(content: &settings::SettingsContent) -> Self {
+        let pane_grid = content.pane_grid.clone().unwrap();
+        Self {
+            show_legacy_docks: pane_grid.show_legacy_docks.unwrap(),
         }
     }
 }

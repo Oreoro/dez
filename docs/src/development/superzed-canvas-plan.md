@@ -172,6 +172,9 @@ Use the existing panel-as-pane bridge as the migration path:
 - Default `pane_grid.panel_surface` to `pane_tab`, default
   `pane_grid.show_legacy_docks` to `false`, and keep
   `pane_grid.draggable_panel_tabs` enabled.
+- Runtime startup applies `pane_grid.show_legacy_docks = false` after session
+  restore by migrating dock-hosted panels into pane tabs and closing legacy dock
+  chrome.
 - Remove the one-visible-agent bottleneck. Multiple agent tabs and terminal
   agents can be visible across panes and windows.
 - Support direct pane/tab dragging, keyboard movement, context-menu movement,
@@ -226,7 +229,9 @@ Terminal-agent detection:
   CLI titles and render matching identity in the Session Rail and thread
   switcher. Standalone `terminal_view::TerminalView` tabs are scanned from open
   workspaces and surfaced when their title identifies a known agent CLI;
-  activation and close route back to the existing terminal tab.
+  activation and close route back to the existing terminal tab. Session Rail
+  terminal rows now label detected agents as `Agent detected` and terminal-bell
+  attention as `Possibly waiting`.
 - Default `agent_ui.allow_multiple_visible_agents` to `true` so agents can live
   in normal tabs across multiple panes.
 - Default `agent_ui.connect_hooks`, `agent_ui.resume_sessions_on_restart`, and
@@ -249,8 +254,8 @@ Notifications:
 - Selecting a notification focuses the exact source tab.
 - Do not repeatedly announce streaming output.
 - Implemented first attention slice: standalone agent terminal rows reuse the
-  terminal bell as a notification signal and clear it on Session Rail
-  activation.
+  terminal bell as a notification signal, label that observed state as
+  `Possibly waiting`, and clear it on Session Rail activation.
 
 ## Markdown and document surfaces {#markdown-and-document-surfaces}
 

@@ -158,7 +158,7 @@ use util::{
 };
 use uuid::Uuid;
 pub use workspace_settings::{
-    AccessibleMode, AutosaveSetting, EncodingDisplayOptions, FocusFollowsMouse,
+    AccessibleMode, AutosaveSetting, EncodingDisplayOptions, FocusFollowsMouse, PaneGridSettings,
     RestoreOnStartupBehavior, SidebarSettings, StatusBarSettings, TabBarSettings, ToolbarSettings,
     WorkspaceSettings, observe_accessible_mode,
 };
@@ -2114,6 +2114,14 @@ impl Workspace {
                         .log_err();
                 }
             }
+
+            window
+                .update(cx, |_, window, cx| {
+                    workspace.update(cx, |workspace, cx| {
+                        workspace.apply_pane_grid_settings(window, cx);
+                    });
+                })
+                .log_err();
 
             window
                 .update(cx, |_, _window, cx| {
@@ -4877,6 +4885,22 @@ impl Workspace {
         } else {
             self.apply_canvas_agent_control_layout(window, cx);
         }
+    }
+
+    fn apply_pane_grid_settings(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if PaneGridSettings::get_global(cx).show_legacy_docks {
+            return;
+        }
+
+        self.sync_panel_panes_from_docks(window, cx);
+
+        for dock in [&self.left_dock, &self.right_dock] {
+            dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
+        }
+
+        self.center.mark_positions(cx);
+        self.serialize_workspace(window, cx);
+        cx.notify();
     }
 
     fn ensure_panel_pane(

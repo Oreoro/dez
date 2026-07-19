@@ -281,6 +281,15 @@ fn terminal_agent_icon(kind: TerminalAgentKind) -> IconName {
     }
 }
 
+fn terminal_agent_metadata_label(kind: TerminalAgentKind, has_notification: bool) -> SharedString {
+    let state = if has_notification {
+        "Possibly waiting"
+    } else {
+        "Agent detected"
+    };
+    SharedString::from(format!("{} · {}", kind.display_name(), state))
+}
+
 fn standalone_terminal_id(
     workspace: &Entity<Workspace>,
     terminal_view: &Entity<TerminalView>,
@@ -7003,6 +7012,7 @@ impl Sidebar {
 
         let display_title = terminal.metadata.display_title();
         let terminal_agent_kind = terminal.metadata.detected_agent_kind();
+        let has_notification = terminal.has_notification;
         let (icon_char, title, highlight_positions) =
             match split_leading_icon_char(&display_title, &terminal.highlight_positions) {
                 Some((icon_char, title, positions)) => (Some(icon_char), title, positions),
@@ -7019,11 +7029,11 @@ impl Sidebar {
             .when_some(icon_char, |this, icon_char| this.icon_char(icon_char))
             .is_remote(is_remote)
             .when_some(terminal_agent_kind, |this, agent_kind| {
-                this.project_name(agent_kind.display_name())
+                this.project_name(terminal_agent_metadata_label(agent_kind, has_notification))
             })
             .worktrees(worktrees)
             .timestamp(timestamp)
-            .notified(terminal.has_notification)
+            .notified(has_notification)
             .highlight_positions(highlight_positions)
             .selected(is_active)
             .focused(is_focused)
