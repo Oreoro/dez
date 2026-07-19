@@ -95,6 +95,10 @@ Implemented in this phase:
   `design_system.density`, `design_system.radius`, `design_system.contrast`, and
   `design_system.show_labels` so the rail can behave like a compact vertical
   activity bar or a labeled workspace navigator without separate row chrome.
+- Superzed self-update affordances are now fork-aware: background polling is
+  explicitly gated on the upstream app name, the default `auto_update` setting
+  is off, and the application menu hides `Check for Updates` while using
+  `paths::APP_NAME` for About/Hide/Quit labels.
 
 ## Ground truth {#ground-truth}
 

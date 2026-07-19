@@ -7,7 +7,7 @@ use gpui::{
     Window, actions,
 };
 use http_client::{HttpClient, HttpClientWithUrl};
-use paths::remote_servers_dir;
+use paths::{self, remote_servers_dir};
 use release_channel::{AppCommitSha, ReleaseChannel};
 use semver::Version;
 use serde::{Deserialize, Serialize};
@@ -258,6 +258,10 @@ struct GlobalAutoUpdate(Option<Entity<AutoUpdater>>);
 
 impl Global for GlobalAutoUpdate {}
 
+pub fn self_updates_enabled() -> bool {
+    paths::APP_NAME == "Zed"
+}
+
 pub fn init(client: Arc<Client>, cx: &mut App) {
     cx.observe_new(|workspace: &mut Workspace, _window, _cx| {
         workspace.register_action(|_, action, window, cx| check(action, window, cx));
@@ -273,7 +277,7 @@ pub fn init(client: Arc<Client>, cx: &mut App) {
         let updater = AutoUpdater::new(version, client, cx);
 
         let poll_for_updates = ReleaseChannel::try_global(cx)
-            .map(|channel| channel.poll_for_updates())
+            .map(|channel| self_updates_enabled() && channel.poll_for_updates())
             .unwrap_or(false);
 
         if option_env!("ZED_UPDATE_EXPLANATION").is_none()
@@ -302,6 +306,21 @@ pub fn init(client: Arc<Client>, cx: &mut App) {
 }
 
 pub fn check(_: &Check, window: &mut Window, cx: &mut App) {
+    if !self_updates_enabled() {
+        let message = format!(
+            "{} is updated by rebuilding the local fork, not by downloading upstream Zed releases.",
+            paths::APP_NAME
+        );
+        drop(window.prompt(
+            gpui::PromptLevel::Info,
+            "Automatic updates are disabled",
+            Some(&message),
+            &["OK"],
+            cx,
+        ));
+        return;
+    }
+
     if let Some(message) = option_env!("ZED_UPDATE_EXPLANATION")
         .map(ToOwned::to_owned)
         .or_else(|| env::var("ZED_UPDATE_EXPLANATION").ok())
