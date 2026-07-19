@@ -530,6 +530,8 @@ Open Path Prompt uses Canvas picker shell tokens and density-driven directory
 row rhythm for open/create path workflows.
 Toolchain Selector uses Canvas picker and modal-shell tokens for toolchain
 search, add-toolchain path browsing, scope selection rows, and action footers.
+Snippets scope selection uses Canvas picker shell tokens plus density-driven
+row rhythm and label/file spacing.
 
 ## Layout system {#layout-system}
 

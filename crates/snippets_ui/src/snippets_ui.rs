@@ -16,9 +16,11 @@ use std::{
     path::Path,
     sync::Arc,
 };
-use ui::{HighlightedLabel, ListItem, ListItemSpacing, prelude::*};
+use ui::{HighlightedLabel, ListItem, prelude::*};
 use util::ResultExt;
 use workspace::{ModalView, OpenOptions, OpenVisible, Workspace, notifications::NotifyResultExt};
+
+mod canvas;
 
 #[derive(Eq, Hash, PartialEq)]
 struct ScopeName(Cow<'static, str>);
@@ -111,7 +113,12 @@ impl ScopeSelector {
         let delegate =
             ScopeSelectorDelegate::new(workspace, cx.entity().downgrade(), language_registry);
 
-        let picker = cx.new(|cx| Picker::uniform_list(delegate, window, cx));
+        let picker = cx.new(|cx| {
+            Picker::uniform_list(delegate, window, cx)
+                .surface_density(canvas::snippets_picker_density(cx))
+                .surface_radius(canvas::snippets_picker_radius(cx))
+                .surface_contrast(canvas::snippets_picker_contrast(cx))
+        });
 
         Self { picker }
     }
@@ -348,12 +355,12 @@ impl PickerDelegate for ScopeSelectorDelegate {
         Some(
             ListItem::new(ix)
                 .inset(true)
-                .spacing(ListItemSpacing::Sparse)
+                .spacing(canvas::snippets_row_spacing(cx))
                 .toggle_state(selected)
                 .start_slot::<Icon>(language_icon)
                 .child(
                     h_flex()
-                        .gap_x_2()
+                        .gap(canvas::snippets_row_gap(cx))
                         .child(HighlightedLabel::new(name_label, mat.positions.clone()))
                         .when_some(file_label, |item, path_label| {
                             item.child(
