@@ -512,6 +512,8 @@ navigation separators.
 Extensions UI uses the same tokens for page, header, and list backgrounds,
 search input chrome, category filter rows, extension cards, and dev-extension
 override overlays.
+Tasks UI uses Canvas density, radius, and contrast for its picker shell, search
+row, empty state, task rows, history/source indicators, and custom task footer.
 
 ## Layout system {#layout-system}
 

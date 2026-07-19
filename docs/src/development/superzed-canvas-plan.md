@@ -47,6 +47,10 @@ Implemented in this phase:
   backgrounds, search input chrome, category filter rows, extension cards, and
   dev-extension override overlays now read `design_system.density`,
   `design_system.radius`, and `design_system.contrast`.
+- Applied Canvas design-system tokens to Tasks UI: the task picker shell,
+  search row, empty state, task rows, history/source indicators, and custom task
+  footer now read `design_system.density`, `design_system.radius`, and
+  `design_system.contrast`.
 - Added schema/default switches for pane-tab panel hosting, terminal-agent
   detection, multiple visible agents, session restoration, agent attention
   notifications, and preview-first Markdown.
@@ -333,6 +337,9 @@ Current consumers:
   theme selector, and language selector opt the shared picker component into
   Canvas density, radius, and contrast for modal chrome, search input rows,
   empty states, and documentation asides where present.
+- Tasks UI: the task picker shell, search row, empty state, task rows,
+  history/source indicators, and custom task footer now consume Canvas density,
+  radius, and contrast.
 - Saved-layout modals: Canvas layout naming and manager modals use Canvas
   density for width, row padding, and row rhythm; radius for inline callout and
   saved-layout row corners; and contrast for row backgrounds and borders.

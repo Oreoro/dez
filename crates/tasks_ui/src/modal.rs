@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::TaskContexts;
+use crate::{TaskContexts, canvas};
 use editor::Editor;
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
@@ -14,8 +14,7 @@ use project::{TaskSourceKind, task_store::TaskStore};
 use task::{DebugScenario, ResolvedTask, RevealTarget, TaskContext, TaskTemplate};
 use ui::{
     ActiveTheme, Clickable, FluentBuilder as _, IconButtonShape, IconWithIndicator, Indicator,
-    IntoElement, KeyBinding, ListItem, ListItemSpacing, RenderOnce, Toggleable, Tooltip, div,
-    prelude::*,
+    IntoElement, KeyBinding, ListItem, RenderOnce, Toggleable, Tooltip, div, prelude::*,
 };
 
 use util::{ResultExt, truncate_and_trailoff};
@@ -148,6 +147,9 @@ impl TasksModal {
                 window,
                 cx,
             )
+            .surface_density(canvas::task_picker_density(cx))
+            .surface_radius(canvas::task_picker_radius(cx))
+            .surface_contrast(canvas::task_picker_contrast(cx))
             .when(!is_modal, |picker| picker.embedded())
         });
         let mut _subscriptions = [
@@ -504,7 +506,7 @@ impl PickerDelegate for TasksModalDelegate {
         };
         let icon = icon.map(|icon| {
             IconWithIndicator::new(icon, indicator)
-                .indicator_border_color(Some(cx.theme().colors().border_transparent))
+                .indicator_border_color(Some(canvas::task_indicator_border(cx)))
         });
         let history_run_icon = if Some(ix) <= self.divider_index {
             Some(
@@ -528,7 +530,7 @@ impl PickerDelegate for TasksModalDelegate {
                 .start_slot::<IconWithIndicator>(icon)
                 .end_slot::<AnyElement>(
                     h_flex()
-                        .gap_1()
+                        .gap(canvas::task_footer_gap(cx))
                         .child(Label::new(truncate_and_trailoff(
                             &template
                                 .tags
@@ -542,7 +544,7 @@ impl PickerDelegate for TasksModalDelegate {
                         .child(history_run_icon.unwrap())
                         .into_any_element(),
                 )
-                .spacing(ListItemSpacing::Sparse)
+                .spacing(canvas::task_row_spacing(cx))
                 .when_some(tooltip_label, |list_item, item_label| {
                     list_item.tooltip(move |_, _| item_label.clone())
                 })
@@ -653,10 +655,11 @@ impl PickerDelegate for TasksModalDelegate {
         Some(
             h_flex()
                 .w_full()
-                .p_1p5()
+                .p(canvas::task_footer_padding(cx))
+                .gap(canvas::task_footer_gap(cx))
                 .justify_between()
                 .border_t_1()
-                .border_color(cx.theme().colors().border_variant)
+                .border_color(canvas::task_footer_border(cx))
                 .child(
                     left_button
                         .map(|(label, action)| {
