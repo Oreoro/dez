@@ -244,6 +244,10 @@ Rules:
   Canvas recipe identity so menu state can follow restores. Recognized active
   recipe ids persist as workspace metadata across restart; persisted semantic
   layout history is still required.
+- `Save Current Canvas Layout` stores one runtime `Saved Layout` snapshot with
+  pane visibility, focus, and active recipe identity. `Restore Saved Canvas
+  Layout` applies that snapshot to panes that still exist. This does not yet
+  persist named layouts across restart or recreate closed items/processes.
 - Manual structural layout changes clear the active recipe identity and show
   `Custom Canvas Layout` in the Panel Layout menu while keeping the pane tree
   and tabs intact.
@@ -262,6 +266,8 @@ Implementation boundary:
 
 - Current recipes are geometry-only and reveal existing pane-hosted surfaces.
   They must not spawn agents, terminals, browsers, or external processes.
+- Saved-layout support is currently one in-memory runtime slot, not durable
+  named layout management.
 - Proper persisted layouts still need semantic snapshots containing pane tree,
   tab identities, process restoration metadata, and named layout data.
 - Process lifetime stays separate from tab lifetime so closing a tab is not
@@ -372,6 +378,8 @@ or `agent` items by role.
 The first runtime recipe set exposes direct actions for Full, Agent Control,
 Focus Editor, Even Columns, Even Rows, and the broader geometry-only Canvas
 starter layouts, with cycling controlled separately by `multiplexer.layout_cycle`.
+The first saved-layout action pair records and restores one in-memory Canvas
+snapshot without spawning, closing, or recreating workspace items.
 
 Responsive rules:
 

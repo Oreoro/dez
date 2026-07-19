@@ -128,6 +128,10 @@ actions!(
         ApplyCanvasPortraitDisplayLayout,
         /// Cycles between Canvas agent-control and focus-editor layouts.
         CycleCanvasLayout,
+        /// Saves the current Canvas layout visibility and focus snapshot.
+        SaveCurrentCanvasLayout,
+        /// Restores the saved Canvas layout visibility and focus snapshot.
+        RestoreSavedCanvasLayout,
         /// Restores the previous Canvas layout visibility and focus snapshot.
         RestorePreviousCanvasLayout,
     ]
@@ -286,6 +290,15 @@ pub fn init(cx: &mut App) {
             workspace.cycle_canvas_layout(window, cx);
         });
 
+        workspace.register_action(|workspace, _: &SaveCurrentCanvasLayout, _window, cx| {
+            workspace.save_current_canvas_layout(cx);
+        });
+
+        workspace.register_action(|workspace, _: &RestoreSavedCanvasLayout, window, cx| {
+            set_window_layout(WindowLayout::Agent(None), cx);
+            workspace.restore_saved_canvas_layout(window, cx);
+        });
+
         workspace.register_action(|workspace, _: &RestorePreviousCanvasLayout, window, cx| {
             set_window_layout(WindowLayout::Agent(None), cx);
             workspace.restore_previous_canvas_layout(window, cx);
@@ -371,6 +384,8 @@ fn update_layout_action_filter(cx: &mut App) {
         TypeId::of::<ApplyCanvasIncidentResponseLayout>(),
         TypeId::of::<ApplyCanvasPortraitDisplayLayout>(),
         TypeId::of::<CycleCanvasLayout>(),
+        TypeId::of::<SaveCurrentCanvasLayout>(),
+        TypeId::of::<RestoreSavedCanvasLayout>(),
         TypeId::of::<RestorePreviousCanvasLayout>(),
     ];
     CommandPaletteFilter::update_global(cx, |filter, _| {
@@ -1505,22 +1520,34 @@ impl SidebarChrome {
                 let is_editor = matches!(current_layout, WindowLayout::Editor(_));
                 let is_agent = matches!(current_layout, WindowLayout::Agent(_));
                 let is_custom = matches!(current_layout, WindowLayout::Custom(_));
-                let (active_canvas_layout_recipe, canvas_layout_history_len) = if is_agent {
-                    workspace.upgrade().map_or((None, 0), |workspace| {
+                let (
+                    active_canvas_layout_recipe,
+                    canvas_layout_history_len,
+                    has_saved_canvas_layout,
+                    saved_canvas_layout_count,
+                ) = workspace
+                    .upgrade()
+                    .map_or((None, 0, false, 0), |workspace| {
                         let workspace = workspace.read(cx);
                         (
                             workspace.active_canvas_layout_recipe_id(),
                             workspace.canvas_layout_history_len(),
+                            workspace.has_saved_canvas_layout(),
+                            workspace.saved_canvas_layout_count(),
                         )
-                    })
-                } else {
-                    (None, 0)
-                };
+                    });
+                let active_canvas_layout_recipe =
+                    is_agent.then_some(active_canvas_layout_recipe).flatten();
                 let has_previous_canvas_layout = canvas_layout_history_len > 0;
                 let canvas_layout_history_label = if canvas_layout_history_len == 1 {
                     "Layout History: 1 snapshot".to_string()
                 } else {
                     format!("Layout History: {canvas_layout_history_len} snapshots")
+                };
+                let saved_canvas_layout_label = if saved_canvas_layout_count == 1 {
+                    "Saved Layouts: 1 runtime slot".to_string()
+                } else {
+                    format!("Saved Layouts: {saved_canvas_layout_count} runtime slots")
                 };
                 let multiplexer_hint = {
                     let multiplexer_settings = MultiplexerSettings::get_global(cx);
@@ -1926,6 +1953,22 @@ impl SidebarChrome {
                                         window.dispatch_action(CycleCanvasLayout.boxed_clone(), cx);
                                     },
                                 )
+                                .entry(
+                                    "Save Current Canvas Layout",
+                                    Some(SaveCurrentCanvasLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            SaveCurrentCanvasLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .action_checked_with_disabled(
+                                    "Restore Saved Canvas Layout",
+                                    RestoreSavedCanvasLayout.boxed_clone(),
+                                    false,
+                                    !has_saved_canvas_layout,
+                                )
                                 .action_checked_with_disabled(
                                     "Restore Previous Canvas Layout",
                                     RestorePreviousCanvasLayout.boxed_clone(),
@@ -1935,6 +1978,12 @@ impl SidebarChrome {
                                 .when(is_agent, |menu| {
                                     menu.item(
                                         ContextMenuEntry::new(canvas_layout_history_label.clone())
+                                            .disabled(true),
+                                    )
+                                })
+                                .when(is_agent, |menu| {
+                                    menu.item(
+                                        ContextMenuEntry::new(saved_canvas_layout_label.clone())
                                             .disabled(true),
                                     )
                                 })

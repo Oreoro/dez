@@ -129,7 +129,7 @@ use std::{
     borrow::Cow,
     cell::{Cell, RefCell},
     cmp,
-    collections::VecDeque,
+    collections::{BTreeMap, VecDeque},
     env,
     hash::Hash,
     path::{Path, PathBuf},
@@ -341,6 +341,7 @@ use crate::{
 
 pub const SERIALIZATION_THROTTLE_TIME: Duration = Duration::from_millis(200);
 const CANVAS_LAYOUT_HISTORY_LIMIT: usize = 24;
+const DEFAULT_CANVAS_SAVED_LAYOUT_NAME: &str = "Saved Layout";
 
 static ZED_WINDOW_SIZE: LazyLock<Option<Size<Pixels>>> = LazyLock::new(|| {
     env::var("ZED_WINDOW_SIZE")
@@ -1570,6 +1571,7 @@ pub struct Workspace {
     canvas_layout_cycle_index: usize,
     active_canvas_layout_recipe: Option<CanvasLayoutRecipe>,
     canvas_layout_history: VecDeque<CanvasLayoutSnapshot>,
+    saved_canvas_layouts: BTreeMap<String, CanvasLayoutSnapshot>,
 }
 
 impl EventEmitter<Event> for Workspace {}
@@ -2014,6 +2016,7 @@ impl Workspace {
             canvas_layout_cycle_index: 0,
             active_canvas_layout_recipe: None,
             canvas_layout_history: VecDeque::new(),
+            saved_canvas_layouts: BTreeMap::new(),
         }
     }
 
@@ -2358,6 +2361,14 @@ impl Workspace {
 
     pub fn canvas_layout_history_len(&self) -> usize {
         self.canvas_layout_history.len()
+    }
+
+    pub fn has_saved_canvas_layout(&self) -> bool {
+        !self.saved_canvas_layouts.is_empty()
+    }
+
+    pub fn saved_canvas_layout_count(&self) -> usize {
+        self.saved_canvas_layouts.len()
     }
 
     fn mark_canvas_layout_custom(&mut self) {
@@ -5051,10 +5062,43 @@ impl Workspace {
         }
     }
 
+    pub fn save_current_canvas_layout(&mut self, cx: &mut Context<Self>) {
+        let Some(snapshot) = self.current_canvas_layout_snapshot(cx) else {
+            return;
+        };
+
+        self.saved_canvas_layouts
+            .insert(DEFAULT_CANVAS_SAVED_LAYOUT_NAME.to_string(), snapshot);
+        cx.notify();
+    }
+
+    pub fn restore_saved_canvas_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(snapshot) = self
+            .saved_canvas_layouts
+            .get(DEFAULT_CANVAS_SAVED_LAYOUT_NAME)
+            .cloned()
+        else {
+            return;
+        };
+
+        self.push_canvas_layout_snapshot(cx);
+        self.restore_canvas_layout_snapshot(snapshot, window, cx);
+    }
+
     pub fn restore_previous_canvas_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(snapshot) = self.canvas_layout_history.pop_back() else {
             return;
         };
+
+        self.restore_canvas_layout_snapshot(snapshot, window, cx);
+    }
+
+    fn restore_canvas_layout_snapshot(
+        &mut self,
+        snapshot: CanvasLayoutSnapshot,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         self.active_canvas_layout_recipe = snapshot.active_layout_recipe;
 
         let panes_by_id = self
