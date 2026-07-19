@@ -519,6 +519,8 @@ its ignored-file control gap, checkbox/icon spacing, result-row rhythm, and
 preview/action footer chrome.
 Tab Switcher uses Canvas picker shell tokens and maps density into recent-tab
 row rhythm plus indicator/close affordance spacing.
+Project Symbols uses Canvas picker shell tokens and maps density into symbol
+result row rhythm for project-wide code navigation.
 
 ## Layout system {#layout-system}
 

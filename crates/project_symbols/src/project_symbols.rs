@@ -14,8 +14,10 @@ use theme_settings::ThemeSettings;
 use util::ResultExt;
 use workspace::{
     Workspace,
-    ui::{LabelLike, ListItem, ListItemSpacing, prelude::*},
+    ui::{LabelLike, ListItem, prelude::*},
 };
+
+mod canvas;
 
 pub fn init(cx: &mut App) {
     cx.observe_new(
@@ -28,6 +30,9 @@ pub fn init(cx: &mut App) {
                         let delegate = ProjectSymbolsDelegate::new(handle, project.clone());
                         let preview = picker_preview::editor_preview(project, window, cx);
                         Picker::uniform_list_with_preview(delegate, preview, window, cx)
+                            .surface_density(canvas::project_symbols_picker_density(cx))
+                            .surface_radius(canvas::project_symbols_picker_radius(cx))
+                            .surface_contrast(canvas::project_symbols_picker_contrast(cx))
                     })
                 },
             );
@@ -306,7 +311,7 @@ impl PickerDelegate for ProjectSymbolsDelegate {
         Some(
             ListItem::new(ix)
                 .inset(true)
-                .spacing(ListItemSpacing::Sparse)
+                .spacing(canvas::project_symbols_row_spacing(cx))
                 .toggle_state(selected)
                 .child(
                     v_flex()
