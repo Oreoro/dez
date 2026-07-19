@@ -98,6 +98,8 @@ Implemented in this phase:
   shell padding, trailing action padding, radius, background, and border
   strength now read `design_system.density`, `design_system.radius`, and
   `design_system.contrast`.
+- Applied Canvas density to toast layer placement: bottom offset and horizontal
+  safe-area padding now read `design_system.density`.
 - Added schema/default switches for pane-tab panel hosting, terminal-agent
   detection, multiple visible agents, session restoration, agent attention
   notifications, and preview-first Markdown.
@@ -398,6 +400,8 @@ Current consumers:
 - Compact status toasts: inline spacing, shell padding, trailing action
   padding, radius, background, and border strength consume Canvas density,
   radius, and contrast.
+- Toast layer placement: bottom offset and horizontal safe-area padding consume
+  Canvas density.
 - Go To Line: the modal shell, input divider, help row spacing, and elevated
   navigation surface consume Canvas density, radius, and contrast.
 - Tasks UI: the task picker shell, search row, empty state, task rows,

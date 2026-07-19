@@ -4,16 +4,33 @@ use std::{
 };
 
 use gpui::{
-    AnyView, DismissEvent, Entity, EntityId, FocusHandle, ManagedView, MouseButton, Subscription,
-    Task,
+    AnyView, DismissEvent, Entity, EntityId, FocusHandle, ManagedView, MouseButton, Pixels,
+    Subscription, Task,
 };
+use settings::Settings;
 use ui::{animation::DefaultAnimations, prelude::*};
 use zed_actions::toast;
 
-use crate::Workspace;
+use crate::{DesignSystemSettings, Workspace};
 
 const DEFAULT_TOAST_DURATION: Duration = Duration::from_secs(10);
 const MINIMUM_RESUME_DURATION: Duration = Duration::from_millis(800);
+
+fn canvas_toast_layer_bottom(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(8.),
+        settings::CanvasDensity::Balanced => px(12.),
+        settings::CanvasDensity::Spacious => px(16.),
+    }
+}
+
+fn canvas_toast_layer_padding_x(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(8.),
+        settings::CanvasDensity::Balanced => px(12.),
+        settings::CanvasDensity::Spacious => px(16.),
+    }
+}
 
 pub fn init(cx: &mut App) {
     cx.observe_new(|workspace: &mut Workspace, _window, _cx| {
@@ -234,7 +251,8 @@ impl Render for ToastLayer {
                 .id(("toast-layer-container", active_toast.id))
                 .absolute()
                 .w_full()
-                .bottom(px(0.))
+                .bottom(canvas_toast_layer_bottom(cx))
+                .px(canvas_toast_layer_padding_x(cx))
                 .flex()
                 .flex_col()
                 .items_center()

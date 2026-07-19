@@ -543,6 +543,8 @@ background, and border strength.
 Compact status toasts use Canvas density, radius, and contrast for inline
 spacing, shell padding, trailing action padding, background, and border
 strength.
+Toast layer placement uses Canvas density for bottom offset and horizontal
+safe-area padding.
 
 ## Layout system {#layout-system}
 
