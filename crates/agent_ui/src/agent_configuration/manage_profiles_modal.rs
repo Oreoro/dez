@@ -6,7 +6,10 @@ use agent::ContextServerRegistry;
 use agent_settings::{AgentProfile, AgentProfileId, AgentSettings, builtin_profiles};
 use editor::Editor;
 use fs::Fs;
-use gpui::{DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, Subscription, prelude::*};
+use gpui::{
+    DismissEvent, Div, Entity, EventEmitter, FocusHandle, Focusable, Hsla, Pixels, Stateful,
+    Subscription, prelude::*,
+};
 use language_model::{LanguageModel, LanguageModelRegistry};
 use settings::SettingsStore;
 use settings::{
@@ -15,12 +18,72 @@ use settings::{
 use ui::{
     KeyBinding, ListItem, ListItemSpacing, ListSeparator, Navigable, NavigableEntry, prelude::*,
 };
-use workspace::{ModalView, Workspace};
+use workspace::{DesignSystemSettings, ModalView, Workspace};
 
 use crate::agent_configuration::manage_profiles_modal::profile_modal_header::ProfileModalHeader;
 use crate::agent_configuration::tool_picker::{ToolPicker, ToolPickerDelegate};
 use crate::language_model_selector::{LanguageModelSelector, language_model_selector};
 use crate::{AgentPanel, ManageProfiles};
+
+fn manage_profiles_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.elevated_surface_background.opacity(0.94),
+        settings::CanvasContrast::Standard => colors.elevated_surface_background,
+        settings::CanvasContrast::High => colors
+            .elevated_surface_background
+            .blend(colors.border_focused.opacity(0.08)),
+    }
+}
+
+fn manage_profiles_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border_variant.opacity(0.42),
+        settings::CanvasContrast::Standard => colors.border_variant,
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn manage_profiles_row_spacing(cx: &App) -> ListItemSpacing {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => ListItemSpacing::ExtraDense,
+        settings::CanvasDensity::Balanced => ListItemSpacing::Dense,
+        settings::CanvasDensity::Spacious => ListItemSpacing::Sparse,
+    }
+}
+
+fn manage_profiles_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn manage_profiles_header_padding_x(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn manage_profiles_header_padding_bottom(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(2.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn manage_profiles_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_md(),
+        settings::CanvasRadius::Rounded => element.rounded_lg(),
+    }
+}
 
 enum Mode {
     ChooseProfile(ChooseProfileMode),
@@ -538,7 +601,7 @@ impl ManageProfilesModal {
                 ListItem::new(format!("profile-{}", profile.id))
                     .toggle_state(is_focused)
                     .inset(true)
-                    .spacing(ListItemSpacing::Sparse)
+                    .spacing(manage_profiles_row_spacing(cx))
                     .child(Label::new(profile.name.clone()))
                     .when(is_focused, |this| {
                         this.end_slot(
@@ -578,7 +641,7 @@ impl ManageProfilesModal {
                 .child(ProfileModalHeader::new("Agent Profiles", None))
                 .child(
                     v_flex()
-                        .pb_1()
+                        .pb(manage_profiles_header_padding_bottom(cx))
                         .child(ListSeparator)
                         .children(
                             mode.builtin_profiles
@@ -588,11 +651,14 @@ impl ManageProfilesModal {
                         .when(!mode.custom_profiles.is_empty(), |this| {
                             this.child(ListSeparator)
                                 .child(
-                                    div().pl_2().pb_1().child(
-                                        Label::new("Custom Profiles")
-                                            .size(LabelSize::Small)
-                                            .color(Color::Muted),
-                                    ),
+                                    div()
+                                        .pl(manage_profiles_header_padding_x(cx))
+                                        .pb(manage_profiles_header_padding_bottom(cx))
+                                        .child(
+                                            Label::new("Custom Profiles")
+                                                .size(LabelSize::Small)
+                                                .color(Color::Muted),
+                                        ),
                                 )
                                 .children(
                                     mode.custom_profiles
@@ -616,7 +682,7 @@ impl ManageProfilesModal {
                                                 .contains_focused(window, cx),
                                         )
                                         .inset(true)
-                                        .spacing(ListItemSpacing::Sparse)
+                                        .spacing(manage_profiles_row_spacing(cx))
                                         .start_slot(Icon::new(IconName::Plus))
                                         .child(Label::new("Add New Profile"))
                                         .on_click({
@@ -672,7 +738,11 @@ impl ManageProfilesModal {
                 },
             ))
             .child(ListSeparator)
-            .child(h_flex().p_2().child(mode.name_editor))
+            .child(
+                h_flex()
+                    .p(manage_profiles_padding(cx))
+                    .child(mode.name_editor),
+            )
     }
 
     fn render_view_profile(
@@ -702,7 +772,7 @@ impl ManageProfilesModal {
                 .child(ProfileModalHeader::new(profile_name, Some(icon)))
                 .child(
                     v_flex()
-                        .pb_1()
+                        .pb(manage_profiles_header_padding_bottom(cx))
                         .child(ListSeparator)
                         .child(
                             div()
@@ -722,7 +792,7 @@ impl ManageProfilesModal {
                                                 .contains_focused(window, cx),
                                         )
                                         .inset(true)
-                                        .spacing(ListItemSpacing::Sparse)
+                                        .spacing(manage_profiles_row_spacing(cx))
                                         .start_slot(
                                             Icon::new(IconName::Scissors)
                                                 .size(IconSize::Small)
@@ -763,7 +833,7 @@ impl ManageProfilesModal {
                                                 .contains_focused(window, cx),
                                         )
                                         .inset(true)
-                                        .spacing(ListItemSpacing::Sparse)
+                                        .spacing(manage_profiles_row_spacing(cx))
                                         .start_slot(
                                             Icon::new(IconName::ZedAssistant)
                                                 .size(IconSize::Small)
@@ -804,7 +874,7 @@ impl ManageProfilesModal {
                                                 .contains_focused(window, cx),
                                         )
                                         .inset(true)
-                                        .spacing(ListItemSpacing::Sparse)
+                                        .spacing(manage_profiles_row_spacing(cx))
                                         .start_slot(
                                             Icon::new(IconName::Settings)
                                                 .size(IconSize::Small)
@@ -841,7 +911,7 @@ impl ManageProfilesModal {
                                                 .contains_focused(window, cx),
                                         )
                                         .inset(true)
-                                        .spacing(ListItemSpacing::Sparse)
+                                        .spacing(manage_profiles_row_spacing(cx))
                                         .start_slot(
                                             Icon::new(IconName::ToolHammer)
                                                 .size(IconSize::Small)
@@ -878,7 +948,7 @@ impl ManageProfilesModal {
                                                 .contains_focused(window, cx),
                                         )
                                         .inset(true)
-                                        .spacing(ListItemSpacing::Sparse)
+                                        .spacing(manage_profiles_row_spacing(cx))
                                         .start_slot(
                                             Icon::new(IconName::Trash)
                                                 .size(IconSize::Small)
@@ -912,7 +982,7 @@ impl ManageProfilesModal {
                                                 .contains_focused(window, cx),
                                         )
                                         .inset(true)
-                                        .spacing(ListItemSpacing::Sparse)
+                                        .spacing(manage_profiles_row_spacing(cx))
                                         .start_slot(
                                             Icon::new(IconName::ArrowLeft)
                                                 .size(IconSize::Small)
@@ -964,7 +1034,7 @@ impl Render for ManageProfilesModal {
                 ListItem::new("cancel-item")
                     .toggle_state(self.focus_handle.contains_focused(window, cx))
                     .inset(true)
-                    .spacing(ListItemSpacing::Sparse)
+                    .spacing(manage_profiles_row_spacing(cx))
                     .start_slot(
                         Icon::new(IconName::ArrowLeft)
                             .size(IconSize::Small)
@@ -987,6 +1057,11 @@ impl Render for ManageProfilesModal {
         div()
             .elevation_3(cx)
             .w(rems(34.))
+            .bg(manage_profiles_background(cx))
+            .border_1()
+            .border_color(manage_profiles_border(cx))
+            .map(|this| manage_profiles_radius(this, cx))
+            .overflow_hidden()
             .key_context("ManageProfilesModal")
             .on_action(cx.listener(|this, _: &menu::Cancel, window, cx| this.cancel(window, cx)))
             .on_action(cx.listener(|this, _: &menu::Confirm, window, cx| this.confirm(window, cx)))
@@ -1016,7 +1091,7 @@ impl Render for ManageProfilesModal {
                         .unwrap_or_else(|| "Unknown".into());
 
                     v_flex()
-                        .pb_1()
+                        .pb(manage_profiles_header_padding_bottom(cx))
                         .child(ProfileModalHeader::new(
                             format!("{profile_name} — Configure Built-in Tools"),
                             Some(IconName::Settings),
@@ -1039,7 +1114,7 @@ impl Render for ManageProfilesModal {
                         .unwrap_or_else(|| "Unknown".into());
 
                     v_flex()
-                        .pb_1()
+                        .pb(manage_profiles_header_padding_bottom(cx))
                         .child(ProfileModalHeader::new(
                             format!("{profile_name} — Configure Default Model"),
                             Some(IconName::ZedAgent),
@@ -1062,7 +1137,7 @@ impl Render for ManageProfilesModal {
                         .unwrap_or_else(|| "Unknown".into());
 
                     v_flex()
-                        .pb_1()
+                        .pb(manage_profiles_header_padding_bottom(cx))
                         .child(ProfileModalHeader::new(
                             format!("{profile_name} — Configure MCP Tools"),
                             Some(IconName::ToolHammer),

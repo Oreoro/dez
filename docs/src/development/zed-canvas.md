@@ -559,6 +559,9 @@ rhythm, shortcut spacing, separator padding, and separator contrast.
 The agent profile selector uses Canvas density and contrast for trigger tooltip
 rhythm, section headers, profile row density, warning/action spacing,
 documentation-aside rhythm, footer padding, and separator contrast.
+The agent profile manager modal uses Canvas density, radius, and contrast for
+modal shell chrome, profile/action row density, section padding, editor
+padding, and nested picker wrapper padding.
 
 ## Layout system {#layout-system}
 
