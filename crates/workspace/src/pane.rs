@@ -3679,6 +3679,8 @@ impl Pane {
         let tab_bar_settings = TabBarSettings::get_global(cx);
         let use_separate_rows = tab_bar_settings.show_pinned_tabs_in_separate_row;
         let tab_overflow = PaneGridSettings::get_global(cx).tab_overflow;
+        let show_searchable_overflow_menu =
+            matches!(tab_overflow, settings::TabOverflowBehavior::Searchable) && tab_count > 1;
 
         if matches!(tab_overflow, settings::TabOverflowBehavior::Stack) {
             let active_unpinned_tab = if self.active_item_index >= self.pinned_tab_count {
@@ -3696,6 +3698,7 @@ impl Pane {
                 tab_count,
                 navigate_backward,
                 navigate_forward,
+                show_searchable_overflow_menu,
                 window,
                 cx,
             )
@@ -3706,6 +3709,7 @@ impl Pane {
                 tab_count,
                 navigate_backward,
                 navigate_forward,
+                show_searchable_overflow_menu,
                 window,
                 cx,
             )
@@ -3761,6 +3765,7 @@ impl Pane {
         tab_count: usize,
         navigate_backward: IconButton,
         navigate_forward: IconButton,
+        show_tab_overflow_menu: bool,
         window: &mut Window,
         cx: &mut Context<Pane>,
     ) -> AnyElement {
@@ -3789,6 +3794,14 @@ impl Pane {
                     })
             }))
             .child(self.render_unpinned_tabs_container(unpinned_tabs, tab_count, cx));
+        let tab_bar = if show_tab_overflow_menu {
+            tab_bar.end_child(
+                self.render_tab_overflow_menu_button(window, cx)
+                    .into_any_element(),
+            )
+        } else {
+            tab_bar
+        };
         tab_bar.into_any_element()
     }
 
@@ -3799,6 +3812,7 @@ impl Pane {
         tab_count: usize,
         navigate_backward: IconButton,
         navigate_forward: IconButton,
+        show_tab_overflow_menu: bool,
         window: &mut Window,
         cx: &mut Context<Pane>,
     ) -> AnyElement {
@@ -3853,17 +3867,22 @@ impl Pane {
                     .children(pinned_tabs)
                     .child(self.render_pinned_tab_bar_drop_target(cx)),
             );
+        let unpinned_tab_bar = TabBar::new("unpinned_tab_bar")
+            .child(self.render_unpinned_tabs_container(unpinned_tabs, tab_count, cx));
+        let unpinned_tab_bar = if show_tab_overflow_menu {
+            unpinned_tab_bar.end_child(
+                self.render_tab_overflow_menu_button(window, cx)
+                    .into_any_element(),
+            )
+        } else {
+            unpinned_tab_bar
+        };
+
         v_flex()
             .w_full()
             .flex_none()
             .child(pinned_tab_bar)
-            .child(
-                TabBar::new("unpinned_tab_bar").child(self.render_unpinned_tabs_container(
-                    unpinned_tabs,
-                    tab_count,
-                    cx,
-                )),
-            )
+            .child(unpinned_tab_bar)
             .into_any_element()
     }
 

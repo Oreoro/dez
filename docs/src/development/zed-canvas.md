@@ -222,8 +222,9 @@ Rules:
 - `pane_grid.attention_ring = false` suppresses Canvas pane overlay-ring chrome
   even when `pane_grid.focus_indicator` selects a border-style treatment.
 - `pane_grid.tab_overflow = "stack"` compacts a pane to pinned tabs plus the
-  active unpinned tab and an overflow tab menu; `scroll` and `searchable`
-  currently use the existing scrollable tab strip.
+  active unpinned tab and an overflow tab menu. `searchable` keeps the
+  scrollable tab strip and adds the same direct tab selector as a stable
+  vertical overflow affordance. `scroll` keeps only the horizontal strip.
 - `pane_grid.layout_history = true` captures a bounded in-memory snapshot before
   Canvas layout recipes. `Restore Previous Canvas Layout` restores visibility
   and focus for panes that still exist, without deserializing workspace items or

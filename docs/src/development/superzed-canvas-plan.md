@@ -208,8 +208,9 @@ Use the existing panel-as-pane bridge as the migration path:
   draggable tab surface.
 - Runtime tab-bar rendering now reads `pane_grid.tab_overflow`: `stack` shows
   pinned tabs plus the active unpinned tab with a tab menu for direct
-  activation, while `scroll` and `searchable` retain the existing scrollable
-  strip until a dedicated searchable tab affordance lands.
+  activation, `searchable` keeps the scrollable tab strip and adds the same
+  direct tab selector as a stable vertical overflow affordance, and `scroll`
+  retains the existing scrollable strip.
 - Runtime pane-grid settings now read `layout_history` and `auto_reflow`.
   `layout_history` captures a bounded in-memory snapshot before each Canvas
   recipe and exposes `Restore Previous Canvas Layout`, which restores visibility
