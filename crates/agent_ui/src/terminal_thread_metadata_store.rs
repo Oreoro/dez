@@ -55,6 +55,37 @@ pub struct TerminalThreadMetadata {
     pub working_directory: Option<PathBuf>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TerminalAgentKind {
+    Claude,
+    Codex,
+    Gemini,
+    Aider,
+    OpenCode,
+    Amp,
+    Goose,
+    Qwen,
+    Cursor,
+    Copilot,
+}
+
+impl TerminalAgentKind {
+    pub fn display_name(self) -> &'static str {
+        match self {
+            Self::Claude => "Claude Code",
+            Self::Codex => "Codex",
+            Self::Gemini => "Gemini CLI",
+            Self::Aider => "Aider",
+            Self::OpenCode => "OpenCode",
+            Self::Amp => "Amp",
+            Self::Goose => "Goose",
+            Self::Qwen => "Qwen Code",
+            Self::Cursor => "Cursor Agent",
+            Self::Copilot => "GitHub Copilot",
+        }
+    }
+}
+
 impl TerminalThreadMetadata {
     pub fn folder_paths(&self) -> &PathList {
         self.worktree_paths.folder_path_list()
@@ -69,6 +100,10 @@ impl TerminalThreadMetadata {
             self.title.as_ref(),
             self.custom_title.as_ref().map(|title| title.as_ref()),
         )
+    }
+
+    pub fn detected_agent_kind(&self) -> Option<TerminalAgentKind> {
+        detect_terminal_agent_kind(self.display_title().as_ref())
     }
 }
 
@@ -130,6 +165,56 @@ pub fn terminal_title_prefix(title: &str) -> Option<&str> {
 
     if saw_whitespace_after_prefix {
         Some(&title[..prefix_byte_len])
+    } else {
+        None
+    }
+}
+
+pub fn detect_terminal_agent_kind(title: &str) -> Option<TerminalAgentKind> {
+    let title = terminal_title_without_prefix(title);
+    let normalized = title
+        .chars()
+        .map(|character| {
+            if character.is_alphanumeric() {
+                character.to_ascii_lowercase()
+            } else {
+                ' '
+            }
+        })
+        .collect::<String>();
+    let tokens = normalized.split_whitespace().collect::<Vec<_>>();
+    if tokens.is_empty() {
+        return None;
+    }
+
+    let has_token = |token: &str| tokens.contains(&token);
+    let has_phrase = |phrase: &[&str]| {
+        tokens
+            .windows(phrase.len())
+            .any(|candidate| candidate == phrase)
+    };
+    let compact = tokens.join("");
+
+    if has_token("claude") || has_phrase(&["claude", "code"]) {
+        Some(TerminalAgentKind::Claude)
+    } else if has_token("codex") {
+        Some(TerminalAgentKind::Codex)
+    } else if has_token("gemini") {
+        Some(TerminalAgentKind::Gemini)
+    } else if has_token("aider") {
+        Some(TerminalAgentKind::Aider)
+    } else if has_token("opencode") || compact.contains("opencode") {
+        Some(TerminalAgentKind::OpenCode)
+    } else if has_token("amp") {
+        Some(TerminalAgentKind::Amp)
+    } else if has_token("goose") {
+        Some(TerminalAgentKind::Goose)
+    } else if has_token("qwen") {
+        Some(TerminalAgentKind::Qwen)
+    } else if has_token("cursor") {
+        Some(TerminalAgentKind::Cursor)
+    } else if has_token("copilot") {
+        Some(TerminalAgentKind::Copilot)
     } else {
         None
     }
@@ -657,6 +742,32 @@ mod tests {
 
         metadata.title = "Thinking".into();
         assert_eq!(metadata.display_title().as_ref(), "Fix bug");
+    }
+
+    #[test]
+    fn test_detect_terminal_agent_kind_from_titles() {
+        assert_eq!(
+            detect_terminal_agent_kind("✳ Claude Code v2.1.207"),
+            Some(TerminalAgentKind::Claude)
+        );
+        assert_eq!(
+            detect_terminal_agent_kind("codex hello"),
+            Some(TerminalAgentKind::Codex)
+        );
+        assert_eq!(
+            detect_terminal_agent_kind("Gemini CLI"),
+            Some(TerminalAgentKind::Gemini)
+        );
+        assert_eq!(
+            detect_terminal_agent_kind("open-code session"),
+            Some(TerminalAgentKind::OpenCode)
+        );
+        assert_eq!(
+            detect_terminal_agent_kind("amp"),
+            Some(TerminalAgentKind::Amp)
+        );
+        assert_eq!(detect_terminal_agent_kind("lamp server"), None);
+        assert_eq!(detect_terminal_agent_kind("zsh"), None);
     }
 
     #[gpui::test]

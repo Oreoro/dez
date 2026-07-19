@@ -27,6 +27,12 @@ Implemented in this phase:
 - Registered Markdown preview as the default project item opener for Markdown
   files while preserving source access through the embedded editor and source
   return action.
+- Panel-hosted project and agent surfaces now use the normal pane tab bar and
+  close their pane when emptied, so they behave like regular
+  draggable/closable workspace tabs.
+- Session Rail terminal rows now classify known terminal agent CLIs from title
+  metadata, including Claude Code, Codex, Gemini CLI, Aider, OpenCode, Amp,
+  Goose, Qwen Code, Cursor Agent, and GitHub Copilot.
 
 ## Ground truth {#ground-truth}
 
@@ -145,6 +151,9 @@ Use the existing panel-as-pane bridge as the migration path:
   surfaces as pane tabs by default.
 - Agent pane-hosted panels show a tab bar by default so agent sessions behave
   like regular workspace items instead of a hidden singleton surface.
+- Project and agent panel panes should use the default pane tab bar. Avoid
+  custom icon-only panel headers unless they preserve normal tab drag, close,
+  context-menu, and keyboard behavior.
 - The Canvas layout action syncs registered dock panels into pane-hosted tabs,
   opens the project and agent pane surfaces, hides legacy left and right docks,
   and returns focus to the last editor pane.
@@ -198,6 +207,11 @@ Terminal-agent detection:
   `Possibly waiting`, or `Disconnected`.
 - Default `agent_ui.detect_terminal_agents` and
   `agent_ui.show_terminal_agents_in_session_rail` to `true`.
+- Implemented first slice: terminal-thread metadata rows classify known agent
+  CLI titles and render matching identity in the Session Rail and thread
+  switcher. Remaining work is bridging standalone `terminal_view::TerminalView`
+  items into the same metadata store without introducing a `terminal_view` ↔
+  `agent_ui` dependency cycle.
 - Default `agent_ui.allow_multiple_visible_agents` to `true` so agents can live
   in normal tabs across multiple panes.
 - Default `agent_ui.connect_hooks`, `agent_ui.resume_sessions_on_restart`, and

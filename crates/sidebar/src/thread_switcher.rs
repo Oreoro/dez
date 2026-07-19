@@ -2,7 +2,8 @@ use action_log::DiffStats;
 #[cfg(test)]
 use agent_ui::TerminalId;
 use agent_ui::{
-    terminal_thread_metadata_store::TerminalThreadMetadata, thread_metadata_store::ThreadMetadata,
+    terminal_thread_metadata_store::{TerminalAgentKind, TerminalThreadMetadata},
+    thread_metadata_store::ThreadMetadata,
 };
 use gpui::{
     Action as _, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, Modifiers,
@@ -97,7 +98,11 @@ impl ThreadSwitcherEntry {
         match self {
             Self::Thread(entry) if entry.is_draft => IconName::Circle,
             Self::Thread(entry) => entry.icon,
-            Self::Terminal(_) => IconName::Terminal,
+            Self::Terminal(entry) => entry
+                .metadata
+                .detected_agent_kind()
+                .map(terminal_agent_icon)
+                .unwrap_or(IconName::Terminal),
         }
     }
 
@@ -179,6 +184,21 @@ impl ThreadSwitcherEntry {
             Self::Thread(_) => None,
             Self::Terminal(entry) => Some(entry.metadata.terminal_id),
         }
+    }
+}
+
+fn terminal_agent_icon(kind: TerminalAgentKind) -> IconName {
+    match kind {
+        TerminalAgentKind::Claude => IconName::AiClaude,
+        TerminalAgentKind::Codex => IconName::ZedAssistant,
+        TerminalAgentKind::Copilot => IconName::Copilot,
+        TerminalAgentKind::Cursor => IconName::EditorCursor,
+        TerminalAgentKind::Gemini
+        | TerminalAgentKind::Aider
+        | TerminalAgentKind::OpenCode
+        | TerminalAgentKind::Amp
+        | TerminalAgentKind::Goose
+        | TerminalAgentKind::Qwen => IconName::Robot,
     }
 }
 

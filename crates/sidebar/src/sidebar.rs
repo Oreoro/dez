@@ -6,7 +6,7 @@ use agent::{ThreadStore, ZED_AGENT_ID};
 use agent_client_protocol::schema::v1 as acp;
 use agent_settings::{AgentSettings, UserAgentsMd};
 use agent_ui::terminal_thread_metadata_store::{
-    TerminalThreadMetadata, TerminalThreadMetadataStore, terminal_title_prefix,
+    TerminalAgentKind, TerminalThreadMetadata, TerminalThreadMetadataStore, terminal_title_prefix,
 };
 use agent_ui::thread_metadata_store::{
     ThreadMetadata, ThreadMetadataStore, WorktreePaths, worktree_info_from_thread_paths,
@@ -263,6 +263,21 @@ fn split_leading_icon_char(
         trimmed_title.to_string().into(),
         adjusted_positions,
     ))
+}
+
+fn terminal_agent_icon(kind: TerminalAgentKind) -> IconName {
+    match kind {
+        TerminalAgentKind::Claude => IconName::AiClaude,
+        TerminalAgentKind::Codex => IconName::ZedAssistant,
+        TerminalAgentKind::Copilot => IconName::Copilot,
+        TerminalAgentKind::Cursor => IconName::EditorCursor,
+        TerminalAgentKind::Gemini
+        | TerminalAgentKind::Aider
+        | TerminalAgentKind::OpenCode
+        | TerminalAgentKind::Amp
+        | TerminalAgentKind::Goose
+        | TerminalAgentKind::Qwen => IconName::Robot,
+    }
 }
 
 /// Picks a single glyph to render as the icon from a detected title prefix.
@@ -6719,6 +6734,7 @@ impl Sidebar {
         let is_remote = terminal.workspace.is_remote(cx);
 
         let display_title = terminal.metadata.display_title();
+        let terminal_agent_kind = terminal.metadata.detected_agent_kind();
         let (icon_char, title, highlight_positions) =
             match split_leading_icon_char(&display_title, &terminal.highlight_positions) {
                 Some((icon_char, title, positions)) => (Some(icon_char), title, positions),
@@ -6727,9 +6743,16 @@ impl Sidebar {
 
         ThreadItem::new(id, title)
             .base_bg(sidebar_bg)
-            .icon(IconName::Terminal)
+            .icon(
+                terminal_agent_kind
+                    .map(terminal_agent_icon)
+                    .unwrap_or(IconName::Terminal),
+            )
             .when_some(icon_char, |this, icon_char| this.icon_char(icon_char))
             .is_remote(is_remote)
+            .when_some(terminal_agent_kind, |this, agent_kind| {
+                this.project_name(agent_kind.display_name())
+            })
             .worktrees(worktrees)
             .timestamp(timestamp)
             .notified(terminal.has_notification)
