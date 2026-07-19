@@ -484,12 +484,44 @@ struct CanvasSavedPaneSnapshot {
     tabs: Vec<CanvasSavedTabSnapshot>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum CanvasSavedPaneTreeAxis {
+    Horizontal,
+    Vertical,
+}
+
+impl From<Axis> for CanvasSavedPaneTreeAxis {
+    fn from(axis: Axis) -> Self {
+        match axis {
+            Axis::Horizontal => Self::Horizontal,
+            Axis::Vertical => Self::Vertical,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+enum CanvasSavedPaneTreeSnapshot {
+    Pane {
+        pane: CanvasSavedPaneId,
+    },
+    Axis {
+        axis: CanvasSavedPaneTreeAxis,
+        #[serde(default)]
+        flex_weights_millis: Vec<u32>,
+        members: Vec<CanvasSavedPaneTreeSnapshot>,
+    },
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct CanvasSavedLayoutSnapshot {
     #[serde(default)]
     label: Option<String>,
     active_pane: Option<CanvasSavedPaneId>,
     active_layout_recipe: Option<String>,
+    #[serde(default)]
+    pane_tree: Option<CanvasSavedPaneTreeSnapshot>,
     panes: Vec<CanvasSavedPaneSnapshot>,
 }
 
@@ -531,6 +563,47 @@ fn canvas_saved_layout_slot_name(slot: usize) -> Option<&'static str> {
         2 => Some(CANVAS_SAVED_LAYOUT_SLOT_2_NAME),
         3 => Some(CANVAS_SAVED_LAYOUT_SLOT_3_NAME),
         _ => None,
+    }
+}
+
+fn canvas_saved_pane_tree_snapshot(
+    member: &Member,
+    pane_ids_by_entity_id: &HashMap<EntityId, CanvasSavedPaneId>,
+) -> Option<CanvasSavedPaneTreeSnapshot> {
+    match member {
+        Member::Pane(pane) => pane_ids_by_entity_id
+            .get(&pane.entity_id())
+            .copied()
+            .map(|pane| CanvasSavedPaneTreeSnapshot::Pane { pane }),
+        Member::Axis(axis) => {
+            let members = axis
+                .members
+                .iter()
+                .filter_map(|member| canvas_saved_pane_tree_snapshot(member, pane_ids_by_entity_id))
+                .collect::<Vec<_>>();
+            if members.is_empty() {
+                return None;
+            }
+
+            let flex_weights_millis = axis
+                .flexes
+                .lock()
+                .iter()
+                .map(|flex| {
+                    if flex.is_finite() && *flex > 0. {
+                        (*flex * 1000.).round() as u32
+                    } else {
+                        0
+                    }
+                })
+                .collect();
+
+            Some(CanvasSavedPaneTreeSnapshot::Axis {
+                axis: axis.axis.into(),
+                flex_weights_millis,
+                members,
+            })
+        }
     }
 }
 
@@ -5228,6 +5301,7 @@ impl Workspace {
     fn current_canvas_saved_layout_snapshot(&self, cx: &App) -> Option<CanvasSavedLayoutSnapshot> {
         let mut occurrences_by_kind = BTreeMap::new();
         let mut active_pane = None;
+        let mut pane_ids_by_entity_id = HashMap::default();
         let mut panes = Vec::new();
 
         for pane in self
@@ -5244,6 +5318,7 @@ impl Workspace {
                 occurrence: *occurrence,
             };
             *occurrence += 1;
+            pane_ids_by_entity_id.insert(pane.entity_id(), pane_id);
 
             if self.active_pane == pane {
                 active_pane = Some(pane_id);
@@ -5293,6 +5368,8 @@ impl Workspace {
             });
         }
 
+        let pane_tree = canvas_saved_pane_tree_snapshot(&self.center.root, &pane_ids_by_entity_id);
+
         if panes.is_empty() {
             return None;
         }
@@ -5308,6 +5385,7 @@ impl Workspace {
             active_layout_recipe: self
                 .active_canvas_layout_recipe
                 .map(|layout_recipe| layout_recipe.id().to_string()),
+            pane_tree,
             panes,
         })
     }
@@ -13372,6 +13450,10 @@ mod tests {
         assert_eq!(pane.active_tab_index, Some(1));
         assert_eq!(pane.pinned_count, 1);
         assert_eq!(pane.tabs.len(), 2);
+        assert_eq!(
+            snapshot.pane_tree.as_ref(),
+            Some(&CanvasSavedPaneTreeSnapshot::Pane { pane: pane.pane })
+        );
         assert_eq!(pane.tabs[0].title.as_str(), "agent.md");
         assert_eq!(
             pane.tabs[0].serialized_item_kind.as_deref(),
