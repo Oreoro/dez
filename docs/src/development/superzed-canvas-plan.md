@@ -91,6 +91,10 @@ Implemented in this phase:
   workspace/rail attention chrome. `center_command_search` now opens the Command
   Palette from the workspace bar when visible, and `height` controls the
   rendered workspace-bar row density.
+- Session Rail thread, terminal, and project-header rows now read
+  `design_system.density`, `design_system.radius`, `design_system.contrast`, and
+  `design_system.show_labels` so the rail can behave like a compact vertical
+  activity bar or a labeled workspace navigator without separate row chrome.
 
 ## Ground truth {#ground-truth}
 
@@ -209,9 +213,13 @@ Current consumers:
 - Markdown preview ContentSheet width: `markdown_preview.max_width` is now an
   explicit override; when it is unset, `design_system.content_width` maps to
   narrow, comfortable, wide, or full readable widths.
+- Session Rail rows: project headers plus thread and terminal rows read
+  `density`, `radius`, `contrast`, and `show_labels`. Hidden labels suppress row
+  text/empty-state copy in icon rail modes while preserving accessible icon
+  targets.
 
-Broader rollout should apply the same runtime model to Session Rail rows, pane
-tabs, layout menus, agent surfaces, Markdown sheets, and command surfaces.
+Broader rollout should apply the same runtime model to pane tabs, layout menus,
+agent surfaces, Markdown sheets, and command surfaces.
 
 ## Pane-first workspace {#pane-first-workspace}
 

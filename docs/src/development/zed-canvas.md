@@ -165,6 +165,10 @@ the source of truth for whether latest-attention timestamps are shown.
 When `session_rail.metadata` contains `layout` or `saved_layout`, project
 headers show the active Canvas recipe name and saved-layout count when row
 labels are visible.
+Session Rail project headers, thread rows, and terminal rows read
+`design_system.density`, `design_system.radius`, `design_system.contrast`, and
+`design_system.show_labels`. Hidden labels suppress row text and empty-state
+copy for compact vertical activity-bar use while retaining icon targets.
 
 `workspace_bar.visibility = "hidden"` suppresses the existing layout
 command/menu affordances, the centered command-search trigger, and workspace/rail

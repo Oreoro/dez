@@ -505,6 +505,12 @@ SessionRail
 Sections with no items disappear. Metadata is configurable. Indicators navigate
 to the exact workspace item that produced the state.
 
+Runtime implementation maps `design_system.density`, `design_system.radius`,
+`design_system.contrast`, and `design_system.show_labels` into Session Rail
+project headers, thread rows, and terminal rows. This lets the rail collapse to
+an icon-first activity bar or expand to a labeled workspace navigator without a
+separate component model.
+
 Command Palette result anatomy:
 
 ```text
@@ -761,7 +767,9 @@ Markdown preview follows `design_system.content_width` when
 ## Implementation order {#implementation-order}
 
 1. Foundation: semantic tokens, density, accessibility mappings, typography,
-   icon sizes, component-state contracts, visual fixtures.
+   icon sizes, component-state contracts, visual fixtures. Session Rail row
+   density, radius, contrast, and label-visibility mappings are implemented for
+   project, thread, and terminal rows.
 2. Pane shell: Pane Frame, Tab Bar, Context Bar, attention rings, Empty Pane,
    Pane Map, layout history, snapshots.
 3. Multiplexer: automatic layouts, layout cycling, optional Prefix Mode,

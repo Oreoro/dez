@@ -1,7 +1,7 @@
 use crate::{CommonAnimationExt, DiffStat, GradientFade, HighlightedLabel, Tooltip, prelude::*};
 
 use gpui::{
-    Animation, AnimationExt, ClickEvent, Hsla, MouseButton, SharedString,
+    Animation, AnimationExt, ClickEvent, Hsla, MouseButton, Pixels, SharedString,
     WindowBackgroundAppearance, pulsating_between,
 };
 use itertools::Itertools as _;
@@ -21,6 +21,30 @@ pub enum WorktreeKind {
     #[default]
     Main,
     Linked,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ThreadItemDensity {
+    Compact,
+    #[default]
+    Balanced,
+    Spacious,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ThreadItemRadius {
+    None,
+    #[default]
+    Subtle,
+    Rounded,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ThreadItemContrast {
+    Low,
+    #[default]
+    Standard,
+    High,
 }
 
 #[derive(Clone, Default)]
@@ -53,6 +77,9 @@ pub struct ThreadItem {
     hovered: bool,
     labels_visible: bool,
     rounded: bool,
+    density: ThreadItemDensity,
+    radius: ThreadItemRadius,
+    contrast: ThreadItemContrast,
     is_truncated: bool,
     added: Option<usize>,
     removed: Option<usize>,
@@ -89,6 +116,9 @@ impl ThreadItem {
             hovered: false,
             labels_visible: true,
             rounded: false,
+            density: ThreadItemDensity::default(),
+            radius: ThreadItemRadius::default(),
+            contrast: ThreadItemContrast::default(),
             is_truncated: true,
             added: None,
             removed: None,
@@ -226,6 +256,22 @@ impl ThreadItem {
         self
     }
 
+    pub fn density(mut self, density: ThreadItemDensity) -> Self {
+        self.density = density;
+        self
+    }
+
+    pub fn radius(mut self, radius: ThreadItemRadius) -> Self {
+        self.rounded = radius != ThreadItemRadius::None;
+        self.radius = radius;
+        self
+    }
+
+    pub fn contrast(mut self, contrast: ThreadItemContrast) -> Self {
+        self.contrast = contrast;
+        self
+    }
+
     pub fn is_truncated(mut self, is_truncated: bool) -> Self {
         self.is_truncated = is_truncated;
         self
@@ -269,17 +315,72 @@ impl RenderOnce for ThreadItem {
 
         let raw_bg = self.base_bg.unwrap_or(sidebar_base_bg);
         let apparent_bg = color.background.blend(raw_bg);
+        let selected_color = match self.contrast {
+            ThreadItemContrast::Low => color.element_active.opacity(0.55),
+            ThreadItemContrast::Standard => color.element_active,
+            ThreadItemContrast::High => color
+                .element_active
+                .blend(color.border_focused.opacity(0.16)),
+        };
 
         let base_bg = if self.selected {
-            apparent_bg.blend(color.element_active)
+            apparent_bg.blend(selected_color)
         } else {
             apparent_bg
         };
 
-        let hover_color = color
-            .element_active
-            .blend(color.element_background.opacity(0.2));
+        let hover_color = match self.contrast {
+            ThreadItemContrast::Low => color
+                .element_active
+                .blend(color.element_background.opacity(0.12)),
+            ThreadItemContrast::Standard => color
+                .element_active
+                .blend(color.element_background.opacity(0.2)),
+            ThreadItemContrast::High => color
+                .element_active
+                .blend(color.border_focused.opacity(0.12)),
+        };
         let hover_bg = apparent_bg.blend(hover_color);
+        let focused_border_color = match self.contrast {
+            ThreadItemContrast::Low => color.border_variant,
+            ThreadItemContrast::Standard | ThreadItemContrast::High => color.border_focused,
+        };
+        let (row_padding_y, row_padding_x, content_height, content_gap, metadata_gap, label_size) =
+            match self.density {
+                ThreadItemDensity::Compact => (
+                    px(2.0),
+                    px(6.0),
+                    px(22.0),
+                    px(4.0),
+                    px(4.0),
+                    LabelSize::XSmall,
+                ),
+                ThreadItemDensity::Balanced => (
+                    px(4.0),
+                    px(6.0),
+                    px(24.0),
+                    px(6.0),
+                    px(6.0),
+                    LabelSize::Default,
+                ),
+                ThreadItemDensity::Spacious => (
+                    px(6.0),
+                    px(8.0),
+                    px(28.0),
+                    px(8.0),
+                    px(8.0),
+                    LabelSize::Default,
+                ),
+            };
+        let icon_box_size = match self.density {
+            ThreadItemDensity::Compact => px(14.0),
+            ThreadItemDensity::Balanced => px(16.0),
+            ThreadItemDensity::Spacious => px(18.0),
+        };
+        let icon_size = match self.density {
+            ThreadItemDensity::Compact => IconSize::XSmall,
+            ThreadItemDensity::Balanced | ThreadItemDensity::Spacious => IconSize::Small,
+        };
 
         let gradient_overlay = GradientFade::new(base_bg, hover_bg, hover_bg)
             .width(px(64.0))
@@ -299,7 +400,7 @@ impl RenderOnce for ThreadItem {
         let icon_container = || {
             h_flex()
                 .id(icon_id.clone())
-                .size_4()
+                .size(icon_box_size)
                 .flex_none()
                 .justify_center()
                 .when(!icon_visible, |this| this.invisible())
@@ -307,25 +408,25 @@ impl RenderOnce for ThreadItem {
         let icon_color = self.icon_color.unwrap_or(Color::Muted);
         let agent_icon = if let Some(icon_char) = self.icon_char {
             Label::new(icon_char)
-                .size(LabelSize::Small)
+                .size(label_size)
                 .color(icon_color)
                 .into_any_element()
         } else if let Some(custom_svg) = self.custom_icon_from_external_svg {
             Icon::from_external_svg(custom_svg)
                 .color(icon_color)
-                .size(IconSize::Small)
+                .size(icon_size)
                 .into_any_element()
         } else {
             Icon::new(self.icon)
                 .color(icon_color)
-                .size(IconSize::Small)
+                .size(icon_size)
                 .into_any_element()
         };
 
         let status_icon = if self.status == AgentThreadStatus::Error {
             Some(
                 Icon::new(IconName::Close)
-                    .size(IconSize::Small)
+                    .size(icon_size)
                     .color(Color::Error),
             )
         } else if self.status == AgentThreadStatus::WaitingForConfirmation {
@@ -348,7 +449,7 @@ impl RenderOnce for ThreadItem {
             icon_container()
                 .child(
                     Icon::new(IconName::LoadCircle)
-                        .size(IconSize::Small)
+                        .size(icon_size)
                         .color(Color::Muted)
                         .with_rotate_animation(2),
                 )
@@ -366,6 +467,7 @@ impl RenderOnce for ThreadItem {
             title_slot
         } else if self.title_generating {
             Label::new(title)
+                .size(label_size)
                 .color(Color::Muted)
                 .with_animation(
                     "generating-title",
@@ -377,11 +479,13 @@ impl RenderOnce for ThreadItem {
                 .into_any_element()
         } else if highlight_positions.is_empty() {
             Label::new(title)
+                .size(label_size)
                 .when_some(self.title_label_color, |label, color| label.color(color))
                 .when(!opaque_window, |label| label.truncate())
                 .into_any_element()
         } else {
             HighlightedLabel::new(title, highlight_positions)
+                .size(label_size)
                 .when_some(self.title_label_color, |label, color| label.color(color))
                 .when(!opaque_window, |label| label.truncate())
                 .into_any_element()
@@ -441,28 +545,35 @@ impl RenderOnce for ThreadItem {
             .flex_shrink_0()
             .overflow_hidden()
             .w_full()
-            .py_1()
-            .px_1p5()
-            .when(self.selected, |s| s.bg(color.element_active))
+            .py(row_padding_y)
+            .px(row_padding_x)
+            .when(self.selected, |s| s.bg(selected_color))
             .border_1()
             .border_color(gpui::transparent_black())
-            .when(self.focused, |s| s.border_color(color.border_focused))
-            .when(self.rounded, |s| s.rounded_sm())
+            .when(self.focused, |s| s.border_color(focused_border_color))
+            .when(
+                self.rounded && self.radius == ThreadItemRadius::Subtle,
+                |s| s.rounded_sm(),
+            )
+            .when(
+                self.rounded && self.radius == ThreadItemRadius::Rounded,
+                |s| s.rounded_lg(),
+            )
             .hover(|s| s.bg(hover_color))
             .on_hover(self.on_hover)
             .child(
                 h_flex()
                     .min_w_0()
                     .w_full()
-                    .h_6()
-                    .gap_2()
+                    .h(content_height)
+                    .gap(content_gap)
                     .justify_between()
                     .child(
                         h_flex()
                             .id("content")
                             .min_w_0()
                             .flex_1()
-                            .gap_1p5()
+                            .gap(metadata_gap)
                             .child(icon)
                             .when(labels_visible, |this| this.child(title_label)),
                     )
@@ -496,7 +607,7 @@ impl RenderOnce for ThreadItem {
             .when(has_metadata, |this| {
                 this.child(
                     h_flex()
-                        .gap_1p5()
+                        .gap(metadata_gap)
                         .child(icon_container()) // Icon Spacing
                         .when(self.archived, |this| {
                             this.child(

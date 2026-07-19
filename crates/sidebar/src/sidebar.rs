@@ -59,17 +59,19 @@ use theme::{ActiveTheme, CLIENT_SIDE_DECORATION_ROUNDING};
 use ui::{
     AgentThreadStatus, CommonAnimationExt, ContextMenu, ContextMenuEntry, GradientFade,
     HighlightedLabel, KeyBinding, PopoverMenu, PopoverMenuHandle, ProjectEmptyState, ScrollAxes,
-    Scrollbars, Tab, ThreadItem, ThreadItemWorktreeInfo, TintColor, Tooltip, WithScrollbar,
-    prelude::*, render_modifiers, right_click_menu,
+    Scrollbars, Tab, ThreadItem, ThreadItemContrast, ThreadItemDensity, ThreadItemRadius,
+    ThreadItemWorktreeInfo, TintColor, Tooltip, WithScrollbar, prelude::*, render_modifiers,
+    right_click_menu,
 };
 use unicode_segmentation::UnicodeSegmentation as _;
 use util::ResultExt as _;
 use util::path_list::PathList;
 use workspace::{
-    CloseWindow, MultiWorkspace, MultiWorkspaceEvent, NextProject, NextThread, Open, OpenMode,
-    PreviousProject, PreviousThread, ProjectGroupKey, SaveIntent, Sidebar as WorkspaceSidebar,
-    SidebarRenderState, SidebarSettings, SidebarSide, Toast, ToggleSidebar, Workspace,
-    notifications::NotificationId, render_sidebar_header_controls_with_state,
+    CloseWindow, DesignSystemSettings, MultiWorkspace, MultiWorkspaceEvent, NextProject,
+    NextThread, Open, OpenMode, PreviousProject, PreviousThread, ProjectGroupKey, SaveIntent,
+    Sidebar as WorkspaceSidebar, SidebarRenderState, SidebarSettings, SidebarSide, Toast,
+    ToggleSidebar, Workspace, notifications::NotificationId,
+    render_sidebar_header_controls_with_state,
 };
 
 use git_ui::worktree_service::{RemoteBranchName, worktree_create_targets};
@@ -209,6 +211,39 @@ fn session_rail_metadata_contains(metadata: &[String], field: &str) -> bool {
     metadata
         .iter()
         .any(|candidate| candidate.eq_ignore_ascii_case(field))
+}
+
+fn session_rail_labels_visible(
+    session_rail_settings: &SessionRailSettings,
+    design_system: &DesignSystemSettings,
+) -> bool {
+    !session_rail_settings.is_icon_mode() && design_system.show_contextual_labels()
+}
+
+fn canvas_thread_item_style(
+    thread_item: ThreadItem,
+    design_system: &DesignSystemSettings,
+) -> ThreadItem {
+    let density = match design_system.density {
+        settings::CanvasDensity::Compact => ThreadItemDensity::Compact,
+        settings::CanvasDensity::Balanced => ThreadItemDensity::Balanced,
+        settings::CanvasDensity::Spacious => ThreadItemDensity::Spacious,
+    };
+    let radius = match design_system.radius {
+        settings::CanvasRadius::None => ThreadItemRadius::None,
+        settings::CanvasRadius::Subtle => ThreadItemRadius::Subtle,
+        settings::CanvasRadius::Rounded => ThreadItemRadius::Rounded,
+    };
+    let contrast = match design_system.contrast {
+        settings::CanvasContrast::Low => ThreadItemContrast::Low,
+        settings::CanvasContrast::Standard => ThreadItemContrast::Standard,
+        settings::CanvasContrast::High => ThreadItemContrast::High,
+    };
+
+    thread_item
+        .density(density)
+        .radius(radius)
+        .contrast(contrast)
 }
 
 fn canvas_layout_recipe_label(recipe_id: &str) -> Option<&'static str> {
@@ -2800,9 +2835,30 @@ impl Sidebar {
 
         let has_filter = self.has_filter_query(cx);
         let session_rail_settings = SessionRailSettings::get_global(cx);
-        let labels_visible = !session_rail_settings.is_icon_mode();
+        let design_system = DesignSystemSettings::get_global(cx);
+        let labels_visible = session_rail_labels_visible(&session_rail_settings, &design_system);
         let show_agent_attention =
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
+        let (header_height, header_padding_left, header_padding_right, header_gap, label_size) =
+            match design_system.density {
+                settings::CanvasDensity::Compact => {
+                    (px(24.0), px(6.0), px(4.0), px(4.0), LabelSize::XSmall)
+                }
+                settings::CanvasDensity::Balanced => (
+                    Tab::content_height(cx),
+                    px(8.0),
+                    px(6.0),
+                    px(4.0),
+                    LabelSize::Small,
+                ),
+                settings::CanvasDensity::Spacious => (
+                    Tab::container_height(cx),
+                    px(10.0),
+                    px(8.0),
+                    px(6.0),
+                    LabelSize::Small,
+                ),
+            };
 
         let id_prefix = if is_sticky { "sticky-" } else { "" };
         let id = SharedString::from(format!("{id_prefix}project-header-{ix}"));
@@ -2825,11 +2881,13 @@ impl Sidebar {
 
         let label = if highlight_positions.is_empty() {
             Label::new(label.clone())
+                .size(label_size)
                 .when(!is_active, |this| this.color(Color::Muted))
                 .when(!opaque_window, |this| this.truncate())
                 .into_any_element()
         } else {
             HighlightedLabel::new(label.clone(), highlight_positions.to_vec())
+                .size(label_size)
                 .when(!is_active, |this| this.color(Color::Muted))
                 .when(!opaque_window, |this| this.truncate())
                 .into_any_element()
@@ -2838,10 +2896,30 @@ impl Sidebar {
         let color = cx.theme().colors();
         let base_bg = color.editor_background;
 
-        let hover_base = color
-            .element_active
-            .blend(color.element_background.opacity(0.2));
+        let hover_base = match design_system.contrast {
+            settings::CanvasContrast::Low => color
+                .element_active
+                .blend(color.element_background.opacity(0.12)),
+            settings::CanvasContrast::Standard => color
+                .element_active
+                .blend(color.element_background.opacity(0.2)),
+            settings::CanvasContrast::High => color
+                .element_active
+                .blend(color.border_focused.opacity(0.12)),
+        };
         let hover_solid = base_bg.blend(hover_base);
+        let active_background = match design_system.contrast {
+            settings::CanvasContrast::Low => color.element_active.opacity(0.55),
+            settings::CanvasContrast::Standard => color.element_active,
+            settings::CanvasContrast::High => color
+                .element_active
+                .blend(color.border_focused.opacity(0.16)),
+        };
+        let focused_border_color = if design_system.is_low_contrast() {
+            color.border_variant
+        } else {
+            color.border_focused
+        };
 
         let group_name_for_gradient = group_name.clone();
         let gradient_overlay = move || {
@@ -2859,30 +2937,45 @@ impl Sidebar {
             .group(&group_name)
             .when(!has_filter, |this| this.cursor_pointer())
             .relative()
-            .h(Tab::content_height(cx))
+            .h(header_height)
             .w_full()
-            .pl_2()
-            .pr_1p5()
+            .pl(header_padding_left)
+            .pr(header_padding_right)
             .justify_between()
             .border_1()
             .map(|this| {
                 if is_focused {
-                    this.border_color(color.border_focused)
+                    this.border_color(focused_border_color)
                 } else {
                     this.border_color(gpui::transparent_black())
                 }
             })
+            .when(is_active, |this| this.bg(active_background))
+            .when(
+                design_system.radius == settings::CanvasRadius::Subtle,
+                |this| this.rounded_sm(),
+            )
+            .when(
+                design_system.radius == settings::CanvasRadius::Rounded,
+                |this| this.rounded_lg(),
+            )
             .when(!has_filter, |this| this.hover(|s| s.bg(hover_solid)))
             .child(
                 h_flex()
                     .relative()
                     .min_w_0()
                     .w_full()
-                    .gap_1()
+                    .gap(header_gap)
                     .when(!labels_visible, |this| {
                         this.child(
                             Icon::new(IconName::FolderOpen)
-                                .size(IconSize::Small)
+                                .size(
+                                    if design_system.density == settings::CanvasDensity::Compact {
+                                        IconSize::XSmall
+                                    } else {
+                                        IconSize::Small
+                                    },
+                                )
                                 .color(Color::Muted),
                         )
                     })
@@ -2960,8 +3053,8 @@ impl Sidebar {
             .children(opaque_window.then(|| gradient_overlay()))
             .child(
                 h_flex()
-                    .gap_px()
-                    .pr_1p5()
+                    .gap(px(1.0))
+                    .pr(header_padding_right)
                     .children(opaque_window.then(|| gradient_overlay()))
                     .child(self.render_new_thread_button(ix, id_prefix, key, &group_name, cx))
                     .child(self.render_project_header_ellipsis_menu(
@@ -2999,7 +3092,7 @@ impl Sidebar {
             )
             .block_mouse_except_scroll();
 
-        if !is_collapsed && !has_threads {
+        if labels_visible && !is_collapsed && !has_threads {
             v_flex()
                 .w_full()
                 .child(header)
@@ -7145,7 +7238,8 @@ impl Sidebar {
         let color = cx.theme().colors();
         let sidebar_bg = color.editor_background;
         let session_rail_settings = SessionRailSettings::get_global(cx);
-        let labels_visible = !session_rail_settings.is_icon_mode();
+        let design_system = DesignSystemSettings::get_global(cx);
+        let labels_visible = session_rail_labels_visible(&session_rail_settings, &design_system);
         let show_agent_attention =
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
 
@@ -7179,187 +7273,194 @@ impl Sidebar {
                 .regenerating_titles
                 .contains(&thread.metadata.thread_id);
 
-        let thread_item = ThreadItem::new(id, title.clone())
-            .base_bg(sidebar_bg)
-            .icon(icon)
-            .when(is_draft, |this| {
-                this.icon_color(Color::Custom(cx.theme().colors().icon_muted.opacity(0.2)))
-            })
-            .status(
-                session_rail_settings
-                    .show_agent_state_metadata
-                    .then_some(thread.status)
-                    .unwrap_or_default(),
-            )
-            .is_remote(is_remote)
-            .when_some(icon_svg, |this, svg| {
-                this.custom_icon_from_external_svg(svg)
-            })
-            .worktrees(worktrees)
-            .timestamp(timestamp)
-            .highlight_positions(thread.highlight_positions.to_vec())
-            .title_generating(title_generating)
-            .labels_visible(labels_visible)
-            .notified(
-                show_agent_attention
-                    && session_rail_settings.show_latest_attention_metadata
-                    && has_notification,
-            )
-            .when(thread.diff_stats.lines_added > 0, |this| {
-                this.added(thread.diff_stats.lines_added as usize)
-            })
-            .when(thread.diff_stats.lines_removed > 0, |this| {
-                this.removed(thread.diff_stats.lines_removed as usize)
-            })
-            .selected(is_selected)
-            .focused(is_focused)
-            .hovered(is_hovered)
-            .on_hover(cx.listener(move |this, is_hovered: &bool, _window, cx| {
-                if *is_hovered {
-                    this.hovered_thread_index = Some(ix);
-                } else if this.hovered_thread_index == Some(ix) {
-                    this.hovered_thread_index = None;
-                }
-                cx.notify();
-            }))
-            .when(is_renaming, |this| {
-                this.is_truncated(false).title_slot(
-                    div()
-                        .h_full()
-                        .min_w_0()
-                        .flex_1()
-                        .capture_action(cx.listener(
-                            |this, _: &editor::actions::Newline, window, cx| {
-                                this.finish_thread_rename(window, cx);
-                            },
-                        ))
-                        .on_action(cx.listener(|this, _: &Confirm, window, cx| {
-                            this.finish_thread_rename(window, cx);
-                        }))
-                        .on_action(
-                            cx.listener(|this, _: &editor::actions::Cancel, window, cx| {
-                                this.finish_thread_rename(window, cx);
-                            }),
-                        )
-                        .child(title_editor),
+        let thread_item =
+            canvas_thread_item_style(ThreadItem::new(id, title.clone()), &design_system)
+                .base_bg(sidebar_bg)
+                .icon(icon)
+                .when(is_draft, |this| {
+                    this.icon_color(Color::Custom(cx.theme().colors().icon_muted.opacity(0.2)))
+                })
+                .status(
+                    session_rail_settings
+                        .show_agent_state_metadata
+                        .then_some(thread.status)
+                        .unwrap_or_default(),
                 )
-            })
-            .when(is_hovered && !is_renaming, |this| {
-                let rename_button = IconButton::new(("rename-thread", ix), IconName::Pencil)
-                    .icon_size(IconSize::Small)
-                    .tooltip({
-                        let focus_handle = focus_handle.clone();
-                        move |_window, cx| {
-                            Tooltip::for_action_in(
-                                "Rename Thread",
-                                &RenameSelectedThread,
-                                &focus_handle,
-                                cx,
-                            )
-                        }
-                    })
-                    .on_click({
-                        let title = title.clone();
-                        cx.listener(move |this, _, window, cx| {
-                            this.start_renaming_thread(
-                                ix,
-                                thread_id_for_actions,
-                                title.clone(),
-                                window,
-                                cx,
-                            );
-                        })
-                    });
-
-                let contextual_action: Option<AnyElement> = if is_running {
-                    Some(
-                        IconButton::new("stop-thread", IconName::Stop)
-                            .icon_size(IconSize::Small)
-                            .icon_color(Color::Error)
-                            .style(ButtonStyle::Tinted(TintColor::Error))
-                            .tooltip(Tooltip::text("Stop Generation"))
-                            .on_click(cx.listener(move |this, _, _window, cx| {
-                                this.stop_thread(&thread_id_for_actions, cx);
+                .is_remote(is_remote)
+                .when_some(icon_svg, |this, svg| {
+                    this.custom_icon_from_external_svg(svg)
+                })
+                .worktrees(worktrees)
+                .timestamp(timestamp)
+                .highlight_positions(thread.highlight_positions.to_vec())
+                .title_generating(title_generating)
+                .labels_visible(labels_visible)
+                .notified(
+                    show_agent_attention
+                        && session_rail_settings.show_latest_attention_metadata
+                        && has_notification,
+                )
+                .when(thread.diff_stats.lines_added > 0, |this| {
+                    this.added(thread.diff_stats.lines_added as usize)
+                })
+                .when(thread.diff_stats.lines_removed > 0, |this| {
+                    this.removed(thread.diff_stats.lines_removed as usize)
+                })
+                .selected(is_selected)
+                .focused(is_focused)
+                .hovered(is_hovered)
+                .on_hover(cx.listener(move |this, is_hovered: &bool, _window, cx| {
+                    if *is_hovered {
+                        this.hovered_thread_index = Some(ix);
+                    } else if this.hovered_thread_index == Some(ix) {
+                        this.hovered_thread_index = None;
+                    }
+                    cx.notify();
+                }))
+                .when(is_renaming, |this| {
+                    this.is_truncated(false).title_slot(
+                        div()
+                            .h_full()
+                            .min_w_0()
+                            .flex_1()
+                            .capture_action(cx.listener(
+                                |this, _: &editor::actions::Newline, window, cx| {
+                                    this.finish_thread_rename(window, cx);
+                                },
+                            ))
+                            .on_action(cx.listener(|this, _: &Confirm, window, cx| {
+                                this.finish_thread_rename(window, cx);
                             }))
-                            .into_any_element(),
+                            .on_action(cx.listener(
+                                |this, _: &editor::actions::Cancel, window, cx| {
+                                    this.finish_thread_rename(window, cx);
+                                },
+                            ))
+                            .child(title_editor),
                     )
-                } else {
-                    match thread.draft {
-                        Some(DraftKind::Empty) => None,
-                        Some(DraftKind::WithContent) => Some(
-                            IconButton::new("discard_thread", IconName::Close)
+                })
+                .when(is_hovered && !is_renaming, |this| {
+                    let rename_button = IconButton::new(("rename-thread", ix), IconName::Pencil)
+                        .icon_size(IconSize::Small)
+                        .tooltip({
+                            let focus_handle = focus_handle.clone();
+                            move |_window, cx| {
+                                Tooltip::for_action_in(
+                                    "Rename Thread",
+                                    &RenameSelectedThread,
+                                    &focus_handle,
+                                    cx,
+                                )
+                            }
+                        })
+                        .on_click({
+                            let title = title.clone();
+                            cx.listener(move |this, _, window, cx| {
+                                this.start_renaming_thread(
+                                    ix,
+                                    thread_id_for_actions,
+                                    title.clone(),
+                                    window,
+                                    cx,
+                                );
+                            })
+                        });
+
+                    let contextual_action: Option<AnyElement> = if is_running {
+                        Some(
+                            IconButton::new("stop-thread", IconName::Stop)
                                 .icon_size(IconSize::Small)
-                                .tooltip(Tooltip::text("Discard Draft"))
-                                .on_click({
-                                    let thread_workspace = thread_workspace.clone();
-                                    cx.listener(move |this, _, window, cx| {
-                                        this.remove_draft(
-                                            thread_id_for_actions,
-                                            &thread_workspace,
-                                            window,
-                                            cx,
-                                        );
-                                    })
-                                })
+                                .icon_color(Color::Error)
+                                .style(ButtonStyle::Tinted(TintColor::Error))
+                                .tooltip(Tooltip::text("Stop Generation"))
+                                .on_click(cx.listener(move |this, _, _window, cx| {
+                                    this.stop_thread(&thread_id_for_actions, cx);
+                                }))
                                 .into_any_element(),
-                        ),
-                        None => Some(
-                            IconButton::new("archive-thread", IconName::Archive)
-                                .icon_size(IconSize::Small)
-                                .tooltip({
-                                    let focus_handle = focus_handle.clone();
-                                    move |_window, cx| {
-                                        Tooltip::for_action_in(
-                                            "Archive Thread",
-                                            &ArchiveSelectedThread,
-                                            &focus_handle,
-                                            cx,
-                                        )
-                                    }
-                                })
-                                .on_click({
-                                    let session_id = session_id_for_delete.clone();
-                                    cx.listener(move |this, _, window, cx| {
-                                        if let Some(ref session_id) = session_id {
-                                            this.archive_thread(session_id, window, cx);
+                        )
+                    } else {
+                        match thread.draft {
+                            Some(DraftKind::Empty) => None,
+                            Some(DraftKind::WithContent) => Some(
+                                IconButton::new("discard_thread", IconName::Close)
+                                    .icon_size(IconSize::Small)
+                                    .tooltip(Tooltip::text("Discard Draft"))
+                                    .on_click({
+                                        let thread_workspace = thread_workspace.clone();
+                                        cx.listener(move |this, _, window, cx| {
+                                            this.remove_draft(
+                                                thread_id_for_actions,
+                                                &thread_workspace,
+                                                window,
+                                                cx,
+                                            );
+                                        })
+                                    })
+                                    .into_any_element(),
+                            ),
+                            None => Some(
+                                IconButton::new("archive-thread", IconName::Archive)
+                                    .icon_size(IconSize::Small)
+                                    .tooltip({
+                                        let focus_handle = focus_handle.clone();
+                                        move |_window, cx| {
+                                            Tooltip::for_action_in(
+                                                "Archive Thread",
+                                                &ArchiveSelectedThread,
+                                                &focus_handle,
+                                                cx,
+                                            )
                                         }
                                     })
-                                })
-                                .into_any_element(),
-                        ),
-                    }
-                };
+                                    .on_click({
+                                        let session_id = session_id_for_delete.clone();
+                                        cx.listener(move |this, _, window, cx| {
+                                            if let Some(ref session_id) = session_id {
+                                                this.archive_thread(session_id, window, cx);
+                                            }
+                                        })
+                                    })
+                                    .into_any_element(),
+                            ),
+                        }
+                    };
 
-                this.action_slot(
-                    h_flex()
-                        .gap_0p5()
-                        .child(rename_button)
-                        .when_some(contextual_action, |this, action| this.child(action)),
-                )
-            })
-            .on_click({
-                let thread_workspace = thread_workspace.clone();
-                cx.listener(move |this, _, window, cx| {
-                    this.selection = None;
-                    match &thread_workspace {
-                        ThreadEntryWorkspace::Open(workspace) => {
-                            this.activate_thread(metadata.clone(), workspace, false, window, cx);
-                        }
-                        ThreadEntryWorkspace::Closed {
-                            folder_paths,
-                            project_group_key,
-                        } => {
-                            this.open_workspace_and_activate_thread(
-                                metadata.clone(),
-                                folder_paths.clone(),
-                                project_group_key,
-                                window,
-                                cx,
-                            );
-                        }
-                    }
+                    this.action_slot(
+                        h_flex()
+                            .gap_0p5()
+                            .child(rename_button)
+                            .when_some(contextual_action, |this, action| this.child(action)),
+                    )
                 })
-            });
+                .on_click({
+                    let thread_workspace = thread_workspace.clone();
+                    cx.listener(move |this, _, window, cx| {
+                        this.selection = None;
+                        match &thread_workspace {
+                            ThreadEntryWorkspace::Open(workspace) => {
+                                this.activate_thread(
+                                    metadata.clone(),
+                                    workspace,
+                                    false,
+                                    window,
+                                    cx,
+                                );
+                            }
+                            ThreadEntryWorkspace::Closed {
+                                folder_paths,
+                                project_group_key,
+                            } => {
+                                this.open_workspace_and_activate_thread(
+                                    metadata.clone(),
+                                    folder_paths.clone(),
+                                    project_group_key,
+                                    window,
+                                    cx,
+                                );
+                            }
+                        }
+                    })
+                });
 
         if is_draft || thread.metadata.session_id.is_none() {
             return thread_item.into_any_element();
@@ -7521,7 +7622,8 @@ impl Sidebar {
 
         let display_title = terminal.metadata.display_title();
         let agent_ui_settings = CanvasAgentUiSettings::get_global(cx);
-        let labels_visible = !session_rail_settings.is_icon_mode();
+        let design_system = DesignSystemSettings::get_global(cx);
+        let labels_visible = session_rail_labels_visible(&session_rail_settings, &design_system);
         let show_agent_attention =
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
         let terminal_agent_kind = terminal.detected_agent_kind;
@@ -7533,7 +7635,7 @@ impl Sidebar {
                 None => (None, display_title, terminal.highlight_positions.clone()),
             };
 
-        ThreadItem::new(id, title)
+        canvas_thread_item_style(ThreadItem::new(id, title), &design_system)
             .base_bg(sidebar_bg)
             .icon(
                 terminal_agent_kind
