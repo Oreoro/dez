@@ -68,6 +68,9 @@ Implemented in this phase:
 - Additional tab command aliases now resolve for the implemented Canvas tab
   workflow: `tab::New`, `tab::Close`, `tab::Pin`, `tab::MoveLeft`,
   `tab::MoveRight`, and `tab::Search`.
+- Pane command aliases now resolve for exact zoom and equalize workflows:
+  `pane::Zoom` aliases `workspace::ToggleZoom`, and `pane::Equalize` aliases
+  `workspace::ResetPaneSizes`.
 - `workspace_bar.show_layout` now controls whether Canvas layout commands show
   in the Command Palette and Panel Layout chrome.
 - `workspace_bar.show_agent_attention` now controls workspace-level attention

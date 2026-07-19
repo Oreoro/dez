@@ -801,6 +801,7 @@ actions!(
         /// Resizes the active pane one step downward.
         ResizePaneDown,
         /// Resets all panes in the center group to equal sizes, preserving the split layout.
+        #[action(deprecated_aliases = ["pane::Equalize"])]
         ResetPaneSizes,
         /// Reloads the application
         Reload,
@@ -819,6 +820,7 @@ actions!(
         /// Toggles edit prediction feature globally for all files.
         ToggleEditPrediction,
         /// Toggles zoom on the active pane.
+        #[action(deprecated_aliases = ["pane::Zoom"])]
         ToggleZoom,
         /// Toggles maximizing the active editor pane within the center area,
         /// hiding other split panes but leaving docks/panels unaffected.

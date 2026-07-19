@@ -345,15 +345,19 @@ pane::SplitUp
 pane::SplitDown
 pane::CloseActiveItem (alias: pane::Close)
 pane::ReopenClosedItem (aliases: pane::RestoreClosed, tab::Reopen)
-pane::Zoom
+workspace::ToggleZoom (alias: pane::Zoom)
 pane::Swap
 pane::Move
 pane::Rotate
-pane::Equalize
+workspace::ResetPaneSizes (alias: pane::Equalize)
 pane::Resize
 pane::BreakToWindow
 pane::JoinFromWindow
 ```
+
+Generic Canvas aliases for `pane::Swap`, `pane::Move`, `pane::Rotate`,
+`pane::Resize`, `pane::BreakToWindow`, and `pane::JoinFromWindow` remain future
+until they have exact action payloads or runtime implementations.
 
 Tab manipulation actions:
 
