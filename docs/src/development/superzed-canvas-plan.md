@@ -242,7 +242,9 @@ Use the existing panel-as-pane bridge as the migration path:
   changes, preserving tabs and live processes while avoiding squeezed columns.
   Ultrawide workspaces now reflow vertical-first recipes such as Main Top,
   Code/Run/Observe, Debug, and Even Rows into horizontal-first layouts while
-  preserving the explicit Portrait Display recipe.
+  preserving the explicit Portrait Display recipe. Four-Agent Matrix and
+  Six-Agent Supervisor also prefer column-first split directions when newly
+  applied on ultrawide workspaces.
 - Remove the one-visible-agent bottleneck. Multiple agent tabs and terminal
   agents can be visible across panes and windows.
 - Support direct pane/tab dragging, keyboard movement, context-menu movement,
@@ -308,7 +310,8 @@ Proper Pane Layout is the Canvas migration target, not just a visual skin:
   claiming terminal, agent, or browser processes were resumed.
 - `pane_grid.auto_reflow` should choose semantic variants for narrow,
   portrait, ultrawide, and many-agent states without closing items. Narrow,
-  portrait, and first ultrawide orientation variants are implemented.
+  portrait, first ultrawide orientation variants, and first many-agent
+  ultrawide recipe-application variants are implemented.
 
 Implementation order:
 
@@ -327,8 +330,10 @@ Implementation order:
 4. Add resize-driven `auto_reflow` using semantic recipe variants rather than
    raw pixel snapshots. Initial recipe-application reflow and resize-triggered
    root-orientation reflow for active recipes are implemented. First ultrawide
-   orientation variants are implemented for vertical-first recipes; many-agent
-   variants are still pending.
+   orientation variants are implemented for vertical-first recipes, and
+   Four-Agent Matrix plus Six-Agent Supervisor prefer ultrawide column-first
+   splits when newly applied. Live tree reshaping for already-open many-agent
+   layouts remains future work.
 5. Add UI for named saved layouts and layout history once the underlying
    metadata is stable. Three fixed durable saved-layout slots are implemented
    in the Panel Layout menu, and manual structural changes mark the active

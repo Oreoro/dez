@@ -302,6 +302,10 @@ impl CanvasLayoutRecipe {
         )
     }
 
+    fn should_reflow_agent_matrix_to_columns_on_ultrawide(self) -> bool {
+        matches!(self, Self::FourAgentMatrix | Self::SixAgentSupervisor)
+    }
+
     fn from_name(name: &str) -> Option<Self> {
         match normalized_canvas_layout_recipe_name(name).as_str() {
             "full" | "canvas" | "canvas_full" => Some(Self::Full),
@@ -5925,8 +5929,14 @@ impl Workspace {
         let should_reflow_to_horizontal = !should_reflow_to_vertical
             && layout_recipe.should_reflow_vertical_to_horizontal_on_ultrawide()
             && self.canvas_workspace_is_ultrawide();
+        let should_reflow_agent_matrix_to_columns = !should_reflow_to_vertical
+            && layout_recipe.should_reflow_agent_matrix_to_columns_on_ultrawide()
+            && self.canvas_workspace_is_ultrawide();
 
-        if !should_reflow_to_vertical && !should_reflow_to_horizontal {
+        if !should_reflow_to_vertical
+            && !should_reflow_to_horizontal
+            && !should_reflow_agent_matrix_to_columns
+        {
             return split_directions.to_vec();
         }
 
@@ -5936,7 +5946,9 @@ impl Workspace {
                 SplitDirection::Left | SplitDirection::Right if should_reflow_to_vertical => {
                     SplitDirection::Down
                 }
-                SplitDirection::Up | SplitDirection::Down if should_reflow_to_horizontal => {
+                SplitDirection::Up | SplitDirection::Down
+                    if should_reflow_to_horizontal || should_reflow_agent_matrix_to_columns =>
+                {
                     SplitDirection::Right
                 }
                 _ => *direction,
