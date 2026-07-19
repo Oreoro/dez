@@ -1,4 +1,5 @@
 mod active_toolchain;
+mod canvas;
 
 pub use active_toolchain::ActiveToolchain;
 use anyhow::Context as _;
@@ -22,8 +23,7 @@ use std::{
     time::Duration,
 };
 use ui::{
-    Divider, HighlightedLabel, KeyBinding, List, ListItem, ListItemSpacing, Navigable,
-    NavigableEntry, prelude::*,
+    Divider, HighlightedLabel, KeyBinding, List, ListItem, Navigable, NavigableEntry, prelude::*,
 };
 use util::{ResultExt, maybe, paths::PathStyle, rel_path::RelPath};
 use workspace::{ModalView, Workspace};
@@ -112,7 +112,10 @@ impl AddToolchainState {
             let (lister, rx) = Self::create_path_browser_delegate(project.clone(), cx);
             let path_style = project.read(cx).path_style(cx);
             let picker = cx.new(|cx| {
-                let picker = Picker::uniform_list(lister, window, cx);
+                let picker = Picker::uniform_list(lister, window, cx)
+                    .surface_density(canvas::toolchain_picker_density(cx))
+                    .surface_radius(canvas::toolchain_picker_radius(cx))
+                    .surface_contrast(canvas::toolchain_picker_contrast(cx));
                 let mut worktree_root = worktree_root_path.to_string_lossy().into_owned();
                 worktree_root.push_str(path_style.primary_separator());
                 picker.set_query(&worktree_root, window, cx);
@@ -172,9 +175,9 @@ impl AddToolchainState {
                         .child(Divider::horizontal())
                         .child(
                             h_flex()
-                                .p_1()
+                                .p(canvas::toolchain_footer_padding(cx))
                                 .justify_between()
-                                .gap_2()
+                                .gap(canvas::toolchain_footer_gap(cx))
                                 .child(Label::new("Select Toolchain Path").color(Color::Muted).map(
                                     |this| {
                                         if is_loading {
@@ -232,7 +235,10 @@ impl AddToolchainState {
                             let (delegate, rx) =
                                 Self::create_path_browser_delegate(this.project.clone(), cx);
                             picker.update(cx, |picker, cx| {
-                                *picker = Picker::uniform_list(delegate, window, cx);
+                                *picker = Picker::uniform_list(delegate, window, cx)
+                                    .surface_density(canvas::toolchain_picker_density(cx))
+                                    .surface_radius(canvas::toolchain_picker_radius(cx))
+                                    .surface_contrast(canvas::toolchain_picker_contrast(cx));
                                 picker.set_query(path.to_string_lossy().as_ref(), window, cx);
                             });
                             *input_state = Self::wait_for_path(rx, window, cx);
@@ -383,7 +389,6 @@ impl Focusable for State {
 }
 impl Render for AddToolchainState {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = cx.theme().clone();
         let weak = self.weak.upgrade();
         let label = SharedString::new_static("Add");
 
@@ -391,10 +396,10 @@ impl Render for AddToolchainState {
             .size_full()
             // todo: These modal styles shouldn't be needed as the modal picker already has `elevation_3`
             // They get duplicated in the middle state of adding a virtual env, but then are needed for this last state
-            .bg(cx.theme().colors().elevated_surface_background)
+            .bg(canvas::toolchain_modal_background(cx))
             .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .rounded_lg()
+            .border_color(canvas::toolchain_border(cx))
+            .map(|modal| canvas::toolchain_modal_radius(modal, cx))
             .when_some(weak, |this, weak| {
                 this.on_action(window.listener_for(
                     &weak,
@@ -427,9 +432,9 @@ impl Render for AddToolchainState {
                             .child(
                                 h_flex()
                                     .w_full()
-                                    .p_2()
+                                    .p(canvas::toolchain_editor_padding(cx))
                                     .border_b_1()
-                                    .border_color(theme.colors().border)
+                                    .border_color(canvas::toolchain_border(cx))
                                     .child(editor.clone()),
                             )
                             .child(
@@ -471,10 +476,10 @@ impl Render for AddToolchainState {
                                                                 .contains_focused(window, cx),
                                                     )
                                                     .inset(true)
-                                                    .spacing(ListItemSpacing::Sparse)
+                                                    .spacing(canvas::toolchain_row_spacing(cx))
                                                     .child(
                                                         h_flex()
-                                                            .gap_2()
+                                                            .gap(canvas::toolchain_row_gap(cx))
                                                             .child(Label::new(label))
                                                             .child(
                                                                 Label::new(description)
@@ -492,44 +497,53 @@ impl Render for AddToolchainState {
                                         }),
                                     ))
                                     .child(Divider::horizontal())
-                                    .child(h_flex().p_1p5().justify_end().map(|this| {
-                                        let is_disabled = editor.read(cx).is_empty(cx);
-                                        let handle = self.focus_handle(cx);
-                                        this.child(
-                                            Button::new("add-toolchain", label)
-                                                .disabled(is_disabled)
-                                                .key_binding(KeyBinding::for_action_in(
-                                                    &menu::Confirm,
-                                                    &handle,
-                                                    cx,
-                                                ))
-                                                .on_click(cx.listener(|this, _, window, cx| {
-                                                    this.confirm_toolchain(
-                                                        &menu::Confirm,
-                                                        window,
-                                                        cx,
-                                                    );
-                                                }))
-                                                .map(|this| {
-                                                    if false {
-                                                        this.with_animation(
-                                                            "inspecting-user-toolchain",
-                                                            Animation::new(Duration::from_millis(
-                                                                500,
-                                                            ))
-                                                            .repeat()
-                                                            .with_easing(pulsating_between(
-                                                                0.4, 0.8,
-                                                            )),
-                                                            |label, delta| label.alpha(delta),
-                                                        )
-                                                        .into_any()
-                                                    } else {
-                                                        this.into_any_element()
-                                                    }
-                                                }),
-                                        )
-                                    })),
+                                    .child(
+                                        h_flex()
+                                            .p(canvas::toolchain_footer_padding(cx))
+                                            .justify_end()
+                                            .map(|this| {
+                                                let is_disabled = editor.read(cx).is_empty(cx);
+                                                let handle = self.focus_handle(cx);
+                                                this.child(
+                                                    Button::new("add-toolchain", label)
+                                                        .disabled(is_disabled)
+                                                        .key_binding(KeyBinding::for_action_in(
+                                                            &menu::Confirm,
+                                                            &handle,
+                                                            cx,
+                                                        ))
+                                                        .on_click(cx.listener(
+                                                            |this, _, window, cx| {
+                                                                this.confirm_toolchain(
+                                                                    &menu::Confirm,
+                                                                    window,
+                                                                    cx,
+                                                                );
+                                                            },
+                                                        ))
+                                                        .map(|this| {
+                                                            if false {
+                                                                this.with_animation(
+                                                                    "inspecting-user-toolchain",
+                                                                    Animation::new(
+                                                                        Duration::from_millis(500),
+                                                                    )
+                                                                    .repeat()
+                                                                    .with_easing(pulsating_between(
+                                                                        0.4, 0.8,
+                                                                    )),
+                                                                    |label, delta| {
+                                                                        label.alpha(delta)
+                                                                    },
+                                                                )
+                                                                .into_any()
+                                                            } else {
+                                                                this.into_any_element()
+                                                            }
+                                                        }),
+                                                )
+                                            }),
+                                    ),
                             )
                             .into_any_element(),
                     );
@@ -684,6 +698,9 @@ impl ToolchainSelector {
                     cx,
                 );
                 Picker::uniform_list(delegate, window, cx)
+                    .surface_density(canvas::toolchain_picker_density(cx))
+                    .surface_radius(canvas::toolchain_picker_radius(cx))
+                    .surface_contrast(canvas::toolchain_picker_contrast(cx))
             });
             let picker_focus_handle = picker.focus_handle(cx);
             picker.update(cx, |picker, _| {
@@ -1070,7 +1087,7 @@ impl PickerDelegate for ToolchainSelectorDelegate {
         Some(
             ListItem::new(id)
                 .inset(true)
-                .spacing(ListItemSpacing::Sparse)
+                .spacing(canvas::toolchain_row_spacing(cx))
                 .toggle_state(selected)
                 .child(HighlightedLabel::new(label, name_highlights))
                 .child(
@@ -1132,8 +1149,8 @@ impl PickerDelegate for ToolchainSelectorDelegate {
                 .child(Divider::horizontal())
                 .child(
                     h_flex()
-                        .p_1p5()
-                        .gap_0p5()
+                        .p(canvas::toolchain_footer_padding(cx))
+                        .gap(canvas::toolchain_footer_gap(cx))
                         .justify_end()
                         .child(
                             Button::new("xd", self.add_toolchain_text.clone())
