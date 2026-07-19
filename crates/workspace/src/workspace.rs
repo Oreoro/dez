@@ -500,6 +500,15 @@ impl From<Axis> for CanvasSavedPaneTreeAxis {
     }
 }
 
+impl CanvasSavedPaneTreeAxis {
+    fn to_axis(self) -> Axis {
+        match self {
+            Self::Horizontal => Axis::Horizontal,
+            Self::Vertical => Axis::Vertical,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 enum CanvasSavedPaneTreeSnapshot {
@@ -603,6 +612,45 @@ fn canvas_saved_pane_tree_snapshot(
                 flex_weights_millis,
                 members,
             })
+        }
+    }
+}
+
+fn canvas_saved_pane_tree_member(
+    snapshot: &CanvasSavedPaneTreeSnapshot,
+    panes_by_id: &BTreeMap<CanvasSavedPaneId, Entity<Pane>>,
+    used_panes: &mut HashSet<CanvasSavedPaneId>,
+) -> Option<Member> {
+    match snapshot {
+        CanvasSavedPaneTreeSnapshot::Pane { pane } => {
+            if !used_panes.insert(*pane) {
+                return None;
+            }
+            panes_by_id.get(pane).cloned().map(Member::Pane)
+        }
+        CanvasSavedPaneTreeSnapshot::Axis {
+            axis,
+            flex_weights_millis,
+            members,
+        } => {
+            let members = members
+                .iter()
+                .map(|member| canvas_saved_pane_tree_member(member, panes_by_id, used_panes))
+                .collect::<Option<Vec<_>>>()?;
+            if members.is_empty() {
+                return None;
+            }
+
+            let flex_weights = flex_weights_millis
+                .iter()
+                .map(|flex| (*flex as f32 / 1000.).max(f32::EPSILON))
+                .collect::<Vec<_>>();
+
+            Some(Member::Axis(PaneAxis::load(
+                axis.to_axis(),
+                members,
+                Some(flex_weights),
+            )))
         }
     }
 }
@@ -5537,6 +5585,10 @@ impl Workspace {
             .collect::<BTreeMap<_, _>>();
         let mut focus_pane = None;
 
+        if let Some(pane_tree) = snapshot.pane_tree.as_ref() {
+            self.restore_canvas_saved_pane_tree_snapshot(pane_tree, &panes_by_id, cx);
+        }
+
         for pane_snapshot in snapshot.panes {
             let Some(pane) = panes_by_id.get(&pane_snapshot.pane) else {
                 continue;
@@ -5562,6 +5614,25 @@ impl Workspace {
 
         self.focus_canvas_pane(&focus_pane, window, cx);
         self.finish_canvas_recipe(None, window, cx);
+    }
+
+    fn restore_canvas_saved_pane_tree_snapshot(
+        &mut self,
+        pane_tree: &CanvasSavedPaneTreeSnapshot,
+        panes_by_id: &BTreeMap<CanvasSavedPaneId, Entity<Pane>>,
+        cx: &mut Context<Self>,
+    ) {
+        let mut used_panes = HashSet::default();
+        let Some(root) = canvas_saved_pane_tree_member(pane_tree, panes_by_id, &mut used_panes)
+        else {
+            return;
+        };
+        if used_panes != panes_by_id.keys().copied().collect::<HashSet<_>>() {
+            return;
+        }
+
+        self.center.root = root;
+        self.center.mark_positions(cx);
     }
 
     pub fn apply_canvas_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -13483,6 +13554,54 @@ mod tests {
         let restored =
             canvas_saved_layouts_from_persisted(canvas_saved_layouts_to_persisted(&saved_layouts));
         assert_eq!(restored.get("slot-1"), Some(&snapshot));
+    }
+
+    #[gpui::test]
+    async fn test_restore_canvas_saved_layout_reshapes_existing_pane_tree(cx: &mut TestAppContext) {
+        init_test(cx);
+
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        let (pane_a, pane_b, pane_c) = workspace.update_in(cx, |workspace, window, cx| {
+            let pane_a = workspace.active_pane().clone();
+            let pane_b = workspace.split_pane(pane_a.clone(), SplitDirection::Right, window, cx);
+            let pane_c = workspace.split_pane(pane_b.clone(), SplitDirection::Down, window, cx);
+            (pane_a, pane_b, pane_c)
+        });
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            workspace.save_current_canvas_layout_slot(1, window, cx);
+            workspace.center.invert_axies(cx);
+
+            {
+                let Member::Axis(root) = &workspace.center.root else {
+                    panic!("inverted tree should still have a root axis");
+                };
+                assert_eq!(root.axis, Axis::Vertical);
+            }
+
+            workspace.restore_saved_canvas_layout_slot(1, window, cx);
+        });
+
+        workspace.read_with(cx, |workspace, _| {
+            let Member::Axis(root) = &workspace.center.root else {
+                panic!("restored tree should have a root axis");
+            };
+            assert_eq!(root.axis, Axis::Horizontal);
+            assert_eq!(root.members.len(), 2);
+            assert!(matches!(&root.members[0], Member::Pane(pane) if pane == &pane_a));
+
+            let Member::Axis(second_column) = &root.members[1] else {
+                panic!("second column should restore the nested split");
+            };
+            assert_eq!(second_column.axis, Axis::Vertical);
+            assert_eq!(second_column.members.len(), 2);
+            assert!(matches!(&second_column.members[0], Member::Pane(pane) if pane == &pane_b));
+            assert!(matches!(&second_column.members[1], Member::Pane(pane) if pane == &pane_c));
+        });
     }
 
     #[gpui::test]

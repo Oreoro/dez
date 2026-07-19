@@ -260,8 +260,10 @@ Rules:
   Layout`, pane tree shape with split axes and flex weights, tab titles,
   serializable item kind/id when available, tab active, preview, dirty, pinned,
   and project-path metadata, and the Panel Layout menu shows the derived label
-  on restore actions. This does not yet support free-form user-authored naming
-  or recreate closed items/processes.
+  on restore actions. Restore applies the saved pane-tree shape when every
+  saved center pane still exists, without closing panes or relaunching
+  processes. This does not yet support free-form user-authored naming or
+  recreate closed items/processes.
 - Manual structural layout changes clear the active recipe identity and show
   `Custom Canvas Layout` in the Panel Layout menu while keeping the pane tree
   and tabs intact.
@@ -288,9 +290,9 @@ Implementation boundary:
 - Saved-layout support currently provides three fixed durable slots with
   derived display labels, not free-form multi-name layout management.
 - Proper persisted layouts still need process restoration metadata and
-  user-authored layout naming data. Saved layout slots now capture pane-tree and
-  tab identity metadata for restore planning, but do not yet use it to reshape
-  the pane tree or reopen closed tabs.
+  user-authored layout naming data. Saved layout slots now use pane-tree
+  metadata to reshape existing panes, but do not yet reopen closed tabs or
+  processes.
 - Process lifetime stays separate from tab lifetime so closing a tab is not
   silently treated as killing or resuming a process.
 

@@ -282,7 +282,8 @@ Use the existing panel-as-pane bridge as the migration path:
   Layout menu checks the active recipe entry while the window is in Canvas mode.
   Three durable saved-layout slots are available now; each saved snapshot stores
   a derived display label shown by the Panel Layout restore actions, pane-tree
-  shape metadata, and tab-role metadata for restore planning. Free-form
+  shape metadata, and tab-role metadata for restore planning. Restore now uses
+  the pane-tree shape when every saved center pane still exists. Free-form
   user-authored layout names and process restoration metadata remain future
   work.
 - Manual structural layout changes now clear the active Canvas recipe identity
@@ -337,7 +338,8 @@ Implementation order:
    workspace metadata, including derived saved-layout display labels, pane-tree
    split axes and flex weights, plus tab title, serializable item kind/id,
    active, preview, dirty, pinned, and project-path metadata for restore
-   planning; free-form saved layout naming remains future work.
+   planning. Restore applies saved pane-tree shape when all saved center panes
+   still exist; free-form saved layout naming remains future work.
 4. Add resize-driven `auto_reflow` using semantic recipe variants rather than
    raw pixel snapshots. Initial recipe-application reflow and resize-triggered
    root-orientation reflow for active recipes are implemented. First ultrawide
