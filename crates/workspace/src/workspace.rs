@@ -489,6 +489,15 @@ struct CanvasSavedTabProjectPath {
     path: String,
 }
 
+impl CanvasSavedTabProjectPath {
+    fn to_project_path(&self) -> Option<ProjectPath> {
+        Some(ProjectPath {
+            worktree_id: WorktreeId::from_proto(self.worktree_id),
+            path: RelPath::from_unix_str(&self.path).log_err()?.into(),
+        })
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 enum CanvasSavedTabRestorePlan {
@@ -524,6 +533,19 @@ struct CanvasSavedTabSnapshot {
     restore_plan: Option<CanvasSavedTabRestorePlan>,
 }
 
+impl CanvasSavedTabSnapshot {
+    fn project_path_restore(&self) -> Option<ProjectPath> {
+        match self.restore_plan.as_ref() {
+            Some(CanvasSavedTabRestorePlan::ProjectPath { path }) => path.to_project_path(),
+            Some(CanvasSavedTabRestorePlan::LiveOnly { .. }) => None,
+            Some(CanvasSavedTabRestorePlan::SerializableItem { .. }) | None => self
+                .project_path
+                .as_ref()
+                .and_then(CanvasSavedTabProjectPath::to_project_path),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct CanvasSavedPaneSnapshot {
     pane: CanvasSavedPaneId,
@@ -534,6 +556,21 @@ struct CanvasSavedPaneSnapshot {
     pinned_count: usize,
     #[serde(default)]
     tabs: Vec<CanvasSavedTabSnapshot>,
+}
+
+#[derive(Clone)]
+struct CanvasSavedProjectPathTabRestore {
+    project_path: ProjectPath,
+    tab_index: usize,
+    active: bool,
+    preview: bool,
+}
+
+struct CanvasSavedPaneProjectPathRestore {
+    pane: WeakEntity<Pane>,
+    pinned_count: usize,
+    active_tab_index: Option<usize>,
+    tabs: Vec<CanvasSavedProjectPathTabRestore>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -5797,7 +5834,7 @@ impl Workspace {
             self.restore_canvas_saved_pane_tree_snapshot(pane_tree, &panes_by_id, cx);
         }
 
-        for pane_snapshot in snapshot.panes {
+        for pane_snapshot in &snapshot.panes {
             let Some(pane) = panes_by_id.get(&pane_snapshot.pane) else {
                 continue;
             };
@@ -5807,6 +5844,8 @@ impl Workspace {
                 focus_pane = Some(pane.clone());
             }
         }
+
+        self.restore_canvas_saved_project_path_tabs(&snapshot.panes, &panes_by_id, window, cx);
 
         let focus_pane = focus_pane
             .filter(|pane| pane.read(cx).is_visible())
@@ -5822,6 +5861,116 @@ impl Workspace {
 
         self.focus_canvas_pane(&focus_pane, window, cx);
         self.finish_canvas_recipe(None, window, cx);
+    }
+
+    fn restore_canvas_saved_project_path_tabs(
+        &mut self,
+        pane_snapshots: &[CanvasSavedPaneSnapshot],
+        panes_by_id: &BTreeMap<CanvasSavedPaneId, Entity<Pane>>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let pane_restores = pane_snapshots
+            .iter()
+            .filter_map(|pane_snapshot| {
+                let pane = panes_by_id.get(&pane_snapshot.pane)?;
+                if !pane.read(cx).can_host_tabs() {
+                    return None;
+                }
+
+                let mut restored_project_paths = pane
+                    .read(cx)
+                    .items()
+                    .filter_map(|item| item.project_path(cx))
+                    .collect::<HashSet<_>>();
+                let tabs = pane_snapshot
+                    .tabs
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(tab_index, tab_snapshot)| {
+                        let project_path = tab_snapshot.project_path_restore()?;
+                        restored_project_paths
+                            .insert(project_path.clone())
+                            .then_some(CanvasSavedProjectPathTabRestore {
+                                project_path,
+                                tab_index,
+                                active: tab_snapshot.active,
+                                preview: tab_snapshot.preview,
+                            })
+                    })
+                    .collect::<Vec<_>>();
+
+                (!tabs.is_empty()).then_some(CanvasSavedPaneProjectPathRestore {
+                    pane: pane.downgrade(),
+                    pinned_count: pane_snapshot.pinned_count,
+                    active_tab_index: pane_snapshot.active_tab_index,
+                    tabs,
+                })
+            })
+            .collect::<Vec<_>>();
+
+        if pane_restores.is_empty() {
+            return;
+        }
+
+        cx.spawn_in(window, async move |this, cx| -> Result<()> {
+            for pane_restore in pane_restores {
+                let CanvasSavedPaneProjectPathRestore {
+                    pane,
+                    pinned_count,
+                    active_tab_index,
+                    tabs,
+                } = pane_restore;
+
+                for tab_restore in tabs {
+                    let project_path = tab_restore.project_path.clone();
+                    let Ok(load_task) = this.update_in(cx, |workspace, window, cx| {
+                        workspace.load_path(project_path.clone(), window, cx)
+                    }) else {
+                        continue;
+                    };
+                    let Some((project_entry_id, build_item)) = load_task.await.log_err() else {
+                        continue;
+                    };
+
+                    let Some(pane) = pane.upgrade() else {
+                        continue;
+                    };
+                    pane.update_in(cx, |pane, window, cx| {
+                        if pane.item_for_path(project_path.clone(), cx).is_some() {
+                            return;
+                        }
+
+                        pane.open_item(
+                            project_entry_id,
+                            project_path,
+                            false,
+                            tab_restore.preview,
+                            tab_restore.active,
+                            Some(tab_restore.tab_index),
+                            window,
+                            cx,
+                            build_item,
+                        );
+                    })?;
+                }
+
+                let Some(pane) = pane.upgrade() else {
+                    continue;
+                };
+                pane.update_in(cx, |pane, window, cx| {
+                    pane.set_pinned_count(pinned_count.min(pane.items_len()));
+                    if let Some(active_tab_index) = active_tab_index
+                        .filter(|active_tab_index| *active_tab_index < pane.items_len())
+                    {
+                        pane.activate_item(active_tab_index, false, false, window, cx);
+                    }
+                })?;
+            }
+
+            Ok(())
+        })
+        .detach_and_log_err(cx);
     }
 
     fn restore_canvas_saved_pane_tree_snapshot(
@@ -18571,6 +18720,116 @@ mod tests {
                 })
                 .await;
             assert!(handle.is_err());
+        }
+
+        #[gpui::test]
+        async fn test_restore_saved_canvas_layout_reopens_project_path_tabs(
+            cx: &mut TestAppContext,
+        ) {
+            init_test(cx);
+
+            cx.update(|cx| {
+                register_project_item::<TestPngItemView>(cx);
+                register_project_item::<TestIpynbItemView>(cx);
+            });
+
+            let fs = FakeFs::new(cx.executor());
+            fs.insert_tree(
+                "/root1",
+                json!({
+                    "one.png": "BINARYDATAHERE",
+                    "two.ipynb": "{ totally a notebook }",
+                }),
+            )
+            .await;
+
+            let project = Project::test(fs, ["root1".as_ref()], cx).await;
+            let (workspace, cx) =
+                cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
+            let worktree_id = project.update(cx, |project, cx| {
+                project.worktrees(cx).next().unwrap().read(cx).id()
+            });
+
+            workspace.update_in(cx, |workspace, window, cx| {
+                let snapshot = CanvasSavedLayoutSnapshot {
+                    label: Some("Restored Work".to_string()),
+                    active_pane: Some(CanvasSavedPaneId {
+                        kind: CanvasSavedPaneKind::Tabs,
+                        occurrence: 0,
+                    }),
+                    active_layout_recipe: Some(CanvasLayoutRecipe::EditorFocus.id().to_string()),
+                    pane_tree: None,
+                    panes: vec![CanvasSavedPaneSnapshot {
+                        pane: CanvasSavedPaneId {
+                            kind: CanvasSavedPaneKind::Tabs,
+                            occurrence: 0,
+                        },
+                        visible: true,
+                        active_tab_index: Some(1),
+                        pinned_count: 1,
+                        tabs: vec![
+                            CanvasSavedTabSnapshot {
+                                title: "one.png".to_string(),
+                                serialized_item_kind: None,
+                                item_id: None,
+                                active: false,
+                                preview: false,
+                                dirty: false,
+                                project_path: Some(CanvasSavedTabProjectPath {
+                                    worktree_id: worktree_id.to_proto(),
+                                    path: "one.png".to_string(),
+                                }),
+                                restore_plan: Some(CanvasSavedTabRestorePlan::ProjectPath {
+                                    path: CanvasSavedTabProjectPath {
+                                        worktree_id: worktree_id.to_proto(),
+                                        path: "one.png".to_string(),
+                                    },
+                                }),
+                            },
+                            CanvasSavedTabSnapshot {
+                                title: "two.ipynb".to_string(),
+                                serialized_item_kind: None,
+                                item_id: None,
+                                active: true,
+                                preview: false,
+                                dirty: false,
+                                project_path: Some(CanvasSavedTabProjectPath {
+                                    worktree_id: worktree_id.to_proto(),
+                                    path: "two.ipynb".to_string(),
+                                }),
+                                restore_plan: Some(CanvasSavedTabRestorePlan::ProjectPath {
+                                    path: CanvasSavedTabProjectPath {
+                                        worktree_id: worktree_id.to_proto(),
+                                        path: "two.ipynb".to_string(),
+                                    },
+                                }),
+                            },
+                        ],
+                    }],
+                };
+
+                workspace.restore_canvas_saved_layout_snapshot(snapshot, window, cx);
+            });
+            cx.run_until_parked();
+
+            workspace.read_with(cx, |workspace, cx| {
+                let pane = workspace.active_pane().read(cx);
+                assert_eq!(pane.items_len(), 2);
+                assert_eq!(pane.pinned_count(), 1);
+                assert_eq!(pane.active_item_index(), 1);
+
+                let item_types = pane
+                    .items()
+                    .map(|item| item.to_any_view().entity_type())
+                    .collect::<Vec<_>>();
+                assert_eq!(
+                    item_types,
+                    vec![
+                        TypeId::of::<TestPngItemView>(),
+                        TypeId::of::<TestIpynbItemView>()
+                    ]
+                );
+            });
         }
 
         #[gpui::test]

@@ -263,11 +263,12 @@ Rules:
   project-path, or live-only tabs. The Panel Layout menu shows the derived
   label on restore actions. Restore applies the saved pane-tree shape when
   every saved center pane still exists, without closing panes or relaunching
-  processes. The Panel Layout menu can clear stale fixed slots, and
+  processes. Restore now also reopens missing project-path-backed tabs into
+  their saved panes in saved order, then reapplies saved pinned and active-tab
+  metadata. The Panel Layout menu can clear stale fixed slots, and
   `workspace::SetSavedCanvasLayoutSlotLabel` can assign a user-authored label
-  to an existing saved slot; built-in text entry and free-form multi-name
-  management are still future work. Restore does not yet recreate closed
-  items/processes.
+  to an existing saved slot; built-in text entry, free-form multi-name
+  management, and live process/session restoration are still future work.
 - Manual structural layout changes clear the active recipe identity and show
   `Custom Canvas Layout` in the Panel Layout menu while keeping the pane tree
   and tabs intact.
@@ -299,8 +300,8 @@ Implementation boundary:
   labels, not built-in text entry or free-form multi-name layout management.
 - Proper persisted layouts still need a saved-layout manager UI and actual
   process restoration. Saved layout slots now use pane-tree metadata to reshape
-  existing panes and store restore-planning intent, but do not yet reopen
-  closed tabs or processes.
+  existing panes, reopen project-path-backed tabs, and store restore-planning
+  intent for live-only/process-backed tabs.
 - Process lifetime stays separate from tab lifetime so closing a tab is not
   silently treated as killing or resuming a process.
 
