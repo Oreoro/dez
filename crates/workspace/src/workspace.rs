@@ -2305,6 +2305,10 @@ impl Workspace {
         self.active_canvas_layout_recipe.map(CanvasLayoutRecipe::id)
     }
 
+    pub fn has_previous_canvas_layout(&self) -> bool {
+        !self.canvas_layout_history.is_empty()
+    }
+
     fn mark_canvas_layout_custom(&mut self) {
         self.active_canvas_layout_recipe = None;
     }

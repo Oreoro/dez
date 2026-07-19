@@ -1512,6 +1512,10 @@ impl SidebarChrome {
                 } else {
                     None
                 };
+                let has_previous_canvas_layout = is_agent
+                    && workspace
+                        .upgrade()
+                        .is_some_and(|workspace| workspace.read(cx).has_previous_canvas_layout());
                 let multiplexer_hint = {
                     let multiplexer_settings = MultiplexerSettings::get_global(cx);
                     multiplexer_settings.prefix_mode.then(|| {
@@ -1916,15 +1920,11 @@ impl SidebarChrome {
                                         window.dispatch_action(CycleCanvasLayout.boxed_clone(), cx);
                                     },
                                 )
-                                .entry(
+                                .action_checked_with_disabled(
                                     "Restore Previous Canvas Layout",
-                                    Some(RestorePreviousCanvasLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            RestorePreviousCanvasLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
+                                    RestorePreviousCanvasLayout.boxed_clone(),
+                                    false,
+                                    !has_previous_canvas_layout,
                                 )
                                 .when_some(multiplexer_hint.clone(), |menu, hint| {
                                     menu.separator()
