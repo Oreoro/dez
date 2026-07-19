@@ -201,6 +201,27 @@ Relevant branch families:
 Skip unrelated, stale, duplicate, or conflicting branches unless a commit
 directly supports the Canvas plan.
 
+Branch audit status, 2026-07-19:
+
+- Current upstream refs were fetched and `upstream/main` is merged through
+  `0c51c7fd24`.
+- `upstream/rounded-corner-clipping` is high-value for Lumin/Canvas rounded
+  surfaces, but a direct merge conflicts across editor rendering, GPUI scene
+  and style internals, Metal/WGPU/HLSL shader paths, terminal rendering, and
+  scrollbars. Treat it as a dedicated renderer integration, not a blind
+  experimental merge.
+- `upstream/grid-auto-tracks` and `upstream/text-min-content` remain candidates
+  for later pane/grid layout polish after Canvas pane shell behavior is stable.
+- `upstream/settings-ui-add-subagent-model-setting`,
+  `upstream/fix-agent-focus-issues`, and
+  `upstream/fix-agent-path-hyperlinks` remain targeted agent UX candidates.
+- `upstream/terminal-restore`, `upstream/terminal-restore-2`, and
+  `upstream/ghostty` remain terminal-session candidates, but they require the
+  Canvas resume/session model to distinguish metadata restoration from live
+  process restoration.
+- Stable/preview release branches are skipped unless they contain a specific
+  fix not already present through `main`.
+
 ## Foundation implementation {#foundation-implementation}
 
 Create a Canvas foundation without replacing existing Zed primitives:
