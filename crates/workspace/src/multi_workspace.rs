@@ -702,7 +702,11 @@ impl MultiWorkspace {
         }
 
         if self.sidebar_open() {
-            self.close_sidebar(window, cx);
+            if SidebarSettings::get_global(cx).always_open {
+                self.focus_sidebar(window, cx);
+            } else {
+                self.close_sidebar(window, cx);
+            }
         } else {
             self.previous_focus_handle = window.focused(cx);
             self.open_sidebar(cx);
@@ -718,7 +722,11 @@ impl MultiWorkspace {
             return;
         }
 
-        if self.sidebar_open() {
+        if SidebarSettings::get_global(cx).always_open {
+            if !self.sidebar_open() {
+                self.apply_open_sidebar(true, cx);
+            }
+        } else if self.sidebar_open() {
             self.close_sidebar(window, cx);
         }
     }
@@ -768,7 +776,7 @@ impl MultiWorkspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if sidebar_open {
+        if sidebar_open || SidebarSettings::get_global(cx).always_open {
             self.apply_open_sidebar(false, cx);
         } else {
             self.apply_close_sidebar(false, window, false, cx);
@@ -806,6 +814,11 @@ impl MultiWorkspace {
     }
 
     pub fn close_sidebar(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if SidebarSettings::get_global(cx).always_open {
+            self.apply_open_sidebar(true, cx);
+            return;
+        }
+
         let side = match self.sidebar_side(cx) {
             SidebarSide::Left => "left",
             SidebarSide::Right => "right",

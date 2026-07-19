@@ -183,14 +183,16 @@ and recent-activity row ordering. Manual/project ordering still need persisted
 manual order and cross-group sorting before they can behave differently from the
 current recent-first order.
 
-`session_rail.visibility = "hidden"` removes the rail from layout. Overlay,
-always, and auto modes share the current rail surface until distinct render
-modes are added.
+`session_rail.visibility = "hidden"` removes the rail from layout. Overlay and
+auto modes share the current rail surface until distinct render modes are added.
 
 `session_rail.mode = "icon"` narrows the rail and hides row labels/metadata,
 `compact` clamps it to a narrower readable width, and `detailed` keeps a wider
 minimum width. The first pass keeps the same row component so status and
 attention icons remain consistent across modes.
+
+`session_rail.mode = "always"` keeps the rail open on startup, restore, toggle,
+and close actions unless the rail is explicitly hidden.
 
 `session_rail.position` is the effective left/right side for Canvas rail
 placement. The existing sidebar side menu writes both `sidebar.side` and

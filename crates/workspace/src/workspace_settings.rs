@@ -53,6 +53,7 @@ pub struct FocusFollowsMouse {
 pub struct SidebarSettings {
     pub side: SidebarDockPosition,
     pub starts_open: bool,
+    pub always_open: bool,
     pub show_project_pane_button: bool,
 }
 
@@ -206,6 +207,21 @@ impl Settings for WorkspaceSettings {
 impl Settings for SidebarSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
         let sidebar = content.sidebar.clone().unwrap();
+        let session_rail_visibility = content
+            .session_rail
+            .as_ref()
+            .and_then(|session_rail| session_rail.visibility)
+            .unwrap_or_default();
+        let session_rail_mode = content
+            .session_rail
+            .as_ref()
+            .and_then(|session_rail| session_rail.mode)
+            .unwrap_or_default();
+        let session_rail_hidden = session_rail_visibility == settings::CanvasVisibility::Hidden
+            || session_rail_mode == settings::CanvasVisibility::Hidden;
+        let session_rail_always_open = !session_rail_hidden
+            && (session_rail_visibility == settings::CanvasVisibility::Always
+                || session_rail_mode == settings::CanvasVisibility::Always);
         let session_rail_side = content
             .session_rail
             .as_ref()
@@ -216,7 +232,8 @@ impl Settings for SidebarSettings {
             });
         Self {
             side: session_rail_side.unwrap_or_else(|| sidebar.side.unwrap()),
-            starts_open: sidebar.starts_open.unwrap(),
+            starts_open: sidebar.starts_open.unwrap() || session_rail_always_open,
+            always_open: session_rail_always_open,
             show_project_pane_button: sidebar.show_project_pane_button.unwrap(),
         }
     }
