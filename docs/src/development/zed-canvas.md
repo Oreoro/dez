@@ -373,7 +373,9 @@ tab::Search
 An optional tmux-style Prefix Mode may exist for experts, but ordinary users
 must not need it. Prefix Mode needs a visible mode indicator, configurable
 prefix, timeout, fixed-step resize commands, eventual single-prefix repeat
-mode, and command discovery.
+mode, and command discovery. The first visible indicator is implemented as a
+compact title-bar chip that appears while GPUI is waiting for the next
+multi-stroke key.
 
 The runtime settings model now reads `multiplexer.prefix_mode`,
 `multiplexer.prefix`, and `multiplexer.broadcast_confirmation`; the Panel Layout
@@ -381,7 +383,8 @@ menu shows the configured prefix and broadcast policy when prefix mode is
 enabled. When `multiplexer.prefix_mode = true`, workspace key context exposes
 `canvas_prefix_mode` and the default keymaps bind the default `ctrl-b` prefix to
 core Canvas commands. The Panel Layout menu also shows disabled discovery rows
-for the default prefix command set:
+for the default prefix command set, and the title bar shows a `PREFIX …` chip
+while a multi-stroke prefix sequence is pending:
 
 - `ctrl-b space` cycles Canvas layouts.
 - `ctrl-b a` applies Agent Control.
@@ -393,8 +396,8 @@ for the default prefix command set:
 - `ctrl-b h/j/k/l` resizes the active pane left/down/up/right in fixed steps.
 - `ctrl-b =` equalizes pane sizes without changing the split tree.
 
-Custom prefix strings still require user keymap overrides; timeout and
-single-prefix repeat mode remain future work.
+Custom prefix strings still require user keymap overrides; dynamic remapping,
+configurable timeout, and single-prefix repeat mode remain future work.
 
 ## Layout system {#layout-system}
 

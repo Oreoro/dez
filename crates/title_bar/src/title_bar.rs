@@ -626,6 +626,10 @@ impl Render for SidebarChrome {
                         this.child(self.render_command_search_button(cx))
                             .child(div().flex_1())
                     })
+                    .when_some(
+                        self.render_canvas_prefix_indicator(window, cx),
+                        |this, indicator| this.child(indicator),
+                    )
                     .children(self.render_connection_status(status, cx))
                     .child(self.update_version.clone())
                     .when(
@@ -707,6 +711,7 @@ impl SidebarChrome {
             }),
         );
         subscriptions.push(cx.observe_button_layout_changed(window, |_, _, cx| cx.notify()));
+        subscriptions.push(cx.observe_pending_input(window, |_, _, cx| cx.notify()));
         if let Some(trusted_worktrees) = TrustedWorktrees::try_get_global(cx) {
             subscriptions.push(cx.subscribe(&trusted_worktrees, |_, _, _, cx| {
                 cx.notify();
@@ -1437,6 +1442,37 @@ impl SidebarChrome {
             }
             _ => None,
         }
+    }
+
+    fn render_canvas_prefix_indicator(
+        &self,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        let multiplexer_settings = MultiplexerSettings::get_global(cx);
+        if !multiplexer_settings.prefix_mode || !window.has_pending_keystrokes() {
+            return None;
+        }
+
+        Some(
+            h_flex()
+                .id("canvas-prefix-indicator")
+                .h_5()
+                .gap_1()
+                .px_1p5()
+                .rounded_sm()
+                .border_1()
+                .border_color(cx.theme().colors().border_focused)
+                .bg(cx.theme().colors().element_active.opacity(0.35))
+                .child(Indicator::dot().color(Color::Accent))
+                .child(
+                    Label::new(format!("PREFIX {}", multiplexer_settings.prefix))
+                        .size(LabelSize::XSmall)
+                        .color(Color::Accent),
+                )
+                .tooltip(Tooltip::text("Prefix mode is awaiting the next key"))
+                .into_any_element(),
+        )
     }
 
     pub fn render_sign_in_button(&mut self, _: &mut Context<Self>) -> Button {

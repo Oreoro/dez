@@ -274,8 +274,10 @@ Use the existing panel-as-pane bridge as the migration path:
   Four-Agent Matrix, save slot 1, restore slot 1, restore previous layout,
   fixed-step pane resizing with `h/j/k/l`, and pane equalization with `=`.
   The Panel Layout menu also shows disabled discovery rows for those prefix
-  commands. Custom prefix strings, timeout behavior, and single-prefix repeat
-  mode remain future work.
+  commands, and the title bar shows a compact `PREFIX …` chip while a
+  multi-stroke prefix sequence is pending. Custom prefix strings, dynamic
+  remapping, timeout behavior, and single-prefix repeat mode remain future
+  work.
 - Canvas recipes now share one canonical runtime recipe-name mapping. The
   workspace records the last applied Canvas recipe, layout history snapshots
   restore that recipe identity with pane visibility/focus, persisted workspace
