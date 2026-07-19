@@ -214,8 +214,12 @@ Branch audit status, 2026-07-19:
   for later pane/grid layout polish after Canvas pane shell behavior is stable.
 - `upstream/fix-agent-focus-issues` is merged into the Canvas branch, preserving
   the current pane-render signature while adding the upstream focus tracking.
-- `upstream/settings-ui-add-subagent-model-setting` and
-  `upstream/fix-agent-path-hyperlinks` remain targeted agent UX candidates.
+- `upstream/settings-ui-add-subagent-model-setting` remains a targeted agent UX
+  candidate.
+- `upstream/fix-agent-path-hyperlinks` remains a targeted agent UX candidate,
+  but a direct merge conflicts through the ACP mention parser and thread-view
+  tests. Treat it as a parser/test integration rather than a blind branch
+  merge.
 - `upstream/terminal-restore`, `upstream/terminal-restore-2`, and
   `upstream/ghostty` remain terminal-session candidates, but they require the
   Canvas resume/session model to distinguish metadata restoration from live
