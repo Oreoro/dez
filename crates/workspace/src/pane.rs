@@ -14,7 +14,8 @@ use crate::{
     render_sidebar_header_controls_with_project_pane_visibility,
     toolbar::Toolbar,
     workspace_settings::{
-        AutosaveSetting, FocusFollowsMouse, PaneGridSettings, TabBarSettings, WorkspaceSettings,
+        AutosaveSetting, DesignSystemSettings, FocusFollowsMouse, PaneGridSettings, TabBarSettings,
+        WorkspaceSettings,
     },
 };
 use anyhow::Result;
@@ -49,8 +50,8 @@ use std::{
 use theme_settings::ThemeSettings;
 use ui::{
     ContextMenu, ContextMenuEntry, ContextMenuItem, DecoratedIcon, IconButtonShape, IconDecoration,
-    IconDecorationKind, Indicator, PopoverMenu, PopoverMenuHandle, Tab, TabBar, TabPosition,
-    Tooltip, prelude::*, right_click_menu,
+    IconDecorationKind, Indicator, PopoverMenu, PopoverMenuHandle, Tab, TabBar, TabContrast,
+    TabDensity, TabPosition, TabRadius, Tooltip, prelude::*, right_click_menu,
 };
 use util::{
     ResultExt, debug_panic, markdown::MarkdownInlineCode, maybe, paths::PathStyle,
@@ -62,6 +63,40 @@ use util::{
 pub struct SelectedEntry {
     pub worktree_id: WorktreeId,
     pub entry_id: ProjectEntryId,
+}
+
+fn canvas_tab_density(cx: &App) -> TabDensity {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => TabDensity::Compact,
+        settings::CanvasDensity::Balanced => TabDensity::Balanced,
+        settings::CanvasDensity::Spacious => TabDensity::Spacious,
+    }
+}
+
+fn canvas_tab_radius(cx: &App) -> TabRadius {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => TabRadius::None,
+        settings::CanvasRadius::Subtle => TabRadius::Subtle,
+        settings::CanvasRadius::Rounded => TabRadius::Rounded,
+    }
+}
+
+fn canvas_tab_contrast(cx: &App) -> TabContrast {
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => TabContrast::Low,
+        settings::CanvasContrast::Standard => TabContrast::Standard,
+        settings::CanvasContrast::High => TabContrast::High,
+    }
+}
+
+fn canvas_tab_bar(id: &'static str, cx: &App) -> TabBar {
+    TabBar::new(id)
+        .density(canvas_tab_density(cx))
+        .contrast(canvas_tab_contrast(cx))
+}
+
+fn canvas_tab_bar_height(cx: &App) -> Pixels {
+    canvas_tab_density(cx).container_height(cx)
 }
 
 /// A group of selected entries from project panel.
@@ -3066,6 +3101,9 @@ impl Pane {
 
         let capability = item.capability(cx);
         let tab = Tab::new(ix)
+            .density(canvas_tab_density(cx))
+            .radius(canvas_tab_radius(cx))
+            .contrast(canvas_tab_contrast(cx))
             .position(if is_first_item {
                 TabPosition::First
             } else if is_last_item {
@@ -3786,7 +3824,7 @@ impl Pane {
     ) -> AnyElement {
         let tab_bar = self
             .configure_tab_bar_start(
-                TabBar::new("tab_bar"),
+                canvas_tab_bar("tab_bar", cx),
                 navigate_backward,
                 navigate_forward,
                 window,
@@ -3837,7 +3875,7 @@ impl Pane {
 
         let tab_bar = self
             .configure_tab_bar_start(
-                TabBar::new("stacked_tab_bar"),
+                canvas_tab_bar("stacked_tab_bar", cx),
                 navigate_backward,
                 navigate_forward,
                 window,
@@ -3867,7 +3905,7 @@ impl Pane {
     ) -> AnyElement {
         let pinned_tab_bar = self
             .configure_tab_bar_start(
-                TabBar::new("pinned_tab_bar"),
+                canvas_tab_bar("pinned_tab_bar", cx),
                 navigate_backward,
                 navigate_forward,
                 window,
@@ -3882,7 +3920,7 @@ impl Pane {
                     .children(pinned_tabs)
                     .child(self.render_pinned_tab_bar_drop_target(cx)),
             );
-        let unpinned_tab_bar = TabBar::new("unpinned_tab_bar")
+        let unpinned_tab_bar = canvas_tab_bar("unpinned_tab_bar", cx)
             .child(self.render_unpinned_tabs_container(unpinned_tabs, tab_count, cx));
         let unpinned_tab_bar = if show_tab_overflow_menu {
             unpinned_tab_bar.end_child(
@@ -3982,7 +4020,7 @@ impl Pane {
             .id("tab_bar_drop_target")
             .relative()
             .min_w_6()
-            .h(Tab::container_height(cx))
+            .h(canvas_tab_bar_height(cx))
             .flex_grow_1()
             // HACK: This empty child is currently necessary to force the drop target to appear
             // despite us setting a min width above.
@@ -4050,7 +4088,7 @@ impl Pane {
             .debug_selector(|| "pinned_tabs_border".into())
             .relative()
             .min_w_6()
-            .h(Tab::container_height(cx))
+            .h(canvas_tab_bar_height(cx))
             .flex_grow_1()
             .border_l_1()
             .border_color(cx.theme().colors().border)
@@ -4202,7 +4240,7 @@ impl Pane {
 
     fn is_over_tab_bar_above_body<T>(event: &DragMoveEvent<T>, cx: &App) -> bool {
         let position = event.event.position;
-        let tab_bar_height = Tab::container_height(cx) * 2.;
+        let tab_bar_height = canvas_tab_bar_height(cx) * 2.;
 
         position.x >= event.bounds.left()
             && position.x <= event.bounds.right()
@@ -4968,7 +5006,7 @@ impl Pane {
         let hidden_sidebar_controls = self.render_hidden_sidebar_header_controls(cx);
 
         h_flex()
-            .h(Tab::container_height(cx))
+            .h(canvas_tab_bar_height(cx))
             .w_full()
             .flex_none()
             .bg(cx.theme().colors().tab_bar_background)
@@ -5800,6 +5838,9 @@ impl Render for DraggedTab {
                 .read(cx)
                 .tab_icon_element(self.item.as_ref(), self.is_active, window, cx);
         Tab::new("")
+            .density(canvas_tab_density(cx))
+            .radius(canvas_tab_radius(cx))
+            .contrast(canvas_tab_contrast(cx))
             .toggle_state(self.is_active)
             .children(icon)
             .child(label)
@@ -5812,7 +5853,7 @@ impl Render for DraggedPane {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         div()
             .px_2()
-            .h(Tab::container_height(cx))
+            .h(canvas_tab_bar_height(cx))
             .flex()
             .items_center()
             .border_1()

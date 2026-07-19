@@ -29,6 +29,68 @@ pub enum TabCloseSide {
     End,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum TabDensity {
+    Compact,
+    #[default]
+    Balanced,
+    Spacious,
+}
+
+impl TabDensity {
+    pub fn content_height(self, cx: &App) -> Pixels {
+        self.container_height(cx) - px(1.)
+    }
+
+    pub fn container_height(self, cx: &App) -> Pixels {
+        match self {
+            Self::Compact => DynamicSpacing::Base24.px(cx),
+            Self::Balanced => DynamicSpacing::Base32.px(cx),
+            Self::Spacious => DynamicSpacing::Base40.px(cx),
+        }
+    }
+
+    fn content_padding(self, cx: &App) -> (Pixels, Pixels) {
+        match self {
+            Self::Compact => (DynamicSpacing::Base06.px(cx), DynamicSpacing::Base02.px(cx)),
+            Self::Balanced => (DynamicSpacing::Base08.px(cx), DynamicSpacing::Base04.px(cx)),
+            Self::Spacious => (DynamicSpacing::Base12.px(cx), DynamicSpacing::Base06.px(cx)),
+        }
+    }
+
+    pub(crate) fn slot_padding(self, cx: &App) -> Rems {
+        match self {
+            Self::Compact => DynamicSpacing::Base04.rems(cx),
+            Self::Balanced => DynamicSpacing::Base06.rems(cx),
+            Self::Spacious => DynamicSpacing::Base08.rems(cx),
+        }
+    }
+
+    pub(crate) fn gap(self, cx: &App) -> Rems {
+        match self {
+            Self::Compact => DynamicSpacing::Base02.rems(cx),
+            Self::Balanced => DynamicSpacing::Base04.rems(cx),
+            Self::Spacious => DynamicSpacing::Base06.rems(cx),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum TabRadius {
+    #[default]
+    None,
+    Subtle,
+    Rounded,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum TabContrast {
+    Low,
+    #[default]
+    Standard,
+    High,
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum TabInsertionIndicator {
     Left,
@@ -41,6 +103,9 @@ pub struct Tab {
     selected: bool,
     position: TabPosition,
     close_side: TabCloseSide,
+    density: TabDensity,
+    radius: TabRadius,
+    contrast: TabContrast,
     insertion_indicator: Option<TabInsertionIndicator>,
     start_slot: Option<AnyElement>,
     end_slot: Option<AnyElement>,
@@ -57,6 +122,9 @@ impl Tab {
             selected: false,
             position: TabPosition::First,
             close_side: TabCloseSide::End,
+            density: TabDensity::default(),
+            radius: TabRadius::default(),
+            contrast: TabContrast::default(),
             insertion_indicator: None,
             start_slot: None,
             end_slot: None,
@@ -71,6 +139,21 @@ impl Tab {
 
     pub fn close_side(mut self, close_side: TabCloseSide) -> Self {
         self.close_side = close_side;
+        self
+    }
+
+    pub fn density(mut self, density: TabDensity) -> Self {
+        self.density = density;
+        self
+    }
+
+    pub fn radius(mut self, radius: TabRadius) -> Self {
+        self.radius = radius;
+        self
+    }
+
+    pub fn contrast(mut self, contrast: TabContrast) -> Self {
+        self.contrast = contrast;
         self
     }
 
@@ -95,11 +178,11 @@ impl Tab {
     }
 
     pub fn content_height(cx: &App) -> Pixels {
-        DynamicSpacing::Base32.px(cx) - px(1.)
+        TabDensity::Balanced.content_height(cx)
     }
 
     pub fn container_height(cx: &App) -> Pixels {
-        DynamicSpacing::Base32.px(cx)
+        TabDensity::Balanced.container_height(cx)
     }
 }
 
@@ -128,20 +211,40 @@ impl RenderOnce for Tab {
     #[allow(refining_impl_trait)]
     fn render(self, _: &mut Window, cx: &mut App) -> Stateful<Div> {
         let insertion_indicator = self.insertion_indicator;
+        let colors = cx.theme().colors();
         let (text_color, tab_bg, _tab_hover_bg, _tab_active_bg) = match self.selected {
             false => (
-                cx.theme().colors().text_muted,
-                cx.theme().colors().tab_inactive_background,
-                cx.theme().colors().ghost_element_hover,
-                cx.theme().colors().ghost_element_active,
+                colors.text_muted,
+                colors.tab_inactive_background,
+                colors.ghost_element_hover,
+                colors.ghost_element_active,
             ),
             true => (
-                cx.theme().colors().text,
-                cx.theme().colors().tab_active_background,
-                cx.theme().colors().element_hover,
-                cx.theme().colors().element_active,
+                colors.text,
+                colors.tab_active_background,
+                colors.element_hover,
+                colors.element_active,
             ),
         };
+        let tab_bg = match (self.contrast, self.selected) {
+            (TabContrast::Low, false) => colors.tab_bar_background,
+            (TabContrast::Low, true) => colors
+                .tab_bar_background
+                .blend(colors.tab_active_background.opacity(0.7)),
+            (TabContrast::Standard, _) => tab_bg,
+            (TabContrast::High, false) => colors
+                .tab_inactive_background
+                .blend(colors.border_variant.opacity(0.12)),
+            (TabContrast::High, true) => colors
+                .tab_active_background
+                .blend(colors.border_focused.opacity(0.12)),
+        };
+        let border_color = match self.contrast {
+            TabContrast::Low => colors.border.opacity(0.55),
+            TabContrast::Standard => colors.border,
+            TabContrast::High => colors.border_variant,
+        };
+        let (padding_left, padding_right) = self.density.content_padding(cx);
 
         let (start_slot, end_slot) = {
             let start_slot = self.start_slot.map(|slot| {
@@ -166,9 +269,15 @@ impl RenderOnce for Tab {
 
         self.div
             .relative()
-            .h(Tab::container_height(cx))
+            .h(self.density.container_height(cx))
             .bg(tab_bg)
-            .border_color(cx.theme().colors().border)
+            .border_color(border_color)
+            .when(self.selected && self.radius == TabRadius::Subtle, |this| {
+                this.rounded_t_sm()
+            })
+            .when(self.selected && self.radius == TabRadius::Rounded, |this| {
+                this.rounded_t_md()
+            })
             .map(|this| match self.position {
                 TabPosition::First => {
                     if self.selected {
@@ -193,10 +302,10 @@ impl RenderOnce for Tab {
                 h_flex()
                     .group("")
                     .relative()
-                    .h(Tab::content_height(cx))
-                    .pl(DynamicSpacing::Base08.px(cx))
-                    .pr(DynamicSpacing::Base04.px(cx))
-                    .gap(DynamicSpacing::Base04.rems(cx))
+                    .h(self.density.content_height(cx))
+                    .pl(padding_left)
+                    .pr(padding_right)
+                    .gap(self.density.gap(cx))
                     .text_color(text_color)
                     .children(start_slot)
                     .children(self.children)

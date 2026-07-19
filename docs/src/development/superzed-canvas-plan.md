@@ -116,6 +116,9 @@ Implemented in this phase:
 - The thread switcher overlay now applies Canvas density, radius, and contrast
   settings to its result surface and thread/terminal rows, reusing the same row
   styling path as the Session Rail while preserving visible result labels.
+- Pane tabs and pane tab bars now consume Canvas density and contrast, with tab
+  radius applied to active tab chrome and matching drag-preview/drop-target
+  heights.
 
 ## Ground truth {#ground-truth}
 
@@ -238,9 +241,12 @@ Current consumers:
   `density`, `radius`, `contrast`, and `show_labels`. Hidden labels suppress row
   text/empty-state copy in icon rail modes while preserving accessible icon
   targets.
+- Pane tab bars: tab height, tab content padding, start/end control spacing,
+  active tab radius, tab border strength, drag previews, and drop-target
+  hitboxes read Canvas density, radius, and contrast.
 
-Broader rollout should apply the same runtime model to pane tabs, layout menus,
-agent surfaces, Markdown sheets, and command surfaces.
+Broader rollout should apply the same runtime model to layout menus, agent
+surfaces, Markdown sheets, and command surfaces.
 
 ## Pane-first workspace {#pane-first-workspace}
 

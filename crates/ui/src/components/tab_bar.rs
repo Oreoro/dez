@@ -3,6 +3,7 @@ use smallvec::SmallVec;
 
 use crate::Tab;
 use crate::prelude::*;
+use crate::{TabContrast, TabDensity};
 
 #[derive(IntoElement, RegisterComponent)]
 pub struct TabBar {
@@ -11,6 +12,8 @@ pub struct TabBar {
     children: SmallVec<[AnyElement; 2]>,
     end_children: SmallVec<[AnyElement; 2]>,
     scroll_handle: Option<ScrollHandle>,
+    density: TabDensity,
+    contrast: TabContrast,
 }
 
 impl TabBar {
@@ -21,7 +24,19 @@ impl TabBar {
             children: SmallVec::new(),
             end_children: SmallVec::new(),
             scroll_handle: None,
+            density: TabDensity::default(),
+            contrast: TabContrast::default(),
         }
+    }
+
+    pub fn density(mut self, density: TabDensity) -> Self {
+        self.density = density;
+        self
+    }
+
+    pub fn contrast(mut self, contrast: TabContrast) -> Self {
+        self.contrast = contrast;
+        self
     }
 
     pub fn track_scroll(mut self, scroll_handle: &ScrollHandle) -> Self {
@@ -91,23 +106,30 @@ impl ParentElement for TabBar {
 
 impl RenderOnce for TabBar {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        let colors = cx.theme().colors();
+        let border_color = match self.contrast {
+            TabContrast::Low => colors.border.opacity(0.55),
+            TabContrast::Standard => colors.border,
+            TabContrast::High => colors.border_variant,
+        };
+
         div()
             .id(self.id)
             .group("tab_bar")
             .flex()
             .flex_none()
             .w_full()
-            .h(Tab::container_height(cx))
-            .bg(cx.theme().colors().tab_bar_background)
+            .h(self.density.container_height(cx))
+            .bg(colors.tab_bar_background)
             .when(!self.start_children.is_empty(), |this| {
                 this.child(
                     h_flex()
                         .flex_none()
-                        .gap(DynamicSpacing::Base04.rems(cx))
-                        .px(DynamicSpacing::Base06.rems(cx))
+                        .gap(self.density.gap(cx))
+                        .px(self.density.slot_padding(cx))
                         .border_b_1()
                         .border_r_1()
-                        .border_color(cx.theme().colors().border)
+                        .border_color(border_color)
                         .children(self.start_children),
                 )
             })
@@ -124,7 +146,7 @@ impl RenderOnce for TabBar {
                             .left_0()
                             .size_full()
                             .border_b_1()
-                            .border_color(cx.theme().colors().border),
+                            .border_color(border_color),
                     )
                     .child(
                         h_flex()
@@ -142,9 +164,9 @@ impl RenderOnce for TabBar {
                 this.child(
                     h_flex()
                         .flex_none()
-                        .gap(DynamicSpacing::Base04.rems(cx))
-                        .px(DynamicSpacing::Base06.rems(cx))
-                        .border_color(cx.theme().colors().border)
+                        .gap(self.density.gap(cx))
+                        .px(self.density.slot_padding(cx))
+                        .border_color(border_color)
                         .border_b_1()
                         .border_l_1()
                         .children(self.end_children),
