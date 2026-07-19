@@ -104,6 +104,10 @@ Implemented in this phase:
   width, shell padding, section cards, row rhythm, radius, background, and
   border strength now read `design_system.density`, `design_system.radius`, and
   `design_system.contrast`.
+- Applied Canvas design-system tokens to terminal tool-call headers: header
+  background, top/side padding, action rhythm, running-state spacing, and top
+  radius now read `design_system.density`, `design_system.radius`, and
+  `design_system.contrast`.
 - Added schema/default switches for pane-tab panel hosting, terminal-agent
   detection, multiple visible agents, session restoration, agent attention
   notifications, and preview-first Markdown.
@@ -409,6 +413,9 @@ Current consumers:
 - Sandbox status tooltip: tooltip width, shell padding, section-card treatment,
   row rhythm, radius, background, and border strength consume Canvas density,
   radius, and contrast.
+- Terminal tool-call headers: header background, top/side padding, action
+  rhythm, running-state spacing, and top radius consume Canvas density, radius,
+  and contrast.
 - Go To Line: the modal shell, input divider, help row spacing, and elevated
   navigation surface consume Canvas density, radius, and contrast.
 - Tasks UI: the task picker shell, search row, empty state, task rows,

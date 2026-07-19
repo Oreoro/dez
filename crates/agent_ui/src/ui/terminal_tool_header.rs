@@ -1,12 +1,75 @@
 use std::time::Duration;
 
-use gpui::{AnyElement, ClickEvent, CursorStyle, Window};
+use gpui::{AnyElement, ClickEvent, CursorStyle, Div, Hsla, Pixels, Stateful, Window};
+use settings::Settings;
 use ui::{CommonAnimationExt, Disclosure, Divider, DividerColor, Tooltip, prelude::*};
 use util::time::duration_alt_display;
+use workspace::DesignSystemSettings;
 
 const ELAPSED_DISPLAY_THRESHOLD: Duration = Duration::from_secs(10);
 
 type ClickHandler = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
+
+fn terminal_tool_header_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.element_background.opacity(0.72),
+        settings::CanvasContrast::Standard => colors
+            .element_background
+            .blend(colors.editor_foreground.opacity(0.025)),
+        settings::CanvasContrast::High => {
+            colors.element_background.blend(colors.border.opacity(0.14))
+        }
+    }
+}
+
+fn terminal_tool_header_padding_top(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(3.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn terminal_tool_header_padding_left(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(10.),
+    }
+}
+
+fn terminal_tool_header_padding_right(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
+fn terminal_tool_header_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn terminal_tool_header_running_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(5.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
+fn terminal_tool_header_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_t_sm(),
+        settings::CanvasRadius::Rounded => element.rounded_t_md(),
+    }
+}
 
 pub struct TerminalSandboxWarning {
     pub title: SharedString,
@@ -127,21 +190,17 @@ impl RenderOnce for TerminalToolHeader {
 
         let child_id = |name: &str| format!("terminal-tool-{name}-{id}");
 
-        let header_bg = cx
-            .theme()
-            .colors()
-            .element_background
-            .blend(cx.theme().colors().editor_foreground.opacity(0.025));
+        let header_bg = terminal_tool_header_background(cx);
 
         let header_row = h_flex()
             .id(child_id("header"))
-            .pt_1()
-            .pl_1p5()
-            .pr_1()
+            .pt(terminal_tool_header_padding_top(cx))
+            .pl(terminal_tool_header_padding_left(cx))
+            .pr(terminal_tool_header_padding_right(cx))
             .flex_none()
-            .gap_1()
+            .gap(terminal_tool_header_gap(cx))
             .justify_between()
-            .rounded_t_md()
+            .map(|this| terminal_tool_header_radius(this, cx))
             .child(
                 div().w_full().min_w_0().overflow_hidden().child(
                     Label::new(working_dir)
@@ -171,7 +230,7 @@ impl RenderOnce for TerminalToolHeader {
             })
             .when(running, |header| {
                 header
-                    .gap_1p5()
+                    .gap(terminal_tool_header_running_gap(cx))
                     .child(
                         Icon::new(IconName::LoadCircle)
                             .size(IconSize::Small)

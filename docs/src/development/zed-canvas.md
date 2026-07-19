@@ -548,6 +548,9 @@ safe-area padding.
 The sandbox status tooltip uses Canvas density, radius, and contrast for
 tooltip width, shell padding, section cards, row rhythm, background, and border
 strength.
+Terminal tool-call headers use Canvas density, radius, and contrast for header
+background, top/side padding, action rhythm, running-state spacing, and top
+radius.
 
 ## Layout system {#layout-system}
 
