@@ -755,6 +755,22 @@ enum EntryShape {
     Terminal(TerminalId),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+enum ManualEntryOrderKey {
+    Thread(ThreadId),
+    Terminal(TerminalId),
+}
+
+impl ManualEntryOrderKey {
+    fn from_entry(entry: &ListEntry) -> Option<Self> {
+        match entry {
+            ListEntry::Thread(thread) => Some(Self::Thread(thread.metadata.thread_id)),
+            ListEntry::Terminal(terminal) => Some(Self::Terminal(terminal.metadata.terminal_id)),
+            ListEntry::ProjectHeader { .. } => None,
+        }
+    }
+}
+
 impl SidebarContents {
     fn is_thread_notified(&self, thread_id: &agent_ui::ThreadId) -> bool {
         self.notified_threads.contains(thread_id)
@@ -1709,6 +1725,14 @@ impl Sidebar {
         let query = "";
 
         let previous = mem::take(&mut self.contents);
+        let manual_entry_order: HashMap<_, _> = previous
+            .entries
+            .iter()
+            .enumerate()
+            .filter_map(|(index, entry)| {
+                ManualEntryOrderKey::from_entry(entry).map(|key| (key, index))
+            })
+            .collect();
 
         let old_statuses = &self.live_thread_statuses;
 
@@ -2337,6 +2361,7 @@ impl Sidebar {
                     session_rail_sort_by,
                     &notified_threads,
                     &notified_terminals,
+                    &manual_entry_order,
                     &mut current_session_ids,
                     &mut current_thread_ids,
                 );
@@ -2391,6 +2416,7 @@ impl Sidebar {
                     session_rail_sort_by,
                     &notified_threads,
                     &notified_terminals,
+                    &manual_entry_order,
                     &mut current_session_ids,
                     &mut current_thread_ids,
                 );
@@ -6437,6 +6463,7 @@ impl Sidebar {
         sort_by: settings::SessionRailSorting,
         notified_threads: &HashSet<agent_ui::ThreadId>,
         notified_terminals: &HashSet<TerminalId>,
+        manual_entry_order: &HashMap<ManualEntryOrderKey, usize>,
         current_session_ids: &mut HashSet<acp::SessionId>,
         current_thread_ids: &mut HashSet<agent_ui::ThreadId>,
     ) {
@@ -6528,8 +6555,20 @@ impl Sidebar {
                 settings::SessionRailSorting::Project => project_sort_key(left)
                     .cmp(&project_sort_key(right))
                     .then_with(|| display_time(right).cmp(&display_time(left))),
-                settings::SessionRailSorting::RecentActivity
-                | settings::SessionRailSorting::Manual => {
+                settings::SessionRailSorting::Manual => {
+                    let left_order = ManualEntryOrderKey::from_entry(left)
+                        .and_then(|key| manual_entry_order.get(&key).copied());
+                    let right_order = ManualEntryOrderKey::from_entry(right)
+                        .and_then(|key| manual_entry_order.get(&key).copied());
+
+                    match (left_order, right_order) {
+                        (Some(left_order), Some(right_order)) => left_order.cmp(&right_order),
+                        (Some(_), None) => Ordering::Less,
+                        (None, Some(_)) => Ordering::Greater,
+                        (None, None) => display_time(right).cmp(&display_time(left)),
+                    }
+                }
+                settings::SessionRailSorting::RecentActivity => {
                     display_time(right).cmp(&display_time(left))
                 }
             });

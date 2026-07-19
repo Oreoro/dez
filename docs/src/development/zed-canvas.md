@@ -185,8 +185,10 @@ Rail modes:
 `session_rail.sort_by` supports attention-first, agent-state, creation-time,
 recent-activity, and project row ordering. Project sorting orders thread and
 terminal rows by their first worktree label or path inside each project group,
-then falls back to recent activity. Manual ordering still needs persisted row
-order before it can behave differently from the current recent-first order.
+then falls back to recent activity. Manual ordering now preserves the visible
+thread and terminal row order across in-session rail rebuilds, with new rows
+falling back to recent activity. Persisted user-authored row order remains
+future work.
 
 `session_rail.visibility = "hidden"` removes the rail from layout. Setting
 `visibility` to `icon`, `compact`, or `detailed` overrides the rail display

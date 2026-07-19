@@ -368,8 +368,9 @@ Refine the existing sidebar direction into Session Rail:
   `attention`, `agent_state`, `creation_time`, `recent_activity`, and
   `project`. Project sorting orders thread and terminal rows by their first
   worktree label or path inside each project group, then falls back to recent
-  activity. `manual` currently preserves the previous recent-first in-group
-  ordering until persisted manual row order exists.
+  activity. `manual` now preserves existing thread and terminal row positions
+  across in-session rail rebuilds, with new rows appended by recent activity,
+  until persisted user-authored row order exists.
 - Runtime rail hosting now honors `session_rail.visibility = "hidden"` by
   reporting zero sidebar width, rendering an empty rail, and suppressing the
   resize hitbox. `visibility = "icon"`, `"compact"`, or `"detailed"` now acts
