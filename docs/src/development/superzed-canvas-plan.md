@@ -296,6 +296,12 @@ Terminal-agent detection:
   breadcrumb, program, and bell hooks now respect `agent_ui.connect_hooks`, and
   Agent Panel terminal attention state/popups respect
   `agent_ui.notify_on_attention`.
+- Runtime settings now expose the full Canvas agent UI family:
+  `presentation`, `event_verbosity`, `group_tool_calls`,
+  `keep_failures_expanded`, `keep_permissions_expanded`, `fleet_view`, and the
+  terminal/session settings above. Failed, rejected, and canceled tool-call
+  cards honor `agent_ui.keep_failures_expanded`; permission requests remain
+  expanded for safety so approval actions stay visible.
 
 Restoration:
 

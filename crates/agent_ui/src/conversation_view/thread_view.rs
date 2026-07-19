@@ -1,5 +1,5 @@
 use crate::{
-    DEFAULT_THREAD_TITLE, SelectPermissionGranularity,
+    CanvasAgentUiSettings, DEFAULT_THREAD_TITLE, SelectPermissionGranularity,
     agent_configuration::configure_context_server_modal::default_markdown_style,
     conversation_view::thread_search_bar::{ThreadSearchBar, ThreadSearchBarEvent},
     open_abs_path_at_point,
@@ -8320,6 +8320,8 @@ impl ThreadView {
             .read(cx)
             .is_tool_call_expanded(&tool_call.id);
 
+        is_open |=
+            failed_or_canceled && CanvasAgentUiSettings::get_global(cx).keep_failures_expanded;
         is_open |= needs_confirmation;
 
         let input_output_header = |label: SharedString| {

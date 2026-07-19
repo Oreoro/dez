@@ -99,7 +99,13 @@ pub use zed_actions::{CreateWorktree, NewWorktreeBranchTarget, SwitchWorktree};
 
 #[derive(Clone, Debug, settings::RegisterSetting)]
 pub struct CanvasAgentUiSettings {
+    pub presentation: settings::AgentPresentation,
+    pub event_verbosity: settings::AgentEventVerbosity,
+    pub group_tool_calls: bool,
+    pub keep_failures_expanded: bool,
+    pub keep_permissions_expanded: bool,
     pub show_detection_confidence: bool,
+    pub fleet_view: settings::AgentFleetView,
     pub allow_multiple_visible_agents: bool,
     pub detect_terminal_agents: bool,
     pub show_terminal_agents_in_session_rail: bool,
@@ -112,7 +118,13 @@ impl settings::Settings for CanvasAgentUiSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
         let agent_ui = content.agent_ui.clone().unwrap();
         Self {
+            presentation: agent_ui.presentation.unwrap(),
+            event_verbosity: agent_ui.event_verbosity.unwrap(),
+            group_tool_calls: agent_ui.group_tool_calls.unwrap(),
+            keep_failures_expanded: agent_ui.keep_failures_expanded.unwrap(),
+            keep_permissions_expanded: agent_ui.keep_permissions_expanded.unwrap(),
             show_detection_confidence: agent_ui.show_detection_confidence.unwrap(),
+            fleet_view: agent_ui.fleet_view.unwrap(),
             allow_multiple_visible_agents: agent_ui.allow_multiple_visible_agents.unwrap(),
             detect_terminal_agents: agent_ui.detect_terminal_agents.unwrap(),
             show_terminal_agents_in_session_rail: agent_ui
