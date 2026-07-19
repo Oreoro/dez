@@ -1,7 +1,7 @@
+use collections::HashMap;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use settings_macros::{MergeFrom, with_fallible_options};
-use std::collections::HashMap;
 
 #[derive(
     Clone,
