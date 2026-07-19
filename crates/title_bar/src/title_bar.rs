@@ -1505,17 +1505,23 @@ impl SidebarChrome {
                 let is_editor = matches!(current_layout, WindowLayout::Editor(_));
                 let is_agent = matches!(current_layout, WindowLayout::Agent(_));
                 let is_custom = matches!(current_layout, WindowLayout::Custom(_));
-                let active_canvas_layout_recipe = if is_agent {
-                    workspace
-                        .upgrade()
-                        .and_then(|workspace| workspace.read(cx).active_canvas_layout_recipe_id())
+                let (active_canvas_layout_recipe, canvas_layout_history_len) = if is_agent {
+                    workspace.upgrade().map_or((None, 0), |workspace| {
+                        let workspace = workspace.read(cx);
+                        (
+                            workspace.active_canvas_layout_recipe_id(),
+                            workspace.canvas_layout_history_len(),
+                        )
+                    })
                 } else {
-                    None
+                    (None, 0)
                 };
-                let has_previous_canvas_layout = is_agent
-                    && workspace
-                        .upgrade()
-                        .is_some_and(|workspace| workspace.read(cx).has_previous_canvas_layout());
+                let has_previous_canvas_layout = canvas_layout_history_len > 0;
+                let canvas_layout_history_label = if canvas_layout_history_len == 1 {
+                    "Layout History: 1 snapshot".to_string()
+                } else {
+                    format!("Layout History: {canvas_layout_history_len} snapshots")
+                };
                 let multiplexer_hint = {
                     let multiplexer_settings = MultiplexerSettings::get_global(cx);
                     multiplexer_settings.prefix_mode.then(|| {
@@ -1926,6 +1932,12 @@ impl SidebarChrome {
                                     false,
                                     !has_previous_canvas_layout,
                                 )
+                                .when(is_agent, |menu| {
+                                    menu.item(
+                                        ContextMenuEntry::new(canvas_layout_history_label.clone())
+                                            .disabled(true),
+                                    )
+                                })
                                 .when_some(multiplexer_hint.clone(), |menu, hint| {
                                     menu.separator()
                                         .item(ContextMenuEntry::new(hint).disabled(true))

@@ -2356,6 +2356,10 @@ impl Workspace {
         !self.canvas_layout_history.is_empty()
     }
 
+    pub fn canvas_layout_history_len(&self) -> usize {
+        self.canvas_layout_history.len()
+    }
+
     fn mark_canvas_layout_custom(&mut self) {
         self.active_canvas_layout_recipe = None;
     }

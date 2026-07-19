@@ -227,8 +227,9 @@ Use the existing panel-as-pane bridge as the migration path:
   recipe and exposes `Restore Previous Canvas Layout`, which restores visibility
   and focus for still-existing panes without recreating items or terminating
   live processes. The Panel Layout menu disables that restore action until a
-  previous Canvas layout snapshot exists. Full persisted semantic layout history
-  and advanced responsive variants remain future work.
+  previous Canvas layout snapshot exists and shows the current in-memory
+  snapshot count. Full persisted semantic layout history and advanced
+  responsive variants remain future work.
 - First `pane_grid.auto_reflow` behavior is implemented for Canvas recipe
   application and resize: when the workspace is narrow or portrait, horizontal
   recipe splits reflow into vertical splits. Active Canvas recipes invert the
