@@ -27,9 +27,9 @@ use command_palette_hooks::CommandPaletteFilter;
 
 use gpui::{
     Action, Anchor, Animation, AnimationExt, AnyElement, App, Context, Element, Entity, Focusable,
-    InteractiveElement, IntoElement, MouseButton, ParentElement, Render,
-    StatefulInteractiveElement, Styled, Subscription, TaskExt, WeakEntity, Window, actions, div,
-    pulsating_between,
+    InteractiveElement, IntoElement, KeyBinding, KeyBindingContextPredicate, Keystroke,
+    MouseButton, ParentElement, Render, StatefulInteractiveElement, Styled, Subscription, TaskExt,
+    WeakEntity, Window, actions, div, pulsating_between,
 };
 use onboarding_banner::OnboardingBanner;
 use project::{
@@ -37,10 +37,11 @@ use project::{
     trusted_worktrees::TrustedWorktrees,
 };
 use remote::RemoteConnectionOptions;
-use settings::{Settings as _, SettingsStore};
+use settings::{KeybindSource, Settings as _, SettingsStore};
 
 use sidebar_chrome_settings::{SidebarChromeSettings, WorkspaceBarSettings};
 use std::any::TypeId;
+use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
 use theme::ActiveTheme;
@@ -51,12 +52,16 @@ use ui::{
 use update_version::UpdateVersion;
 use util::ResultExt;
 use workspace::{
-    AccessibleMode, ClearAllSavedCanvasLayouts, ClearSavedCanvasLayoutNamed,
-    ClearSavedCanvasLayoutSlot, CopySavedCanvasLayoutsToClipboard, DuplicateSavedCanvasLayoutNamed,
+    AccessibleMode, ActivatePaneDown, ActivatePaneLeft, ActivatePaneRight, ActivatePaneUp,
+    ClearAllSavedCanvasLayouts, ClearSavedCanvasLayoutNamed, ClearSavedCanvasLayoutSlot,
+    CopySavedCanvasLayoutsToClipboard, DuplicateSavedCanvasLayoutNamed,
     DuplicateSavedCanvasLayoutSlot, ImportSavedCanvasLayoutsFromClipboard,
-    ManageSavedCanvasLayouts, MultiWorkspace, MultiplexerSettings, RenameSavedCanvasLayoutNamed,
-    RenameSavedCanvasLayoutSlot, RestoreSavedCanvasLayoutNamed, SaveCurrentCanvasLayoutAs,
-    SaveCurrentCanvasLayoutNamed, ToggleWorktreeSecurity, Workspace,
+    ManageSavedCanvasLayouts, MovePaneDown, MovePaneLeft, MovePaneRight, MovePaneUp,
+    MultiWorkspace, MultiplexerSettings, RenameSavedCanvasLayoutNamed, RenameSavedCanvasLayoutSlot,
+    ResetPaneSizes, ResizePaneDown, ResizePaneLeft, ResizePaneRight, ResizePaneUp,
+    RestoreSavedCanvasLayoutNamed, SaveCurrentCanvasLayoutAs, SaveCurrentCanvasLayoutNamed,
+    SendKeystrokes, SplitDown, SplitRight, SwapPaneDown, SwapPaneLeft, SwapPaneRight, SwapPaneUp,
+    ToggleWorktreeSecurity, Workspace,
     notifications::{NotifyResultExt, NotifyTaskExt as _},
 };
 
@@ -67,6 +72,7 @@ pub use onboarding_banner::restore_banner;
 const MAX_PROJECT_NAME_LENGTH: usize = 40;
 const MAX_BRANCH_NAME_LENGTH: usize = 40;
 const MAX_SHORT_SHA_LENGTH: usize = 8;
+const CANVAS_MULTIPLEXER_CONTEXT: &str = "Workspace && canvas_prefix_mode";
 
 actions!(
     collab,
@@ -448,6 +454,101 @@ fn update_layout_action_filter(cx: &mut App) {
 fn set_window_layout(layout: WindowLayout, cx: &App) {
     let fs = <dyn fs::Fs>::global(cx);
     drop(AgentSettings::set_layout(layout, fs, cx));
+}
+
+pub fn canvas_multiplexer_key_bindings(cx: &App) -> Vec<KeyBinding> {
+    let multiplexer_settings = MultiplexerSettings::get_global(cx);
+    if !multiplexer_settings.prefix_mode {
+        return Vec::new();
+    }
+
+    let prefix = multiplexer_settings.prefix.trim();
+    if prefix.is_empty() || !valid_canvas_multiplexer_prefix(prefix) {
+        return Vec::new();
+    }
+
+    let Some(context) = KeyBindingContextPredicate::parse(CANVAS_MULTIPLEXER_CONTEXT).log_err()
+    else {
+        return Vec::new();
+    };
+    let context = Rc::new(context);
+    let mut bindings = Vec::new();
+    let commands: Vec<(&str, Box<dyn Action>)> = vec![
+        ("space", CycleCanvasLayout.boxed_clone()),
+        ("a", ApplyCanvasAgentControlLayout.boxed_clone()),
+        ("f", ApplyCanvasEditorFocusLayout.boxed_clone()),
+        ("m", ApplyCanvasFourAgentMatrixLayout.boxed_clone()),
+        ("s", SaveCurrentCanvasLayout.boxed_clone()),
+        ("r", RestoreSavedCanvasLayout.boxed_clone()),
+        ("shift-1", SaveCurrentCanvasLayout.boxed_clone()),
+        ("shift-2", SaveCurrentCanvasLayoutSlot2.boxed_clone()),
+        ("shift-3", SaveCurrentCanvasLayoutSlot3.boxed_clone()),
+        ("1", RestoreSavedCanvasLayout.boxed_clone()),
+        ("2", RestoreSavedCanvasLayoutSlot2.boxed_clone()),
+        ("3", RestoreSavedCanvasLayoutSlot3.boxed_clone()),
+        ("n 1", RenameSavedCanvasLayoutSlot { slot: 1 }.boxed_clone()),
+        ("n 2", RenameSavedCanvasLayoutSlot { slot: 2 }.boxed_clone()),
+        ("n 3", RenameSavedCanvasLayoutSlot { slot: 3 }.boxed_clone()),
+        ("n m", ManageSavedCanvasLayouts.boxed_clone()),
+        ("n s", SaveCurrentCanvasLayoutAs.boxed_clone()),
+        ("p", RestorePreviousCanvasLayout.boxed_clone()),
+        ("left", ActivatePaneLeft.boxed_clone()),
+        ("down", ActivatePaneDown.boxed_clone()),
+        ("up", ActivatePaneUp.boxed_clone()),
+        ("right", ActivatePaneRight.boxed_clone()),
+        ("shift-left", SwapPaneLeft.boxed_clone()),
+        ("shift-down", SwapPaneDown.boxed_clone()),
+        ("shift-up", SwapPaneUp.boxed_clone()),
+        ("shift-right", SwapPaneRight.boxed_clone()),
+        ("alt-left", MovePaneLeft.boxed_clone()),
+        ("alt-down", MovePaneDown.boxed_clone()),
+        ("alt-up", MovePaneUp.boxed_clone()),
+        ("alt-right", MovePaneRight.boxed_clone()),
+        ("v", SplitRight::default().boxed_clone()),
+        ("enter", SplitDown::default().boxed_clone()),
+        ("h", ResizePaneLeft.boxed_clone()),
+        ("j", ResizePaneDown.boxed_clone()),
+        ("k", ResizePaneUp.boxed_clone()),
+        ("l", ResizePaneRight.boxed_clone()),
+        (prefix, SendKeystrokes(prefix.to_string()).boxed_clone()),
+        ("=", ResetPaneSizes.boxed_clone()),
+    ];
+
+    for (suffix, action) in commands {
+        push_canvas_multiplexer_binding(&mut bindings, prefix, suffix, action, &context, cx);
+    }
+
+    bindings
+}
+
+fn valid_canvas_multiplexer_prefix(prefix: &str) -> bool {
+    prefix
+        .split_whitespace()
+        .all(|keystroke| Keystroke::parse(keystroke).log_err().is_some())
+}
+
+fn push_canvas_multiplexer_binding(
+    bindings: &mut Vec<KeyBinding>,
+    prefix: &str,
+    suffix: &str,
+    action: Box<dyn Action>,
+    context: &Rc<KeyBindingContextPredicate>,
+    cx: &App,
+) {
+    let keystrokes = format!("{prefix} {suffix}");
+    let Some(mut binding) = KeyBinding::load(
+        &keystrokes,
+        action,
+        Some(context.clone()),
+        false,
+        None,
+        cx.keyboard_mapper().as_ref(),
+    )
+    .log_err() else {
+        return;
+    };
+    binding.set_meta(KeybindSource::Default.meta());
+    bindings.push(binding);
 }
 
 pub fn sidebar_button_layout(cx: &App) -> Option<gpui::WindowButtonLayout> {
@@ -1684,22 +1785,22 @@ impl SidebarChrome {
                             format!(
                                 "Prefix mode: {prefix} · timeout: {timeout} · broadcast confirmation: {confirmation}"
                             ),
-                            "Prefix commands: ctrl-b space · Cycle Layout".to_string(),
-                            "Prefix commands: ctrl-b a · Agent Control".to_string(),
-                            "Prefix commands: ctrl-b f · Focus Editor".to_string(),
-                            "Prefix commands: ctrl-b m · Four-Agent Matrix".to_string(),
-                            "Prefix commands: ctrl-b s/r/p · Save, Restore, Previous".to_string(),
-                            "Prefix commands: ctrl-b 1/2/3 · Restore saved slots".to_string(),
-                            "Prefix commands: ctrl-b shift-1/2/3 · Save slots".to_string(),
-                            "Prefix commands: ctrl-b n m/s/1/2/3 · Manage, Save as, Rename slots"
-                                .to_string(),
-                            "Prefix commands: ctrl-b arrows · Focus adjacent panes".to_string(),
-                            "Prefix commands: ctrl-b shift-arrows · Swap adjacent panes"
-                                .to_string(),
-                            "Prefix commands: ctrl-b alt-arrows · Move pane to edge".to_string(),
-                            "Prefix commands: ctrl-b v/enter · Split right, Split down".to_string(),
-                            "Prefix commands: ctrl-b h/j/k/l/= · Resize, Equalize".to_string(),
-                            "Prefix commands: ctrl-b ctrl-b · Send prefix".to_string(),
+                            format!("Prefix commands: {prefix} space · Cycle Layout"),
+                            format!("Prefix commands: {prefix} a · Agent Control"),
+                            format!("Prefix commands: {prefix} f · Focus Editor"),
+                            format!("Prefix commands: {prefix} m · Four-Agent Matrix"),
+                            format!("Prefix commands: {prefix} s/r/p · Save, Restore, Previous"),
+                            format!("Prefix commands: {prefix} 1/2/3 · Restore saved slots"),
+                            format!("Prefix commands: {prefix} shift-1/2/3 · Save slots"),
+                            format!(
+                                "Prefix commands: {prefix} n m/s/1/2/3 · Manage, Save as, Rename slots"
+                            ),
+                            format!("Prefix commands: {prefix} arrows · Focus adjacent panes"),
+                            format!("Prefix commands: {prefix} shift-arrows · Swap adjacent panes"),
+                            format!("Prefix commands: {prefix} alt-arrows · Move pane to edge"),
+                            format!("Prefix commands: {prefix} v/enter · Split right, Split down"),
+                            format!("Prefix commands: {prefix} h/j/k/l/= · Resize, Equalize"),
+                            format!("Prefix commands: {prefix} {prefix} · Send prefix"),
                         ]
                     })
                 };

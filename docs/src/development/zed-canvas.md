@@ -426,35 +426,35 @@ The runtime settings model now reads `multiplexer.prefix_mode`,
 `multiplexer.broadcast_confirmation`; the Panel Layout menu shows the
 configured prefix, prefix timeout, and broadcast policy when prefix mode is
 enabled. When `multiplexer.prefix_mode = true`, workspace key context exposes
-`canvas_prefix_mode` and the default keymaps bind the default `ctrl-b` prefix to
-core Canvas commands. The Panel Layout menu also shows disabled discovery rows
-for the default prefix command set, and the title bar shows a `PREFIX …` chip
-while a multi-stroke prefix sequence is pending:
+`canvas_prefix_mode` and generated default key bindings map the configured
+prefix to core Canvas commands. The Panel Layout menu also shows disabled
+discovery rows for the active prefix command set, and the title bar shows a
+`PREFIX …` chip while a multi-stroke prefix sequence is pending:
 
-- `ctrl-b space` cycles Canvas layouts.
-- `ctrl-b a` applies Agent Control.
-- `ctrl-b f` applies Focus Editor.
-- `ctrl-b m` applies Four-Agent Matrix.
-- `ctrl-b s` saves Canvas layout slot 1.
-- `ctrl-b r` restores Canvas layout slot 1.
-- `ctrl-b shift-1/2/3` saves Canvas layout slots 1/2/3.
-- `ctrl-b 1/2/3` restores Canvas layout slots 1/2/3.
-- `ctrl-b n 1/2/3` renames Canvas layout slots 1/2/3.
-- `ctrl-b n m` opens the Canvas saved-layout manager.
-- `ctrl-b n s` saves the current Canvas layout under a free-form name.
-- `ctrl-b p` restores the previous Canvas layout snapshot.
-- `ctrl-b left/down/up/right` focuses adjacent panes.
-- `ctrl-b shift-left/down/up/right` swaps adjacent panes.
-- `ctrl-b alt-left/down/up/right` moves the active pane to the workspace edge.
-- `ctrl-b v` splits the active pane to the right.
-- `ctrl-b enter` splits the active pane downward.
-- `ctrl-b h/j/k/l` resizes the active pane left/down/up/right in fixed steps.
-- `ctrl-b =` equalizes pane sizes without changing the split tree.
-- `ctrl-b ctrl-b` sends the default prefix through to the focused item.
+- `<prefix> space` cycles Canvas layouts.
+- `<prefix> a` applies Agent Control.
+- `<prefix> f` applies Focus Editor.
+- `<prefix> m` applies Four-Agent Matrix.
+- `<prefix> s` saves Canvas layout slot 1.
+- `<prefix> r` restores Canvas layout slot 1.
+- `<prefix> shift-1/2/3` saves Canvas layout slots 1/2/3.
+- `<prefix> 1/2/3` restores Canvas layout slots 1/2/3.
+- `<prefix> n 1/2/3` renames Canvas layout slots 1/2/3.
+- `<prefix> n m` opens the Canvas saved-layout manager.
+- `<prefix> n s` saves the current Canvas layout under a free-form name.
+- `<prefix> p` restores the previous Canvas layout snapshot.
+- `<prefix> left/down/up/right` focuses adjacent panes.
+- `<prefix> shift-left/down/up/right` swaps adjacent panes.
+- `<prefix> alt-left/down/up/right` moves the active pane to the workspace edge.
+- `<prefix> v` splits the active pane to the right.
+- `<prefix> enter` splits the active pane downward.
+- `<prefix> h/j/k/l` resizes the active pane left/down/up/right in fixed steps.
+- `<prefix> =` equalizes pane sizes without changing the split tree.
+- `<prefix> <prefix>` sends the configured prefix through to the focused item.
 
 `multiplexer.prefix_timeout_ms = 0` disables timeout replay for incomplete
-prefix sequences. Custom prefix strings still require user keymap overrides,
-and dynamic remapping remains future work.
+prefix sequences. Prefix strings use Zed keymap keystroke syntax; invalid or
+empty prefix strings do not install generated prefix bindings.
 
 ## Layout system {#layout-system}
 

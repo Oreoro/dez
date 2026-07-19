@@ -289,7 +289,7 @@ Use the existing panel-as-pane bridge as the migration path:
   prefix mode is enabled, the Panel Layout menu shows the configured prefix,
   prefix timeout, and broadcast confirmation policy as a disabled status row.
   Workspace key context now exposes
-  `canvas_prefix_mode`, and the default keymaps bind the default `ctrl-b`
+  `canvas_prefix_mode`, and generated default key bindings bind the configured
   prefix to core Canvas commands: cycle layout, Agent Control, Focus Editor,
   Four-Agent Matrix, save slot 1, restore slot 1, restore previous layout,
   save/restore all three fixed slots with `shift-1/2/3` and `1/2/3`,
@@ -298,12 +298,12 @@ Use the existing panel-as-pane bridge as the migration path:
   adjacent-pane focus with arrow keys, adjacent-pane swapping with shift-arrow
   keys, move-to-edge commands with alt-arrow keys, split-right/split-down with
   `v`/`enter`, fixed-step pane resizing with `h/j/k/l`, and pane equalization
-  with `=`, plus `ctrl-b ctrl-b` to send the default prefix through to the
-  focused item. The Panel Layout menu also shows disabled discovery rows for
+  with `=`, plus `<prefix> <prefix>` to send the configured prefix through to
+  the focused item. The Panel Layout menu also shows disabled discovery rows for
   those prefix commands, and the title bar shows a compact `PREFIX …` chip
   while a multi-stroke prefix sequence is pending. `prefix_timeout_ms = 0`
-  disables timeout replay. Custom prefix strings and dynamic remapping remain
-  future work.
+  disables timeout replay. Prefix strings use Zed keymap keystroke syntax;
+  invalid or empty prefix strings do not install generated prefix bindings.
 - Canvas recipes now share one canonical runtime recipe-name mapping. The
   workspace records the last applied Canvas recipe, layout history snapshots
   restore that recipe identity with pane visibility/focus, persisted workspace
@@ -599,9 +599,9 @@ Add semantic command surfaces:
   Zed keymaps.
 - Runtime prefix settings are now available through `MultiplexerSettings`, and
   the layout menu surfaces the configured prefix/broadcast policy when prefix
-  mode is enabled. Default `ctrl-b` prefix key-dispatch capture, timeout
-  handling, and the pending-prefix title-bar chip are implemented; custom
-  dynamic remapping remains future work.
+  mode is enabled. Prefix key-dispatch capture is generated from the configured
+  prefix string, timeout handling is wired through GPUI pending input, and the
+  pending-prefix title-bar chip is implemented.
 
 Automation API:
 
@@ -659,13 +659,12 @@ recipe-name dispatcher to keymaps, command chaining, and automation without
 requiring a dedicated action per recipe.
 `Cycle Canvas Layout` reads `multiplexer.layout_cycle` so users can choose the
 order of named recipes without changing keybindings. When
-`multiplexer.prefix_mode = true`, the default `ctrl-b` prefix can trigger the
-core Canvas command set from workspace focus, including fixed-step pane
-resizing and pane equalization; `multiplexer.prefix_timeout_ms` controls
-pending prefix replay and `0` disables it. Custom prefixes can be expressed
-through user keymap overrides while dynamic prefix remapping remains future
-work. `ctrl-b ctrl-b` sends the default prefix through to the focused item.
-The Panel Layout menu exposes the default prefix command set as discoverable
+`multiplexer.prefix_mode = true`, generated default key bindings use
+`multiplexer.prefix` to trigger the core Canvas command set from workspace
+focus, including fixed-step pane resizing and pane equalization;
+`multiplexer.prefix_timeout_ms` controls pending prefix replay and `0` disables
+it. `<prefix> <prefix>` sends the configured prefix through to the focused item.
+The Panel Layout menu exposes the active prefix command set as discoverable
 disabled rows while prefix mode is enabled.
 
 ## Accessibility and performance requirements {#accessibility-and-performance}

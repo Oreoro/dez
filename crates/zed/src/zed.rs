@@ -94,9 +94,9 @@ use vim_mode_setting::VimModeSetting;
 use workspace::notifications::{NotificationId, dismiss_app_notification, show_app_notification};
 
 use workspace::{
-    AppState, MultiWorkspace, NewFile, NewWindow, OpenLog, Toast, Workspace, WorkspaceSettings,
-    create_and_open_local_file, notifications::simple_message_notification::MessageNotification,
-    open_new,
+    AppState, MultiWorkspace, MultiplexerSettings, NewFile, NewWindow, OpenLog, Toast, Workspace,
+    WorkspaceSettings, create_and_open_local_file,
+    notifications::simple_message_notification::MessageNotification, open_new,
 };
 use workspace::{
     CloseIntent, CloseProject, CloseWindow, RestoreBanner, with_active_or_new_workspace,
@@ -2022,22 +2022,32 @@ pub fn handle_keymap_file_changes(
     let mut old_vim_enabled = VimModeSetting::get_global(cx).0;
     let mut old_helix_enabled = vim_mode_setting::HelixModeSetting::get_global(cx).0;
     let mut old_disable_ai = DisableAiSettings::get_global(cx).disable_ai;
+    let multiplexer_settings = MultiplexerSettings::get_global(cx);
+    let mut old_canvas_prefix_mode = multiplexer_settings.prefix_mode;
+    let mut old_canvas_prefix = multiplexer_settings.prefix.clone();
 
     cx.observe_global::<SettingsStore>(move |cx| {
         let new_base_keymap = *BaseKeymap::get_global(cx);
         let new_vim_enabled = VimModeSetting::get_global(cx).0;
         let new_helix_enabled = vim_mode_setting::HelixModeSetting::get_global(cx).0;
         let new_disable_ai = DisableAiSettings::get_global(cx).disable_ai;
+        let multiplexer_settings = MultiplexerSettings::get_global(cx);
+        let new_canvas_prefix_mode = multiplexer_settings.prefix_mode;
+        let new_canvas_prefix = multiplexer_settings.prefix.clone();
 
         if new_base_keymap != old_base_keymap
             || new_vim_enabled != old_vim_enabled
             || new_helix_enabled != old_helix_enabled
             || new_disable_ai != old_disable_ai
+            || new_canvas_prefix_mode != old_canvas_prefix_mode
+            || new_canvas_prefix != old_canvas_prefix
         {
             old_base_keymap = new_base_keymap;
             old_vim_enabled = new_vim_enabled;
             old_helix_enabled = new_helix_enabled;
             old_disable_ai = new_disable_ai;
+            old_canvas_prefix_mode = new_canvas_prefix_mode;
+            old_canvas_prefix = new_canvas_prefix;
 
             base_keymap_tx.unbounded_send(()).unwrap();
         }
@@ -2228,6 +2238,10 @@ pub fn load_default_keymap(cx: &mut App) {
 
     cx.bind_keys(filter_disabled_ai_bindings(
         KeymapFile::load_asset(DEFAULT_KEYMAP_PATH, Some(KeybindSource::Default), cx).unwrap(),
+        cx,
+    ));
+    cx.bind_keys(filter_disabled_ai_bindings(
+        title_bar::canvas_multiplexer_key_bindings(cx),
         cx,
     ));
 
