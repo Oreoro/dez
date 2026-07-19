@@ -18,7 +18,7 @@ use editor::{
 };
 use gpui::{
     AnyElement, App, AsyncApp, Context, Entity, EventEmitter, FocusHandle, FocusOutEvent,
-    Focusable, Global, InteractiveElement, IntoElement, ParentElement, Render, SharedString,
+    Focusable, Global, Hsla, InteractiveElement, IntoElement, ParentElement, Render, SharedString,
     Styled, Subscription, Task, WeakEntity, Window, actions, div,
 };
 use itertools::Itertools as _;
@@ -45,7 +45,7 @@ pub use toolbar_controls::ToolbarControls;
 use ui::{Icon, IconName, Label, h_flex, prelude::*};
 use util::ResultExt;
 use workspace::{
-    ItemNavHistory, Workspace,
+    DesignSystemSettings, ItemNavHistory, Workspace,
     item::{Item, ItemEvent, ItemHandle, SaveOptions, TabContentParams},
     searchable::SearchableItemHandle,
 };
@@ -70,6 +70,15 @@ pub fn init(cx: &mut App) {
     editor::set_diagnostic_renderer(diagnostic_renderer::DiagnosticRenderer {}, cx);
     cx.observe_new(ProjectDiagnosticsEditor::register).detach();
     cx.observe_new(BufferDiagnosticsEditor::register).detach();
+}
+
+pub(crate) fn diagnostics_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.editor_background,
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors.element_background,
+    }
 }
 
 pub(crate) struct ProjectDiagnosticsEditor {
@@ -115,7 +124,7 @@ impl Render for ProjectDiagnosticsEditor {
                     .justify_center()
                     .items_center()
                     .text_center()
-                    .bg(cx.theme().colors().editor_background)
+                    .bg(diagnostics_background(cx))
                     .child(Label::new(label).color(Color::Muted))
                     .when(self.summary.warning_count > 0, |this| {
                         let plural_suffix = if self.summary.warning_count > 1 {
@@ -144,6 +153,7 @@ impl Render for ProjectDiagnosticsEditor {
             .key_context("Diagnostics")
             .track_focus(&self.focus_handle(cx))
             .size_full()
+            .bg(diagnostics_background(cx))
             .on_action(cx.listener(Self::toggle_warnings))
             .on_action(cx.listener(Self::toggle_diagnostics_refresh))
             .child(child)

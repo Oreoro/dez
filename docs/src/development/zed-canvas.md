@@ -503,7 +503,9 @@ Preview uses Canvas backgrounds, borders, density, and radius for its
 navigation rail, filter bar, component cards, and focused component page; CSV
 Preview uses them for the settings toolbar, table background, cell gutters,
 header fades, and debug overlay; Image Viewer uses them for the viewport,
-checkerboard backdrop, image border, and image radius.
+checkerboard backdrop, image border, and image radius. SVG Preview uses them
+for its viewport and empty/error cards. Diagnostics uses Canvas contrast for
+project and buffer diagnostics roots plus empty states.
 
 ## Layout system {#layout-system}
 

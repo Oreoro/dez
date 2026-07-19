@@ -1,6 +1,7 @@
 use crate::{
     DIAGNOSTICS_UPDATE_DEBOUNCE, IncludeWarnings, ToggleWarnings, context_range_for_entry,
     diagnostic_renderer::{DiagnosticBlock, DiagnosticRenderer},
+    diagnostics_background,
     toolbar_controls::DiagnosticsToolbarEditor,
 };
 use anyhow::Result;
@@ -908,7 +909,7 @@ impl Render for BufferDiagnosticsEditor {
                 .justify_center()
                 .items_center()
                 .text_center()
-                .bg(cx.theme().colors().editor_background)
+                .bg(diagnostics_background(cx))
                 .child(
                     div()
                         .h_flex()
@@ -961,6 +962,7 @@ impl Render for BufferDiagnosticsEditor {
             .key_context("Diagnostics")
             .track_focus(&self.focus_handle(cx))
             .size_full()
+            .bg(diagnostics_background(cx))
             .child(child)
     }
 }

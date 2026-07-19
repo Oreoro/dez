@@ -35,6 +35,10 @@ Implemented in this phase:
   chrome, and Image Viewer viewport/checkerboard/image border chrome now read
   `design_system.density`, `design_system.radius`, and
   `design_system.contrast`.
+- Extended the same Canvas styling pass to SVG Preview and Diagnostics: SVG
+  Preview now reads Canvas background, border, density, and radius tokens for
+  its viewport and empty/error cards; Project and Buffer Diagnostics use Canvas
+  contrast for their root and empty-state backgrounds.
 - Added schema/default switches for pane-tab panel hosting, terminal-agent
   detection, multiple visible agents, session restoration, agent attention
   notifications, and preview-first Markdown.

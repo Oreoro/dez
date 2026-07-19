@@ -3,16 +3,72 @@ use std::sync::Arc;
 
 use file_icons::FileIcons;
 use gpui::{
-    App, Context, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, ParentElement, Render,
-    RenderImage, Styled, Subscription, Task, WeakEntity, Window, div, img,
+    App, Context, Div, Entity, EventEmitter, FocusHandle, Focusable, Hsla, IntoElement,
+    ParentElement, Pixels, Render, RenderImage, Stateful, Styled, Subscription, Task, WeakEntity,
+    Window, div, img, px,
 };
 use language::{Buffer, BufferEvent};
 use multi_buffer::MultiBuffer;
+use settings::Settings;
 use ui::prelude::*;
 use workspace::item::Item;
-use workspace::{Pane, Workspace};
+use workspace::{DesignSystemSettings, Pane, Workspace};
 
 use crate::{OpenFollowingPreview, OpenPreview, OpenPreviewToTheSide};
+
+fn canvas_svg_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.editor_background,
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors.element_background,
+    }
+}
+
+fn canvas_svg_empty_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.surface_background,
+        settings::CanvasContrast::Standard => colors.surface_background,
+        settings::CanvasContrast::High => colors.panel_background,
+    }
+}
+
+fn canvas_svg_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border.opacity(0.5),
+        settings::CanvasContrast::Standard => colors.border,
+        settings::CanvasContrast::High => colors.border_variant,
+    }
+}
+
+fn canvas_svg_empty_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(12.),
+        settings::CanvasDensity::Balanced => px(16.),
+        settings::CanvasDensity::Spacious => px(24.),
+    }
+}
+
+fn canvas_svg_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_sm(),
+        settings::CanvasRadius::Rounded => element.rounded_md(),
+    }
+}
+
+fn canvas_svg_empty_card(cx: &App) -> Stateful<Div> {
+    canvas_svg_radius(
+        div()
+            .p(canvas_svg_empty_padding(cx))
+            .bg(canvas_svg_empty_background(cx))
+            .border_1()
+            .border_color(canvas_svg_border(cx)),
+        cx,
+    )
+}
 
 pub struct SvgPreviewView {
     focus_handle: FocusHandle,
@@ -284,7 +340,7 @@ impl Render for SvgPreviewView {
             .key_context("SvgPreview")
             .track_focus(&self.focus_handle(cx))
             .size_full()
-            .bg(cx.theme().colors().editor_background)
+            .bg(canvas_svg_background(cx))
             .flex()
             .justify_center()
             .items_center()
@@ -299,8 +355,12 @@ impl Render for SvgPreviewView {
                             .into_any_element()
                     }))
                 }
-                Some(Err(e)) => this.child(div().p_4().child(e).into_any_element()),
-                None => this.child(div().p_4().child("No SVG file selected")),
+                Some(Err(e)) => this.child(canvas_svg_empty_card(cx).child(e).into_any_element()),
+                None => this.child(
+                    canvas_svg_empty_card(cx)
+                        .child("No SVG file selected")
+                        .into_any_element(),
+                ),
             })
     }
 }
