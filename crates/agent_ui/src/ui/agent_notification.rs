@@ -1,11 +1,106 @@
 use gpui::{
-    App, Context, EventEmitter, IntoElement, PlatformDisplay, Size, Window,
-    WindowBackgroundAppearance, WindowBounds, WindowDecorations, WindowKind, WindowOptions,
+    App, Context, Div, EventEmitter, Hsla, IntoElement, Pixels, PlatformDisplay, Size, Stateful,
+    Window, WindowBackgroundAppearance, WindowBounds, WindowDecorations, WindowKind, WindowOptions,
     linear_color_stop, linear_gradient, point,
 };
 use release_channel::ReleaseChannel;
+use settings::Settings;
 use std::rc::Rc;
 use ui::{Render, prelude::*};
+use workspace::DesignSystemSettings;
+
+fn notification_window_size(cx: &App) -> Size<Pixels> {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => Size {
+            width: px(420.),
+            height: px(64.),
+        },
+        settings::CanvasDensity::Balanced => Size {
+            width: px(450.),
+            height: px(72.),
+        },
+        settings::CanvasDensity::Spacious => Size {
+            width: px(520.),
+            height: px(88.),
+        },
+    }
+}
+
+fn notification_window_margin(cx: &App) -> (Pixels, Pixels) {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => (px(12.), px(-40.)),
+        settings::CanvasDensity::Balanced => (px(16.), px(-48.)),
+        settings::CanvasDensity::Spacious => (px(24.), px(-56.)),
+    }
+}
+
+fn notification_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.elevated_surface_background.opacity(0.94),
+        settings::CanvasContrast::Standard => colors.elevated_surface_background,
+        settings::CanvasContrast::High => colors
+            .elevated_surface_background
+            .blend(colors.border_focused.opacity(0.08)),
+    }
+}
+
+fn notification_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border.opacity(0.45),
+        settings::CanvasContrast::Standard => colors.border,
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn notification_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(8.),
+        settings::CanvasDensity::Balanced => px(12.),
+        settings::CanvasDensity::Spacious => px(16.),
+    }
+}
+
+fn notification_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(10.),
+        settings::CanvasDensity::Balanced => px(16.),
+        settings::CanvasDensity::Spacious => px(20.),
+    }
+}
+
+fn notification_inner_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(10.),
+    }
+}
+
+fn notification_button_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn notification_text_width(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(260.),
+        settings::CanvasDensity::Balanced => px(300.),
+        settings::CanvasDensity::Spacious => px(340.),
+    }
+}
+
+fn notification_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_lg(),
+        settings::CanvasRadius::Rounded => element.rounded_xl(),
+    }
+}
 
 pub struct AgentNotification {
     title: SharedString,
@@ -30,13 +125,9 @@ impl AgentNotification {
     }
 
     pub fn window_options(screen: Rc<dyn PlatformDisplay>, cx: &App) -> WindowOptions {
-        let size = Size {
-            width: px(450.),
-            height: px(72.),
-        };
-
-        let notification_margin_width = px(16.);
-        let notification_margin_height = px(-48.);
+        let size = notification_window_size(cx);
+        let (notification_margin_width, notification_margin_height) =
+            notification_window_margin(cx);
 
         let bounds = gpui::Bounds::<Pixels> {
             origin: screen.bounds().top_right()
@@ -89,7 +180,7 @@ impl Render for AgentNotification {
         let ui_font = theme_settings::setup_ui_font(window, cx);
         let line_height = window.line_height();
 
-        let bg = cx.theme().colors().elevated_surface_background;
+        let bg = notification_background(cx);
         let gradient_overflow = || {
             div()
                 .h_full()
@@ -107,18 +198,20 @@ impl Render for AgentNotification {
         h_flex()
             .id("agent-notification")
             .size_full()
-            .p_3()
-            .gap_4()
+            .p(notification_padding(cx))
+            .gap(notification_gap(cx))
             .justify_between()
             .elevation_3(cx)
             .text_ui(cx)
             .font(ui_font)
-            .border_color(cx.theme().colors().border)
-            .rounded_xl()
+            .bg(bg)
+            .border_1()
+            .border_color(notification_border(cx))
+            .map(|this| notification_radius(this, cx))
             .child(
                 h_flex()
                     .items_start()
-                    .gap_2()
+                    .gap(notification_inner_gap(cx))
                     .flex_1()
                     .child(
                         h_flex().h(line_height).justify_center().child(
@@ -130,7 +223,7 @@ impl Render for AgentNotification {
                     .child(
                         v_flex()
                             .flex_1()
-                            .max_w(px(300.))
+                            .max_w(notification_text_width(cx))
                             .child(
                                 div()
                                     .relative()
@@ -143,7 +236,7 @@ impl Render for AgentNotification {
                             .child(
                                 h_flex()
                                     .relative()
-                                    .gap_1p5()
+                                    .gap(notification_button_gap(cx))
                                     .text_size(px(12.))
                                     .text_color(cx.theme().colors().text_muted)
                                     .truncate()
@@ -177,7 +270,7 @@ impl Render for AgentNotification {
             )
             .child(
                 v_flex()
-                    .gap_1()
+                    .gap(notification_button_gap(cx))
                     .items_center()
                     .child(
                         Button::new("open", "View")

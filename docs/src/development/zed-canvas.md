@@ -534,6 +534,9 @@ Snippets scope selection uses Canvas picker shell tokens plus density-driven
 row rhythm and label/file spacing.
 Generic UI prompts use Canvas density, radius, and contrast for modal padding,
 button rhythm, shell contrast, border strength, and backdrop intensity.
+Agent attention notification popups use Canvas density, radius, and contrast
+for popup size, placement margin, shell padding, content rhythm, text width,
+background, and border strength.
 
 ## Layout system {#layout-system}
 

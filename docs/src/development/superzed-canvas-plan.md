@@ -85,6 +85,10 @@ Implemented in this phase:
   button rhythm, shell contrast, border strength, radius, and backdrop
   intensity now read `design_system.density`, `design_system.radius`, and
   `design_system.contrast`.
+- Applied Canvas design-system tokens to agent attention notification popups:
+  popup size, screen margin, shell padding, content rhythm, text width, radius,
+  background, and border strength now read `design_system.density`,
+  `design_system.radius`, and `design_system.contrast`.
 - Added schema/default switches for pane-tab panel hosting, terminal-agent
   detection, multiple visible agents, session restoration, agent attention
   notifications, and preview-first Markdown.
@@ -376,6 +380,9 @@ Current consumers:
   documentation asides where present.
 - Generic UI prompts: prompt shells, action stacks, borders, radius, and
   backdrops consume Canvas density, radius, and contrast.
+- Agent attention notification popups: popup size, placement margin, shell
+  padding, inner rhythm, text width, radius, background, and border strength
+  consume Canvas density, radius, and contrast.
 - Go To Line: the modal shell, input divider, help row spacing, and elevated
   navigation surface consume Canvas density, radius, and contrast.
 - Tasks UI: the task picker shell, search row, empty state, task rows,
