@@ -973,6 +973,14 @@ pub struct PaneRotate;
 #[serde(deny_unknown_fields)]
 pub struct TabDuplicate;
 
+/// Applies a Canvas layout recipe by name.
+#[derive(Clone, Deserialize, PartialEq, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct ApplyCanvasLayoutRecipe {
+    pub name: String,
+}
+
 /// Creates a new file in a split of the desired direction.
 #[derive(Clone, Deserialize, PartialEq, JsonSchema, Action)]
 #[action(namespace = workspace)]
@@ -10084,6 +10092,11 @@ impl Workspace {
                     workspace.duplicate_active_tab(window, cx);
                 }),
             )
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, action: &ApplyCanvasLayoutRecipe, window, cx| {
+                    workspace.apply_canvas_layout_recipe(&action.name, window, cx);
+                },
+            ))
             .on_action(cx.listener(
                 |workspace: &mut Workspace, action: &SetSavedCanvasLayoutSlotLabel, window, cx| {
                     workspace.set_saved_canvas_layout_slot_label(

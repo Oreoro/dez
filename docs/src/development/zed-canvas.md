@@ -383,6 +383,18 @@ tab::Duplicate
 tabs whose item type supports cloning. `tab::MoveToWorkspace` remains a future
 Canvas command alias until exact runtime behavior exists.
 
+Layout actions:
+
+```text
+workspace::ApplyCanvasLayoutRecipe { name: "four_agent_matrix" }
+workspace::CycleCanvasLayout
+```
+
+`workspace::ApplyCanvasLayoutRecipe` accepts the same normalized recipe names
+and aliases used by `multiplexer.layout_cycle`, no-ops on unknown names, and
+preserves the current workspace/window mode instead of forcing title-bar Canvas
+chrome.
+
 An optional tmux-style Prefix Mode may exist for experts, but ordinary users
 must not need it. Prefix Mode needs a visible mode indicator, configurable
 prefix, timeout, fixed-step resize commands, eventual single-prefix repeat

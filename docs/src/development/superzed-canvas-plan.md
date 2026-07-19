@@ -558,7 +558,9 @@ Add semantic command surfaces:
   Zed keymaps.
 - Runtime prefix settings are now available through `MultiplexerSettings`, and
   the layout menu surfaces the configured prefix/broadcast policy when prefix
-  mode is enabled. Key-dispatch prefix capture is not implemented yet.
+  mode is enabled. Default `ctrl-b` prefix key-dispatch capture, timeout
+  handling, and the pending-prefix title-bar chip are implemented; custom
+  dynamic remapping remains future work.
 
 Automation API:
 
@@ -611,6 +613,9 @@ recipe slices now implement `Full Canvas`, `Agent Control`, `Focus Editor`,
 `Worktree Matrix`, `Remote Operations`, `Pair Programming`,
 `Incident Response`, `Portrait Display`, `Even Columns`, `Even Rows`, and
 `Cycle Canvas Layout` against the existing pane/panel bridge.
+`workspace::ApplyCanvasLayoutRecipe { name }` exposes the same normalized
+recipe-name dispatcher to keymaps, command chaining, and automation without
+requiring a dedicated action per recipe.
 `Cycle Canvas Layout` reads `multiplexer.layout_cycle` so users can choose the
 order of named recipes without changing keybindings. When
 `multiplexer.prefix_mode = true`, the default `ctrl-b` prefix can trigger the
