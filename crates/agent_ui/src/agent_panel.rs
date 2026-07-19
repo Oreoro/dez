@@ -166,6 +166,13 @@ impl TerminalId {
         Self(uuid::Uuid::new_v4())
     }
 
+    pub fn from_stable_key(namespace: &str, key: &str) -> Self {
+        Self(uuid::Uuid::new_v5(
+            &uuid::Uuid::NAMESPACE_OID,
+            format!("{namespace}:{key}").as_bytes(),
+        ))
+    }
+
     pub(crate) fn to_key_string(self) -> String {
         self.0.hyphenated().to_string()
     }

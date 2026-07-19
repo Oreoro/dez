@@ -53,6 +53,7 @@ use std::mem;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
+use terminal_view::TerminalView;
 use theme::{ActiveTheme, CLIENT_SIDE_DECORATION_ROUNDING};
 use ui::{
     AgentThreadStatus, CommonAnimationExt, ContextMenu, ContextMenuEntry, GradientFade,
@@ -280,6 +281,59 @@ fn terminal_agent_icon(kind: TerminalAgentKind) -> IconName {
     }
 }
 
+fn standalone_terminal_id(
+    workspace: &Entity<Workspace>,
+    terminal_view: &Entity<TerminalView>,
+    cx: &App,
+) -> TerminalId {
+    let workspace_key = workspace
+        .read(cx)
+        .database_id()
+        .map(|database_id| format!("db:{}", i64::from(database_id)))
+        .or_else(|| {
+            workspace
+                .read(cx)
+                .session_id()
+                .map(|session_id| format!("session:{session_id}"))
+        })
+        .unwrap_or_else(|| format!("entity:{}", workspace.entity_id().as_u64()));
+    let terminal_key = terminal_view.entity_id().as_u64();
+    TerminalId::from_stable_key(
+        "standalone-terminal",
+        &format!("{workspace_key}:{terminal_key}"),
+    )
+}
+
+fn standalone_terminal_metadata(
+    workspace: &Entity<Workspace>,
+    terminal_view: &Entity<TerminalView>,
+    created_at: DateTime<Utc>,
+    cx: &App,
+) -> Option<TerminalThreadMetadata> {
+    let terminal_id = standalone_terminal_id(workspace, terminal_view, cx);
+    let terminal_view = terminal_view.read(cx);
+    let terminal = terminal_view.terminal().read(cx);
+    let title = SharedString::from(terminal.title(true));
+    let custom_title = terminal_view
+        .custom_title()
+        .map(|title| SharedString::from(title.to_string()));
+    let working_directory = terminal.working_directory();
+
+    let project = workspace.read(cx).project().clone();
+    let project = project.read(cx);
+    let metadata = TerminalThreadMetadata {
+        terminal_id,
+        title,
+        custom_title,
+        created_at,
+        worktree_paths: project.worktree_paths(cx),
+        remote_connection: project.remote_connection_options(cx),
+        working_directory,
+    };
+
+    metadata.detected_agent_kind().is_some().then_some(metadata)
+}
+
 /// Picks a single glyph to render as the icon from a detected title prefix.
 ///
 /// We only ever show one glyph, so this makes a best effort to choose a
@@ -383,9 +437,16 @@ struct ThreadEntry {
 struct TerminalEntry {
     metadata: TerminalThreadMetadata,
     workspace: ThreadEntryWorkspace,
+    source: TerminalEntrySource,
     worktrees: Vec<ThreadItemWorktreeInfo>,
     has_notification: bool,
     highlight_positions: Vec<usize>,
+}
+
+#[derive(Clone)]
+enum TerminalEntrySource {
+    AgentPanel,
+    WorkspaceItem(Entity<TerminalView>),
 }
 
 impl ThreadEntry {
@@ -431,6 +492,7 @@ enum ActivatableEntry {
     Terminal {
         metadata: TerminalThreadMetadata,
         workspace: ThreadEntryWorkspace,
+        source: TerminalEntrySource,
     },
 }
 
@@ -444,6 +506,7 @@ impl ActivatableEntry {
             ListEntry::Terminal(terminal) => Some(Self::Terminal {
                 metadata: terminal.metadata.clone(),
                 workspace: terminal.workspace.clone(),
+                source: terminal.source.clone(),
             }),
             ListEntry::ProjectHeader { .. } => None,
         }
@@ -811,6 +874,7 @@ pub struct Sidebar {
     /// background data changes. Used to sort the thread switcher popup.
     thread_last_accessed: HashMap<ThreadId, DateTime<Utc>>,
     terminal_last_accessed: HashMap<TerminalId, DateTime<Utc>>,
+    standalone_terminal_created_at: HashMap<TerminalId, DateTime<Utc>>,
     thread_switcher: Option<Entity<ThreadSwitcher>>,
     _thread_switcher_subscriptions: Vec<gpui::Subscription>,
     pending_thread_activation: Option<agent_ui::ThreadId>,
@@ -977,6 +1041,7 @@ impl Sidebar {
 
             thread_last_accessed: HashMap::new(),
             terminal_last_accessed: HashMap::new(),
+            standalone_terminal_created_at: HashMap::new(),
             thread_switcher: None,
             _thread_switcher_subscriptions: Vec::new(),
             pending_thread_activation: None,
@@ -1191,7 +1256,13 @@ impl Sidebar {
                 AgentPanelEvent::TerminalClosed { metadata } => {
                     if let Some(workspace) = workspace.upgrade() {
                         let workspace = ThreadEntryWorkspace::Open(workspace);
-                        this.close_terminal(metadata, &workspace, window, cx);
+                        this.close_terminal(
+                            metadata,
+                            &workspace,
+                            &TerminalEntrySource::AgentPanel,
+                            window,
+                            cx,
+                        );
                     }
                 }
                 AgentPanelEvent::ThreadInteracted { thread_id } => {
@@ -1223,6 +1294,21 @@ impl Sidebar {
                 self.pending_thread_activation = None;
             }
             return;
+        }
+
+        if let Some(item) = active_workspace.read(cx).active_item_as::<TerminalView>(cx) {
+            let terminal_id = standalone_terminal_id(&active_workspace, &item, cx);
+            let created_at = *self
+                .standalone_terminal_created_at
+                .entry(terminal_id)
+                .or_insert_with(Utc::now);
+            if standalone_terminal_metadata(&active_workspace, &item, created_at, cx).is_some() {
+                self.active_entry = Some(ActiveEntry::Terminal {
+                    terminal_id,
+                    workspace: active_workspace,
+                });
+                return;
+            }
         }
 
         if let Some(panel) = active_workspace.read(cx).panel::<AgentPanel>(cx) {
@@ -1584,6 +1670,7 @@ impl Sidebar {
                     TerminalEntry {
                         metadata,
                         workspace,
+                        source: TerminalEntrySource::AgentPanel,
                         worktrees,
                         has_notification,
                         highlight_positions: Vec::new(),
@@ -1642,6 +1729,34 @@ impl Sidebar {
                             project_group_key: group_key.clone(),
                         },
                     );
+                }
+            }
+            for ws in group_workspaces {
+                for terminal_view in ws.read(cx).items_of_type::<TerminalView>(cx) {
+                    let terminal_id = standalone_terminal_id(ws, &terminal_view, cx);
+                    let created_at = self
+                        .standalone_terminal_created_at
+                        .entry(terminal_id)
+                        .or_insert_with(Utc::now);
+                    let Some(metadata) =
+                        standalone_terminal_metadata(ws, &terminal_view, *created_at, cx)
+                    else {
+                        continue;
+                    };
+                    if !seen_terminal_ids.insert(metadata.terminal_id) {
+                        continue;
+                    }
+
+                    let worktrees =
+                        worktree_info_from_thread_paths(&metadata.worktree_paths, &branch_by_path);
+                    terminals.push(TerminalEntry {
+                        metadata,
+                        workspace: ThreadEntryWorkspace::Open(ws.clone()),
+                        source: TerminalEntrySource::WorkspaceItem(terminal_view),
+                        worktrees,
+                        has_notification: false,
+                        highlight_positions: Vec::new(),
+                    });
                 }
             }
             current_terminal_ids.extend(
@@ -2086,6 +2201,8 @@ impl Sidebar {
         self.thread_last_accessed
             .retain(|id, _| current_thread_ids.contains(id));
         self.terminal_last_accessed
+            .retain(|id, _| current_terminal_ids.contains(id));
+        self.standalone_terminal_created_at
             .retain(|id, _| current_terminal_ids.contains(id));
 
         self.live_thread_statuses = new_live_statuses;
@@ -3678,7 +3795,8 @@ impl Sidebar {
             ListEntry::Terminal(terminal) => {
                 let metadata = terminal.metadata.clone();
                 let workspace = terminal.workspace.clone();
-                self.activate_terminal_entry(metadata, workspace, false, window, cx);
+                let source = terminal.source.clone();
+                self.activate_terminal_entry(metadata, workspace, source, false, window, cx);
             }
         }
     }
@@ -4490,10 +4608,12 @@ impl Sidebar {
             ActivatableEntry::Terminal {
                 metadata,
                 workspace,
+                source,
             } => {
                 self.activate_terminal_entry(
                     metadata.clone(),
                     workspace.clone(),
+                    source.clone(),
                     false,
                     window,
                     cx,
@@ -4507,18 +4627,34 @@ impl Sidebar {
         &mut self,
         metadata: TerminalThreadMetadata,
         workspace: ThreadEntryWorkspace,
+        source: TerminalEntrySource,
         retain: bool,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        match workspace {
-            ThreadEntryWorkspace::Open(workspace) => {
+        match (workspace, source) {
+            (
+                ThreadEntryWorkspace::Open(workspace),
+                TerminalEntrySource::WorkspaceItem(terminal_view),
+            ) => self.activate_workspace_terminal_item(
+                &workspace,
+                &terminal_view,
+                metadata,
+                retain,
+                true,
+                window,
+                cx,
+            ),
+            (ThreadEntryWorkspace::Open(workspace), TerminalEntrySource::AgentPanel) => {
                 self.activate_terminal_in_workspace(&workspace, metadata, retain, window, cx);
             }
-            ThreadEntryWorkspace::Closed {
-                folder_paths,
-                project_group_key,
-            } => {
+            (
+                ThreadEntryWorkspace::Closed {
+                    folder_paths,
+                    project_group_key,
+                },
+                _,
+            ) => {
                 self.open_workspace_and_activate_terminal(
                     metadata,
                     folder_paths,
@@ -4528,6 +4664,41 @@ impl Sidebar {
                 );
             }
         }
+    }
+
+    fn activate_workspace_terminal_item(
+        &mut self,
+        workspace: &Entity<Workspace>,
+        terminal_view: &Entity<TerminalView>,
+        metadata: TerminalThreadMetadata,
+        retain: bool,
+        focus_item: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(multi_workspace) = self.multi_workspace.upgrade() else {
+            return;
+        };
+
+        let terminal_id = metadata.terminal_id;
+        self.record_terminal_access(terminal_id);
+        self.active_entry = Some(ActiveEntry::Terminal {
+            terminal_id,
+            workspace: workspace.clone(),
+        });
+
+        multi_workspace.update(cx, |multi_workspace, cx| {
+            multi_workspace.activate(workspace.clone(), None, window, cx);
+            if retain {
+                multi_workspace.retain_active_workspace(cx);
+            }
+        });
+
+        workspace.update(cx, |workspace, cx| {
+            workspace.activate_item(terminal_view, true, focus_item, window, cx);
+        });
+
+        self.update_entries(cx);
     }
 
     fn load_agent_terminal_in_workspace(
@@ -5026,7 +5197,13 @@ impl Sidebar {
 
             this.update_in(cx, |this, window, cx| {
                 let workspace = ThreadEntryWorkspace::Open(workspace);
-                this.close_terminal(&metadata, &workspace, window, cx);
+                this.close_terminal(
+                    &metadata,
+                    &workspace,
+                    &TerminalEntrySource::AgentPanel,
+                    window,
+                    cx,
+                );
             })?;
             anyhow::Ok(())
         })
@@ -5037,9 +5214,17 @@ impl Sidebar {
         &mut self,
         metadata: &TerminalThreadMetadata,
         workspace: &ThreadEntryWorkspace,
+        source: &TerminalEntrySource,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if let (ThreadEntryWorkspace::Open(workspace), TerminalEntrySource::WorkspaceItem(item)) =
+            (workspace, source)
+        {
+            self.close_workspace_terminal_item(metadata, workspace, item, window, cx);
+            return;
+        }
+
         if let ThreadEntryWorkspace::Closed {
             folder_paths,
             project_group_key,
@@ -5225,6 +5410,58 @@ impl Sidebar {
                 cx,
             );
         }
+    }
+
+    fn close_workspace_terminal_item(
+        &mut self,
+        metadata: &TerminalThreadMetadata,
+        workspace: &Entity<Workspace>,
+        terminal_view: &Entity<TerminalView>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let terminal_id = metadata.terminal_id;
+        let is_active = self
+            .active_entry
+            .as_ref()
+            .is_some_and(|entry| entry.is_active_terminal(terminal_id));
+        let neighbor = self
+            .contents
+            .entries
+            .iter()
+            .position(|entry| {
+                matches!(
+                    entry,
+                    ListEntry::Terminal(terminal)
+                        if terminal.metadata.terminal_id == terminal_id
+                )
+            })
+            .and_then(|position| self.neighboring_activatable_entry(position));
+
+        let item_id = terminal_view.entity_id();
+        workspace.update(cx, |workspace, cx| {
+            if let Some(pane) = workspace.pane_for(terminal_view) {
+                pane.update(cx, |pane, cx| {
+                    pane.close_item_by_id(item_id, SaveIntent::Close, window, cx)
+                        .detach_and_log_err(cx);
+                });
+            }
+        });
+
+        self.standalone_terminal_created_at.remove(&terminal_id);
+
+        if is_active {
+            self.active_entry = None;
+            if neighbor
+                .as_ref()
+                .is_some_and(|neighbor| self.activate_entry(neighbor, window, cx))
+            {
+                return;
+            }
+            self.sync_active_entry_from_active_workspace(cx);
+        }
+
+        self.update_entries(cx);
     }
 
     fn close_terminal_entry(
@@ -5913,7 +6150,8 @@ impl Sidebar {
             Some(ListEntry::Terminal(terminal)) => {
                 let metadata = terminal.metadata.clone();
                 let workspace = terminal.workspace.clone();
-                self.close_terminal(&metadata, &workspace, window, cx);
+                let source = terminal.source.clone();
+                self.close_terminal(&metadata, &workspace, &source, window, cx);
             }
             _ => {}
         }
@@ -6079,6 +6317,7 @@ impl Sidebar {
                     Some(ThreadSwitcherEntry::Terminal(ThreadSwitcherTerminalEntry {
                         metadata: terminal.metadata.clone(),
                         workspace: terminal.workspace.clone(),
+                        source: terminal.source.clone(),
                         project_name: current_header_label.clone(),
                         worktrees: terminal
                             .worktrees
@@ -6149,19 +6388,37 @@ impl Sidebar {
             ThreadSwitcherSelection::Terminal {
                 metadata,
                 workspace,
+                source,
             } => {
                 if let ThreadEntryWorkspace::Open(workspace) = workspace {
-                    if let Some(multi_workspace) = self.multi_workspace.upgrade() {
-                        multi_workspace.update(cx, |multi_workspace, cx| {
-                            multi_workspace.activate(workspace.clone(), None, window, cx);
-                        });
+                    match source {
+                        TerminalEntrySource::WorkspaceItem(terminal_view) => {
+                            self.activate_workspace_terminal_item(
+                                workspace,
+                                terminal_view,
+                                metadata.clone(),
+                                false,
+                                false,
+                                window,
+                                cx,
+                            );
+                        }
+                        TerminalEntrySource::AgentPanel => {
+                            if let Some(multi_workspace) = self.multi_workspace.upgrade() {
+                                multi_workspace.update(cx, |multi_workspace, cx| {
+                                    multi_workspace.activate(workspace.clone(), None, window, cx);
+                                });
+                            }
+                            self.active_entry = Some(ActiveEntry::Terminal {
+                                terminal_id: metadata.terminal_id,
+                                workspace: workspace.clone(),
+                            });
+                            self.update_entries(cx);
+                            Self::load_agent_terminal_in_workspace(
+                                workspace, metadata, false, window, cx,
+                            );
+                        }
                     }
-                    self.active_entry = Some(ActiveEntry::Terminal {
-                        terminal_id: metadata.terminal_id,
-                        workspace: workspace.clone(),
-                    });
-                    self.update_entries(cx);
-                    Self::load_agent_terminal_in_workspace(workspace, metadata, false, window, cx);
                 }
             }
         }
@@ -6197,9 +6454,17 @@ impl Sidebar {
             ThreadSwitcherSelection::Terminal {
                 metadata,
                 workspace,
+                source,
             } => {
                 self.dismiss_thread_switcher(cx);
-                self.activate_terminal_entry(metadata.clone(), workspace.clone(), true, window, cx);
+                self.activate_terminal_entry(
+                    metadata.clone(),
+                    workspace.clone(),
+                    source.clone(),
+                    true,
+                    window,
+                    cx,
+                );
             }
         }
     }
@@ -6726,6 +6991,7 @@ impl Sidebar {
         let sidebar_bg = color.editor_background;
         let metadata = terminal.metadata.clone();
         let workspace = terminal.workspace.clone();
+        let source = terminal.source.clone();
         let focus_handle = self.focus_handle.clone();
         let worktrees = apply_worktree_label_mode(
             terminal.worktrees.clone(),
@@ -6785,17 +7051,19 @@ impl Sidebar {
                             }
                         })
                         .on_click(cx.listener(move |this, _, window, cx| {
-                            this.close_terminal(&metadata, &workspace, window, cx);
+                            this.close_terminal(&metadata, &workspace, &source, window, cx);
                         })),
                 )
             })
             .on_click(cx.listener({
                 let metadata = terminal.metadata.clone();
                 let workspace = terminal.workspace.clone();
+                let source = terminal.source.clone();
                 move |this, _, window, cx| {
                     this.activate_terminal_entry(
                         metadata.clone(),
                         workspace.clone(),
+                        source.clone(),
                         false,
                         window,
                         cx,
@@ -7474,7 +7742,8 @@ impl Sidebar {
             ListEntry::Terminal(terminal) => {
                 let metadata = terminal.metadata.clone();
                 let workspace = terminal.workspace.clone();
-                self.activate_terminal_entry(metadata, workspace, true, window, cx);
+                let source = terminal.source.clone();
+                self.activate_terminal_entry(metadata, workspace, source, true, window, cx);
             }
             ListEntry::ProjectHeader { .. } => {}
         }

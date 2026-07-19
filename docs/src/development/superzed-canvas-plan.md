@@ -33,6 +33,10 @@ Implemented in this phase:
 - Session Rail terminal rows now classify known terminal agent CLIs from title
   metadata, including Claude Code, Codex, Gemini CLI, Aider, OpenCode, Amp,
   Goose, Qwen Code, Cursor Agent, and GitHub Copilot.
+- Standalone terminal tabs whose titles identify a known agent CLI now appear
+  in the Session Rail. Activating the rail row focuses the existing terminal
+  tab, and closing the row closes that tab instead of spawning or restoring an
+  Agent Panel terminal.
 
 ## Ground truth {#ground-truth}
 
@@ -207,11 +211,11 @@ Terminal-agent detection:
   `Possibly waiting`, or `Disconnected`.
 - Default `agent_ui.detect_terminal_agents` and
   `agent_ui.show_terminal_agents_in_session_rail` to `true`.
-- Implemented first slice: terminal-thread metadata rows classify known agent
+- Implemented first slices: terminal-thread metadata rows classify known agent
   CLI titles and render matching identity in the Session Rail and thread
-  switcher. Remaining work is bridging standalone `terminal_view::TerminalView`
-  items into the same metadata store without introducing a `terminal_view` ↔
-  `agent_ui` dependency cycle.
+  switcher. Standalone `terminal_view::TerminalView` tabs are scanned from open
+  workspaces and surfaced when their title identifies a known agent CLI;
+  activation and close route back to the existing terminal tab.
 - Default `agent_ui.allow_multiple_visible_agents` to `true` so agents can live
   in normal tabs across multiple panes.
 - Default `agent_ui.connect_hooks`, `agent_ui.resume_sessions_on_restart`, and

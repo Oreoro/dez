@@ -104,6 +104,7 @@ impl TerminalThreadMetadata {
 
     pub fn detected_agent_kind(&self) -> Option<TerminalAgentKind> {
         detect_terminal_agent_kind(self.display_title().as_ref())
+            .or_else(|| detect_terminal_agent_kind(self.title.as_ref()))
     }
 }
 

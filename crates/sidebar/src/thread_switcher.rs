@@ -13,7 +13,7 @@ use ui::{AgentThreadStatus, ThreadItem, ThreadItemWorktreeInfo, WithScrollbar, p
 use workspace::{ModalView, Workspace};
 use zed_actions::sidebar::ToggleThreadSwitcher;
 
-use super::ThreadEntryWorkspace;
+use super::{TerminalEntrySource, ThreadEntryWorkspace};
 
 #[derive(Clone)]
 pub(crate) struct ThreadSwitcherThreadEntry {
@@ -36,6 +36,7 @@ pub(crate) struct ThreadSwitcherThreadEntry {
 pub(crate) struct ThreadSwitcherTerminalEntry {
     pub metadata: TerminalThreadMetadata,
     pub(super) workspace: ThreadEntryWorkspace,
+    pub(super) source: TerminalEntrySource,
     pub project_name: Option<SharedString>,
     pub worktrees: Vec<ThreadItemWorktreeInfo>,
     pub notified: bool,
@@ -57,6 +58,7 @@ pub(super) enum ThreadSwitcherSelection {
     Terminal {
         metadata: TerminalThreadMetadata,
         workspace: ThreadEntryWorkspace,
+        source: TerminalEntrySource,
     },
 }
 
@@ -70,6 +72,7 @@ impl ThreadSwitcherEntry {
             Self::Terminal(entry) => ThreadSwitcherSelection::Terminal {
                 metadata: entry.metadata.clone(),
                 workspace: entry.workspace.clone(),
+                source: entry.source.clone(),
             },
         }
     }
