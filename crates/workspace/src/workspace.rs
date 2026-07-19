@@ -4973,12 +4973,52 @@ impl Workspace {
                 self.apply_canvas_code_run_observe_layout(window, cx);
                 true
             }
+            "review" | "code_review" => {
+                self.apply_canvas_review_layout(window, cx);
+                true
+            }
+            "debug" => {
+                self.apply_canvas_debug_layout(window, cx);
+                true
+            }
+            "documentation" | "documentation_studio" | "docs" | "docs_studio" => {
+                self.apply_canvas_documentation_studio_layout(window, cx);
+                true
+            }
+            "browser" | "browser_development" | "web_development" => {
+                self.apply_canvas_browser_development_layout(window, cx);
+                true
+            }
             "agent_operations" | "agent_operations_center" => {
                 self.apply_canvas_agent_operations_layout(window, cx);
                 true
             }
             "four_agent_matrix" | "four_agents" | "agent_matrix" | "tiled" => {
                 self.apply_canvas_four_agent_matrix_layout(window, cx);
+                true
+            }
+            "six_agent_supervisor" | "six_agents" | "six_agent_matrix" => {
+                self.apply_canvas_six_agent_supervisor_layout(window, cx);
+                true
+            }
+            "worktree_matrix" | "worktrees" => {
+                self.apply_canvas_worktree_matrix_layout(window, cx);
+                true
+            }
+            "remote_operations" | "remote_ops" => {
+                self.apply_canvas_remote_operations_layout(window, cx);
+                true
+            }
+            "pair_programming" | "pairing" => {
+                self.apply_canvas_pair_programming_layout(window, cx);
+                true
+            }
+            "incident_response" | "incident" => {
+                self.apply_canvas_incident_response_layout(window, cx);
+                true
+            }
+            "portrait_display" | "portrait" => {
+                self.apply_canvas_portrait_display_layout(window, cx);
                 true
             }
             "even_columns" => {
@@ -5059,6 +5099,64 @@ impl Workspace {
         self.finish_canvas_recipe(window, cx);
     }
 
+    pub fn apply_canvas_review_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let panes = self.prepare_canvas_recipe(
+            true,
+            false,
+            3,
+            &[SplitDirection::Right, SplitDirection::Down],
+            window,
+            cx,
+        );
+        self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+        self.finish_canvas_recipe(window, cx);
+    }
+
+    pub fn apply_canvas_debug_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let panes = self.prepare_canvas_recipe(
+            true,
+            false,
+            4,
+            &[
+                SplitDirection::Down,
+                SplitDirection::Right,
+                SplitDirection::Down,
+            ],
+            window,
+            cx,
+        );
+        self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+        self.finish_canvas_recipe(window, cx);
+    }
+
+    pub fn apply_canvas_documentation_studio_layout(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let panes =
+            self.prepare_canvas_recipe(false, false, 3, &[SplitDirection::Right], window, cx);
+        self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+        self.finish_canvas_recipe(window, cx);
+    }
+
+    pub fn apply_canvas_browser_development_layout(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let panes = self.prepare_canvas_recipe(
+            false,
+            false,
+            3,
+            &[SplitDirection::Right, SplitDirection::Down],
+            window,
+            cx,
+        );
+        self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+        self.finish_canvas_recipe(window, cx);
+    }
+
     pub fn apply_canvas_agent_operations_layout(
         &mut self,
         window: &mut Window,
@@ -5088,6 +5186,109 @@ impl Workspace {
             window,
             cx,
         );
+        self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+        self.finish_canvas_recipe(window, cx);
+    }
+
+    pub fn apply_canvas_six_agent_supervisor_layout(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let panes = self.prepare_canvas_recipe(
+            false,
+            false,
+            6,
+            &[
+                SplitDirection::Right,
+                SplitDirection::Down,
+                SplitDirection::Right,
+                SplitDirection::Down,
+                SplitDirection::Right,
+            ],
+            window,
+            cx,
+        );
+        self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+        self.finish_canvas_recipe(window, cx);
+    }
+
+    pub fn apply_canvas_worktree_matrix_layout(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let panes = self.prepare_canvas_recipe(
+            true,
+            false,
+            4,
+            &[
+                SplitDirection::Right,
+                SplitDirection::Down,
+                SplitDirection::Right,
+            ],
+            window,
+            cx,
+        );
+        self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+        self.finish_canvas_recipe(window, cx);
+    }
+
+    pub fn apply_canvas_remote_operations_layout(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let panes = self.prepare_canvas_recipe(
+            true,
+            true,
+            3,
+            &[SplitDirection::Right, SplitDirection::Down],
+            window,
+            cx,
+        );
+        self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+        self.finish_canvas_recipe(window, cx);
+    }
+
+    pub fn apply_canvas_pair_programming_layout(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let panes = self.prepare_canvas_recipe(true, true, 2, &[SplitDirection::Right], window, cx);
+        self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+        self.finish_canvas_recipe(window, cx);
+    }
+
+    pub fn apply_canvas_incident_response_layout(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let panes = self.prepare_canvas_recipe(
+            true,
+            true,
+            4,
+            &[
+                SplitDirection::Right,
+                SplitDirection::Down,
+                SplitDirection::Right,
+            ],
+            window,
+            cx,
+        );
+        self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+        self.finish_canvas_recipe(window, cx);
+    }
+
+    pub fn apply_canvas_portrait_display_layout(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let panes =
+            self.prepare_canvas_recipe(false, false, 3, &[SplitDirection::Down], window, cx);
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
         self.finish_canvas_recipe(window, cx);
     }

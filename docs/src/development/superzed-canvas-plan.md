@@ -45,6 +45,11 @@ Implemented in this phase:
 - Added additional named Canvas recipe actions for Main + Stack, Main Top,
   Golden Split, Code/Run/Observe, Agent Operations Center, and Four-Agent
   Matrix.
+- Added additional geometry-only starter layout actions for Review, Debug,
+  Documentation Studio, Browser Development, Six-Agent Supervisor, Worktree
+  Matrix, Remote Operations, Pair Programming, Incident Response, and Portrait
+  Display. These recipes create or reuse pane geometry only; they do not spawn
+  agents, terminals, browsers, or external processes.
 - `workspace_bar.show_layout` now controls whether Canvas layout commands show
   in the Command Palette and Panel Layout chrome.
 - `workspace_bar.show_agent_attention` now controls workspace-level attention
@@ -205,8 +210,11 @@ Use the existing panel-as-pane bridge as the migration path:
   - Cycle Canvas Layout toggles between agent-control and focus-editor modes.
 - Additional recipe actions now create or reuse regular tabbed panes for
   `Main + Stack`, `Main Top`, `Golden Split`, `Code/Run/Observe`,
-  `Agent Operations Center`, and `Four-Agent Matrix` without starting
-  processes or replacing tab contents.
+  `Review`, `Debug`, `Documentation Studio`, `Browser Development`,
+  `Agent Operations Center`, `Four-Agent Matrix`, `Six-Agent Supervisor`,
+  `Worktree Matrix`, `Remote Operations`, `Pair Programming`,
+  `Incident Response`, and `Portrait Display` without starting processes or
+  replacing tab contents.
 - `Cycle Canvas Layout` now honors `multiplexer.layout_cycle`, including the
   default `even_columns`, `even_rows`, `main_left`, `main_top`, `tiled`, and
   `agent_control` recipe names, with tolerant matching for label-style names.
@@ -384,8 +392,11 @@ Layouts are semantic recipes. They preserve pane IDs and tab contents where
 possible and reflow instead of overwriting saved desktop geometry. Runtime
 recipe slices now implement `Full Canvas`, `Agent Control`, `Focus Editor`,
 `Main + Stack`, `Main Top`, `Golden Split`, `Code/Run/Observe`,
-`Agent Operations Center`, `Four-Agent Matrix`, and `Cycle Canvas Layout`
-against the existing pane/panel bridge.
+`Review`, `Debug`, `Documentation Studio`, `Browser Development`,
+`Agent Operations Center`, `Four-Agent Matrix`, `Six-Agent Supervisor`,
+`Worktree Matrix`, `Remote Operations`, `Pair Programming`,
+`Incident Response`, `Portrait Display`, and `Cycle Canvas Layout` against the
+existing pane/panel bridge.
 `Cycle Canvas Layout` reads `multiplexer.layout_cycle` so users can choose the
 order of named recipes without changing keybindings.
 

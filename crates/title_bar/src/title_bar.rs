@@ -98,10 +98,30 @@ actions!(
         ApplyCanvasGoldenSplitLayout,
         /// Applies the Canvas code-run-observe layout.
         ApplyCanvasCodeRunObserveLayout,
+        /// Applies the Canvas review layout.
+        ApplyCanvasReviewLayout,
+        /// Applies the Canvas debug layout.
+        ApplyCanvasDebugLayout,
+        /// Applies the Canvas documentation studio layout.
+        ApplyCanvasDocumentationStudioLayout,
+        /// Applies the Canvas browser development layout.
+        ApplyCanvasBrowserDevelopmentLayout,
         /// Applies the Canvas agent operations center layout.
         ApplyCanvasAgentOperationsLayout,
         /// Applies the Canvas four-agent matrix layout.
         ApplyCanvasFourAgentMatrixLayout,
+        /// Applies the Canvas six-agent supervisor layout.
+        ApplyCanvasSixAgentSupervisorLayout,
+        /// Applies the Canvas worktree matrix layout.
+        ApplyCanvasWorktreeMatrixLayout,
+        /// Applies the Canvas remote operations layout.
+        ApplyCanvasRemoteOperationsLayout,
+        /// Applies the Canvas pair programming layout.
+        ApplyCanvasPairProgrammingLayout,
+        /// Applies the Canvas incident response layout.
+        ApplyCanvasIncidentResponseLayout,
+        /// Applies the Canvas portrait display layout.
+        ApplyCanvasPortraitDisplayLayout,
         /// Cycles between Canvas agent-control and focus-editor layouts.
         CycleCanvasLayout,
     ]
@@ -165,6 +185,30 @@ pub fn init(cx: &mut App) {
             },
         );
 
+        workspace.register_action(|workspace, _: &ApplyCanvasReviewLayout, window, cx| {
+            set_window_layout(WindowLayout::Agent(None), cx);
+            workspace.apply_canvas_review_layout(window, cx);
+        });
+
+        workspace.register_action(|workspace, _: &ApplyCanvasDebugLayout, window, cx| {
+            set_window_layout(WindowLayout::Agent(None), cx);
+            workspace.apply_canvas_debug_layout(window, cx);
+        });
+
+        workspace.register_action(
+            |workspace, _: &ApplyCanvasDocumentationStudioLayout, window, cx| {
+                set_window_layout(WindowLayout::Agent(None), cx);
+                workspace.apply_canvas_documentation_studio_layout(window, cx);
+            },
+        );
+
+        workspace.register_action(
+            |workspace, _: &ApplyCanvasBrowserDevelopmentLayout, window, cx| {
+                set_window_layout(WindowLayout::Agent(None), cx);
+                workspace.apply_canvas_browser_development_layout(window, cx);
+            },
+        );
+
         workspace.register_action(
             |workspace, _: &ApplyCanvasAgentOperationsLayout, window, cx| {
                 set_window_layout(WindowLayout::Agent(None), cx);
@@ -176,6 +220,48 @@ pub fn init(cx: &mut App) {
             |workspace, _: &ApplyCanvasFourAgentMatrixLayout, window, cx| {
                 set_window_layout(WindowLayout::Agent(None), cx);
                 workspace.apply_canvas_four_agent_matrix_layout(window, cx);
+            },
+        );
+
+        workspace.register_action(
+            |workspace, _: &ApplyCanvasSixAgentSupervisorLayout, window, cx| {
+                set_window_layout(WindowLayout::Agent(None), cx);
+                workspace.apply_canvas_six_agent_supervisor_layout(window, cx);
+            },
+        );
+
+        workspace.register_action(
+            |workspace, _: &ApplyCanvasWorktreeMatrixLayout, window, cx| {
+                set_window_layout(WindowLayout::Agent(None), cx);
+                workspace.apply_canvas_worktree_matrix_layout(window, cx);
+            },
+        );
+
+        workspace.register_action(
+            |workspace, _: &ApplyCanvasRemoteOperationsLayout, window, cx| {
+                set_window_layout(WindowLayout::Agent(None), cx);
+                workspace.apply_canvas_remote_operations_layout(window, cx);
+            },
+        );
+
+        workspace.register_action(
+            |workspace, _: &ApplyCanvasPairProgrammingLayout, window, cx| {
+                set_window_layout(WindowLayout::Agent(None), cx);
+                workspace.apply_canvas_pair_programming_layout(window, cx);
+            },
+        );
+
+        workspace.register_action(
+            |workspace, _: &ApplyCanvasIncidentResponseLayout, window, cx| {
+                set_window_layout(WindowLayout::Agent(None), cx);
+                workspace.apply_canvas_incident_response_layout(window, cx);
+            },
+        );
+
+        workspace.register_action(
+            |workspace, _: &ApplyCanvasPortraitDisplayLayout, window, cx| {
+                set_window_layout(WindowLayout::Agent(None), cx);
+                workspace.apply_canvas_portrait_display_layout(window, cx);
             },
         );
 
@@ -249,8 +335,18 @@ fn update_layout_action_filter(cx: &mut App) {
         TypeId::of::<ApplyCanvasMainTopLayout>(),
         TypeId::of::<ApplyCanvasGoldenSplitLayout>(),
         TypeId::of::<ApplyCanvasCodeRunObserveLayout>(),
+        TypeId::of::<ApplyCanvasReviewLayout>(),
+        TypeId::of::<ApplyCanvasDebugLayout>(),
+        TypeId::of::<ApplyCanvasDocumentationStudioLayout>(),
+        TypeId::of::<ApplyCanvasBrowserDevelopmentLayout>(),
         TypeId::of::<ApplyCanvasAgentOperationsLayout>(),
         TypeId::of::<ApplyCanvasFourAgentMatrixLayout>(),
+        TypeId::of::<ApplyCanvasSixAgentSupervisorLayout>(),
+        TypeId::of::<ApplyCanvasWorktreeMatrixLayout>(),
+        TypeId::of::<ApplyCanvasRemoteOperationsLayout>(),
+        TypeId::of::<ApplyCanvasPairProgrammingLayout>(),
+        TypeId::of::<ApplyCanvasIncidentResponseLayout>(),
+        TypeId::of::<ApplyCanvasPortraitDisplayLayout>(),
         TypeId::of::<CycleCanvasLayout>(),
     ];
     CommandPaletteFilter::update_global(cx, |filter, _| {
@@ -1562,6 +1658,46 @@ impl SidebarChrome {
                                     },
                                 )
                                 .entry(
+                                    "Canvas: Review",
+                                    Some(ApplyCanvasReviewLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasReviewLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Canvas: Debug",
+                                    Some(ApplyCanvasDebugLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasDebugLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Canvas: Documentation Studio",
+                                    Some(ApplyCanvasDocumentationStudioLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasDocumentationStudioLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Canvas: Browser Development",
+                                    Some(ApplyCanvasBrowserDevelopmentLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasBrowserDevelopmentLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
                                     "Canvas: Agent Operations Center",
                                     Some(ApplyCanvasAgentOperationsLayout.boxed_clone()),
                                     move |window, cx| {
@@ -1577,6 +1713,66 @@ impl SidebarChrome {
                                     move |window, cx| {
                                         window.dispatch_action(
                                             ApplyCanvasFourAgentMatrixLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Canvas: Six-Agent Supervisor",
+                                    Some(ApplyCanvasSixAgentSupervisorLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasSixAgentSupervisorLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Canvas: Worktree Matrix",
+                                    Some(ApplyCanvasWorktreeMatrixLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasWorktreeMatrixLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Canvas: Remote Operations",
+                                    Some(ApplyCanvasRemoteOperationsLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasRemoteOperationsLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Canvas: Pair Programming",
+                                    Some(ApplyCanvasPairProgrammingLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasPairProgrammingLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Canvas: Incident Response",
+                                    Some(ApplyCanvasIncidentResponseLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasIncidentResponseLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Canvas: Portrait Display",
+                                    Some(ApplyCanvasPortraitDisplayLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasPortraitDisplayLayout.boxed_clone(),
                                             cx,
                                         );
                                     },
