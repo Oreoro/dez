@@ -240,8 +240,10 @@ Rules:
   killing live processes. Runtime snapshots also retain the last applied
   Canvas recipe identity so menu state can follow restores. Persisted semantic
   layout history is still required.
-- `pane_grid.auto_reflow` is available at runtime; dedicated responsive reflow
-  rules still need to be implemented.
+- `pane_grid.auto_reflow` is available at runtime. On recipe application,
+  narrow or portrait workspaces reflow horizontal recipe splits into vertical
+  splits without closing workspace items. Resize-driven live reflow and broader
+  ultrawide/many-agent variants still need to be implemented.
 - Empty panes offer quick item creation and restore actions.
 - Zoom preserves underlying layout.
 - Layout modifications persist continuously.

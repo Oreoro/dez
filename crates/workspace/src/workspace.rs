@@ -5496,13 +5496,43 @@ impl Workspace {
             self.close_legacy_docks_for_canvas(window, cx);
         }
 
-        self.ensure_visible_tabbed_panes(tabbed_pane_count, split_directions, window, cx)
+        let split_directions = self.reflow_canvas_split_directions(split_directions, cx);
+        self.ensure_visible_tabbed_panes(tabbed_pane_count, &split_directions, window, cx)
     }
 
     fn close_legacy_docks_for_canvas(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         for dock in self.all_docks() {
             dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
         }
+    }
+
+    fn reflow_canvas_split_directions(
+        &self,
+        split_directions: &[SplitDirection],
+        cx: &App,
+    ) -> Vec<SplitDirection> {
+        if !PaneGridSettings::get_global(cx).auto_reflow
+            || !self.canvas_workspace_is_narrow_or_portrait()
+        {
+            return split_directions.to_vec();
+        }
+
+        split_directions
+            .iter()
+            .map(|direction| match direction {
+                SplitDirection::Left | SplitDirection::Right => SplitDirection::Down,
+                SplitDirection::Up | SplitDirection::Down => *direction,
+            })
+            .collect()
+    }
+
+    fn canvas_workspace_is_narrow_or_portrait(&self) -> bool {
+        let size = self.bounds.size;
+        if size.width <= Pixels::ZERO || size.height <= Pixels::ZERO {
+            return false;
+        }
+
+        size.width < px(900.) || size.width < size.height
     }
 
     fn set_canvas_panel_pane_visible(

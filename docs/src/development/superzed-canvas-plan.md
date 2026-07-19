@@ -228,6 +228,11 @@ Use the existing panel-as-pane bridge as the migration path:
   and focus for still-existing panes without recreating items or terminating
   live processes. Full persisted semantic layout history and responsive reflow
   remain future work.
+- First `pane_grid.auto_reflow` behavior is implemented for Canvas recipe
+  application: when the workspace is narrow or portrait, horizontal recipe
+  splits reflow into vertical splits. This preserves the recipe's semantic
+  identity and does not close tabs, spawn processes, or live-reflow on every
+  resize yet.
 - Remove the one-visible-agent bottleneck. Multiple agent tabs and terminal
   agents can be visible across panes and windows.
 - Support direct pane/tab dragging, keyboard movement, context-menu movement,
@@ -301,7 +306,9 @@ Implementation order:
 3. Add durable layout metadata separately from process lifetime so restart
    restore can recreate layout intent without claiming processes are alive.
 4. Add resize-driven `auto_reflow` using semantic recipe variants rather than
-   raw pixel snapshots.
+   raw pixel snapshots. Initial recipe-application reflow for narrow/portrait
+   workspaces is implemented; resize-driven reflow and ultrawide variants are
+   still pending.
 5. Add UI for named saved layouts and layout history once the underlying
    metadata is stable.
 
