@@ -49,7 +49,8 @@ use crate::conversation_view::elicitation::{
 };
 use crate::message_editor::SessionCapabilities;
 use crate::{
-    AgentThreadSource, DEFAULT_THREAD_TITLE, request_agent_window_attention, resolve_agent_image,
+    AgentThreadSource, CanvasAgentUiSettings, DEFAULT_THREAD_TITLE, request_agent_window_attention,
+    resolve_agent_image,
 };
 use lru::LruCache;
 use rope::Point;
@@ -3161,6 +3162,9 @@ impl ConversationView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if !CanvasAgentUiSettings::get_global(cx).notify_on_attention {
+            return;
+        }
         #[cfg(feature = "audio")]
         self.play_notification_sound(window, cx);
         self.show_notification(caption, icon, window, cx);
@@ -6112,6 +6116,50 @@ pub(crate) mod tests {
                 .iter()
                 .any(|window| window.downcast::<AgentNotification>().is_some()),
             "Expected no notification when notify_when_agent_waiting is Never"
+        );
+    }
+
+    #[gpui::test]
+    async fn test_notification_respects_canvas_notify_on_attention_setting(
+        cx: &mut TestAppContext,
+    ) {
+        init_test(cx);
+
+        cx.update(|cx| {
+            cx.update_global::<SettingsStore, _>(|store, cx| {
+                store.update_user_settings(cx, |settings| {
+                    settings
+                        .agent
+                        .get_or_insert_with(Default::default)
+                        .notify_when_agent_waiting = Some(NotifyWhenAgentWaiting::PrimaryScreen);
+                    settings
+                        .agent_ui
+                        .get_or_insert_with(Default::default)
+                        .notify_on_attention = Some(false);
+                });
+            });
+        });
+
+        let (conversation_view, cx) =
+            setup_conversation_view(StubAgentServer::default_response(), cx).await;
+
+        let message_editor = message_editor(&conversation_view, cx);
+        message_editor.update_in(cx, |editor, window, cx| {
+            editor.set_text("Hello", window, cx);
+        });
+
+        cx.deactivate_window();
+
+        active_thread(&conversation_view, cx)
+            .update_in(cx, |view, window, cx| view.send(window, cx));
+
+        cx.run_until_parked();
+
+        assert!(
+            !cx.windows()
+                .iter()
+                .any(|window| window.downcast::<AgentNotification>().is_some()),
+            "Expected no notification when agent_ui.notify_on_attention is false"
         );
     }
 
