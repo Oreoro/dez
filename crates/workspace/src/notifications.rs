@@ -1,11 +1,12 @@
 use crate::{
-    MultiWorkspace, SuppressNotification, Toast, Workspace, workspace_error::WorkspaceError,
+    DesignSystemSettings, MultiWorkspace, SuppressNotification, Toast, Workspace,
+    workspace_error::WorkspaceError,
 };
 use anyhow::Context as _;
 use gpui::{
     AnyEntity, AnyView, App, AppContext as _, AsyncApp, AsyncWindowContext, ClickEvent, Context,
-    DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, PromptLevel, Render, ScrollHandle,
-    Task, TextStyleRefinement, UnderlineStyle, WeakEntity,
+    DismissEvent, Div, Entity, EventEmitter, FocusHandle, Focusable, Hsla, Pixels, PromptLevel,
+    Render, ScrollHandle, Stateful, Task, TextStyleRefinement, UnderlineStyle, WeakEntity,
 };
 use markdown::{CopyButtonVisibility, Markdown, MarkdownElement, MarkdownStyle};
 use parking_lot::Mutex;
@@ -18,6 +19,66 @@ use std::sync::{Arc, LazyLock};
 use std::{any::TypeId, time::Duration};
 use ui::{CopyButton, Tooltip, prelude::*};
 use util::ResultExt;
+
+fn canvas_notification_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.elevated_surface_background.opacity(0.94),
+        settings::CanvasContrast::Standard => colors.elevated_surface_background,
+        settings::CanvasContrast::High => colors
+            .elevated_surface_background
+            .blend(colors.border_focused.opacity(0.08)),
+    }
+}
+
+fn canvas_notification_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border.opacity(0.45),
+        settings::CanvasContrast::Standard => colors.border,
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn canvas_notification_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(8.),
+        settings::CanvasDensity::Balanced => px(12.),
+        settings::CanvasDensity::Spacious => px(16.),
+    }
+}
+
+fn canvas_notification_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn canvas_notification_action_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn canvas_notification_content_width(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(352.),
+        settings::CanvasDensity::Balanced => px(384.),
+        settings::CanvasDensity::Spacious => px(480.),
+    }
+}
+
+fn canvas_notification_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_md(),
+        settings::CanvasRadius::Rounded => element.rounded_lg(),
+    }
+}
 
 #[derive(Default)]
 pub struct Notifications {
@@ -327,25 +388,30 @@ impl Render for LanguageServerPrompt {
             .w_full()
             .max_h(vh(0.8, window))
             .elevation_3(cx)
+            .bg(canvas_notification_background(cx))
+            .border_1()
+            .border_color(canvas_notification_border(cx))
+            .map(|this| canvas_notification_radius(this, cx))
             .overflow_y_scroll()
             .track_scroll(&self.scroll_handle)
             .on_modifiers_changed(cx.listener(|_, _, _, cx| cx.notify()))
             .child(
                 v_flex()
-                    .p_3()
+                    .p(canvas_notification_padding(cx))
+                    .gap(canvas_notification_gap(cx))
                     .overflow_hidden()
                     .child(
                         h_flex()
                             .justify_between()
                             .child(
                                 h_flex()
-                                    .gap_2()
+                                    .gap(canvas_notification_gap(cx))
                                     .child(Icon::new(icon).color(color).size(IconSize::Small))
                                     .child(Label::new(request.lsp_name.clone())),
                             )
                             .child(
                                 h_flex()
-                                    .gap_1()
+                                    .gap(canvas_notification_action_gap(cx))
                                     .child(
                                         CopyButton::new(
                                             "copy-description",
@@ -479,7 +545,12 @@ pub mod simple_message_notification {
         ActionIcon, ErrorAction, ErrorActionHandler, ErrorSeverity, WorkspaceError,
     };
 
-    use super::{Notification, SuppressEvent};
+    use super::{
+        Notification, SuppressEvent, canvas_notification_action_gap,
+        canvas_notification_background, canvas_notification_border,
+        canvas_notification_content_width, canvas_notification_gap, canvas_notification_padding,
+        canvas_notification_radius,
+    };
 
     const FADE_OUT_DURATION: Duration = Duration::from_secs(2);
     const FADE_TO_FULL_OPACITY_DURATION: Duration = Duration::from_millis(200);
@@ -982,7 +1053,7 @@ pub mod simple_message_notification {
             let copy_text = self.copy_text.clone();
             let header_actions = h_flex()
                 .flex_shrink_0()
-                .gap_1()
+                .gap(canvas_notification_action_gap(cx))
                 .when_some(copy_text, |el, text| {
                     el.child(
                         CopyButton::new("copy-notification-message", text)
@@ -1026,7 +1097,7 @@ pub mod simple_message_notification {
                 || self.more_info_message.is_some();
 
             let suffix = h_flex()
-                .gap_1()
+                .gap(canvas_notification_action_gap(cx))
                 .children(self.primary_message.iter().map(|message| {
                     Button::new(("notification-primary", cx.entity_id()), message.clone())
                         .when_some(self.button_style, |button, style| button.style(style))
@@ -1093,7 +1164,7 @@ pub mod simple_message_notification {
             // text and suffix all share a single column to the right of the icon so
             // they line up under one another even when an icon is present.
             let body = h_flex()
-                .gap_2()
+                .gap(canvas_notification_gap(cx))
                 .items_start()
                 .when_some(
                     self.content_icon.zip(self.content_icon_color),
@@ -1110,10 +1181,10 @@ pub mod simple_message_notification {
                     v_flex()
                         .flex_1()
                         .min_w_0()
-                        .gap_2()
+                        .gap(canvas_notification_gap(cx))
                         .child(
                             v_flex()
-                                .gap_1()
+                                .gap(canvas_notification_action_gap(cx))
                                 .child(
                                     div()
                                         .child(
@@ -1152,12 +1223,16 @@ pub mod simple_message_notification {
                         .when(show_close_button, |this| {
                             this.on_modifiers_changed(move |_, _, cx| cx.notify(entity))
                         })
-                        .p_3()
-                        .gap_2()
+                        .p(canvas_notification_padding(cx))
+                        .gap(canvas_notification_gap(cx))
                         .elevation_3(cx)
+                        .bg(canvas_notification_background(cx))
+                        .border_1()
+                        .border_color(canvas_notification_border(cx))
+                        .map(|this| canvas_notification_radius(this, cx))
                         .child(
                             h_flex()
-                                .gap_4()
+                                .gap(canvas_notification_gap(cx))
                                 .justify_between()
                                 .items_start()
                                 .child(
@@ -1168,7 +1243,11 @@ pub mod simple_message_notification {
                                         .when_some(self.title.clone(), |div, title| {
                                             div.child(Label::new(title))
                                         })
-                                        .child(div().max_w_96().child(body)),
+                                        .child(
+                                            div()
+                                                .max_w(canvas_notification_content_width(cx))
+                                                .child(body),
+                                        ),
                                 )
                                 .child(header_actions),
                         ),

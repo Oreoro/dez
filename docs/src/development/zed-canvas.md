@@ -537,6 +537,9 @@ button rhythm, shell contrast, border strength, and backdrop intensity.
 Agent attention notification popups use Canvas density, radius, and contrast
 for popup size, placement margin, shell padding, content rhythm, text width,
 background, and border strength.
+Workspace notification cards and LSP prompt notifications use the same Canvas
+tokens for shell padding, content rhythm, action spacing, content width, radius,
+background, and border strength.
 
 ## Layout system {#layout-system}
 
