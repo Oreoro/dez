@@ -498,7 +498,12 @@ section headers, search field, navigation rail, and content backgrounds.
 Debugger UI surfaces use Canvas tokens for the Debug Panel shell, empty-state
 breakpoint/dashboard split, stack frames, variables, breakpoints, modules,
 loaded sources, console query bar, memory query bar, and debugger scroll
-tracks.
+tracks. Preview/media surfaces now follow the same token family: Component
+Preview uses Canvas backgrounds, borders, density, and radius for its
+navigation rail, filter bar, component cards, and focused component page; CSV
+Preview uses them for the settings toolbar, table background, cell gutters,
+header fades, and debug overlay; Image Viewer uses them for the viewport,
+checkerboard backdrop, image border, and image radius.
 
 ## Layout system {#layout-system}
 

@@ -5,7 +5,7 @@ use ui::{
 };
 
 use crate::{
-    CsvPreviewView,
+    CsvPreviewView, canvas,
     settings::RowIdentifiers,
     types::{DataRow, DisplayRow, LineNumber},
 };
@@ -163,9 +163,9 @@ impl CsvPreviewView {
 
         let value = div()
             .flex()
-            .px_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().panel_background)
+            .px(canvas::preview_cell_padding_x(cx))
+            .border_color(canvas::preview_subtle_border(cx))
+            .bg(canvas::preview_panel_background(cx))
             .h_full()
             .text_color(cx.theme().colors().text_muted)
             .justify_center()

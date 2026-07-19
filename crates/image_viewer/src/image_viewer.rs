@@ -7,11 +7,11 @@ use anyhow::Context as _;
 use editor::{EditorSettings, RevealInFileManager, items::entry_git_aware_label_color};
 use file_icons::FileIcons;
 use gpui::{
-    AnyElement, App, Bounds, Context, DispatchPhase, Element, ElementId, Entity, EventEmitter,
-    FocusHandle, Focusable, Font, GlobalElementId, InspectorElementId, InteractiveElement,
+    AnyElement, App, Bounds, Context, DispatchPhase, Div, Element, ElementId, Entity, EventEmitter,
+    FocusHandle, Focusable, Font, GlobalElementId, Hsla, InspectorElementId, InteractiveElement,
     IntoElement, LayoutId, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
-    ParentElement, PinchEvent, Pixels, Point, Render, ScrollDelta, ScrollWheelEvent, Style, Styled,
-    Task, WeakEntity, Window, actions, checkerboard, div, img, point, px, size,
+    ParentElement, PinchEvent, Pixels, Point, Render, ScrollDelta, ScrollWheelEvent, Stateful,
+    Style, Styled, Task, WeakEntity, Window, actions, checkerboard, div, img, point, px, size,
 };
 use language::File as _;
 use persistence::ImageViewerDb;
@@ -21,8 +21,8 @@ use theme_settings::ThemeSettings;
 use ui::{Tooltip, prelude::*};
 use util::paths::PathExt;
 use workspace::{
-    ItemId, ItemSettings, Pane, ToolbarItemEvent, ToolbarItemLocation, ToolbarItemView, Workspace,
-    WorkspaceId, delete_unloaded_items,
+    DesignSystemSettings, ItemId, ItemSettings, Pane, ToolbarItemEvent, ToolbarItemLocation,
+    ToolbarItemView, Workspace, WorkspaceId, delete_unloaded_items,
     invalid_item_view::InvalidItemView,
     item::{HighlightedText, Item, ItemHandle, ProjectItem, SerializableItem, TabContentParams},
 };
@@ -51,6 +51,41 @@ const MAX_ZOOM: f32 = 20.0;
 const ZOOM_STEP: f32 = 1.1;
 const SCROLL_LINE_MULTIPLIER: f32 = 20.0;
 const BASE_SQUARE_SIZE: f32 = 32.0;
+
+fn canvas_image_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.editor_background,
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors.element_background,
+    }
+}
+
+fn canvas_image_checkerboard_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.panel_background,
+        settings::CanvasContrast::Standard => colors.panel_background,
+        settings::CanvasContrast::High => colors.surface_background,
+    }
+}
+
+fn canvas_image_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border.opacity(0.5),
+        settings::CanvasContrast::Standard => colors.border,
+        settings::CanvasContrast::High => colors.border_variant,
+    }
+}
+
+fn canvas_image_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_sm(),
+        settings::CanvasRadius::Rounded => element.rounded_md(),
+    }
+}
 
 pub struct ImageView {
     image_item: Entity<ImageItem>,
@@ -354,7 +389,7 @@ impl Element for ImageContentElement {
         let zoom_level = initial_zoom_level.unwrap_or(image_view.zoom_level);
 
         let pan_offset = image_view.pan_offset;
-        let border_color = cx.theme().colors().border;
+        let border_color = canvas_image_border(cx);
 
         let is_dragging = image_view.is_dragging();
 
@@ -401,11 +436,12 @@ impl Element for ImageContentElement {
                             .top_0()
                             .left_0()
                             .child(div().size_full().bg(checkerboard(
-                                cx.theme().colors().panel_background,
+                                canvas_image_checkerboard_background(cx),
                                 BASE_SQUARE_SIZE * zoom_level,
                             )))
                             .border_1()
-                            .border_color(border_color),
+                            .border_color(border_color)
+                            .map(|image_backdrop| canvas_image_radius(image_backdrop, cx)),
                     )
                     .child({
                         img(image)
@@ -693,7 +729,7 @@ impl Render for ImageView {
             .on_action(cx.listener(Self::reveal_in_file_manager))
             .size_full()
             .relative()
-            .bg(cx.theme().colors().editor_background)
+            .bg(canvas_image_background(cx))
             .child({
                 let container = div()
                     .id("image-container")

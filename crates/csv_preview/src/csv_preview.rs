@@ -17,6 +17,7 @@ use workspace::{Item, SplitDirection, Workspace};
 
 use crate::{parser::EditorState, settings::CsvPreviewSettings, types::TableLikeContent};
 
+mod canvas;
 mod parser;
 mod renderer;
 mod settings;

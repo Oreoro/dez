@@ -4,7 +4,7 @@ use ui::{
 };
 
 use crate::{
-    CsvPreviewView,
+    CsvPreviewView, canvas,
     settings::FilterSortOrder,
     table_data_engine::{
         filtering_by_column::{FilterEntry, FilterEntryState},
@@ -29,8 +29,7 @@ impl CsvPreviewView {
         let always_show_buttons = has_active_filter || has_active_sort;
         let group_name = SharedString::from(format!("csv-col-header-{}", col_idx.get()));
 
-        let colors = cx.theme().colors();
-        let base_bg = colors.editor_background;
+        let base_bg = canvas::preview_background(cx);
         let grad_width_hovered = px(100.);
         let grad_width = if always_show_buttons {
             grad_width_hovered

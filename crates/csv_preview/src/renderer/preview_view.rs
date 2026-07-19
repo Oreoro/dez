@@ -2,11 +2,10 @@ use std::time::Instant;
 
 use ui::{SpinnerLabel, div, prelude::*};
 
-use crate::CsvPreviewView;
+use crate::{CsvPreviewView, canvas};
 
 impl Render for CsvPreviewView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = cx.theme();
         let row_height = window.pixel_snap(window.line_height());
         if row_height != self.row_height {
             self.row_height = row_height;
@@ -19,7 +18,7 @@ impl Render for CsvPreviewView {
         let render_prep_start = Instant::now();
         let table_with_settings = v_flex()
             .size_full()
-            .bg(theme.colors().editor_background)
+            .bg(canvas::preview_background(cx))
             .track_focus(&self.focus_handle)
             .child(self.render_settings_panel(window, cx))
             .child({

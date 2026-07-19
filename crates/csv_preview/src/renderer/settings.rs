@@ -5,7 +5,7 @@ use ui::{
 };
 
 use crate::{
-    CsvPreviewView,
+    CsvPreviewView, canvas,
     settings::{FilterSortOrder, VerticalAlignment},
 };
 
@@ -70,13 +70,16 @@ impl CsvPreviewView {
             })
         });
 
+        let toolbar_padding = canvas::preview_toolbar_padding(cx);
+        let toolbar_gap = canvas::preview_toolbar_gap(cx);
         let panel = h_flex()
-            .gap_4()
-            .p_2()
-            .bg(cx.theme().colors().surface_background)
+            .gap(toolbar_gap)
+            .p(toolbar_padding)
+            .bg(canvas::preview_panel_background(cx))
             .border_b_1()
-            .border_color(cx.theme().colors().border)
+            .border_color(canvas::preview_border(cx))
             .flex_wrap()
+            .map(|panel| canvas::preview_radius(panel, cx))
             .child(
                 h_flex()
                     .gap_2()

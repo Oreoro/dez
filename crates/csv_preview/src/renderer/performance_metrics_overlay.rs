@@ -5,7 +5,7 @@
 
 use ui::{ActiveTheme, Context, IntoElement, ParentElement, Styled, StyledTypography, div};
 
-use crate::{CsvPreviewView, PerformanceMetrics};
+use crate::{CsvPreviewView, PerformanceMetrics, canvas};
 
 impl CsvPreviewView {
     /// Renders a semi-transparent performance metrics overlay in the bottom-right corner.
@@ -24,10 +24,10 @@ impl CsvPreviewView {
             .right_4()
             .px_3()
             .py_2()
-            .bg(theme.colors().editor_background)
+            .bg(canvas::preview_panel_background(cx))
             .border_1()
-            .border_color(theme.colors().border)
-            .rounded_md()
+            .border_color(canvas::preview_border(cx))
+            .map(|overlay| canvas::preview_radius(overlay, cx))
             .opacity(0.75)
             .text_xs()
             .font_buffer(cx)

@@ -30,6 +30,11 @@ Implemented in this phase:
   and code-like agent surfaces. Bundled-font test loaders now register all
   packaged TTFs so JetBrains defaults are covered without relying on system
   fonts.
+- Applied Canvas design-system tokens to preview/media surfaces: Component
+  Preview navigation/filter/card/page chrome, CSV Preview toolbar/table/cell
+  chrome, and Image Viewer viewport/checkerboard/image border chrome now read
+  `design_system.density`, `design_system.radius`, and
+  `design_system.contrast`.
 - Added schema/default switches for pane-tab panel hosting, terminal-agent
   detection, multiple visible agents, session restoration, agent attention
   notifications, and preview-first Markdown.
