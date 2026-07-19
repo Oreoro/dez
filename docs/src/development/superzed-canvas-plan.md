@@ -136,6 +136,9 @@ Implemented in this phase:
   picker shell chrome, search-row height/padding, empty-state spacing, and
   documentation-aside padding while leaving non-command pickers on the existing
   default style unless they opt in.
+- Project Panel rows now consume Canvas density, radius, and contrast for row
+  padding, row rhythm, selection/hover/focus backgrounds, high-contrast row
+  borders, validation callouts, and the panel shell background.
 
 ## Ground truth {#ground-truth}
 
@@ -309,9 +312,12 @@ Current consumers:
 - Saved-layout modals: Canvas layout naming and manager modals use Canvas
   density for width, row padding, and row rhythm; radius for inline callout and
   saved-layout row corners; and contrast for row backgrounds and borders.
+- Project Panel: file-tree rows and validation callouts use Canvas density,
+  radius, and contrast so panel-hosted project tabs visually match Session Rail,
+  tabs, pickers, and saved-layout surfaces.
 
 Broader rollout should apply the same runtime model to additional command-like
-pickers as they opt into Canvas-specific workflows.
+pickers and panel-hosted tools as they opt into Canvas-specific workflows.
 
 ## Pane-first workspace {#pane-first-workspace}
 

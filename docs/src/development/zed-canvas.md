@@ -470,7 +470,10 @@ visual constants. The workspace-bar command search also reads
 accessibility label, while `contextual` and `always` keep the visible label.
 Markdown preview uses `design_system.content_width` for its default ContentSheet
 readable width when `markdown_preview.max_width` is unset; explicit
-`markdown_preview.max_width` continues to override the Canvas width.
+`markdown_preview.max_width` continues to override the Canvas width. Project
+Panel rows use the same density, radius, and contrast settings for row rhythm,
+hover/selection/focus states, validation callouts, high-contrast row borders,
+and the panel shell background when project surfaces are pane-hosted.
 
 ## Layout system {#layout-system}
 

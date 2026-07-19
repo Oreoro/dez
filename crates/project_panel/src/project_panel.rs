@@ -73,8 +73,8 @@ use util::{
     rel_path::{RelPath, RelPathBuf},
 };
 use workspace::{
-    DraggedSelection, OpenInTerminal, OpenMode, OpenOptions, OpenVisible, PaneKind,
-    PreviewTabsSettings, SelectedEntry, SplitDirection, Workspace, WorkspaceSettings,
+    DesignSystemSettings, DraggedSelection, OpenInTerminal, OpenMode, OpenOptions, OpenVisible,
+    PaneKind, PreviewTabsSettings, SelectedEntry, SplitDirection, Workspace, WorkspaceSettings,
     dock::{DockPosition, Panel, PanelEvent},
     focus_follows_mouse::FocusFollowsMouse as _,
     notifications::{DetachAndPromptErr, NotifyResultExt, NotifyTaskExt},
@@ -623,21 +623,111 @@ struct ItemColors {
 
 fn get_item_color(is_sticky: bool, cx: &App) -> ItemColors {
     let colors = cx.theme().colors();
+    let contrast = DesignSystemSettings::get_global(cx).contrast;
+    let default = if is_sticky {
+        colors.panel_overlay_background
+    } else {
+        canvas_project_panel_background(contrast, cx)
+    };
+    let hover = if is_sticky {
+        colors.panel_overlay_hover
+    } else {
+        match contrast {
+            settings::CanvasContrast::Low => colors.element_hover.opacity(0.75),
+            settings::CanvasContrast::Standard => colors.element_hover,
+            settings::CanvasContrast::High => colors
+                .element_hover
+                .blend(colors.border_focused.opacity(0.14)),
+        }
+    };
 
     ItemColors {
-        default: if is_sticky {
-            colors.panel_overlay_background
-        } else {
-            colors.editor_background
+        default,
+        hover,
+        marked: match contrast {
+            settings::CanvasContrast::Low => colors.element_selected.opacity(0.72),
+            settings::CanvasContrast::Standard => colors.element_selected,
+            settings::CanvasContrast::High => colors
+                .element_selected
+                .blend(colors.border_focused.opacity(0.16)),
         },
-        hover: if is_sticky {
-            colors.panel_overlay_hover
+        focused: if contrast == settings::CanvasContrast::Low {
+            colors.border_variant
         } else {
-            colors.element_hover
+            colors.panel_focused_border
         },
-        marked: colors.element_selected,
-        focused: colors.panel_focused_border,
         drag_over: colors.drop_target_background,
+    }
+}
+
+fn canvas_project_panel_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.editor_background,
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors.element_background,
+    }
+}
+
+fn canvas_project_panel_row_padding_x(density: settings::CanvasDensity) -> Pixels {
+    match density {
+        settings::CanvasDensity::Compact => px(2.),
+        settings::CanvasDensity::Balanced => px(4.),
+        settings::CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn canvas_project_panel_entry_spacing(
+    density: settings::CanvasDensity,
+    entry_spacing: ProjectPanelEntrySpacing,
+) -> ListItemSpacing {
+    match density {
+        settings::CanvasDensity::Compact => ListItemSpacing::ExtraDense,
+        settings::CanvasDensity::Balanced => match entry_spacing {
+            ProjectPanelEntrySpacing::Comfortable => ListItemSpacing::Dense,
+            ProjectPanelEntrySpacing::Standard => ListItemSpacing::ExtraDense,
+        },
+        settings::CanvasDensity::Spacious => ListItemSpacing::Dense,
+    }
+}
+
+fn canvas_project_panel_entry_border_color(
+    background: Hsla,
+    marked: bool,
+    contrast: settings::CanvasContrast,
+    cx: &App,
+) -> Hsla {
+    let colors = cx.theme().colors();
+    match (marked, contrast) {
+        (_, settings::CanvasContrast::Low) => background,
+        (true, settings::CanvasContrast::Standard) => colors.border.opacity(0.36),
+        (true, settings::CanvasContrast::High) => colors.border_variant,
+        (false, settings::CanvasContrast::Standard) => background,
+        (false, settings::CanvasContrast::High) => colors.border.opacity(0.28),
+    }
+}
+
+fn canvas_project_panel_entry_hover_border_color(
+    background: Hsla,
+    marked: bool,
+    contrast: settings::CanvasContrast,
+    cx: &App,
+) -> Hsla {
+    let colors = cx.theme().colors();
+    match (marked, contrast) {
+        (_, settings::CanvasContrast::Low) => background,
+        (true, settings::CanvasContrast::Standard) => colors.border.opacity(0.46),
+        (true, settings::CanvasContrast::High) => colors.border_focused,
+        (false, settings::CanvasContrast::Standard) => background,
+        (false, settings::CanvasContrast::High) => colors.border_variant,
+    }
+}
+
+fn canvas_project_panel_validation_padding(density: settings::CanvasDensity) -> (Pixels, Pixels) {
+    match density {
+        settings::CanvasDensity::Compact => (px(8.), px(4.)),
+        settings::CanvasDensity::Balanced => (px(10.), px(6.)),
+        settings::CanvasDensity::Spacious => (px(12.), px(8.)),
     }
 }
 
@@ -5605,6 +5695,15 @@ impl ProjectPanel {
         let is_sticky = details.sticky.is_some();
         let sticky_index = details.sticky.as_ref().map(|this| this.sticky_index);
         let settings = ProjectPanelSettings::get_global(cx);
+        let design_system = DesignSystemSettings::get_global(cx);
+        let canvas_density = design_system.density;
+        let canvas_radius = design_system.radius;
+        let canvas_contrast = design_system.contrast;
+        let row_padding_x = canvas_project_panel_row_padding_x(canvas_density);
+        let list_item_spacing =
+            canvas_project_panel_entry_spacing(canvas_density, settings.entry_spacing);
+        let (validation_padding_x, validation_padding_y) =
+            canvas_project_panel_validation_padding(canvas_density);
         let show_editor = details.is_editing && !details.is_processing;
 
         let selection = SelectedEntry {
@@ -5673,7 +5772,7 @@ impl ProjectPanel {
                     None => item_colors.focused,
                 }
             } else {
-                bg_color
+                canvas_project_panel_entry_border_color(bg_color, is_marked, canvas_contrast, cx)
             };
 
         let border_hover_color =
@@ -5683,7 +5782,12 @@ impl ProjectPanel {
                     None => item_colors.focused,
                 }
             } else {
-                bg_hover_color
+                canvas_project_panel_entry_hover_border_color(
+                    bg_hover_color,
+                    is_marked,
+                    canvas_contrast,
+                    cx,
+                )
             };
 
         let folded_directory_drag_target = self.folded_directory_drag_target;
@@ -5729,11 +5833,18 @@ impl ProjectPanel {
             .relative()
             .group(GROUP_NAME)
             .cursor_pointer()
-            .rounded_none()
+            .pl(row_padding_x)
+            .pr(row_padding_x)
             .bg(bg_color)
             .border_1()
             .border_r_2()
             .border_color(border_color)
+            .when(canvas_radius == settings::CanvasRadius::Subtle, |this| {
+                this.rounded_sm()
+            })
+            .when(canvas_radius == settings::CanvasRadius::Rounded, |this| {
+                this.rounded_md()
+            })
             .hover(|style| style.bg(bg_hover_color).border_color(border_hover_color))
             .when(is_sticky, |this| this.block_mouse_except_scroll())
             .when(!is_sticky, |this| {
@@ -6077,10 +6188,7 @@ impl ProjectPanel {
                 ListItem::new(id)
                     .indent_level(depth)
                     .indent_step_size(px(settings.indent_size))
-                    .spacing(match settings.entry_spacing {
-                        ProjectPanelEntrySpacing::Comfortable => ListItemSpacing::Dense,
-                        ProjectPanelEntrySpacing::Standard => ListItemSpacing::ExtraDense,
-                    })
+                    .spacing(list_item_spacing)
                     .selectable(false)
                     .when(
                         canonical_path.is_some()
@@ -6258,11 +6366,17 @@ impl ProjectPanel {
                         .top_full()
                         .left(px(-1.)) // Used px over rem so that it doesn't change with font size
                         .right(px(-0.5))
-                        .py_1()
-                        .px_2()
+                        .py(validation_padding_y)
+                        .px(validation_padding_x)
                         .border_1()
                         .border_color(color)
                         .bg(cx.theme().colors().background)
+                        .when(canvas_radius == settings::CanvasRadius::Subtle, |this| {
+                            this.rounded_sm()
+                        })
+                        .when(canvas_radius == settings::CanvasRadius::Rounded, |this| {
+                            this.rounded_md()
+                        })
                         .child(
                             Label::new(message)
                                 .color(Color::from(color))
@@ -6877,6 +6991,7 @@ impl Render for ProjectPanel {
         let has_worktree = !self.state.visible_entries.is_empty();
         let project = self.project.read(cx);
         let panel_settings = ProjectPanelSettings::get_global(cx);
+        let canvas_contrast = DesignSystemSettings::get_global(cx).contrast;
         let indent_size = panel_settings.indent_size;
         let show_indent_guides = panel_settings.indent_guides.show == ShowIndentGuides::Always;
         let horizontal_scroll = panel_settings.scrollbar.horizontal_scroll;
@@ -6989,7 +7104,7 @@ impl Render for ProjectPanel {
                         }))
                 })
                 .size_full()
-                .bg(cx.theme().colors().editor_background)
+                .bg(canvas_project_panel_background(canvas_contrast, cx))
                 .relative()
                 .on_modifiers_changed(cx.listener(
                     |this, event: &ModifiersChangedEvent, window, cx| {
