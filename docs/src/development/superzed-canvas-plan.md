@@ -42,6 +42,9 @@ Implemented in this phase:
 - Added command-palette/menu actions for Canvas layout recipes:
   `Canvas: Full`, `Canvas: Agent Control`, `Canvas: Focus Editor`, and
   `Cycle Canvas Layout`.
+- Added additional named Canvas recipe actions for Main + Stack, Main Top,
+  Golden Split, Code/Run/Observe, Agent Operations Center, and Four-Agent
+  Matrix.
 
 ## Ground truth {#ground-truth}
 
@@ -185,6 +188,10 @@ Use the existing panel-as-pane bridge as the migration path:
   - Agent Control shows project and agent panes and focuses the agent pane.
   - Focus Editor hides project and agent panes and focuses the editor/tab pane.
   - Cycle Canvas Layout toggles between agent-control and focus-editor modes.
+- Additional recipe actions now create or reuse regular tabbed panes for
+  `Main + Stack`, `Main Top`, `Golden Split`, `Code/Run/Observe`,
+  `Agent Operations Center`, and `Four-Agent Matrix` without starting
+  processes or replacing tab contents.
 - Add explicit close, restore, and "detach process" behavior so closing a tab
   is not confused with killing a process.
 
@@ -338,9 +345,11 @@ Ship purpose-based starter layouts:
 - Portrait Display.
 
 Layouts are semantic recipes. They preserve pane IDs and tab contents where
-possible and reflow instead of overwriting saved desktop geometry. The first
-runtime slice implements Full Canvas, Agent Control, Focus Editor, and Cycle
-Canvas Layout against the existing pane/panel bridge.
+possible and reflow instead of overwriting saved desktop geometry. Runtime
+recipe slices now implement `Full Canvas`, `Agent Control`, `Focus Editor`,
+`Main + Stack`, `Main Top`, `Golden Split`, `Code/Run/Observe`,
+`Agent Operations Center`, `Four-Agent Matrix`, and `Cycle Canvas Layout`
+against the existing pane/panel bridge.
 
 ## Accessibility and performance requirements {#accessibility-and-performance}
 

@@ -90,6 +90,18 @@ actions!(
         ApplyCanvasAgentControlLayout,
         /// Applies the Canvas focus-editor layout and hides panel panes.
         ApplyCanvasEditorFocusLayout,
+        /// Applies the Canvas main-and-stack editor layout.
+        ApplyCanvasMainStackLayout,
+        /// Applies the Canvas main-top editor layout.
+        ApplyCanvasMainTopLayout,
+        /// Applies the Canvas golden-split editor layout.
+        ApplyCanvasGoldenSplitLayout,
+        /// Applies the Canvas code-run-observe layout.
+        ApplyCanvasCodeRunObserveLayout,
+        /// Applies the Canvas agent operations center layout.
+        ApplyCanvasAgentOperationsLayout,
+        /// Applies the Canvas four-agent matrix layout.
+        ApplyCanvasFourAgentMatrixLayout,
         /// Cycles between Canvas agent-control and focus-editor layouts.
         CycleCanvasLayout,
     ]
@@ -130,6 +142,42 @@ pub fn init(cx: &mut App) {
             set_window_layout(WindowLayout::Agent(None), cx);
             workspace.apply_canvas_editor_focus_layout(window, cx);
         });
+
+        workspace.register_action(|workspace, _: &ApplyCanvasMainStackLayout, window, cx| {
+            set_window_layout(WindowLayout::Agent(None), cx);
+            workspace.apply_canvas_main_stack_layout(window, cx);
+        });
+
+        workspace.register_action(|workspace, _: &ApplyCanvasMainTopLayout, window, cx| {
+            set_window_layout(WindowLayout::Agent(None), cx);
+            workspace.apply_canvas_main_top_layout(window, cx);
+        });
+
+        workspace.register_action(|workspace, _: &ApplyCanvasGoldenSplitLayout, window, cx| {
+            set_window_layout(WindowLayout::Agent(None), cx);
+            workspace.apply_canvas_golden_split_layout(window, cx);
+        });
+
+        workspace.register_action(
+            |workspace, _: &ApplyCanvasCodeRunObserveLayout, window, cx| {
+                set_window_layout(WindowLayout::Agent(None), cx);
+                workspace.apply_canvas_code_run_observe_layout(window, cx);
+            },
+        );
+
+        workspace.register_action(
+            |workspace, _: &ApplyCanvasAgentOperationsLayout, window, cx| {
+                set_window_layout(WindowLayout::Agent(None), cx);
+                workspace.apply_canvas_agent_operations_layout(window, cx);
+            },
+        );
+
+        workspace.register_action(
+            |workspace, _: &ApplyCanvasFourAgentMatrixLayout, window, cx| {
+                set_window_layout(WindowLayout::Agent(None), cx);
+                workspace.apply_canvas_four_agent_matrix_layout(window, cx);
+            },
+        );
 
         workspace.register_action(|workspace, _: &CycleCanvasLayout, window, cx| {
             set_window_layout(WindowLayout::Agent(None), cx);
@@ -196,6 +244,12 @@ fn update_layout_action_filter(cx: &mut App) {
         TypeId::of::<ApplyCanvasFullLayout>(),
         TypeId::of::<ApplyCanvasAgentControlLayout>(),
         TypeId::of::<ApplyCanvasEditorFocusLayout>(),
+        TypeId::of::<ApplyCanvasMainStackLayout>(),
+        TypeId::of::<ApplyCanvasMainTopLayout>(),
+        TypeId::of::<ApplyCanvasGoldenSplitLayout>(),
+        TypeId::of::<ApplyCanvasCodeRunObserveLayout>(),
+        TypeId::of::<ApplyCanvasAgentOperationsLayout>(),
+        TypeId::of::<ApplyCanvasFourAgentMatrixLayout>(),
         TypeId::of::<CycleCanvasLayout>(),
     ];
     CommandPaletteFilter::update_global(cx, |filter, _| {
@@ -1461,6 +1515,66 @@ impl SidebarChrome {
                                     move |window, cx| {
                                         window.dispatch_action(
                                             ApplyCanvasEditorFocusLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Canvas: Main + Stack",
+                                    Some(ApplyCanvasMainStackLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasMainStackLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Canvas: Main Top",
+                                    Some(ApplyCanvasMainTopLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasMainTopLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Canvas: Golden Split",
+                                    Some(ApplyCanvasGoldenSplitLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasGoldenSplitLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Canvas: Code, Run, Observe",
+                                    Some(ApplyCanvasCodeRunObserveLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasCodeRunObserveLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Canvas: Agent Operations Center",
+                                    Some(ApplyCanvasAgentOperationsLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasAgentOperationsLayout.boxed_clone(),
+                                            cx,
+                                        );
+                                    },
+                                )
+                                .entry(
+                                    "Canvas: Four-Agent Matrix",
+                                    Some(ApplyCanvasFourAgentMatrixLayout.boxed_clone()),
+                                    move |window, cx| {
+                                        window.dispatch_action(
+                                            ApplyCanvasFourAgentMatrixLayout.boxed_clone(),
                                             cx,
                                         );
                                     },

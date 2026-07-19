@@ -4887,6 +4887,87 @@ impl Workspace {
         }
     }
 
+    pub fn apply_canvas_main_stack_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let panes =
+            self.prepare_canvas_recipe(false, false, 2, &[SplitDirection::Right], window, cx);
+        self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+        self.finish_canvas_recipe(window, cx);
+    }
+
+    pub fn apply_canvas_main_top_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let panes =
+            self.prepare_canvas_recipe(false, false, 2, &[SplitDirection::Down], window, cx);
+        self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+        self.finish_canvas_recipe(window, cx);
+    }
+
+    pub fn apply_canvas_golden_split_layout(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let panes = self.prepare_canvas_recipe(
+            false,
+            false,
+            3,
+            &[SplitDirection::Right, SplitDirection::Down],
+            window,
+            cx,
+        );
+        self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+        self.finish_canvas_recipe(window, cx);
+    }
+
+    pub fn apply_canvas_code_run_observe_layout(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let panes = self.prepare_canvas_recipe(
+            true,
+            false,
+            3,
+            &[SplitDirection::Down, SplitDirection::Right],
+            window,
+            cx,
+        );
+        self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+        self.finish_canvas_recipe(window, cx);
+    }
+
+    pub fn apply_canvas_agent_operations_layout(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.prepare_canvas_recipe(true, true, 2, &[SplitDirection::Right], window, cx);
+        if let Some(agent_pane) = self.panel_pane_for_kind(PaneKind::Agent, cx) {
+            self.focus_canvas_pane(&agent_pane, window, cx);
+        }
+        self.finish_canvas_recipe(window, cx);
+    }
+
+    pub fn apply_canvas_four_agent_matrix_layout(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let panes = self.prepare_canvas_recipe(
+            false,
+            false,
+            4,
+            &[
+                SplitDirection::Right,
+                SplitDirection::Down,
+                SplitDirection::Right,
+            ],
+            window,
+            cx,
+        );
+        self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+        self.finish_canvas_recipe(window, cx);
+    }
+
     fn apply_pane_grid_settings(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if PaneGridSettings::get_global(cx).show_legacy_docks {
             return;
@@ -4898,6 +4979,111 @@ impl Workspace {
             dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
         }
 
+        self.center.mark_positions(cx);
+        self.serialize_workspace(window, cx);
+        cx.notify();
+    }
+
+    fn prepare_canvas_recipe(
+        &mut self,
+        show_project_pane: bool,
+        show_agent_pane: bool,
+        tabbed_pane_count: usize,
+        split_directions: &[SplitDirection],
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Vec<Entity<Pane>> {
+        self.sync_panel_panes_from_docks(window, cx);
+        self.set_canvas_panel_pane_visible(PanelPaneKind::Project, show_project_pane, window, cx);
+        self.set_canvas_panel_pane_visible(PanelPaneKind::Agent, show_agent_pane, window, cx);
+
+        for dock in [&self.left_dock, &self.right_dock] {
+            dock.update(cx, |dock, cx| dock.set_open(false, window, cx));
+        }
+
+        self.ensure_visible_tabbed_panes(tabbed_pane_count, split_directions, window, cx)
+    }
+
+    fn set_canvas_panel_pane_visible(
+        &mut self,
+        panel_pane_kind: PanelPaneKind,
+        visible: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if visible {
+            let pane = self.ensure_panel_pane(panel_pane_kind, window, cx);
+            pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+        } else if let Some(pane) = self.panel_pane_for_kind(panel_pane_kind.pane_kind(), cx) {
+            pane.update(cx, |pane, cx| pane.set_visible(false, cx));
+        }
+    }
+
+    fn ensure_visible_tabbed_panes(
+        &mut self,
+        count: usize,
+        split_directions: &[SplitDirection],
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Vec<Entity<Pane>> {
+        let count = count.max(1);
+        let mut panes = self
+            .center
+            .panes()
+            .into_iter()
+            .filter(|pane| pane.read(cx).pane_kind() == PaneKind::Tabs)
+            .filter(|pane| self.pane_is_in_center(pane))
+            .cloned()
+            .collect::<Vec<_>>();
+
+        for pane in panes.iter().take(count) {
+            pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+        }
+        panes.retain(|pane| pane.read(cx).is_visible());
+
+        if panes.is_empty() {
+            panes.push(self.ensure_tabbed_pane(window, cx));
+        }
+
+        while panes.len() < count {
+            let target = panes
+                .last()
+                .cloned()
+                .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
+            let direction = if split_directions.is_empty() {
+                SplitDirection::Right
+            } else {
+                split_directions[(panes.len() - 1) % split_directions.len()]
+            };
+            panes.push(self.split_pane(target, direction, window, cx));
+        }
+
+        panes
+    }
+
+    fn focus_canvas_tabbed_pane(
+        &mut self,
+        pane: Option<&Entity<Pane>>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let pane = pane
+            .cloned()
+            .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
+        self.focus_canvas_pane(&pane, window, cx);
+    }
+
+    fn focus_canvas_pane(
+        &mut self,
+        pane: &Entity<Pane>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.set_active_pane(pane, window, cx);
+        pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
+    }
+
+    fn finish_canvas_recipe(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.center.mark_positions(cx);
         self.serialize_workspace(window, cx);
         cx.notify();
