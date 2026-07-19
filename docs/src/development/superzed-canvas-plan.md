@@ -214,8 +214,9 @@ Branch audit status, 2026-07-19:
   for later pane/grid layout polish after Canvas pane shell behavior is stable.
 - `upstream/fix-agent-focus-issues` is merged into the Canvas branch, preserving
   the current pane-render signature while adding the upstream focus tracking.
-- `upstream/settings-ui-add-subagent-model-setting` remains a targeted agent UX
-  candidate.
+- `upstream/settings-ui-add-subagent-model-setting` is merged into the Canvas
+  branch, adding subagent model/reasoning-effort settings UI and thread-card
+  model visibility.
 - `upstream/fix-agent-path-hyperlinks` remains a targeted agent UX candidate,
   but a direct merge conflicts through the ACP mention parser and thread-view
   tests. Treat it as a parser/test integration rather than a blind branch
