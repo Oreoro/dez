@@ -90,6 +90,7 @@ pub struct PaneGridSettings {
     pub focus_indicator: settings::PaneGridFocusIndicator,
     pub panel_surface: settings::CanvasPanelSurface,
     pub draggable_panel_tabs: bool,
+    pub attention_ring: bool,
     pub tab_overflow: settings::TabOverflowBehavior,
     pub auto_hide_single_tab_bar: bool,
 }
@@ -102,12 +103,13 @@ impl PaneGridSettings {
     }
 
     pub fn shows_active_pane_border(&self) -> bool {
-        matches!(
-            self.focus_indicator,
-            settings::PaneGridFocusIndicator::Border
-                | settings::PaneGridFocusIndicator::BorderAndTitle
-                | settings::PaneGridFocusIndicator::Ring
-        )
+        self.attention_ring
+            && matches!(
+                self.focus_indicator,
+                settings::PaneGridFocusIndicator::Border
+                    | settings::PaneGridFocusIndicator::BorderAndTitle
+                    | settings::PaneGridFocusIndicator::Ring
+            )
     }
 }
 
@@ -226,6 +228,7 @@ impl Settings for PaneGridSettings {
             focus_indicator: pane_grid.focus_indicator.unwrap(),
             panel_surface: pane_grid.panel_surface.unwrap(),
             draggable_panel_tabs: pane_grid.draggable_panel_tabs.unwrap(),
+            attention_ring: pane_grid.attention_ring.unwrap(),
             tab_overflow: pane_grid.tab_overflow.unwrap(),
             auto_hide_single_tab_bar: pane_grid.auto_hide_single_tab_bar.unwrap(),
         }

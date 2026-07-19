@@ -195,6 +195,9 @@ Use the existing panel-as-pane bridge as the migration path:
 - Runtime active-pane border rendering now honors `pane_grid.focus_indicator`:
   `title` suppresses the border, while `border`, `border_and_title`, and
   `ring` use the existing active-pane border treatment.
+- Runtime pane overlay-ring rendering now also honors
+  `pane_grid.attention_ring`; disabling it suppresses Canvas pane ring chrome
+  even when `pane_grid.focus_indicator` selects a border-style treatment.
 - Runtime pane rendering now honors `pane_grid.auto_hide_single_tab_bar`; the
   Canvas default remains `false` so single-tab panes still advertise their
   draggable tab surface.

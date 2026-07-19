@@ -212,6 +212,8 @@ Rules:
 - Pane borders stay subtle except for focus, drag target, or attention.
 - `pane_grid.focus_indicator` controls whether active-pane focus uses the
   existing border treatment or relies on the active tab/title state only.
+- `pane_grid.attention_ring = false` suppresses Canvas pane overlay-ring chrome
+  even when `pane_grid.focus_indicator` selects a border-style treatment.
 - `pane_grid.tab_overflow = "stack"` compacts a pane to pinned tabs plus the
   active unpinned tab and an overflow tab menu; `scroll` and `searchable`
   currently use the existing scrollable tab strip.
