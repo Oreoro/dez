@@ -35,7 +35,9 @@ use workspace::notifications::NotifyResultExt;
 use workspace::searchable::{
     Direction, SearchEvent, SearchOptions, SearchToken, SearchableItem, SearchableItemHandle,
 };
-use workspace::{ItemId, Pane, SaveIntent, Workspace, WorkspaceId, delete_unloaded_items};
+use workspace::{
+    DesignSystemSettings, ItemId, Pane, SaveIntent, Workspace, WorkspaceId, delete_unloaded_items,
+};
 use zed_actions::{DecreaseBufferFontSize, IncreaseBufferFontSize, ResetBufferFontSize};
 
 use crate::markdown_preview_settings::MarkdownPreviewSettings;
@@ -1381,6 +1383,27 @@ impl Render for MarkdownPreviewView {
             .as_ref()
             .map(|theme| theme.colors().editor_background)
             .unwrap_or_else(|| cx.theme().colors().editor_background);
+        let design_system = DesignSystemSettings::get_global(cx);
+        let colors = cx.theme().colors();
+        let (scroll_padding, sheet_padding_x, sheet_padding_y) = match design_system.density {
+            settings::CanvasDensity::Compact => (px(12.), px(12.), px(10.)),
+            settings::CanvasDensity::Balanced => (px(16.), px(20.), px(16.)),
+            settings::CanvasDensity::Spacious => (px(24.), px(28.), px(24.)),
+        };
+        let sheet_bg = match design_system.contrast {
+            settings::CanvasContrast::Low => bg_color,
+            settings::CanvasContrast::Standard => {
+                bg_color.blend(colors.panel_background.opacity(0.08))
+            }
+            settings::CanvasContrast::High => {
+                bg_color.blend(colors.element_background.opacity(0.16))
+            }
+        };
+        let sheet_border = match design_system.contrast {
+            settings::CanvasContrast::Low => colors.border.opacity(0.45),
+            settings::CanvasContrast::Standard => colors.border,
+            settings::CanvasContrast::High => colors.border_variant,
+        };
         let preview_font_size = ThemeSettings::get_global(cx).markdown_preview_font_size(cx);
         div()
             .image_cache(self.image_cache.clone())
@@ -1410,12 +1433,13 @@ impl Render for MarkdownPreviewView {
                         .size_full()
                         .overflow_y_scroll()
                         .track_scroll(&self.scroll_handle)
-                        .p_4()
+                        .p(scroll_padding)
                         .child({
                             let markdown_element =
                                 self.render_markdown_element(&preview_theme, window, cx);
                             let markdown = self.markdown.clone();
                             let max_width = MarkdownPreviewSettings::get_global(cx).max_width;
+                            let show_readable_sheet = max_width.is_some();
                             let content = right_click_menu("markdown-preview-context-menu")
                                 .trigger(move |_, _, _| markdown_element)
                                 .maybe_menu(move |window, cx| {
@@ -1474,6 +1498,23 @@ impl Render for MarkdownPreviewView {
                                 .when_some(max_width, |this, max_width| {
                                     this.max_w(max_width).mx_auto()
                                 })
+                                .when(show_readable_sheet, |this| {
+                                    this.bg(sheet_bg)
+                                        .border_1()
+                                        .border_color(sheet_border)
+                                        .px(sheet_padding_x)
+                                        .py(sheet_padding_y)
+                                })
+                                .when(
+                                    show_readable_sheet
+                                        && design_system.radius == settings::CanvasRadius::Subtle,
+                                    |this| this.rounded_md(),
+                                )
+                                .when(
+                                    show_readable_sheet
+                                        && design_system.radius == settings::CanvasRadius::Rounded,
+                                    |this| this.rounded_lg(),
+                                )
                                 .child(content)
                         }),
                 ),

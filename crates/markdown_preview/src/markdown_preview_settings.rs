@@ -1,6 +1,5 @@
 use gpui::{Pixels, px};
 use settings::{RegisterSetting, Settings};
-use workspace::DesignSystemSettings;
 
 /// The settings for the markdown preview.
 #[derive(Clone, Copy, Debug, Default, RegisterSetting)]
@@ -42,5 +41,5 @@ fn canvas_content_width(content: &settings::SettingsContent) -> Option<Pixels> {
         .and_then(|design_system| design_system.content_width)
         .unwrap_or_default();
 
-    DesignSystemSettings::content_width_pixels_for(content_width)
+    content_width.readable_width_px().map(px)
 }

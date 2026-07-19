@@ -127,6 +127,10 @@ Implemented in this phase:
   `design_system.content_width` when `agent.max_content_width` is unset, and
   the native default leaves the agent override unset so agent conversations
   share the same readable-width model as Markdown previews.
+- Markdown preview readable sheets now use Canvas density for scroll/sheet
+  padding, Canvas radius for sheet corners, and Canvas contrast for sheet
+  background and border strength. Markdown and agent content-width fallbacks now
+  share the same settings-level readable-width mapping.
 
 ## Ground truth {#ground-truth}
 
@@ -259,9 +263,11 @@ Current consumers:
   readable-width mapping, so conversation entries, draft editors, activity
   bars, subagent title bars, and toolbars stay aligned with
   `design_system.content_width`.
+- Markdown sheets: preview scroll padding, readable-sheet padding, sheet radius,
+  background, and border strength now read Canvas density, radius, and contrast
+  when content width limiting is active.
 
-Broader rollout should apply the same runtime model to Markdown sheets and
-command surfaces.
+Broader rollout should apply the same runtime model to command surfaces.
 
 ## Pane-first workspace {#pane-first-workspace}
 

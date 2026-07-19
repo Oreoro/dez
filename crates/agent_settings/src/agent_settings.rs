@@ -735,12 +735,13 @@ pub fn normalize_path(raw: &str) -> String {
 }
 
 fn canvas_content_width(content: &settings::SettingsContent) -> Option<Pixels> {
-    content
+    let content_width = content
         .design_system
         .as_ref()
         .and_then(|design_system| design_system.content_width)
-        .and_then(|content_width| content_width.readable_width_px())
-        .map(px)
+        .unwrap_or_default();
+
+    content_width.readable_width_px().map(px)
 }
 
 impl Settings for AgentSettings {
