@@ -462,9 +462,11 @@ Current consumers:
   header rhythm/background, body padding, form field chrome, single/multi-select
   option rows, URL rows, action footer, and component preview spacing consume
   Canvas density, radius, and contrast.
-- Agent end-trial upsell banner: plan section rhythm, section-header spacing,
-  description spacing, dismiss affordance offset, and current-plan label
-  contrast consume Canvas density and contrast.
+- Agent end-trial upsell banner: shared onboarding-card shell hooks now accept
+  Canvas-driven padding, background, border, radius, gradient, and gap values;
+  the end-trial banner applies those values along with plan section rhythm,
+  section-header spacing, description spacing, dismiss affordance offset, and
+  current-plan label contrast.
 - Go To Line: the modal shell, input divider, help row spacing, and elevated
   navigation surface consume Canvas density, radius, and contrast.
 - Tasks UI: the task picker shell, search row, empty state, task rows,

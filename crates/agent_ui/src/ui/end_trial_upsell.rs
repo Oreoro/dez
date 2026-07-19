@@ -2,10 +2,50 @@ use std::sync::Arc;
 
 use ai_onboarding::{AgentPanelOnboardingCard, PlanDefinitions};
 use client::zed_urls;
-use gpui::{AnyElement, App, IntoElement, Pixels, RenderOnce, Window};
+use gpui::{AnyElement, App, Hsla, IntoElement, Pixels, RenderOnce, Window};
 use settings::Settings as _;
 use ui::{Divider, Tooltip, prelude::*};
 use workspace::DesignSystemSettings;
+
+fn upsell_card_outer_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(10.),
+        settings::CanvasDensity::Spacious => px(14.),
+    }
+}
+
+fn upsell_card_frame_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(2.),
+        settings::CanvasDensity::Balanced => px(3.),
+        settings::CanvasDensity::Spacious => px(4.),
+    }
+}
+
+fn upsell_card_content_padding_x(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(12.),
+        settings::CanvasDensity::Balanced => px(16.),
+        settings::CanvasDensity::Spacious => px(20.),
+    }
+}
+
+fn upsell_card_content_padding_y(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(8.),
+        settings::CanvasDensity::Balanced => px(12.),
+        settings::CanvasDensity::Spacious => px(16.),
+    }
+}
+
+fn upsell_card_content_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
 
 fn upsell_section_gap(cx: &App) -> Pixels {
     match DesignSystemSettings::get_global(cx).density {
@@ -55,6 +95,69 @@ fn upsell_current_plan_color(cx: &App) -> Color {
         settings::CanvasContrast::High => 0.78,
     };
     Color::Custom(colors.text_muted.opacity(opacity))
+}
+
+fn upsell_card_outer_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.editor_background.opacity(0.92),
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors
+            .editor_background
+            .blend(colors.border_focused.opacity(0.05)),
+    }
+}
+
+fn upsell_card_frame_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.background.opacity(0.36),
+        settings::CanvasContrast::Standard => colors.background.opacity(0.5),
+        settings::CanvasContrast::High => colors.background.opacity(0.62),
+    }
+}
+
+fn upsell_card_content_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.panel_background.opacity(0.92),
+        settings::CanvasContrast::Standard => colors.panel_background,
+        settings::CanvasContrast::High => colors
+            .panel_background
+            .blend(colors.border_focused.opacity(0.08)),
+    }
+}
+
+fn upsell_card_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.text.opacity(0.07),
+        settings::CanvasContrast::Standard => colors.text.opacity(0.1),
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn upsell_card_gradient_start(cx: &App) -> Hsla {
+    upsell_card_content_background(cx)
+}
+
+fn upsell_card_gradient_end(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.editor_background.opacity(0.4),
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors
+            .editor_background
+            .blend(colors.border_focused.opacity(0.06)),
+    }
+}
+
+fn upsell_card_radii(cx: &App) -> (Pixels, Pixels) {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => (px(0.), px(0.)),
+        settings::CanvasRadius::Subtle => (px(8.), px(5.)),
+        settings::CanvasRadius::Rounded => (px(12.), px(8.)),
+    }
 }
 
 #[derive(IntoElement, RegisterComponent)]
@@ -116,7 +219,24 @@ impl RenderOnce for EndTrialUpsell {
             )
             .child(PlanDefinitions.free_plan());
 
+        let (frame_radius, content_radius) = upsell_card_radii(cx);
+
         AgentPanelOnboardingCard::new()
+            .outer_padding(upsell_card_outer_padding(cx))
+            .frame_padding(upsell_card_frame_padding(cx))
+            .content_padding(
+                upsell_card_content_padding_x(cx),
+                upsell_card_content_padding_y(cx),
+            )
+            .content_gap(upsell_card_content_gap(cx))
+            .backgrounds(
+                upsell_card_outer_background(cx),
+                upsell_card_frame_background(cx),
+                upsell_card_content_background(cx),
+            )
+            .content_border(upsell_card_border(cx))
+            .radii(frame_radius, content_radius)
+            .gradient(upsell_card_gradient_start(cx), upsell_card_gradient_end(cx))
             .child(Headline::new("Your Zed Pro Trial has expired"))
             .child(
                 Label::new("You've been automatically reset to the Free plan.")

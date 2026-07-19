@@ -576,9 +576,10 @@ spacing.
 ACP elicitation cards use Canvas density, radius, and contrast for request-card
 shells, header/body rhythm, form field chrome, option rows, URL rows, action
 footers, and component preview spacing.
-The agent end-trial upsell banner uses Canvas density and contrast for plan
-section rhythm, header spacing, description spacing, dismiss placement, and
-current-plan label contrast.
+The agent end-trial upsell banner uses Canvas density, radius, and contrast for
+the shared onboarding-card shell, gradient, plan section rhythm, header
+spacing, description spacing, dismiss placement, and current-plan label
+contrast.
 
 ## Layout system {#layout-system}
 
