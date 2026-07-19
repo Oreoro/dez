@@ -198,9 +198,16 @@ fn terminal_agent_icon(kind: TerminalAgentKind) -> IconName {
         TerminalAgentKind::Cursor => IconName::EditorCursor,
         TerminalAgentKind::Gemini
         | TerminalAgentKind::Aider
+        | TerminalAgentKind::Agy
         | TerminalAgentKind::OpenCode
         | TerminalAgentKind::Amp
+        | TerminalAgentKind::Crush
+        | TerminalAgentKind::Devin
+        | TerminalAgentKind::Droid
         | TerminalAgentKind::Goose
+        | TerminalAgentKind::Grok
+        | TerminalAgentKind::OpenHands
+        | TerminalAgentKind::Pi
         | TerminalAgentKind::Qwen => IconName::Robot,
     }
 }

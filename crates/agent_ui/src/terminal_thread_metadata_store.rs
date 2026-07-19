@@ -61,9 +61,16 @@ pub enum TerminalAgentKind {
     Codex,
     Gemini,
     Aider,
+    Agy,
     OpenCode,
     Amp,
+    Crush,
+    Devin,
+    Droid,
     Goose,
+    Grok,
+    OpenHands,
+    Pi,
     Qwen,
     Cursor,
     Copilot,
@@ -76,9 +83,16 @@ impl TerminalAgentKind {
             Self::Codex => "Codex",
             Self::Gemini => "Gemini CLI",
             Self::Aider => "Aider",
+            Self::Agy => "Agy",
             Self::OpenCode => "OpenCode",
             Self::Amp => "Amp",
+            Self::Crush => "Crush",
+            Self::Devin => "Devin",
+            Self::Droid => "Droid",
             Self::Goose => "Goose",
+            Self::Grok => "Grok",
+            Self::OpenHands => "OpenHands",
+            Self::Pi => "Pi",
             Self::Qwen => "Qwen Code",
             Self::Cursor => "Cursor Agent",
             Self::Copilot => "GitHub Copilot",
@@ -204,12 +218,26 @@ pub fn detect_terminal_agent_kind(title: &str) -> Option<TerminalAgentKind> {
         Some(TerminalAgentKind::Gemini)
     } else if has_token("aider") {
         Some(TerminalAgentKind::Aider)
+    } else if has_token("agy") {
+        Some(TerminalAgentKind::Agy)
     } else if has_token("opencode") || compact.contains("opencode") {
         Some(TerminalAgentKind::OpenCode)
     } else if has_token("amp") {
         Some(TerminalAgentKind::Amp)
+    } else if has_token("crush") {
+        Some(TerminalAgentKind::Crush)
+    } else if has_token("devin") {
+        Some(TerminalAgentKind::Devin)
+    } else if has_token("droid") {
+        Some(TerminalAgentKind::Droid)
     } else if has_token("goose") {
         Some(TerminalAgentKind::Goose)
+    } else if has_token("grok") {
+        Some(TerminalAgentKind::Grok)
+    } else if has_token("openhands") || compact.contains("openhands") {
+        Some(TerminalAgentKind::OpenHands)
+    } else if has_token("pi") {
+        Some(TerminalAgentKind::Pi)
     } else if has_token("qwen") {
         Some(TerminalAgentKind::Qwen)
     } else if has_token("cursor") {
@@ -767,7 +795,37 @@ mod tests {
             detect_terminal_agent_kind("amp"),
             Some(TerminalAgentKind::Amp)
         );
+        assert_eq!(
+            detect_terminal_agent_kind("agy plan"),
+            Some(TerminalAgentKind::Agy)
+        );
+        assert_eq!(
+            detect_terminal_agent_kind("crush"),
+            Some(TerminalAgentKind::Crush)
+        );
+        assert_eq!(
+            detect_terminal_agent_kind("devin task"),
+            Some(TerminalAgentKind::Devin)
+        );
+        assert_eq!(
+            detect_terminal_agent_kind("droid session"),
+            Some(TerminalAgentKind::Droid)
+        );
+        assert_eq!(
+            detect_terminal_agent_kind("grok code"),
+            Some(TerminalAgentKind::Grok)
+        );
+        assert_eq!(
+            detect_terminal_agent_kind("OpenHands"),
+            Some(TerminalAgentKind::OpenHands)
+        );
+        assert_eq!(
+            detect_terminal_agent_kind("pi"),
+            Some(TerminalAgentKind::Pi)
+        );
         assert_eq!(detect_terminal_agent_kind("lamp server"), None);
+        assert_eq!(detect_terminal_agent_kind("api server"), None);
+        assert_eq!(detect_terminal_agent_kind("agent"), None);
         assert_eq!(detect_terminal_agent_kind("zsh"), None);
     }
 

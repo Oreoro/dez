@@ -39,8 +39,9 @@ Implemented in this phase:
   project/external file drops, explicit add-item routing, project-item opens,
   shared-screen opens, and move/clone item helpers.
 - Session Rail terminal rows now classify known terminal agent CLIs from title
-  metadata, including Claude Code, Codex, Gemini CLI, Aider, OpenCode, Amp,
-  Goose, Qwen Code, Cursor Agent, and GitHub Copilot.
+  metadata, including Claude Code, Codex, Gemini CLI, Aider, Agy, OpenCode,
+  Amp, Crush, Devin, Droid, Goose, Grok, OpenHands, Pi, Qwen Code, Cursor
+  Agent, and GitHub Copilot.
 - Standalone terminal tabs whose titles identify a known agent CLI now appear
   in the Session Rail. Activating the rail row focuses the existing terminal
   tab, and closing the row closes that tab instead of spawning or restoring an
@@ -428,8 +429,11 @@ Create one registry model for structured agents and terminal-native agents:
 
 Terminal-agent detection:
 
-- Detect known commands such as `claude`, `codex`, `aider`, `opencode`,
-  `gemini`, `amp`, and similar entries already present in the fork.
+- Detect known commands such as `claude`, `codex`, `aider`, `agy`, `opencode`,
+  `gemini`, `amp`, `crush`, `devin`, `droid`, `goose`, `grok`, `openhands`,
+  `pi`, `qwen`, `cursor`, and `copilot`. Keep ambiguous bare commands such as
+  `agent` out of standalone title classification until runtime hooks can
+  disambiguate them.
 - Use provider hooks or protocol events as authoritative state when available.
 - Use process title, foreground command, terminal bell, exit status,
   breadcrumbs, OSC markers, and output heuristics only as observed or inferred
@@ -440,11 +444,12 @@ Terminal-agent detection:
   `agent_ui.show_terminal_agents_in_session_rail` to `true`.
 - Implemented first slices: terminal-thread metadata rows classify known agent
   CLI titles and render matching identity in the Session Rail and thread
-  switcher. Standalone `terminal_view::TerminalView` tabs are scanned from open
-  workspaces and surfaced when their title identifies a known agent CLI;
-  activation and close route back to the existing terminal tab. Session Rail
-  terminal rows now label detected agents as `Agent detected` and terminal-bell
-  attention as `Possibly waiting`. Runtime settings now honor
+  switcher. The classifier now covers the same non-ambiguous command families
+  as terminal runtime hooks. Standalone `terminal_view::TerminalView` tabs are
+  scanned from open workspaces and surfaced when their title identifies a known
+  agent CLI; activation and close route back to the existing terminal tab.
+  Session Rail terminal rows now label detected agents as `Agent detected` and
+  terminal-bell attention as `Possibly waiting`. Runtime settings now honor
   `agent_ui.detect_terminal_agents`,
   `agent_ui.show_terminal_agents_in_session_rail`,
   `agent_ui.show_detection_confidence`, and `agent_ui.notify_on_attention`.
