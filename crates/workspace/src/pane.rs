@@ -95,6 +95,10 @@ impl PaneKind {
     pub fn is_tabbed(self) -> bool {
         self == Self::Tabs
     }
+
+    pub fn can_host_tabs(self) -> bool {
+        matches!(self, Self::Tabs | Self::Project | Self::Agent)
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -909,6 +913,10 @@ impl Pane {
 
     pub fn is_tabbed(&self) -> bool {
         self.pane_kind.is_tabbed()
+    }
+
+    pub fn can_host_tabs(&self) -> bool {
+        self.pane_kind.can_host_tabs()
     }
 
     pub fn set_visible(&mut self, visible: bool, cx: &mut Context<Self>) {
@@ -1744,7 +1752,7 @@ impl Pane {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Task<Result<()>> {
-        if !self.is_tabbed() {
+        if !self.can_host_tabs() {
             return Task::ready(Ok(()));
         }
 
@@ -2100,7 +2108,7 @@ impl Pane {
         mut save_intent: SaveIntent,
         should_close: &dyn Fn(EntityId) -> bool,
     ) -> Task<Result<()>> {
-        if !self.is_tabbed() {
+        if !self.can_host_tabs() {
             return Task::ready(Ok(()));
         }
 
@@ -2231,7 +2239,7 @@ impl Pane {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<Box<dyn ItemHandle>> {
-        if !self.is_tabbed() {
+        if !self.can_host_tabs() {
             return None;
         }
 
@@ -4389,7 +4397,7 @@ impl Pane {
             split_direction.is_none() && event.dragged_item().is::<DraggedPane>(),
             split_direction.is_none()
                 && Self::can_drop_as_tab_target(&target_pane, event.dragged_item())
-                && self.is_tabbed(),
+                && self.can_host_tabs(),
             cx,
         );
     }
@@ -4460,7 +4468,7 @@ impl Pane {
             return;
         }
 
-        if !self.is_tabbed() && self.drag_split_direction.is_none() {
+        if !self.can_host_tabs() && self.drag_split_direction.is_none() {
             return;
         }
 
@@ -4669,7 +4677,7 @@ impl Pane {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if !self.is_tabbed() && self.drag_split_direction.is_none() {
+        if !self.can_host_tabs() && self.drag_split_direction.is_none() {
             return;
         }
 
@@ -4749,7 +4757,7 @@ impl Pane {
             return;
         }
 
-        if !self.is_tabbed() && self.drag_split_direction.is_none() {
+        if !self.can_host_tabs() && self.drag_split_direction.is_none() {
             return;
         }
 

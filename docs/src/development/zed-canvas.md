@@ -221,6 +221,9 @@ Rules:
 - Automatic dock-to-pane migration is controlled by `pane_grid.panel_surface`,
   `pane_grid.draggable_panel_tabs`, and `pane_grid.show_legacy_docks`.
 - No item type owns a privileged location.
+- Pane-hosted project and agent surfaces retain semantic pane identity for
+  compatibility and persistence, but participate in normal tab-host operations
+  such as close, move, clone, project/external file drops, and tab drop targets.
 - Focused pane receives keyboard actions first.
 - Pane borders stay subtle except for focus, drag target, or attention.
 - `pane_grid.focus_indicator` controls whether active-pane focus uses the

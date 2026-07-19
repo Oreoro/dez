@@ -33,6 +33,11 @@ Implemented in this phase:
 - Panel-hosted project and agent surfaces now use the normal pane tab bar and
   close their pane when emptied, so they behave like regular
   draggable/closable workspace tabs.
+- Project and agent panel panes now keep their semantic pane kind for
+  migration/persistence, but opt into normal tab-host interactions: close
+  active item, close matching items, take active item, tab/body drop targets,
+  project/external file drops, explicit add-item routing, project-item opens,
+  shared-screen opens, and move/clone item helpers.
 - Session Rail terminal rows now classify known terminal agent CLIs from title
   metadata, including Claude Code, Codex, Gemini CLI, Aider, OpenCode, Amp,
   Goose, Qwen Code, Cursor Agent, and GitHub Copilot.
@@ -283,6 +288,9 @@ Implementation order:
    application.
 2. Replace any remaining privileged project/agent pane behavior with normal tab
    affordances: drag, close, context menu, keyboard movement, and overflow.
+   Close, open, move, clone, and tab-drop routing now use the tab-host
+   capability for existing project/agent panel panes while persistence keeps
+   their semantic pane kind.
 3. Add durable layout metadata separately from process lifetime so restart
    restore can recreate layout intent without claiming processes are alive.
 4. Add resize-driven `auto_reflow` using semantic recipe variants rather than

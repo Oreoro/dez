@@ -5819,7 +5819,7 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let pane = if self.active_pane.read(cx).is_tabbed() {
+        let pane = if self.active_pane.read(cx).can_host_tabs() {
             self.active_pane.clone()
         } else {
             self.last_tabbed_pane(cx)
@@ -5839,7 +5839,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let is_panel_item = item.downcast::<PanelItem>().is_some();
-        let pane = if pane.read(cx).is_tabbed() || is_panel_item {
+        let pane = if pane.read(cx).can_host_tabs() || is_panel_item {
             pane
         } else {
             self.ensure_tabbed_pane(window, cx)
@@ -6239,7 +6239,7 @@ impl Workspace {
     where
         T: ProjectItem,
     {
-        if !pane.read(cx).is_tabbed() {
+        if !pane.read(cx).can_host_tabs() {
             pane = self.ensure_tabbed_pane(window, cx);
         }
 
@@ -6298,7 +6298,7 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let pane = if self.active_pane.read(cx).is_tabbed() {
+        let pane = if self.active_pane.read(cx).can_host_tabs() {
             self.active_pane.clone()
         } else {
             self.ensure_tabbed_pane(window, cx)
@@ -8592,7 +8592,7 @@ impl Workspace {
     fn has_any_items_open(&self, cx: &App) -> bool {
         self.panes
             .iter()
-            .any(|pane| pane.read(cx).is_tabbed() && pane.read(cx).items_len() > 0)
+            .any(|pane| pane.read(cx).can_host_tabs() && pane.read(cx).items_len() > 0)
     }
 
     fn workspace_location(&self, cx: &App) -> WorkspaceLocation {
@@ -12274,7 +12274,7 @@ fn move_all_items(
     window: &mut Window,
     cx: &mut App,
 ) {
-    if !from_pane.read(cx).is_tabbed() || !to_pane.read(cx).is_tabbed() {
+    if !from_pane.read(cx).can_host_tabs() || !to_pane.read(cx).can_host_tabs() {
         return;
     }
 
@@ -12313,7 +12313,7 @@ pub fn move_item(
     window: &mut Window,
     cx: &mut App,
 ) {
-    if !source.read(cx).is_tabbed() || !destination.read(cx).is_tabbed() {
+    if !source.read(cx).can_host_tabs() || !destination.read(cx).can_host_tabs() {
         return;
     }
 
@@ -12363,7 +12363,7 @@ pub fn move_active_item(
     if source == destination {
         return;
     }
-    if !source.read(cx).is_tabbed() || !destination.read(cx).is_tabbed() {
+    if !source.read(cx).can_host_tabs() || !destination.read(cx).can_host_tabs() {
         return;
     }
     let Some(active_item) = source.read(cx).active_item() else {
@@ -12396,7 +12396,7 @@ pub fn clone_active_item(
     if source == destination {
         return;
     }
-    if !source.read(cx).is_tabbed() || !destination.read(cx).is_tabbed() {
+    if !source.read(cx).can_host_tabs() || !destination.read(cx).can_host_tabs() {
         return;
     }
     let Some(active_item) = source.read(cx).active_item() else {
