@@ -2,8 +2,60 @@ use std::sync::Arc;
 
 use ai_onboarding::{AgentPanelOnboardingCard, PlanDefinitions};
 use client::zed_urls;
-use gpui::{AnyElement, App, IntoElement, RenderOnce, Window};
+use gpui::{AnyElement, App, IntoElement, Pixels, RenderOnce, Window};
+use settings::Settings as _;
 use ui::{Divider, Tooltip, prelude::*};
+use workspace::DesignSystemSettings;
+
+fn upsell_section_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
+fn upsell_header_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn upsell_free_section_margin_top(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(10.),
+    }
+}
+
+fn upsell_description_margin_bottom(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn upsell_dismiss_offset(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(10.),
+        settings::CanvasDensity::Balanced => px(16.),
+        settings::CanvasDensity::Spacious => px(20.),
+    }
+}
+
+fn upsell_current_plan_color(cx: &App) -> Color {
+    let colors = cx.theme().colors();
+    let opacity = match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => 0.5,
+        settings::CanvasContrast::Standard => 0.6,
+        settings::CanvasContrast::High => 0.78,
+    };
+    Color::Custom(colors.text_muted.opacity(opacity))
+}
 
 #[derive(IntoElement, RegisterComponent)]
 pub struct EndTrialUpsell {
@@ -19,10 +71,10 @@ impl EndTrialUpsell {
 impl RenderOnce for EndTrialUpsell {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let pro_section = v_flex()
-            .gap_1()
+            .gap(upsell_section_gap(cx))
             .child(
                 h_flex()
-                    .gap_2()
+                    .gap(upsell_header_gap(cx))
                     .child(
                         Label::new("Pro")
                             .size(LabelSize::Small)
@@ -43,11 +95,11 @@ impl RenderOnce for EndTrialUpsell {
             );
 
         let free_section = v_flex()
-            .mt_1p5()
-            .gap_1()
+            .mt(upsell_free_section_margin_top(cx))
+            .gap(upsell_section_gap(cx))
             .child(
                 h_flex()
-                    .gap_2()
+                    .gap(upsell_header_gap(cx))
                     .child(
                         Label::new("Free")
                             .size(LabelSize::Small)
@@ -57,7 +109,7 @@ impl RenderOnce for EndTrialUpsell {
                     .child(
                         Label::new("(Current Plan)")
                             .size(LabelSize::Small)
-                            .color(Color::Custom(cx.theme().colors().text_muted.opacity(0.6)))
+                            .color(upsell_current_plan_color(cx))
                             .buffer_font(cx),
                     )
                     .child(Divider::horizontal()),
@@ -69,23 +121,27 @@ impl RenderOnce for EndTrialUpsell {
             .child(
                 Label::new("You've been automatically reset to the Free plan.")
                     .color(Color::Muted)
-                    .mb_2(),
+                    .mb(upsell_description_margin_bottom(cx)),
             )
             .child(pro_section)
             .child(free_section)
             .child(
-                h_flex().absolute().top_4().right_4().child(
-                    IconButton::new("dismiss_onboarding", IconName::Close)
-                        .icon_size(IconSize::Small)
-                        .tooltip(Tooltip::text("Dismiss"))
-                        .on_click({
-                            let callback = self.dismiss_upsell.clone();
-                            move |_, window, cx| {
-                                telemetry::event!("Banner Dismissed", source = "AI Onboarding");
-                                callback(window, cx)
-                            }
-                        }),
-                ),
+                h_flex()
+                    .absolute()
+                    .top(upsell_dismiss_offset(cx))
+                    .right(upsell_dismiss_offset(cx))
+                    .child(
+                        IconButton::new("dismiss_onboarding", IconName::Close)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Dismiss"))
+                            .on_click({
+                                let callback = self.dismiss_upsell.clone();
+                                move |_, window, cx| {
+                                    telemetry::event!("Banner Dismissed", source = "AI Onboarding");
+                                    callback(window, cx)
+                                }
+                            }),
+                    ),
             )
     }
 }
