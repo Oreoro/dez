@@ -352,9 +352,9 @@ Implementation order:
    raw pixel snapshots. Initial recipe-application reflow and resize-triggered
    root-orientation reflow for active recipes are implemented. First ultrawide
    orientation variants are implemented for vertical-first recipes, and
-   Four-Agent Matrix plus Six-Agent Supervisor prefer ultrawide column-first
-   splits when newly applied. Live tree reshaping for already-open many-agent
-   layouts remains future work.
+   Four-Agent Matrix, Six-Agent Supervisor, plus Worktree Matrix prefer
+   ultrawide column-first splits when newly applied. Live tree reshaping for
+   already-open many-agent layouts remains future work.
 5. Add UI for named saved layouts and layout history once the underlying
    metadata is stable. Three fixed durable saved-layout slots are implemented
    in the Panel Layout menu with derived restore labels, and manual structural

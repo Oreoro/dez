@@ -329,7 +329,10 @@ impl CanvasLayoutRecipe {
     }
 
     fn should_reflow_agent_matrix_to_columns_on_ultrawide(self) -> bool {
-        matches!(self, Self::FourAgentMatrix | Self::SixAgentSupervisor)
+        matches!(
+            self,
+            Self::FourAgentMatrix | Self::SixAgentSupervisor | Self::WorktreeMatrix
+        )
     }
 
     fn from_name(name: &str) -> Option<Self> {
@@ -13524,6 +13527,21 @@ mod tests {
     use settings::SettingsStore;
     use util::path;
     use util::rel_path::rel_path;
+
+    #[test]
+    fn test_worktree_matrix_uses_ultrawide_column_variant() {
+        assert!(
+            CanvasLayoutRecipe::WorktreeMatrix.should_reflow_agent_matrix_to_columns_on_ultrawide()
+        );
+        assert!(
+            CanvasLayoutRecipe::FourAgentMatrix
+                .should_reflow_agent_matrix_to_columns_on_ultrawide()
+        );
+        assert!(
+            CanvasLayoutRecipe::SixAgentSupervisor
+                .should_reflow_agent_matrix_to_columns_on_ultrawide()
+        );
+    }
 
     #[gpui::test]
     async fn test_tab_disambiguation(cx: &mut TestAppContext) {

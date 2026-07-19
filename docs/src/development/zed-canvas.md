@@ -277,10 +277,10 @@ Rules:
   pane axes when the recipe's desired root orientation changes. Ultrawide
   workspaces reflow vertical-first recipes such as Main Top, Code/Run/Observe,
   Debug, and Even Rows into horizontal-first layouts while preserving the
-  explicit Portrait Display recipe. Four-Agent Matrix and Six-Agent Supervisor
-  also prefer column-first split directions when newly applied on ultrawide
-  workspaces. Richer many-agent variants that reshape already-live pane trees
-  remain future work.
+  explicit Portrait Display recipe. Four-Agent Matrix, Six-Agent Supervisor,
+  and Worktree Matrix also prefer column-first split directions when newly
+  applied on ultrawide workspaces. Richer many-agent variants that reshape
+  already-live pane trees remain future work.
 - Empty panes offer quick item creation and restore actions.
 - Zoom preserves underlying layout.
 - Layout modifications persist continuously.
