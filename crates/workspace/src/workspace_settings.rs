@@ -90,6 +90,11 @@ pub struct PaneGridSettings {
     pub auto_hide_single_tab_bar: bool,
 }
 
+#[derive(Clone, Debug, RegisterSetting)]
+pub struct MultiplexerSettings {
+    pub layout_cycle: Vec<String>,
+}
+
 #[derive(Deserialize, RegisterSetting)]
 pub struct TabBarSettings {
     pub show: bool,
@@ -190,6 +195,15 @@ impl Settings for PaneGridSettings {
         Self {
             show_legacy_docks: pane_grid.show_legacy_docks.unwrap(),
             auto_hide_single_tab_bar: pane_grid.auto_hide_single_tab_bar.unwrap(),
+        }
+    }
+}
+
+impl Settings for MultiplexerSettings {
+    fn from_settings(content: &settings::SettingsContent) -> Self {
+        let multiplexer = content.multiplexer.clone().unwrap();
+        Self {
+            layout_cycle: multiplexer.layout_cycle.clone().unwrap(),
         }
     }
 }

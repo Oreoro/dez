@@ -195,6 +195,9 @@ Use the existing panel-as-pane bridge as the migration path:
   `Main + Stack`, `Main Top`, `Golden Split`, `Code/Run/Observe`,
   `Agent Operations Center`, and `Four-Agent Matrix` without starting
   processes or replacing tab contents.
+- `Cycle Canvas Layout` now honors `multiplexer.layout_cycle`, including the
+  default `even_columns`, `even_rows`, `main_left`, `main_top`, `tiled`, and
+  `agent_control` recipe names, with tolerant matching for label-style names.
 - Add explicit close, restore, and "detach process" behavior so closing a tab
   is not confused with killing a process.
 
@@ -353,6 +356,8 @@ recipe slices now implement `Full Canvas`, `Agent Control`, `Focus Editor`,
 `Main + Stack`, `Main Top`, `Golden Split`, `Code/Run/Observe`,
 `Agent Operations Center`, `Four-Agent Matrix`, and `Cycle Canvas Layout`
 against the existing pane/panel bridge.
+`Cycle Canvas Layout` reads `multiplexer.layout_cycle` so users can choose the
+order of named recipes without changing keybindings.
 
 ## Accessibility and performance requirements {#accessibility-and-performance}
 

@@ -158,9 +158,9 @@ use util::{
 };
 use uuid::Uuid;
 pub use workspace_settings::{
-    AccessibleMode, AutosaveSetting, EncodingDisplayOptions, FocusFollowsMouse, PaneGridSettings,
-    RestoreOnStartupBehavior, SidebarSettings, StatusBarSettings, TabBarSettings, ToolbarSettings,
-    WorkspaceSettings, observe_accessible_mode,
+    AccessibleMode, AutosaveSetting, EncodingDisplayOptions, FocusFollowsMouse,
+    MultiplexerSettings, PaneGridSettings, RestoreOnStartupBehavior, SidebarSettings,
+    StatusBarSettings, TabBarSettings, ToolbarSettings, WorkspaceSettings, observe_accessible_mode,
 };
 use zed_actions::{Spawn, feedback::FileBugReport, theme::ToggleMode};
 
@@ -170,6 +170,27 @@ pub(crate) fn workspace_card_gap(cx: &App) -> Pixels {
 
 pub(crate) fn title_bar_visible(_cx: &App) -> bool {
     false
+}
+
+fn normalized_canvas_layout_recipe_name(name: &str) -> String {
+    let mut normalized = String::new();
+    let mut previous_was_separator = false;
+
+    for character in name.trim().chars() {
+        if character.is_ascii_alphanumeric() {
+            normalized.push(character.to_ascii_lowercase());
+            previous_was_separator = false;
+        } else if !previous_was_separator && !normalized.is_empty() {
+            normalized.push('_');
+            previous_was_separator = true;
+        }
+    }
+
+    if normalized.ends_with('_') {
+        normalized.pop();
+    }
+
+    normalized
 }
 
 use crate::{dock::PanelSizeState, item::ItemBufferKind, notifications::NotificationId};
@@ -1394,6 +1415,7 @@ pub struct Workspace {
     active_workspace_id: Option<Rc<Cell<EntityId>>>,
     active_worktree_creation: ActiveWorktreeCreation,
     deferred_save_items: Vec<Box<dyn WeakItemHandle>>,
+    canvas_layout_cycle_index: usize,
 }
 
 impl EventEmitter<Event> for Workspace {}
@@ -1835,6 +1857,7 @@ impl Workspace {
             open_in_dev_container: false,
             _dev_container_task: None,
             deferred_save_items: Vec::new(),
+            canvas_layout_cycle_index: 0,
         }
     }
 
@@ -4877,6 +4900,22 @@ impl Workspace {
     }
 
     pub fn cycle_canvas_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let layout_cycle = MultiplexerSettings::get_global(cx).layout_cycle.clone();
+        if !layout_cycle.is_empty() {
+            let start_index = self.canvas_layout_cycle_index % layout_cycle.len();
+            for offset in 0..layout_cycle.len() {
+                let index = (start_index + offset) % layout_cycle.len();
+                if self.apply_canvas_layout_recipe(&layout_cycle[index], window, cx) {
+                    self.canvas_layout_cycle_index = (index + 1) % layout_cycle.len();
+                    return;
+                }
+            }
+        }
+
+        self.cycle_canvas_layout_fallback(window, cx);
+    }
+
+    fn cycle_canvas_layout_fallback(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let has_visible_panel_pane = self.panel_pane_visible(PaneKind::Project, cx)
             || self.panel_pane_visible(PaneKind::Agent, cx);
 
@@ -4884,6 +4923,79 @@ impl Workspace {
             self.apply_canvas_editor_focus_layout(window, cx);
         } else {
             self.apply_canvas_agent_control_layout(window, cx);
+        }
+    }
+
+    fn apply_canvas_layout_recipe(
+        &mut self,
+        name: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        match normalized_canvas_layout_recipe_name(name).as_str() {
+            "full" | "canvas" | "canvas_full" => {
+                self.apply_canvas_layout(window, cx);
+                true
+            }
+            "agent" | "agent_control" | "agentic" => {
+                self.apply_canvas_agent_control_layout(window, cx);
+                true
+            }
+            "focus" | "focus_editor" | "editor_focus" => {
+                self.apply_canvas_editor_focus_layout(window, cx);
+                true
+            }
+            "main_and_stack" | "main_stack" | "main_left" => {
+                self.apply_canvas_main_stack_layout(window, cx);
+                true
+            }
+            "main_top" => {
+                self.apply_canvas_main_top_layout(window, cx);
+                true
+            }
+            "golden_split" => {
+                self.apply_canvas_golden_split_layout(window, cx);
+                true
+            }
+            "code_run_observe" => {
+                self.apply_canvas_code_run_observe_layout(window, cx);
+                true
+            }
+            "agent_operations" | "agent_operations_center" => {
+                self.apply_canvas_agent_operations_layout(window, cx);
+                true
+            }
+            "four_agent_matrix" | "four_agents" | "agent_matrix" | "tiled" => {
+                self.apply_canvas_four_agent_matrix_layout(window, cx);
+                true
+            }
+            "even_columns" => {
+                let panes = self.prepare_canvas_recipe(
+                    false,
+                    false,
+                    3,
+                    &[SplitDirection::Right],
+                    window,
+                    cx,
+                );
+                self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+                self.finish_canvas_recipe(window, cx);
+                true
+            }
+            "even_rows" => {
+                let panes = self.prepare_canvas_recipe(
+                    false,
+                    false,
+                    3,
+                    &[SplitDirection::Down],
+                    window,
+                    cx,
+                );
+                self.focus_canvas_tabbed_pane(panes.first(), window, cx);
+                self.finish_canvas_recipe(window, cx);
+                true
+            }
+            _ => false,
         }
     }
 
