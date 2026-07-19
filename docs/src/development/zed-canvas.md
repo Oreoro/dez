@@ -182,9 +182,10 @@ Rail modes:
 - Auto.
 
 `session_rail.sort_by` supports attention-first, agent-state, creation-time,
-and recent-activity row ordering. Manual/project ordering still need persisted
-manual order and cross-group sorting before they can behave differently from the
-current recent-first order.
+recent-activity, and project row ordering. Project sorting orders thread and
+terminal rows by their first worktree label or path inside each project group,
+then falls back to recent activity. Manual ordering still needs persisted row
+order before it can behave differently from the current recent-first order.
 
 `session_rail.visibility = "hidden"` removes the rail from layout. Overlay and
 auto modes share the current rail surface until distinct render modes are added.

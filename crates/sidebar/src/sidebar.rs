@@ -6465,6 +6465,21 @@ impl Sidebar {
             }
         }
 
+        fn project_sort_key(entry: &ListEntry) -> String {
+            let worktrees = match entry {
+                ListEntry::Thread(thread) => &thread.worktrees,
+                ListEntry::Terminal(terminal) => &terminal.worktrees,
+                ListEntry::ProjectHeader { .. } => unreachable!(),
+            };
+
+            worktrees
+                .iter()
+                .find_map(|worktree| worktree.worktree_name.as_ref())
+                .or_else(|| worktrees.first().map(|worktree| &worktree.full_path))
+                .map(|label| label.to_string().to_lowercase())
+                .unwrap_or_default()
+        }
+
         let row_entries = terminals
             .into_iter()
             .map(ListEntry::Terminal)
@@ -6481,9 +6496,11 @@ impl Sidebar {
                 settings::SessionRailSorting::CreationTime => {
                     creation_time(right).cmp(&creation_time(left))
                 }
+                settings::SessionRailSorting::Project => project_sort_key(left)
+                    .cmp(&project_sort_key(right))
+                    .then_with(|| display_time(right).cmp(&display_time(left))),
                 settings::SessionRailSorting::RecentActivity
-                | settings::SessionRailSorting::Manual
-                | settings::SessionRailSorting::Project => {
+                | settings::SessionRailSorting::Manual => {
                     display_time(right).cmp(&display_time(left))
                 }
             });

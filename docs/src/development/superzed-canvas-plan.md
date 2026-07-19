@@ -360,9 +360,11 @@ Refine the existing sidebar direction into Session Rail:
   of that metadata: workspace-level badges, row notification dots, and
   collapsed-project waiting/notification markers.
 - Runtime row ordering now honors `session_rail.sort_by` for
-  `attention`, `agent_state`, `creation_time`, and `recent_activity`. `manual`
-  and `project` currently preserve the previous recent-first in-group ordering
-  until persisted manual row order and cross-group project sorting exist.
+  `attention`, `agent_state`, `creation_time`, `recent_activity`, and
+  `project`. Project sorting orders thread and terminal rows by their first
+  worktree label or path inside each project group, then falls back to recent
+  activity. `manual` currently preserves the previous recent-first in-group
+  ordering until persisted manual row order exists.
 - Runtime rail hosting now honors `session_rail.visibility = "hidden"` by
   reporting zero sidebar width, rendering an empty rail, and suppressing the
   resize hitbox. Other visibility modes remain future UI work.
