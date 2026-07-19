@@ -6532,6 +6532,10 @@ impl ThreadView {
                 }
             }
             AgentThreadEntry::ToolCall(tool_call) => {
+                if !self.should_render_tool_call_event(tool_call, cx) {
+                    return Empty.into_any();
+                }
+
                 // A canceled tool call that produced visible output is still worth
                 // showing, but one that was canceled before producing anything just
                 // renders as a useless "Canceled" card — hide those entirely.
@@ -6742,6 +6746,35 @@ impl ThreadView {
         } else {
             primary
         }
+    }
+
+    fn should_render_tool_call_event(&self, tool_call: &ToolCall, cx: &Context<Self>) -> bool {
+        if CanvasAgentUiSettings::get_global(cx).event_verbosity
+            != settings::AgentEventVerbosity::Summary
+        {
+            return true;
+        }
+
+        if tool_call.is_subagent()
+            || tool_call.terminals().next().is_some()
+            || tool_call.diffs().next().is_some()
+        {
+            return true;
+        }
+
+        if matches!(
+            tool_call.status,
+            ToolCallStatus::Pending
+                | ToolCallStatus::InProgress
+                | ToolCallStatus::WaitingForConfirmation { .. }
+                | ToolCallStatus::Rejected
+                | ToolCallStatus::Canceled
+                | ToolCallStatus::Failed
+        ) {
+            return true;
+        }
+
+        tool_call.raw_input.is_some() || !tool_call.content.is_empty()
     }
 
     fn render_elicitation(

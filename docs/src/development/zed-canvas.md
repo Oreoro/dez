@@ -417,6 +417,11 @@ Tool events should be compact, expandable rows. Expanded details may show
 sanitized arguments, output, error, affected files, command, exit status, and
 timing.
 
+`agent_ui.event_verbosity = "summary"` suppresses completed generic tool events
+that have no content or raw input. Safety- or state-bearing events remain
+visible: subagents, terminal tools, edits, pending work, permission prompts,
+failures, cancellations, and rejected calls.
+
 Agent changes must support file-grouped review, unified or split diffs, hunk
 acceptance, hunk rejection, file acceptance, full rollback, conflict state, test
 linkage, commit preparation, and attribution. Proposed and applied changes must

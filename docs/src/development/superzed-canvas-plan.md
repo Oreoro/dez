@@ -324,7 +324,10 @@ Terminal-agent detection:
   `keep_failures_expanded`, `keep_permissions_expanded`, `fleet_view`, and the
   terminal/session settings above. Failed, rejected, and canceled tool-call
   cards honor `agent_ui.keep_failures_expanded`; permission requests remain
-  expanded for safety so approval actions stay visible.
+  expanded for safety so approval actions stay visible. `event_verbosity =
+  "summary"` now hides completed generic tool-call events that have no content
+  or raw input, while preserving subagents, terminal tools, edits, pending work,
+  permission prompts, failures, cancellations, and rejected calls.
 
 Restoration:
 
