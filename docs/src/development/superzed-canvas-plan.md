@@ -285,8 +285,10 @@ Use the existing panel-as-pane bridge as the migration path:
   a derived display label shown by the Panel Layout restore actions, pane-tree
   shape metadata, tab-role metadata, and explicit serializable/project-path/
   live-only restore intent. Restore now uses the pane-tree shape when every
-  saved center pane still exists. Free-form user-authored layout names and
-  actual process restoration remain future work.
+  saved center pane still exists. `workspace::SetSavedCanvasLayoutSlotLabel`
+  can assign a user-authored label to an existing saved slot; built-in text
+  entry, free-form multi-name layout management, and actual process restoration
+  remain future work.
 - Manual structural layout changes now clear the active Canvas recipe identity
   so the Panel Layout menu reports `Custom Canvas Layout` after pane splits,
   pane moves, pane joins, pane removal, pane-size changes, or explicit
@@ -314,7 +316,8 @@ Proper Pane Layout is the Canvas migration target, not just a visual skin:
   visible in separate panes at the same time.
 - Layout history records pane visibility/focus immediately and evolves toward
   durable semantic snapshots: recipe name, pane tree, tab identities, process
-  restoration metadata, and user-authored saved layout names.
+  restoration metadata, user-authored saved slot labels, and later multi-name
+  layout management.
 - The first recipe-identity slice persists the active recipe id separately from
   process lifetime. Restart restore can recover the active recipe label without
   claiming terminal, agent, or browser processes were resumed.
@@ -340,8 +343,9 @@ Implementation order:
    split axes and flex weights, plus tab title, serializable item kind/id,
    active, preview, dirty, pinned, project-path metadata, and explicit
    restore-planning intent. Restore applies saved pane-tree shape when all
-   saved center panes still exist; free-form saved layout naming remains future
-   work.
+   saved center panes still exist. User-authored slot labels are available
+   through `workspace::SetSavedCanvasLayoutSlotLabel`; built-in text entry and
+   free-form multi-name layout management remain future work.
 4. Add resize-driven `auto_reflow` using semantic recipe variants rather than
    raw pixel snapshots. Initial recipe-application reflow and resize-triggered
    root-orientation reflow for active recipes are implemented. First ultrawide
@@ -352,9 +356,10 @@ Implementation order:
 5. Add UI for named saved layouts and layout history once the underlying
    metadata is stable. Three fixed durable saved-layout slots are implemented
    in the Panel Layout menu with derived restore labels, and manual structural
-   changes mark the active recipe as custom. Tab-role metadata is captured in
-   saved slots, while free-form naming and actual process restoration remain
-   future work.
+   changes mark the active recipe as custom. Tab-role metadata and
+   user-authored slot-label metadata are captured in saved slots, while a
+   built-in naming UI, free-form multi-name layout management, and actual
+   process restoration remain future work.
 
 ## Session Rail {#session-rail}
 

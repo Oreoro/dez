@@ -942,6 +942,15 @@ pub struct CloseItemInAllPanes {
 #[action(namespace = workspace)]
 pub struct SendKeystrokes(pub String);
 
+/// Sets the display label for a saved Canvas layout slot.
+#[derive(Clone, PartialEq, Debug, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+#[serde(deny_unknown_fields)]
+pub struct SetSavedCanvasLayoutSlotLabel {
+    pub slot: usize,
+    pub label: String,
+}
+
 actions!(
     project_symbols,
     [
@@ -2698,6 +2707,27 @@ impl Workspace {
         canvas_saved_layout_slot_name(slot)
             .and_then(|name| self.saved_canvas_layouts.get(name))
             .map(CanvasSavedLayoutSnapshot::display_label)
+    }
+
+    pub fn set_saved_canvas_layout_slot_label(
+        &mut self,
+        slot: usize,
+        label: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(slot_name) = canvas_saved_layout_slot_name(slot) else {
+            return false;
+        };
+        let Some(snapshot) = self.saved_canvas_layouts.get_mut(slot_name) else {
+            return false;
+        };
+
+        let label = label.trim();
+        snapshot.label = (!label.is_empty()).then(|| label.to_string());
+        self.serialize_workspace(window, cx);
+        cx.notify();
+        true
     }
 
     fn mark_canvas_layout_custom(&mut self) {
@@ -9858,6 +9888,16 @@ impl Workspace {
                 },
             ))
             .on_action(cx.listener(
+                |workspace: &mut Workspace, action: &SetSavedCanvasLayoutSlotLabel, window, cx| {
+                    workspace.set_saved_canvas_layout_slot_label(
+                        action.slot,
+                        action.label.clone(),
+                        window,
+                        cx,
+                    );
+                },
+            ))
+            .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ResetPaneSizes, window, cx| {
                     workspace.reset_pane_sizes(window, cx);
                 },
@@ -13630,6 +13670,48 @@ mod tests {
         let restored =
             canvas_saved_layouts_from_persisted(canvas_saved_layouts_to_persisted(&saved_layouts));
         assert_eq!(restored.get("slot-1"), Some(&snapshot));
+    }
+
+    #[gpui::test]
+    async fn test_set_canvas_saved_layout_slot_label(cx: &mut TestAppContext) {
+        init_test(cx);
+
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            assert!(!workspace.set_saved_canvas_layout_slot_label(
+                1,
+                "Deep Work".to_string(),
+                window,
+                cx,
+            ));
+
+            workspace.save_current_canvas_layout_slot(1, window, cx);
+            assert_eq!(
+                workspace.saved_canvas_layout_slot_label(1),
+                Some("Custom Canvas Layout")
+            );
+
+            assert!(workspace.set_saved_canvas_layout_slot_label(
+                1,
+                "  Deep Work  ".to_string(),
+                window,
+                cx,
+            ));
+            assert_eq!(
+                workspace.saved_canvas_layout_slot_label(1),
+                Some("Deep Work")
+            );
+
+            assert!(workspace.set_saved_canvas_layout_slot_label(1, "  ".to_string(), window, cx));
+            assert_eq!(
+                workspace.saved_canvas_layout_slot_label(1),
+                Some("Custom Canvas Layout")
+            );
+        });
     }
 
     #[gpui::test]

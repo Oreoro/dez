@@ -263,7 +263,9 @@ Rules:
   project-path, or live-only tabs. The Panel Layout menu shows the derived
   label on restore actions. Restore applies the saved pane-tree shape when
   every saved center pane still exists, without closing panes or relaunching
-  processes. This does not yet support free-form user-authored naming or
+  processes. `workspace::SetSavedCanvasLayoutSlotLabel` can assign a
+  user-authored label to an existing saved slot; built-in text entry and
+  free-form multi-name management are still future work. Restore does not yet
   recreate closed items/processes.
 - Manual structural layout changes clear the active recipe identity and show
   `Custom Canvas Layout` in the Panel Layout menu while keeping the pane tree
@@ -289,11 +291,12 @@ Implementation boundary:
 - Current recipes are geometry-only and reveal existing pane-hosted surfaces.
   They must not spawn agents, terminals, browsers, or external processes.
 - Saved-layout support currently provides three fixed durable slots with
-  derived display labels, not free-form multi-name layout management.
-- Proper persisted layouts still need user-authored layout naming data and
-  actual process restoration. Saved layout slots now use pane-tree metadata to
-  reshape existing panes and store restore-planning intent, but do not yet
-  reopen closed tabs or processes.
+  derived display labels plus a parameterized action for user-authored slot
+  labels, not built-in text entry or free-form multi-name layout management.
+- Proper persisted layouts still need a saved-layout manager UI and actual
+  process restoration. Saved layout slots now use pane-tree metadata to reshape
+  existing panes and store restore-planning intent, but do not yet reopen
+  closed tabs or processes.
 - Process lifetime stays separate from tab lifetime so closing a tab is not
   silently treated as killing or resuming a process.
 
