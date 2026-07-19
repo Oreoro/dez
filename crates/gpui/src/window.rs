@@ -83,6 +83,24 @@ pub const DEFAULT_ADDITIONAL_WINDOW_SIZE: Size<Pixels> = Size {
     height: Pixels(750.),
 };
 
+const DEFAULT_PENDING_INPUT_TIMEOUT: Duration = Duration::from_secs(1);
+
+#[derive(Clone, Copy)]
+struct PendingInputTimeout(Option<Duration>);
+
+impl Global for PendingInputTimeout {}
+
+/// Configures how long pending multi-stroke key input waits before replaying
+/// partial input. Passing `None` disables the timeout.
+pub fn set_pending_input_timeout(timeout: Option<Duration>, cx: &mut App) {
+    cx.set_global(PendingInputTimeout(timeout));
+}
+
+fn pending_input_timeout(cx: &App) -> Option<Duration> {
+    cx.try_global::<PendingInputTimeout>()
+        .map_or(Some(DEFAULT_PENDING_INPUT_TIMEOUT), |timeout| timeout.0)
+}
+
 /// Represents the two different phases when dispatching events.
 #[derive(Default, Copy, Clone, Debug, Eq, PartialEq)]
 pub enum DispatchPhase {
@@ -4985,9 +5003,13 @@ impl Window {
             currently_pending.needs_timeout |=
                 match_result.pending_has_binding || text_input_requires_timeout;
 
-            if currently_pending.needs_timeout {
+            let timeout = currently_pending
+                .needs_timeout
+                .then(|| pending_input_timeout(cx))
+                .flatten();
+            if let Some(timeout) = timeout {
                 currently_pending.timer = Some(self.spawn(cx, async move |cx| {
-                    cx.background_executor.timer(Duration::from_secs(1)).await;
+                    cx.background_executor.timer(timeout).await;
                     cx.update(move |window, cx| {
                         let Some(currently_pending) = window
                             .pending_input

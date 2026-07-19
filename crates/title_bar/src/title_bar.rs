@@ -1656,9 +1656,13 @@ impl SidebarChrome {
                             settings::BroadcastConfirmation::Never => "never",
                         };
                         let prefix = multiplexer_settings.prefix.clone();
+                        let timeout = multiplexer_settings.prefix_timeout.map_or_else(
+                            || "off".to_string(),
+                            |timeout| format!("{}ms", timeout.as_millis()),
+                        );
                         vec![
                             format!(
-                                "Prefix mode: {prefix} · broadcast confirmation: {confirmation}"
+                                "Prefix mode: {prefix} · timeout: {timeout} · broadcast confirmation: {confirmation}"
                             ),
                             "Prefix commands: ctrl-b space · Cycle Layout".to_string(),
                             "Prefix commands: ctrl-b a · Agent Control".to_string(),

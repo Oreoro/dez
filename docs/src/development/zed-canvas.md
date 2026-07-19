@@ -378,8 +378,9 @@ compact title-bar chip that appears while GPUI is waiting for the next
 multi-stroke key.
 
 The runtime settings model now reads `multiplexer.prefix_mode`,
-`multiplexer.prefix`, and `multiplexer.broadcast_confirmation`; the Panel Layout
-menu shows the configured prefix and broadcast policy when prefix mode is
+`multiplexer.prefix`, `multiplexer.prefix_timeout_ms`, and
+`multiplexer.broadcast_confirmation`; the Panel Layout menu shows the
+configured prefix, prefix timeout, and broadcast policy when prefix mode is
 enabled. When `multiplexer.prefix_mode = true`, workspace key context exposes
 `canvas_prefix_mode` and the default keymaps bind the default `ctrl-b` prefix to
 core Canvas commands. The Panel Layout menu also shows disabled discovery rows
@@ -403,8 +404,9 @@ while a multi-stroke prefix sequence is pending:
 - `ctrl-b h/j/k/l` resizes the active pane left/down/up/right in fixed steps.
 - `ctrl-b =` equalizes pane sizes without changing the split tree.
 
-Custom prefix strings still require user keymap overrides; dynamic remapping,
-configurable timeout, and single-prefix repeat mode remain future work.
+`multiplexer.prefix_timeout_ms = 0` disables timeout replay for incomplete
+prefix sequences. Custom prefix strings still require user keymap overrides;
+dynamic remapping and single-prefix repeat mode remain future work.
 
 ## Layout system {#layout-system}
 

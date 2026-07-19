@@ -1133,6 +1133,8 @@
   "multiplexer": {
     "prefix_mode": false,
     "prefix": "ctrl-b",
+    // How long to wait before replaying an incomplete prefix sequence. Set to 0 to disable timeout replay.
+    "prefix_timeout_ms": 1000,
     "layout_cycle": [
       "even_columns",
       "even_rows",

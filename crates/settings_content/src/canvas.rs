@@ -652,6 +652,11 @@ pub struct MultiplexerSettingsContent {
     ///
     /// Default: ctrl-b
     pub prefix: Option<String>,
+    /// How long to wait before replaying an incomplete prefix sequence.
+    /// Set to 0 to disable prefix timeout replay.
+    ///
+    /// Default: 1000
+    pub prefix_timeout_ms: Option<u64>,
     /// Layout names included when cycling layouts.
     ///
     /// Default: ["even_columns", "even_rows", "main_left", "main_top", "tiled", "agent_control"]

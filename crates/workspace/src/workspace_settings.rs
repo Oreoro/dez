@@ -2,7 +2,7 @@ use std::{num::NonZeroUsize, time::Duration};
 
 use crate::DockPosition;
 use collections::HashMap;
-use gpui::{App, Subscription};
+use gpui::{App, Subscription, set_pending_input_timeout};
 use serde::Deserialize;
 pub use settings::{
     AutosaveSetting, EncodingDisplayOptions, InactiveOpacity, PaneSplitDirectionHorizontal,
@@ -120,6 +120,7 @@ impl PaneGridSettings {
 pub struct MultiplexerSettings {
     pub prefix_mode: bool,
     pub prefix: String,
+    pub prefix_timeout: Option<Duration>,
     pub layout_cycle: Vec<String>,
     pub broadcast_confirmation: settings::BroadcastConfirmation,
 }
@@ -262,13 +263,20 @@ impl Settings for PaneGridSettings {
 impl Settings for MultiplexerSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
         let multiplexer = content.multiplexer.clone().unwrap();
+        let prefix_timeout_ms = multiplexer.prefix_timeout_ms.unwrap();
         Self {
             prefix_mode: multiplexer.prefix_mode.unwrap(),
             prefix: multiplexer.prefix.clone().unwrap(),
+            prefix_timeout: (prefix_timeout_ms > 0)
+                .then(|| Duration::from_millis(prefix_timeout_ms)),
             layout_cycle: multiplexer.layout_cycle.clone().unwrap(),
             broadcast_confirmation: multiplexer.broadcast_confirmation.unwrap(),
         }
     }
+}
+
+pub fn apply_multiplexer_settings(cx: &mut App) {
+    set_pending_input_timeout(MultiplexerSettings::get_global(cx).prefix_timeout, cx);
 }
 
 /// Provides convenient access to whether "accessible mode" is enabled, mirroring
