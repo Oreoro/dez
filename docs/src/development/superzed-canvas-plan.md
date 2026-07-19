@@ -178,6 +178,9 @@ Use the existing panel-as-pane bridge as the migration path:
 - Runtime startup applies `pane_grid.show_legacy_docks = false` after session
   restore by migrating dock-hosted panels into pane tabs and closing legacy dock
   chrome.
+- Runtime pane rendering now honors `pane_grid.auto_hide_single_tab_bar`; the
+  Canvas default remains `false` so single-tab panes still advertise their
+  draggable tab surface.
 - Remove the one-visible-agent bottleneck. Multiple agent tabs and terminal
   agents can be visible across panes and windows.
 - Support direct pane/tab dragging, keyboard movement, context-menu movement,

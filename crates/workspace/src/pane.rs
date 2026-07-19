@@ -13,7 +13,9 @@ use crate::{
     notifications::NotifyResultExt,
     render_sidebar_header_controls_with_project_pane_visibility,
     toolbar::Toolbar,
-    workspace_settings::{AutosaveSetting, FocusFollowsMouse, TabBarSettings, WorkspaceSettings},
+    workspace_settings::{
+        AutosaveSetting, FocusFollowsMouse, PaneGridSettings, TabBarSettings, WorkspaceSettings,
+    },
 };
 use anyhow::Result;
 use collections::{BTreeSet, HashMap, HashSet, VecDeque};
@@ -648,7 +650,14 @@ impl Pane {
             can_drop_predicate,
             can_split_predicate: None,
             can_toggle_zoom: true,
-            should_display_tab_bar: Rc::new(|_, cx| TabBarSettings::get_global(cx).show),
+            should_display_tab_bar: Rc::new(|pane, cx| {
+                if !TabBarSettings::get_global(cx).show {
+                    return false;
+                }
+
+                let pane_grid_settings = PaneGridSettings::get_global(cx);
+                !(pane_grid_settings.auto_hide_single_tab_bar && pane.items_len() <= 1)
+            }),
             should_display_welcome_page: false,
             render_tab_bar_buttons: Rc::new(default_render_tab_bar_buttons),
             render_tab_bar: Rc::new(Self::render_tab_bar),

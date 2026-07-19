@@ -87,6 +87,7 @@ pub struct ActivePanelModifiers {
 #[derive(Clone, Debug, RegisterSetting)]
 pub struct PaneGridSettings {
     pub show_legacy_docks: bool,
+    pub auto_hide_single_tab_bar: bool,
 }
 
 #[derive(Deserialize, RegisterSetting)]
@@ -188,6 +189,7 @@ impl Settings for PaneGridSettings {
         let pane_grid = content.pane_grid.clone().unwrap();
         Self {
             show_legacy_docks: pane_grid.show_legacy_docks.unwrap(),
+            auto_hide_single_tab_bar: pane_grid.auto_hide_single_tab_bar.unwrap(),
         }
     }
 }
