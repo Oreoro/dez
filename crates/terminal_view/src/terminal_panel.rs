@@ -513,24 +513,35 @@ impl TerminalPanel {
         window: &mut Window,
         cx: &mut Context<Workspace>,
     ) {
-        let Some(terminal_panel) = workspace.panel::<Self>(cx) else {
-            return;
-        };
+        let local = action.local;
+        let working_directory = action.working_directory.clone();
+        Self::add_center_terminal(workspace, window, cx, move |project, cx| {
+            if local {
+                project.create_local_terminal(cx)
+            } else {
+                project.create_terminal_shell(Some(working_directory), cx)
+            }
+        })
+        .detach_and_log_err(cx);
+    }
 
-        terminal_panel
-            .update(cx, |panel, cx| {
-                if action.local {
-                    panel.add_local_terminal_shell(RevealStrategy::Always, window, cx)
-                } else {
-                    panel.add_terminal_shell(
-                        Some(action.working_directory.clone()),
-                        RevealStrategy::Always,
-                        window,
-                        cx,
-                    )
-                }
-            })
-            .detach_and_log_err(cx);
+    /// Create a new Terminal in the current working directory or the user's home directory
+    fn new_terminal(
+        workspace: &mut Workspace,
+        action: &workspace::NewTerminal,
+        window: &mut Window,
+        cx: &mut Context<Workspace>,
+    ) {
+        let working_directory = default_working_directory(workspace, cx);
+        let local = action.local;
+        Self::add_center_terminal(workspace, window, cx, move |project, cx| {
+            if local {
+                project.create_local_terminal(cx)
+            } else {
+                project.create_terminal_shell(working_directory, cx)
+            }
+        })
+        .detach_and_log_err(cx);
     }
 
     pub fn spawn_task(
@@ -634,54 +645,6 @@ impl TerminalPanel {
                 .unwrap_or_else(|e| Task::ready(Err(e))),
             RevealTarget::Dock => self.add_terminal_task(spawn_task, reveal, window, cx),
         }
-    }
-
-    /// Create a new Terminal in the current working directory or the user's home directory
-    fn new_terminal(
-        workspace: &mut Workspace,
-        action: &workspace::NewTerminal,
-        window: &mut Window,
-        cx: &mut Context<Workspace>,
-    ) {
-        let center_pane = workspace.active_pane();
-        let center_pane_has_focus = center_pane.focus_handle(cx).contains_focused(window, cx);
-        let active_center_item_is_terminal = center_pane
-            .read(cx)
-            .active_item()
-            .is_some_and(|item| item.downcast::<TerminalView>().is_some());
-
-        if center_pane_has_focus && active_center_item_is_terminal {
-            let working_directory = default_working_directory(workspace, cx);
-            let local = action.local;
-            Self::add_center_terminal(workspace, window, cx, move |project, cx| {
-                if local {
-                    project.create_local_terminal(cx)
-                } else {
-                    project.create_terminal_shell(working_directory, cx)
-                }
-            })
-            .detach_and_log_err(cx);
-            return;
-        }
-
-        let Some(terminal_panel) = workspace.panel::<Self>(cx) else {
-            return;
-        };
-
-        terminal_panel
-            .update(cx, |this, cx| {
-                if action.local {
-                    this.add_local_terminal_shell(RevealStrategy::Always, window, cx)
-                } else {
-                    this.add_terminal_shell(
-                        default_working_directory(workspace, cx),
-                        RevealStrategy::Always,
-                        window,
-                        cx,
-                    )
-                }
-            })
-            .detach_and_log_err(cx);
     }
 
     fn terminals_for_task(
@@ -1984,7 +1947,7 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn test_new_terminal_opens_in_panel_by_default(cx: &mut TestAppContext) {
+    async fn test_new_terminal_opens_in_center_by_default(cx: &mut TestAppContext) {
         cx.executor().allow_parking();
         init_test(cx);
 
@@ -2032,13 +1995,13 @@ mod tests {
             .expect("Failed to read center pane items");
 
         assert_eq!(
-            panel_items_after,
-            panel_items_before + 1,
-            "Terminal should be added to the panel when no center terminal is focused"
+            center_items_after,
+            center_items_before + 1,
+            "Terminal should be added to the active center pane by default"
         );
         assert_eq!(
-            center_items_after, center_items_before,
-            "Center pane should not gain a new terminal"
+            panel_items_after, panel_items_before,
+            "Terminal panel should not gain a new terminal by default"
         );
     }
 
@@ -2135,7 +2098,7 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn test_new_terminal_opens_in_panel_when_panel_focused(cx: &mut TestAppContext) {
+    async fn test_new_terminal_opens_in_center_when_panel_focused(cx: &mut TestAppContext) {
         cx.executor().allow_parking();
         init_test(cx);
 
@@ -2201,13 +2164,13 @@ mod tests {
             .expect("Failed to read center pane items");
 
         assert_eq!(
-            panel_items_after,
-            panel_items_before + 1,
-            "New terminal should be added to the panel when panel is focused"
+            center_items_after,
+            center_items_before + 1,
+            "New terminal should be added to the center pane when panel is focused"
         );
         assert_eq!(
-            center_items_after, center_items_before,
-            "Center pane should not gain a new terminal"
+            panel_items_after, panel_items_before,
+            "Terminal panel should not gain a new terminal when panel is focused"
         );
     }
 
@@ -2302,7 +2265,7 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn test_new_terminal_opens_in_panel_when_panel_focused_and_center_has_terminal(
+    async fn test_new_terminal_opens_in_center_when_panel_focused_and_center_has_terminal(
         cx: &mut TestAppContext,
     ) {
         cx.executor().allow_parking();
@@ -2382,13 +2345,13 @@ mod tests {
             .expect("Failed to read center pane items");
 
         assert_eq!(
-            panel_items_after,
-            panel_items_before + 1,
-            "New terminal should go to panel when panel is focused, even if center has a terminal"
+            center_items_after,
+            center_items_before + 1,
+            "New terminal should go to the center pane even when the terminal panel is focused"
         );
         assert_eq!(
-            center_items_after, center_items_before,
-            "Center pane should not gain a new terminal when panel is focused"
+            panel_items_after, panel_items_before,
+            "Terminal panel should not gain a new terminal when panel is focused"
         );
     }
 

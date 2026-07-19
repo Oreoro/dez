@@ -343,6 +343,11 @@ Use the existing panel-as-pane bridge as the migration path:
   working.
 - Host project, Git, outline, collaboration, agent, terminal, and future tool
   surfaces as pane tabs by default.
+- `workspace::NewTerminal` and `workspace::OpenTerminal` now route through the
+  active pane even when the legacy Terminal Panel has registered compatibility
+  handlers. Dock-target task spawning and existing serialized terminal-panel
+  restoration remain compatibility paths until live process/session migration is
+  completed.
 - Agent pane-hosted panels show a tab bar by default so agent sessions behave
   like regular workspace items instead of a hidden singleton surface.
 - Project and agent panel panes should use the default pane tab bar. Avoid

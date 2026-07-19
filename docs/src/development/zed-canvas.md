@@ -233,6 +233,10 @@ Rules:
   list after migrating panel contents into pane-hosted tabs. Current bottom
   panel compatibility maps through the existing dock model until a distinct
   bottom-dock entity exists.
+- New and explicitly opened terminals route to the active pane as normal tabs,
+  including when legacy Terminal Panel compatibility handlers are registered.
+  Dock-target task spawning and restored serialized terminal-panel geometry stay
+  compatibility paths until live process/session migration is implemented.
 - Automatic dock-to-pane migration is controlled by `pane_grid.panel_surface`,
   `pane_grid.draggable_panel_tabs`, and `pane_grid.show_legacy_docks`.
 - No item type owns a privileged location.
