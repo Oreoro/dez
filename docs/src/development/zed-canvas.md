@@ -422,6 +422,11 @@ that have no content or raw input. Safety- or state-bearing events remain
 visible: subagents, terminal tools, edits, pending work, permission prompts,
 failures, cancellations, and rejected calls.
 
+`agent_ui.keep_permissions_expanded` controls whether generic permission
+details default open. Approval and rejection controls stay visible either way;
+sandbox and confusable-warning details stay expanded so users can inspect the
+scope before granting access.
+
 `agent_ui.presentation` controls agent transcript density. `compact` tightens
 user and assistant message spacing for multi-pane agent lanes, `chat` keeps a
 conversational middle density, and `document` preserves the roomier default

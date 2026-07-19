@@ -6815,6 +6815,25 @@ impl ThreadView {
         tool_call.raw_input.is_some() || !tool_call.content.is_empty()
     }
 
+    fn should_keep_permission_details_expanded(
+        &self,
+        tool_call: &ToolCall,
+        allow_disabled: bool,
+        cx: &Context<Self>,
+    ) -> bool {
+        if !matches!(
+            tool_call.status,
+            ToolCallStatus::WaitingForConfirmation { .. }
+        ) {
+            return false;
+        }
+
+        CanvasAgentUiSettings::get_global(cx).keep_permissions_expanded
+            || allow_disabled
+            || tool_call.sandbox_authorization_details.is_some()
+            || tool_call.sandbox_fallback_authorization_details.is_some()
+    }
+
     fn render_elicitation(
         &self,
         entry_ix: usize,
@@ -8059,10 +8078,14 @@ impl ThreadView {
             cx,
         );
 
+        let allow_disabled = self.sandbox_confusables_block_allow(tool_call, cx);
+        let keep_permission_details_expanded =
+            self.should_keep_permission_details_expanded(tool_call, allow_disabled, cx);
         let is_expanded = self
             .entry_view_state
             .read(cx)
-            .is_tool_call_expanded(&tool_call.id);
+            .is_tool_call_expanded(&tool_call.id)
+            || keep_permission_details_expanded;
 
         let truncated_tooltip = truncated_output.then(|| {
             if let Some(output) = output {
@@ -8093,16 +8116,18 @@ impl ThreadView {
         )
         .elapsed(time_elapsed)
         .running(!command_finished && !needs_confirmation)
-        .on_toggle_expand(cx.listener({
-            let id = tool_call.id.clone();
-            move |this, _event, window, cx| {
-                this.entry_view_state.update(cx, |state, _cx| {
-                    state.toggle_tool_call_expansion(&id);
-                });
-                this.refresh_thread_search(window, cx);
-                cx.notify();
-            }
-        }))
+        .when(!keep_permission_details_expanded, |header| {
+            header.on_toggle_expand(cx.listener({
+                let id = tool_call.id.clone();
+                move |this, _event, window, cx| {
+                    this.entry_view_state.update(cx, |state, _cx| {
+                        state.toggle_tool_call_expansion(&id);
+                    });
+                    this.refresh_thread_search(window, cx);
+                    cx.notify();
+                }
+            }))
+        })
         .on_stop({
             let terminal = terminal.clone();
             cx.listener(move |this, _event, _window, cx| {
@@ -8180,7 +8205,6 @@ impl ThreadView {
             })
             .when_some(confirmation_options, |this, options| {
                 let is_first = self.is_first_tool_call(active_session_id, &tool_call.id, cx);
-                let allow_disabled = self.sandbox_confusables_block_allow(tool_call, cx);
                 this.child(self.render_permission_buttons(
                     self.thread.read(cx).session_id().clone(),
                     is_first,
@@ -8382,10 +8406,22 @@ impl ThreadView {
 
         let should_show_raw_input = !is_terminal_tool && !is_edit && !has_image_content;
 
+        let allow_disabled = self.sandbox_confusables_block_allow(tool_call, cx);
+        let keep_permission_details_expanded =
+            self.should_keep_permission_details_expanded(tool_call, allow_disabled, cx);
+
         let has_content = !tool_call.content.is_empty()
             || (should_show_raw_input && tool_call.raw_input.is_some());
+        let has_permission_details = needs_confirmation
+            && (has_content
+                || tool_call.sandbox_authorization_details.is_some()
+                || tool_call.sandbox_fallback_authorization_details.is_some());
 
-        let is_collapsible = has_content && !needs_confirmation;
+        let is_collapsible = if needs_confirmation {
+            has_permission_details && !keep_permission_details_expanded
+        } else {
+            has_content
+        };
         let mut is_open = self
             .entry_view_state
             .read(cx)
@@ -8393,7 +8429,7 @@ impl ThreadView {
 
         is_open |=
             failed_or_canceled && CanvasAgentUiSettings::get_global(cx).keep_failures_expanded;
-        is_open |= needs_confirmation;
+        is_open |= keep_permission_details_expanded;
 
         let input_output_header = |label: SharedString| {
             Label::new(label)
@@ -8621,7 +8657,7 @@ impl ThreadView {
                     entry_ix,
                     tool_call.id.clone(),
                     focus_handle,
-                    self.sandbox_confusables_block_allow(tool_call, cx),
+                    allow_disabled,
                     cx,
                 ))
             } else {

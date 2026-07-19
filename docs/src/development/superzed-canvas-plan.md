@@ -323,11 +323,14 @@ Terminal-agent detection:
   `presentation`, `event_verbosity`, `group_tool_calls`,
   `keep_failures_expanded`, `keep_permissions_expanded`, `fleet_view`, and the
   terminal/session settings above. Failed, rejected, and canceled tool-call
-  cards honor `agent_ui.keep_failures_expanded`; permission requests remain
-  expanded for safety so approval actions stay visible. `event_verbosity =
-  "summary"` now hides completed generic tool-call events that have no content
-  or raw input, while preserving subagents, terminal tools, edits, pending work,
-  permission prompts, failures, cancellations, and rejected calls.
+  cards honor `agent_ui.keep_failures_expanded`; permission prompts keep
+  approval actions visible while `agent_ui.keep_permissions_expanded` controls
+  whether generic permission detail sections default open. Sandbox and
+  confusable-warning permission details stay expanded for safety.
+  `event_verbosity = "summary"` now hides completed generic tool-call events
+  that have no content or raw input, while preserving subagents, terminal tools,
+  edits, pending work, permission prompts, failures, cancellations, and rejected
+  calls.
   `agent_ui.presentation` now controls transcript density: `compact` uses
   tighter message padding for side-by-side agent lanes, `chat` uses a
   conversational middle density, and `document` preserves the roomy default
