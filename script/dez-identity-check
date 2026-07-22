@@ -125,9 +125,24 @@ reject_pattern crates/install_cli/src/register_zed_scheme.rs \
 reject_pattern crates/install_cli/src/install_cli_binary.rs \
     '/usr/local/bin/zed|InstalledZedCli|Zed CLI' \
     'the Dez CLI installer still overwrites or presents the official Zed CLI'
+reject_pattern crates/install_cli/src/install_cli_binary.rs \
+    'installed Zed|zeditor|zedit|zed-editor' \
+    'the Dez CLI installer still gives upstream package guidance'
+require_multiline_pattern crates/zed/src/zed/app_menus.rs \
+    'if APP_NAME != "Zed" \{.*?"Install CLI"' \
+    'the Dez application menu does not expose its isolated CLI installer'
+require_multiline_pattern crates/zed/src/zed.rs \
+    'if APP_NAME == "Zed" \{.*?Official Zed CLI is not managed by this fork.*?return;' \
+    'the fork CLI action can overwrite the official Zed command'
+reject_pattern crates/zed/src/zed.rs \
+    'does not install a global CLI shim in this build' \
+    'the reachable Dez CLI action is still disabled'
 reject_pattern crates/cli/src/main.rs \
     'Generate shell completions for Zed|Run zed in dev-server mode|Uninstall Zed from user system|Zed will attempt to open the paths directly' \
     'the Dez CLI help still presents the local product as Zed'
+reject_pattern crates/cli/src/main.rs \
+    'Handshake (before|after) Zed spawn' \
+    'the Dez CLI reports launch-handshake failures as Zed failures'
 reject_pattern crates/cli/src/main.rs \
     'visible_alias = "zed"' \
     'the Dez CLI exposes its legacy Zed compatibility alias in help'

@@ -136,7 +136,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
         zed_actions::Extensions::default(),
     ));
     #[cfg(not(target_os = "windows"))]
-    if APP_NAME == "Zed" {
+    if APP_NAME != "Zed" {
         app_items.push(MenuItem::action(
             "Install CLI",
             install_cli::InstallCliBinary,

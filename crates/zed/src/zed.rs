@@ -1613,14 +1613,11 @@ fn install_cli(
     window: &mut Window,
     cx: &mut Context<Workspace>,
 ) {
-    if APP_NAME != "Zed" {
-        let message = format!(
-            "{APP_NAME} does not install a global CLI shim in this build. Use the app bundle directly."
-        );
+    if APP_NAME == "Zed" {
         drop(window.prompt(
             PromptLevel::Info,
-            "CLI install is disabled",
-            Some(&message),
+            "Official Zed CLI is not managed by this fork",
+            Some("Install or update the official `zed` command from an official Zed distribution."),
             &["OK"],
             cx,
         ));
