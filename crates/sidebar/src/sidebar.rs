@@ -11486,6 +11486,25 @@ impl Sidebar {
                                 this.toggle_archive(&ToggleThreadHistory, window, cx);
                             })),
                     )
+                    .child(
+                        IconButton::new("command-search", IconName::MagnifyingGlass)
+                            .size(ButtonSize::Medium)
+                            .icon_size(IconSize::Small)
+                            .aria_label("Open Command Palette")
+                            .tooltip(|_, cx| {
+                                Tooltip::for_action(
+                                    "Command Search",
+                                    &zed_actions::command_palette::Toggle,
+                                    cx,
+                                )
+                            })
+                            .on_click(|_, window, cx| {
+                                window.dispatch_action(
+                                    zed_actions::command_palette::Toggle.boxed_clone(),
+                                    cx,
+                                );
+                            }),
+                    )
                     .child(div().flex_1())
                     .child(self.render_recent_projects_button(cx)),
             )

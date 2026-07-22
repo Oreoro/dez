@@ -719,6 +719,8 @@ impl Render for SidebarChrome {
         let mut render_project_items =
             sidebar_settings.show_branch_name || sidebar_settings.show_project_items;
         let application_menu = self.application_menu.clone();
+        let canvas_prefix_indicator = self.render_canvas_prefix_indicator(window, cx);
+        let show_workspace_bar = paths::APP_NAME == "Zed" || canvas_prefix_indicator.is_some();
 
         v_flex()
             .w_full()
@@ -802,56 +804,63 @@ impl Render for SidebarChrome {
             .when(sidebar_settings.show_onboarding_banner, |this| {
                 this.when_some(self.banner.clone(), |this, banner| this.child(banner))
             })
-            .child(
-                h_flex()
-                    .w_full()
-                    .map(|this| match workspace_bar_settings.height {
-                        settings::WorkspaceBarHeight::Minimal => this.h_6(),
-                        settings::WorkspaceBarHeight::Compact => this.h_7(),
-                        settings::WorkspaceBarHeight::Comfortable => this.h_8(),
-                    })
-                    .gap_1()
-                    .justify_between()
-                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                    .child(div().flex_1())
-                    .when(workspace_bar_settings.center_command_search(), |this| {
-                        this.child(self.render_command_search_button(cx))
-                            .child(div().flex_1())
-                    })
-                    .when_some(
-                        self.render_canvas_prefix_indicator(window, cx),
-                        |this, indicator| this.child(indicator),
-                    )
-                    .when(paths::APP_NAME == "Zed", |this| {
-                        this.children(self.render_connection_status(status, cx))
-                    })
-                    .child(self.update_version.clone())
-                    .when(
-                        paths::APP_NAME == "Zed"
-                            && user.is_none()
-                            && is_signed_out_or_auth_error
-                            && sidebar_settings.show_sign_in,
-                        |this| this.child(self.render_sign_in_button(cx)),
-                    )
-                    .when(paths::APP_NAME == "Zed" && is_signing_in, |this| {
-                        this.child(
-                            Label::new("Signing in…")
-                                .size(LabelSize::Small)
-                                .color(Color::Muted)
-                                .with_animation(
-                                    "signing-in",
-                                    Animation::new(Duration::from_secs(2))
-                                        .repeat()
-                                        .with_easing(pulsating_between(0.4, 0.8)),
-                                    |label, delta| label.alpha(delta),
-                                ),
+            .when(show_workspace_bar, |this| {
+                this.child(
+                    h_flex()
+                        .w_full()
+                        .map(|this| match workspace_bar_settings.height {
+                            settings::WorkspaceBarHeight::Minimal => this.h_6(),
+                            settings::WorkspaceBarHeight::Compact => this.h_7(),
+                            settings::WorkspaceBarHeight::Comfortable => this.h_8(),
+                        })
+                        .gap_1()
+                        .justify_between()
+                        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                        .child(div().flex_1())
+                        .when(
+                            paths::APP_NAME == "Zed"
+                                && workspace_bar_settings.center_command_search(),
+                            |this| {
+                                this.child(self.render_command_search_button(cx))
+                                    .child(div().flex_1())
+                            },
                         )
-                    })
-                    .when(
-                        paths::APP_NAME == "Zed" && sidebar_settings.show_user_menu,
-                        |this| this.child(self.render_user_menu_button(cx)),
-                    ),
-            )
+                        .when_some(canvas_prefix_indicator, |this, indicator| {
+                            this.child(indicator)
+                        })
+                        .when(paths::APP_NAME == "Zed", |this| {
+                            this.children(self.render_connection_status(status, cx))
+                        })
+                        .when(paths::APP_NAME == "Zed", |this| {
+                            this.child(self.update_version.clone())
+                        })
+                        .when(
+                            paths::APP_NAME == "Zed"
+                                && user.is_none()
+                                && is_signed_out_or_auth_error
+                                && sidebar_settings.show_sign_in,
+                            |this| this.child(self.render_sign_in_button(cx)),
+                        )
+                        .when(paths::APP_NAME == "Zed" && is_signing_in, |this| {
+                            this.child(
+                                Label::new("Signing in…")
+                                    .size(LabelSize::Small)
+                                    .color(Color::Muted)
+                                    .with_animation(
+                                        "signing-in",
+                                        Animation::new(Duration::from_secs(2))
+                                            .repeat()
+                                            .with_easing(pulsating_between(0.4, 0.8)),
+                                        |label, delta| label.alpha(delta),
+                                    ),
+                            )
+                        })
+                        .when(
+                            paths::APP_NAME == "Zed" && sidebar_settings.show_user_menu,
+                            |this| this.child(self.render_user_menu_button(cx)),
+                        ),
+                )
+            })
             .into_any_element()
     }
 }
