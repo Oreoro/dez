@@ -231,8 +231,9 @@ public release claim.
 
 The remaining launch blockers are the live hosted-terminal reattach and Codex
 review hero flows, restored/degraded UI states, visual and accessibility audit,
-modified-crate Clippy, public signing/notarization/install checks, official Zed
-coexistence, and design-partner validation. The current macOS desktop must be
+app-facing modified-crate Clippy, public signing/notarization/install checks,
+official Zed coexistence, and design-partner validation. The standalone Host
+Clippy graph passes with warnings denied. The current macOS desktop must be
 unlocked before the rendered gates can be completed through the approved UI
 control path.
 

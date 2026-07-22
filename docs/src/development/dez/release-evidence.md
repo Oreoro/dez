@@ -8,6 +8,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - App and Host build commit: `da562e14bb403af815cbab9802225dda0b2418c8`
 - App and Host build tree: `56cb7714537073db1aeff2e6cf24809c9a79fb95`
 - Packaging and permission-copy commit: `ce11c4ed3db138fe6ca0a8890bfb6db8b7f7bd52`
+- Post-build lint compatibility commit: `3ad224dfd6`
 - Integration merge: `2be63cfea347006e407934754086bbef62d482c2`
 - Incorporated upstream: `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
 - `Cargo.lock` SHA-256:
@@ -124,8 +125,10 @@ and same-process reattachment.
 - [x] Focused Prettier checks for the canonical Dez documentation slices
 - [x] Focused tests: 15 terminal client/model tests, 8 Host/helper tests, and
       three Session Rail terminal lifecycle tests
-- [ ] Modified-crate `cargo clippy` (not completed; the consolidated graph
-      exceeded the remaining local storage budget)
+- [x] `cargo clippy -p dez_terminal_host --all-targets -- -D warnings` with the
+      recorded storage-constrained dev profile
+- [ ] App-facing modified-crate `cargo clippy` (the full app graph exceeds the
+      remaining local storage budget)
 - [x] Intended app and helper consolidated build
 - [x] Intended CLI build
 - [x] Debug bundle build and static bundle audit

@@ -669,3 +669,8 @@ Notes decision:
   automatic unlock failed, so the visual state matrix, keyboard/pointer audit,
   accessibility tree, and full hosted-terminal recovery scenario remain
   explicitly unverified.
+- 2026-07-22: Ran warning-denied Clippy for every terminal Host target. Current
+  Clippy found one behavior-neutral `100 / 100` fallback-theme normalization;
+  commit `3ad224dfd6` expresses it as `1.0`, and the Host graph then passes.
+  App-facing modified-crate Clippy remains open because its much larger graph
+  exceeds the remaining storage budget.

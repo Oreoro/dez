@@ -572,6 +572,10 @@ code, all launch gates pass, and known limitations are documented.
       deep strict signature verification with identifier `dev.dez.Dez-Dev`,
       version `0.0.1`, scheme `dez-dev`, and app, CLI, helper, and bundled Git.
       Permission prompts now describe developer-tool requests truthfully.
+- [x] 2026-07-22: Run warning-denied Clippy across all terminal Host targets.
+      Current Clippy exposed one equal-operands normalization in the fallback
+      theme dependency; `3ad224dfd6` replaces `100 / 100` with the identical
+      `1.0`, after which the complete Host lint graph passes.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
@@ -844,7 +848,9 @@ Completed at the 2026-07-22 consolidated gate:
 
 Still required after the consolidated gate:
 
-- modified-crate Clippy when enough local build storage is available;
+- app-facing modified-crate Clippy when enough local build storage is
+  available; the complete terminal Host target graph already passes with
+  warnings denied;
 - a live hosted PTY with Session ID, child PID, replay cursor, and
   same-computation restart/reattach proof;
 - restored/empty/offline/failed/incompatible UI scenarios and the structured
