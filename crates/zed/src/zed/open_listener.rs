@@ -328,6 +328,25 @@ impl OpenRequest {
     }
 }
 
+/// Holds listener traffic behind the startup restoration barrier and then
+/// dispatches it in arrival order. The barrier is completion-based rather
+/// than success-based: restoration is responsible for presenting its fallback
+/// and error UI, after which queued user intent must still be released.
+pub async fn dispatch_open_requests_after_startup<Ready, Requests, Request, Dispatch>(
+    startup_complete: Ready,
+    mut requests: Requests,
+    mut dispatch: Dispatch,
+) where
+    Ready: std::future::Future<Output = ()>,
+    Requests: futures::Stream<Item = Request> + Unpin,
+    Dispatch: FnMut(Request),
+{
+    startup_complete.await;
+    while let Some(request) = requests.next().await {
+        dispatch(request);
+    }
+}
+
 fn dez_url_path(url: &str) -> Option<&str> {
     ["dez://", "dez-dev://", "dez-nightly://", "dez-preview://"]
         .into_iter()
@@ -1169,6 +1188,45 @@ mod tests {
                 .send(response)
                 .map_err(|error| anyhow::anyhow!("{error}"))
         }
+    }
+
+    #[gpui::test]
+    async fn queued_open_requests_wait_for_startup_and_preserve_order(cx: &mut TestAppContext) {
+        let (startup_complete_tx, startup_complete_rx) = oneshot::channel::<()>();
+        let (request_tx, request_rx) = mpsc::unbounded::<u8>();
+        let dispatched = Arc::new(parking_lot::Mutex::new(Vec::new()));
+
+        request_tx.unbounded_send(2).unwrap();
+        request_tx.unbounded_send(1).unwrap();
+
+        let dispatched_for_task = dispatched.clone();
+        let dispatch_task = cx.background_executor().spawn(async move {
+            dispatch_open_requests_after_startup(
+                async move {
+                    // Success and failure recovery both release the same
+                    // completion barrier; queued intent must survive either.
+                    startup_complete_rx.await.ok();
+                },
+                request_rx,
+                move |request| dispatched_for_task.lock().push(request),
+            )
+            .await;
+        });
+
+        cx.run_until_parked();
+        assert!(
+            dispatched.lock().is_empty(),
+            "listener traffic must remain queued while restoration is pending"
+        );
+
+        startup_complete_tx.send(()).unwrap();
+        cx.run_until_parked();
+        assert_eq!(*dispatched.lock(), [2, 1]);
+
+        request_tx.unbounded_send(3).unwrap();
+        drop(request_tx);
+        dispatch_task.await;
+        assert_eq!(*dispatched.lock(), [2, 1, 3]);
     }
 
     fn assert_ssh_parse(

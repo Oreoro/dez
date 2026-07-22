@@ -74,8 +74,9 @@ use workspace::{
 };
 use zed::{
     OpenListener, OpenRequest, RawOpenRequest, app_menus, build_window_options,
-    derive_paths_with_position, edit_prediction_registry, handle_cli_connection,
-    handle_keymap_file_changes, initialize_workspace, open_paths_with_positions,
+    derive_paths_with_position, dispatch_open_requests_after_startup, edit_prediction_registry,
+    handle_cli_connection, handle_keymap_file_changes, initialize_workspace,
+    open_paths_with_positions,
 };
 
 use crate::zed::{CrashHandler, OpenRequestKind, eager_load_active_theme_and_icon_theme};
@@ -991,14 +992,20 @@ fn main() {
         component_preview::init(app_state.clone(), cx);
 
         cx.spawn(async move |cx| {
-            startup_ready_rx.await.ok();
-            while let Some(urls) = open_rx.next().await {
-                cx.update(|cx| {
-                    if let Some(request) = OpenRequest::parse(urls, cx).log_err() {
-                        handle_open_request(request, app_state.clone(), cx);
-                    }
-                });
-            }
+            dispatch_open_requests_after_startup(
+                async move {
+                    startup_ready_rx.await.ok();
+                },
+                open_rx,
+                |urls| {
+                    cx.update(|cx| {
+                        if let Some(request) = OpenRequest::parse(urls, cx).log_err() {
+                            handle_open_request(request, app_state.clone(), cx);
+                        }
+                    });
+                },
+            )
+            .await;
         })
         .detach();
     });
