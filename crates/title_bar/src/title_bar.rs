@@ -737,6 +737,8 @@ impl Render for SidebarChrome {
             .child(
                 h_flex()
                     .w_full()
+                    .min_w_0()
+                    .h_6()
                     .gap_1()
                     .overflow_x_hidden()
                     .map(|this| {
@@ -1266,6 +1268,7 @@ impl SidebarChrome {
             .trigger_with_tooltip(
                 Button::new("project_name_trigger", display_name)
                     .label_size(LabelSize::Small)
+                    .truncate(true)
                     .tab_index(0isize)
                     .when(self.worktree_count(cx) > 1, |this| {
                         this.end_icon(
@@ -1318,6 +1321,7 @@ impl SidebarChrome {
             .trigger_with_tooltip(
                 Button::new("project_name_trigger", display_name)
                     .label_size(LabelSize::Small)
+                    .truncate(true)
                     .tab_index(0isize)
                     .when(self.worktree_count(cx) > 1, |this| {
                         this.end_icon(
@@ -1383,6 +1387,7 @@ impl SidebarChrome {
         let settings = SidebarChromeSettings::get_global(cx);
         let effective_repository = Some(repository);
 
+        let has_linked_worktree_name = linked_worktree_name.is_some();
         let worktree_label: SharedString = linked_worktree_name.unwrap_or_else(|| "main".into());
 
         let (creation_in_progress, is_switch) = self
@@ -1405,7 +1410,9 @@ impl SidebarChrome {
             worktree_label.clone()
         };
 
-        let worktree_button = settings.show_worktree_name.then(|| {
+        let worktree_button = (settings.show_worktree_name
+            && (has_linked_worktree_name || creation_in_progress.is_some()))
+        .then(|| {
             let project = self.project.clone();
             let workspace_handle = workspace.downgrade();
             PopoverMenu::new("worktree-picker-menu")
@@ -1422,6 +1429,7 @@ impl SidebarChrome {
                         .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                         .label_size(LabelSize::Small)
                         .color(Color::Muted)
+                        .truncate(true)
                         .tab_index(0isize)
                         .loading(is_creating)
                         .start_icon(
@@ -1454,6 +1462,7 @@ impl SidebarChrome {
                     Button::new("project_branch_trigger", "Create Branch")
                         .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                         .label_size(LabelSize::Small)
+                        .truncate(true)
                         .tab_index(0isize)
                         .start_icon(
                             Icon::new(IconName::GitBranchPlus)
@@ -1465,6 +1474,7 @@ impl SidebarChrome {
                         .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                         .label_size(LabelSize::Small)
                         .color(Color::Muted)
+                        .truncate(true)
                         .tab_index(0isize)
                         .start_icon(
                             Icon::new(branch_icon)

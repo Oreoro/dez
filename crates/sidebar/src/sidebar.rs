@@ -1017,11 +1017,11 @@ fn standalone_terminal_metadata(
     terminal_view: &Entity<TerminalView>,
     created_at: DateTime<Utc>,
     cx: &App,
-) -> Option<(
+) -> (
     TerminalThreadMetadata,
-    TerminalAgentKind,
+    Option<TerminalAgentKind>,
     TerminalRuntimeInfo,
-)> {
+) {
     let terminal_id = standalone_terminal_id(workspace, terminal_view, cx);
     let terminal_view = terminal_view.read(cx);
     let has_attention = terminal_view.has_bell();
@@ -1074,10 +1074,8 @@ fn standalone_terminal_metadata(
         session_ref,
     };
 
-    metadata
-        .detected_agent_kind()
-        .or(detected_agent_command)
-        .map(|detected_agent_kind| (metadata, detected_agent_kind, runtime))
+    let detected_agent_kind = metadata.detected_agent_kind().or(detected_agent_command);
+    (metadata, detected_agent_kind, runtime)
 }
 
 fn workspace_for_local_terminal_session(
@@ -2651,17 +2649,11 @@ impl Sidebar {
 
         if let Some(item) = active_workspace.read(cx).active_item_as::<TerminalView>(cx) {
             let terminal_id = standalone_terminal_id(&active_workspace, &item, cx);
-            let created_at = *self
-                .standalone_terminal_created_at
-                .entry(terminal_id)
-                .or_insert_with(Utc::now);
-            if standalone_terminal_metadata(&active_workspace, &item, created_at, cx).is_some() {
-                self.active_entry = Some(ActiveEntry::Terminal {
-                    terminal_id,
-                    workspace: active_workspace,
-                });
-                return;
-            }
+            self.active_entry = Some(ActiveEntry::Terminal {
+                terminal_id,
+                workspace: active_workspace,
+            });
+            return;
         }
 
         if let Some(panel) = active_workspace.read(cx).panel::<AgentPanel>(cx) {
@@ -3173,58 +3165,55 @@ impl Sidebar {
                         );
                     }
                 }
-                if detect_terminal_agents {
-                    for ws in group_workspaces {
-                        for terminal_view in ws.read(cx).items_of_type::<TerminalView>(cx) {
-                            let terminal_id = standalone_terminal_id(ws, &terminal_view, cx);
-                            let created_at = self
-                                .standalone_terminal_created_at
-                                .entry(terminal_id)
-                                .or_insert_with(Utc::now);
-                            let Some((metadata, detected_agent_kind, runtime)) =
-                                standalone_terminal_metadata(ws, &terminal_view, *created_at, cx)
-                            else {
-                                continue;
-                            };
-                            if !seen_terminal_ids.insert(metadata.terminal_id) {
-                                continue;
-                            }
-
-                            let worktrees = worktree_info_from_thread_paths(
-                                &metadata.worktree_paths,
-                                &branch_by_path,
-                            );
-                            let has_notification =
-                                notify_on_terminal_attention && terminal_view.read(cx).has_bell();
-                            let agent = metadata
-                                .session_ref
-                                .and_then(|session_ref| {
-                                    helper_snapshot_by_session.get(&session_ref.session_id)
-                                })
-                                .and_then(|snapshot| snapshot.agent.clone());
-                            let has_notification = has_notification
-                                || agent.as_ref().is_some_and(|agent| agent.attention_required);
-                            let needs_attention = metadata.attention.requires_action_at(Utc::now())
-                                || has_notification;
-                            let attention_priority =
-                                terminal_attention_priority(&metadata, agent.as_ref());
-                            terminals.push(TerminalEntry {
-                                metadata,
-                                detected_agent_kind: terminal_agent_kind_from_snapshot(
-                                    agent.as_ref(),
-                                )
-                                .or(Some(detected_agent_kind)),
-                                workspace: ThreadEntryWorkspace::Open(ws.clone()),
-                                source: TerminalEntrySource::WorkspaceItem(terminal_view),
-                                runtime: Some(runtime),
-                                agent,
-                                worktrees,
-                                needs_attention,
-                                attention_priority,
-                                has_notification,
-                                highlight_positions: Vec::new(),
-                            });
+                for ws in group_workspaces {
+                    for terminal_view in ws.read(cx).items_of_type::<TerminalView>(cx) {
+                        let terminal_id = standalone_terminal_id(ws, &terminal_view, cx);
+                        let created_at = self
+                            .standalone_terminal_created_at
+                            .entry(terminal_id)
+                            .or_insert_with(Utc::now);
+                        let (metadata, detected_agent_kind, runtime) =
+                            standalone_terminal_metadata(ws, &terminal_view, *created_at, cx);
+                        if !seen_terminal_ids.insert(metadata.terminal_id) {
+                            continue;
                         }
+
+                        let worktrees = worktree_info_from_thread_paths(
+                            &metadata.worktree_paths,
+                            &branch_by_path,
+                        );
+                        let has_notification =
+                            notify_on_terminal_attention && terminal_view.read(cx).has_bell();
+                        let agent = metadata
+                            .session_ref
+                            .and_then(|session_ref| {
+                                helper_snapshot_by_session.get(&session_ref.session_id)
+                            })
+                            .and_then(|snapshot| snapshot.agent.clone());
+                        let has_notification = has_notification
+                            || agent.as_ref().is_some_and(|agent| agent.attention_required);
+                        let needs_attention =
+                            metadata.attention.requires_action_at(Utc::now()) || has_notification;
+                        let attention_priority =
+                            terminal_attention_priority(&metadata, agent.as_ref());
+                        terminals.push(TerminalEntry {
+                            metadata,
+                            detected_agent_kind: terminal_agent_kind_from_snapshot(agent.as_ref())
+                                .or_else(|| {
+                                    detect_terminal_agents
+                                        .then_some(detected_agent_kind)
+                                        .flatten()
+                                }),
+                            workspace: ThreadEntryWorkspace::Open(ws.clone()),
+                            source: TerminalEntrySource::WorkspaceItem(terminal_view),
+                            runtime: Some(runtime),
+                            agent,
+                            worktrees,
+                            needs_attention,
+                            attention_priority,
+                            has_notification,
+                            highlight_positions: Vec::new(),
+                        });
                     }
                 }
                 for (snapshot, workspace) in &detached_local_sessions {
@@ -9797,7 +9786,7 @@ impl Sidebar {
                             needs_attention,
                             attention_is_muted,
                             false,
-                            show_detection_confidence,
+                            false,
                         ))
                 })
                 .host_label(host_label)
