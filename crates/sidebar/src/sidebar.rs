@@ -4182,7 +4182,7 @@ impl Sidebar {
                         .size(IconSize::XSmall)
                         .color(Color::Muted),
                 )
-                .tooltip(Tooltip::text("Remote Project"))
+                .tooltip(Tooltip::text("Remote Workspace"))
                 .into_any_element(),
         )
     }
@@ -4856,7 +4856,7 @@ impl Sidebar {
                     .size(ButtonSize::Medium)
                     .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                     .icon_size(IconSize::Small)
-                    .aria_label("Project Options")
+                    .aria_label("Workspace Options")
                     .when(!is_menu_open, |el| el.visible_on_hover(group_name)),
             )
             .on_open(Rc::new({
@@ -4916,7 +4916,7 @@ impl Sidebar {
 
                         let menu = menu.when(show_multi_project_entries, |this| {
                             this.entry(
-                                "Open Project in New Window",
+                                "Open Workspace in New Window",
                                 Some(Box::new(workspace::MoveProjectToNewWindow)),
                                 {
                                     let project_group_key = project_group_key.clone();
@@ -4954,9 +4954,9 @@ impl Sidebar {
                                             .child(Label::new("-click").color(Color::Muted));
 
                                         let label = if has_threads {
-                                            "Focus Last Project"
+                                            "Focus Last Workspace"
                                         } else {
-                                            "Focus Project"
+                                            "Focus Workspace"
                                         };
 
                                         h_flex()
@@ -10162,12 +10162,12 @@ impl Sidebar {
                 })
             })
             .trigger_with_tooltip(
-                IconButton::new("open-project", IconName::FolderAdd)
+                IconButton::new("open-project", IconName::FolderOpen)
                     .size(ButtonSize::Medium)
                     .icon_size(IconSize::Small)
-                    .aria_label("Add Project")
+                    .aria_label("Open Workspace")
                     .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
-                |_window, cx| Tooltip::for_action("Add Project", &OpenRecent::default(), cx),
+                |_window, cx| Tooltip::for_action("Open Workspace", &OpenRecent::default(), cx),
             )
             .offset(gpui::Point {
                 x: px(-2.0),
@@ -11573,7 +11573,7 @@ impl Sidebar {
                             }
                             if project_agents_md_exists {
                                 menu = menu.action(
-                                    "Open Project Rules",
+                                    "Open Workspace Rules",
                                     Box::new(OpenProjectAgentsMdRules),
                                 );
                             }

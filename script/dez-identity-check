@@ -115,6 +115,9 @@ require_pattern crates/sidebar/src/sidebar.rs \
 require_pattern crates/sidebar/src/sidebar.rs \
     'session_overview_visible\(show_start_state\)' \
     'the empty Session Rail can regress to duplicating its creation action'
+reject_pattern crates/sidebar/src/sidebar.rs \
+    '"(Remote Project|Project Options|Open Project in New Window|Focus Last Project|Focus Project|Add Project|Open Project Rules)"' \
+    'the Session Rail mixes upstream Project terminology into the Workspace hierarchy'
 require_pattern crates/release_channel/src/lib.rs \
     'ReleaseChannel::Stable => "Dez"' \
     'stable release display name is not Dez'
