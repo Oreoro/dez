@@ -82,7 +82,7 @@ rendered or end-to-end interaction proof.
 | Agent adapter          | Structured Codex hook path, observation-only capabilities, bounded file targets, objective/context projection, and onboarding exist                                                                                                                                      | Live hook proof and a second adapter after the PMF gate                                                                          |
 | Attention              | Session Rail projection, restart-safe attention, acknowledgement, mute, resolution, priority, and stale handling exist                                                                                                                                                   | Consolidated runtime and accessibility proof                                                                                     |
 | Review                 | Native and terminal review briefs consume observed commands/checks, Git/worktree state, bounded file targets, cwd provenance, risks, and missing-evidence labels                                                                                                         | Compiled proof, live navigation, and side-by-side hero-flow validation                                                           |
-| UI/UX                  | The rebuilt bundle includes the rail, blank-center, footer, and utility-row corrections; `e4fbc22a3a` additionally makes new empty Dez windows terminal-first and preserves Zed's upstream blank-editor behavior in source                                               | Rebuild the newest source, capture it, then complete shell hierarchy, outward polish, onboarding, accessibility, and state audit |
+| UI/UX                  | The rebuilt bundle includes the rail, blank-center, footer, and utility-row corrections; newer source makes empty Dez windows terminal-first and replaces ambiguous zero-session/caught-up and `+ New` copy with honest explicit actions                                 | Rebuild the newest source, capture it, then complete shell hierarchy, outward polish, onboarding, accessibility, and state audit |
 | Release                | Static gates, focused tests, the corrected protocol-4 app/helper build at `679cdc28445c`, exact signed-bundle launch, authenticated runtime Session exercise, and deep-strict ad-hoc bundle audit pass                                                                   | Full GUI Session restart, visual/a11y, app-facing lint, public signing/install, coexistence, and partner proof                   |
 
 The intended raw executable was used for the first consolidated runtime gate;
@@ -425,7 +425,9 @@ with new labels.
       center blank. Its primary action is now New Terminal, followed by Find
       File and New File. New Window and startup fallbacks preserve this surface
       in Dez instead of covering it with an unsolicited blank editor. The full
-      state audit and rendered proof remain open.
+      Session Rail zero state now says No sessions yet, exposes New Terminal,
+      and starts with Start working instead of implying finished work or
+      requiring a project. The full state audit and rendered proof remain open.
 - [ ] Remove dead buttons, unsupported provider actions, duplicate navigation,
       noisy badges, ambiguous icon-only controls, and success copy unsupported
       by observed evidence. The compiled Zed Pro trial-end overlay/reset action
@@ -815,3 +817,13 @@ Notes decision:
   formatting, diff, identity, and full `zed --bin dez` source checks pass. The
   running bundle predates this slice, so rebuild and rendered proof remain
   open.
+- 2026-07-23: Replaced the screenshot's misleading zero-session shell copy in
+  `d9688490ad`. An empty rail now says No sessions yet instead of caught up,
+  visibly labels its primary action New Terminal, and uses Start working rather
+  than a project-only frame. Search, singular/plural attention, and genuine
+  caught-up states remain distinct in an authored model assertion. The full
+  `zed --bin dez` source check, formatting, diff, identity, CLI build, and help
+  audit pass; the sidebar test target was not linked because it selected a
+  second 1 GiB WebRTC graph on the storage-constrained volume. The current raw
+  CLI hash is
+  `06f2b4e799b9fc4dcc1178d3095cecea0a0dd2636f77a9d1827b98fc16a5563b`.

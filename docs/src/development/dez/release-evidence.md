@@ -9,6 +9,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Corrected shell bundle source: `679cdc28445c824482923bdfdfd8463927f9a337`
 - Durable viewport test source: `a91b04809ce0fa9d26407bc1685726ef36a0f03f`
 - Terminal-first empty-workspace source: `e4fbc22a3a`
+- Honest Session Rail zero-state source: `d9688490ad`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -60,7 +61,7 @@ captured unsigned build artifacts were arm64 Mach-O files:
 | Artifact            | Size | SHA-256                                                            |
 | ------------------- | ---- | ------------------------------------------------------------------ |
 | `target/debug/dez`  | 1.0G | `c244c5501097257cb4bbe4203ffb3ced1ffa416dced857ffb6be515a445c8489` |
-| `target/debug/cli`  | 12M  | `cc8d62764f0892da5306aeefb9206732e8f25584f9213e84631184d2ae8d9787` |
+| `target/debug/cli`  | 12M  | `06f2b4e799b9fc4dcc1178d3095cecea0a0dd2636f77a9d1827b98fc16a5563b` |
 | `dez-terminal-host` | 13M  | `935e1e3395a37860e0a2533958e28a1a0c13aeda37c7cc20be489897951deee2` |
 
 The final link completed in 38.17 seconds from the already compiled graph. A
@@ -206,7 +207,7 @@ cannot unlock it automatically. A fresh rendered screenshot of the corrected
 artifact therefore remains required before the visual matrix can be checked
 complete.
 
-Commits `a91b04809c` and `e4fbc22a3a` are newer than that running bundle. The
+Commits `a91b04809c`, `e4fbc22a3a`, and `d9688490ad` are newer than that running bundle. The
 first passes all nine focused Session tests, including duplicate viewport
 replacement without reordering or membership loss. The second makes Project
 ready terminal-first, prevents New Window and startup fallback paths from
@@ -214,6 +215,10 @@ covering Dez's actionable launch surface with an unsolicited blank editor, and
 cleans the public CLI help while keeping the legacy alias hidden for
 compatibility. The full `zed --bin dez` source check and rebuilt CLI pass, but
 these changes require the next consolidated app rebuild and rendered audit.
+The latest slice also replaces the misleading zero-session caught-up state and
+ambiguous creation copy. Its model assertion is authored, while its focused
+test target remains unclaimed because that target selected a second WebRTC SDK
+graph that exceeded safe storage headroom.
 
 The packaged helper also accepted a direct authenticated protocol 4 exercise.
 Host ID `d9670db8-e498-5537-a9d8-f99ad098f4aa` created Session
@@ -304,7 +309,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `e4fbc22a3a` or
+visual evidence: the exact bundle must first be rebuilt from `d9688490ad` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -314,6 +319,6 @@ credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
 running and contains the corrected shell source through `679cdc28445c`, but
-predates `a91b04809c` and `e4fbc22a3a`. A rebuild/re-audit and an unlocked
+predates `a91b04809c`, `e4fbc22a3a`, and `d9688490ad`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.

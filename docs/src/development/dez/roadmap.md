@@ -673,6 +673,15 @@ code, all launch gates pass, and known limitations are documented.
       Formatting, diff, identity, CLI build/help, and full `zed --bin dez`
       source checks pass. Consolidated app rebuild and rendered proof remain
       open.
+- [x] 2026-07-23: Make the Session Rail zero state honest and explicit. Commit
+      `d9688490ad` replaces `0 sessions · caught up` with `No sessions yet`,
+      labels the ambiguous `+ New` action `New Terminal`, and changes the
+      project-centric `Start a workspace` frame to `Start working`. A model
+      assertion covers empty, search, singular/plural attention, and genuine
+      caught-up copy. Formatting, diff, identity, CLI build/help, and the full
+      `zed --bin dez` source check pass. The focused sidebar test target is not
+      claimed because its separate WebRTC graph exceeded safe local storage
+      headroom. Consolidated rebuild and rendered proof remain open.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
