@@ -5979,12 +5979,35 @@ mod tests {
         });
         cx.run_until_parked();
 
-        let active_paths =
-            multi_workspace.read_with(cx, |mw, cx| mw.workspace().read(cx).root_paths(cx));
+        let (active_paths, database_id, app_session, viewport_id) =
+            multi_workspace.update_in(cx, |mw, window, cx| {
+                let workspace = mw.workspace().read(cx);
+                (
+                    workspace.root_paths(cx),
+                    workspace.database_id(),
+                    workspace.app_state().session.clone(),
+                    window.window_handle().window_id().as_u64(),
+                )
+            });
         assert!(
             active_paths.is_empty(),
             "After removing the only remaining group, should have an empty workspace"
         );
+        let database_id = database_id.expect("the fallback workspace should be durable");
+        let database_id = i64::from(database_id);
+        app_session.read_with(cx, |session, _cx| {
+            assert!(
+                session
+                    .durable_workspace_memberships()
+                    .any(|membership| membership.workspace_id == database_id),
+                "the fallback workspace should remain an App Session member"
+            );
+            assert_eq!(
+                session.active_durable_workspace(viewport_id),
+                Some(database_id),
+                "the fallback workspace should own the active durable viewport"
+            );
+        });
     }
 
     /// Regression test for a crash where `find_or_create_local_workspace`

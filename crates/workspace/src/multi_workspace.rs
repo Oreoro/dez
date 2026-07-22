@@ -1273,6 +1273,33 @@ impl MultiWorkspace {
         })
     }
 
+    fn create_durable_empty_local_workspace(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Task<Result<Entity<Workspace>>> {
+        let app_state = self.workspace().read(cx).app_state().clone();
+        let db = crate::persistence::WorkspaceDb::global(cx);
+
+        cx.spawn_in(window, async move |this, cx| {
+            let workspace_id = db.next_id().await?;
+            let workspace = this.update_in(cx, |_this, window, cx| {
+                let project = Project::local(
+                    app_state.client.clone(),
+                    app_state.node_runtime.clone(),
+                    app_state.user_store.clone(),
+                    app_state.languages.clone(),
+                    app_state.fs.clone(),
+                    None,
+                    project::LocalProjectFlags::default(),
+                    cx,
+                );
+                cx.new(|cx| Workspace::new(Some(workspace_id), project, app_state, window, cx))
+            })?;
+            Ok(workspace)
+        })
+    }
+
     pub fn close_workspace(
         &mut self,
         workspace: &Entity<Workspace>,
@@ -1354,20 +1381,7 @@ impl MultiWorkspace {
                     );
                 }
 
-                let app_state = this.workspace().read(cx).app_state().clone();
-                let project = Project::local(
-                    app_state.client.clone(),
-                    app_state.node_runtime.clone(),
-                    app_state.user_store.clone(),
-                    app_state.languages.clone(),
-                    app_state.fs.clone(),
-                    None,
-                    project::LocalProjectFlags::default(),
-                    cx,
-                );
-                let new_workspace =
-                    cx.new(|cx| Workspace::new(None, project, app_state, window, cx));
-                Task::ready(Ok(new_workspace))
+                this.create_durable_empty_local_workspace(window, cx)
             },
             window,
             cx,
@@ -1418,21 +1432,10 @@ impl MultiWorkspace {
                     );
                 }
 
-                // No other project groups remain — create an empty workspace.
-                let app_state = this.workspace().read(cx).app_state().clone();
-                let project = Project::local(
-                    app_state.client.clone(),
-                    app_state.node_runtime.clone(),
-                    app_state.user_store.clone(),
-                    app_state.languages.clone(),
-                    app_state.fs.clone(),
-                    None,
-                    project::LocalProjectFlags::default(),
-                    cx,
-                );
-                let new_workspace =
-                    cx.new(|cx| Workspace::new(None, project, app_state, window, cx));
-                Task::ready(Ok(new_workspace))
+                // No other project groups remain. Keep the replacement empty,
+                // but give it a durable identity so App Session restoration can
+                // recover the viewport instead of treating it as throwaway UI.
+                this.create_durable_empty_local_workspace(window, cx)
             },
             window,
             cx,
