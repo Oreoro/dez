@@ -1984,6 +1984,53 @@ impl Terminal {
         cx.emit(Event::Wakeup);
     }
 
+    fn resize_replay_grid(&mut self, dimensions: session_host::TerminalDimensions) {
+        let current = self.last_content.terminal_bounds;
+        let columns = usize::from(dimensions.columns.max(1));
+        let rows = usize::from(dimensions.rows.max(1));
+        if current.num_columns() == columns && current.num_lines() == rows {
+            return;
+        }
+
+        let replay_bounds = TerminalBounds::new(
+            current.line_height,
+            current.cell_width,
+            Bounds {
+                origin: current.bounds.origin,
+                size: Size {
+                    width: current.cell_width * columns as f32,
+                    height: current.line_height * rows as f32,
+                },
+            },
+        );
+        self.last_content.terminal_bounds = replay_bounds;
+        resize(&mut self.term.lock(), replay_bounds);
+    }
+
+    /// Rebuilds Host output under the PTY dimensions that produced it.
+    ///
+    /// Cursor-positioning escape sequences depend on terminal width. Applying
+    /// retained bytes to an arbitrary default grid corrupts prompts and
+    /// full-screen output after restart, so replay dimensions are part of the
+    /// durable Host truth rather than a presentation detail.
+    pub fn write_hosted_replay(
+        &mut self,
+        chunk: &session_host::TerminalReplayChunk,
+        cx: &mut Context<Self>,
+    ) {
+        self.resize_replay_grid(chunk.dimensions);
+        self.write_output(&chunk.bytes, cx);
+    }
+
+    pub fn finish_hosted_replay(
+        &mut self,
+        dimensions: session_host::TerminalDimensions,
+        cx: &mut Context<Self>,
+    ) {
+        self.resize_replay_grid(dimensions);
+        cx.emit(Event::Wakeup);
+    }
+
     pub fn total_lines(&self) -> usize {
         total_lines(&self.term.lock_unfair())
     }
@@ -3638,6 +3685,32 @@ mod tests {
             terminal.write_output(marker.as_bytes(), cx);
         });
         assert!(startup_rx.try_recv().is_ok());
+    }
+
+    #[gpui::test]
+    async fn hosted_replay_applies_recorded_terminal_dimensions(cx: &mut TestAppContext) {
+        let terminal = cx.new(|cx| {
+            TerminalBuilder::new_display_only(
+                SettingsCursorShape::default(),
+                AlternateScroll::On,
+                None,
+                0,
+                cx.background_executor(),
+                PathStyle::local(),
+            )
+            .subscribe(cx)
+        });
+        let chunk = session_host::TerminalReplayChunk {
+            sequence: 1,
+            bytes: b"dimension-aware replay".to_vec(),
+            dimensions: session_host::TerminalDimensions::new(132, 41),
+        };
+
+        terminal.update(cx, |terminal, cx| {
+            terminal.write_hosted_replay(&chunk, cx);
+            assert_eq!(terminal.last_content.terminal_bounds.num_columns(), 132);
+            assert_eq!(terminal.last_content.terminal_bounds.num_lines(), 41);
+        });
     }
 
     #[test]

@@ -22,7 +22,39 @@ pub use local::{AttachedLocalTerminal, LocalTerminalHost};
 pub use pty_process::{TerminalHostPtyEvent, TerminalHostPtyHandle};
 
 /// First version of the terminal host protocol understood by this client.
-pub const TERMINAL_SESSION_PROTOCOL_VERSION: u32 = 3;
+pub const TERMINAL_SESSION_PROTOCOL_VERSION: u32 = 4;
+
+/// Cell dimensions under which a Host produced terminal output.
+///
+/// Terminal byte streams may contain cursor positioning derived from the PTY
+/// size. Retaining dimensions with replay is therefore required to rebuild the
+/// same screen after a GUI restart instead of applying wide-screen output to a
+/// default 80x24 grid.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TerminalDimensions {
+    pub columns: u16,
+    pub rows: u16,
+}
+
+impl TerminalDimensions {
+    pub const DEFAULT: Self = Self {
+        columns: 80,
+        rows: 24,
+    };
+
+    pub const fn new(columns: u16, rows: u16) -> Self {
+        Self {
+            columns: if columns == 0 { 1 } else { columns },
+            rows: if rows == 0 { 1 } else { rows },
+        }
+    }
+}
+
+impl Default for TerminalDimensions {
+    fn default() -> Self {
+        Self::DEFAULT
+    }
+}
 
 /// Features implemented by both sides of one authenticated Host connection.
 ///
@@ -382,6 +414,8 @@ pub struct TerminalSessionSnapshot {
     pub process_id: Option<u32>,
     #[serde(default)]
     pub agent: Option<TerminalAgentSnapshot>,
+    #[serde(default)]
+    pub dimensions: TerminalDimensions,
     pub earliest_replay_sequence: u64,
     pub latest_replay_sequence: u64,
 }

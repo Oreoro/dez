@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use super::{
     TERMINAL_SESSION_PROTOCOL_VERSION, TerminalAgentEvent, TerminalAgentSnapshot,
-    TerminalAgentState, TerminalAgentUpdate, TerminalHostId, TerminalSessionId,
+    TerminalAgentState, TerminalAgentUpdate, TerminalDimensions, TerminalHostId, TerminalSessionId,
     TerminalSessionSnapshot, TerminalSessionState,
 };
 
@@ -16,6 +16,8 @@ const MAX_AGENT_EVENTS: usize = 32;
 pub struct TerminalReplayChunk {
     pub sequence: u64,
     pub bytes: Vec<u8>,
+    #[serde(default)]
+    pub dimensions: TerminalDimensions,
 }
 
 /// Result of resolving a client attachment against the host's current truth.
@@ -70,10 +72,20 @@ impl InProcessTerminalHost {
         session_id: TerminalSessionId,
         working_directory: Option<std::path::PathBuf>,
     ) -> Result<TerminalSessionSnapshot, TerminalHostError> {
+        self.create_with_dimensions(session_id, working_directory, TerminalDimensions::DEFAULT)
+    }
+
+    pub fn create_with_dimensions(
+        &mut self,
+        session_id: TerminalSessionId,
+        working_directory: Option<std::path::PathBuf>,
+        dimensions: TerminalDimensions,
+    ) -> Result<TerminalSessionSnapshot, TerminalHostError> {
         if self.sessions.contains_key(&session_id) {
             return Err(TerminalHostError::AlreadyExists(session_id));
         }
 
+        let dimensions = TerminalDimensions::new(dimensions.columns, dimensions.rows);
         let snapshot = TerminalSessionSnapshot {
             protocol_version: TERMINAL_SESSION_PROTOCOL_VERSION,
             host_id: self.host_id,
@@ -83,6 +95,7 @@ impl InProcessTerminalHost {
             working_directory,
             process_id: None,
             agent: None,
+            dimensions,
             earliest_replay_sequence: 0,
             latest_replay_sequence: 0,
         };
@@ -112,6 +125,19 @@ impl InProcessTerminalHost {
             .get(&session_id)
             .map(|session| session.snapshot.clone())
             .unwrap_or_else(|| self.missing_snapshot(session_id))
+    }
+
+    pub fn set_dimensions(
+        &mut self,
+        session_id: TerminalSessionId,
+        dimensions: TerminalDimensions,
+    ) -> TerminalSessionSnapshot {
+        if let Some(session) = self.sessions.get_mut(&session_id) {
+            session.snapshot.dimensions =
+                TerminalDimensions::new(dimensions.columns, dimensions.rows);
+            return session.snapshot.clone();
+        }
+        self.missing_snapshot(session_id)
     }
 
     pub fn attach(
@@ -335,7 +361,11 @@ impl InProcessTerminalHost {
         }
 
         let sequence = session.snapshot.latest_replay_sequence.saturating_add(1);
-        let chunk = TerminalReplayChunk { sequence, bytes };
+        let chunk = TerminalReplayChunk {
+            sequence,
+            bytes,
+            dimensions: session.snapshot.dimensions,
+        };
         session.replay_bytes = session.replay_bytes.saturating_add(chunk.bytes.len());
         session.replay.push_back(chunk.clone());
         session.snapshot.latest_replay_sequence = sequence;
@@ -364,6 +394,7 @@ impl InProcessTerminalHost {
             working_directory: None,
             process_id: None,
             agent: None,
+            dimensions: TerminalDimensions::DEFAULT,
             earliest_replay_sequence: 0,
             latest_replay_sequence: 0,
         }
@@ -493,6 +524,32 @@ mod tests {
         assert_eq!(attachment.replay[0].bytes, b"def");
         assert_eq!(attachment.snapshot.earliest_replay_sequence, 2);
         assert_eq!(attachment.snapshot.latest_replay_sequence, 2);
+        Ok(())
+    }
+
+    #[test]
+    fn replay_retains_the_dimensions_for_each_output_fragment() -> Result<(), TerminalHostError> {
+        let mut host = host(1024);
+        let session_id = TerminalSessionId::new();
+        host.create_with_dimensions(session_id, None, TerminalDimensions::new(80, 24))?;
+        host.record_output(session_id, b"before resize".to_vec())?;
+        host.set_dimensions(session_id, TerminalDimensions::new(132, 41));
+        host.record_output(session_id, b"after resize".to_vec())?;
+
+        let attachment = host.attach(session_id, TERMINAL_SESSION_PROTOCOL_VERSION, Some(0));
+        assert_eq!(attachment.replay.len(), 2);
+        assert_eq!(
+            attachment.replay[0].dimensions,
+            TerminalDimensions::new(80, 24)
+        );
+        assert_eq!(
+            attachment.replay[1].dimensions,
+            TerminalDimensions::new(132, 41)
+        );
+        assert_eq!(
+            attachment.snapshot.dimensions,
+            TerminalDimensions::new(132, 41)
+        );
         Ok(())
     }
 

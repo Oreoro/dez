@@ -802,6 +802,7 @@ impl TerminalHostConnection {
 
                 let replay_was_truncated = attachment.replay_was_truncated;
                 let state = attachment.snapshot.state;
+                let dimensions = attachment.snapshot.dimensions;
                 let snapshot_latest_sequence = attachment.snapshot.latest_replay_sequence;
                 let replay = attachment.replay;
                 terminal.update(cx, |terminal, cx| {
@@ -813,8 +814,9 @@ impl TerminalHostConnection {
                     }
                     for chunk in replay {
                         latest_sequence = latest_sequence.max(chunk.sequence);
-                        terminal.write_output(&chunk.bytes, cx);
+                        terminal.write_hosted_replay(&chunk, cx);
                     }
+                    terminal.finish_hosted_replay(dimensions, cx);
                     match state {
                         super::TerminalSessionState::Exited { exit_code } => {
                             terminal.hosted_process_exited(exit_code, cx);

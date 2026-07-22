@@ -10,9 +10,10 @@ use clap::{Parser, Subcommand};
 use net::async_net::{UnixListener, UnixStream};
 use terminal::session_host::{
     InProcessTerminalHost, TERMINAL_SESSION_PROTOCOL_VERSION, TerminalAgentEventKind,
-    TerminalAgentState, TerminalAgentUpdate, TerminalHostCapabilities, TerminalHostEventEnvelope,
-    TerminalHostId, TerminalHostPtyEvent, TerminalHostPtyHandle, TerminalSessionCommand,
-    TerminalSessionEvent, TerminalSessionId, TerminalSessionSnapshot, TerminalSessionState,
+    TerminalAgentState, TerminalAgentUpdate, TerminalDimensions, TerminalHostCapabilities,
+    TerminalHostEventEnvelope, TerminalHostId, TerminalHostPtyEvent, TerminalHostPtyHandle,
+    TerminalSessionCommand, TerminalSessionEvent, TerminalSessionId, TerminalSessionSnapshot,
+    TerminalSessionState,
     transport::{
         TERMINAL_HOST_ID_ENV, TERMINAL_HOST_SOCKET_ENV, TERMINAL_HOST_TOKEN_FILE_ENV,
         TERMINAL_SESSION_ID_ENV, TerminalHostAuthToken, TerminalHostClientMessage,
@@ -937,10 +938,11 @@ impl TerminalHostService {
         columns: u16,
         rows: u16,
     ) -> TerminalHostResponse {
-        if let Err(error) = self
-            .lock_model()
-            .create(session_id, working_directory.clone())
-        {
+        if let Err(error) = self.lock_model().create_with_dimensions(
+            session_id,
+            working_directory.clone(),
+            TerminalDimensions::new(columns, rows),
+        ) {
             return TerminalHostResponse::Error {
                 message: error.to_string(),
             };
@@ -1007,7 +1009,9 @@ impl TerminalHostService {
             };
         }
         TerminalHostResponse::Snapshot {
-            snapshot: self.lock_model().snapshot(session_id),
+            snapshot: self
+                .lock_model()
+                .set_dimensions(session_id, TerminalDimensions::new(columns, rows)),
         }
     }
 
@@ -1236,7 +1240,39 @@ mod tests {
                 rows: 24,
             },
         );
-        assert!(matches!(created, TerminalHostResponse::Snapshot { .. }));
+        assert!(matches!(
+            created,
+            TerminalHostResponse::Snapshot {
+                snapshot: terminal::session_host::TerminalSessionSnapshot {
+                    dimensions: TerminalDimensions {
+                        columns: 80,
+                        rows: 24,
+                    },
+                    ..
+                }
+            }
+        ));
+
+        let resized = handle_command(
+            &mut host,
+            TerminalSessionCommand::Resize {
+                session_id,
+                columns: 132,
+                rows: 41,
+            },
+        );
+        assert!(matches!(
+            resized,
+            TerminalHostResponse::Snapshot {
+                snapshot: terminal::session_host::TerminalSessionSnapshot {
+                    dimensions: TerminalDimensions {
+                        columns: 132,
+                        rows: 41,
+                    },
+                    ..
+                }
+            }
+        ));
 
         let detached = handle_command(&mut host, TerminalSessionCommand::Detach { session_id });
         assert!(matches!(
