@@ -176,6 +176,14 @@ and keeps the Git group bounded to the row width. Formatting and diff checks
 pass. The change is source-only until the consolidated build and narrow-width
 render audit complete.
 
+The same footer rendered Command Search in a dedicated row immediately above a
+second icon utility bar. Commit `abc4f8bedb` removes that stacked Dez-only
+chrome, keeps Command Search as an accessible icon in the existing utility bar,
+suppresses the unowned upstream update surface, and renders the Canvas prefix
+indicator row only while prefix mode is active. Official Zed retains its prior
+workspace-bar behavior. Formatting and diff checks pass; build and render proof
+remain open.
+
 The audited `Dez Dev.app` is now registered and launched as launchd child PID
 `57957`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 The desktop is currently locked, and the approved accessibility controller
@@ -224,6 +232,10 @@ that scenario still requires the unlocked UI and a graceful application quit.
       identity and Git controls explicit shrink/overflow contracts so their
       one-line labels can truncate instead of colliding. Formatting and diff
       checks pass; compile and rendered narrow-width proof remain open.
+- [ ] Consolidated footer-utility regression: commit `abc4f8bedb` removes the
+      dedicated Dez Command Search row while preserving the action, accessible
+      tooltip, and on-demand prefix indicator. Formatting and diff checks pass;
+      compile and rendered proof remain open.
 - [x] `cargo clippy -p dez_terminal_host --all-targets -- -D warnings` with the
       recorded storage-constrained dev profile
 - [ ] App-facing modified-crate `cargo clippy` (the full app graph exceeds the
@@ -257,7 +269,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `0d8496969f` or
+visual evidence: the exact bundle must first be rebuilt from `abc4f8bedb` or
 later, including the rail, launch-surface, and local-first corrections, and
 re-audited.
 
@@ -267,6 +279,7 @@ Public Developer ID signing and Apple notarization require Dez publisher
 credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
-running but predates `79f69b273c`, `4829f6b052`, and `0d8496969f`; a
+running but predates `79f69b273c`, `4829f6b052`, `0d8496969f`, and
+`abc4f8bedb`; a
 rebuild/re-audit and an unlocked desktop are both prerequisites for the visual,
 interaction, accessibility, and GUI-driven hosted-PTY recovery matrix.

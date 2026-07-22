@@ -642,6 +642,12 @@ code, all launch gates pass, and known limitations are documented.
       allowing their existing one-line truncation and tooltips to work without
       colliding in the fixed-height row. Formatting and diff checks pass;
       compile, rebuild, and rendered proof remain open.
+- [x] 2026-07-23: Consolidate the lower utility chrome. Commit `abc4f8bedb`
+      removes the standalone Dez Command Search row, preserves the action and
+      accessible tooltip in the existing icon bar, suppresses the unowned
+      upstream update surface, and keeps the Canvas prefix row on demand.
+      Official Zed behavior is unchanged. Formatting and diff checks pass;
+      compile, rebuild, and rendered proof remain open.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
