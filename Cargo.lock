@@ -5211,9 +5211,12 @@ name = "dez_terminal_host"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "async-channel 2.5.0",
  "clap",
  "futures-lite 1.13.0",
  "net",
+ "serde",
+ "serde_json",
  "smol",
  "terminal",
 ]
@@ -12339,6 +12342,7 @@ dependencies = [
  "gpui",
  "menu",
  "notifications",
+ "paths",
  "picker",
  "project",
  "schemars 1.0.4",
@@ -16758,6 +16762,7 @@ version = "0.1.0"
 dependencies = [
  "db",
  "gpui",
+ "serde",
  "serde_json",
  "util",
  "uuid",
@@ -18944,6 +18949,7 @@ dependencies = [
  "icons",
  "livekit_client",
  "notifications",
+ "paths",
  "platform_title_bar",
  "project",
  "recent_projects",

@@ -1069,19 +1069,20 @@ impl Pane {
                     ),
             )
             .child(
-                Button::new((id, "return-to-editor"), "Return to Editor")
-                    .full_width()
-                    .tab_index(0isize)
-                    .style(ButtonStyle::Filled)
-                    .start_icon(Icon::new(IconName::ArrowLeft))
-                    .key_binding(key_binding)
-                    .on_click(move |_, window, cx| match pane_kind {
-                        PaneKind::Project => {
-                            window.dispatch_action(Box::new(ToggleProjectPane), cx)
-                        }
-                        PaneKind::Agent => window.dispatch_action(Box::new(ToggleAgentPane), cx),
-                        PaneKind::Tabs => {}
-                    }),
+                Button::new(
+                    (gpui::ElementId::from(id), "return-to-editor"),
+                    "Return to Editor",
+                )
+                .full_width()
+                .tab_index(0isize)
+                .style(ButtonStyle::Filled)
+                .start_icon(Icon::new(IconName::ArrowLeft))
+                .key_binding(key_binding)
+                .on_click(move |_, window, cx| match pane_kind {
+                    PaneKind::Project => window.dispatch_action(Box::new(ToggleProjectPane), cx),
+                    PaneKind::Agent => window.dispatch_action(Box::new(ToggleAgentPane), cx),
+                    PaneKind::Tabs => {}
+                }),
             )
             .into_any_element()
     }
@@ -5359,7 +5360,7 @@ impl Render for Pane {
         let display_tab_bar = should_display_tab_bar(window, cx)
             && !(auto_hide_single_tab_bar && self.items_len() <= 1);
         let Some(project) = self.project.upgrade() else {
-            return div().track_focus(&self.focus_handle(cx));
+            return div().track_focus(&self.focus_handle(cx)).into_any_element();
         };
         let is_local = project.read(cx).is_local();
 
@@ -5698,6 +5699,7 @@ impl Render for Pane {
                     }
                 }),
             )
+            .into_any_element()
     }
 }
 

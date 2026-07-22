@@ -727,7 +727,7 @@ impl RenderOnce for ThreadItem {
                                     this.child(
                                         h_flex()
                                             .min_w_0()
-                                            .flex_shrink()
+                                            .flex_shrink_1()
                                             .max_w(px(168.0))
                                             .overflow_hidden()
                                             .px_1()
@@ -818,7 +818,7 @@ impl RenderOnce for ThreadItem {
 
                                     h_flex()
                                         .min_w_0()
-                                        .flex_shrink()
+                                        .flex_shrink_1()
                                         .gap_0p5()
                                         .child(
                                             Icon::new(chip_icon)

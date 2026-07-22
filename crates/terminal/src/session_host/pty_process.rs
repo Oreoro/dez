@@ -14,6 +14,10 @@ use alacritty_terminal::{
 use polling::{Event, Events, PollMode, Poller};
 
 const PTY_READ_BUFFER_BYTES: usize = 64 * 1024;
+// `EventedPty` assigns these fixed polling keys during registration, but the
+// current Alacritty revision no longer exports their names to consumers.
+const PTY_READ_WRITE_TOKEN: usize = 0;
+const PTY_CHILD_EVENT_TOKEN: usize = 1;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TerminalHostPtyEvent {
@@ -126,7 +130,7 @@ fn run_pty(
 ) {
     let mut pending_input = VecDeque::<(Vec<u8>, usize)>::new();
     let mut read_buffer = vec![0; PTY_READ_BUFFER_BYTES];
-    let mut interest = Event::readable(tty::PTY_READ_WRITE_TOKEN);
+    let mut interest = Event::readable(PTY_READ_WRITE_TOKEN);
     if let Err(error) = unsafe { pty.register(&poller, interest, PollMode::Level) } {
         event_handler(TerminalHostPtyEvent::Failed(error.to_string()));
         return;
@@ -175,7 +179,7 @@ fn run_pty(
 
         for event in events.iter() {
             match event.key {
-                tty::PTY_CHILD_EVENT_TOKEN => {
+                PTY_CHILD_EVENT_TOKEN => {
                     if let Some(ChildEvent::Exited(exit_status)) = pty.next_child_event() {
                         if let Err(error) =
                             drain_pty_output(&mut pty, &mut read_buffer, &event_handler)
@@ -189,7 +193,7 @@ fn run_pty(
                         break 'host;
                     }
                 }
-                tty::PTY_READ_WRITE_TOKEN => {
+                PTY_READ_WRITE_TOKEN => {
                     if event.is_interrupt() {
                         continue;
                     }

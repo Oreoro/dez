@@ -1,7 +1,10 @@
 use std::{fmt, io, path::Path};
 
 use futures_lite::io::{AsyncRead, AsyncReadExt as _, AsyncWrite, AsyncWriteExt as _};
-use gpui::{App, AppContext as _, BackgroundExecutor, Entity, Global, Task, WeakEntity};
+use gpui::{
+    App, AppContext as _, BackgroundExecutor, BorrowAppContext as _, Entity, Global, Task,
+    WeakEntity,
+};
 use net::async_net::UnixStream;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use thiserror::Error;

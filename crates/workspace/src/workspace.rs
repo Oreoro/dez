@@ -10123,7 +10123,6 @@ impl Workspace {
     ) -> Entity<Pane> {
         self.center
             .find_pane_in_direction(origin, SplitDirection::Right, cx)
-            .cloned()
             .unwrap_or_else(|| self.split_pane(origin.clone(), SplitDirection::Right, window, cx))
     }
 

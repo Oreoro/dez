@@ -22,7 +22,7 @@ use zed_actions::sidebar::ToggleThreadSwitcher;
 
 use crate::workspace_settings::SidebarSettings;
 use settings::{CanvasSide, SidebarDockPosition};
-use ui::{ContextMenu, Tooltip, right_click_menu};
+use ui::{ContextMenu, TintColor, Tooltip, right_click_menu};
 
 const SIDEBAR_RESIZE_HANDLE_SIZE: Pixels = px(6.0);
 #[cfg(target_os = "macos")]
