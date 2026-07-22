@@ -8,6 +8,7 @@ target_dir="release"
 open_result=false
 local_install=false
 can_code_sign=false
+debug_build=false
 
 # Release signing must be supplied by the Dez publisher. Never fall back to an
 # upstream Zed signing identity for a fork artifact.
@@ -20,7 +21,7 @@ Usage: ${0##*/} [options] [architecture=host]
 Build the application bundle for macOS.
 
 Options:
-  -d    Compile in debug mode
+  -d    Create a debug bundle (reuses complete host debug binaries when present)
   -o    Open dir with the resulting DMG or launch the app itself in local mode.
   -i    Install the resulting DMG into /Applications.
   -h    Display this help and exit.
@@ -36,6 +37,7 @@ do
             export CARGO_BUNDLE_SKIP_BUILD=true
             build_flag="";
             target_dir="debug"
+            debug_build=true
             ;;
         i) local_install=true;;
         h)
@@ -67,7 +69,8 @@ export CXXFLAGS="-stdlib=libc++"
 version_info=$(rustc --version --verbose)
 host_line=$(echo "$version_info" | grep host)
 target_triple=${host_line#*: }
-if [[ $# -gt 0 && -n "$1" ]]; then
+requested_target="${1:-}"
+if [[ -n "$requested_target" ]]; then
     target_triple="$1"
 fi
 arch_suffix=""
@@ -81,16 +84,37 @@ else
     exit 1
 fi
 
-# Generate the licenses first, so they can be baked into the binaries
-script/generate-licenses
+cargo_target_arg="--target $target_triple"
+artifact_dir="target/${target_triple}/${target_dir}"
+if [[ "$debug_build" = true && -z "$requested_target" ]]; then
+    # Reuse the consolidated host build for a local debug bundle instead of
+    # materializing the same graph again under target/<host>/debug.
+    cargo_target_arg=""
+    artifact_dir="target/debug"
+fi
+
+reuse_debug_artifacts=false
+if [[ "$debug_build" = true && -x "${artifact_dir}/dez" && -x "${artifact_dir}/cli" && -x "${artifact_dir}/dez-terminal-host" ]]; then
+    reuse_debug_artifacts=true
+else
+    # Generate the licenses first, so they can be baked into newly compiled
+    # binaries. A reused debug artifact already contains its generated copy.
+    script/generate-licenses
+fi
 
 rustup target add $target_triple
 
-echo "Compiling Dez binaries"
-cargo build ${build_flag} --package zed --package cli --package dez_terminal_host --target $target_triple
-# Build remote_server in separate invocation to prevent feature unification from other crates
-# from influencing dynamic libraries required by it.
-cargo build ${build_flag} --package remote_server --target $target_triple
+echo "Preparing Dez binaries"
+if [[ "$reuse_debug_artifacts" = true ]]; then
+    echo "Reusing existing debug binaries from ${artifact_dir}"
+else
+    cargo build ${build_flag} --package zed --package cli --package dez_terminal_host ${cargo_target_arg}
+fi
+if [[ "$debug_build" = false ]]; then
+    # Build remote_server separately so feature unification from the app does
+    # not influence its required dynamic libraries.
+    cargo build ${build_flag} --package remote_server ${cargo_target_arg}
+fi
 
 echo "Creating application bundle"
 pushd crates/zed
@@ -100,8 +124,13 @@ sed \
     "s/package.metadata.bundle-${channel}/package.metadata.bundle/" \
     Cargo.toml
 
-app_path=$(cargo bundle ${build_flag} --target $target_triple --select-workspace-root | xargs)
-
+# cargo-bundle's legacy term backend returns an error when TERM names a
+# terminal whose colour capability cannot be resolved (including some CI and
+# Codex PTYs). Unsetting TERM makes its existing plain-output fallback reliable.
+if ! app_path=$(env -u TERM cargo bundle ${build_flag} ${cargo_target_arg} --select-workspace-root | xargs); then
+    mv Cargo.toml.backup Cargo.toml
+    exit 1
+fi
 mv Cargo.toml.backup Cargo.toml
 popd
 echo "Bundled ${app_path}"
@@ -330,10 +359,12 @@ function upload_debug_symbols() {
 
 upload_debug_symbols
 
-cp target/${target_triple}/${target_dir}/dez "${app_path}/Contents/MacOS/dez"
-cp target/${target_triple}/${target_dir}/cli "${app_path}/Contents/MacOS/cli"
-cp target/${target_triple}/${target_dir}/dez-terminal-host "${app_path}/Contents/MacOS/dez-terminal-host"
+cp "${artifact_dir}/dez" "${app_path}/Contents/MacOS/dez"
+cp "${artifact_dir}/cli" "${app_path}/Contents/MacOS/cli"
+cp "${artifact_dir}/dez-terminal-host" "${app_path}/Contents/MacOS/dez-terminal-host"
 sign_app_binaries
 
-sign_binary "target/$target_triple/release/remote_server"
-gzip -f --stdout --best target/$target_triple/release/remote_server > target/zed-remote-server-macos-$arch_suffix.gz
+if [[ "$debug_build" = false ]]; then
+    sign_binary "${artifact_dir}/remote_server"
+    gzip -f --stdout --best "${artifact_dir}/remote_server" > target/zed-remote-server-macos-$arch_suffix.gz
+fi

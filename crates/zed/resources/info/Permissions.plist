@@ -1,24 +1,24 @@
 <key>NSSystemAdministrationUsageDescription</key>
-<string>The operation being performed by a program in Dez requires elevated permission.</string>
+<string>A developer tool launched from Dez requested administrator privileges.</string>
 <key>NSAppleEventsUsageDescription</key>
-<string>An application in Dez wants to use AppleScript.</string>
+<string>Dez or a developer tool you launched wants to automate another app with Apple events.</string>
 <key>NSBluetoothAlwaysUsageDescription</key>
-<string>An application in Dez wants to use Bluetooth.</string>
+<string>A developer tool you launched from Dez wants to connect to a Bluetooth device.</string>
 <key>NSCalendarsUsageDescription</key>
-<string>An application in Dez wants to use Calendar data.</string>
+<string>A developer tool you launched from Dez requested access to your calendars.</string>
 <key>NSCameraUsageDescription</key>
-<string>An application in Dez wants to use the camera.</string>
+<string>A developer tool you launched from Dez requested access to the camera.</string>
 <key>NSContactsUsageDescription</key>
-<string>An application in Dez wants to use your contacts.</string>
+<string>A developer tool you launched from Dez requested access to your contacts.</string>
 <key>NSLocationAlwaysUsageDescription</key>
-<string>An application in Dez wants to use your location information, even in the background.</string>
+<string>A developer tool you launched from Dez requested location access in the background.</string>
 <key>NSLocationUsageDescription</key>
-<string>An application in Dez wants to use your location information.</string>
+<string>A developer tool you launched from Dez requested access to your location.</string>
 <key>NSLocationWhenInUseUsageDescription</key>
-<string>An application in Dez wants to use your location information while active.</string>
+<string>A developer tool you launched from Dez requested location access while it is active.</string>
 <key>NSMicrophoneUsageDescription</key>
-<string>An application in Dez wants to use your microphone.</string>
+<string>A developer tool you launched from Dez requested access to the microphone.</string>
 <key>NSSpeechRecognitionUsageDescription</key>
-<string>An application in Dez wants to use speech recognition.</string>
+<string>A developer tool you launched from Dez requested access to speech recognition.</string>
 <key>NSRemindersUsageDescription</key>
-<string>An application in Dez wants to use your reminders.</string>
+<string>A developer tool you launched from Dez requested access to your reminders.</string>
