@@ -563,7 +563,9 @@ chrome; every state is truthful, accessible, and visually coherent.
       runtime proof remains open. Commit `a20074de26` removes the inherited
       Calls/Collaboration settings page and GUI controls for Zed auto-connect
       and collaboration-server configuration while retaining compatibility
-      parsing and the live proxy control.
+      parsing and the live proxy control. Commit `2435348289` also removes the
+      dead Zed Edit Predictions data-collection control from Dez and frames
+      setup around explicit providers.
 - [ ] Ensure opening a file, folder, repository, URL, remote target, recent
       Workspace, or empty Workspace routes into the existing App Session
       without creating an accidental parallel universe.
@@ -1051,3 +1053,9 @@ Notes decision:
   absent. Compatibility keys remain readable and official Zed is unchanged.
   Attention copy no longer names the removed workspace bar. A model test and
   identity guards cover the boundary; no bundle was built or launched.
+- 2026-07-23: Removed upstream prediction-data controls from Dez Settings in
+  `2435348289`. Zed Edit Predictions data collection is absent because the fork
+  disables its Zed/Mercury providers; provider setup now describes explicit
+  providers honestly. Compatibility parsing and official Zed behavior remain.
+  A model test and identity guard cover the boundary; no bundle was built or
+  launched.

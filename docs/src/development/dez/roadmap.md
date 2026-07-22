@@ -840,6 +840,12 @@ code, all launch gates pass, and known limitations are documented.
       longer names the removed workspace bar. A product-boundary model test and
       identity guards pass; compiled Settings UI proof remains in the
       consolidated gate.
+- [x] 2026-07-23: Remove upstream prediction-data controls from Dez. Commit
+      `2435348289` hides Zed Edit Predictions data collection because Dez
+      disables its Zed/Mercury providers, and rewrites provider setup around
+      explicit providers. Compatibility parsing and official Zed behavior are
+      retained. A product-boundary model test and identity guard pass; compiled
+      Settings UI proof remains in the consolidated gate.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
