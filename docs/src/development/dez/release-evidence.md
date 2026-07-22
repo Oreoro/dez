@@ -14,6 +14,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Reachable isolated CLI installer source: `704314cc92`
 - Initial terminal-scope evidence source: `7a20dc1d19`
 - Live background viewport attachment source: `962b611605`
+- Durable empty-fallback Workspace source: `e9a595fcff`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -222,7 +223,7 @@ artifact therefore remains required before the visual matrix can be checked
 complete.
 
 Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
-`7a20dc1d19`, `962b611605`, and `1ebb7c79d4` are newer than that running
+`7a20dc1d19`, `962b611605`, `1ebb7c79d4`, and `e9a595fcff` are newer than that running
 bundle. The first passes all nine focused Session tests, including duplicate viewport
 replacement without reordering or membership loss. The second makes Project
 ready terminal-first, prevents New Window and startup fallback paths from
@@ -254,6 +255,17 @@ durable viewport records without changing active selection. Repeat attachment
 is idempotent and a second viewport does not duplicate global membership. All
 ten focused Session tests and the workspace library compile gate pass; shared
 live entity and consolidated restart proof remain open.
+
+Commit `e9a595fcff` closes a separate empty-Workspace ownership gap. Removing
+the final project group or closing the last project-backed Workspace previously
+constructed its fallback with no database ID, making the visible empty state
+ineligible for durable membership or serialization. Both paths now allocate an
+ID before construction; normal registration makes the replacement a global App
+Session member and activation selects it in the same viewport. The existing
+persistence regression asserts identity, membership, and selection. The
+production `cargo check --locked -p workspace --lib -j1` passes in 5m08s; the
+expanded all-tests metadata check is not claimed because it was stopped at the
+storage safety floor before returning a code result.
 
 The packaged helper also accepted a direct authenticated protocol 4 exercise.
 Host ID `d9670db8-e498-5537-a9d8-f99ad098f4aa` created Session
@@ -303,6 +315,12 @@ that scenario still requires the unlocked UI and a graceful application quit.
       existing clearable query. The model assertion is authored; formatting,
       diff, identity, and a clean focused `sidebar` Cargo check pass. Rendered
       proof remains in the manual gate.
+- [x] Durable empty-fallback production regression: commit `e9a595fcff` gives
+      both final-project replacement paths a database identity before
+      construction. The persistence assertion covers global membership and
+      active viewport selection; formatting, diff, identity, and focused
+      production workspace-library checks pass. Execution of the expanded test
+      remains open under the local storage ceiling.
 - [ ] Restored empty-project launch regression: commit `4829f6b052` makes a
       loaded project render Project ready actions even when an old pane lacks
       the welcome flag. The assertion is authored and formatting passes; the
@@ -350,7 +368,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `1ebb7c79d4` or
+visual evidence: the exact bundle must first be rebuilt from `e9a595fcff` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -360,6 +378,6 @@ credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
 running and contains the corrected shell source through `679cdc28445c`, but
-predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, and `1ebb7c79d4`. A rebuild/re-audit and an unlocked
+predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, and `e9a595fcff`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.

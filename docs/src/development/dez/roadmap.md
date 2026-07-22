@@ -712,6 +712,15 @@ code, all launch gates pass, and known limitations are documented.
       updates selection in place. All ten focused Session tests and the
       workspace library compile gate pass with the low-disk profiles. Shared
       live entity composition and restart proof remain open.
+- [x] 2026-07-23: Keep the empty replacement after final-project removal in the
+      durable App Session. Commit `e9a595fcff` centralizes both close-Workspace
+      and remove-project-group fallbacks behind an allocator-backed constructor.
+      The empty Workspace now has a database ID before construction, enters
+      global membership, and becomes active in the current viewport. The
+      existing persistence regression asserts all three conditions. The
+      production workspace library check passes in 5m08s; its expanded test
+      target is authored but not claimed because the all-tests metadata graph
+      reached the local storage floor before producing a code result.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

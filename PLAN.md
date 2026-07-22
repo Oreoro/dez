@@ -75,7 +75,7 @@ rendered or end-to-end interaction proof.
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | Upstream               | Integrated `upstream/main` `9d0ef37a2571` through two-parent merge `2be63cfea347`; eleven conflicts are resolved and classified; consolidated build provenance is recorded                                                                                                                         | Complete runtime regression, installed coexistence, and design-partner proof                                                     |
 | Identity               | Dez source guards pass; the corrected arm64 app, helper, and `dev.dez.Dez-Dev`/`dez-dev` ad-hoc bundle are audited; the rebuilt raw CLI exposes `--dez <PATH>` and no visible legacy alias; the launched app held no TCP connection or listener during the recorded soak                           | Official-Zed install coexistence, consolidated rebuild, public signing/notarization, updater, remote, and visual proof           |
-| App Session            | Restore barrier, lifecycle state, ordered Workspace registry, explicit ordered viewport records, active selection, unresolved identity retention, and live background-viewport attachment exist in source; all ten focused Session tests pass                                                      | Shared live entity composition and consolidated runtime proof                                                                    |
+| App Session            | Restore barrier, lifecycle state, ordered Workspace registry, explicit ordered viewport records, active selection, unresolved identity retention, live background-viewport attachment, and durable final-project fallback exist in source; all ten focused Session tests pass                      | Shared live entity composition and consolidated runtime proof                                                                    |
 | Workspace and Surfaces | Pane/Canvas repair, panel-to-pane work, startup request ordering, and typed path projection exist                                                                                                                                                                                                  | Authoritative EvidenceSet, scoped tools, movement proof, and shared-store isolation                                              |
 | Local Host             | Protocol 4 app/helper builds and focused tests pass; an authenticated packaged-runtime Session retained one shell PID, 88 replay chunks, both pre/post-resize dimensions, and explicit Detached state                                                                                              | GUI-exit/same-Session reattach proof and default-backend decision                                                                |
 | Terminal recovery      | Host/Session references, attach/detach/terminate, recovery surfaces, honest transport states, and dimension-aware replay exist in source and packaged runtime                                                                                                                                      | Full GUI restart scenario, stale-host cleanup, and rendered UX verification                                                      |
@@ -148,7 +148,10 @@ official Zed.
 - [x] Persist active Workspace selection per viewport independently of which OS
       window is frontmost. Consolidated runtime proof remains open.
 - [x] Preserve empty Workspace membership and explicitly unresolved prior
-      Workspace IDs until user removal. Their recovery UI remains open.
+      Workspace IDs until user removal. Removing the final project or closing
+      the last project-backed Workspace now allocates a database identity for
+      the empty fallback and makes it active in the same durable viewport
+      instead of constructing disposable UI. Their recovery UI remains open.
 - [x] Define explicit ordered viewport records so a Workspace can be presented
       in more than one OS window without duplicating global App Session
       membership. Live entity composition and rendered proof remain open.
@@ -158,8 +161,9 @@ official Zed.
       live entity composition remains open.
 - [ ] Make New Window create another viewport without silently creating a
       separate application universe. Dez no longer inserts an unsolicited
-      blank editor over the terminal-first launch surface, but live viewport
-      registration and runtime proof remain open.
+      blank editor over the terminal-first launch surface. Database-backed new
+      windows register during Workspace construction and MultiWorkspace root
+      registration; shared live composition and runtime proof remain open.
 - [x] Prove durable viewport normalization cannot duplicate, reorder, or
       garbage-collect Workspace membership accidentally. Ten focused Session
       tests cover ordered updates, duplicate viewport replacement, duplicate
@@ -169,8 +173,11 @@ official Zed.
       Live entity composition and consolidated runtime proof remain open.
 - [ ] Add focused persistence and startup-order tests for empty, unresolved,
       reordered, multi-viewport, queued-open, and failed-restore cases. The
-      first four persistence cases now have focused coverage; queued-open and
-      failed-restore ordering remain open.
+      first four persistence cases now have focused coverage, and the existing
+      last-project removal regression now asserts a database ID, global
+      membership, and active viewport ownership. Its expanded test target is
+      authored but not claimed under the current storage ceiling; queued-open
+      and failed-restore ordering remain open.
 
 Acceptance: a mixed set of populated, empty, and unresolved Workspaces returns
 in the same order and selection; later launch requests apply only after
@@ -872,3 +879,13 @@ Notes decision:
   All ten low-disk `session --lib` tests pass, the full workspace library graph
   checks, and formatting, diff, and identity gates pass. Shared live entity and
   consolidated restart proof remain open.
+- 2026-07-23: Made final-project fallback Workspaces durable in `e9a595fcff`.
+  Both close-Workspace and remove-project-group paths now allocate a Workspace
+  database ID before constructing an empty replacement, so construction and
+  activation register the same App Session membership and viewport selection
+  as any populated Workspace. The existing persistence regression now requires
+  that identity, membership, and active selection. The production
+  `cargo check --locked -p workspace --lib -j1` passes in 5m08s; the broader
+  test-metadata check was stopped before a code result when free space fell
+  below 1 GiB. Formatting, diff, and identity gates pass; runtime restoration
+  proof remains open.
