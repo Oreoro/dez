@@ -276,6 +276,10 @@ fn session_search_visible(session_count: usize, has_query: bool) -> bool {
     session_count > 0 || has_query
 }
 
+fn session_overview_visible(show_start_state: bool) -> bool {
+    !show_start_state
+}
+
 fn canvas_thread_item_style(
     thread_item: ThreadItem,
     design_system: &DesignSystemSettings,
@@ -11124,10 +11128,10 @@ impl Sidebar {
                             .size(IconSize::Medium)
                             .color(Color::Accent),
                     )
-                    .child(Label::new("Start working").size(LabelSize::Large))
+                    .child(Label::new("Start a session").size(LabelSize::Large))
                     .child(
                         Label::new(
-                            "Open a terminal or file. Dez derives context from what you open.",
+                            "Open a terminal or workspace. Sessions appear here with their live state.",
                         )
                         .size(LabelSize::Small)
                         .color(Color::Muted),
@@ -11159,6 +11163,7 @@ impl Sidebar {
                                 Button::new("start-new-file", "New File")
                                     .full_width()
                                     .style(ButtonStyle::Outlined)
+                                    .start_icon(Icon::new(IconName::File).size(IconSize::XSmall))
                                     .on_click(|_, window, cx| {
                                         window.dispatch_action(NewFile.boxed_clone(), cx);
                                     }),
@@ -11167,6 +11172,9 @@ impl Sidebar {
                                 Button::new("start-open", "Open…")
                                     .full_width()
                                     .style(ButtonStyle::Outlined)
+                                    .start_icon(
+                                        Icon::new(IconName::FolderOpen).size(IconSize::XSmall),
+                                    )
                                     .on_click(|_, window, cx| {
                                         window.dispatch_action(
                                             Open {
@@ -12232,8 +12240,11 @@ impl Render for Sidebar {
             .border_color(color.border)
             .child(self.render_sidebar_header(window, cx))
             .map(|this| match &self.view {
-                SidebarView::ThreadList => {
-                    this.child(self.render_session_overview(cx)).map(|this| {
+                SidebarView::ThreadList => this
+                    .when(session_overview_visible(show_start_state), |this| {
+                        this.child(self.render_session_overview(cx))
+                    })
+                    .map(|this| {
                         if show_start_state {
                             this.when_some(
                                 self.render_workspace_restore_status(cx),
@@ -12303,8 +12314,7 @@ impl Render for Sidebar {
                                     ),
                             )
                         }
-                    })
-                }
+                    }),
                 SidebarView::Archive(archive_view) => this.child(archive_view.clone()),
             })
             .map(|this| {

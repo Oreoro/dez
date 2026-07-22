@@ -75,9 +75,14 @@ fn session_rail_render_width_matches_reserved_width_for_each_mode() {
 fn zero_session_rail_hides_inert_scope_and_search_controls() {
     assert!(!session_scope_controls_visible(0));
     assert!(!session_search_visible(0, false));
+    assert!(
+        !session_overview_visible(true),
+        "the full start state owns the empty rail's only creation action"
+    );
 
     assert!(session_scope_controls_visible(1));
     assert!(session_search_visible(1, false));
+    assert!(session_overview_visible(false));
     assert!(
         session_search_visible(0, true),
         "an existing query must remain visible so it can be cleared"

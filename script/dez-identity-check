@@ -107,8 +107,11 @@ require_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\("new-session", "New Terminal"\)' \
     'the primary Session Rail creation action is ambiguous'
 require_pattern crates/sidebar/src/sidebar.rs \
-    'Label::new\("Start working"\)' \
+    'Label::new\("Start a session"\)' \
     'the empty Session Rail funnels terminal-native work into a project-first frame'
+require_pattern crates/sidebar/src/sidebar.rs \
+    'session_overview_visible\(show_start_state\)' \
+    'the empty Session Rail can regress to duplicating its creation action'
 require_pattern crates/release_channel/src/lib.rs \
     'ReleaseChannel::Stable => "Dez"' \
     'stable release display name is not Dez'
