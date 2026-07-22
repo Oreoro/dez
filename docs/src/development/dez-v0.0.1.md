@@ -13,6 +13,29 @@ positioning.
 The longer Canvas documents remain useful research and implementation history.
 The Dez documentation set wins when priorities or defaults conflict.
 
+## Current release-candidate status {#current-release-candidate-status}
+
+The exact protocol 4 `Dez Dev.app` is now built, ad-hoc signed, deep-strict
+verified, registered, and launched through its audited bundle path. The
+packaged Host created a real PTY Session with one shell PID, retained 88 bounded
+replay chunks across an 80x24 to 132x41 resize, preserved output markers and
+dimensions on both sides of that resize, and reported explicit Detached state.
+An automated Session Rail regression also proves that an ordinary non-agent
+workspace shell appears as Live, remains unclassified, and is selected when
+active.
+
+The corrected visual, accessibility, and graceful GUI restart/reattach matrix
+is still open because macOS is locked and the approved UI controller cannot
+unlock it automatically. The historical untracked `dist/Superzed.app` remains
+excluded and unopened. Public signing, notarization, installed official-Zed
+coexistence, updater ownership, and design-partner validation also remain open.
+
+See the [v0.0.1 Release Runbook](./dez/v0.0.1-release-runbook.md) for exact
+candidate identity, checksums, recovery semantics, known limitations, and
+rollback guidance. The chronological implementation notes below are retained as
+history; this section and [Release Evidence](./dez/release-evidence.md) describe
+the current candidate.
+
 ## Product promise
 
 Dez helps terminal-native developers supervise coding agents and long-running

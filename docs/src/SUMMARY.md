@@ -235,6 +235,8 @@
     - [Codex Terminal Adapter](./development/dez/codex-adapter.md)
     - [Consolidated Plan Reconciliation](./development/dez/consolidated-plan-reconciliation.md)
     - [Roadmap](./development/dez/roadmap.md)
+    - [Release Evidence](./development/dez/release-evidence.md)
+    - [v0.0.1 Release Runbook](./development/dez/v0.0.1-release-runbook.md)
     - [v0.0.1 Launch Record](./development/dez-v0.0.1.md)
   - [Glossary](./development/glossary.md)
 - [Release Notes](./development/release-notes.md)

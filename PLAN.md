@@ -498,8 +498,9 @@ feels complete for daily work and remains maintainable as a Zed fork.
       startup/memory regressions, and crashes.
 - [ ] Resolve every release blocker or document a narrow honest limitation with
       a safe fallback that does not contradict Fork Notes.
-- [ ] Produce release notes, known limitations, recovery documentation,
-      provenance, checksums, and rollback instructions for v0.0.1.
+- [x] Produce release notes, known limitations, recovery documentation,
+      provenance, checksums, and rollback instructions for v0.0.1 in the
+      operator-facing Release Runbook.
 
 Acceptance: all definition-of-done requirements have direct evidence, the
 activation and hero workflows pass on the intended artifact, and no required
@@ -697,3 +698,8 @@ Notes decision:
   strict verification, uses `dev.dez.Dez-Dev` and `dez-dev`, and is running via
   its exact bundle path. The locked desktop still blocks fresh visual and
   accessibility evidence; `dist/Superzed.app` remains unopened.
+- 2026-07-22: Added the operator-facing v0.0.1 Release Runbook. It consolidates
+  release notes, exact bundle identity and executable checksums, terminal
+  recovery semantics, state-specific safe actions, known limitations,
+  verification rules, rollback, and public-preview promotion gates without
+  upgrading local ad-hoc evidence into a public-release claim.

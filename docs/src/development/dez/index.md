@@ -27,6 +27,10 @@ documents according to their authority, not their age.
    checklist.
 10. [Release Evidence](./release-evidence.md) records direct build, runtime,
     visual, coexistence, and packaging proof for the current release candidate.
+11. [v0.0.1 Release Runbook](./v0.0.1-release-runbook.md) contains release
+    notes, recovery semantics, exact artifact identity and checksums, known
+    limitations, safe verification, rollback, and public-preview promotion
+    gates.
 
 The older Superzed and Canvas documents remain design research and
 implementation history. They do not override this section.
