@@ -1613,7 +1613,24 @@ fn subscribe_for_terminal_events(
     cx: &mut Context<TerminalView>,
 ) -> Vec<Subscription> {
     let terminal_subscription = cx.observe(terminal, |_, _, cx| cx.notify());
-    let mut previous_cwd = None;
+    let (mut previous_cwd, initial_session_id) = {
+        let terminal = terminal.read(cx);
+        (
+            terminal.working_directory(),
+            terminal.session_id().to_string(),
+        )
+    };
+    // Seed scope before the first PTY event so a newly opened terminal can
+    // produce an honest review brief even while it is idle.
+    workspace
+        .update(cx, |workspace, cx| {
+            workspace.set_terminal_working_directory_evidence(
+                initial_session_id,
+                previous_cwd.clone(),
+                cx,
+            );
+        })
+        .ok();
     let terminal_events_subscription = cx.subscribe_in(
         terminal,
         window,
