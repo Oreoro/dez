@@ -3596,6 +3596,7 @@ dependencies = [
  "language",
  "log",
  "menu",
+ "paths",
  "picker",
  "postage",
  "project",

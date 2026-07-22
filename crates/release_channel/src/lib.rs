@@ -225,6 +225,16 @@ impl ReleaseChannel {
         }
     }
 
+    /// Returns the isolated URL scheme for this Dez release channel.
+    pub fn url_scheme(&self) -> &'static str {
+        match self {
+            ReleaseChannel::Dev => "dez-dev",
+            ReleaseChannel::Nightly => "dez-nightly",
+            ReleaseChannel::Preview => "dez-preview",
+            ReleaseChannel::Stable => "dez",
+        }
+    }
+
     /// Returns the query parameter for this [`ReleaseChannel`].
     pub fn release_query_param(&self) -> Option<&'static str> {
         match self {
@@ -278,23 +288,26 @@ mod tests {
     #[test]
     fn test_dez_release_identities() {
         let expected = [
-            (ReleaseChannel::Dev, "Dez Dev", "dev.dez.Dez-Dev"),
+            (ReleaseChannel::Dev, "Dez Dev", "dev.dez.Dez-Dev", "dez-dev"),
             (
                 ReleaseChannel::Nightly,
                 "Dez Nightly",
                 "dev.dez.Dez-Nightly",
+                "dez-nightly",
             ),
             (
                 ReleaseChannel::Preview,
                 "Dez Preview",
                 "dev.dez.Dez-Preview",
+                "dez-preview",
             ),
-            (ReleaseChannel::Stable, "Dez", "dev.dez.Dez"),
+            (ReleaseChannel::Stable, "Dez", "dev.dez.Dez", "dez"),
         ];
 
-        for (channel, display_name, app_id) in expected {
+        for (channel, display_name, app_id, url_scheme) in expected {
             assert_eq!(channel.display_name(), display_name);
             assert_eq!(channel.app_id(), app_id);
+            assert_eq!(channel.url_scheme(), url_scheme);
         }
     }
 

@@ -1,5 +1,5 @@
 use gpui::{AsyncApp, actions};
-use release_channel::{RELEASE_CHANNEL, ReleaseChannel};
+use release_channel::RELEASE_CHANNEL;
 
 actions!(
     cli,
@@ -10,11 +10,6 @@ actions!(
 );
 
 pub async fn register_dez_scheme(cx: &AsyncApp) -> anyhow::Result<()> {
-    let scheme = match *RELEASE_CHANNEL {
-        ReleaseChannel::Dev => "dez-dev",
-        ReleaseChannel::Nightly => "dez-nightly",
-        ReleaseChannel::Preview => "dez-preview",
-        ReleaseChannel::Stable => "dez",
-    };
+    let scheme = RELEASE_CHANNEL.url_scheme();
     cx.update(|cx| cx.register_url_scheme(scheme)).await
 }

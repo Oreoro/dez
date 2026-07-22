@@ -100,6 +100,12 @@ require_multiline_pattern crates/settings_ui/src/page_data.rs \
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'dez_edit_prediction_setting_visible\(\s*paths::APP_NAME' \
     'Dez Settings can regress to exposing upstream edit-prediction data collection'
+require_pattern crates/command_palette/src/command_palette.rs \
+    'humanize_action_name_for_product\(name, paths::APP_NAME\)' \
+    'Dez command surfaces can regress to displaying the internal Zed namespace'
+require_pattern crates/settings_ui/src/settings_ui.rs \
+    'format!\("\{scheme\}://settings/\{path\}"\)' \
+    'Dez Settings can regress to copying upstream Zed URLs'
 require_pattern crates/workspace/src/welcome.rs \
     'APP_NAME == "Zed" && !self.fallback_to_recent_projects' \
     'the Dez welcome surface can route back into upstream onboarding'

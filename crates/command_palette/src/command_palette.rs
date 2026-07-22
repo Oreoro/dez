@@ -891,6 +891,10 @@ impl PickerDelegate for CommandPaletteDelegate {
 }
 
 pub fn humanize_action_name(name: &str) -> String {
+    humanize_action_name_for_product(name, paths::APP_NAME)
+}
+
+fn humanize_action_name_for_product(name: &str, app_name: &str) -> String {
     let chars = name.chars().collect::<Vec<_>>();
     let capacity = name.len() + chars.iter().filter(|c| c.is_uppercase()).count();
     let mut result = String::with_capacity(capacity);
@@ -954,6 +958,10 @@ pub fn humanize_action_name(name: &str) -> String {
         }
     }
 
+    if app_name != "Zed" && result.starts_with("zed: ") {
+        result.replace_range(..3, &app_name.to_ascii_lowercase());
+    }
+
     result
 }
 
@@ -1005,6 +1013,18 @@ mod tests {
         assert_eq!(
             humanize_action_name("editor::OpenURLParser"),
             "editor: open URL parser"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::OpenPerformanceProfiler", "Dez"),
+            "dez: open performance profiler"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::OpenPerformanceProfiler", "Zed"),
+            "zed: open performance profiler"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed_actions::OpenSettings", "Dez"),
+            "zed actions: open settings"
         );
     }
 

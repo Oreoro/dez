@@ -114,9 +114,14 @@ fn developer_page(cx: &App) -> SettingsPage {
     }
 
     items.push(SettingsPageItem::SectionHeader("Instrumentation"));
+    let profiler_description = if paths::APP_NAME == "Zed" {
+        "Collect timing data for foreground and background executor tasks so they can be inspected via `zed: open performance profiler`. May lead to increased memory usage."
+    } else {
+        "Collect timing data for foreground and background executor tasks so they can be inspected via `dez: open performance profiler`. May lead to increased memory usage."
+    };
     items.push(SettingsPageItem::SettingItem(SettingItem {
         title: "Performance Profiler",
-        description: "Collect timing data for foreground and background executor tasks so they can be inspected via `zed: open performance profiler`. May lead to increased memory usage.",
+        description: profiler_description,
         field: Box::new(SettingField {
             organization_override: None,
             json_path: Some("instrumentation.performance_profiler.enabled"),
