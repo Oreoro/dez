@@ -1494,12 +1494,9 @@ pub(crate) async fn restore_or_create_workspace(
 
         if error_count > 0 {
             let message = if error_count == 1 {
-                "Failed to restore 1 workspace. Check logs for details.".to_string()
+                "Couldn't restore 1 workspace.".to_string()
             } else {
-                format!(
-                    "Failed to restore {} workspaces. Check logs for details.",
-                    error_count
-                )
+                format!("Couldn't restore {error_count} workspaces.")
             };
 
             // Try to find an active workspace to show the toast
@@ -1507,17 +1504,14 @@ pub(crate) async fn restore_or_create_workspace(
                 if let Some(window) = cx.active_window()
                     && let Some(multi_workspace) = window.downcast::<MultiWorkspace>()
                 {
-                    multi_workspace
+                    return multi_workspace
                         .update(cx, |multi_workspace, _, cx| {
                             multi_workspace.workspace().update(cx, |workspace, cx| {
-                                workspace.show_toast(
-                                    Toast::new(NotificationId::unique::<()>(), message.clone()),
-                                    cx,
-                                )
+                                workspace
+                                    .show_toast(failed_workspace_restore_toast(message.clone()), cx)
                             });
                         })
-                        .ok();
-                    return true;
+                        .is_ok();
                 }
                 false
             });
@@ -1532,10 +1526,7 @@ pub(crate) async fn restore_or_create_workspace(
                         app_state.clone(),
                         cx,
                         |workspace, _window, cx| {
-                            workspace.show_toast(
-                                Toast::new(NotificationId::unique::<()>(), message),
-                                cx,
-                            );
+                            workspace.show_toast(failed_workspace_restore_toast(message), cx);
                         },
                     )
                 })
@@ -1593,6 +1584,18 @@ pub(crate) async fn restore_or_create_workspace(
     }
 
     Ok(())
+}
+
+struct WorkspaceRestoreErrorToast;
+
+fn failed_workspace_restore_toast(message: String) -> Toast {
+    Toast::new(
+        NotificationId::unique::<WorkspaceRestoreErrorToast>(),
+        message,
+    )
+    .on_click("Open Dez log", |window, cx| {
+        window.dispatch_action(Box::new(workspace::OpenLog), cx);
+    })
 }
 
 async fn restorable_workspaces(
