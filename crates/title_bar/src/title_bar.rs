@@ -606,6 +606,18 @@ pub fn sidebar_button_layout(cx: &App) -> Option<gpui::WindowButtonLayout> {
     SidebarChromeSettings::get_global(cx).button_layout
 }
 
+fn sidebar_project_identity_visible(app_name: &str, enabled_by_settings: bool) -> bool {
+    app_name == "Zed" && enabled_by_settings
+}
+
+fn sidebar_identity_row_visible(
+    project_identity_visible: bool,
+    has_embedded_application_menu: bool,
+    has_restricted_mode: bool,
+) -> bool {
+    project_identity_visible || has_embedded_application_menu || has_restricted_mode
+}
+
 pub struct SidebarChrome {
     platform_titlebar: Entity<PlatformTitleBar>,
     project: Entity<Project>,
@@ -716,11 +728,19 @@ impl Render for SidebarChrome {
                 client::Status::SignedOut | client::Status::AuthenticationError
             );
 
-        let mut render_project_items =
-            sidebar_settings.show_branch_name || sidebar_settings.show_project_items;
+        let mut render_project_items = sidebar_project_identity_visible(
+            paths::APP_NAME,
+            sidebar_settings.show_branch_name || sidebar_settings.show_project_items,
+        );
         let application_menu = self.application_menu.clone();
         let canvas_prefix_indicator = self.render_canvas_prefix_indicator(window, cx);
         let show_workspace_bar = paths::APP_NAME == "Zed" || canvas_prefix_indicator.is_some();
+        let restricted_mode = self.render_restricted_mode(cx);
+        let show_identity_row = sidebar_identity_row_visible(
+            render_project_items,
+            application_menu.is_some() && !show_menus,
+            restricted_mode.is_some(),
+        );
 
         v_flex()
             .w_full()
@@ -740,7 +760,8 @@ impl Render for SidebarChrome {
                 h_flex()
                     .w_full()
                     .min_w_0()
-                    .h_6()
+                    .when(show_identity_row, |this| this.h_6())
+                    .when(!show_identity_row, |this| this.h_0())
                     .gap_1()
                     .overflow_x_hidden()
                     .map(|this| {
@@ -750,7 +771,7 @@ impl Render for SidebarChrome {
                                 || cx.accessible_mode();
                             this.child(menu)
                         })
-                        .children(self.render_restricted_mode(cx))
+                        .children(restricted_mode)
                         .when(render_project_items, |this| {
                             this.child(
                                 h_flex()
@@ -2598,5 +2619,24 @@ impl SidebarChrome {
                 .into()
             })
             .anchor(Anchor::TopRight)
+    }
+}
+
+#[cfg(test)]
+mod dez_sidebar_chrome_tests {
+    use super::{sidebar_identity_row_visible, sidebar_project_identity_visible};
+
+    #[test]
+    fn dez_footer_does_not_duplicate_project_identity() {
+        assert!(!sidebar_project_identity_visible("Dez", true));
+        assert!(sidebar_project_identity_visible("Zed", true));
+        assert!(!sidebar_project_identity_visible("Zed", false));
+    }
+
+    #[test]
+    fn essential_footer_content_keeps_the_identity_row_available() {
+        assert!(!sidebar_identity_row_visible(false, false, false));
+        assert!(sidebar_identity_row_visible(false, true, false));
+        assert!(sidebar_identity_row_visible(false, false, true));
     }
 }
