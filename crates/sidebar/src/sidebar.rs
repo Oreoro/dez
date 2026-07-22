@@ -4431,7 +4431,8 @@ impl Sidebar {
                                 .child(
                                     Label::new("No sessions in this workspace")
                                         .size(LabelSize::XSmall)
-                                        .color(Color::Placeholder),
+                                        .color(Color::Placeholder)
+                                        .truncate(),
                                 ),
                         )
                         .child(
@@ -10932,7 +10933,8 @@ impl Sidebar {
                                     .child(
                                         Label::new(status_label)
                                             .size(LabelSize::XSmall)
-                                            .color(status_color),
+                                            .color(status_color)
+                                            .truncate(),
                                     ),
                             ),
                     )
@@ -11970,6 +11972,8 @@ impl Render for Sidebar {
 
         v_flex()
             .id("workspace-sidebar")
+            .role(gpui::Role::Complementary)
+            .aria_label("Session Rail")
             .key_context(self.dispatch_context(window, cx))
             .track_focus(&self.focus_handle)
             .on_action(cx.listener(Self::select_next))
