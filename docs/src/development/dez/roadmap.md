@@ -622,6 +622,14 @@ code, all launch gates pass, and known limitations are documented.
       diff checks pass. The complete post-fix app and signed bundle now build;
       the focused test and rendered proof remain open, so neither is inferred
       from compilation.
+- [x] 2026-07-23: Give compact and zero-session chrome enough room to breathe.
+      Commit `1ebb7c79d4` raises the compact rail cap from 240 px to 280 px and
+      the resize floor from 200 px to 240 px, hides All 0 / Attention 0 until a
+      session exists, and suppresses the inert search row at zero while keeping
+      an existing query visible for recovery. The visibility rules have a
+      focused model assertion. A clean
+      `cargo check --locked -p sidebar --lib -j1` passes in 14m34s after only
+      regenerable Cargo caches were cleared; rendered proof remains open.
 - [x] 2026-07-22: Keep an empty loaded project actionable after restoration.
       Commit `4829f6b052` makes the visible-worktree launch surface outrank a
       missing legacy welcome flag, preventing the blank center shown beside the

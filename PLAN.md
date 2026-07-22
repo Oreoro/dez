@@ -71,19 +71,19 @@ Status below reflects repository evidence through 2026-07-23. The corrected
 app, CLI, helper, and signed bundle now exist; build proof still does not imply
 rendered or end-to-end interaction proof.
 
-| Area                   | Evidence now                                                                                                                                                                                                                                                             | Completion gap                                                                                                                   |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| Upstream               | Integrated `upstream/main` `9d0ef37a2571` through two-parent merge `2be63cfea347`; eleven conflicts are resolved and classified; consolidated build provenance is recorded                                                                                               | Complete runtime regression, installed coexistence, and design-partner proof                                                     |
-| Identity               | Dez source guards pass; the corrected arm64 app, helper, and `dev.dez.Dez-Dev`/`dez-dev` ad-hoc bundle are audited; the rebuilt raw CLI exposes `--dez <PATH>` and no visible legacy alias; the launched app held no TCP connection or listener during the recorded soak | Official-Zed install coexistence, consolidated rebuild, public signing/notarization, updater, remote, and visual proof           |
-| App Session            | Restore barrier, lifecycle state, ordered Workspace registry, explicit ordered viewport records, active selection, unresolved identity retention, and live background-viewport attachment exist in source; all ten focused Session tests pass                            | Shared live entity composition and consolidated runtime proof                                                                    |
-| Workspace and Surfaces | Pane/Canvas repair, panel-to-pane work, startup request ordering, and typed path projection exist                                                                                                                                                                        | Authoritative EvidenceSet, scoped tools, movement proof, and shared-store isolation                                              |
-| Local Host             | Protocol 4 app/helper builds and focused tests pass; an authenticated packaged-runtime Session retained one shell PID, 88 replay chunks, both pre/post-resize dimensions, and explicit Detached state                                                                    | GUI-exit/same-Session reattach proof and default-backend decision                                                                |
-| Terminal recovery      | Host/Session references, attach/detach/terminate, recovery surfaces, honest transport states, and dimension-aware replay exist in source and packaged runtime                                                                                                            | Full GUI restart scenario, stale-host cleanup, and rendered UX verification                                                      |
-| Agent adapter          | Structured Codex hook path, observation-only capabilities, bounded file targets, objective/context projection, and onboarding exist                                                                                                                                      | Live hook proof and a second adapter after the PMF gate                                                                          |
-| Attention              | Session Rail projection, restart-safe attention, acknowledgement, mute, resolution, priority, and stale handling exist                                                                                                                                                   | Consolidated runtime and accessibility proof                                                                                     |
-| Review                 | Native and terminal review briefs consume observed commands/checks, Git/worktree state, bounded file targets, cwd provenance, risks, and missing-evidence labels                                                                                                         | Compiled proof, live navigation, and side-by-side hero-flow validation                                                           |
-| UI/UX                  | The rebuilt bundle includes the rail, blank-center, footer, and utility-row corrections; newer source makes empty Dez windows terminal-first and replaces ambiguous zero-session/caught-up and `+ New` copy with honest explicit actions                                 | Rebuild the newest source, capture it, then complete shell hierarchy, outward polish, onboarding, accessibility, and state audit |
-| Release                | Static gates, focused tests, the corrected protocol-4 app/helper build at `679cdc28445c`, exact signed-bundle launch, authenticated runtime Session exercise, and deep-strict ad-hoc bundle audit pass                                                                   | Full GUI Session restart, visual/a11y, app-facing lint, public signing/install, coexistence, and partner proof                   |
+| Area                   | Evidence now                                                                                                                                                                                                                                                                                       | Completion gap                                                                                                                   |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Upstream               | Integrated `upstream/main` `9d0ef37a2571` through two-parent merge `2be63cfea347`; eleven conflicts are resolved and classified; consolidated build provenance is recorded                                                                                                                         | Complete runtime regression, installed coexistence, and design-partner proof                                                     |
+| Identity               | Dez source guards pass; the corrected arm64 app, helper, and `dev.dez.Dez-Dev`/`dez-dev` ad-hoc bundle are audited; the rebuilt raw CLI exposes `--dez <PATH>` and no visible legacy alias; the launched app held no TCP connection or listener during the recorded soak                           | Official-Zed install coexistence, consolidated rebuild, public signing/notarization, updater, remote, and visual proof           |
+| App Session            | Restore barrier, lifecycle state, ordered Workspace registry, explicit ordered viewport records, active selection, unresolved identity retention, and live background-viewport attachment exist in source; all ten focused Session tests pass                                                      | Shared live entity composition and consolidated runtime proof                                                                    |
+| Workspace and Surfaces | Pane/Canvas repair, panel-to-pane work, startup request ordering, and typed path projection exist                                                                                                                                                                                                  | Authoritative EvidenceSet, scoped tools, movement proof, and shared-store isolation                                              |
+| Local Host             | Protocol 4 app/helper builds and focused tests pass; an authenticated packaged-runtime Session retained one shell PID, 88 replay chunks, both pre/post-resize dimensions, and explicit Detached state                                                                                              | GUI-exit/same-Session reattach proof and default-backend decision                                                                |
+| Terminal recovery      | Host/Session references, attach/detach/terminate, recovery surfaces, honest transport states, and dimension-aware replay exist in source and packaged runtime                                                                                                                                      | Full GUI restart scenario, stale-host cleanup, and rendered UX verification                                                      |
+| Agent adapter          | Structured Codex hook path, observation-only capabilities, bounded file targets, objective/context projection, and onboarding exist                                                                                                                                                                | Live hook proof and a second adapter after the PMF gate                                                                          |
+| Attention              | Session Rail projection, restart-safe attention, acknowledgement, mute, resolution, priority, and stale handling exist                                                                                                                                                                             | Consolidated runtime and accessibility proof                                                                                     |
+| Review                 | Native and terminal review briefs consume observed commands/checks, Git/worktree state, bounded file targets, cwd provenance, risks, and missing-evidence labels                                                                                                                                   | Compiled proof, live navigation, and side-by-side hero-flow validation                                                           |
+| UI/UX                  | The rebuilt bundle includes the rail, blank-center, footer, and utility-row corrections; newer source makes empty Dez windows terminal-first, replaces ambiguous zero-session/caught-up and `+ New` copy, hides inert zero-session filters/search, and gives compact chrome 280 px of usable width | Rebuild the newest source, capture it, then complete shell hierarchy, outward polish, onboarding, accessibility, and state audit |
+| Release                | Static gates, focused tests, the corrected protocol-4 app/helper build at `679cdc28445c`, exact signed-bundle launch, authenticated runtime Session exercise, and deep-strict ad-hoc bundle audit pass                                                                                             | Full GUI Session restart, visual/a11y, app-facing lint, public signing/install, coexistence, and partner proof                   |
 
 The intended raw executable was used for the first consolidated runtime gate;
 the current gate launches only
@@ -342,7 +342,10 @@ with new labels.
       supervision region Session Rail consistently. The rail now uses the same
       mode-resolved width for workspace reservation and root painting instead
       of painting compact mode 60 px wider than its allocation; a rebuilt
-      rendered resize/collapse audit remains.
+      rendered resize/collapse audit remains. Commit `1ebb7c79d4` raises the
+      compact cap from 240 px to 280 px and the resize floor from 200 px to
+      240 px so the visible labels and actions are no longer designed into a
+      crushed column. The focused `sidebar` source check passes.
 - [ ] Keep fixed shell chrome bounded under real project names and narrow
       widths. Commit `0d8496969f` gives the project identity and Git controls
       explicit shrinkable, overflow-hidden regions so their one-line labels do
@@ -430,8 +433,11 @@ with new labels.
       File and New File. New Window and startup fallbacks preserve this surface
       in Dez instead of covering it with an unsolicited blank editor. The full
       Session Rail zero state now says No sessions yet, exposes New Terminal,
-      and starts with Start working instead of implying finished work or
-      requiring a project. The full state audit and rendered proof remain open.
+      starts with Start working instead of implying finished work or requiring
+      a project, and suppresses the inert All 0 / Attention 0 scopes and search
+      field until a real session exists. An existing query remains visible so
+      it can always be cleared. The full state audit and rendered proof remain
+      open.
 - [ ] Remove dead buttons, unsupported provider actions, duplicate navigation,
       noisy badges, ambiguous icon-only controls, and success copy unsupported
       by observed evidence. The compiled Zed Pro trial-end overlay/reset action
@@ -833,6 +839,14 @@ Notes decision:
   second 1 GiB WebRTC graph on the storage-constrained volume. The current raw
   CLI hash is
   `06f2b4e799b9fc4dcc1178d3095cecea0a0dd2636f77a9d1827b98fc16a5563b`.
+- 2026-07-23: Calmed the empty Session Rail in `1ebb7c79d4`. Compact mode now
+  has a 280 px cap and 240 px resize floor, zero-session mode omits the
+  meaningless All 0 / Attention 0 scope row, and search stays hidden until a
+  session exists unless a live query must remain clearable. A focused model
+  assertion covers those visibility rules. After clearing only regenerable
+  Cargo caches, `cargo check --locked -p sidebar --lib -j1` passes from a clean
+  graph in 14m34s; formatting, diff, and identity checks pass. The running
+  bundle predates this source, so rendered proof remains open.
 - 2026-07-23: Restored the reachable Dez CLI installation flow in
   `704314cc92`. The application menu now exposes Install CLI for Dez, the
   handler installs only `/usr/local/bin/dez`, Linux guidance names the bundled

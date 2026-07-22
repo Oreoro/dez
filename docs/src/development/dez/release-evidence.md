@@ -10,6 +10,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Durable viewport test source: `a91b04809ce0fa9d26407bc1685726ef36a0f03f`
 - Terminal-first empty-workspace source: `e4fbc22a3a`
 - Honest Session Rail zero-state source: `d9688490ad`
+- Calm zero-session rail geometry source: `1ebb7c79d4`
 - Reachable isolated CLI installer source: `704314cc92`
 - Initial terminal-scope evidence source: `7a20dc1d19`
 - Live background viewport attachment source: `962b611605`
@@ -201,6 +202,16 @@ indicator row only while prefix mode is active. Official Zed retains its prior
 workspace-bar behavior. Formatting and diff checks pass, and the complete app
 build contains the change; render proof remains open.
 
+The supplied zero-session screenshot also makes the remaining density problem
+plain: even after correcting reservation versus painting, compact mode itself
+allowed only 240 px, while the rail still carried named creation, scope, search,
+project, and utility controls. Commit `1ebb7c79d4` raises the compact cap to
+280 px and the user-resize floor to 240 px. At zero sessions it omits the inert
+All 0 / Attention 0 scope row and search field; a pre-existing query remains
+visible so it can be cleared. The focused visibility assertion is authored and
+a clean `cargo check --locked -p sidebar --lib -j1` passes in 14m34s. No
+rendered claim is inferred from that source check.
+
 The corrected `Dez Dev.app` is now registered and launched as launchd child PID
 `85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 `lsof` resolves its text executable to
@@ -210,18 +221,21 @@ cannot unlock it automatically. A fresh rendered screenshot of the corrected
 artifact therefore remains required before the visual matrix can be checked
 complete.
 
-Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, and `704314cc92` are newer than that running bundle. The
-first passes all nine focused Session tests, including duplicate viewport
+Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
+`7a20dc1d19`, `962b611605`, and `1ebb7c79d4` are newer than that running
+bundle. The first passes all nine focused Session tests, including duplicate viewport
 replacement without reordering or membership loss. The second makes Project
 ready terminal-first, prevents New Window and startup fallback paths from
 covering Dez's actionable launch surface with an unsolicited blank editor, and
 cleans the public CLI help while keeping the legacy alias hidden for
 compatibility. The full `zed --bin dez` source check and rebuilt CLI pass, but
 these changes require the next consolidated app rebuild and rendered audit.
-The latest slice also replaces the misleading zero-session caught-up state and
-ambiguous creation copy. Its model assertion is authored, while its focused
-test target remains unclaimed because that target selected a second WebRTC SDK
-graph that exceeded safe storage headroom.
+The later Session Rail slices replace the misleading zero-session caught-up
+state and ambiguous creation copy, increase compact width, and suppress inert
+zero-count scope and search controls. Their model assertions are authored. The
+focused unit-test invocation remains unclaimed because its first clean-profile
+attempt exhausted storage before reaching the test; after clearing only
+regenerable Cargo caches, a clean focused sidebar library check passes.
 
 The latest source also exposes Install CLI for Dez while retaining
 `/usr/local/bin/dez` as the only global target. Its Linux guidance and CLI
@@ -284,6 +298,11 @@ that scenario still requires the unlocked UI and a graceful application quit.
       checks pass, but the focused test did not finish under the local storage
       ceiling. The post-fix complete app and bundle build pass; rendered and
       focused-test proof remain open.
+- [x] Zero-session rail source regression: commit `1ebb7c79d4` expands compact
+      geometry and removes inert zero-count scopes/search without hiding an
+      existing clearable query. The model assertion is authored; formatting,
+      diff, identity, and a clean focused `sidebar` Cargo check pass. Rendered
+      proof remains in the manual gate.
 - [ ] Restored empty-project launch regression: commit `4829f6b052` makes a
       loaded project render Project ready actions even when an old pane lacks
       the welcome flag. The assertion is authored and formatting passes; the
@@ -331,7 +350,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `962b611605` or
+visual evidence: the exact bundle must first be rebuilt from `1ebb7c79d4` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -341,6 +360,6 @@ credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
 running and contains the corrected shell source through `679cdc28445c`, but
-predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, and `962b611605`. A rebuild/re-audit and an unlocked
+predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, and `1ebb7c79d4`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.
