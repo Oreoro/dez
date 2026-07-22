@@ -935,6 +935,10 @@ impl Pane {
         self.is_tab_pinned(self.active_item_index)
     }
 
+    fn should_render_project_launch_surface(&self, has_worktrees: bool) -> bool {
+        self.pane_kind == PaneKind::Tabs && has_worktrees
+    }
+
     pub fn activation_history(&self) -> &[ActivationHistoryEntry] {
         &self.activation_history
     }
@@ -5573,10 +5577,10 @@ impl Render for Pane {
                                 ));
                             if self.pane_kind != PaneKind::Tabs {
                                 placeholder.child(self.render_empty_panel_state(cx))
+                            } else if self.should_render_project_launch_surface(has_worktrees) {
+                                placeholder.child(self.render_empty_project_state(cx))
                             } else if !self.should_display_welcome_page {
                                 placeholder
-                            } else if has_worktrees {
-                                placeholder.child(self.render_empty_project_state(cx))
                             } else {
                                 if self.welcome_page.is_none() {
                                     let workspace = self.workspace.clone();
@@ -9698,6 +9702,19 @@ mod tests {
 
         assert!(first_pane.read_with(cx, |pane, _| pane.should_display_welcome_page));
         assert!(second_pane.read_with(cx, |pane, _| pane.should_display_welcome_page));
+
+        first_pane.update(cx, |pane, _| {
+            // Legacy/restored panes may predate the welcome-page flag. A loaded
+            // project must still render its launch surface instead of a blank
+            // pane.
+            pane.set_should_display_welcome_page(false);
+        });
+        assert!(first_pane.read_with(cx, |pane, _| {
+            pane.should_render_project_launch_surface(true)
+        }));
+        assert!(!first_pane.read_with(cx, |pane, _| {
+            pane.should_render_project_launch_surface(false)
+        }));
     }
 
     #[gpui::test]
