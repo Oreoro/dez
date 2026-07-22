@@ -467,8 +467,11 @@ with new labels.
       a real session exists. Commit `4e6292ff0a` goes further: the full **Start
       a session** state owns the only creation action instead of stacking below
       a duplicate Sessions overview, and its New File and Open alternatives
-      have distinct icons. An existing query remains visible so it can always
-      be cleared. The full state audit and rendered proof remain open.
+      have distinct icons. Commit `4fc53b860f` also removes the global overview
+      shortcut when open Workspace groups have zero sessions, leaving each
+      group's correctly scoped New Terminal action as the single path. An
+      existing query remains visible so it can always be cleared. The full
+      state audit and rendered proof remain open.
 - [ ] Remove dead buttons, unsupported provider actions, duplicate navigation,
       noisy badges, ambiguous icon-only controls, and success copy unsupported
       by observed evidence. The compiled Zed Pro trial-end overlay/reset action
@@ -1014,3 +1017,10 @@ Notes decision:
   a Folder Open glyph. Internal upstream types are unchanged; an identity
   rejection freezes the visible terminology. Formatting, diff, and identity
   checks pass; no bundle was built or launched.
+- 2026-07-23: Removed the last zero-session creation duplicate in
+  `4fc53b860f`. With open Workspaces but no sessions, each Workspace row now
+  owns the single scoped New Terminal action; the global overview shortcut
+  returns after a session exists. The no-Workspace activation surface is
+  unchanged. An authored model assertion and identity guard cover the
+  transition. Formatting, diff, and identity checks pass; no bundle was built
+  or launched.

@@ -26,6 +26,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Single-action empty Session Rail source: `4e6292ff0a`
 - Deduplicated Session Rail footer source: `a9b1a961c0`
 - Unified Session Rail Workspace vocabulary source: `ff91b34a81`
+- Workspace-scoped zero-session creation source: `4fc53b860f`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -268,6 +269,14 @@ glyph rather than an add-project glyph. An identity rejection prevents the old
 mixed labels from returning. Formatting, diff, and identity checks pass;
 rendered proof remains deferred.
 
+Commit `4fc53b860f` removes the last zero-session duplicate from the screenshot's
+open-Workspace state. At zero sessions, each Workspace group owns its scoped
+New Terminal action and the global overview omits its competing copy. After a
+session exists, the overview creation shortcut returns. The full no-Workspace
+activation surface remains unchanged. An authored model assertion and identity
+guard cover the count transition. Formatting, diff, and identity checks pass;
+compile and rendered proof remain deferred.
+
 The corrected `Dez Dev.app` is now registered and launched as launchd child PID
 `85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 `lsof` resolves its text executable to
@@ -280,8 +289,8 @@ complete.
 Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`,
 `47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, `c101fe6a43`,
-`699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, and `ff91b34a81` are
-newer than that running bundle. The first passes all nine focused Session tests, including duplicate viewport
+`699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`, and
+`4fc53b860f` are newer than that running bundle. The first passes all nine focused Session tests, including duplicate viewport
 replacement without reordering or membership loss. The second makes Project
 ready terminal-first, prevents New Window and startup fallback paths from
 covering Dez's actionable launch surface with an unsolicited blank editor, and
@@ -497,7 +506,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `ff91b34a81` or
+visual evidence: the exact bundle must first be rebuilt from `4fc53b860f` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -507,6 +516,6 @@ credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
 running and contains the corrected shell source through `679cdc28445c`, but
-predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`, `47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, `c101fe6a43`, `699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, and `ff91b34a81`. A rebuild/re-audit and an unlocked
+predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`, `47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, `c101fe6a43`, `699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`, and `4fc53b860f`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.

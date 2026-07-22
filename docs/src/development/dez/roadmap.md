@@ -810,6 +810,14 @@ code, all launch gates pass, and known limitations are documented.
       Internal upstream types remain intact, and an identity rejection freezes
       the visible language. Formatting, diff, and identity checks pass;
       rendered proof remains in the consolidated gate.
+- [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
+      `4fc53b860f` hides the overview's global New Terminal shortcut while no
+      sessions exist, leaving each open Workspace group's scoped action as the
+      single path. The shortcut returns after the first session, and the
+      no-Workspace activation surface is unchanged. An authored model
+      assertion and identity guard cover the transition. Formatting, diff, and
+      identity checks pass; compile and rendered proof remain in the
+      consolidated gate.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
