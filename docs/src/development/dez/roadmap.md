@@ -565,6 +565,14 @@ code, all launch gates pass, and known limitations are documented.
       relaunched GUI PID `50092` with one instance, the same socket, and Host ID
       `d9670db8-e498-5537-a9d8-f99ad098f4aa`. Same hosted-Session replay and
       child-PID reattachment remain unproven because the desktop is locked.
+- [x] 2026-07-22: Repair the blocking macOS client-decoration layout exposed by
+      the first unlocked screenshot. The Session Rail no longer pins both
+      horizontal edges or covers the editor/welcome surface; it uses its
+      configured width, anchors only its active edge, and presents an empty
+      project as a vertical explanation plus full-width New Terminal action.
+      The exact corrected raw executable builds and runs while reusing the
+      existing helper. A fresh rendered capture remains open because the bare
+      Mach-O process is not targetable by the approved accessibility surface.
 - [x] 2026-07-22: Harden and audit local debug packaging at `ce11c4ed3d`. The
       bundle script reuses the consolidated host artifacts, restores its
       manifest after failures, avoids the pinned bundler's broken colour path,

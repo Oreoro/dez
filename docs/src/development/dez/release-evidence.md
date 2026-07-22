@@ -51,7 +51,7 @@ single-codegen-unit profile. Unsigned build artifacts are arm64 Mach-O files:
 
 | Artifact            | Size | SHA-256                                                            |
 | ------------------- | ---- | ------------------------------------------------------------------ |
-| `target/debug/dez`  | 1.0G | `9b209289555689fdbdc67bc3d9514b772d4bdfec979bd82f3706990add2ba186` |
+| `target/debug/dez`  | 1.0G | `3a44def40b063ad2c5edb413d6a6b860942f8cc4a219dbd24229ef0d0fb64598` |
 | `target/debug/cli`  | 12M  | `e9bde80f1d951a6f9b7da53b0175de23db31c642b368c67c19451a04fbc9eaed` |
 | `dez-terminal-host` | 13M  | `2ac370c716c76e6a37979ab8e8c5454cdabc42847a96a949b14b20e4f7177ea8` |
 
@@ -115,6 +115,25 @@ terminal acceptance scenario because the locked desktop prevented creating an
 ordinary hosted PTY and capturing Session ID, child PID, output cursor, replay,
 and same-process reattachment.
 
+The desktop later became available and exposed a blocking macOS shell defect:
+the Session Rail occupied the whole client area, compressed its contents into
+word-level wrapping, covered the welcome/editor surface, and clipped the lower
+workspace chrome. The client-decoration render branch had absolute positioning
+with both horizontal edges pinned and, unlike the server-decoration branch, no
+explicit rail width. Commit `36d8024280` gives the rail its configured width,
+anchors only the active edge, and replaces the cramped empty-project row with
+a vertical empty state and full-width New Terminal action. The corrected raw
+arm64 executable built successfully and is running as PID `11523`, reusing
+helper PID `48768` and Host ID
+`d9670db8-e498-5537-a9d8-f99ad098f4aa`.
+
+Bare Mach-O GUI processes are not exposed as targetable applications by the
+approved macOS accessibility surface, so the corrected raw process cannot be
+captured through that interface by executable path. No packaged Dez or
+Superzed application was opened as a substitute. A fresh rendered screenshot
+of the corrected artifact therefore remains required before the visual matrix
+can be checked complete.
+
 ## Automated gates {#automated-gates}
 
 - [x] `cargo fmt --all -- --check`
@@ -136,7 +155,9 @@ and same-process reattachment.
 ## Runtime and manual gates {#runtime-and-manual-gates}
 
 - [x] Intended raw-binary first and corrected normal launch
-- [ ] Restored and empty-workspace interaction audit
+- [ ] Restored and empty-workspace interaction audit (the full-window Session
+      Rail overlay found in the first unlocked screenshot is fixed in source
+      and rebuilt; a fresh corrected-artifact capture remains open)
 - [ ] Offline, failed-Host, and incompatible-Host rendered states
 - [ ] Persistent terminal GUI-exit/restart/reattach proof
 - [ ] Structured Codex attention/review/restart proof
@@ -148,15 +169,17 @@ and same-process reattachment.
       signature audit
 - [ ] Developer ID signing, notarization, install, launch, and uninstall audit
 
-The approved macOS UI-control path was retried after the final launch, but the
-desktop remained locked and automatic unlock failed. No alternate screenshot,
-accessibility, AppleScript, or historical binary path was used as a substitute.
+The approved macOS UI-control path was retried after the corrected launch. The
+desktop was available, but the bare raw executable was not registered as a
+targetable application. No alternate screenshot, accessibility, AppleScript,
+packaged Dez, or historical binary path was used as a substitute.
 
 ## Known external release dependencies {#known-external-release-dependencies}
 
 Public Developer ID signing and Apple notarization require Dez publisher
 credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
-separate from local engineering verification. Unlocking the current macOS
-desktop is required to finish the live visual, interaction, accessibility, and
-hosted-PTY recovery matrix on this artifact.
+separate from local engineering verification. A fresh capture of the running
+raw artifact, or a future explicitly approved launch of the matching packaged
+artifact, is required to finish the visual, interaction, accessibility, and
+hosted-PTY recovery matrix.

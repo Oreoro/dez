@@ -233,9 +233,18 @@ The remaining launch blockers are the live hosted-terminal reattach and Codex
 review hero flows, restored/degraded UI states, visual and accessibility audit,
 app-facing modified-crate Clippy, public signing/notarization/install checks,
 official Zed coexistence, and design-partner validation. The standalone Host
-Clippy graph passes with warnings denied. The current macOS desktop must be
-unlocked before the rendered gates can be completed through the approved UI
-control path.
+Clippy graph passes with warnings denied. The approved UI-control path can
+inspect registered application bundles but cannot target the running raw
+Mach-O executable by path, so corrected-artifact rendered gates remain open.
+
+The first unlocked screenshot subsequently revealed that the macOS
+client-decoration branch stretched the Session Rail across the full window,
+covering the welcome/editor surface and compressing rail copy into word-level
+wrapping. Commit `36d8024280` restores the configured rail width, uses a single
+side anchor, and gives the empty project a deliberate vertical state with a
+full-width New Terminal action. The corrected raw executable builds and runs
+against the same durable helper; a fresh capture is still required because the
+approved UI-control API cannot address an unbundled Mach-O GUI by path.
 
 ## Interaction model
 
