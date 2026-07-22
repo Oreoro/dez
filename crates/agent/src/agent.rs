@@ -229,13 +229,22 @@ pub struct LanguageModels {
 impl LanguageModels {
     fn new(cx: &mut App) -> Self {
         let (refresh_models_tx, refresh_models_rx) = watch::channel(());
+        let authenticate_all_providers_task = if client::ClientSettings::get_global(cx).auto_connect
+        {
+            Self::authenticate_all_language_model_providers(cx)
+        } else {
+            // Dez is local-first: discovering the model selector must not
+            // authenticate or contact every cloud provider during startup.
+            // Explicit cloud opt-in retains the upstream eager refresh.
+            Task::ready(())
+        };
 
         let mut this = Self {
             models: HashMap::default(),
             model_list: acp_thread::AgentModelList::Grouped(IndexMap::default()),
             refresh_models_rx,
             refresh_models_tx,
-            _authenticate_all_providers_task: Self::authenticate_all_language_model_providers(cx),
+            _authenticate_all_providers_task: authenticate_all_providers_task,
         };
         this.refresh_list(cx);
         this

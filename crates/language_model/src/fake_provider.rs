@@ -11,7 +11,7 @@ use http_client::Result;
 use parking_lot::Mutex;
 use std::sync::{
     Arc,
-    atomic::{AtomicBool, AtomicU64, Ordering::SeqCst},
+    atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering::SeqCst},
 };
 
 #[derive(Clone)]
@@ -19,6 +19,7 @@ pub struct FakeLanguageModelProvider {
     id: LanguageModelProviderId,
     name: LanguageModelProviderName,
     models: Vec<Arc<dyn LanguageModel>>,
+    authenticate_count: Arc<AtomicUsize>,
 }
 
 impl Default for FakeLanguageModelProvider {
@@ -27,6 +28,7 @@ impl Default for FakeLanguageModelProvider {
             id: LanguageModelProviderId::from("fake".to_string()),
             name: LanguageModelProviderName::from("Fake".to_string()),
             models: vec![Arc::new(FakeLanguageModel::default())],
+            authenticate_count: Arc::new(AtomicUsize::new(0)),
         }
     }
 }
@@ -65,6 +67,7 @@ impl LanguageModelProvider for FakeLanguageModelProvider {
     }
 
     fn authenticate(&self, _: &mut App) -> Task<Result<(), AuthenticateError>> {
+        self.authenticate_count.fetch_add(1, SeqCst);
         Task::ready(Ok(()))
     }
 
@@ -79,6 +82,7 @@ impl FakeLanguageModelProvider {
             id,
             name,
             models: vec![Arc::new(FakeLanguageModel::default())],
+            authenticate_count: Arc::new(AtomicUsize::new(0)),
         }
     }
 
@@ -89,6 +93,10 @@ impl FakeLanguageModelProvider {
 
     pub fn test_model(&self) -> FakeLanguageModel {
         FakeLanguageModel::default()
+    }
+
+    pub fn authenticate_count(&self) -> usize {
+        self.authenticate_count.load(SeqCst)
     }
 }
 

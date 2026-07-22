@@ -6,7 +6,7 @@ use acp_thread::{
 use agent_client_protocol::schema::v1 as acp;
 use agent_settings::AgentProfileId;
 use anyhow::Result;
-use client::{Client, RefreshLlmTokenListener, UserStore};
+use client::{Client, ClientSettings, RefreshLlmTokenListener, UserStore};
 use collections::IndexMap;
 use context_server::{ContextServer, ContextServerCommand, ContextServerId};
 use feature_flags::FeatureFlagAppExt as _;
@@ -62,6 +62,41 @@ pub(crate) fn init_test(cx: &mut TestAppContext) {
         let settings_store = SettingsStore::test(cx);
         cx.set_global(settings_store);
     });
+}
+
+#[gpui::test]
+fn test_language_models_only_authenticate_providers_after_cloud_opt_in(cx: &mut TestAppContext) {
+    init_test(cx);
+
+    let (provider, _offline_models) = cx.update(|cx| {
+        ClientSettings::override_global(
+            ClientSettings {
+                server_url: "https://zed.dev".to_owned(),
+                auto_connect: false,
+                credentials_url: None,
+            },
+            cx,
+        );
+        let provider = LanguageModelRegistry::test(cx);
+        let models = LanguageModels::new(cx);
+        (provider, models)
+    });
+    cx.run_until_parked();
+    assert_eq!(provider.authenticate_count(), 0);
+
+    let _online_models = cx.update(|cx| {
+        ClientSettings::override_global(
+            ClientSettings {
+                server_url: "https://zed.dev".to_owned(),
+                auto_connect: true,
+                credentials_url: None,
+            },
+            cx,
+        );
+        LanguageModels::new(cx)
+    });
+    cx.run_until_parked();
+    assert_eq!(provider.authenticate_count(), 1);
 }
 
 pub(crate) struct FakeTerminalHandle {
