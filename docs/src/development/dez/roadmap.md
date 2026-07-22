@@ -721,6 +721,15 @@ code, all launch gates pass, and known limitations are documented.
       production workspace library check passes in 5m08s; its expanded test
       target is authored but not claimed because the all-tests metadata graph
       reached the local storage floor before producing a code result.
+- [x] 2026-07-23: Prove New Window is another viewport over the shared App
+      Session in source. Commit `2334fbdcfc` upgrades the existing headless
+      regression from checking only the old sidebar to constructing both
+      windows with one AppState and asserting distinct viewport and Workspace
+      IDs, shared durable membership, and correct per-viewport active
+      selection. It also updates a stale bottom-dock test to Dez's supported
+      side-dock model. The full workspace test configuration compiles with one
+      unrelated dead-code warning; direct test execution was cancelled during
+      sustained codegen/I/O pressure, so packaged runtime proof remains open.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

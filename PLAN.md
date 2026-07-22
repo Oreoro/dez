@@ -159,11 +159,14 @@ official Zed.
       independent state universe. Registering a durable Workspace in a
       MultiWorkspace now records that viewport even before activation; shared
       live entity composition remains open.
-- [ ] Make New Window create another viewport without silently creating a
+- [x] Make New Window create another viewport without silently creating a
       separate application universe. Dez no longer inserts an unsolicited
       blank editor over the terminal-first launch surface. Database-backed new
       windows register during Workspace construction and MultiWorkspace root
-      registration; shared live composition and runtime proof remain open.
+      registration. The existing headless New Window regression now uses the
+      real shared AppState and asserts distinct viewport/Workspace IDs, one App
+      Session membership set, and independent active selection. Runtime proof
+      remains open.
 - [x] Prove durable viewport normalization cannot duplicate, reorder, or
       garbage-collect Workspace membership accidentally. Ten focused Session
       tests cover ordered updates, duplicate viewport replacement, duplicate
@@ -889,3 +892,14 @@ Notes decision:
   test-metadata check was stopped before a code result when free space fell
   below 1 GiB. Formatting, diff, and identity gates pass; runtime restoration
   proof remains open.
+- 2026-07-23: Closed the source-level New Window App Session contract in
+  `2334fbdcfc`. The existing headless regression now constructs its original
+  window with the same real AppState used by `open_paths`, finds the second
+  MultiWorkspace, and requires two viewport IDs, two Workspace IDs, singular
+  shared App Session ownership, and the correct active Workspace in each
+  viewport. The slice also removes a stale test-only call to Dez's deleted
+  bottom dock and retains the supported flexible side-dock clamp assertion.
+  `cargo check --locked -p workspace --tests -j1` passes with one unrelated
+  dead-code warning. A direct execution attempt was cancelled during prolonged
+  codegen/I/O saturation, so runtime test execution and packaged GUI proof are
+  still open; formatting, diff, and identity gates pass.

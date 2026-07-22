@@ -15,6 +15,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Initial terminal-scope evidence source: `7a20dc1d19`
 - Live background viewport attachment source: `962b611605`
 - Durable empty-fallback Workspace source: `e9a595fcff`
+- Shared-App-Session New Window proof source: `2334fbdcfc`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -223,9 +224,10 @@ artifact therefore remains required before the visual matrix can be checked
 complete.
 
 Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
-`7a20dc1d19`, `962b611605`, `1ebb7c79d4`, and `e9a595fcff` are newer than that running
-bundle. The first passes all nine focused Session tests, including duplicate viewport
-replacement without reordering or membership loss. The second makes Project
+`7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, and `2334fbdcfc`
+are newer than that running bundle. The first passes all nine focused Session
+tests, including duplicate viewport replacement without reordering or
+membership loss. The second makes Project
 ready terminal-first, prevents New Window and startup fallback paths from
 covering Dez's actionable launch surface with an unsolicited blank editor, and
 cleans the public CLI help while keeping the legacy alias hidden for
@@ -266,6 +268,17 @@ persistence regression asserts identity, membership, and selection. The
 production `cargo check --locked -p workspace --lib -j1` passes in 5m08s; the
 expanded all-tests metadata check is not claimed because it was stopped at the
 storage safety floor before returning a code result.
+
+Commit `2334fbdcfc` upgrades the existing headless New Window regression to use
+one real AppState for the original and newly opened MultiWorkspace. It asserts
+distinct OS-window viewport IDs, distinct Workspace database IDs, membership
+of both identities in the same App Session entity, and the correct active
+selection per viewport. The same slice replaces a stale test-only bottom-dock
+call with the supported flexible side-dock assertion. A full
+`cargo check --locked -p workspace --tests -j1` passes with one unrelated
+dead-code warning. Direct execution of the single test was attempted but
+cancelled during sustained codegen/I/O saturation, so no executed-test or GUI
+runtime claim is made.
 
 The packaged helper also accepted a direct authenticated protocol 4 exercise.
 Host ID `d9670db8-e498-5537-a9d8-f99ad098f4aa` created Session
@@ -321,6 +334,11 @@ that scenario still requires the unlocked UI and a graceful application quit.
       active viewport selection; formatting, diff, identity, and focused
       production workspace-library checks pass. Execution of the expanded test
       remains open under the local storage ceiling.
+- [x] Shared-App-Session New Window source regression: commit `2334fbdcfc`
+      requires two durable viewports and Workspace IDs with one membership set
+      and independent active selections. The complete workspace test
+      configuration compiles. Direct test execution and packaged GUI proof
+      remain open.
 - [ ] Restored empty-project launch regression: commit `4829f6b052` makes a
       loaded project render Project ready actions even when an old pane lacks
       the welcome flag. The assertion is authored and formatting passes; the
@@ -368,7 +386,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `e9a595fcff` or
+visual evidence: the exact bundle must first be rebuilt from `2334fbdcfc` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -378,6 +396,6 @@ credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
 running and contains the corrected shell source through `679cdc28445c`, but
-predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, and `e9a595fcff`. A rebuild/re-audit and an unlocked
+predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, and `2334fbdcfc`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.
