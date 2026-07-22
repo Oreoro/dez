@@ -42,6 +42,7 @@ remote.workspace = true
 remote_connection.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+session.workspace = true
 settings.workspace = true
 telemetry.workspace = true
 terminal.workspace = true

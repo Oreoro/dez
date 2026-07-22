@@ -32,6 +32,10 @@ pub enum AppSessionEvent {
 #[serde(rename_all = "snake_case")]
 pub enum DurableWorkspaceResolution {
     Resolved,
+    /// The database identity exists, but its live window could not be
+    /// materialized. This remains distinct from an identity that has simply
+    /// not been considered by the active restore policy.
+    RestoreFailed,
     #[default]
     Unresolved,
 }
@@ -111,7 +115,7 @@ impl Session {
             &old_durable_workspace_state.active_workspace_by_viewport,
         );
         for membership in &mut old_durable_workspace_state.memberships {
-            membership.resolution = DurableWorkspaceResolution::Unresolved;
+            membership.resolution = resolution_without_live_attachment(membership.resolution);
             membership.viewport_id = None;
         }
         old_durable_workspace_state
@@ -356,7 +360,7 @@ impl AppSession {
     /// materialized during restoration. Its ordered membership and viewport
     /// placement are intentionally retained so a recovery surface can retry or
     /// explicitly remove it instead of silently forgetting user state.
-    pub fn mark_durable_workspace_unresolved(
+    pub fn mark_durable_workspace_restore_failed(
         &mut self,
         workspace_id: i64,
         cx: &mut Context<Self>,
@@ -364,7 +368,7 @@ impl AppSession {
         if !set_workspace_resolution(
             &mut self.durable_workspace_memberships,
             workspace_id,
-            DurableWorkspaceResolution::Unresolved,
+            DurableWorkspaceResolution::RestoreFailed,
         ) {
             return false;
         }
@@ -558,6 +562,17 @@ fn set_workspace_resolution(
     true
 }
 
+fn resolution_without_live_attachment(
+    previous: DurableWorkspaceResolution,
+) -> DurableWorkspaceResolution {
+    match previous {
+        DurableWorkspaceResolution::RestoreFailed => DurableWorkspaceResolution::RestoreFailed,
+        DurableWorkspaceResolution::Resolved | DurableWorkspaceResolution::Unresolved => {
+            DurableWorkspaceResolution::Unresolved
+        }
+    }
+}
+
 fn collect_workspace_memberships(
     memberships: impl IntoIterator<Item = DurableWorkspaceMembership>,
 ) -> Vec<DurableWorkspaceMembership> {
@@ -745,8 +760,9 @@ fn reconcile_workspace_memberships(
         if let Some(membership) = resolved_by_id.remove(&previous_membership.workspace_id) {
             reconciled.push(membership);
         } else {
+            let resolution = resolution_without_live_attachment(previous_membership.resolution);
             reconciled.push(DurableWorkspaceMembership {
-                resolution: DurableWorkspaceResolution::Unresolved,
+                resolution,
                 ..*previous_membership
             });
         }
@@ -792,7 +808,8 @@ mod tests {
         DurableWorkspaceResolution, WorkspaceRestoreState, attach_workspace_to_viewport_records,
         collect_durable_viewports, collect_workspace_memberships, migrate_durable_viewports,
         reconcile_durable_viewports, reconcile_workspace_memberships,
-        remove_workspace_from_viewport_records, set_workspace_resolution,
+        remove_workspace_from_viewport_records, resolution_without_live_attachment,
+        set_workspace_resolution,
     };
 
     #[test]
@@ -804,7 +821,7 @@ mod tests {
     }
 
     #[test]
-    fn failed_restore_becomes_unresolved_without_losing_order() {
+    fn failed_restore_is_distinct_from_unresolved_without_losing_order() {
         let mut memberships = vec![
             DurableWorkspaceMembership {
                 workspace_id: 20,
@@ -821,7 +838,7 @@ mod tests {
         assert!(set_workspace_resolution(
             &mut memberships,
             20,
-            DurableWorkspaceResolution::Unresolved,
+            DurableWorkspaceResolution::RestoreFailed,
         ));
         assert_eq!(
             memberships
@@ -832,7 +849,7 @@ mod tests {
         );
         assert_eq!(
             memberships[0].resolution,
-            DurableWorkspaceResolution::Unresolved
+            DurableWorkspaceResolution::RestoreFailed
         );
         assert_eq!(
             memberships[1].resolution,
@@ -841,13 +858,29 @@ mod tests {
         assert!(!set_workspace_resolution(
             &mut memberships,
             20,
-            DurableWorkspaceResolution::Unresolved,
+            DurableWorkspaceResolution::RestoreFailed,
         ));
         assert!(!set_workspace_resolution(
             &mut memberships,
             999,
-            DurableWorkspaceResolution::Unresolved,
+            DurableWorkspaceResolution::RestoreFailed,
         ));
+    }
+
+    #[test]
+    fn only_actual_restore_failures_survive_as_failures() {
+        assert_eq!(
+            resolution_without_live_attachment(DurableWorkspaceResolution::Resolved),
+            DurableWorkspaceResolution::Unresolved
+        );
+        assert_eq!(
+            resolution_without_live_attachment(DurableWorkspaceResolution::Unresolved),
+            DurableWorkspaceResolution::Unresolved
+        );
+        assert_eq!(
+            resolution_without_live_attachment(DurableWorkspaceResolution::RestoreFailed),
+            DurableWorkspaceResolution::RestoreFailed
+        );
     }
 
     #[test]

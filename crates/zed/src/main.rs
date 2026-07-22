@@ -1485,7 +1485,7 @@ pub(crate) async fn restore_or_create_workspace(
                 log::error!("Failed to restore workspace: {error:#}");
                 cx.update(|cx| {
                     app_state.session.update(cx, |session, cx| {
-                        session.mark_durable_workspace_unresolved(restoring_workspace_id, cx);
+                        session.mark_durable_workspace_restore_failed(restoring_workspace_id, cx);
                     });
                 });
                 error_count += 1;

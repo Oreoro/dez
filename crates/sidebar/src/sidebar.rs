@@ -51,6 +51,7 @@ use project::{AgentId, AgentRegistryStore, Event as ProjectEvent, WorktreeId};
 use recent_projects::sidebar_recent_projects::SidebarRecentProjects;
 use remote::{RemoteConnectionOptions, same_remote_connection_identity};
 use serde::{Deserialize, Serialize};
+use session::{AppSession, AppSessionEvent, DurableWorkspaceResolution};
 use settings::Settings as _;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
@@ -2382,6 +2383,21 @@ impl Sidebar {
         cx.observe_global::<TerminalHostStartupStatus>(|this, cx| {
             this.schedule_update_entries(false, cx);
         })
+        .detach();
+
+        let app_session = multi_workspace
+            .read(cx)
+            .workspace()
+            .read(cx)
+            .app_state()
+            .session
+            .clone();
+        cx.subscribe(
+            &app_session,
+            |_this, _session, _event: &AppSessionEvent, cx| {
+                cx.notify();
+            },
+        )
         .detach();
 
         let channels_with_threads = channels_with_threads(cx);
@@ -11221,6 +11237,90 @@ impl Sidebar {
         Some(callout.into_any_element())
     }
 
+    fn app_session(&self, cx: &App) -> Option<Entity<AppSession>> {
+        let multi_workspace = self.multi_workspace.upgrade()?;
+        let workspace = multi_workspace.read(cx).workspace().clone();
+        let app_session = workspace.read(cx).app_state().session.clone();
+        Some(app_session)
+    }
+
+    fn unresolved_workspace_ids(&self, cx: &App) -> Vec<i64> {
+        self.app_session(cx)
+            .map(|app_session| {
+                app_session
+                    .read(cx)
+                    .durable_workspace_memberships()
+                    .filter_map(|membership| {
+                        (membership.resolution == DurableWorkspaceResolution::RestoreFailed)
+                            .then_some(membership.workspace_id)
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    fn render_workspace_restore_status(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let unresolved_workspace_ids = self.unresolved_workspace_ids(cx);
+        if unresolved_workspace_ids.is_empty() {
+            return None;
+        }
+        let count = unresolved_workspace_ids.len();
+        let title = if count == 1 {
+            "1 workspace needs recovery".to_string()
+        } else {
+            format!("{count} workspaces need recovery")
+        };
+        let description = if count == 1 {
+            "Dez kept the failed Session reference. Reopen it from Recent Workspaces, or dismiss only this unresolved reference."
+        } else {
+            "Dez kept the failed Session references. Reopen them from Recent Workspaces, or dismiss only these unresolved references."
+        };
+
+        Some(
+            Callout::new()
+                .severity(Severity::Warning)
+                .icon(IconName::Warning)
+                .title(title)
+                .description(description)
+                .actions_slot(
+                    h_flex()
+                        .gap_1()
+                        .child(
+                            Button::new("recover-unresolved-workspace", "Open Recent")
+                                .size(ButtonSize::Compact)
+                                .style(ButtonStyle::Filled)
+                                .aria_label("Open Recent Workspaces for Recovery")
+                                .on_click(cx.listener(|this, _, window, cx| {
+                                    this.recent_projects_popover_handle.toggle(window, cx);
+                                })),
+                        )
+                        .child(
+                            Button::new("dismiss-unresolved-workspace", "Dismiss")
+                                .size(ButtonSize::Compact)
+                                .style(ButtonStyle::Outlined)
+                                .aria_label("Dismiss Unresolved Workspace References")
+                                .tooltip(Tooltip::text(
+                                    "Remove only the unresolved Session references; recent workspace data remains available",
+                                ))
+                                .on_click(cx.listener(move |this, _, _window, cx| {
+                                    if let Some(app_session) = this.app_session(cx) {
+                                        app_session.update(cx, |app_session, cx| {
+                                            for workspace_id in &unresolved_workspace_ids {
+                                                app_session.remove_durable_workspace(
+                                                    *workspace_id,
+                                                    cx,
+                                                );
+                                            }
+                                        });
+                                    }
+                                    cx.notify();
+                                })),
+                        ),
+                )
+                .into_any_element(),
+        )
+    }
+
     fn render_sidebar_header(&self, window: &Window, cx: &mut Context<Self>) -> impl IntoElement {
         let sidebar_side = self.side(cx);
         let sidebar_state = SidebarRenderState {
@@ -12135,7 +12235,11 @@ impl Render for Sidebar {
                 SidebarView::ThreadList => {
                     this.child(self.render_session_overview(cx)).map(|this| {
                         if show_start_state {
-                            this.when_some(self.render_terminal_host_status(cx), |this, status| {
+                            this.when_some(
+                                self.render_workspace_restore_status(cx),
+                                |this, status| this.child(status),
+                            )
+                            .when_some(self.render_terminal_host_status(cx), |this, status| {
                                 this.child(status)
                             })
                             .child(self.render_empty_state(cx))
@@ -12144,6 +12248,10 @@ impl Render for Sidebar {
                                 v_flex()
                                     .flex_1()
                                     .overflow_hidden()
+                                    .when_some(
+                                        self.render_workspace_restore_status(cx),
+                                        |this, status| this.child(status),
+                                    )
                                     .when_some(
                                         self.render_terminal_host_status(cx),
                                         |this, status| this.child(status),
