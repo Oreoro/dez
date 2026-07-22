@@ -58,6 +58,8 @@ pub struct PaneGroup {
 pub struct PaneRenderResult {
     pub element: gpui::AnyElement,
     pub contains_active_pane: bool,
+    #[cfg(any(test, feature = "test-support"))]
+    pub decorated_pane_ix: Option<usize>,
 }
 
 impl PaneGroup {
@@ -796,6 +798,8 @@ impl Member {
                     return PaneRenderResult {
                         element: div().into_any(),
                         contains_active_pane: false,
+                        #[cfg(any(test, feature = "test-support"))]
+                        decorated_pane_ix: None,
                     };
                 }
 
@@ -804,6 +808,8 @@ impl Member {
                         return PaneRenderResult {
                             element: div().into_any(),
                             contains_active_pane: false,
+                            #[cfg(any(test, feature = "test-support"))]
+                            decorated_pane_ix: None,
                         };
                     }
                     true
@@ -822,6 +828,8 @@ impl Member {
                         .child(render_pane_card(pane.clone(), render_cx, cx))
                         .into_any(),
                     contains_active_pane: is_active,
+                    #[cfg(any(test, feature = "test-support"))]
+                    decorated_pane_ix: None,
                 }
             }
             Member::Axis(axis) => axis.render(basis + 1, zoomed, maximized, render_cx, window, cx),
@@ -1531,6 +1539,8 @@ impl PaneAxis {
         PaneRenderResult {
             element,
             contains_active_pane,
+            #[cfg(any(test, feature = "test-support"))]
+            decorated_pane_ix: active_pane_ix,
         }
     }
 }
