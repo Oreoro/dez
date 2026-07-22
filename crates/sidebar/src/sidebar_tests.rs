@@ -1705,6 +1705,92 @@ fn setup_sidebar_with_agent_panel(
     (sidebar, panel)
 }
 
+fn add_workspace_shell(
+    workspace: &Entity<Workspace>,
+    project: &Entity<project::Project>,
+    cx: &mut gpui::VisualTestContext,
+) -> Entity<TerminalView> {
+    let workspace_entity = workspace.clone();
+    let project = project.clone();
+    workspace.update_in(cx, |workspace, window, cx| {
+        let terminal = cx.new(|cx| {
+            terminal::TerminalBuilder::new_display_only(
+                terminal::terminal_settings::CursorShape::default(),
+                terminal::terminal_settings::AlternateScroll::On,
+                None,
+                0,
+                cx.background_executor(),
+                util::paths::PathStyle::local(),
+            )
+            .subscribe(cx)
+        });
+        let terminal_view = cx.new(|cx| {
+            TerminalView::new(
+                terminal,
+                workspace_entity.downgrade(),
+                None,
+                project.downgrade(),
+                window,
+                cx,
+            )
+        });
+
+        workspace.active_pane().update(cx, |pane, cx| {
+            pane.add_item(
+                Box::new(terminal_view.clone()),
+                true,
+                true,
+                None,
+                window,
+                cx,
+            );
+        });
+        terminal_view
+    })
+}
+
+#[gpui::test]
+async fn test_plain_workspace_shell_appears_in_session_rail(cx: &mut TestAppContext) {
+    let project = init_test_project_with_agent_panel("/my-project", cx).await;
+    let (multi_workspace, cx) =
+        cx.add_window_view(|window, cx| MultiWorkspace::test_new(project.clone(), window, cx));
+    let sidebar = setup_sidebar(&multi_workspace, cx);
+    let workspace = multi_workspace.read_with(cx, |mw, _cx| mw.workspace().clone());
+    let terminal_view = add_workspace_shell(&workspace, &project, cx);
+    let terminal_id = workspace.read_with(cx, |_workspace, cx| {
+        standalone_terminal_id(&workspace, &terminal_view, cx)
+    });
+
+    multi_workspace.update_in(cx, |_, _window, cx| cx.notify());
+    cx.run_until_parked();
+
+    sidebar.read_with(cx, |sidebar, _cx| {
+        let terminal = sidebar
+            .contents
+            .entries
+            .iter()
+            .find_map(|entry| match entry {
+                ListEntry::Terminal(terminal) if terminal.metadata.terminal_id == terminal_id => {
+                    Some(terminal)
+                }
+                _ => None,
+            })
+            .expect("plain workspace shells should appear in Session Rail");
+        assert_eq!(terminal.detected_agent_kind, None);
+        assert!(matches!(
+            terminal.runtime.as_ref().map(|runtime| runtime.state),
+            Some(TerminalRuntimeState::Live)
+        ));
+        assert!(matches!(
+            sidebar.active_entry,
+            Some(ActiveEntry::Terminal {
+                terminal_id: active_terminal_id,
+                ..
+            }) if active_terminal_id == terminal_id
+        ));
+    });
+}
+
 #[gpui::test]
 async fn test_agent_panel_terminals_appear_in_sidebar_and_search(cx: &mut TestAppContext) {
     let project = init_test_project_with_agent_panel("/my-project", cx).await;
