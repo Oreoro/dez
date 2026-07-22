@@ -115,6 +115,10 @@ pub struct CrashHandler(pub Arc<crashes::Client>);
 
 impl gpui::Global for CrashHandler {}
 
+pub(crate) fn should_seed_empty_workspace_with_blank_file(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 actions!(
     zed,
     [
@@ -1185,21 +1189,27 @@ fn register_actions(
                     cx,
                     |workspace, window, cx| {
                         cx.activate(true);
-                        // Create buffer synchronously to avoid flicker
-                        let project = workspace.project().clone();
-                        let buffer = project.update(cx, |project, cx| {
-                            project.create_local_buffer("", None, true, cx)
-                        });
-                        let editor = cx.new(|cx| {
-                            Editor::for_buffer(buffer, Some(project), window, cx)
-                        });
-                        workspace.add_item_to_active_pane(
-                            Box::new(editor),
-                            None,
-                            true,
-                            window,
-                            cx,
-                        );
+                        // Dez's empty pane is an intentional terminal-first
+                        // launch surface. Do not cover it with an unsolicited
+                        // unsaved editor; New File remains a separate action.
+                        if should_seed_empty_workspace_with_blank_file(APP_NAME) {
+                            // Preserve upstream Zed's synchronous blank buffer
+                            // to avoid changing its New Window behavior.
+                            let project = workspace.project().clone();
+                            let buffer = project.update(cx, |project, cx| {
+                                project.create_local_buffer("", None, true, cx)
+                            });
+                            let editor = cx.new(|cx| {
+                                Editor::for_buffer(buffer, Some(project), window, cx)
+                            });
+                            workspace.add_item_to_active_pane(
+                                Box::new(editor),
+                                None,
+                                true,
+                                window,
+                                cx,
+                            );
+                        }
                     },
                 )
                 .detach();
@@ -2782,6 +2792,12 @@ mod tests {
         item::{Item, ItemHandle},
         open_new, open_paths, pane,
     };
+
+    #[test]
+    fn dez_empty_workspace_preserves_the_actionable_launch_surface() {
+        assert!(!should_seed_empty_workspace_with_blank_file("Dez"));
+        assert!(should_seed_empty_workspace_with_blank_file("Zed"));
+    }
 
     async fn flush_workspace_serialization(
         window: &WindowHandle<MultiWorkspace>,

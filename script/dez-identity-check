@@ -73,6 +73,12 @@ require_pattern crates/zed/src/zed/edit_prediction_registry.rs \
 require_multiline_pattern crates/zed/src/zed.rs \
     'let channels_panel = \(APP_NAME == "Zed"\)\.then\(\|\| \{.*?CollabPanel::load' \
     'Dez eagerly loads the upstream collaboration panel'
+require_pattern crates/zed/src/zed.rs \
+    'should_seed_empty_workspace_with_blank_file\(app_name: &str\) -> bool' \
+    'empty Dez viewports can bypass the actionable launch surface'
+require_pattern crates/zed/src/zed.rs \
+    'app_name == "Zed"' \
+    'blank-file seeding is not restricted to the official Zed product'
 require_pattern crates/release_channel/src/lib.rs \
     'ReleaseChannel::Stable => "Dez"' \
     'stable release display name is not Dez'
@@ -110,6 +116,15 @@ reject_pattern crates/install_cli/src/register_zed_scheme.rs \
 reject_pattern crates/install_cli/src/install_cli_binary.rs \
     '/usr/local/bin/zed|InstalledZedCli|Zed CLI' \
     'the Dez CLI installer still overwrites or presents the official Zed CLI'
+reject_pattern crates/cli/src/main.rs \
+    'Generate shell completions for Zed|Run zed in dev-server mode|Uninstall Zed from user system|Zed will attempt to open the paths directly' \
+    'the Dez CLI help still presents the local product as Zed'
+reject_pattern crates/cli/src/main.rs \
+    'visible_alias = "zed"' \
+    'the Dez CLI exposes its legacy Zed compatibility alias in help'
+require_pattern crates/cli/src/main.rs \
+    'long = "dez", alias = "zed", value_name = "PATH"' \
+    'the Dez CLI custom-app flag can expose a stale Zed metavar'
 reject_pattern crates/terminal/src/terminal.rs \
     'env\.insert\("TERM_PROGRAM"\.to_string\(\), "zed"\.to_string\(\)\);' \
     'terminal sessions still identify the public product as Zed'

@@ -970,7 +970,7 @@ impl Pane {
                     )
                     .child(
                         Label::new(
-                            "Open a file, create one, or start a terminal in this workspace.",
+                            "Start a terminal, find a file, or create one in this workspace.",
                         )
                         .size(LabelSize::Small)
                         .color(Color::Muted),
@@ -980,10 +980,25 @@ impl Pane {
                 v_flex()
                     .gap_1()
                     .child(
-                        Button::new("empty-project-open-file", "Find File")
+                        Button::new("empty-project-terminal", "New Terminal")
                             .full_width()
                             .tab_index(0isize)
                             .style(ButtonStyle::Filled)
+                            .start_icon(Icon::new(IconName::Terminal))
+                            .key_binding(KeyBinding::for_action_in(
+                                &NewTerminal::default(),
+                                &self.focus_handle,
+                                cx,
+                            ))
+                            .on_click(move |_, window, cx| {
+                                terminal_focus.dispatch_action(&NewTerminal::default(), window, cx);
+                            }),
+                    )
+                    .child(
+                        Button::new("empty-project-open-file", "Find File")
+                            .full_width()
+                            .tab_index(1isize)
+                            .style(ButtonStyle::Subtle)
                             .start_icon(Icon::new(IconName::FolderSearch))
                             .key_binding(KeyBinding::for_action_in(
                                 &ToggleFileFinder::default(),
@@ -1001,7 +1016,7 @@ impl Pane {
                     .child(
                         Button::new("empty-project-new-file", "New File")
                             .full_width()
-                            .tab_index(1isize)
+                            .tab_index(2isize)
                             .style(ButtonStyle::Subtle)
                             .start_icon(Icon::new(IconName::Plus))
                             .key_binding(KeyBinding::for_action_in(
@@ -1011,21 +1026,6 @@ impl Pane {
                             ))
                             .on_click(move |_, window, cx| {
                                 new_file_focus.dispatch_action(&NewFile, window, cx);
-                            }),
-                    )
-                    .child(
-                        Button::new("empty-project-terminal", "New Terminal")
-                            .full_width()
-                            .tab_index(2isize)
-                            .style(ButtonStyle::Subtle)
-                            .start_icon(Icon::new(IconName::Terminal))
-                            .key_binding(KeyBinding::for_action_in(
-                                &NewTerminal::default(),
-                                &self.focus_handle,
-                                cx,
-                            ))
-                            .on_click(move |_, window, cx| {
-                                terminal_focus.dispatch_action(&NewTerminal::default(), window, cx);
                             }),
                     ),
             )

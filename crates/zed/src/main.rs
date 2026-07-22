@@ -1533,7 +1533,7 @@ pub(crate) async fn restore_or_create_workspace(
         // If the user cancelled a failed remote connection at startup,
         // open_remote_project returns Ok but removes the window, so error_count
         // stays 0 and the toast fallback above does not trigger. Without this
-        // check, Zed would exit silently.
+        // check, the app would exit silently.
         if cx.update(|cx| cx.windows().is_empty()) {
             cx.update(|cx| {
                 workspace::open_new(
@@ -1543,11 +1543,13 @@ pub(crate) async fn restore_or_create_workspace(
                     |workspace, window, cx| {
                         let restore_on_startup =
                             WorkspaceSettings::get_global(cx).restore_on_startup;
-                        match restore_on_startup {
-                            workspace::RestoreOnStartupBehavior::Launchpad => {}
-                            _ => {
-                                Editor::new_file(workspace, &Default::default(), window, cx);
-                            }
+                        if !matches!(
+                            restore_on_startup,
+                            workspace::RestoreOnStartupBehavior::Launchpad
+                        ) && crate::zed::should_seed_empty_workspace_with_blank_file(
+                            paths::APP_NAME,
+                        ) {
+                            Editor::new_file(workspace, &Default::default(), window, cx);
                         }
                     },
                 )
@@ -1564,11 +1566,12 @@ pub(crate) async fn restore_or_create_workspace(
                 cx,
                 |workspace, window, cx| {
                     let restore_on_startup = WorkspaceSettings::get_global(cx).restore_on_startup;
-                    match restore_on_startup {
-                        workspace::RestoreOnStartupBehavior::Launchpad => {}
-                        _ => {
-                            Editor::new_file(workspace, &Default::default(), window, cx);
-                        }
+                    if !matches!(
+                        restore_on_startup,
+                        workspace::RestoreOnStartupBehavior::Launchpad
+                    ) && crate::zed::should_seed_empty_workspace_with_blank_file(paths::APP_NAME)
+                    {
+                        Editor::new_file(workspace, &Default::default(), window, cx);
                     }
                 },
             )
