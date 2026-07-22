@@ -795,6 +795,14 @@ code, all launch gates pass, and known limitations are documented.
       An authored model assertion and identity guard cover the handoff.
       Formatting, diff, and identity checks pass; compile and rendered proof
       remain in the consolidated gate.
+- [x] 2026-07-23: Remove duplicate project identity from the Dez rail footer.
+      Commit `a9b1a961c0` leaves Workspace/project identity in the Session Rail
+      group hierarchy instead of repeating and wrapping it above the utility
+      icons. Restricted Mode and embedded cross-platform application menus can
+      still open the row, and official Zed retains the upstream behavior. Two
+      model tests and an identity guard cover those boundaries. Formatting,
+      diff, and identity checks pass; compile and rendered proof remain in the
+      consolidated gate.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

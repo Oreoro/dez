@@ -374,6 +374,10 @@ with new labels.
       explicit shrinkable, overflow-hidden regions so their one-line labels do
       not collide with footer controls. Formatting and diff checks pass;
       compiled and rendered narrow-width proof remain in the consolidated gate.
+      Commit `a9b1a961c0` then removes that duplicate project/branch row from
+      Dez's footer entirely because the Session Rail group hierarchy already
+      owns it; essential Restricted Mode and embedded application-menu content
+      can still reopen the row.
 - [ ] Avoid stacked utility chrome that steals space from supervised work.
       Commit `abc4f8bedb` removes Dez's dedicated Command Search footer row,
       keeps the action as a labeled icon in the existing utility bar, hides the
@@ -994,3 +998,10 @@ Notes decision:
   the handoff. Formatting, diff, and identity checks pass. Compilation and
   rendered proof remain deferred to the consolidated build; no application
   bundle was built or launched.
+- 2026-07-23: Removed duplicate project/branch identity from the Dez Session
+  Rail footer in `a9b1a961c0`. Workspace identity remains in the rail's group
+  hierarchy rather than wrapping above the footer utilities. Restricted Mode
+  and embedded application menus still open the row when essential; official
+  Zed is unchanged. Two model tests and an identity guard cover those
+  boundaries. Formatting, diff, and identity checks pass; no bundle was built
+  or launched.
