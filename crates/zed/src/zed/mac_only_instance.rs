@@ -14,6 +14,18 @@ const CONNECT_TIMEOUT: Duration = Duration::from_millis(10);
 const RECEIVE_TIMEOUT: Duration = Duration::from_millis(35);
 const SEND_TIMEOUT: Duration = Duration::from_millis(20);
 const USER_BLOCK: u16 = 100;
+// Official Zed uses 43737 plus the same channel offsets. Dez owns a separate
+// range so installing or running matching channels cannot suppress either app.
+const DEZ_INSTANCE_PORT_BASE: u16 = 45737;
+
+fn channel_port(channel: ReleaseChannel) -> u16 {
+    match channel {
+        ReleaseChannel::Dev => DEZ_INSTANCE_PORT_BASE,
+        ReleaseChannel::Preview => DEZ_INSTANCE_PORT_BASE + USER_BLOCK,
+        ReleaseChannel::Stable => DEZ_INSTANCE_PORT_BASE + (2 * USER_BLOCK),
+        ReleaseChannel::Nightly => DEZ_INSTANCE_PORT_BASE + (3 * USER_BLOCK),
+    }
+}
 
 fn address() -> SocketAddr {
     // These port numbers are offset by the user ID to avoid conflicts between
@@ -23,17 +35,10 @@ fn address() -> SocketAddr {
     // interleaving the ports between different users and different release channels.
     //
     // On macOS user IDs start at 501 and on Linux they start at 1000. The first user
-    // on a Mac with ID 501 running a dev channel build will use port 44238, and the
-    // second user with ID 502 will use port 44239, and so on. User 501 will use ports
-    // 44338, 44438, and 44538 for the preview, stable, and nightly channels,
-    // respectively. User 502 will use ports 44339, 44439, and 44539 for the preview,
-    // stable, and nightly channels, respectively.
-    let port = match *release_channel::RELEASE_CHANNEL {
-        ReleaseChannel::Dev => 43737,
-        ReleaseChannel::Preview => 43737 + USER_BLOCK,
-        ReleaseChannel::Stable => 43737 + (2 * USER_BLOCK),
-        ReleaseChannel::Nightly => 43737 + (3 * USER_BLOCK),
-    };
+    // on a Mac with ID 501 running a Dez dev channel build will use port 46238,
+    // and the second user with ID 502 will use port 46239, and so on. User 501
+    // will use ports 46338, 46438, and 46538 for preview, stable, and nightly.
+    let port = channel_port(*release_channel::RELEASE_CHANNEL);
     let mut user_port = port;
     let mut sys = System::new_all();
     sys.refresh_all();
@@ -147,5 +152,24 @@ fn check_got_handshake() -> bool {
         }
 
         Err(_) => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dez_channels_do_not_claim_official_zed_single_instance_ports() {
+        let dez_ports = [
+            channel_port(ReleaseChannel::Dev),
+            channel_port(ReleaseChannel::Preview),
+            channel_port(ReleaseChannel::Stable),
+            channel_port(ReleaseChannel::Nightly),
+        ];
+        let zed_ports = [43737, 43837, 43937, 44037];
+
+        assert_eq!(dez_ports, [45737, 45837, 45937, 46037]);
+        assert!(dez_ports.iter().all(|port| !zed_ports.contains(port)));
     }
 }

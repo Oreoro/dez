@@ -64,6 +64,15 @@ require_pattern assets/settings/default.json \
 require_pattern crates/zed/src/main.rs \
     'paths::APP_NAME == "Zed" && client::ClientSettings::get_global\(cx\)\.auto_connect' \
     'inherited settings can auto-connect Dez to the upstream Zed cloud'
+require_pattern crates/zed/src/zed/mac_only_instance.rs \
+    '^const DEZ_INSTANCE_PORT_BASE: u16 = 45737;$' \
+    'Dez still shares official Zed macOS single-instance ports'
+require_pattern crates/zed/src/zed/open_listener.rs \
+    'format!\("dez-\{\}\.sock", \*RELEASE_CHANNEL_NAME\)' \
+    'the Dez application listener socket is not product-isolated'
+require_pattern crates/cli/src/main.rs \
+    '"dez-\{\}\.sock"' \
+    'the Dez CLI socket is not product-isolated'
 require_pattern crates/zed/src/zed/edit_prediction_registry.rs \
     'EditPredictionProvider::Zed if paths::APP_NAME != "Zed" => None' \
     'the upstream Zed edit-prediction provider is reachable in Dez'
@@ -149,6 +158,9 @@ reject_pattern crates/cli/src/main.rs \
 reject_pattern crates/cli/src/main.rs \
     'visible_alias = "zed"' \
     'the Dez CLI exposes its legacy Zed compatibility alias in help'
+reject_pattern crates/cli/src/main.rs \
+    '"\.\./libexec/zed-editor"|"\.\./lib/zed/zed-editor"|"\./zed"|"\.\./Zed\.exe"|"\.\./lib/zed/zed-editor\.exe"|"\./zed\.exe"' \
+    'Dez CLI autodetection can silently launch an official Zed executable'
 require_pattern crates/cli/src/main.rs \
     'long = "dez", alias = "zed", value_name = "PATH"' \
     'the Dez CLI custom-app flag can expose a stale Zed metavar'

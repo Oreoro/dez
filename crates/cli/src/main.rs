@@ -921,16 +921,10 @@ mod linux {
                 let cli = env::current_exe()?;
                 let dir = cli.parent().context("no parent path for cli")?;
 
-                // Dez locations come first; Zed locations remain as compatibility
-                // fallbacks for upstream packaging layouts.
-                let possible_locations = [
-                    "../libexec/dez",
-                    "../lib/dez/dez",
-                    "./dez",
-                    "../libexec/zed-editor",
-                    "../lib/zed/zed-editor",
-                    "./zed",
-                ];
+                // Never fall through to an official Zed executable. A Dez CLI
+                // without its matching app is an installation error, not
+                // permission to cross the product boundary silently.
+                let possible_locations = ["../libexec/dez", "../lib/dez/dez", "./dez"];
                 possible_locations
                     .iter()
                     .find_map(|p| dir.join(p).canonicalize().ok().filter(|path| path != &cli))
@@ -967,7 +961,7 @@ mod linux {
                 .unwrap_or_else(|| paths::data_dir().clone());
 
             let sock_path = data_dir.join(format!(
-                "zed-{}.sock",
+                "dez-{}.sock",
                 *release_channel::RELEASE_CHANNEL_NAME
             ));
             let sock = UnixDatagram::unbound()?;
@@ -1265,16 +1259,10 @@ mod windows {
                 let cli = std::env::current_exe()?;
                 let dir = cli.parent().context("no parent path for cli")?;
 
-                // Dez locations come first; Zed locations remain as compatibility
-                // fallbacks for upstream packaging layouts.
-                let possible_locations = [
-                    "../Dez.exe",
-                    "../lib/dez/dez.exe",
-                    "./dez.exe",
-                    "../Zed.exe",
-                    "../lib/zed/zed-editor.exe",
-                    "./zed.exe",
-                ];
+                // Never fall through to an official Zed executable. A Dez CLI
+                // without its matching app is an installation error, not
+                // permission to cross the product boundary silently.
+                let possible_locations = ["../Dez.exe", "../lib/dez/dez.exe", "./dez.exe"];
                 possible_locations
                     .iter()
                     .find_map(|p| dir.join(p).canonicalize().ok().filter(|path| path != &cli))
