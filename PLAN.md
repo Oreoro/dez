@@ -75,7 +75,7 @@ rendered or end-to-end interaction proof.
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
 | Upstream               | Integrated `upstream/main` `9d0ef37a2571` through two-parent merge `2be63cfea347`; eleven conflicts are resolved and classified; consolidated build provenance is recorded                                                                                               | Complete runtime regression, installed coexistence, and design-partner proof                                                     |
 | Identity               | Dez source guards pass; the corrected arm64 app, helper, and `dev.dez.Dez-Dev`/`dez-dev` ad-hoc bundle are audited; the rebuilt raw CLI exposes `--dez <PATH>` and no visible legacy alias; the launched app held no TCP connection or listener during the recorded soak | Official-Zed install coexistence, consolidated rebuild, public signing/notarization, updater, remote, and visual proof           |
-| App Session            | Restore barrier, lifecycle state, ordered Workspace registry, explicit ordered viewport records, active selection, and unresolved identity retention exist in source; all nine focused Session tests pass                                                                | Live viewport/entity composition and consolidated runtime proof                                                                  |
+| App Session            | Restore barrier, lifecycle state, ordered Workspace registry, explicit ordered viewport records, active selection, unresolved identity retention, and live background-viewport attachment exist in source; all ten focused Session tests pass                            | Shared live entity composition and consolidated runtime proof                                                                    |
 | Workspace and Surfaces | Pane/Canvas repair, panel-to-pane work, startup request ordering, and typed path projection exist                                                                                                                                                                        | Authoritative EvidenceSet, scoped tools, movement proof, and shared-store isolation                                              |
 | Local Host             | Protocol 4 app/helper builds and focused tests pass; an authenticated packaged-runtime Session retained one shell PID, 88 replay chunks, both pre/post-resize dimensions, and explicit Detached state                                                                    | GUI-exit/same-Session reattach proof and default-backend decision                                                                |
 | Terminal recovery      | Host/Session references, attach/detach/terminate, recovery surfaces, honest transport states, and dimension-aware replay exist in source and packaged runtime                                                                                                            | Full GUI restart scenario, stale-host cleanup, and rendered UX verification                                                      |
@@ -153,16 +153,19 @@ official Zed.
       in more than one OS window without duplicating global App Session
       membership. Live entity composition and rendered proof remain open.
 - [ ] Make every OS window a view over the same App Session rather than an
-      independent state universe.
+      independent state universe. Registering a durable Workspace in a
+      MultiWorkspace now records that viewport even before activation; shared
+      live entity composition remains open.
 - [ ] Make New Window create another viewport without silently creating a
       separate application universe. Dez no longer inserts an unsolicited
       blank editor over the terminal-first launch surface, but live viewport
       registration and runtime proof remain open.
 - [x] Prove durable viewport normalization cannot duplicate, reorder, or
-      garbage-collect Workspace membership accidentally. Nine focused Session
+      garbage-collect Workspace membership accidentally. Ten focused Session
       tests cover ordered updates, duplicate viewport replacement, duplicate
       Workspace IDs, invalid active selection, unresolved composition,
-      multi-viewport membership, one-copy removal, migration, and round trips.
+      multi-viewport membership, idempotent live attachment, one-copy removal,
+      migration, and round trips.
       Live entity composition and consolidated runtime proof remain open.
 - [ ] Add focused persistence and startup-order tests for empty, unresolved,
       reordered, multi-viewport, queued-open, and failed-restore cases. The
@@ -847,3 +850,11 @@ Notes decision:
   process exit retain their existing Current/Stale lifecycle behavior. The full
   `zed --bin dez` source check, formatting, diff, and identity gates pass;
   consolidated runtime and bundle proof remain open.
+- 2026-07-23: Connected live background Workspace registration to durable
+  viewport composition in `962b611605`. `MultiWorkspace::register_workspace`
+  now records a database-backed Workspace in the current viewport without
+  making it active; repeat registration is idempotent, a second viewport keeps
+  global membership singular, and later activation updates selection in place.
+  All ten low-disk `session --lib` tests pass, the full workspace library graph
+  checks, and formatting, diff, and identity gates pass. Shared live entity and
+  consolidated restart proof remain open.

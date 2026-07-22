@@ -12,6 +12,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Honest Session Rail zero-state source: `d9688490ad`
 - Reachable isolated CLI installer source: `704314cc92`
 - Initial terminal-scope evidence source: `7a20dc1d19`
+- Live background viewport attachment source: `962b611605`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -234,6 +235,12 @@ source-level gap where an idle new shell could open a review brief without cwd
 scope. Full Dez source checks pass; runtime review and restoration proof remain
 open.
 
+Commit `962b611605` connects live background Workspace registration to the
+durable viewport records without changing active selection. Repeat attachment
+is idempotent and a second viewport does not duplicate global membership. All
+ten focused Session tests and the workspace library compile gate pass; shared
+live entity and consolidated restart proof remain open.
+
 The packaged helper also accepted a direct authenticated protocol 4 exercise.
 Host ID `d9670db8-e498-5537-a9d8-f99ad098f4aa` created Session
 `040b4465-5f0a-416b-9cb3-549da1a2a28b` with shell PID `53394`, emitted 88
@@ -256,9 +263,10 @@ that scenario still requires the unlocked UI and a graceful application quit.
 - [x] Focused Prettier checks for the canonical Dez documentation slices
 - [x] Focused tests: 15 terminal client/model tests, 8 Host/helper tests, and
       three Session Rail terminal lifecycle tests
-- [x] Nine focused App Session tests covering durable ordering, reconciliation,
+- [x] Ten focused App Session tests covering durable ordering, reconciliation,
       duplicate viewport replacement, multi-viewport membership, one-copy
-      removal, legacy migration, and serialization round trips
+      removal, live idempotent attachment, legacy migration, and serialization
+      round trips
 - [x] Full `cargo check -p zed --bin dez` with the recorded locked,
       storage-constrained dev profile after the terminal-first source slice
 - [x] Rebuilt raw CLI help exposes `--dez <PATH>`, uses Dez product copy, and
@@ -323,7 +331,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `7a20dc1d19` or
+visual evidence: the exact bundle must first be rebuilt from `962b611605` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -333,6 +341,6 @@ credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
 running and contains the corrected shell source through `679cdc28445c`, but
-predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, and `7a20dc1d19`. A rebuild/re-audit and an unlocked
+predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, and `962b611605`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.

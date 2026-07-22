@@ -696,6 +696,14 @@ code, all launch gates pass, and known limitations are documented.
       exit events still update Current/Stale lifecycle truth. Formatting, diff,
       identity, and full `zed --bin dez` source checks pass; runtime restoration
       proof remains open.
+- [x] 2026-07-23: Connect live background Workspace registration to App
+      Session viewport composition. Commit `962b611605` records a durable
+      Workspace in the current viewport from `MultiWorkspace::register_workspace`
+      without changing active selection. Repeated registration is idempotent,
+      a second viewport preserves singular global membership, and activation
+      updates selection in place. All ten focused Session tests and the
+      workspace library compile gate pass with the low-disk profiles. Shared
+      live entity composition and restart proof remain open.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
