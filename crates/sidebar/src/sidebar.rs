@@ -11950,12 +11950,14 @@ impl Focusable for Sidebar {
 
 impl Render for Sidebar {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        if SessionRailSettings::get_global(cx).is_hidden() {
+        let session_rail_settings = SessionRailSettings::get_global(cx);
+        if session_rail_settings.is_hidden() {
             return div()
                 .id("workspace-sidebar-hidden")
                 .size_0()
                 .into_any_element();
         }
+        let rail_width = session_rail_settings.width(self.width);
 
         let ui_font = theme_settings::setup_ui_font(window, cx);
         let sticky_header = self.render_sticky_header(window, cx);
@@ -12012,7 +12014,7 @@ impl Render for Sidebar {
             .map(|el| {
                 let on_left = self.side(cx) == SidebarSide::Left;
                 match window.window_decorations() {
-                    Decorations::Server => el.h_full().w(self.width),
+                    Decorations::Server => el.h_full().w(rail_width),
                     // With client-side decorations the sidebar owns the window
                     // corners on its side, so round them like the title bar and
                     // status bar do. The sidebar is stretched 1px outwards over
@@ -12022,7 +12024,7 @@ impl Render for Sidebar {
                     // rounded corners.
                     Decorations::Client { tiling, .. } => el
                         .absolute()
-                        .w(self.width)
+                        .w(rail_width)
                         .top(if tiling.top { px(0.) } else { px(-1.) })
                         .bottom(if tiling.bottom { px(0.) } else { px(-1.) })
                         .when(!tiling.top, |el| el.pt_px())

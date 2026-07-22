@@ -42,6 +42,35 @@ fn init_test(cx: &mut TestAppContext) {
     });
 }
 
+#[test]
+fn session_rail_render_width_matches_reserved_width_for_each_mode() {
+    let settings_for = |mode| SessionRailSettings {
+        visibility: settings::CanvasVisibility::Auto,
+        mode,
+        show_worktree_metadata: true,
+        show_agent_state_metadata: true,
+        show_layout_metadata: true,
+        show_latest_attention_metadata: true,
+        sort_by: settings::SessionRailSorting::Manual,
+    };
+
+    assert_eq!(
+        settings_for(settings::CanvasVisibility::Compact).width(DEFAULT_WIDTH),
+        COMPACT_MAX_WIDTH,
+        "compact rails must paint at the same capped width the workspace reserves"
+    );
+    assert_eq!(
+        settings_for(settings::CanvasVisibility::Detailed).width(DEFAULT_WIDTH),
+        DETAILED_MIN_WIDTH,
+        "detailed rails must paint at the same expanded width the workspace reserves"
+    );
+    assert_eq!(
+        settings_for(settings::CanvasVisibility::Icon).width(DEFAULT_WIDTH),
+        ICON_WIDTH,
+        "icon rails must paint at the same fixed width the workspace reserves"
+    );
+}
+
 #[track_caller]
 fn assert_active_thread(sidebar: &Sidebar, session_id: &acp::SessionId, msg: &str) {
     let active = sidebar.active_entry.as_ref();
