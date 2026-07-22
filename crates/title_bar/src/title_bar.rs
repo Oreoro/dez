@@ -750,19 +750,40 @@ impl Render for SidebarChrome {
                         })
                         .children(self.render_restricted_mode(cx))
                         .when(render_project_items, |this| {
-                            this.when(sidebar_settings.show_project_items, |this| {
-                                this.children(self.render_project_host(cx))
-                                    .child(self.render_project_name(project_name, window, cx))
-                            })
-                            .when_some(
-                                repository.filter(|_| is_git_enabled),
-                                |this, repository| {
-                                    this.children(self.render_worktree_and_branch(
-                                        repository,
-                                        linked_worktree_name,
-                                        cx,
-                                    ))
-                                },
+                            this.child(
+                                h_flex()
+                                    .min_w_0()
+                                    .flex_1()
+                                    .gap_1()
+                                    .overflow_x_hidden()
+                                    .when(sidebar_settings.show_project_items, |this| {
+                                        this.children(self.render_project_host(cx)).child(
+                                            div().min_w_0().flex_1().overflow_x_hidden().child(
+                                                self.render_project_name(project_name, window, cx),
+                                            ),
+                                        )
+                                    })
+                                    .when_some(
+                                        repository.filter(|_| is_git_enabled),
+                                        |this, repository| {
+                                            this.when_some(
+                                                self.render_worktree_and_branch(
+                                                    repository,
+                                                    linked_worktree_name,
+                                                    cx,
+                                                ),
+                                                |this, worktree_and_branch| {
+                                                    this.child(
+                                                        div()
+                                                            .min_w_0()
+                                                            .flex_1()
+                                                            .overflow_x_hidden()
+                                                            .child(worktree_and_branch),
+                                                    )
+                                                },
+                                            )
+                                        },
+                                    ),
                             )
                         })
                     })
@@ -1519,7 +1540,10 @@ impl SidebarChrome {
 
         Some(
             h_flex()
+                .min_w_0()
+                .w_full()
                 .gap_px()
+                .overflow_x_hidden()
                 .children(worktree_button)
                 .when(show_separator, |this| {
                     this.child(
