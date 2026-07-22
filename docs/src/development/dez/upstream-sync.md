@@ -23,19 +23,26 @@ stable tag as the release-quality compatibility floor.
 
 Refreshed on 2026-07-22:
 
-- Dez `HEAD`: `820eb1cf5f0f3daf569a2621445cf0eb60daba64`
-- fetched `upstream/main`: `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
-- merge base: `f14fea9bf3c93797d5161f7440ed418655bc6c57`
-- divergence: 240 Dez commits and 81 upstream commits after the merge base
+- Dez source checkpoint: `c2335969f994af4c7de6fa43e91eb1c93b3f1bb5`
+- integration merge: `2be63cfea347006e407934754086bbef62d482c2`
+- incorporated `upstream/main`: `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
+- current merge base: `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
+- divergence: 242 Dez commits and 0 upstream commits after the merge base
 - latest stable tag fetched: `v1.11.3`
 - `origin`: `maxktz/superzed`
 - active branch at capture: `codex/canvas-plan`
+- Rust toolchain at the post-merge static gate: `rustc 1.95.0` and
+  `cargo 1.95.0`
 
 The tag fetch again reported existing local-name collisions for `nightly` and
 `collab-staging`; `upstream/main` still refreshed successfully. Versioned
 stable tags were queried independently and continue to top out at `v1.11.3`.
 Resolve or namespace the colliding moving tags before treating a future
 `--tags` fetch as an all-or-nothing integration gate.
+
+The 2026-07-22 train is integrated as a real two-parent merge. Eleven conflicts
+were resolved according to Fork Notes; the exact set and treatment are in the
+[Upstream Feature Ledger](./upstream-ledger.md).
 
 ## Merge train {#merge-train}
 

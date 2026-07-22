@@ -177,6 +177,12 @@ code, all launch gates pass, and known limitations are documented.
       remains `v1.11.3`, and a disposable detached-worktree rehearsal was
       aborted and removed after recording ten conflicts. The new conflict is
       `workspace.rs`; the active dirty product worktree was not modified.
+- [x] 2026-07-22: Checkpoint the completed supervision source slice as
+      `c2335969f994`, then integrate `upstream/main` `9d0ef37a2571` with the
+      reversible two-parent merge `2be63cfea347`. Resolve all eleven actual
+      conflicts according to Fork Notes, preserve the Dez sidebar-native shell,
+      retain compatible Markdown/workspace/task behavior, and pass formatting,
+      metadata, diff, and identity static gates.
 - [x] 2026-07-22: Add a locally runnable fork identity checker and GitHub
       workflow for pull-request identity guards, scheduled upstream drift,
       no-commit merge rehearsal, conflict artifacts, and one maintained status
@@ -545,12 +551,15 @@ code, all launch gates pass, and known limitations are documented.
       remain open.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
-- [ ] Persist and reattach local terminal sessions.
+- [x] Persist local terminal Host/Session references and implement authenticated
+      replay/reattachment in source; full process-restart proof remains in the
+      release gate.
 - [x] Implement the structured Codex adapter and attention inbox in source;
       hook onboarding and live verification remain release-gate work.
 - [x] Implement the deterministic review-brief projection with structured
-      terminal command evidence and conservative check classification. File
-      evidence and broader checker adapters remain open.
+      terminal command/check evidence, conservative classification, Git and
+      worktree state, bounded file targets, cwd provenance, and explicit
+      non-ownership language. Broader checker adapters remain open.
 - [ ] Demonstrate the complete restart-and-review vertical slice.
 - [ ] Complete workspace-scoped `Project` and evidence behavior.
 - [ ] Add remote continuity, conflict radar, recipes, and worktree brokering.

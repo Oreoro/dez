@@ -72,15 +72,15 @@ not imply compiled or live-verified behavior.
 
 | Area                   | Evidence now                                                                                                                                                         | Completion gap                                                                                |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Upstream               | Recorded merge through `f14fea9bf3c93797d5161f7440ed418655bc6c57`; refreshed `upstream/main` and conflict rehearsal                                                  | Select and merge the next base, adapt conflicts, and record release provenance                |
+| Upstream               | Integrated `upstream/main` `9d0ef37a2571` through two-parent merge `2be63cfea347`; eleven conflicts are resolved and classified                                      | Complete compiled/runtime regression proof and record final artifact provenance               |
 | Identity               | Dez names, executable, schemes, bundle/update guards, identity script, and CI workflow exist in source                                                               | Compile, package, install/coexistence, updater, remote, and first-party visual proof          |
 | App Session            | Restore barrier, lifecycle state, ordered Workspace registry, explicit ordered viewport records, active selection, and unresolved identity retention exist in source | Live viewport/entity composition and consolidated runtime proof                               |
 | Workspace and Surfaces | Pane/Canvas repair, panel-to-pane work, startup request ordering, and typed path projection exist                                                                    | Authoritative EvidenceSet, scoped tools, movement proof, and shared-store isolation           |
 | Local Host             | Authenticated versioned helper, PTY ownership, replay, lifecycle commands, supervisor, and packaging seam exist behind an opt-in flag                                | Compile, liveness/security tests, GUI-exit survival proof, and default-backend decision       |
 | Terminal recovery      | Host/Session references, attach/detach/terminate, recovery surfaces, and honest transport states exist in source                                                     | Full restart scenario, task-terminal policy, stale-host cleanup, and UX verification          |
-| Agent adapter          | Structured Codex hook path, capability-limited actions, bounded events, and onboarding exist                                                                         | Live hook proof, objective/file/Git evidence, and a second adapter after the PMF gate         |
-| Attention              | Session Rail projection and restart-safe terminal attention exist                                                                                                    | Separate condition, acknowledgement, mute, resolution, priority, and stale handling           |
-| Review                 | Native and terminal review briefs consume observed commands/checks and label missing evidence                                                                        | File/Git provenance, risks, completion gate, side-by-side hero-flow proof                     |
+| Agent adapter          | Structured Codex hook path, observation-only capabilities, bounded file targets, objective/context projection, and onboarding exist                                  | Live hook proof and a second adapter after the PMF gate                                       |
+| Attention              | Session Rail projection, restart-safe attention, acknowledgement, mute, resolution, priority, and stale handling exist                                               | Consolidated runtime and accessibility proof                                                  |
+| Review                 | Native and terminal review briefs consume observed commands/checks, Git/worktree state, bounded file targets, cwd provenance, risks, and missing-evidence labels     | Compiled proof, live navigation, and side-by-side hero-flow validation                        |
 | UI/UX                  | Repaired Canvas states, pane focus, Session Rail search/start states, density and contrast work exist                                                                | Complete shell hierarchy, outward polish, onboarding, accessibility, and state-by-state audit |
 | Release                | Static formatting, metadata, identity, and documentation checks have passed for source slices                                                                        | Consolidated build, intended-binary live audit, restart, packaging, and design-partner proof  |
 
@@ -99,11 +99,11 @@ convenient evidence.
       and conflict rehearsal.
 - [x] Add local and CI identity guards for executable, bundle, URL scheme,
       updater, and packaged terminal helper.
-- [ ] Select the next upstream base and merge it through a reversible,
+- [x] Select the next upstream base and merge it through a reversible,
       reviewable branch.
-- [ ] Resolve presentation and settings conflicts according to Fork Notes;
+- [x] Resolve presentation and settings conflicts according to Fork Notes;
       retain compatible upstream functionality instead of reimplementing it.
-- [ ] Audit remote/headless identifiers, logs, crash metadata, help links,
+- [x] Audit remote/headless identifiers, logs, crash metadata, help links,
       collaboration copy, telemetry labels, and first-party UI for stale Zed or
       Superzed identity.
 - [ ] Prove Dez and official Zed coexist without overwriting binaries, data,

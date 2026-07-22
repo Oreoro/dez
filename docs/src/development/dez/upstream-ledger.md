@@ -5,32 +5,35 @@ Dez treatment of user-visible changes. Update it during every merge train.
 
 ## Integration target {#integration-target}
 
-- Current Dez commit: `820eb1cf5f0f3daf569a2621445cf0eb60daba64`
-- Current merge base: `f14fea9bf3c93797d5161f7440ed418655bc6c57`
-- Target `upstream/main`: `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
-- Upstream commits after the merge base: 81
+- Source checkpoint: `c2335969f994af4c7de6fa43e91eb1c93b3f1bb5`
+- Integration merge: `2be63cfea347006e407934754086bbef62d482c2`
+- Incorporated `upstream/main`: `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
+- Current merge base: `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
+- Current divergence: 242 Dez commits and 0 upstream commits after the merge base
 - Latest fetched stable tag: `v1.11.3`
-- Rehearsal date: 2026-07-22
+- Integration date: 2026-07-22
 
-The rehearsal ran in a detached temporary worktree. It did not modify the
-active product worktree and was aborted after evidence collection.
+The merge was rehearsed in a detached temporary worktree, then integrated on
+`codex/canvas-plan` after the Dez source slice was checkpointed. The merge has
+two explicit parents and was not squashed or rebased.
 
-## Rehearsal result {#rehearsal-result}
+## Integration result {#integration-result}
 
-The merge produced ten conflicted paths:
+The real merge produced eleven conflicted paths:
 
-| Path                                                   | Class                          | Resolution intent                                                                                                                                        |
-| ------------------------------------------------------ | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `assets/settings/default.json`                         | Settings and defaults          | Add upstream settings while preserving Dez offline, Canvas, privacy, updater, and terminal-first defaults.                                               |
-| `crates/image_viewer/src/image_viewer.rs`              | Universal surface presentation | Retain upstream custom zoom and fold it into the existing Canvas-token treatment.                                                                        |
-| `crates/markdown_preview/src/markdown_preview_view.rs` | Universal surface presentation | Retain upstream link-destination hover behavior and Dez preview/readability styling.                                                                     |
-| `crates/settings_content/src/sidebar.rs`               | Settings schema                | Add upstream title-bar/worktree controls without losing Session Rail and Canvas settings.                                                                |
-| `crates/settings_ui/src/page_data.rs`                  | Settings presentation          | Preserve upstream setting discoverability and Dez terminology/defaults.                                                                                  |
-| `crates/tasks_ui/Cargo.toml`                           | Dependency wiring              | Use the newest compatible upstream dependency set plus existing Canvas dependencies.                                                                     |
-| `crates/title_bar/src/title_bar.rs`                    | Shell and collaboration        | Retain upstream layout fixes and worktree controls while preserving Dez branding, offline startup, and pane-first shell behavior.                        |
-| `crates/title_bar/src/title_bar_settings.rs`           | Modify/delete architecture     | Reconcile the upstream setting into the current consolidated title-bar settings owner; do not restore a duplicate owner.                                 |
-| `crates/workspace/src/pane_group.rs`                   | Pane focus and rendering       | Retain upstream active-border/dimming fix and Dez focus, accessibility, and layout behavior.                                                             |
-| `crates/workspace/src/workspace.rs`                    | Workspace routing and shell    | Retain upstream picker, run-status, recent-project, and workspace fixes while preserving App Session, EvidenceSet, terminal Host, and Dez shell changes. |
+| Path                                                   | Class                       | Integrated resolution                                                                                                                                              |
+| ------------------------------------------------------ | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `assets/settings/default.json`                         | Settings and defaults       | Preserved Dez offline, Canvas, privacy, updater, terminal-first, and sidebar-native shell defaults.                                                                |
+| `crates/agent_ui/src/conversation_view/thread_view.rs` | Agent presentation          | Combined upstream Markdown-fragment behavior with Dez pane-splitting behavior.                                                                                     |
+| `crates/markdown_preview/src/markdown_preview_view.rs` | Surface presentation        | Retained upstream link hover, source-position, and file-link behavior with Dez preview-first opening and readable Canvas styling.                                  |
+| `crates/settings_content/src/sidebar.rs`               | Settings schema             | Preserved the consolidated Dez `SidebarChrome` owner rather than restoring an overlapping upstream title-bar schema.                                               |
+| `crates/settings_ui/src/page_data.rs`                  | Settings presentation       | Kept the Dez sidebar-chrome section and terminology.                                                                                                               |
+| `crates/tasks_ui/Cargo.toml`                           | Dependency wiring           | Combined Dez settings dependencies with the current upstream tree-sitter dependencies.                                                                             |
+| `crates/title_bar/src/title_bar.rs`                    | Shell and collaboration     | Preserved the Dez sidebar-native hierarchy and account/collaboration demotion; compatible upstream changes outside the conflicting render branch remain inherited. |
+| `crates/title_bar/src/title_bar_settings.rs`           | Modify/delete architecture  | Kept the file deleted because `sidebar_chrome_settings` is the single Dez settings owner.                                                                          |
+| `crates/workspace/src/pane.rs`                         | Pane lifecycle and tests    | Preserved Dez empty-launch behavior and upstream leased-workspace pinned-tab coverage.                                                                             |
+| `crates/workspace/src/pane_group.rs`                   | Pane focus and rendering    | Kept the visible-index active-pane correction with Dez focus and layout behavior.                                                                                  |
+| `crates/workspace/src/workspace.rs`                    | Workspace routing and tests | Preserved Dez saved-Canvas-layout coverage and upstream remote-base-path coverage while inheriting compatible workspace fixes.                                     |
 
 No conflict occurred in terminal process handling, terminal rendering, ACP,
 remote transport, Git stores, workspace persistence, or agent lifecycle code.
@@ -106,10 +109,13 @@ clean textual application does not prove correct Dez semantics.
 
 ## Verification required after resolution {#verification-required}
 
-- Resolve each conflict in an isolated integration branch.
+- The merge is resolved on the reversible `codex/canvas-plan` integration
+  branch with source checkpoint and two-parent merge provenance.
 - Run focused tests for every conflicted crate.
 - Exercise terminal focus, pane focus, Markdown links, image zoom, settings
   search, task setup, collaboration-offline behavior, and workspace restore.
-- Run `./script/dez-identity-check` after conflict resolution.
+- `cargo fmt --all -- --check`, `git diff --check`,
+  `cargo metadata --no-deps`, and `./script/dez-identity-check` pass after
+  conflict resolution.
 - Run formatting, the `dez` build, bundle audit, and live smoke gate before
   landing.
