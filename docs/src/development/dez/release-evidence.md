@@ -148,6 +148,15 @@ was attempted but not completed: reconstructing the deleted Cargo source cache
 twice exhausted the remaining volume before the large test link, so no test
 pass is claimed. The running signed bundle predates this correction.
 
+The screenshot also showed a loaded project with a completely blank center.
+The render decision checked `should_display_welcome_page` before checking for a
+visible worktree, so a legacy/restored tabbed pane with the flag unset returned
+an empty placeholder. Commit `4829f6b052` gives a loaded project priority and
+renders the existing Project ready surface with Find File, New File, and New
+Terminal actions; no-worktree welcome suppression retains its old meaning. A
+focused model assertion covers both cases, but it shares the unfinished
+storage-bound test target and is not recorded as passing.
+
 The audited `Dez Dev.app` is now registered and launched as launchd child PID
 `57957`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 The desktop is currently locked, and the approved accessibility controller
@@ -186,6 +195,10 @@ that scenario still requires the unlocked UI and a graceful application quit.
       workspace and contains assertions for all modes. Formatting and diff
       checks pass, but the focused test did not finish under the local storage
       ceiling and the post-fix bundle has not been built.
+- [ ] Restored empty-project launch regression: commit `4829f6b052` makes a
+      loaded project render Project ready actions even when an old pane lacks
+      the welcome flag. The assertion is authored and formatting passes; the
+      shared focused test target and post-fix bundle remain incomplete.
 - [x] `cargo clippy -p dez_terminal_host --all-targets -- -D warnings` with the
       recorded storage-constrained dev profile
 - [ ] App-facing modified-crate `cargo clippy` (the full app graph exceeds the
@@ -217,7 +230,7 @@ The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
 visual evidence: the exact bundle must first be rebuilt from `79f69b273c` or
-later and re-audited.
+later, including `4829f6b052`, and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
 
@@ -225,6 +238,6 @@ Public Developer ID signing and Apple notarization require Dez publisher
 credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
-running but predates `79f69b273c`; a rebuild/re-audit and an unlocked desktop
-are both prerequisites for the visual, interaction, accessibility, and
-GUI-driven hosted-PTY recovery matrix.
+running but predates `79f69b273c` and `4829f6b052`; a rebuild/re-audit and an
+unlocked desktop are both prerequisites for the visual, interaction,
+accessibility, and GUI-driven hosted-PTY recovery matrix.

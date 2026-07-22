@@ -622,6 +622,12 @@ code, all launch gates pass, and known limitations are documented.
       diff checks pass; the focused test build and post-fix bundle remain open
       under the documented storage gate, so no rendered or test pass is
       inferred from the source correction.
+- [x] 2026-07-22: Keep an empty loaded project actionable after restoration.
+      Commit `4829f6b052` makes the visible-worktree launch surface outrank a
+      missing legacy welcome flag, preventing the blank center shown beside the
+      crushed rail. Find File, New File, and New Terminal remain the deliberate
+      recovery actions. The focused assertion is authored; the shared
+      storage-bound test target, rebuild, and rendered proof remain open.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
