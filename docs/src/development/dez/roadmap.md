@@ -593,7 +593,9 @@ code, all launch gates pass, and known limitations are documented.
       repair the workspace footer. Detection now classifies an agent instead of
       deciding whether a terminal exists, active shells select correctly, the
       footer stays on one line, dynamic labels truncate, and a redundant
-      default `main` worktree label is suppressed.
+      default `main` worktree label is suppressed. A focused visual-model test
+      now creates a plain workspace shell and proves its live, unclassified,
+      selected Session Rail projection.
 - [x] 2026-07-22: Exercise the packaged protocol 4 boundary with a live PTY.
       Host `d9670db8-e498-5537-a9d8-f99ad098f4aa` created Session
       `040b4465-5f0a-416b-9cb3-549da1a2a28b` with shell PID `53394`; 88 replay

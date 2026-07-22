@@ -51,13 +51,19 @@ cargo build --locked --profile dev \
 ```
 
 The CLI completed separately with the same locked, non-incremental,
-single-codegen-unit profile. Unsigned build artifacts are arm64 Mach-O files:
+single-codegen-unit profile. The captured unsigned build artifacts were arm64
+Mach-O files:
 
 | Artifact            | Size | SHA-256                                                            |
 | ------------------- | ---- | ------------------------------------------------------------------ |
 | `target/debug/dez`  | 1.0G | `ccc84c35cc2ef037a0f4ebcfe41ea8a14918df95e369b0989fef6235eaa10db5` |
 | `target/debug/cli`  | 12M  | `e9bde80f1d951a6f9b7da53b0175de23db31c642b368c67c19451a04fbc9eaed` |
 | `dez-terminal-host` | 13M  | `500845d7e3c27ba205803330865c92ebbd55a533c261a915eeb7422f715b6113` |
+
+After hashing and copying it into the signed bundle, the 1.0G raw `dez` file
+was removed to provide safe link headroom for the Session Rail regression test.
+The signed bundle copy remains present and running; the raw file is reproducible
+with the recorded build command.
 
 ## Debug bundle and coexistence evidence {#debug-bundle-and-coexistence-evidence}
 
@@ -159,6 +165,9 @@ that scenario still requires the unlocked UI and a graceful application quit.
 - [x] Focused Prettier checks for the canonical Dez documentation slices
 - [x] Focused tests: 15 terminal client/model tests, 8 Host/helper tests, and
       three Session Rail terminal lifecycle tests
+- [x] Plain workspace-shell regression: the Session Rail includes a non-agent
+      terminal as `Live`, leaves its agent classification empty, and selects its
+      active row
 - [x] `cargo clippy -p dez_terminal_host --all-targets -- -D warnings` with the
       recorded storage-constrained dev profile
 - [ ] App-facing modified-crate `cargo clippy` (the full app graph exceeds the
