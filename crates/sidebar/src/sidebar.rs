@@ -135,9 +135,9 @@ gpui::actions!(
 
 const DEFAULT_WIDTH: Pixels = px(300.0);
 const ICON_WIDTH: Pixels = px(56.0);
-const COMPACT_MAX_WIDTH: Pixels = px(240.0);
+const COMPACT_MAX_WIDTH: Pixels = px(280.0);
 const DETAILED_MIN_WIDTH: Pixels = px(380.0);
-const MIN_WIDTH: Pixels = px(200.0);
+const MIN_WIDTH: Pixels = px(240.0);
 const MAX_WIDTH: Pixels = px(800.0);
 
 #[derive(Clone, Debug, settings::RegisterSetting)]
@@ -265,6 +265,14 @@ fn session_overview_status_label(
     } else {
         format!("{session_count} {session_noun} · caught up")
     }
+}
+
+fn session_scope_controls_visible(session_count: usize) -> bool {
+    session_count > 0
+}
+
+fn session_search_visible(session_count: usize, has_query: bool) -> bool {
+    session_count > 0 || has_query
 }
 
 fn canvas_thread_item_style(
@@ -10984,54 +10992,59 @@ impl Sidebar {
                             }),
                     ),
             )
-            .child(
-                h_flex()
-                    .w_full()
-                    .gap_1()
-                    .child(
-                        div().min_w_0().flex_1().child(
-                            Button::new("all-session-scope", all_scope_label)
-                                .full_width()
-                                .size(ButtonSize::Compact)
-                                .style(ButtonStyle::Subtle)
-                                .toggle_state(!self.attention_only)
-                                .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-                                .aria_label(all_scope_aria_label)
-                                .tooltip(move |_window, cx| {
-                                    Tooltip::for_action_in(
-                                        "Toggle Attention Scope",
-                                        &ToggleAttentionFilter,
-                                        &all_scope_focus,
-                                        cx,
-                                    )
-                                })
-                                .on_click(cx.listener(|this, _, window, cx| {
-                                    this.set_attention_filter(false, window, cx);
-                                })),
-                        ),
+            .when(
+                session_scope_controls_visible(self.contents.session_count),
+                |this| {
+                    this.child(
+                        h_flex()
+                            .w_full()
+                            .gap_1()
+                            .child(
+                                div().min_w_0().flex_1().child(
+                                    Button::new("all-session-scope", all_scope_label)
+                                        .full_width()
+                                        .size(ButtonSize::Compact)
+                                        .style(ButtonStyle::Subtle)
+                                        .toggle_state(!self.attention_only)
+                                        .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                                        .aria_label(all_scope_aria_label)
+                                        .tooltip(move |_window, cx| {
+                                            Tooltip::for_action_in(
+                                                "Toggle Attention Scope",
+                                                &ToggleAttentionFilter,
+                                                &all_scope_focus,
+                                                cx,
+                                            )
+                                        })
+                                        .on_click(cx.listener(|this, _, window, cx| {
+                                            this.set_attention_filter(false, window, cx);
+                                        })),
+                                ),
+                            )
+                            .child(
+                                div().min_w_0().flex_1().child(
+                                    Button::new("attention-session-scope", attention_scope_label)
+                                        .full_width()
+                                        .size(ButtonSize::Compact)
+                                        .style(ButtonStyle::Subtle)
+                                        .toggle_state(self.attention_only)
+                                        .selected_style(ButtonStyle::Tinted(TintColor::Warning))
+                                        .aria_label(attention_scope_aria_label)
+                                        .tooltip(move |_window, cx| {
+                                            Tooltip::for_action_in(
+                                                "Toggle Attention Scope",
+                                                &ToggleAttentionFilter,
+                                                &attention_scope_focus,
+                                                cx,
+                                            )
+                                        })
+                                        .on_click(cx.listener(|this, _, window, cx| {
+                                            this.set_attention_filter(true, window, cx);
+                                        })),
+                                ),
+                            ),
                     )
-                    .child(
-                        div().min_w_0().flex_1().child(
-                            Button::new("attention-session-scope", attention_scope_label)
-                                .full_width()
-                                .size(ButtonSize::Compact)
-                                .style(ButtonStyle::Subtle)
-                                .toggle_state(self.attention_only)
-                                .selected_style(ButtonStyle::Tinted(TintColor::Warning))
-                                .aria_label(attention_scope_aria_label)
-                                .tooltip(move |_window, cx| {
-                                    Tooltip::for_action_in(
-                                        "Toggle Attention Scope",
-                                        &ToggleAttentionFilter,
-                                        &attention_scope_focus,
-                                        cx,
-                                    )
-                                })
-                                .on_click(cx.listener(|this, _, window, cx| {
-                                    this.set_attention_filter(true, window, cx);
-                                })),
-                        ),
-                    ),
+                },
             )
     }
 
@@ -12026,6 +12039,7 @@ impl Render for Sidebar {
 
         let no_search_results = self.contents.entries.is_empty();
         let has_query = self.has_filter_query(cx);
+        let show_session_search = session_search_visible(self.contents.session_count, has_query);
         let show_start_state = !self.contents.has_open_projects
             && self.contents.session_count == 0
             && !has_query
@@ -12134,7 +12148,9 @@ impl Render for Sidebar {
                                         self.render_terminal_host_status(cx),
                                         |this, status| this.child(status),
                                     )
-                                    .child(self.render_session_search(cx))
+                                    .when(show_session_search, |this| {
+                                        this.child(self.render_session_search(cx))
+                                    })
                                     .child(
                                         v_flex()
                                             .relative()
