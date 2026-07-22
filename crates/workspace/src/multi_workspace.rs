@@ -196,9 +196,9 @@ fn render_sidebar_header_controls_for_state(
         (false, SidebarSide::Right) => IconName::SidebarRightClosed,
     };
     let sidebar_label = if sidebar_open {
-        "Hide Sidebar"
+        "Hide Session Rail"
     } else {
-        "Open Sidebar"
+        "Open Session Rail"
     };
     let on_right = sidebar_side == SidebarSide::Right;
     let sidebar_multi_workspace = multi_workspace.clone();
@@ -216,8 +216,11 @@ fn render_sidebar_header_controls_for_state(
         })
         .trigger(move |_is_active, _window, _cx| {
             IconButton::new("sidebar-toggle", sidebar_icon)
-                .icon_size(IconSize::Small)
+                .size(ButtonSize::Medium)
+                .icon_size(IconSize::Medium)
                 .icon_color(Color::Muted)
+                .aria_label(sidebar_label)
+                .aria_expanded(sidebar_open)
                 .tooltip(move |_, cx| Tooltip::for_action(sidebar_label, &ToggleSidebar, cx))
                 .on_click(move |_, window, cx| {
                     sidebar_multi_workspace.update(cx, |multi_workspace, cx| {
@@ -244,14 +247,18 @@ fn render_sidebar_header_controls_for_state(
         };
 
         Some(
-            IconButton::new("project-pane-toggle", IconName::Compass)
-                .icon_size(IconSize::Small)
+            IconButton::new("project-pane-toggle", IconName::FileTree)
+                .size(ButtonSize::Medium)
+                .icon_size(IconSize::Medium)
                 .icon_color(if is_visible {
                     Color::Default
                 } else {
                     Color::Muted
                 })
                 .toggle_state(is_visible)
+                .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                .aria_label(label)
+                .aria_expanded(is_visible)
                 .tooltip(move |_, cx| Tooltip::for_action(label, &ToggleProjectPane, cx))
                 .on_click(|_, window, cx| {
                     window.dispatch_action(Box::new(ToggleProjectPane), cx);
@@ -564,6 +571,7 @@ impl MultiWorkspace {
         cx: &mut Context<Self>,
         sidebar_open: bool,
     ) -> Self {
+        let sidebar_open = sidebar_open || SidebarSettings::get_global(cx).always_open;
         let release_subscription = cx.on_release(|this: &mut MultiWorkspace, _cx| {
             if let Some(task) = this._serialize_task.take() {
                 task.detach();
@@ -598,6 +606,12 @@ impl MultiWorkspace {
         if sidebar_open {
             multi_workspace.apply_open_sidebar(false, cx);
         }
+
+        let active_workspace = multi_workspace.active_workspace.clone();
+        let viewport_id = multi_workspace.window_id.as_u64();
+        active_workspace.update(cx, |workspace, cx| {
+            workspace.mark_durable_session_active(viewport_id, cx);
+        });
 
         multi_workspace
     }
@@ -1843,6 +1857,10 @@ impl MultiWorkspace {
         // to decide who owns the window chrome.
         self.active_workspace_id
             .set(self.active_workspace.entity_id());
+        let viewport_id = self.window_id.as_u64();
+        self.active_workspace.update(cx, |workspace, cx| {
+            workspace.mark_durable_session_active(viewport_id, cx);
+        });
 
         let active_key = self.active_workspace.read(cx).project_group_key(cx);
         if let Some(group) = self.project_groups.iter_mut().find(|g| g.key == active_key) {
@@ -1929,7 +1947,9 @@ impl MultiWorkspace {
             }
         }
         cx.emit(MultiWorkspaceEvent::WorkspaceRemoved(workspace.entity_id()));
-        workspace.update(cx, |workspace, _cx| {
+        let viewport_id = self.window_id.as_u64();
+        workspace.update(cx, |workspace, cx| {
+            workspace.remove_durable_session_membership_from_viewport(viewport_id, cx);
             workspace.session_id.take();
             workspace._schedule_serialize_workspace.take();
             workspace._serialize_workspace_task.take();
@@ -2633,7 +2653,6 @@ impl Render for MultiWorkspace {
                 })),
             window,
             cx,
-            Tiling::default(),
         )
     }
 }

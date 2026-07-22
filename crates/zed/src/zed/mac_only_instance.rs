@@ -72,10 +72,10 @@ fn get_uid_as_u32(uid: &sysinfo::Uid) -> u32 {
 
 fn instance_handshake() -> &'static str {
     match *release_channel::RELEASE_CHANNEL {
-        ReleaseChannel::Dev => "Superzed Dev Instance Running",
-        ReleaseChannel::Nightly => "Superzed Nightly Instance Running",
-        ReleaseChannel::Preview => "Superzed Preview Instance Running",
-        ReleaseChannel::Stable => "Superzed Stable Instance Running",
+        ReleaseChannel::Dev => "Dez Dev Instance Running",
+        ReleaseChannel::Nightly => "Dez Nightly Instance Running",
+        ReleaseChannel::Preview => "Dez Preview Instance Running",
+        ReleaseChannel::Stable => "Dez Stable Instance Running",
     }
 }
 

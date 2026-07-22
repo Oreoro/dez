@@ -3452,7 +3452,7 @@ fn merge_anchor_ranges(
 
 #[derive(Error, Debug)]
 #[error(
-    "You must update to Zed version {minimum_version} or higher to continue using edit predictions."
+    "Upstream Zed Edit Predictions requires client version {minimum_version} or higher. This Dez build cannot use that service version."
 )]
 pub struct ZedUpdateRequiredError {
     minimum_version: Version,

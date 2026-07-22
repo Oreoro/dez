@@ -1,6 +1,6 @@
 use crate::{
-    AnyActiveCall, AppState, CollaboratorId, FollowerState, Pane, PaneGridSettings,
-    ParticipantLocation, Workspace, WorkspaceSettings,
+    AnyActiveCall, AppState, CollaboratorId, FollowerState, Pane, ParticipantLocation, Workspace,
+    WorkspaceSettings,
     notifications::DetachAndPromptErr,
     pane_group::element::pane_axis,
     workspace_card_gap,
@@ -382,6 +382,36 @@ pub(crate) fn render_pane_card(
         .into_any()
 }
 
+pub(crate) fn render_leader_decoration(
+    render_cx: &dyn PaneLeaderDecorator,
+    pane: &Entity<Pane>,
+    cx: &mut App,
+) -> Option<AnyElement> {
+    let decoration = render_cx.decorate(pane, cx);
+    if decoration.border.is_none() && decoration.status_box.is_none() {
+        return None;
+    }
+
+    Some(
+        div()
+            .absolute()
+            .size_full()
+            .left_0()
+            .top_0()
+            .children(decoration.border.map(|color| {
+                div()
+                    .absolute()
+                    .size_full()
+                    .left_0()
+                    .top_0()
+                    .border_2()
+                    .border_color(color)
+            }))
+            .children(decoration.status_box)
+            .into_any(),
+    )
+}
+
 type PaneDistances = (f32, f32, f32);
 
 fn pane_distances_in_direction(
@@ -606,11 +636,11 @@ impl PaneLeaderDecorator for PaneRenderContext<'_> {
                         }
                     }
                     ParticipantLocation::UnsharedProject => Some(Label::new(format!(
-                        "{} is viewing an unshared Zed project",
+                        "{} is viewing an unshared Dez project",
                         leader.user.username
                     ))),
                     ParticipantLocation::External => Some(Label::new(format!(
-                        "{} is viewing a window outside of Zed",
+                        "{} is viewing a window outside of Dez",
                         leader.user.username
                     ))),
                 };
@@ -816,13 +846,6 @@ impl Member {
                 }
             }
             Member::Pane(pane) => panes.push(pane),
-        }
-    }
-
-    fn contains_pane(&self, pane: &Entity<Pane>) -> bool {
-        match self {
-            Member::Axis(axis) => axis.members.iter().any(|member| member.contains_pane(pane)),
-            Member::Pane(candidate) => candidate == pane,
         }
     }
 
@@ -1731,7 +1754,7 @@ mod element {
     use ui::prelude::*;
     use util::ResultExt;
 
-    use crate::{Workspace, WorkspaceSettings, workspace_card_gap};
+    use crate::{PaneGridSettings, Workspace, WorkspaceSettings, workspace_card_gap};
 
     use super::{
         HANDLE_HITBOX_SIZE, HORIZONTAL_MIN_SIZE, VERTICAL_MIN_SIZE, resize_adjacent_visible_pair,

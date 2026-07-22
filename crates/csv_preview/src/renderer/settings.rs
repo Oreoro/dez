@@ -1,7 +1,7 @@
 use ui::{
     ActiveTheme as _, AnyElement, ButtonSize, Checkbox, Context, ContextMenu, DropdownMenu,
-    ElementId, IntoElement as _, ParentElement as _, Styled as _, ToggleState, Tooltip, Window,
-    div, h_flex,
+    ElementId, FluentBuilder as _, IntoElement as _, ParentElement as _, Styled as _, ToggleState,
+    Tooltip, Window, div, h_flex,
 };
 
 use crate::{

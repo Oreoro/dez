@@ -1,7 +1,7 @@
-use gpui::{App, Hsla, Pixels, prelude::*, px};
+use gpui::{App, Hsla, Pixels, px};
 use picker::{PickerSurfaceContrast, PickerSurfaceDensity, PickerSurfaceRadius};
 use settings::Settings;
-use ui::ListItemSpacing;
+use ui::{ActiveTheme, ListItemSpacing};
 use workspace::DesignSystemSettings;
 
 pub(crate) fn task_picker_density(cx: &App) -> PickerSurfaceDensity {

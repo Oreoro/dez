@@ -213,10 +213,10 @@ impl PromptLocalCommand {
     pub fn description(&self) -> &'static str {
         match self {
             Self::ThumbsUp => {
-                "Rate this response as helpful. Sends the current conversation to the Zed team."
+                "Rate this response as helpful. Sends the current conversation to the upstream agent service."
             }
             Self::ThumbsDown => {
-                "Rate this response as not helpful. Sends the current conversation to the Zed team."
+                "Rate this response as not helpful. Sends the current conversation to the upstream agent service."
             }
         }
     }

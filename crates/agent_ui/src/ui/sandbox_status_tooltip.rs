@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use file_icons::FileIcons;
-use gpui::{AnyElement, App, Div, Hsla, Pixels, Stateful};
+use gpui::{AnyElement, App, Div, Hsla, Pixels};
 use settings::Settings;
 use ui::{Divider, prelude::*};
 use workspace::DesignSystemSettings;
@@ -67,7 +67,7 @@ fn sandbox_tooltip_width(cx: &App) -> Rems {
     }
 }
 
-fn sandbox_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+fn sandbox_radius(element: Div, cx: &App) -> Div {
     match DesignSystemSettings::get_global(cx).radius {
         settings::CanvasRadius::None => element,
         settings::CanvasRadius::Subtle => element.rounded_md(),
@@ -75,7 +75,7 @@ fn sandbox_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
     }
 }
 
-fn sandbox_section_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+fn sandbox_section_radius(element: Div, cx: &App) -> Div {
     match DesignSystemSettings::get_global(cx).radius {
         settings::CanvasRadius::None => element,
         settings::CanvasRadius::Subtle => element.rounded_sm(),

@@ -138,7 +138,7 @@ fn elicitation_preview_gap(cx: &App) -> Pixels {
     }
 }
 
-fn elicitation_card_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+fn elicitation_card_radius(element: Div, cx: &App) -> Div {
     match DesignSystemSettings::get_global(cx).radius {
         settings::CanvasRadius::None => element,
         settings::CanvasRadius::Subtle => element.rounded_sm(),
@@ -146,7 +146,15 @@ fn elicitation_card_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
     }
 }
 
-fn elicitation_field_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+fn elicitation_field_radius(element: Div, cx: &App) -> Div {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_xs(),
+        settings::CanvasRadius::Rounded => element.rounded_sm(),
+    }
+}
+
+fn elicitation_stateful_field_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
     match DesignSystemSettings::get_global(cx).radius {
         settings::CanvasRadius::None => element,
         settings::CanvasRadius::Subtle => element.rounded_xs(),
@@ -505,7 +513,7 @@ mod tests {
                     acp::ElicitationId::new("accepted-url"),
                     "https://auth.example.com/device",
                 ),
-                "Authorize Zed in your browser.",
+                "Authorize Dez in your browser.",
             ),
             status: ElicitationStatus::Accepted,
         };
@@ -869,7 +877,7 @@ fn render_form_preview(
 ) -> AnyElement {
     let request = acp::CreateElicitationRequest::new(
         acp::ElicitationFormMode::new(preview_request_scope(entry_ix), preview_form_schema()),
-        "Choose how Zed should connect to this account.",
+        "Choose how Dez should connect to this account.",
     );
     let mut form_state = matches!(status, ElicitationStatus::Pending { .. }).then(|| {
         let acp::ElicitationMode::Form(mode) = &request.mode else {
@@ -902,7 +910,7 @@ fn render_url_preview(
             acp::ElicitationId::new(format!("preview-url-{entry_ix}")),
             preview_url(),
         ),
-        "Authorize Zed in your browser to finish signing in.",
+        "Authorize Dez in your browser to finish signing in.",
     );
 
     render_preview_card(entry_ix, request, status, None, cx)
@@ -1603,7 +1611,7 @@ impl<'a> ElicitationCard<'a> {
                                 .min_h(rems_from_px(28.))
                                 .items_start()
                                 .gap(elicitation_option_gap(cx))
-                                .map(|this| elicitation_field_radius(this, cx))
+                                .map(|this| elicitation_stateful_field_radius(this, cx))
                                 .border_1()
                                 .border_color(field_border_color.opacity(0.5))
                                 .bg(row_background)
@@ -1670,7 +1678,7 @@ impl<'a> ElicitationCard<'a> {
                     .min_h(rems_from_px(28.))
                     .items_start()
                     .gap(elicitation_option_gap(cx))
-                    .map(|this| elicitation_field_radius(this, cx))
+                    .map(|this| elicitation_stateful_field_radius(this, cx))
                     .border_1()
                     .border_color(border_color.opacity(0.5))
                     .bg(row_background)

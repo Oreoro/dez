@@ -2,16 +2,17 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod reliability;
+mod terminal_host_runtime;
 mod zed;
 
-// Ensure the binary name stays in sync with APP_NAME so that the paths used
-// at runtime (data dir, config dir, etc.) match what the binary is called.
+// Ensure the executable name stays in sync with the public product name.
+// User-data paths may intentionally retain a legacy storage identity during a
+// migration window; see `paths::APP_STORAGE_NAME`.
 const _: () = assert!(
     paths::APP_NAME_LOWERCASE
         .as_bytes()
         .eq_ignore_ascii_case(env!("CARGO_BIN_NAME").as_bytes()),
-    "paths::APP_NAME_LOWERCASE must match the binary name. \
-     Forks: update APP_NAME in crates/paths/src/paths.rs when renaming the binary.",
+    "paths::APP_NAME_LOWERCASE must match the binary name.",
 );
 
 use agent_ui::AgentPanel;
@@ -85,11 +86,7 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 fn build_application() -> Application {
     let platform = gpui_platform::current_platform(false);
-    if std::env::var("ZED_EXPERIMENTAL_A11Y").as_deref() == Ok("1") {
-        Application::with_platform(platform)
-    } else {
-        Application::new_inaccessible(platform)
-    }
+    Application::with_platform(platform)
 }
 
 fn files_not_created_on_launch(errors: HashMap<io::ErrorKind, Vec<&Path>>) {
@@ -155,7 +152,7 @@ fn fail_to_open_window_async(e: anyhow::Error, cx: &mut AsyncApp) {
 
 fn fail_to_open_window(e: anyhow::Error, _cx: &mut App) {
     eprintln!(
-        "{} failed to open a window: {e:?}. See https://zed.dev/docs/linux for troubleshooting steps.",
+        "{} failed to open a window: {e:?}. See the upstream Linux compatibility notes at https://zed.dev/docs/linux.",
         paths::APP_NAME
     );
     #[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
@@ -179,7 +176,7 @@ fn fail_to_open_window(e: anyhow::Error, _cx: &mut App) {
                     Notification::new(format!("{} failed to launch", paths::APP_NAME))
                         .body(Some(
                             format!(
-                                "{e:?}. See https://zed.dev/docs/linux for troubleshooting steps."
+                                "{e:?}. See the upstream Linux compatibility notes at https://zed.dev/docs/linux."
                             )
                             .as_str(),
                         ))
@@ -507,7 +504,8 @@ fn main() {
         handle_keymap_file_changes(user_keymap_file_rx, user_keymap_watcher, cx);
 
         let user_agent = format!(
-            "Zed/{} ({}; {})",
+            "{}/{} ({}; {})",
+            paths::APP_NAME,
             AppVersion::global(cx),
             std::env::consts::OS,
             std::env::consts::ARCH
@@ -648,6 +646,14 @@ fn main() {
             }
         }
         let app_session = cx.new(|cx| AppSession::new(session, cx));
+
+        if let Some(installation_id) = &installation_id {
+            let terminal_host_id = terminal::session_host::TerminalHostId::from_stable_key(
+                &format!("dez-local-host:{}", installation_id.to_string()),
+            );
+            terminal::session_host::LocalTerminalHost::init(terminal_host_id, cx);
+            terminal_host_runtime::TerminalHostRuntime::init(terminal_host_id, cx);
+        }
 
         let app_state = Arc::new(AppState {
             languages,
@@ -879,11 +885,13 @@ fn main() {
 
         cx.activate(true);
 
-        cx.spawn({
-            let client = app_state.client.clone();
-            async move |cx| authenticate(client, cx).await
-        })
-        .detach_and_log_err(cx);
+        if client::ClientSettings::get_global(cx).auto_connect {
+            cx.spawn({
+                let client = app_state.client.clone();
+                async move |cx| authenticate(client, cx).await
+            })
+            .detach_and_log_err(cx);
+        }
 
         let urls: Vec<_> = args
             .paths_or_urls
@@ -927,38 +935,47 @@ fn main() {
             )
         };
 
-        let restore_task = match open_rx
+        let initial_open_request = open_rx
             .try_recv()
             .ok()
-            .and_then(|request| OpenRequest::parse(request, cx).log_err())
+            .and_then(|request| OpenRequest::parse(request, cx).log_err());
+        if !app_state
+            .session
+            .update(cx, |session, cx| session.begin_workspace_restore(cx))
         {
-            Some(request) if request.is_focus_app_only() => cx.spawn({
-                let app_state = app_state.clone();
-                async move |cx| {
-                    if let Err(e) = restore_or_create_workspace(app_state, cx).await {
-                        fail_to_open_window_async(e, cx)
-                    }
+            log::warn!("workspace restore was already started for this app session");
+        }
+        let startup_task = cx.spawn({
+            let app_state = app_state.clone();
+            async move |cx| {
+                if let Err(error) = restore_or_create_workspace(app_state.clone(), cx).await {
+                    fail_to_open_window_async(error, cx);
                 }
-            }),
-            Some(request) => {
-                handle_open_request(request, app_state.clone(), cx);
-                Task::ready(())
+                if let Some(request) = initial_open_request
+                    && !request.is_focus_app_only()
+                {
+                    cx.update(|cx| handle_open_request(request, app_state.clone(), cx));
+                }
+                cx.update(|cx| {
+                    if !app_state
+                        .session
+                        .update(cx, |session, cx| session.finish_workspace_restore(cx))
+                    {
+                        log::warn!(
+                            "workspace restore completed from an unexpected app-session state"
+                        );
+                    }
+                });
             }
-            None => cx.spawn({
-                let app_state = app_state.clone();
-                async move |cx| {
-                    if let Err(e) = restore_or_create_workspace(app_state, cx).await {
-                        fail_to_open_window_async(e, cx)
-                    }
-                }
-            }),
-        };
+        });
+        let (startup_ready_tx, startup_ready_rx) = oneshot::channel();
 
         cx.spawn({
             let db = workspace::WorkspaceDb::global(cx);
             let fs = app_state.fs.clone();
             async move |_cx| {
-                restore_task.await;
+                startup_task.await;
+                startup_ready_tx.send(()).ok();
                 db.garbage_collect_workspaces(
                     fs.as_ref(),
                     &current_session_id,
@@ -974,6 +991,7 @@ fn main() {
         component_preview::init(app_state.clone(), cx);
 
         cx.spawn(async move |cx| {
+            startup_ready_rx.await.ok();
             while let Some(urls) = open_rx.next().await {
                 cx.update(|cx| {
                     if let Some(request) = OpenRequest::parse(urls, cx).log_err() {
@@ -1046,7 +1064,7 @@ fn handle_open_request(request: OpenRequest, app_state: Arc<AppState>, cx: &mut 
                                 });
                             } else {
                                 log::warn!(
-                                    "zed://agent received but the AgentPanel is not registered \
+                                    "Agent link received but the AgentPanel is not registered \
                                      (is `disable_ai` enabled?)"
                                 );
                             }
@@ -1566,7 +1584,62 @@ async fn restorable_workspaces(
     app_state: &Arc<AppState>,
 ) -> Option<Vec<workspace::SerializedMultiWorkspace>> {
     let locations = restorable_workspace_locations(cx, app_state).await?;
-    Some(cx.update(|cx| workspace::read_serialized_multi_workspaces(locations, cx)))
+    let serialized_workspaces =
+        cx.update(|cx| workspace::read_serialized_multi_workspaces(locations.clone(), cx));
+    let mut durable_viewports = Vec::<session::DurableViewportRecord>::new();
+    for location in &locations {
+        let Some(viewport_id) = location.window_id.map(|window_id| window_id.as_u64()) else {
+            continue;
+        };
+        let viewport = if let Some(index) = durable_viewports
+            .iter()
+            .position(|viewport| viewport.viewport_id == viewport_id)
+        {
+            &mut durable_viewports[index]
+        } else {
+            durable_viewports.push(session::DurableViewportRecord {
+                viewport_id,
+                workspace_ids: Vec::new(),
+                active_workspace_id: None,
+            });
+            durable_viewports
+                .last_mut()
+                .expect("viewport was just inserted")
+        };
+        viewport.workspace_ids.push(location.workspace_id.into());
+    }
+    for serialized_workspace in &serialized_workspaces {
+        let Some(viewport_id) = serialized_workspace
+            .active_workspace
+            .window_id
+            .map(|window_id| window_id.as_u64())
+        else {
+            continue;
+        };
+        if let Some(viewport) = durable_viewports
+            .iter_mut()
+            .find(|viewport| viewport.viewport_id == viewport_id)
+        {
+            viewport.active_workspace_id =
+                Some(serialized_workspace.active_workspace.workspace_id.into());
+        }
+    }
+    cx.update(|cx| {
+        app_state.session.update(cx, |session, cx| {
+            session.replace_durable_workspace_memberships(
+                locations
+                    .iter()
+                    .map(|location| session::DurableWorkspaceMembership {
+                        workspace_id: location.workspace_id.into(),
+                        viewport_id: location.window_id.map(|window_id| window_id.as_u64()),
+                        resolution: session::DurableWorkspaceResolution::Resolved,
+                    }),
+                cx,
+            );
+            session.replace_durable_viewports(durable_viewports, cx);
+        });
+    });
+    Some(serialized_workspaces)
 }
 
 pub(crate) async fn restorable_workspace_locations(
@@ -1678,7 +1751,8 @@ struct Args {
     /// Use `path:line:row` syntax to open a file at a specific location.
     /// Non-existing paths and directories will ignore `:line:row` suffix.
     ///
-    /// URLs can either be `file://` or `zed://` scheme, or relative to <https://zed.dev>.
+    /// URLs can use `file://`, the canonical `dez://` scheme, or the legacy
+    /// `zed://` scheme, and can also be relative to <https://zed.dev>.
     paths_or_urls: Vec<String>,
 
     /// Pairs of file paths to diff. Can be specified multiple times.
@@ -1763,7 +1837,7 @@ struct Args {
     #[arg(long, hide = true)]
     record_etw_trace: bool,
 
-    /// The PID of the Zed process to trace for heap analysis.
+    /// The PID of the Dez process to trace for heap analysis.
     #[cfg(target_os = "windows")]
     #[arg(long, hide = true, allow_hyphen_values = true)]
     etw_zed_pid: Option<i64>,
@@ -1773,7 +1847,7 @@ struct Args {
     #[arg(long, hide = true)]
     etw_output: Option<PathBuf>,
 
-    /// Unix socket path for IPC with the parent Zed process.
+    /// Unix socket path for IPC with the parent Dez process.
     #[cfg(target_os = "windows")]
     #[arg(long, hide = true)]
     etw_socket: Option<String>,
@@ -1798,6 +1872,10 @@ fn parse_url_arg(arg: &str, cx: &App) -> String {
         Ok(path) => format!("file://{}", path.display()),
         Err(_) => {
             if arg.starts_with("file://")
+                || arg.starts_with("dez://")
+                || arg.starts_with("dez-dev://")
+                || arg.starts_with("dez-nightly://")
+                || arg.starts_with("dez-preview://")
                 || arg.starts_with("zed://")
                 || arg.starts_with("zed-cli://")
                 || arg.starts_with("ssh://")

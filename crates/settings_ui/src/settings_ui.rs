@@ -215,15 +215,23 @@ fn canvas_settings_radius(element: Stateful<Div>, radius: settings::CanvasRadius
     }
 }
 
+fn canvas_settings_div_radius(element: Div, radius: settings::CanvasRadius) -> Div {
+    match radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_sm(),
+        settings::CanvasRadius::Rounded => element.rounded_md(),
+    }
+}
+
 fn canvas_settings_item_surface(
-    element: Stateful<Div>,
+    element: Div,
     radius: settings::CanvasRadius,
     background: Hsla,
     border_color: Hsla,
     hover_background: Hsla,
     hover_border_color: Hsla,
-) -> Stateful<Div> {
-    canvas_settings_radius(
+) -> Div {
+    canvas_settings_div_radius(
         element
             .border_1()
             .border_color(border_color)
@@ -1026,7 +1034,9 @@ fn open_settings_editor_with(
         cx.open_window(
             WindowOptions {
                 titlebar: Some(TitlebarOptions {
-                    title: Some("Zed — Settings".into()),
+                    title: Some(
+                        format!("{} — Settings", ReleaseChannel::global(cx).display_name()).into(),
+                    ),
                     appears_transparent: true,
                     traffic_light_position: Some(point(px(12.0), px(12.0))),
                 }),
@@ -5354,6 +5364,8 @@ fn render_subagent_model_picker(
     field: SettingField<Option<settings::LanguageModelSelection>>,
     file: SettingsUiFile,
     _metadata: Option<&SettingsFieldMetadata>,
+    title: &'static str,
+    description: &'static str,
     _window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
@@ -5381,8 +5393,9 @@ fn render_subagent_model_picker(
                 "language_model_picker_trigger".into(),
                 current_label.clone(),
             )
-            .when_some(a11y_label_for_json_path(field.json_path), |this, label| {
-                this.aria_label(format!("{}: {}", label, current_label))
+            .aria_label(format!("{}: {}", title, current_label))
+            .when(!description.is_empty(), |this| {
+                this.aria_description(description)
             }),
             handle.clone(),
         ))

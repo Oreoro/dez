@@ -3089,7 +3089,7 @@ impl ConversationView {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let (heading_label, description_label) = (
-            format!("Upgrade {} to work with Zed", self.agent.agent_id()),
+            format!("Update {} to work with Dez", self.agent.agent_id()),
             if version.is_empty() {
                 format!(
                     "Currently using {}, which does not report a valid --version",
@@ -3893,7 +3893,7 @@ impl ConversationView {
 
                 Some(ContextMenu::build(window, cx, |mut menu, _window, _cx| {
                     menu = menu.item(
-                        ContextMenuEntry::new("Zed Agent")
+                        ContextMenuEntry::new("Dez Agent")
                             .icon(IconName::ZedAgent)
                             .icon_color(Color::Muted)
                             .handler({

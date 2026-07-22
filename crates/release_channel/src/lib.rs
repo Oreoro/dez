@@ -30,10 +30,10 @@ pub static RELEASE_CHANNEL: LazyLock<ReleaseChannel> =
 #[cfg(target_os = "windows")]
 pub fn app_identifier() -> &'static str {
     match *RELEASE_CHANNEL {
-        ReleaseChannel::Dev => "Superzed-Dev",
-        ReleaseChannel::Nightly => "Superzed-Nightly",
-        ReleaseChannel::Preview => "Superzed-Preview",
-        ReleaseChannel::Stable => "Superzed",
+        ReleaseChannel::Dev => "Dez-Dev",
+        ReleaseChannel::Nightly => "Dez-Nightly",
+        ReleaseChannel::Preview => "Dez-Preview",
+        ReleaseChannel::Stable => "Dez",
     }
 }
 
@@ -185,7 +185,7 @@ impl ReleaseChannel {
 
     /// Returns whether we want to poll for updates for this [`ReleaseChannel`]
     pub fn poll_for_updates(&self) -> bool {
-        // Superzed is a fork with no update server of its own. Gating every
+        // Dez is a fork with no update server of its own. Gating every
         // update path (background polling and the manual "Check for Updates"
         // action both funnel through here) off so it can never download and
         // replace itself with upstream Zed. Updates are installed manually by
@@ -196,10 +196,10 @@ impl ReleaseChannel {
     /// Returns the display name for this [`ReleaseChannel`].
     pub fn display_name(&self) -> &'static str {
         match self {
-            ReleaseChannel::Dev => "Superzed Dev",
-            ReleaseChannel::Nightly => "Superzed Nightly",
-            ReleaseChannel::Preview => "Superzed Preview",
-            ReleaseChannel::Stable => "Superzed",
+            ReleaseChannel::Dev => "Dez Dev",
+            ReleaseChannel::Nightly => "Dez Nightly",
+            ReleaseChannel::Preview => "Dez Preview",
+            ReleaseChannel::Stable => "Dez",
         }
     }
 
@@ -215,13 +215,13 @@ impl ReleaseChannel {
 
     /// Returns the application ID that's used by Wayland as application ID
     /// and WM_CLASS on X11.
-    /// This also has to match the bundle identifier for Superzed on macOS.
+    /// This also has to match the bundle identifier for Dez on macOS.
     pub fn app_id(&self) -> &'static str {
         match self {
-            ReleaseChannel::Dev => "superzed.Superzed-Dev",
-            ReleaseChannel::Nightly => "superzed.Superzed-Nightly",
-            ReleaseChannel::Preview => "superzed.Superzed-Preview",
-            ReleaseChannel::Stable => "superzed.Superzed",
+            ReleaseChannel::Dev => "dev.dez.Dez-Dev",
+            ReleaseChannel::Nightly => "dev.dez.Dez-Nightly",
+            ReleaseChannel::Preview => "dev.dez.Dez-Preview",
+            ReleaseChannel::Stable => "dev.dez.Dez",
         }
     }
 
@@ -274,6 +274,29 @@ impl FromStr for ReleaseChannel {
 #[cfg(test)]
 mod tests {
     use super::ReleaseChannel;
+
+    #[test]
+    fn test_dez_release_identities() {
+        let expected = [
+            (ReleaseChannel::Dev, "Dez Dev", "dev.dez.Dez-Dev"),
+            (
+                ReleaseChannel::Nightly,
+                "Dez Nightly",
+                "dev.dez.Dez-Nightly",
+            ),
+            (
+                ReleaseChannel::Preview,
+                "Dez Preview",
+                "dev.dez.Dez-Preview",
+            ),
+            (ReleaseChannel::Stable, "Dez", "dev.dez.Dez"),
+        ];
+
+        for (channel, display_name, app_id) in expected {
+            assert_eq!(channel.display_name(), display_name);
+            assert_eq!(channel.app_id(), app_id);
+        }
+    }
 
     #[test]
     fn test_docs_url_for_release_channel() {

@@ -7,8 +7,8 @@ use agent_settings::{AgentProfile, AgentProfileId, AgentSettings, builtin_profil
 use editor::Editor;
 use fs::Fs;
 use gpui::{
-    DismissEvent, Div, Entity, EventEmitter, FocusHandle, Focusable, Hsla, Pixels, Stateful,
-    Subscription, prelude::*,
+    DismissEvent, Div, Entity, EventEmitter, FocusHandle, Focusable, Hsla, Pixels, Subscription,
+    prelude::*,
 };
 use language_model::{LanguageModel, LanguageModelRegistry};
 use settings::SettingsStore;
@@ -77,7 +77,7 @@ fn manage_profiles_header_padding_bottom(cx: &App) -> Pixels {
     }
 }
 
-fn manage_profiles_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+fn manage_profiles_radius(element: Div, cx: &App) -> Div {
     match DesignSystemSettings::get_global(cx).radius {
         settings::CanvasRadius::None => element,
         settings::CanvasRadius::Subtle => element.rounded_md(),

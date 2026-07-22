@@ -6,8 +6,9 @@ use agent::{ThreadStore, ZED_AGENT_ID};
 use agent_client_protocol::schema::v1 as acp;
 use agent_settings::{AgentSettings, UserAgentsMd};
 use agent_ui::terminal_thread_metadata_store::{
-    TerminalAgentKind, TerminalThreadMetadata, TerminalThreadMetadataStore,
-    detect_terminal_agent_command, terminal_title_prefix,
+    TerminalAgentKind, TerminalAttentionCondition, TerminalAttentionPresentation,
+    TerminalAttentionPriority, TerminalAttentionState, TerminalThreadMetadata,
+    TerminalThreadMetadataStore, detect_terminal_agent_command, terminal_title_prefix,
 };
 use agent_ui::thread_metadata_store::{
     ThreadMetadata, ThreadMetadataStore, WorktreePaths, worktree_info_from_thread_paths,
@@ -17,25 +18,28 @@ use agent_ui::threads_archive_view::{
     fuzzy_match_positions,
 };
 use agent_ui::{
-    AcpThreadImportOnboarding, AddContextServer, Agent, AgentPanel, AgentPanelEvent,
-    AgentThreadItem, AgentThreadSource, ArchiveSelectedThread, CanvasAgentUiSettings,
-    ConversationView, CrossChannelImportOnboarding, DEFAULT_THREAD_TITLE, ManageProfiles,
-    NewTerminalThread, NewThread, RenameSelectedThread, TerminalId, ThreadId, ThreadImportModal,
-    ThreadTitleRegenerationResult, ToggleOptionsMenu, channels_with_threads,
+    AcpThreadImportOnboarding, Agent, AgentPanel, AgentPanelEvent, AgentThreadItem,
+    AgentThreadSource, ArchiveSelectedThread, CanvasAgentUiSettings, ConversationView,
+    CrossChannelImportOnboarding, DEFAULT_THREAD_TITLE, ManageProfiles, NewTerminalThread,
+    NewThread, ObservedRepositoryEvidence, ObservedRunActivity, ObservedRunCheck,
+    ObservedRunCheckStatus, ObservedRunCommand, ObservedWorkspaceEvidence, OpenAgentDiff,
+    RenameSelectedThread, RunReviewBrief, RunReviewState, TerminalId, ThreadId, ThreadImportModal,
+    ThreadTitleRegenerationResult, ToggleOptionsMenu, WorkspaceEvidenceKind, channels_with_threads,
     connection_store_for_project, create_agent_thread_in_workspace,
     import_threads_from_other_channels, open_agent_thread_in_workspace,
 };
 use agent_ui::{MessageEditorEvent, StateChange, thread_worktree_archive};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeZone as _, Utc};
 use editor::Editor;
 use feature_flags::{
     AgentThreadWorktreeLabel, AgentThreadWorktreeLabelFlag, FeatureFlag, FeatureFlagAppExt as _,
 };
 use gpui::{
-    Action as _, AnyElement, App, ClickEvent, Context, Decorations, DismissEvent, Entity, EntityId,
-    FocusHandle, Focusable, KeyContext, ListState, Modifiers, Pixels, Render, SharedString, Task,
-    TaskExt, WeakEntity, Window, WindowBackgroundAppearance, WindowHandle, linear_color_stop,
-    linear_gradient, list, prelude::*, px,
+    Action as _, AnyElement, App, ClickEvent, ClipboardItem, Context, Decorations, DismissEvent,
+    Entity, EntityId, FocusHandle, Focusable, KeyContext, ListState, Modifiers, Pixels,
+    PromptLevel, Render, SharedString, Task, TaskExt, WeakEntity, Window,
+    WindowBackgroundAppearance, WindowHandle, linear_color_stop, linear_gradient, list, prelude::*,
+    px,
 };
 use itertools::Itertools;
 use language_model::LanguageModelRegistry;
@@ -54,12 +58,20 @@ use std::mem;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
+use terminal::session_host::{
+    LocalTerminalHost, TerminalAgentEventKind, TerminalAgentSnapshot, TerminalAgentState,
+    TerminalSessionCommand, TerminalSessionId, TerminalSessionSnapshot, TerminalSessionState,
+    transport::{
+        TerminalHostConnection, TerminalHostSnapshotRevision, TerminalHostSnapshotStore,
+        TerminalHostStartupState, TerminalHostStartupStatus,
+    },
+};
 use terminal_view::TerminalView;
 use theme::{ActiveTheme, CLIENT_SIDE_DECORATION_ROUNDING};
 use ui::{
-    AgentThreadStatus, CommonAnimationExt, ContextMenu, ContextMenuEntry, GradientFade,
-    HighlightedLabel, KeyBinding, PopoverMenu, PopoverMenuHandle, ProjectEmptyState, ScrollAxes,
-    Scrollbars, Tab, ThreadItem, ThreadItemContrast, ThreadItemDensity, ThreadItemRadius,
+    AgentThreadStatus, Callout, CommonAnimationExt, ContextMenu, ContextMenuEntry, GradientFade,
+    HighlightedLabel, PopoverMenu, PopoverMenuHandle, ScrollAxes, Scrollbars, Severity, Tab,
+    ThreadItem, ThreadItemContrast, ThreadItemDensity, ThreadItemEvidenceStatus, ThreadItemRadius,
     ThreadItemWorktreeInfo, TintColor, Tooltip, WithScrollbar, prelude::*, render_modifiers,
     right_click_menu,
 };
@@ -67,10 +79,15 @@ use unicode_segmentation::UnicodeSegmentation as _;
 use util::ResultExt as _;
 use util::path_list::PathList;
 use workspace::{
-    CloseWindow, DesignSystemSettings, MultiWorkspace, MultiWorkspaceEvent, NextProject,
-    NextThread, Open, OpenMode, PreviousProject, PreviousThread, ProjectGroupKey, SaveIntent,
-    Sidebar as WorkspaceSidebar, SidebarRenderState, SidebarSettings, SidebarSide, Toast,
-    ToggleSidebar, Workspace, notifications::NotificationId,
+    CloseWindow, DesignSystemSettings, MultiWorkspace, MultiWorkspaceEvent, NewCenterTerminal,
+    NewFile, NextProject, NextThread, Open, OpenMode, PreviousProject, PreviousThread,
+    ProjectGroupKey, SaveIntent, Sidebar as WorkspaceSidebar, SidebarRenderState, SidebarSettings,
+    SidebarSide, Toast, ToggleSidebar, Workspace,
+    evidence::{
+        WorkspaceEvidenceKind as AuthoritativeWorkspaceEvidenceKind, WorkspaceEvidenceLifecycle,
+        WorkspaceEvidenceProvenance,
+    },
+    notifications::NotificationId,
     render_sidebar_header_controls_with_state,
 };
 
@@ -101,6 +118,10 @@ gpui::actions!(
         MoveSelectedEntryDown,
         /// Toggles between the thread list and the thread history.
         ToggleThreadHistory,
+        /// Shows only sessions and agents that currently need attention.
+        ToggleAttentionFilter,
+        /// Opens a deterministic evidence-backed review brief for the selected Run.
+        OpenSelectedReviewBrief,
     ]
 );
 
@@ -376,6 +397,7 @@ struct ActiveThreadInfo {
     is_background: bool,
     is_title_generating: bool,
     diff_stats: DiffStats,
+    changed_files: Vec<PathBuf>,
 }
 
 #[derive(Clone)]
@@ -390,6 +412,9 @@ enum ThreadEntryWorkspace {
 }
 
 impl ThreadEntryWorkspace {
+    const MAX_REPOSITORY_EVIDENCE: usize = 8;
+    const MAX_REPOSITORY_CHANGED_PATHS: usize = 128;
+
     fn is_remote(&self, cx: &App) -> bool {
         match self {
             ThreadEntryWorkspace::Open(workspace) => {
@@ -399,6 +424,142 @@ impl ThreadEntryWorkspace {
                 project_group_key, ..
             } => project_group_key.host().is_some(),
         }
+    }
+
+    fn authoritative_workspace_evidence(
+        &self,
+        terminal_session_id: Option<&str>,
+        cx: &App,
+    ) -> Option<(Vec<ObservedWorkspaceEvidence>, bool, bool)> {
+        let Self::Open(workspace) = self else {
+            return None;
+        };
+        let workspace = workspace.read(cx);
+        let evidence = workspace.evidence_set();
+        let records = evidence
+            .records()
+            .iter()
+            .filter(|record| match record.kind {
+                AuthoritativeWorkspaceEvidenceKind::WorkspaceRoot
+                | AuthoritativeWorkspaceEvidenceKind::OpenFile => true,
+                AuthoritativeWorkspaceEvidenceKind::TerminalWorkingDirectory => terminal_session_id
+                    .is_some_and(|terminal_session_id| {
+                        matches!(
+                            &record.provenance,
+                            WorkspaceEvidenceProvenance::TerminalSession { session_id }
+                                if session_id.as_ref() == terminal_session_id
+                        )
+                    }),
+            })
+            .collect::<Vec<_>>();
+        let has_stale_evidence = records
+            .iter()
+            .any(|record| record.lifecycle == WorkspaceEvidenceLifecycle::Stale);
+        Some((
+            records
+                .into_iter()
+                .map(|record| ObservedWorkspaceEvidence {
+                    kind: match record.kind {
+                        AuthoritativeWorkspaceEvidenceKind::WorkspaceRoot => {
+                            WorkspaceEvidenceKind::WorkspaceRoot
+                        }
+                        AuthoritativeWorkspaceEvidenceKind::OpenFile => {
+                            WorkspaceEvidenceKind::OpenFile
+                        }
+                        AuthoritativeWorkspaceEvidenceKind::TerminalWorkingDirectory => {
+                            WorkspaceEvidenceKind::TerminalWorkingDirectory
+                        }
+                    },
+                    path: record.path.to_path_buf(),
+                })
+                .collect(),
+            evidence.is_truncated(),
+            has_stale_evidence,
+        ))
+    }
+
+    fn authoritative_repository_evidence(
+        &self,
+        terminal_working_directory: Option<&Path>,
+        cx: &App,
+    ) -> Option<(Vec<ObservedRepositoryEvidence>, bool)> {
+        let Self::Open(workspace) = self else {
+            return None;
+        };
+        let project_entity = workspace.read(cx).project().clone();
+        let project = project_entity.read(cx);
+        let mut repositories = project
+            .repositories(cx)
+            .values()
+            .cloned()
+            .collect::<Vec<_>>();
+
+        if let Some(terminal_working_directory) = terminal_working_directory {
+            repositories.retain(|repository| {
+                repository
+                    .read(cx)
+                    .abs_path_to_repo_path(terminal_working_directory)
+                    .is_some()
+            });
+            // Nested repositories can both contain a directory. The longest
+            // worktree path is the most specific authoritative owner.
+            repositories.sort_by(|left, right| {
+                right
+                    .read(cx)
+                    .work_directory_abs_path
+                    .components()
+                    .count()
+                    .cmp(&left.read(cx).work_directory_abs_path.components().count())
+            });
+            repositories.truncate(1);
+        } else {
+            repositories.sort_by(|left, right| {
+                left.read(cx)
+                    .work_directory_abs_path
+                    .cmp(&right.read(cx).work_directory_abs_path)
+            });
+        }
+
+        let repositories_truncated = repositories.len() > Self::MAX_REPOSITORY_EVIDENCE;
+        repositories.truncate(Self::MAX_REPOSITORY_EVIDENCE);
+        let evidence = repositories
+            .into_iter()
+            .map(|repository| {
+                let repository = repository.read(cx);
+                let summary = repository.status_summary();
+                let mut changed_paths = repository
+                    .cached_status()
+                    .filter_map(|entry| {
+                        repository
+                            .repo_path_to_project_path(&entry.repo_path, cx)
+                            .and_then(|path| project.absolute_path(&path, cx))
+                    })
+                    .collect::<Vec<_>>();
+                changed_paths.sort();
+                changed_paths.dedup();
+                let changed_paths_truncated = changed_paths.len() < summary.count
+                    || changed_paths.len() > Self::MAX_REPOSITORY_CHANGED_PATHS;
+                changed_paths.truncate(Self::MAX_REPOSITORY_CHANGED_PATHS);
+                ObservedRepositoryEvidence {
+                    worktree_path: repository.work_directory_abs_path.to_path_buf(),
+                    main_worktree_path: repository
+                        .main_worktree_abs_path()
+                        .filter(|path| *path != repository.work_directory_abs_path.as_ref())
+                        .map(Path::to_path_buf),
+                    branch: repository
+                        .branch
+                        .as_ref()
+                        .map(|branch| branch.name().to_owned()),
+                    changed_paths,
+                    changed_path_count: summary.count,
+                    conflict_count: summary.conflict,
+                    untracked_count: summary.untracked,
+                    linked_worktree: repository.is_linked_worktree(),
+                    truncated: changed_paths_truncated,
+                }
+            })
+            .collect();
+        Some((evidence, repositories_truncated))
     }
 }
 
@@ -454,44 +615,401 @@ fn terminal_agent_icon(kind: TerminalAgentKind) -> IconName {
     }
 }
 
-fn terminal_agent_metadata_label(
-    kind: TerminalAgentKind,
+const CODEX_HOOK_SETUP: &str = include_str!("../../../assets/dez/codex-hooks.json");
+
+fn terminal_agent_state_label(
+    agent: Option<&TerminalAgentSnapshot>,
+    runtime: Option<&TerminalRuntimeInfo>,
     has_notification: bool,
+    is_snoozed: bool,
+    setup_available: bool,
     show_detection_confidence: bool,
 ) -> SharedString {
-    if !show_detection_confidence {
-        return SharedString::from(kind.display_name());
+    let runtime_state = runtime.map(|runtime| runtime.state);
+    let mut state = agent.map_or_else(
+        || {
+            match runtime_state {
+                Some(TerminalRuntimeState::Live) if has_notification => "Needs attention",
+                Some(TerminalRuntimeState::Live) => "Live",
+                Some(TerminalRuntimeState::Detached) => "Detached",
+                Some(TerminalRuntimeState::Reconnecting) => "Reconnecting",
+                Some(TerminalRuntimeState::Exited) => "Exited",
+                Some(TerminalRuntimeState::Missing) => "Missing",
+                Some(TerminalRuntimeState::Incompatible) => "Incompatible",
+                None => "Saved",
+            }
+            .to_owned()
+        },
+        |agent| {
+            let mut state = agent.state.label().to_owned();
+            if let Some(runtime_state) =
+                runtime_state.filter(|state| !matches!(state, TerminalRuntimeState::Live))
+            {
+                state.push_str(" · ");
+                state.push_str(runtime_state.label());
+            }
+            if has_notification
+                && !matches!(
+                    agent.state,
+                    TerminalAgentState::WaitingForPermission
+                        | TerminalAgentState::WaitingForInput
+                        | TerminalAgentState::Failed
+                )
+            {
+                state.push_str(" · Needs attention");
+            }
+            state
+        },
+    );
+    if is_snoozed {
+        state.push_str(" · Snoozed");
+    }
+    let state = if show_detection_confidence && agent.is_none() {
+        format!("Detected · {state}")
+    } else {
+        state
+    };
+    if setup_available {
+        format!("{state} · Hook setup").into()
+    } else {
+        state.into()
+    }
+}
+
+fn observed_run_evidence_label(
+    checks: &[ObservedRunCheck],
+    command_count: usize,
+) -> Option<(SharedString, ThreadItemEvidenceStatus)> {
+    let check_count = checks.len();
+    if check_count > 0 {
+        let failed_count = checks
+            .iter()
+            .filter(|check| check.status == ObservedRunCheckStatus::Failed)
+            .count();
+        if failed_count > 0 {
+            let label = if check_count == 1 {
+                "1 check failed".to_owned()
+            } else {
+                format!("{failed_count}/{check_count} checks failed")
+            };
+            return Some((label.into(), ThreadItemEvidenceStatus::Failed));
+        }
+
+        let running_count = checks
+            .iter()
+            .filter(|check| check.status == ObservedRunCheckStatus::Running)
+            .count();
+        if running_count > 0 {
+            let noun = if running_count == 1 {
+                "check"
+            } else {
+                "checks"
+            };
+            return Some((
+                format!("{running_count} {noun} running").into(),
+                ThreadItemEvidenceStatus::Neutral,
+            ));
+        }
+
+        let noun = if check_count == 1 { "check" } else { "checks" };
+        return Some((
+            format!("{check_count} {noun} passed").into(),
+            ThreadItemEvidenceStatus::Passed,
+        ));
     }
 
-    let state = if has_notification {
-        "Possibly waiting"
+    if command_count > 0 {
+        let noun = if command_count == 1 {
+            "command"
+        } else {
+            "commands"
+        };
+        Some((
+            format!("{command_count} {noun}").into(),
+            ThreadItemEvidenceStatus::Neutral,
+        ))
     } else {
-        "Agent detected"
+        None
+    }
+}
+
+fn terminal_attention_priority(
+    metadata: &TerminalThreadMetadata,
+    agent: Option<&TerminalAgentSnapshot>,
+) -> TerminalAttentionPriority {
+    if agent.is_some_and(|agent| {
+        matches!(
+            agent.state,
+            TerminalAgentState::WaitingForPermission | TerminalAgentState::Failed
+        )
+    }) {
+        TerminalAttentionPriority::Urgent
+    } else {
+        metadata.attention.priority
+    }
+}
+
+#[derive(Clone)]
+struct TerminalRuntimeInfo {
+    state: TerminalRuntimeState,
+}
+
+fn terminal_runtime_from_snapshot(
+    snapshot: &TerminalSessionSnapshot,
+) -> Option<TerminalRuntimeInfo> {
+    let state = match snapshot.state {
+        TerminalSessionState::Starting | TerminalSessionState::Attached => {
+            TerminalRuntimeState::Live
+        }
+        TerminalSessionState::Detached => TerminalRuntimeState::Detached,
+        TerminalSessionState::Reconnecting => TerminalRuntimeState::Reconnecting,
+        TerminalSessionState::Exited { .. } => TerminalRuntimeState::Exited,
+        TerminalSessionState::Missing => TerminalRuntimeState::Missing,
+        TerminalSessionState::Incompatible { .. } => TerminalRuntimeState::Incompatible,
     };
-    SharedString::from(format!("{} · {}", kind.display_name(), state))
+    Some(TerminalRuntimeInfo { state })
+}
+
+fn terminal_agent_kind_from_snapshot(
+    snapshot: Option<&TerminalAgentSnapshot>,
+) -> Option<TerminalAgentKind> {
+    snapshot.and_then(|agent| {
+        agent
+            .adapter
+            .starts_with("codex-")
+            .then_some(TerminalAgentKind::Codex)
+    })
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum TerminalRuntimeState {
+    Live,
+    Detached,
+    Reconnecting,
+    Exited,
+    Missing,
+    Incompatible,
+}
+
+impl TerminalRuntimeState {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Live => "Live",
+            Self::Detached => "Detached",
+            Self::Reconnecting => "Reconnecting",
+            Self::Exited => "Exited",
+            Self::Missing => "Missing",
+            Self::Incompatible => "Incompatible",
+        }
+    }
+}
+
+#[cfg(test)]
+mod terminal_runtime_label_tests {
+    use super::*;
+
+    #[test]
+    fn distinguishes_saved_live_and_attention_terminal_agents() {
+        let live = TerminalRuntimeInfo {
+            state: TerminalRuntimeState::Live,
+        };
+        let detached = TerminalRuntimeInfo {
+            state: TerminalRuntimeState::Detached,
+        };
+        let missing = TerminalRuntimeInfo {
+            state: TerminalRuntimeState::Missing,
+        };
+        let incompatible = TerminalRuntimeInfo {
+            state: TerminalRuntimeState::Incompatible,
+        };
+
+        assert_eq!(
+            terminal_agent_state_label(None, None, false, false, false, true),
+            "Detected · Saved"
+        );
+        assert_eq!(
+            terminal_agent_state_label(None, Some(&live), false, false, false, true),
+            "Detected · Live"
+        );
+        assert_eq!(
+            terminal_agent_state_label(None, Some(&live), true, false, false, true),
+            "Detected · Needs attention"
+        );
+        assert_eq!(
+            terminal_agent_state_label(None, Some(&detached), false, false, false, true),
+            "Detected · Detached"
+        );
+        assert_eq!(
+            terminal_agent_state_label(None, Some(&missing), false, false, false, true),
+            "Detected · Missing"
+        );
+        assert_eq!(
+            terminal_agent_state_label(None, Some(&incompatible), false, false, false, true),
+            "Detected · Incompatible"
+        );
+
+        let structured = TerminalAgentSnapshot {
+            adapter: "codex-hooks-v1".to_owned(),
+            actor: "Codex".to_owned(),
+            capabilities: terminal::session_host::TerminalAgentCapabilities::codex_hooks_v1(),
+            provider_session_id: Some("session-7".to_owned()),
+            state: TerminalAgentState::WaitingForPermission,
+            attention_required: true,
+            resumable: true,
+            events: Vec::new(),
+        };
+        assert_eq!(
+            terminal_agent_state_label(Some(&structured), Some(&live), true, false, false, true,),
+            "Waiting for permission"
+        );
+        assert_eq!(
+            terminal_agent_state_label(
+                Some(&TerminalAgentSnapshot {
+                    state: TerminalAgentState::Running,
+                    ..structured.clone()
+                }),
+                Some(&detached),
+                false,
+                false,
+                false,
+                true,
+            ),
+            "Running · Detached"
+        );
+        assert_eq!(
+            terminal_agent_state_label(
+                Some(&TerminalAgentSnapshot {
+                    state: TerminalAgentState::Running,
+                    ..structured.clone()
+                }),
+                Some(&missing),
+                true,
+                false,
+                false,
+                true,
+            ),
+            "Running · Missing · Needs attention"
+        );
+        assert_eq!(
+            terminal_agent_state_label(None, Some(&live), false, true, false, true),
+            "Detected · Live · Snoozed"
+        );
+        assert_eq!(
+            terminal_agent_state_label(None, Some(&live), false, false, true, true),
+            "Detected · Live · Hook setup"
+        );
+    }
+
+    #[test]
+    fn bundled_codex_hook_setup_covers_structured_lifecycle() {
+        let setup: serde_json::Value =
+            serde_json::from_str(CODEX_HOOK_SETUP).unwrap_or(serde_json::Value::Null);
+        let hooks = setup.get("hooks").and_then(serde_json::Value::as_object);
+        assert!(hooks.is_some_and(|hooks| {
+            [
+                "SessionStart",
+                "UserPromptSubmit",
+                "PermissionRequest",
+                "PreToolUse",
+                "PostToolUse",
+                "Stop",
+            ]
+            .iter()
+            .all(|event| hooks.contains_key(*event))
+        }));
+    }
+
+    #[test]
+    fn run_evidence_labels_prioritize_check_outcomes() {
+        let passed = ObservedRunCheck {
+            name: "cargo test".to_owned(),
+            status: ObservedRunCheckStatus::Passed,
+            source_path: None,
+        };
+        let failed = ObservedRunCheck {
+            name: "cargo clippy".to_owned(),
+            status: ObservedRunCheckStatus::Failed,
+            source_path: None,
+        };
+
+        assert_eq!(
+            observed_run_evidence_label(&[], 2),
+            Some(("2 commands".into(), ThreadItemEvidenceStatus::Neutral))
+        );
+        assert_eq!(
+            observed_run_evidence_label(std::slice::from_ref(&passed), 1),
+            Some(("1 check passed".into(), ThreadItemEvidenceStatus::Passed))
+        );
+        assert_eq!(
+            observed_run_evidence_label(&[passed, failed], 2),
+            Some(("1/2 checks failed".into(), ThreadItemEvidenceStatus::Failed))
+        );
+    }
+
+    #[test]
+    fn review_state_never_hides_exceptional_transport_truth() {
+        let agent = TerminalAgentSnapshot {
+            adapter: "codex-hooks-v1".to_owned(),
+            actor: "Codex".to_owned(),
+            capabilities: terminal::session_host::TerminalAgentCapabilities::codex_hooks_v1(),
+            provider_session_id: Some("session-8".to_owned()),
+            state: TerminalAgentState::Running,
+            attention_required: false,
+            resumable: true,
+            events: Vec::new(),
+        };
+        let detached = TerminalRuntimeInfo {
+            state: TerminalRuntimeState::Detached,
+        };
+        let missing = TerminalRuntimeInfo {
+            state: TerminalRuntimeState::Missing,
+        };
+        let exited = TerminalRuntimeInfo {
+            state: TerminalRuntimeState::Exited,
+        };
+
+        assert_eq!(
+            terminal_run_review_state(Some(&agent), Some(&detached)),
+            RunReviewState::Detached
+        );
+        assert_eq!(
+            terminal_run_review_state(Some(&agent), Some(&missing)),
+            RunReviewState::Missing
+        );
+        assert_eq!(
+            terminal_run_review_state(Some(&agent), Some(&exited)),
+            RunReviewState::Exited
+        );
+        assert_eq!(
+            terminal_run_review_state(
+                Some(&TerminalAgentSnapshot {
+                    state: TerminalAgentState::Completed,
+                    ..agent
+                }),
+                Some(&exited),
+            ),
+            RunReviewState::Completed
+        );
+    }
 }
 
 fn standalone_terminal_id(
-    workspace: &Entity<Workspace>,
+    _workspace: &Entity<Workspace>,
     terminal_view: &Entity<TerminalView>,
     cx: &App,
 ) -> TerminalId {
-    let workspace_key = workspace
-        .read(cx)
-        .database_id()
-        .map(|database_id| format!("db:{}", i64::from(database_id)))
-        .or_else(|| {
-            workspace
-                .read(cx)
-                .session_id()
-                .map(|session_id| format!("session:{session_id}"))
-        })
-        .unwrap_or_else(|| format!("entity:{}", workspace.entity_id().as_u64()));
-    let terminal_key = terminal_view.entity_id().as_u64();
-    TerminalId::from_stable_key(
-        "standalone-terminal",
-        &format!("{workspace_key}:{terminal_key}"),
-    )
+    let terminal_entity = terminal_view.read(cx).terminal().clone();
+    let terminal = terminal_entity.read(cx);
+    let session_id = terminal.session_id();
+    let host_id = if terminal.is_hosted() {
+        TerminalHostConnection::try_global(cx).map(|connection| connection.host_id())
+    } else {
+        LocalTerminalHost::try_global(cx).map(|host| host.read(cx).host_id())
+    };
+    let terminal_key = host_id
+        .map(|host_id| format!("{host_id}:{session_id}"))
+        .unwrap_or_else(|| session_id.to_string());
+    TerminalId::from_stable_key("terminal-session", &terminal_key)
 }
 
 fn standalone_terminal_metadata(
@@ -499,22 +1017,51 @@ fn standalone_terminal_metadata(
     terminal_view: &Entity<TerminalView>,
     created_at: DateTime<Utc>,
     cx: &App,
-) -> Option<(TerminalThreadMetadata, TerminalAgentKind)> {
+) -> Option<(
+    TerminalThreadMetadata,
+    TerminalAgentKind,
+    TerminalRuntimeInfo,
+)> {
     let terminal_id = standalone_terminal_id(workspace, terminal_view, cx);
     let terminal_view = terminal_view.read(cx);
+    let has_attention = terminal_view.has_bell();
     let terminal = terminal_view.terminal().read(cx);
     let title = SharedString::from(terminal.title(true));
     let custom_title = terminal_view
         .custom_title()
         .map(|title| SharedString::from(title.to_string()));
     let working_directory = terminal.working_directory();
+    let session_ref = if terminal.is_hosted() {
+        TerminalHostConnection::try_global(cx).map(|connection| {
+            terminal::session_host::TerminalSessionRef {
+                host_id: connection.host_id(),
+                session_id: terminal.session_id(),
+            }
+        })
+    } else {
+        LocalTerminalHost::try_global(cx).and_then(|host| {
+            host.read(cx)
+                .session_ref_if_registered(terminal.session_id())
+        })
+    };
     let detected_agent_command = terminal
         .foreground_process_command_name()
         .as_deref()
         .and_then(detect_terminal_agent_command);
+    let runtime = TerminalRuntimeInfo {
+        state: if terminal.process_exited() {
+            TerminalRuntimeState::Exited
+        } else {
+            TerminalRuntimeState::Live
+        },
+    };
 
     let project = workspace.read(cx).project().clone();
     let project = project.read(cx);
+    let mut attention = TerminalAttentionState::default();
+    if has_attention {
+        attention.raise_observed(Utc::now());
+    }
     let metadata = TerminalThreadMetadata {
         terminal_id,
         title,
@@ -523,12 +1070,42 @@ fn standalone_terminal_metadata(
         worktree_paths: project.worktree_paths(cx),
         remote_connection: project.remote_connection_options(cx),
         working_directory,
+        attention,
+        session_ref,
     };
 
     metadata
         .detected_agent_kind()
         .or(detected_agent_command)
-        .map(|detected_agent_kind| (metadata, detected_agent_kind))
+        .map(|detected_agent_kind| (metadata, detected_agent_kind, runtime))
+}
+
+fn workspace_for_local_terminal_session(
+    snapshot: &TerminalSessionSnapshot,
+    workspaces: &[Entity<Workspace>],
+    active_workspace: Option<&Entity<Workspace>>,
+    cx: &App,
+) -> Option<Entity<Workspace>> {
+    let best_path_match = snapshot.working_directory.as_ref().and_then(|cwd| {
+        workspaces
+            .iter()
+            .filter_map(|workspace| {
+                let match_depth = workspace
+                    .read(cx)
+                    .root_paths(cx)
+                    .into_iter()
+                    .filter(|root| cwd.starts_with(root))
+                    .map(|root| root.components().count())
+                    .max()?;
+                Some((match_depth, workspace.clone()))
+            })
+            .max_by_key(|(depth, _)| *depth)
+            .map(|(_, workspace)| workspace)
+    });
+
+    best_path_match
+        .or_else(|| active_workspace.cloned())
+        .or_else(|| workspaces.first().cloned())
 }
 
 /// Picks a single glyph to render as the icon from a detected title prefix.
@@ -628,6 +1205,7 @@ struct ThreadEntry {
     highlight_positions: Vec<usize>,
     worktrees: Vec<ThreadItemWorktreeInfo>,
     diff_stats: DiffStats,
+    changed_files: Vec<PathBuf>,
 }
 
 #[derive(Clone)]
@@ -636,7 +1214,11 @@ struct TerminalEntry {
     detected_agent_kind: Option<TerminalAgentKind>,
     workspace: ThreadEntryWorkspace,
     source: TerminalEntrySource,
+    runtime: Option<TerminalRuntimeInfo>,
+    agent: Option<TerminalAgentSnapshot>,
     worktrees: Vec<ThreadItemWorktreeInfo>,
+    needs_attention: bool,
+    attention_priority: TerminalAttentionPriority,
     has_notification: bool,
     highlight_positions: Vec<usize>,
 }
@@ -645,6 +1227,59 @@ struct TerminalEntry {
 enum TerminalEntrySource {
     AgentPanel,
     WorkspaceItem(Entity<TerminalView>),
+    HostSession(TerminalSessionId),
+}
+
+#[derive(Clone, Copy)]
+enum TerminalAttentionAction {
+    Acknowledge,
+    SnoozeOneHour,
+    Resume,
+    Resolve,
+}
+
+fn terminal_run_review_state(
+    agent: Option<&TerminalAgentSnapshot>,
+    runtime: Option<&TerminalRuntimeInfo>,
+) -> RunReviewState {
+    match runtime.map(|runtime| runtime.state) {
+        Some(TerminalRuntimeState::Detached) => return RunReviewState::Detached,
+        Some(TerminalRuntimeState::Reconnecting) => return RunReviewState::Reconnecting,
+        Some(TerminalRuntimeState::Missing) => return RunReviewState::Missing,
+        Some(TerminalRuntimeState::Incompatible) => return RunReviewState::Incompatible,
+        Some(TerminalRuntimeState::Exited)
+            if !agent.is_some_and(|agent| {
+                matches!(
+                    agent.state,
+                    TerminalAgentState::Completed | TerminalAgentState::Failed
+                )
+            }) =>
+        {
+            return RunReviewState::Exited;
+        }
+        Some(TerminalRuntimeState::Live | TerminalRuntimeState::Exited) | None => {}
+    }
+
+    agent.map_or_else(
+        || {
+            if runtime.is_some() {
+                RunReviewState::Running
+            } else {
+                RunReviewState::Saved
+            }
+        },
+        |agent| match agent.state {
+            TerminalAgentState::Starting | TerminalAgentState::Running => RunReviewState::Running,
+            TerminalAgentState::WaitingForPermission => RunReviewState::WaitingForPermission,
+            TerminalAgentState::WaitingForInput => RunReviewState::WaitingForInput,
+            TerminalAgentState::Idle => RunReviewState::Idle,
+            TerminalAgentState::Completed => RunReviewState::Completed,
+            TerminalAgentState::Failed => RunReviewState::Failed,
+            TerminalAgentState::Disconnected => RunReviewState::Reconnecting,
+            TerminalAgentState::Resumable => RunReviewState::Resumable,
+            TerminalAgentState::Exited => RunReviewState::Exited,
+        },
+    )
 }
 
 impl ThreadEntry {
@@ -662,6 +1297,313 @@ impl ThreadEntry {
         self.is_background = info.is_background;
         self.is_title_generating = info.is_title_generating;
         self.diff_stats = info.diff_stats;
+        self.changed_files = info.changed_files.clone();
+    }
+
+    fn review_brief(&self, cx: &App) -> RunReviewBrief {
+        let state = if self.draft.is_some() {
+            RunReviewState::Draft
+        } else {
+            match self.status {
+                AgentThreadStatus::Completed => RunReviewState::Completed,
+                AgentThreadStatus::Running => RunReviewState::Running,
+                AgentThreadStatus::WaitingForConfirmation => RunReviewState::WaitingForPermission,
+                AgentThreadStatus::Error => RunReviewState::Failed,
+            }
+        };
+        let mut observed_risks = Vec::new();
+        if !self.is_live && self.draft.is_none() {
+            observed_risks.push(
+                "The owning thread is not currently loaded; live runtime evidence may be stale."
+                    .to_owned(),
+            );
+        }
+        let (workspace_evidence, evidence_truncated, evidence_stale) = self
+            .workspace
+            .authoritative_workspace_evidence(None, cx)
+            .unwrap_or_else(|| {
+                (
+                    self.metadata
+                        .folder_paths()
+                        .paths()
+                        .iter()
+                        .cloned()
+                        .map(|path| ObservedWorkspaceEvidence {
+                            kind: WorkspaceEvidenceKind::WorkspaceRoot,
+                            path,
+                        })
+                        .collect(),
+                    false,
+                    false,
+                )
+            });
+        if evidence_truncated {
+            observed_risks.push("Workspace evidence is truncated.".to_owned());
+        }
+        if evidence_stale {
+            observed_risks.push("Workspace evidence includes stale observations.".to_owned());
+        }
+        let (repository_evidence, repository_evidence_truncated) = self
+            .workspace
+            .authoritative_repository_evidence(None, cx)
+            .unwrap_or_default();
+        if repository_evidence_truncated {
+            observed_risks.push(
+                "Repository evidence is truncated to the first eight observed worktrees."
+                    .to_owned(),
+            );
+        }
+        RunReviewBrief {
+            run_label: self.metadata.display_title().to_string(),
+            actor: if self.metadata.agent_id.as_ref() == ZED_AGENT_ID.as_ref() {
+                "Dez Agent".to_owned()
+            } else {
+                self.metadata.agent_id.as_ref().to_owned()
+            },
+            state,
+            host: self
+                .metadata
+                .remote_connection
+                .as_ref()
+                .map(|_| {
+                    "Remote host (connection details remain in the owning workspace)".to_owned()
+                })
+                .or_else(|| Some("Local host (no remote connection observed)".to_owned())),
+            session: self.metadata.session_id.as_ref().map(ToString::to_string),
+            workspace_evidence,
+            repository_evidence,
+            lines_added: u64::from(self.diff_stats.lines_added),
+            lines_removed: u64::from(self.diff_stats.lines_removed),
+            changed_files: self.changed_files.clone(),
+            file_targets: Vec::new(),
+            file_targets_truncated: false,
+            activity: Vec::new(),
+            commands: Vec::new(),
+            checks: Vec::new(),
+            observed_risks,
+        }
+    }
+}
+
+impl TerminalEntry {
+    fn review_brief(&self, cx: &App) -> RunReviewBrief {
+        let state = terminal_run_review_state(self.agent.as_ref(), self.runtime.as_ref());
+        let commands = self
+            .agent
+            .iter()
+            .filter(|agent| agent.capabilities.command_evidence)
+            .flat_map(|agent| &agent.events)
+            .filter(|event| event.kind == TerminalAgentEventKind::ToolFinished)
+            .filter_map(|event| {
+                event.command.as_ref().map(|command| ObservedRunCommand {
+                    command: command.clone(),
+                    exit_code: event.exit_code,
+                    source_path: event.working_directory.clone(),
+                })
+            })
+            .collect::<Vec<_>>();
+        let checks = if self
+            .agent
+            .as_ref()
+            .is_some_and(|agent| agent.capabilities.check_results)
+        {
+            commands
+                .iter()
+                .filter_map(ObservedRunCheck::from_command)
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let activity = self
+            .agent
+            .iter()
+            .filter(|agent| agent.capabilities.activity_events)
+            .flat_map(|agent| &agent.events)
+            .map(|event| ObservedRunActivity {
+                sequence: event.sequence,
+                summary: event.summary.clone(),
+                source_path: event.working_directory.clone(),
+            })
+            .collect();
+        let file_targets = self
+            .agent
+            .iter()
+            .filter(|agent| agent.capabilities.file_targets)
+            .flat_map(|agent| &agent.events)
+            .flat_map(|event| event.file_targets.iter().cloned())
+            .collect::<Vec<_>>();
+        let file_targets_truncated = self.agent.as_ref().is_some_and(|agent| {
+            agent.capabilities.file_targets
+                && agent
+                    .events
+                    .iter()
+                    .any(|event| event.file_targets_truncated)
+        });
+        let mut observed_risks = Vec::new();
+        if self.agent.is_none() {
+            observed_risks.push(
+                "This terminal adapter has not observed structured command, check, or file-change events."
+                    .to_owned(),
+            );
+        } else if let Some(agent) = &self.agent {
+            if !agent.capabilities.command_evidence {
+                observed_risks
+                    .push("The adapter does not advertise structured command evidence.".to_owned());
+            }
+            if !agent.capabilities.check_results {
+                observed_risks
+                    .push("The adapter does not advertise structured check results.".to_owned());
+            } else {
+                observed_risks.push(
+                    "Only recognized validation commands with observed exit codes count as checks."
+                        .to_owned(),
+                );
+            }
+            if state == RunReviewState::WaitingForPermission
+                && !agent.capabilities.permission_responses
+            {
+                observed_risks.push(
+                    "The adapter reports a permission request but does not provide a scoped, auditable response contract; respond in the owning terminal."
+                        .to_owned(),
+                );
+            }
+            if state == RunReviewState::WaitingForInput && !agent.capabilities.input_responses {
+                observed_risks.push(
+                    "The adapter reports an input request but cannot submit bounded provider input; respond in the owning terminal."
+                        .to_owned(),
+                );
+            }
+            if !agent.capabilities.file_targets {
+                observed_risks.push(
+                    "The adapter does not provide structured file-target evidence.".to_owned(),
+                );
+            } else if file_targets.is_empty() {
+                observed_risks.push(
+                    "No structured file target was observed; this does not prove the Run touched no files."
+                        .to_owned(),
+                );
+            }
+        }
+        match self.runtime.as_ref().map(|runtime| runtime.state) {
+            Some(TerminalRuntimeState::Detached) => observed_risks.push(
+                "The Host owns this detached session; the current surface is not receiving live output."
+                    .to_owned(),
+            ),
+            Some(TerminalRuntimeState::Reconnecting) => observed_risks.push(
+                "The Host connection is recovering; agent evidence may not include the latest activity."
+                    .to_owned(),
+            ),
+            Some(TerminalRuntimeState::Missing) => observed_risks.push(
+                "The Host cannot find this session; no replacement computation was started."
+                    .to_owned(),
+            ),
+            Some(TerminalRuntimeState::Incompatible) => observed_risks.push(
+                "The Host session uses an incompatible protocol; no replacement computation was started."
+                    .to_owned(),
+            ),
+            Some(TerminalRuntimeState::Exited) => observed_risks.push(
+                "The terminal process has exited; no newer terminal evidence will arrive."
+                    .to_owned(),
+            ),
+            Some(TerminalRuntimeState::Live) | None => {}
+        }
+        if self.needs_attention {
+            observed_risks.push(
+                "The terminal has an active attention condition; opening it only acknowledges the presentation and does not resolve the condition."
+                    .to_owned(),
+            );
+        }
+        let terminal_session_id = self
+            .metadata
+            .session_ref
+            .map(|session_ref| session_ref.session_id.to_string());
+        let (mut workspace_evidence, evidence_truncated, evidence_stale) = self
+            .workspace
+            .authoritative_workspace_evidence(terminal_session_id.as_deref(), cx)
+            .unwrap_or_else(|| {
+                (
+                    self.metadata
+                        .worktree_paths
+                        .folder_path_list()
+                        .paths()
+                        .iter()
+                        .cloned()
+                        .map(|path| ObservedWorkspaceEvidence {
+                            kind: WorkspaceEvidenceKind::WorkspaceRoot,
+                            path,
+                        })
+                        .collect::<Vec<_>>(),
+                    false,
+                    false,
+                )
+            });
+        if evidence_truncated {
+            observed_risks.push("Workspace evidence is truncated.".to_owned());
+        }
+        if evidence_stale {
+            observed_risks
+                .push("The owning terminal's working-directory evidence is stale.".to_owned());
+        }
+        if let Some(path) = self.metadata.working_directory.clone() {
+            if !workspace_evidence.iter().any(|evidence| {
+                evidence.kind == WorkspaceEvidenceKind::TerminalWorkingDirectory
+                    && evidence.path == path
+            }) {
+                workspace_evidence.push(ObservedWorkspaceEvidence {
+                    kind: WorkspaceEvidenceKind::TerminalWorkingDirectory,
+                    path,
+                });
+            }
+        }
+        let (repository_evidence, repository_evidence_truncated) = self
+            .workspace
+            .authoritative_repository_evidence(self.metadata.working_directory.as_deref(), cx)
+            .unwrap_or_default();
+        if repository_evidence.is_empty() {
+            observed_risks.push(
+                "No Git repository owning the terminal working directory was observed.".to_owned(),
+            );
+        }
+        if repository_evidence_truncated {
+            observed_risks.push("Repository evidence is truncated.".to_owned());
+        }
+        RunReviewBrief {
+            run_label: self.metadata.display_title().to_string(),
+            actor: self.agent.as_ref().map_or_else(
+                || {
+                    self.detected_agent_kind
+                        .map(|kind| kind.display_name().to_owned())
+                        .unwrap_or_else(|| "Terminal process".to_owned())
+                },
+                |agent| agent.actor.clone(),
+            ),
+            state,
+            host: self
+                .metadata
+                .session_ref
+                .map(|session_ref| session_ref.host_id.to_string())
+                .or_else(|| {
+                    self.metadata
+                        .remote_connection
+                        .as_ref()
+                        .map(|_| "Remote host (identity retained by workspace)".to_owned())
+                }),
+            session: self
+                .metadata
+                .session_ref
+                .map(|session_ref| session_ref.session_id.to_string()),
+            workspace_evidence,
+            repository_evidence,
+            lines_added: 0,
+            lines_removed: 0,
+            changed_files: Vec::new(),
+            file_targets,
+            file_targets_truncated,
+            activity,
+            commands,
+            checks,
+            observed_risks,
+        }
     }
 }
 
@@ -673,7 +1615,7 @@ enum ListEntry {
         highlight_positions: Vec<usize>,
         layout_label: Option<SharedString>,
         has_running_threads: bool,
-        waiting_thread_count: usize,
+        attention_thread_count: usize,
         has_notifications: bool,
         is_active: bool,
         has_threads: bool,
@@ -793,6 +1735,9 @@ struct SidebarContents {
     notified_terminals: HashSet<TerminalId>,
     project_header_indices: Vec<usize>,
     has_open_projects: bool,
+    has_attention: bool,
+    session_count: usize,
+    attention_count: usize,
 }
 
 /// Identity-and-layout key for a [`ListEntry`] used to preserve measured list items
@@ -802,14 +1747,49 @@ struct SidebarContents {
 enum EntryShape {
     ProjectHeader {
         key: ProjectGroupKey,
-        // Toggles the "No threads yet" empty-state row when not collapsed.
+        // Toggles the "No sessions yet" empty-state row when not collapsed.
         has_threads: bool,
-        // Determines whether the "No threads yet" row is rendered (only shown when
+        // Determines whether the "No sessions yet" row is rendered (only shown when
         // `!is_collapsed && !has_threads`).
         is_collapsed: bool,
     },
     Thread(ThreadId),
     Terminal(TerminalId),
+}
+
+/// Stable identity for the keyboard-selected row. Rebuilds may reorder or
+/// filter the rail, so retaining the previous numeric index can silently move
+/// focus to a different session.
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum SelectedEntryKey {
+    ProjectHeader(ProjectGroupKey),
+    Thread(ThreadId),
+    Terminal(TerminalId),
+}
+
+impl SelectedEntryKey {
+    fn from_entry(entry: &ListEntry) -> Self {
+        match entry {
+            ListEntry::ProjectHeader { key, .. } => Self::ProjectHeader(key.clone()),
+            ListEntry::Thread(thread) => Self::Thread(thread.metadata.thread_id),
+            ListEntry::Terminal(terminal) => Self::Terminal(terminal.metadata.terminal_id),
+        }
+    }
+
+    fn matches(&self, entry: &ListEntry) -> bool {
+        match (self, entry) {
+            (Self::ProjectHeader(selected), ListEntry::ProjectHeader { key, .. }) => {
+                selected == key
+            }
+            (Self::Thread(selected), ListEntry::Thread(thread)) => {
+                *selected == thread.metadata.thread_id
+            }
+            (Self::Terminal(selected), ListEntry::Terminal(terminal)) => {
+                *selected == terminal.metadata.terminal_id
+            }
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -841,6 +1821,114 @@ impl SidebarContents {
     fn is_terminal_notified(&self, terminal_id: TerminalId) -> bool {
         self.notified_terminals.contains(&terminal_id)
     }
+}
+
+fn thread_needs_attention(
+    thread: &ThreadEntry,
+    notified_threads: &HashSet<agent_ui::ThreadId>,
+) -> bool {
+    notified_threads.contains(&thread.metadata.thread_id)
+        || agent_status_needs_attention(thread.status)
+}
+
+fn agent_status_needs_attention(status: AgentThreadStatus) -> bool {
+    matches!(
+        status,
+        AgentThreadStatus::WaitingForConfirmation | AgentThreadStatus::Error
+    )
+}
+
+#[cfg(test)]
+mod attention_state_tests {
+    use super::*;
+
+    #[test]
+    fn waiting_and_error_states_need_attention() {
+        assert!(agent_status_needs_attention(
+            AgentThreadStatus::WaitingForConfirmation
+        ));
+        assert!(agent_status_needs_attention(AgentThreadStatus::Error));
+        assert!(!agent_status_needs_attention(AgentThreadStatus::Running));
+        assert!(!agent_status_needs_attention(AgentThreadStatus::Completed));
+    }
+}
+
+fn entry_needs_attention(
+    entry: &ListEntry,
+    notified_threads: &HashSet<agent_ui::ThreadId>,
+    notified_terminals: &HashSet<TerminalId>,
+) -> bool {
+    match entry {
+        ListEntry::ProjectHeader {
+            attention_thread_count,
+            has_notifications,
+            ..
+        } => *attention_thread_count > 0 || *has_notifications,
+        ListEntry::Thread(thread) => thread_needs_attention(thread, notified_threads),
+        ListEntry::Terminal(terminal) => {
+            terminal.needs_attention || notified_terminals.contains(&terminal.metadata.terminal_id)
+        }
+    }
+}
+
+fn attention_entries(
+    entries: Vec<ListEntry>,
+    notified_threads: &HashSet<agent_ui::ThreadId>,
+    notified_terminals: &HashSet<TerminalId>,
+) -> (Vec<ListEntry>, Vec<usize>) {
+    fn flush_group(
+        filtered: &mut Vec<ListEntry>,
+        header: &mut Option<ListEntry>,
+        rows: &mut Vec<ListEntry>,
+        notified_threads: &HashSet<agent_ui::ThreadId>,
+        notified_terminals: &HashSet<TerminalId>,
+    ) {
+        let show_header = header.as_ref().is_some_and(|header| {
+            entry_needs_attention(header, notified_threads, notified_terminals)
+        }) || !rows.is_empty();
+        if show_header && let Some(header) = header.take() {
+            filtered.push(header);
+            filtered.append(rows);
+        } else {
+            header.take();
+            rows.clear();
+        }
+    }
+
+    let mut filtered = Vec::new();
+    let mut header = None;
+    let mut rows = Vec::new();
+
+    for entry in entries {
+        if matches!(entry, ListEntry::ProjectHeader { .. }) {
+            flush_group(
+                &mut filtered,
+                &mut header,
+                &mut rows,
+                notified_threads,
+                notified_terminals,
+            );
+            header = Some(entry);
+        } else if entry_needs_attention(&entry, notified_threads, notified_terminals) {
+            rows.push(entry);
+        }
+    }
+    flush_group(
+        &mut filtered,
+        &mut header,
+        &mut rows,
+        notified_threads,
+        notified_terminals,
+    );
+
+    let project_header_indices = filtered
+        .iter()
+        .enumerate()
+        .filter_map(|(index, entry)| {
+            matches!(entry, ListEntry::ProjectHeader { .. }).then_some(index)
+        })
+        .collect();
+    (filtered, project_header_indices)
 }
 
 // TODO: The mapping from workspace root paths to git repositories needs a
@@ -1074,6 +2162,9 @@ pub struct Sidebar {
     thread_rename_editor: Entity<Editor>,
     list_state: ListState,
     contents: SidebarContents,
+    /// A transient projection over the session list. Authoritative session and
+    /// agent state remains in the existing stores and owning surfaces.
+    attention_only: bool,
     /// The index of the list item that currently has the keyboard focus
     ///
     /// Note: This is NOT the same as the active item.
@@ -1099,6 +2190,10 @@ pub struct Sidebar {
     thread_switcher: Option<Entity<ThreadSwitcher>>,
     _thread_switcher_subscriptions: Vec<gpui::Subscription>,
     pending_thread_activation: Option<agent_ui::ThreadId>,
+    /// Structured Host sessions currently carrying an active attention
+    /// condition. This is transient transition memory only; the Host snapshot
+    /// remains authoritative.
+    host_attention_sessions: HashSet<TerminalSessionId>,
     /// Persists live thread statuses across rebuilds so that Running→Completed
     /// transitions can be detected even when the group is collapsed (and
     /// thread entries are not present in the list).
@@ -1144,7 +2239,7 @@ impl Sidebar {
 
         let filter_editor = cx.new(|cx| {
             let mut editor = Editor::single_line(window, cx);
-            editor.set_placeholder_text("Search threads…", window, cx);
+            editor.set_placeholder_text("Search sessions…", window, cx);
             editor
         });
         let thread_rename_editor = cx.new(|cx| Editor::single_line(window, cx));
@@ -1223,6 +2318,40 @@ impl Sidebar {
         )
         .detach();
 
+        TerminalHostSnapshotRevision::init(cx);
+        TerminalHostStartupStatus::init(cx);
+        cx.observe_global_in::<TerminalHostSnapshotRevision>(window, |this, window, cx| {
+            let current_attention_sessions = TerminalHostSnapshotStore::try_global(cx)
+                .map(|store| {
+                    store
+                        .read(cx)
+                        .snapshots()
+                        .iter()
+                        .filter(|snapshot| {
+                            snapshot
+                                .agent
+                                .as_ref()
+                                .is_some_and(|agent| agent.attention_required)
+                        })
+                        .map(|snapshot| snapshot.session_id)
+                        .collect::<HashSet<_>>()
+                })
+                .unwrap_or_default();
+            let has_new_attention = current_attention_sessions
+                .iter()
+                .any(|session_id| !this.host_attention_sessions.contains(session_id));
+            this.host_attention_sessions = current_attention_sessions;
+            if has_new_attention && CanvasAgentUiSettings::get_global(cx).announce_agent_attention {
+                window.request_attention();
+            }
+            this.schedule_update_entries(false, cx);
+        })
+        .detach();
+        cx.observe_global::<TerminalHostStartupStatus>(|this, cx| {
+            this.schedule_update_entries(false, cx);
+        })
+        .detach();
+
         let channels_with_threads = channels_with_threads(cx);
         cx.spawn(async move |this, cx| {
             let channels = channels_with_threads.await;
@@ -1253,6 +2382,7 @@ impl Sidebar {
             thread_rename_editor,
             list_state: ListState::new(0, gpui::ListAlignment::Top, px(1000.)),
             contents: SidebarContents::default(),
+            attention_only: false,
             selection: None,
             active_entry: None,
             hovered_thread_index: None,
@@ -1267,6 +2397,7 @@ impl Sidebar {
             thread_switcher: None,
             _thread_switcher_subscriptions: Vec::new(),
             pending_thread_activation: None,
+            host_attention_sessions: HashSet::new(),
             live_thread_statuses: HashMap::new(),
             draft_kinds: HashMap::new(),
             view: SidebarView::default(),
@@ -1786,7 +2917,7 @@ impl Sidebar {
             .first()
             .map(|ws| ws.read(cx).project().read(cx).agent_server_store().clone());
 
-        let query = "";
+        let query = self.filter_editor.read(cx).text(cx);
 
         let previous = mem::take(&mut self.contents);
         let mut manual_entry_order: HashMap<ManualEntryOrderKey, usize> = self
@@ -1839,21 +2970,55 @@ impl Sidebar {
 
         let groups = mw.project_groups(cx);
         let mut live_notified_terminal_ids: HashSet<TerminalId> = HashSet::new();
-        if show_terminal_agents && notify_on_terminal_attention {
+        let mut live_terminal_runtime: HashMap<TerminalId, TerminalRuntimeInfo> = HashMap::new();
+        if show_terminal_agents {
             for workspace in &workspaces {
                 if let Some(agent_panel) = workspace.read(cx).panel::<AgentPanel>(cx) {
-                    live_notified_terminal_ids.extend(
-                        agent_panel
-                            .read(cx)
-                            .terminals(cx)
-                            .into_iter()
-                            .filter_map(|terminal| {
-                                terminal.has_notification.then_some(terminal.id)
-                            }),
-                    );
+                    for terminal in agent_panel.read(cx).terminals(cx) {
+                        if notify_on_terminal_attention && terminal.has_notification {
+                            live_notified_terminal_ids.insert(terminal.id);
+                        }
+                        live_terminal_runtime.insert(
+                            terminal.id,
+                            TerminalRuntimeInfo {
+                                state: TerminalRuntimeState::Live,
+                            },
+                        );
+                    }
                 }
             }
         }
+        let local_host_sessions = LocalTerminalHost::try_global(cx)
+            .map(|host| host.read(cx).list())
+            .unwrap_or_default();
+        let helper_host_sessions = TerminalHostSnapshotStore::try_global(cx)
+            .map(|store| store.read(cx).snapshots().to_vec())
+            .unwrap_or_default();
+        let helper_snapshot_by_session = helper_host_sessions
+            .iter()
+            .map(|snapshot| (snapshot.session_id, snapshot.clone()))
+            .collect::<HashMap<_, _>>();
+        let detached_local_sessions = local_host_sessions
+            .into_iter()
+            .chain(helper_host_sessions.iter().cloned())
+            .filter(|snapshot| {
+                matches!(
+                    snapshot.state,
+                    TerminalSessionState::Detached
+                        | TerminalSessionState::Reconnecting
+                        | TerminalSessionState::Exited { .. }
+                )
+            })
+            .filter_map(|snapshot| {
+                let workspace = workspace_for_local_terminal_session(
+                    &snapshot,
+                    &workspaces,
+                    active_workspace.as_ref(),
+                    cx,
+                )?;
+                Some((snapshot, workspace))
+            })
+            .collect::<Vec<_>>();
 
         let mut all_paths: Vec<PathBuf> = groups
             .iter()
@@ -1913,17 +3078,41 @@ impl Sidebar {
                 |metadata: TerminalThreadMetadata, workspace: ThreadEntryWorkspace| {
                     let worktrees =
                         worktree_info_from_thread_paths(&metadata.worktree_paths, &branch_by_path);
-                    let has_notification =
+                    let host_snapshot = metadata.session_ref.and_then(|session_ref| {
+                        helper_snapshot_by_session.get(&session_ref.session_id)
+                    });
+                    let agent = host_snapshot.and_then(|snapshot| snapshot.agent.clone());
+                    let now = Utc::now();
+                    let adapter_attention =
+                        agent.as_ref().is_some_and(|agent| agent.attention_required);
+                    let live_notification =
                         live_notified_terminal_ids.contains(&metadata.terminal_id);
+                    let needs_attention = metadata.attention.requires_action_at(now)
+                        || live_notification
+                        || adapter_attention;
+                    let has_notification = metadata.attention.is_unread_at(now)
+                        || live_notification
+                        || adapter_attention;
+                    let attention_priority = terminal_attention_priority(&metadata, agent.as_ref());
                     let detected_agent_kind = detect_terminal_agents
-                        .then(|| metadata.detected_agent_kind())
+                        .then(|| {
+                            terminal_agent_kind_from_snapshot(agent.as_ref())
+                                .or_else(|| metadata.detected_agent_kind())
+                        })
                         .flatten();
                     TerminalEntry {
+                        runtime: live_terminal_runtime
+                            .get(&metadata.terminal_id)
+                            .cloned()
+                            .or_else(|| host_snapshot.and_then(terminal_runtime_from_snapshot)),
+                        agent,
                         metadata,
                         detected_agent_kind,
                         workspace,
                         source: TerminalEntrySource::AgentPanel,
                         worktrees,
+                        needs_attention,
+                        attention_priority,
                         has_notification,
                         highlight_positions: Vec::new(),
                     }
@@ -1992,7 +3181,7 @@ impl Sidebar {
                                 .standalone_terminal_created_at
                                 .entry(terminal_id)
                                 .or_insert_with(Utc::now);
-                            let Some((metadata, detected_agent_kind)) =
+                            let Some((metadata, detected_agent_kind, runtime)) =
                                 standalone_terminal_metadata(ws, &terminal_view, *created_at, cx)
                             else {
                                 continue;
@@ -2007,17 +3196,99 @@ impl Sidebar {
                             );
                             let has_notification =
                                 notify_on_terminal_attention && terminal_view.read(cx).has_bell();
+                            let agent = metadata
+                                .session_ref
+                                .and_then(|session_ref| {
+                                    helper_snapshot_by_session.get(&session_ref.session_id)
+                                })
+                                .and_then(|snapshot| snapshot.agent.clone());
+                            let has_notification = has_notification
+                                || agent.as_ref().is_some_and(|agent| agent.attention_required);
+                            let needs_attention = metadata.attention.requires_action_at(Utc::now())
+                                || has_notification;
+                            let attention_priority =
+                                terminal_attention_priority(&metadata, agent.as_ref());
                             terminals.push(TerminalEntry {
                                 metadata,
-                                detected_agent_kind: Some(detected_agent_kind),
+                                detected_agent_kind: terminal_agent_kind_from_snapshot(
+                                    agent.as_ref(),
+                                )
+                                .or(Some(detected_agent_kind)),
                                 workspace: ThreadEntryWorkspace::Open(ws.clone()),
                                 source: TerminalEntrySource::WorkspaceItem(terminal_view),
+                                runtime: Some(runtime),
+                                agent,
                                 worktrees,
+                                needs_attention,
+                                attention_priority,
                                 has_notification,
                                 highlight_positions: Vec::new(),
                             });
                         }
                     }
+                }
+                for (snapshot, workspace) in &detached_local_sessions {
+                    if !group_workspaces.contains(workspace) {
+                        continue;
+                    }
+                    let terminal_id = TerminalId::from_stable_key(
+                        "terminal-session",
+                        &format!("{}:{}", snapshot.host_id, snapshot.session_id),
+                    );
+                    if !seen_terminal_ids.insert(terminal_id) {
+                        continue;
+                    }
+                    let created_at = *self
+                        .standalone_terminal_created_at
+                        .entry(terminal_id)
+                        .or_insert_with(Utc::now);
+                    let project = workspace.read(cx).project().clone();
+                    let project = project.read(cx);
+                    let metadata = TerminalThreadMetadata {
+                        terminal_id,
+                        title: snapshot
+                            .title
+                            .clone()
+                            .unwrap_or_else(|| "Terminal".to_string())
+                            .into(),
+                        custom_title: None,
+                        created_at,
+                        worktree_paths: project.worktree_paths(cx),
+                        remote_connection: None,
+                        working_directory: snapshot.working_directory.clone(),
+                        attention: TerminalAttentionState::default(),
+                        session_ref: Some(terminal::session_host::TerminalSessionRef {
+                            host_id: snapshot.host_id,
+                            session_id: snapshot.session_id,
+                        }),
+                    };
+                    let agent = snapshot.agent.clone();
+                    let detected_agent_kind = detect_terminal_agents
+                        .then(|| {
+                            terminal_agent_kind_from_snapshot(agent.as_ref())
+                                .or_else(|| metadata.detected_agent_kind())
+                        })
+                        .flatten();
+                    let worktrees =
+                        worktree_info_from_thread_paths(&metadata.worktree_paths, &branch_by_path);
+                    let attention_priority = terminal_attention_priority(&metadata, agent.as_ref());
+                    terminals.push(TerminalEntry {
+                        metadata,
+                        detected_agent_kind,
+                        workspace: ThreadEntryWorkspace::Open(workspace.clone()),
+                        source: TerminalEntrySource::HostSession(snapshot.session_id),
+                        runtime: terminal_runtime_from_snapshot(snapshot),
+                        agent: agent.clone(),
+                        worktrees,
+                        needs_attention: agent
+                            .as_ref()
+                            .is_some_and(|agent| agent.attention_required),
+                        attention_priority,
+                        has_notification: agent
+                            .as_ref()
+                            .is_some_and(|agent| agent.attention_required),
+                        highlight_positions: Vec::new(),
+                    });
                 }
             }
             current_terminal_ids.extend(
@@ -2082,7 +3353,7 @@ impl Sidebar {
 
             let mut threads: Vec<Arc<ThreadEntry>> = Vec::new();
             let mut has_running_threads = false;
-            let mut waiting_thread_count: usize = 0;
+            let mut attention_thread_count: usize = 0;
             let group_host = group_key.host();
 
             if should_load_threads {
@@ -2106,6 +3377,7 @@ impl Sidebar {
                             highlight_positions: Vec::new(),
                             worktrees,
                             diff_stats: DiffStats::default(),
+                            changed_files: Vec::new(),
                         })
                     };
 
@@ -2245,8 +3517,8 @@ impl Sidebar {
                     if info.status == AgentThreadStatus::Running {
                         has_running_threads = true;
                     }
-                    if info.status == AgentThreadStatus::WaitingForConfirmation {
-                        waiting_thread_count += 1;
+                    if agent_status_needs_attention(info.status) {
+                        attention_thread_count += 1;
                     }
                     live_info_by_session.insert(info.session_id.clone(), info);
                 }
@@ -2296,8 +3568,8 @@ impl Sidebar {
                     if info.status == AgentThreadStatus::Running {
                         has_running_threads = true;
                     }
-                    if info.status == AgentThreadStatus::WaitingForConfirmation {
-                        waiting_thread_count += 1;
+                    if agent_status_needs_attention(info.status) {
+                        attention_thread_count += 1;
                     }
                     // Resolve the thread_id for this session so we can
                     // track its status and detect transitions even while
@@ -2415,7 +3687,7 @@ impl Sidebar {
                     .any(|t| notified_threads.contains(&t.metadata.thread_id));
                 let has_terminal_notifications = matched_terminals
                     .iter()
-                    .any(|t| notified_terminals.contains(&t.metadata.terminal_id));
+                    .any(|terminal| terminal.needs_attention);
 
                 project_header_indices.push(entries.len());
                 entries.push(ListEntry::ProjectHeader {
@@ -2424,7 +3696,7 @@ impl Sidebar {
                     highlight_positions: workspace_highlight_positions,
                     layout_label: layout_label.clone(),
                     has_running_threads,
-                    waiting_thread_count,
+                    attention_thread_count,
                     has_notifications: has_thread_notifications || has_terminal_notifications,
                     is_active,
                     has_threads,
@@ -2442,9 +3714,8 @@ impl Sidebar {
                     &mut current_thread_ids,
                 );
             } else {
-                let has_terminal_notifications = terminals
-                    .iter()
-                    .any(|t| notified_terminals.contains(&t.metadata.terminal_id));
+                let has_terminal_notifications =
+                    terminals.iter().any(|terminal| terminal.needs_attention);
 
                 // When collapsed, threads aren't loaded into `threads`, so we
                 // query the store for thread IDs to check notifications and
@@ -2475,7 +3746,7 @@ impl Sidebar {
                     highlight_positions: Vec::new(),
                     layout_label: layout_label.clone(),
                     has_running_threads,
-                    waiting_thread_count,
+                    attention_thread_count,
                     has_notifications: has_thread_notifications || has_terminal_notifications,
                     is_active,
                     has_threads,
@@ -2510,12 +3781,29 @@ impl Sidebar {
 
         self.live_thread_statuses = new_live_statuses;
 
+        let session_count = entries
+            .iter()
+            .filter(|entry| matches!(entry, ListEntry::Thread(_) | ListEntry::Terminal(_)))
+            .count();
+        let attention_count = entries
+            .iter()
+            .filter(|entry| entry_needs_attention(entry, &notified_threads, &notified_terminals))
+            .count();
+        let has_attention = attention_count > 0;
+        if self.attention_only {
+            (entries, project_header_indices) =
+                attention_entries(entries, &notified_threads, &notified_terminals);
+        }
+
         self.contents = SidebarContents {
             entries,
             notified_threads,
             notified_terminals,
             project_header_indices,
             has_open_projects,
+            has_attention,
+            session_count,
+            attention_count,
         };
     }
 
@@ -2547,10 +3835,17 @@ impl Sidebar {
         }
 
         let had_notifications = self.has_notifications(cx);
+        let previous_selection = self.selection.and_then(|index| {
+            self.contents
+                .entries
+                .get(index)
+                .map(|entry| (index, SelectedEntryKey::from_entry(entry)))
+        });
         let previous_shapes: Vec<EntryShape> =
             self.entry_shapes(multi_workspace.read(cx)).collect();
 
         self.rebuild_contents(cx);
+        self.restore_selection_after_rebuild(previous_selection);
         self.refresh_refilled_draft_times(cx);
         self.refresh_draft_editor_observations(cx);
 
@@ -2566,6 +3861,51 @@ impl Sidebar {
         }
 
         cx.notify();
+    }
+
+    fn restore_selection_after_rebuild(
+        &mut self,
+        previous_selection: Option<(usize, SelectedEntryKey)>,
+    ) {
+        let Some((previous_index, selected_key)) = previous_selection else {
+            return;
+        };
+
+        if let Some(index) = self
+            .contents
+            .entries
+            .iter()
+            .position(|entry| selected_key.matches(entry))
+        {
+            self.selection = Some(index);
+            return;
+        }
+
+        // The selected row was removed or filtered out. Keep keyboard
+        // navigation near the same visual position, but prefer an actionable
+        // session over a project header.
+        self.selection = self
+            .contents
+            .entries
+            .iter()
+            .enumerate()
+            .skip(previous_index.min(self.contents.entries.len()))
+            .find_map(|(index, entry)| {
+                matches!(entry, ListEntry::Thread(_) | ListEntry::Terminal(_)).then_some(index)
+            })
+            .or_else(|| {
+                self.contents
+                    .entries
+                    .iter()
+                    .enumerate()
+                    .take(previous_index.min(self.contents.entries.len()))
+                    .rev()
+                    .find_map(|(index, entry)| {
+                        matches!(entry, ListEntry::Thread(_) | ListEntry::Terminal(_))
+                            .then_some(index)
+                    })
+            })
+            .or_else(|| (!self.contents.entries.is_empty()).then_some(0));
     }
 
     /// Splices only the changed entry range, leaving unchanged item measurements intact.
@@ -2740,7 +4080,7 @@ impl Sidebar {
                 highlight_positions,
                 layout_label,
                 has_running_threads,
-                waiting_thread_count,
+                attention_thread_count,
                 has_notifications,
                 is_active: is_active_group,
                 has_threads,
@@ -2758,7 +4098,7 @@ impl Sidebar {
                     highlight_positions,
                     layout_label.as_ref(),
                     *has_running_threads,
-                    *waiting_thread_count,
+                    *attention_thread_count,
                     *has_notifications,
                     *is_active_group,
                     is_selected,
@@ -2824,7 +4164,7 @@ impl Sidebar {
         highlight_positions: &[usize],
         layout_label: Option<&SharedString>,
         has_running_threads: bool,
-        waiting_thread_count: usize,
+        attention_thread_count: usize,
         has_notifications: bool,
         is_active: bool,
         is_focused: bool,
@@ -2873,6 +4213,7 @@ impl Sidebar {
 
         let key_for_toggle = key.clone();
         let key_for_focus = key.clone();
+        let key_for_empty_terminal = key.clone();
 
         // The fade gradient renders as a visible patch on transparent windows,
         // so truncate the label instead.
@@ -3004,13 +4345,11 @@ impl Sidebar {
                                     .with_rotate_animation(2),
                             )
                         })
-                        .when(show_agent_attention && waiting_thread_count > 0, |this| {
-                            let tooltip_text = if waiting_thread_count == 1 {
-                                "1 thread is waiting for confirmation".to_string()
+                        .when(show_agent_attention && attention_thread_count > 0, |this| {
+                            let tooltip_text = if attention_thread_count == 1 {
+                                "1 session needs attention".to_string()
                             } else {
-                                format!(
-                                    "{waiting_thread_count} threads are waiting for confirmation",
-                                )
+                                format!("{attention_thread_count} sessions need attention")
                             };
                             this.child(
                                 div()
@@ -3028,7 +4367,7 @@ impl Sidebar {
                                 && session_rail_settings.show_latest_attention_metadata
                                 && has_notifications
                                 && !has_running_threads
-                                && waiting_thread_count == 0,
+                                && attention_thread_count == 0,
                             |this| {
                                 this.child(
                                     Icon::new(IconName::Circle)
@@ -3106,9 +4445,40 @@ impl Sidebar {
                             Color::Custom(cx.theme().colors().icon_placeholder.opacity(0.1)),
                         ))
                         .child(
-                            Label::new("No threads yet")
+                            Label::new("No sessions yet")
                                 .size(LabelSize::Small)
-                                .color(Color::Placeholder),
+                                .color(Color::Placeholder)
+                                .flex_1(),
+                        )
+                        .child(
+                            Button::new(
+                                SharedString::from(format!(
+                                    "{id_prefix}empty-project-new-terminal-{ix}"
+                                )),
+                                "New Terminal",
+                            )
+                            .size(ButtonSize::Compact)
+                            .style(ButtonStyle::Subtle)
+                            .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                            .aria_label("Start Terminal in This Workspace")
+                            .on_click(cx.listener(
+                                move |this, _, window, cx| {
+                                    this.set_group_expanded(&key_for_empty_terminal, true, cx);
+                                    this.selection = None;
+                                    if let Some(workspace) =
+                                        this.workspace_for_group(&key_for_empty_terminal, cx)
+                                    {
+                                        this.create_new_terminal(&workspace, window, cx);
+                                    } else {
+                                        this.open_workspace_and_create_entry(
+                                            &key_for_empty_terminal,
+                                            NewEntryTarget::Terminal,
+                                            window,
+                                            cx,
+                                        );
+                                    }
+                                },
+                            )),
                         ),
                 )
                 .into_any_element()
@@ -3126,6 +4496,7 @@ impl Sidebar {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let focus_handle = self.focus_handle.clone();
+        let sidebar = cx.weak_entity();
 
         let menu_handle = self
             .project_header_new_thread_menu_handles
@@ -3138,8 +4509,10 @@ impl Sidebar {
             SharedString::from(format!("{id_prefix}project-header-new-thread-{ix}")),
             IconName::Plus,
         )
+        .size(ButtonSize::Medium)
         .selected_style(ButtonStyle::Tinted(TintColor::Accent))
         .icon_size(IconSize::Small)
+        .aria_label("Start New Agent Thread")
         .when(!is_menu_open, |this| this.visible_on_hover(group_name));
 
         let open_workspaces = self
@@ -3441,8 +4814,10 @@ impl Sidebar {
             .with_handle(menu_handle)
             .trigger(
                 IconButton::new(trigger_id, IconName::Ellipsis)
+                    .size(ButtonSize::Medium)
                     .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                     .icon_size(IconSize::Small)
+                    .aria_label("Project Options")
                     .when(!is_menu_open, |el| el.visible_on_hover(group_name)),
             )
             .on_open(Rc::new({
@@ -3654,7 +5029,9 @@ impl Sidebar {
                                                         ("close-workspace", workspace_index),
                                                         IconName::Close,
                                                     )
+                                                    .size(ButtonSize::Medium)
                                                     .icon_size(IconSize::Small)
+                                                    .aria_label("Close Worktree")
                                                     .visible_on_hover(&row_group_name)
                                                     .tooltip(Tooltip::text("Close Worktree"))
                                                     .on_click(move |_, window, cx| {
@@ -3804,7 +5181,7 @@ impl Sidebar {
             highlight_positions,
             layout_label,
             has_running_threads,
-            waiting_thread_count,
+            attention_thread_count,
             has_notifications,
             is_active,
             has_threads,
@@ -3824,7 +5201,7 @@ impl Sidebar {
             &highlight_positions,
             layout_label.as_ref(),
             *has_running_threads,
-            *waiting_thread_count,
+            *attention_thread_count,
             *has_notifications,
             *is_active,
             is_selected,
@@ -3885,7 +5262,16 @@ impl Sidebar {
             .focus_handle(cx)
             .is_focused(window);
 
-        let identifier = if is_renaming_thread {
+        let is_searching = self.filter_editor.focus_handle(cx).is_focused(window)
+            || matches!(
+                &self.view,
+                SidebarView::Archive(archive)
+                    if archive.read(cx).is_filter_editor_focused(window, cx)
+            );
+
+        let identifier = if is_searching {
+            "searching"
+        } else if is_renaming_thread {
             "editing"
         } else {
             "not_searching"
@@ -3930,7 +5316,7 @@ impl Sidebar {
             self.update_entries(cx);
         } else {
             self.selection = None;
-            self.focus_handle.focus(window, cx);
+            self.filter_editor.focus_handle(cx).focus(window, cx);
             cx.notify();
         }
     }
@@ -3943,11 +5329,13 @@ impl Sidebar {
     ) {
         self.selection = None;
         if let SidebarView::Archive(archive) = &self.view {
-            archive.update(cx, |view, _cx| {
+            archive.update(cx, |view, cx| {
                 view.clear_selection();
+                view.focus_filter_editor(window, cx);
             });
+        } else {
+            self.filter_editor.focus_handle(cx).focus(window, cx);
         }
-        self.focus_handle.focus(window, cx);
 
         cx.notify();
     }
@@ -3963,8 +5351,8 @@ impl Sidebar {
         })
     }
 
-    fn has_filter_query(&self, _cx: &App) -> bool {
-        false
+    fn has_filter_query(&self, cx: &App) -> bool {
+        !self.filter_editor.read(cx).text(cx).is_empty()
     }
 
     fn start_renaming_thread(
@@ -4371,6 +5759,82 @@ impl Sidebar {
                 .await
             })
             .detach_and_log_err(cx);
+    }
+
+    fn open_run_review_brief(
+        brief: RunReviewBrief,
+        workspace: Entity<Workspace>,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        let title = format!(
+            "Review: {}",
+            util::truncate_and_trailoff(&brief.run_label, 48)
+        );
+        agent_ui::open_markdown_beside_in_workspace(
+            title,
+            brief.to_markdown(),
+            workspace,
+            window,
+            cx,
+        )
+        .detach_and_log_err(cx);
+    }
+
+    fn open_terminal_run_review(
+        sidebar: WeakEntity<Self>,
+        metadata: TerminalThreadMetadata,
+        owner_workspace: ThreadEntryWorkspace,
+        source: TerminalEntrySource,
+        brief: RunReviewBrief,
+        review_workspace: Entity<Workspace>,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        sidebar
+            .update(cx, |sidebar, cx| {
+                sidebar.activate_terminal_entry(
+                    metadata,
+                    owner_workspace,
+                    source,
+                    false,
+                    window,
+                    cx,
+                );
+            })
+            .ok();
+        Self::open_run_review_brief(brief, review_workspace, window, cx);
+    }
+
+    fn open_thread_run_review(
+        sidebar: WeakEntity<Self>,
+        metadata: ThreadMetadata,
+        owner_workspace: ThreadEntryWorkspace,
+        brief: RunReviewBrief,
+        review_workspace: Entity<Workspace>,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        sidebar
+            .update(cx, |sidebar, cx| match &owner_workspace {
+                ThreadEntryWorkspace::Open(workspace) => {
+                    sidebar.activate_thread(metadata.clone(), workspace, false, window, cx);
+                }
+                ThreadEntryWorkspace::Closed {
+                    folder_paths,
+                    project_group_key,
+                } => {
+                    sidebar.open_workspace_and_activate_thread(
+                        metadata.clone(),
+                        folder_paths.clone(),
+                        project_group_key,
+                        window,
+                        cx,
+                    );
+                }
+            })
+            .ok();
+        Self::open_run_review_brief(brief, review_workspace, window, cx);
     }
 
     fn show_thread_title_toast(workspace: Entity<Workspace>, message: &'static str, cx: &mut App) {
@@ -5052,6 +6516,51 @@ impl Sidebar {
         }
     }
 
+    fn apply_terminal_attention_action(
+        terminal_id: TerminalId,
+        metadata: TerminalThreadMetadata,
+        action: TerminalAttentionAction,
+        panel: Option<Entity<AgentPanel>>,
+        terminal_view: Option<Entity<TerminalView>>,
+        session_ref: Option<terminal::session_host::TerminalSessionRef>,
+        cx: &mut App,
+    ) {
+        if !matches!(action, TerminalAttentionAction::Resume) {
+            if let Some(panel) = panel {
+                panel.update(cx, |panel, cx| {
+                    panel.clear_terminal_attention_presentation(terminal_id, cx)
+                });
+            }
+            if let Some(terminal_view) = terminal_view {
+                terminal_view.update(cx, |terminal_view, cx| terminal_view.clear_bell(cx));
+            }
+            if let Some(session_ref) = session_ref
+                && let Some(connection) = TerminalHostConnection::try_global(cx)
+                && connection.host_id() == session_ref.host_id
+            {
+                connection.acknowledge_agent_attention(session_ref.session_id);
+            }
+        }
+
+        if let Some(store) = TerminalThreadMetadataStore::try_global(cx) {
+            store.update(cx, |store, cx| {
+                if store.entry(terminal_id).is_none() {
+                    store.save(metadata, cx);
+                }
+                match action {
+                    TerminalAttentionAction::Acknowledge => {
+                        store.acknowledge_attention(terminal_id, cx)
+                    }
+                    TerminalAttentionAction::SnoozeOneHour => {
+                        store.snooze_attention(terminal_id, chrono::Duration::hours(1), cx)
+                    }
+                    TerminalAttentionAction::Resume => store.resume_attention(terminal_id, cx),
+                    TerminalAttentionAction::Resolve => store.resolve_attention(terminal_id, cx),
+                }
+            });
+        }
+    }
+
     /// Find the neighbor thread in the sidebar (by display position).
     /// Look below first, then above, for the nearest thread that isn't
     /// the one being archived. We capture both the neighbor's metadata
@@ -5121,6 +6630,12 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if let Some(session_ref) = metadata.session_ref
+            && let Some(connection) = TerminalHostConnection::try_global(cx)
+            && connection.host_id() == session_ref.host_id
+        {
+            connection.acknowledge_agent_attention(session_ref.session_id);
+        }
         match (workspace, source) {
             (
                 ThreadEntryWorkspace::Open(workspace),
@@ -5138,6 +6653,12 @@ impl Sidebar {
                 self.activate_terminal_in_workspace(&workspace, metadata, retain, window, cx);
             }
             (
+                ThreadEntryWorkspace::Open(workspace),
+                TerminalEntrySource::HostSession(session_id),
+            ) => self.attach_host_terminal_session(
+                &workspace, metadata, session_id, retain, true, window, cx,
+            ),
+            (
                 ThreadEntryWorkspace::Closed {
                     folder_paths,
                     project_group_key,
@@ -5153,6 +6674,141 @@ impl Sidebar {
                 );
             }
         }
+    }
+
+    fn attach_host_terminal_session(
+        &mut self,
+        workspace: &Entity<Workspace>,
+        metadata: TerminalThreadMetadata,
+        session_id: TerminalSessionId,
+        retain: bool,
+        focus_item: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(multi_workspace) = self.multi_workspace.upgrade() else {
+            return;
+        };
+        let local_terminal = LocalTerminalHost::try_global(cx).and_then(|host| {
+            host.update(cx, |host, _cx| host.attach(session_id, None))
+                .terminal
+        });
+        if let Some(terminal) = local_terminal {
+            multi_workspace.update(cx, |multi_workspace, cx| {
+                multi_workspace.activate(workspace.clone(), None, window, cx);
+                if retain {
+                    multi_workspace.retain_active_workspace(cx);
+                }
+            });
+            let terminal_view = workspace.update(cx, |workspace, cx| {
+                let pane = workspace.active_pane().clone();
+                terminal_view::attach_terminal_to_workspace(
+                    workspace, pane, terminal, focus_item, window, cx,
+                )
+            });
+            self.active_entry = Some(ActiveEntry::Terminal {
+                terminal_id: metadata.terminal_id,
+                workspace: workspace.clone(),
+            });
+            self.record_terminal_access(metadata.terminal_id);
+            if focus_item {
+                terminal_view.focus_handle(cx).focus(window, cx);
+            }
+            self.update_entries(cx);
+            return;
+        }
+
+        let Some(session_ref) = metadata.session_ref else {
+            log::warn!("terminal session {session_id} has no host identity");
+            return;
+        };
+        let workspace = workspace.clone();
+        let project = workspace.read(cx).project().clone();
+        cx.spawn_in(window, async move |this, cx| {
+            let connection =
+                terminal_view::wait_for_hosted_terminal_connection(session_ref.host_id, cx).await;
+            let (terminal, session_unavailable) = match connection {
+                Some(connection) => match terminal_view::restore_hosted_terminal(
+                    &project,
+                    connection,
+                    session_ref,
+                    metadata.working_directory.clone(),
+                    cx,
+                )
+                .await
+                {
+                    Ok(Some(terminal)) => (terminal, false),
+                    Ok(None) => {
+                        log::warn!("terminal host no longer owns session {session_id}");
+                        let terminal = cx.update(|window, cx| {
+                            terminal_view::session_unavailable_terminal(
+                                &project,
+                                "The terminal host no longer owns this saved session.",
+                                window,
+                                cx,
+                            )
+                        })?;
+                        (terminal, true)
+                    }
+                    Err(error) => {
+                        log::warn!(
+                            "failed to restore hosted terminal session {session_id}: {error:#}"
+                        );
+                        let terminal = cx.update(|window, cx| {
+                            terminal_view::session_unavailable_terminal(
+                                &project,
+                                "The terminal host could not confirm this saved session.",
+                                window,
+                                cx,
+                            )
+                        })?;
+                        (terminal, true)
+                    }
+                },
+                None => {
+                    log::warn!("terminal host is unavailable for session {session_id}");
+                    let terminal = cx.update(|window, cx| {
+                        terminal_view::session_unavailable_terminal(
+                            &project,
+                            "The terminal host is unavailable for this saved session.",
+                            window,
+                            cx,
+                        )
+                    })?;
+                    (terminal, true)
+                }
+            };
+            this.update_in(cx, |this, window, cx| {
+                multi_workspace.update(cx, |multi_workspace, cx| {
+                    multi_workspace.activate(workspace.clone(), None, window, cx);
+                    if retain {
+                        multi_workspace.retain_active_workspace(cx);
+                    }
+                });
+                let terminal_view = workspace.update(cx, |workspace, cx| {
+                    let pane = workspace.active_pane().clone();
+                    terminal_view::attach_terminal_to_workspace(
+                        workspace, pane, terminal, focus_item, window, cx,
+                    )
+                });
+                if session_unavailable {
+                    terminal_view.update(cx, |terminal_view, cx| {
+                        terminal_view.set_session_unavailable(true, cx);
+                    });
+                }
+                this.active_entry = Some(ActiveEntry::Terminal {
+                    terminal_id: metadata.terminal_id,
+                    workspace: workspace.clone(),
+                });
+                this.record_terminal_access(metadata.terminal_id);
+                if focus_item {
+                    terminal_view.focus_handle(cx).focus(window, cx);
+                }
+                this.update_entries(cx);
+            })?;
+            anyhow::Ok(())
+        })
+        .detach_and_log_err(cx);
     }
 
     fn activate_workspace_terminal_item(
@@ -5708,6 +7364,81 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if let TerminalEntrySource::HostSession(session_id) = source {
+            if let Some(host) = LocalTerminalHost::try_global(cx) {
+                host.update(cx, |host, cx| {
+                    host.terminate(*session_id, cx);
+                });
+            }
+            if let Some(session_ref) = metadata.session_ref
+                && let Some(connection) = TerminalHostConnection::try_global(cx)
+                    .filter(|connection| connection.host_id() == session_ref.host_id)
+            {
+                let session_id = *session_id;
+                cx.spawn(async move |this, cx| {
+                    let result: anyhow::Result<()> = async {
+                        let response = connection
+                            .command(TerminalSessionCommand::Terminate { session_id })
+                            .await?;
+                        match response {
+                            terminal::session_host::transport::TerminalHostResponse::Error {
+                                message,
+                            }
+                            | terminal::session_host::transport::TerminalHostResponse::Unsupported {
+                                message,
+                            } => anyhow::bail!("failed to terminate hosted terminal: {message}"),
+                            terminal::session_host::transport::TerminalHostResponse::Sessions {
+                                ..
+                            }
+                            | terminal::session_host::transport::TerminalHostResponse::Attachment {
+                                ..
+                            }
+                            | terminal::session_host::transport::TerminalHostResponse::Heartbeat {
+                                ..
+                            }
+                            | terminal::session_host::transport::TerminalHostResponse::Events {
+                                ..
+                            } => {
+                                anyhow::bail!("terminal host returned an invalid terminate response")
+                            }
+                            terminal::session_host::transport::TerminalHostResponse::Snapshot {
+                                ..
+                            } => {}
+                        }
+                        Ok(())
+                    }
+                    .await;
+
+                    if let Err(error) = &result {
+                        this.update(cx, |this, cx| {
+                            if let Some(workspace) = this.active_workspace(cx) {
+                                workspace.update(cx, |workspace, cx| {
+                                    struct TerminateTerminalErrorToast;
+                                    workspace.show_toast(
+                                        Toast::new(
+                                            NotificationId::unique::<TerminateTerminalErrorToast>(),
+                                            format!(
+                                                "Durable session was not terminated: {error:#}"
+                                            ),
+                                        )
+                                        .autohide(),
+                                        cx,
+                                    );
+                                });
+                            }
+                        })
+                        .ok();
+                    }
+
+                    result
+                })
+                .detach_and_log_err(cx);
+            }
+            self.standalone_terminal_created_at
+                .remove(&metadata.terminal_id);
+            self.update_entries(cx);
+            return;
+        }
         if let (ThreadEntryWorkspace::Open(workspace), TerminalEntrySource::WorkspaceItem(item)) =
             (workspace, source)
         {
@@ -5900,6 +7631,44 @@ impl Sidebar {
                 cx,
             );
         }
+    }
+
+    fn close_terminal_with_confirmation(
+        &mut self,
+        metadata: TerminalThreadMetadata,
+        workspace: ThreadEntryWorkspace,
+        source: TerminalEntrySource,
+        requires_termination_confirmation: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !requires_termination_confirmation {
+            self.close_terminal(&metadata, &workspace, &source, window, cx);
+            return;
+        }
+
+        let title = metadata.display_title();
+        let detail = format!(
+            "This permanently stops the durable session “{title}”. Closing or detaching a live terminal does not stop its process; this action does."
+        );
+        let prompt = window.prompt(
+            PromptLevel::Critical,
+            "Terminate durable session?",
+            Some(&detail),
+            &["Terminate", "Cancel"],
+            cx,
+        );
+
+        cx.spawn_in(window, async move |this, cx| -> anyhow::Result<()> {
+            if prompt.await.log_err() != Some(0) {
+                return Ok(());
+            }
+            this.update_in(cx, |this, window, cx| {
+                this.close_terminal(&metadata, &workspace, &source, window, cx);
+            })?;
+            Ok(())
+        })
+        .detach_and_log_err(cx);
     }
 
     fn close_workspace_terminal_item(
@@ -6641,9 +8410,103 @@ impl Sidebar {
                 let metadata = terminal.metadata.clone();
                 let workspace = terminal.workspace.clone();
                 let source = terminal.source.clone();
-                self.close_terminal(&metadata, &workspace, &source, window, cx);
+                let requires_termination_confirmation =
+                    terminal.runtime.as_ref().is_some_and(|runtime| {
+                        matches!(
+                            runtime.state,
+                            TerminalRuntimeState::Detached | TerminalRuntimeState::Reconnecting
+                        )
+                    });
+                self.close_terminal_with_confirmation(
+                    metadata,
+                    workspace,
+                    source,
+                    requires_termination_confirmation,
+                    window,
+                    cx,
+                );
             }
             _ => {}
+        }
+    }
+
+    fn open_selected_review_brief(
+        &mut self,
+        _: &OpenSelectedReviewBrief,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let entry = self
+            .selection
+            .and_then(|ix| self.contents.entries.get(ix).cloned())
+            .or_else(|| {
+                self.contents.entries.iter().find_map(|entry| {
+                    let is_active = match (entry, self.active_entry.as_ref()) {
+                        (
+                            ListEntry::Thread(thread),
+                            Some(ActiveEntry::Thread { thread_id, .. }),
+                        ) => thread.metadata.thread_id == *thread_id,
+                        (
+                            ListEntry::Terminal(terminal),
+                            Some(ActiveEntry::Terminal { terminal_id, .. }),
+                        ) => terminal.metadata.terminal_id == *terminal_id,
+                        (ListEntry::ProjectHeader { .. }, _)
+                        | (ListEntry::Thread(_), _)
+                        | (ListEntry::Terminal(_), _) => false,
+                    };
+                    is_active.then(|| entry.clone())
+                })
+            });
+        let Some(entry) = entry else {
+            return;
+        };
+        match entry {
+            ListEntry::Thread(thread) if thread.draft.is_none() => {
+                let brief = thread.review_brief(cx);
+                let owner_workspace = thread.workspace.clone();
+                let review_workspace = match &owner_workspace {
+                    ThreadEntryWorkspace::Open(workspace) => Some(workspace.clone()),
+                    ThreadEntryWorkspace::Closed { .. } => self.active_workspace(cx),
+                };
+                match &owner_workspace {
+                    ThreadEntryWorkspace::Open(workspace) => {
+                        self.activate_thread(thread.metadata.clone(), workspace, false, window, cx)
+                    }
+                    ThreadEntryWorkspace::Closed {
+                        folder_paths,
+                        project_group_key,
+                    } => self.open_workspace_and_activate_thread(
+                        thread.metadata.clone(),
+                        folder_paths.clone(),
+                        project_group_key,
+                        window,
+                        cx,
+                    ),
+                }
+                if let Some(workspace) = review_workspace {
+                    Self::open_run_review_brief(brief, workspace, window, cx);
+                }
+            }
+            ListEntry::Terminal(terminal) => {
+                let brief = terminal.review_brief(cx);
+                let owner_workspace = terminal.workspace.clone();
+                let review_workspace = match &owner_workspace {
+                    ThreadEntryWorkspace::Open(workspace) => Some(workspace.clone()),
+                    ThreadEntryWorkspace::Closed { .. } => self.active_workspace(cx),
+                };
+                self.activate_terminal_entry(
+                    terminal.metadata.clone(),
+                    owner_workspace,
+                    terminal.source.clone(),
+                    false,
+                    window,
+                    cx,
+                );
+                if let Some(workspace) = review_workspace {
+                    Self::open_run_review_brief(brief, workspace, window, cx);
+                }
+            }
+            ListEntry::Thread(_) | ListEntry::ProjectHeader { .. } => {}
         }
     }
 
@@ -6728,10 +8591,10 @@ impl Sidebar {
             match entry {
                 ListEntry::Thread(thread) => {
                     notified_threads.contains(&thread.metadata.thread_id)
-                        || thread.status == AgentThreadStatus::WaitingForConfirmation
+                        || agent_status_needs_attention(thread.status)
                 }
                 ListEntry::Terminal(terminal) => {
-                    terminal.has_notification
+                    terminal.needs_attention
                         || notified_terminals.contains(&terminal.metadata.terminal_id)
                 }
                 ListEntry::ProjectHeader { .. } => unreachable!(),
@@ -6746,8 +8609,15 @@ impl Sidebar {
                     AgentThreadStatus::Error => 2,
                     AgentThreadStatus::Completed => 3,
                 },
-                ListEntry::Terminal(terminal) if terminal.has_notification => 0,
-                ListEntry::Terminal(_) => 1,
+                ListEntry::Terminal(terminal)
+                    if terminal.needs_attention
+                        && terminal.attention_priority == TerminalAttentionPriority::Urgent =>
+                {
+                    0
+                }
+                ListEntry::Terminal(terminal) if terminal.needs_attention => 1,
+                ListEntry::Terminal(terminal) if terminal.runtime.is_some() => 2,
+                ListEntry::Terminal(_) => 3,
                 ListEntry::ProjectHeader { .. } => unreachable!(),
             }
         }
@@ -7006,6 +8876,17 @@ impl Sidebar {
                                 workspace, metadata, false, window, cx,
                             );
                         }
+                        TerminalEntrySource::HostSession(session_id) => {
+                            self.attach_host_terminal_session(
+                                workspace,
+                                metadata.clone(),
+                                *session_id,
+                                false,
+                                false,
+                                window,
+                                cx,
+                            );
+                        }
                     }
                 }
             }
@@ -7217,6 +9098,12 @@ impl Sidebar {
         let title: SharedString = thread.metadata.display_title();
         let metadata = thread.metadata.clone();
         let thread_workspace = thread.workspace.clone();
+        let sidebar = cx.weak_entity();
+        let hover_review_workspace = match &thread.workspace {
+            ThreadEntryWorkspace::Open(workspace) => Some(workspace.clone()),
+            ThreadEntryWorkspace::Closed { .. } => self.active_workspace(cx),
+        };
+        let hover_review_brief = thread.review_brief(cx);
 
         let is_hovered = self.hovered_thread_index == Some(ix);
         let is_selected = is_active;
@@ -7226,6 +9113,7 @@ impl Sidebar {
             thread.status,
             AgentThreadStatus::Running | AgentThreadStatus::WaitingForConfirmation
         );
+        let has_changes = thread.diff_stats.lines_added > 0 || thread.diff_stats.lines_removed > 0;
         let is_renaming = self.renaming_thread_id == Some(thread.metadata.thread_id);
 
         let thread_id_for_actions = thread.metadata.thread_id;
@@ -7267,6 +9155,22 @@ impl Sidebar {
         } else {
             (thread.icon, thread.icon_from_external_svg.clone())
         };
+        let actor_label: SharedString =
+            if thread.metadata.agent_id.as_ref() == ZED_AGENT_ID.as_ref() {
+                "Dez Agent".into()
+            } else {
+                thread.metadata.agent_id.as_ref().to_owned().into()
+            };
+        let state_label = if is_draft {
+            "Draft"
+        } else {
+            match thread.status {
+                AgentThreadStatus::Running => "Running",
+                AgentThreadStatus::WaitingForConfirmation => "Waiting for permission",
+                AgentThreadStatus::Error => "Error",
+                AgentThreadStatus::Completed => "Completed",
+            }
+        };
 
         let title_generating = thread.is_title_generating
             || self
@@ -7286,6 +9190,9 @@ impl Sidebar {
                         .then_some(thread.status)
                         .unwrap_or_default(),
                 )
+                .when(session_rail_settings.show_agent_state_metadata, |this| {
+                    this.actor_label(actor_label).state_label(state_label)
+                })
                 .is_remote(is_remote)
                 .when_some(icon_svg, |this, svg| {
                     this.custom_icon_from_external_svg(svg)
@@ -7341,7 +9248,9 @@ impl Sidebar {
                 })
                 .when(is_hovered && !is_renaming, |this| {
                     let rename_button = IconButton::new(("rename-thread", ix), IconName::Pencil)
+                        .size(ButtonSize::Medium)
                         .icon_size(IconSize::Small)
+                        .aria_label("Rename Thread")
                         .tooltip({
                             let focus_handle = focus_handle.clone();
                             move |_window, cx| {
@@ -7369,9 +9278,11 @@ impl Sidebar {
                     let contextual_action: Option<AnyElement> = if is_running {
                         Some(
                             IconButton::new("stop-thread", IconName::Stop)
+                                .size(ButtonSize::Medium)
                                 .icon_size(IconSize::Small)
                                 .icon_color(Color::Error)
                                 .style(ButtonStyle::Tinted(TintColor::Error))
+                                .aria_label("Stop Generation")
                                 .tooltip(Tooltip::text("Stop Generation"))
                                 .on_click(cx.listener(move |this, _, _window, cx| {
                                     this.stop_thread(&thread_id_for_actions, cx);
@@ -7383,7 +9294,9 @@ impl Sidebar {
                             Some(DraftKind::Empty) => None,
                             Some(DraftKind::WithContent) => Some(
                                 IconButton::new("discard_thread", IconName::Close)
+                                    .size(ButtonSize::Medium)
                                     .icon_size(IconSize::Small)
+                                    .aria_label("Discard Draft")
                                     .tooltip(Tooltip::text("Discard Draft"))
                                     .on_click({
                                         let thread_workspace = thread_workspace.clone();
@@ -7400,7 +9313,9 @@ impl Sidebar {
                             ),
                             None => Some(
                                 IconButton::new("archive-thread", IconName::Archive)
+                                    .size(ButtonSize::Medium)
                                     .icon_size(IconSize::Small)
+                                    .aria_label("Archive Thread")
                                     .tooltip({
                                         let focus_handle = focus_handle.clone();
                                         move |_window, cx| {
@@ -7429,6 +9344,78 @@ impl Sidebar {
                         h_flex()
                             .gap_0p5()
                             .child(rename_button)
+                            .when(has_changes, |this| {
+                                let metadata = thread.metadata.clone();
+                                let owner_workspace = thread.workspace.clone();
+                                this.child(
+                                    IconButton::new(("review-thread-changes", ix), IconName::Diff)
+                                        .size(ButtonSize::Medium)
+                                        .icon_size(IconSize::Small)
+                                        .aria_label("Review Changes")
+                                        .tooltip(Tooltip::text("Review Changes"))
+                                        .on_click(cx.listener(move |this, _, window, cx| {
+                                            if let ThreadEntryWorkspace::Open(workspace) =
+                                                &owner_workspace
+                                            {
+                                                this.activate_thread(
+                                                    metadata.clone(),
+                                                    workspace,
+                                                    true,
+                                                    window,
+                                                    cx,
+                                                );
+                                                window.dispatch_action(
+                                                    OpenAgentDiff.boxed_clone(),
+                                                    cx,
+                                                );
+                                            }
+                                        })),
+                                )
+                            })
+                            .when_some(
+                                (!is_draft)
+                                    .then_some(hover_review_workspace.clone())
+                                    .flatten(),
+                                |this, review_workspace| {
+                                    this.child(
+                                        IconButton::new(
+                                            ("review-thread-run", ix),
+                                            IconName::ListTodo,
+                                        )
+                                        .size(ButtonSize::Medium)
+                                        .icon_size(IconSize::Small)
+                                        .aria_label("Open Review Brief")
+                                        .tooltip({
+                                            let focus_handle = focus_handle.clone();
+                                            move |_window, cx| {
+                                                Tooltip::for_action_in(
+                                                    "Open Review Brief",
+                                                    &OpenSelectedReviewBrief,
+                                                    &focus_handle,
+                                                    cx,
+                                                )
+                                            }
+                                        })
+                                        .on_click({
+                                            let review_brief = hover_review_brief.clone();
+                                            let sidebar = sidebar.clone();
+                                            let metadata = thread.metadata.clone();
+                                            let owner_workspace = thread.workspace.clone();
+                                            move |_, window, cx| {
+                                                Self::open_thread_run_review(
+                                                    sidebar.clone(),
+                                                    metadata.clone(),
+                                                    owner_workspace.clone(),
+                                                    review_brief.clone(),
+                                                    review_workspace.clone(),
+                                                    window,
+                                                    cx,
+                                                );
+                                            }
+                                        }),
+                                    )
+                                },
+                            )
                             .when_some(contextual_action, |this, action| this.child(action)),
                     )
                 })
@@ -7471,13 +9458,18 @@ impl Sidebar {
         };
 
         let context_menu_id = SharedString::from(format!("thread-context-menu-{}", ix));
-        let sidebar = cx.weak_entity();
-
         let active_workspace = self.active_workspace(cx);
         let thread_workspace = match &thread_workspace {
             ThreadEntryWorkspace::Open(workspace) => Some(workspace.clone()),
             ThreadEntryWorkspace::Closed { .. } => None,
         };
+        let review_workspace = thread_workspace
+            .clone()
+            .or_else(|| active_workspace.clone());
+        let review_brief = thread.review_brief(cx);
+        let review_owner_workspace = thread.workspace.clone();
+        let review_metadata = thread.metadata.clone();
+        let has_changes = thread.diff_stats.lines_added > 0 || thread.diff_stats.lines_removed > 0;
 
         let is_zed_thread = thread.metadata.agent_id.as_ref() == ZED_AGENT_ID.as_ref();
         let can_open_as_markdown = thread.is_live || is_zed_thread;
@@ -7489,6 +9481,9 @@ impl Sidebar {
                 let thread_id = thread.metadata.thread_id;
                 let markdown_title = Some(thread.metadata.display_title());
                 let rename_title = title;
+                let review_brief = review_brief.clone();
+                let review_owner_workspace = review_owner_workspace.clone();
+                let review_metadata = review_metadata.clone();
                 move |_window, cx| {
                     let session_id = session_id.clone();
                     let sidebar = sidebar.clone();
@@ -7497,6 +9492,10 @@ impl Sidebar {
                     let markdown_title = markdown_title.clone();
                     let rename_title = rename_title.clone();
                     let folder_paths = folder_paths.clone();
+                    let review_workspace = review_workspace.clone();
+                    let review_brief = review_brief.clone();
+                    let review_owner_workspace = review_owner_workspace.clone();
+                    let review_metadata = review_metadata.clone();
                     ContextMenu::build(_window, cx, move |mut menu, _window, _cx| {
                         menu = menu.entry("Rename Title", None, {
                             let sidebar = sidebar.clone();
@@ -7534,6 +9533,47 @@ impl Sidebar {
                                             );
                                         })
                                         .ok();
+                                }
+                            });
+                        }
+
+                        if let Some(review_workspace) = review_workspace.clone() {
+                            menu = menu.entry("Open Review Brief", None, {
+                                let review_brief = review_brief.clone();
+                                let sidebar = sidebar.clone();
+                                let review_owner_workspace = review_owner_workspace.clone();
+                                let review_metadata = review_metadata.clone();
+                                move |window, cx| {
+                                    Self::open_thread_run_review(
+                                        sidebar.clone(),
+                                        review_metadata.clone(),
+                                        review_owner_workspace.clone(),
+                                        review_brief.clone(),
+                                        review_workspace.clone(),
+                                        window,
+                                        cx,
+                                    );
+                                }
+                            });
+                        }
+
+                        if has_changes && let Some(owner_workspace) = thread_workspace.clone() {
+                            menu = menu.entry("Review Changes", None, {
+                                let sidebar = sidebar.clone();
+                                let metadata = review_metadata.clone();
+                                move |window, cx| {
+                                    sidebar
+                                        .update(cx, |sidebar, cx| {
+                                            sidebar.activate_thread(
+                                                metadata.clone(),
+                                                &owner_workspace,
+                                                true,
+                                                window,
+                                                cx,
+                                            );
+                                        })
+                                        .ok();
+                                    window.dispatch_action(OpenAgentDiff.boxed_clone(), cx);
                                 }
                             });
                         }
@@ -7601,13 +9641,35 @@ impl Sidebar {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let id = ElementId::from(format!("terminal-{}", terminal.metadata.terminal_id));
-        let timestamp = format_history_entry_timestamp(terminal.metadata.created_at);
+        let latest_agent_event_at = terminal
+            .agent
+            .as_ref()
+            .and_then(|agent| agent.events.last())
+            .filter(|event| event.observed_at_unix_ms > 0)
+            .and_then(|event| {
+                let seconds = i64::try_from(event.observed_at_unix_ms / 1000).ok()?;
+                let nanoseconds = u32::try_from(event.observed_at_unix_ms % 1000)
+                    .ok()?
+                    .saturating_mul(1_000_000);
+                Utc.timestamp_opt(seconds, nanoseconds).single()
+            });
+        let timestamp = format_history_entry_timestamp(
+            latest_agent_event_at.unwrap_or(terminal.metadata.created_at),
+        );
         let is_hovered = self.hovered_thread_index == Some(ix);
         let color = cx.theme().colors();
         let sidebar_bg = color.editor_background;
         let metadata = terminal.metadata.clone();
         let workspace = terminal.workspace.clone();
         let source = terminal.source.clone();
+        let sidebar = cx.weak_entity();
+        let review_brief = terminal.review_brief(cx);
+        let evidence_label =
+            observed_run_evidence_label(&review_brief.checks, review_brief.commands.len());
+        let review_workspace = match &terminal.workspace {
+            ThreadEntryWorkspace::Open(workspace) => Some(workspace.clone()),
+            ThreadEntryWorkspace::Closed { .. } => self.active_workspace(cx),
+        };
         let focus_handle = self.focus_handle.clone();
         let session_rail_settings = SessionRailSettings::get_global(cx);
         let worktrees = if session_rail_settings.show_worktree_metadata {
@@ -7627,15 +9689,75 @@ impl Sidebar {
         let show_agent_attention =
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
         let terminal_agent_kind = terminal.detected_agent_kind;
+        let close_label = match terminal.runtime.as_ref().map(|runtime| runtime.state) {
+            Some(TerminalRuntimeState::Detached) => "Terminate Detached Session",
+            Some(TerminalRuntimeState::Reconnecting) => "Terminate Reconnecting Session",
+            Some(TerminalRuntimeState::Live) => "Detach Live Terminal",
+            Some(TerminalRuntimeState::Exited) => "Close Exited Terminal",
+            Some(TerminalRuntimeState::Missing) => "Remove Missing Session",
+            Some(TerminalRuntimeState::Incompatible) => "Remove Incompatible Session",
+            None => "Remove Saved Terminal",
+        };
+        let requires_termination_confirmation = terminal.runtime.as_ref().is_some_and(|runtime| {
+            matches!(
+                runtime.state,
+                TerminalRuntimeState::Detached | TerminalRuntimeState::Reconnecting
+            )
+        });
+        let close_icon = if requires_termination_confirmation {
+            IconName::Stop
+        } else {
+            IconName::Close
+        };
+        let close_icon_color = if requires_termination_confirmation {
+            Color::Error
+        } else {
+            Color::Muted
+        };
         let show_detection_confidence = agent_ui_settings.show_detection_confidence;
+        let needs_attention = terminal.needs_attention;
         let has_notification = terminal.has_notification;
+        let can_copy_codex_hook = terminal_agent_kind == Some(TerminalAgentKind::Codex)
+            && terminal.agent.is_none()
+            && terminal.metadata.session_ref.is_some_and(|session_ref| {
+                TerminalHostConnection::try_global(cx)
+                    .is_some_and(|connection| connection.host_id() == session_ref.host_id)
+            });
+        let context_review_workspace = review_workspace.clone();
+        let context_review_brief = review_brief.clone();
+        let context_working_directory = terminal.metadata.working_directory.clone();
+        let context_session_ref = terminal.metadata.session_ref;
+        let context_terminal_id = terminal.metadata.terminal_id;
+        let context_attention_metadata = terminal.metadata.clone();
+        let attention_is_active =
+            terminal.metadata.attention.condition == TerminalAttentionCondition::Active;
+        let attention_is_unread =
+            terminal.metadata.attention.presentation == TerminalAttentionPresentation::Unread;
+        let attention_is_muted = terminal.metadata.attention.is_muted_at(Utc::now());
+        let context_agent_panel = match (&terminal.workspace, &terminal.source) {
+            (ThreadEntryWorkspace::Open(workspace), TerminalEntrySource::AgentPanel) => {
+                workspace.read(cx).panel::<AgentPanel>(cx)
+            }
+            _ => None,
+        };
+        let context_terminal_view = match &terminal.source {
+            TerminalEntrySource::WorkspaceItem(terminal_view) => Some(terminal_view.clone()),
+            TerminalEntrySource::AgentPanel | TerminalEntrySource::HostSession(_) => None,
+        };
+        let host_label = if terminal.metadata.session_ref.is_some() {
+            "Local Host"
+        } else if is_remote {
+            "Remote Host"
+        } else {
+            "Local process"
+        };
         let (icon_char, title, highlight_positions) =
             match split_leading_icon_char(&display_title, &terminal.highlight_positions) {
                 Some((icon_char, title, positions)) => (Some(icon_char), title, positions),
                 None => (None, display_title, terminal.highlight_positions.clone()),
             };
 
-        canvas_thread_item_style(ThreadItem::new(id, title), &design_system)
+        let terminal_item = canvas_thread_item_style(ThreadItem::new(id, title), &design_system)
             .base_bg(sidebar_bg)
             .icon(
                 terminal_agent_kind
@@ -7646,14 +9768,34 @@ impl Sidebar {
             .is_remote(is_remote)
             .when(session_rail_settings.show_agent_state_metadata, |this| {
                 this.when_some(terminal_agent_kind, |this, agent_kind| {
-                    this.project_name(terminal_agent_metadata_label(
-                        agent_kind,
-                        has_notification,
-                        show_detection_confidence,
-                    ))
+                    this.actor_label(agent_kind.display_name()).state_label(
+                        terminal_agent_state_label(
+                            terminal.agent.as_ref(),
+                            terminal.runtime.as_ref(),
+                            needs_attention,
+                            attention_is_muted,
+                            can_copy_codex_hook,
+                            show_detection_confidence,
+                        ),
+                    )
                 })
+                .when(terminal_agent_kind.is_none(), |this| {
+                    this.actor_label("Terminal")
+                        .state_label(terminal_agent_state_label(
+                            terminal.agent.as_ref(),
+                            terminal.runtime.as_ref(),
+                            needs_attention,
+                            attention_is_muted,
+                            false,
+                            show_detection_confidence,
+                        ))
+                })
+                .host_label(host_label)
             })
             .worktrees(worktrees)
+            .when_some(evidence_label, |this, (label, status)| {
+                this.evidence(label, status)
+            })
             .timestamp(
                 session_rail_settings
                     .show_latest_attention_metadata
@@ -7680,23 +9822,90 @@ impl Sidebar {
             }))
             .when(is_hovered, |this| {
                 this.action_slot(
-                    IconButton::new("close-terminal", IconName::Close)
-                        .icon_size(IconSize::Small)
-                        .icon_color(Color::Muted)
-                        .tooltip({
-                            let focus_handle = focus_handle.clone();
-                            move |_window, cx| {
-                                Tooltip::for_action_in(
-                                    "Close Terminal",
-                                    &ArchiveSelectedThread,
-                                    &focus_handle,
-                                    cx,
-                                )
-                            }
+                    h_flex()
+                        .gap_0p5()
+                        .when(can_copy_codex_hook, |this| {
+                            this.child(
+                                IconButton::new("copy-codex-hook-setup", IconName::Copy)
+                                    .size(ButtonSize::Medium)
+                                    .icon_size(IconSize::Small)
+                                    .icon_color(Color::Muted)
+                                    .aria_label("Copy Codex Hook Setup")
+                                    .tooltip(Tooltip::text("Copy Codex Hook Setup"))
+                                    .on_click(|_, _window, cx| {
+                                        cx.write_to_clipboard(ClipboardItem::new_string(
+                                            CODEX_HOOK_SETUP.to_owned(),
+                                        ));
+                                    }),
+                            )
                         })
-                        .on_click(cx.listener(move |this, _, window, cx| {
-                            this.close_terminal(&metadata, &workspace, &source, window, cx);
-                        })),
+                        .when_some(review_workspace, |this, review_workspace| {
+                            this.child(
+                                IconButton::new("review-terminal-run", IconName::ListTodo)
+                                    .size(ButtonSize::Medium)
+                                    .icon_size(IconSize::Small)
+                                    .icon_color(Color::Muted)
+                                    .aria_label("Open Review Brief")
+                                    .tooltip({
+                                        let focus_handle = focus_handle.clone();
+                                        move |_window, cx| {
+                                            Tooltip::for_action_in(
+                                                "Open Review Brief",
+                                                &OpenSelectedReviewBrief,
+                                                &focus_handle,
+                                                cx,
+                                            )
+                                        }
+                                    })
+                                    .on_click({
+                                        let review_brief = review_brief.clone();
+                                        let sidebar = sidebar.clone();
+                                        let metadata = metadata.clone();
+                                        let workspace = workspace.clone();
+                                        let source = source.clone();
+                                        move |_, window, cx| {
+                                            Self::open_terminal_run_review(
+                                                sidebar.clone(),
+                                                metadata.clone(),
+                                                workspace.clone(),
+                                                source.clone(),
+                                                review_brief.clone(),
+                                                review_workspace.clone(),
+                                                window,
+                                                cx,
+                                            );
+                                        }
+                                    }),
+                            )
+                        })
+                        .child(
+                            IconButton::new("close-terminal", close_icon)
+                                .size(ButtonSize::Medium)
+                                .icon_size(IconSize::Small)
+                                .icon_color(close_icon_color)
+                                .aria_label(close_label)
+                                .tooltip({
+                                    let focus_handle = focus_handle.clone();
+                                    move |_window, cx| {
+                                        Tooltip::for_action_in(
+                                            close_label,
+                                            &ArchiveSelectedThread,
+                                            &focus_handle,
+                                            cx,
+                                        )
+                                    }
+                                })
+                                .on_click(cx.listener(move |this, _, window, cx| {
+                                    this.close_terminal_with_confirmation(
+                                        metadata.clone(),
+                                        workspace.clone(),
+                                        source.clone(),
+                                        requires_termination_confirmation,
+                                        window,
+                                        cx,
+                                    );
+                                })),
+                        ),
                 )
             })
             .on_click(cx.listener({
@@ -7713,7 +9922,155 @@ impl Sidebar {
                         cx,
                     );
                 }
-            }))
+            }));
+
+        let context_menu_id = SharedString::from(format!("terminal-context-menu-{ix}"));
+        right_click_menu(context_menu_id)
+            .trigger(move |_, _, _| terminal_item)
+            .menu(move |window, cx| {
+                let review_workspace = context_review_workspace.clone();
+                let review_brief = context_review_brief.clone();
+                let working_directory = context_working_directory.clone();
+                let agent_panel = context_agent_panel.clone();
+                let terminal_view = context_terminal_view.clone();
+                let attention_metadata = context_attention_metadata.clone();
+                let sidebar = sidebar.clone();
+                let close_metadata = metadata.clone();
+                let close_workspace = workspace.clone();
+                let close_source = source.clone();
+                ContextMenu::build(window, cx, move |mut menu, _window, _cx| {
+                    if let Some(review_workspace) = review_workspace.clone() {
+                        menu = menu.entry("Open Review Brief", None, {
+                            let review_brief = review_brief.clone();
+                            let sidebar = sidebar.clone();
+                            let metadata = close_metadata.clone();
+                            let workspace = close_workspace.clone();
+                            let source = close_source.clone();
+                            move |window, cx| {
+                                Self::open_terminal_run_review(
+                                    sidebar.clone(),
+                                    metadata.clone(),
+                                    workspace.clone(),
+                                    source.clone(),
+                                    review_brief.clone(),
+                                    review_workspace.clone(),
+                                    window,
+                                    cx,
+                                );
+                            }
+                        });
+                    }
+                    if let Some(working_directory) = working_directory.clone() {
+                        menu = menu.entry("Copy Working Directory", None, move |_window, cx| {
+                            cx.write_to_clipboard(ClipboardItem::new_string(
+                                working_directory.to_string_lossy().into_owned(),
+                            ));
+                        });
+                    }
+                    if let Some(session_ref) = context_session_ref {
+                        menu = menu.entry("Copy Session Reference", None, move |_window, cx| {
+                            cx.write_to_clipboard(ClipboardItem::new_string(format!(
+                                "{}:{}",
+                                session_ref.host_id, session_ref.session_id
+                            )));
+                        });
+                    }
+                    if can_copy_codex_hook {
+                        menu = menu.entry("Copy Codex Hook Setup", None, |_window, cx| {
+                            cx.write_to_clipboard(ClipboardItem::new_string(
+                                CODEX_HOOK_SETUP.to_owned(),
+                            ));
+                        });
+                    }
+                    if attention_is_active {
+                        menu = menu.separator();
+                        if attention_is_unread {
+                            menu = menu.entry("Acknowledge Attention", None, {
+                                let agent_panel = agent_panel.clone();
+                                let terminal_view = terminal_view.clone();
+                                let attention_metadata = attention_metadata.clone();
+                                move |_window, cx| {
+                                    Self::apply_terminal_attention_action(
+                                        context_terminal_id,
+                                        attention_metadata.clone(),
+                                        TerminalAttentionAction::Acknowledge,
+                                        agent_panel.clone(),
+                                        terminal_view.clone(),
+                                        context_session_ref,
+                                        cx,
+                                    );
+                                }
+                            });
+                        }
+                        if attention_is_muted {
+                            menu = menu.entry("Resume Attention", None, {
+                                let attention_metadata = attention_metadata.clone();
+                                move |_window, cx| {
+                                    Self::apply_terminal_attention_action(
+                                        context_terminal_id,
+                                        attention_metadata.clone(),
+                                        TerminalAttentionAction::Resume,
+                                        None,
+                                        None,
+                                        context_session_ref,
+                                        cx,
+                                    );
+                                }
+                            });
+                        } else {
+                            menu = menu.entry("Snooze Attention for 1 Hour", None, {
+                                let agent_panel = agent_panel.clone();
+                                let terminal_view = terminal_view.clone();
+                                let attention_metadata = attention_metadata.clone();
+                                move |_window, cx| {
+                                    Self::apply_terminal_attention_action(
+                                        context_terminal_id,
+                                        attention_metadata.clone(),
+                                        TerminalAttentionAction::SnoozeOneHour,
+                                        agent_panel.clone(),
+                                        terminal_view.clone(),
+                                        context_session_ref,
+                                        cx,
+                                    );
+                                }
+                            });
+                        }
+                        menu = menu.entry("Mark Attention Resolved", None, {
+                            let agent_panel = agent_panel.clone();
+                            let terminal_view = terminal_view.clone();
+                            let attention_metadata = attention_metadata.clone();
+                            move |_window, cx| {
+                                Self::apply_terminal_attention_action(
+                                    context_terminal_id,
+                                    attention_metadata.clone(),
+                                    TerminalAttentionAction::Resolve,
+                                    agent_panel.clone(),
+                                    terminal_view.clone(),
+                                    context_session_ref,
+                                    cx,
+                                );
+                            }
+                        });
+                    }
+                    menu = menu.separator().entry(close_label, None, {
+                        move |window, cx| {
+                            sidebar
+                                .update(cx, |sidebar, cx| {
+                                    sidebar.close_terminal_with_confirmation(
+                                        close_metadata.clone(),
+                                        close_workspace.clone(),
+                                        close_source.clone(),
+                                        requires_termination_confirmation,
+                                        window,
+                                        cx,
+                                    );
+                                })
+                                .ok();
+                        }
+                    });
+                    menu
+                })
+            })
             .into_any_element()
     }
 
@@ -7752,7 +10109,9 @@ impl Sidebar {
             })
             .trigger_with_tooltip(
                 IconButton::new("open-project", IconName::FolderAdd)
+                    .size(ButtonSize::Medium)
                     .icon_size(IconSize::Small)
+                    .aria_label("Add Project")
                     .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
                 |_window, cx| Tooltip::for_action("Add Project", &OpenRecent::default(), cx),
             )
@@ -8406,7 +10765,22 @@ impl Sidebar {
         self.cycle_thread_impl(false, window, cx);
     }
 
-    fn render_no_results(&self, _cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_no_results(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let has_query = self.has_filter_query(cx);
+        let (icon, title, description) = if has_query {
+            (
+                IconName::ListX,
+                "No matching sessions",
+                "Try another term or clear the search to return to your current work.",
+            )
+        } else {
+            (
+                IconName::Terminal,
+                "No sessions yet",
+                "Start a terminal in this workspace. It will appear here with its real state.",
+            )
+        };
+
         v_flex()
             .id("sidebar-no-results")
             .p_4()
@@ -8414,35 +10788,383 @@ impl Sidebar {
             .items_center()
             .justify_center()
             .child(
-                Label::new("No threads yet")
-                    .size(LabelSize::Small)
-                    .color(Color::Muted),
+                v_flex()
+                    .w_full()
+                    .max_w(px(260.0))
+                    .items_center()
+                    .gap_2()
+                    .child(Icon::new(icon).size(IconSize::Medium).color(Color::Muted))
+                    .child(Label::new(title).size(LabelSize::Small))
+                    .child(
+                        Label::new(description)
+                            .size(LabelSize::XSmall)
+                            .color(Color::Muted),
+                    )
+                    .when(has_query, |this| {
+                        this.child(
+                            Button::new("no-results-clear-search", "Clear Search")
+                                .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
+                                .label_size(LabelSize::Small)
+                                .on_click(cx.listener(|this, _, window, cx| {
+                                    this.reset_filter_editor_text(window, cx);
+                                    this.update_entries(cx);
+                                    this.select_first_entry();
+                                })),
+                        )
+                    })
+                    .when(!has_query, |this| {
+                        this.child(
+                            Button::new("no-results-new-terminal", "New Terminal")
+                                .style(ButtonStyle::Filled)
+                                .label_size(LabelSize::Small)
+                                .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(
+                                        NewCenterTerminal::default().boxed_clone(),
+                                        cx,
+                                    );
+                                }),
+                        )
+                    }),
             )
     }
 
-    fn render_empty_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        ProjectEmptyState::new(
-            "Sidebar",
-            self.focus_handle(cx),
-            KeyBinding::for_action(&workspace::Open::default(), cx),
-        )
-        .on_open_project(|_, window, cx| {
-            let side = match SidebarSettings::get_global(cx).side() {
-                SidebarSide::Left => "left",
-                SidebarSide::Right => "right",
+    fn render_attention_empty_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        v_flex()
+            .id("sidebar-attention-empty")
+            .p_4()
+            .size_full()
+            .items_center()
+            .justify_center()
+            .gap_2()
+            .child(
+                Icon::new(IconName::Check)
+                    .size(IconSize::Medium)
+                    .color(Color::Success),
+            )
+            .child(Label::new("You're caught up").size(LabelSize::Small))
+            .child(
+                Label::new("No sessions need your attention.")
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted),
+            )
+            .child(
+                Button::new("show-all-sessions", "Show All Sessions")
+                    .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
+                    .label_size(LabelSize::Small)
+                    .on_click(cx.listener(|this, _, window, cx| {
+                        this.set_attention_filter(false, window, cx);
+                    })),
+            )
+    }
+
+    fn render_session_overview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let has_attention = self.contents.has_attention;
+        let is_searching = self.has_filter_query(cx);
+        let session_noun = if self.contents.session_count == 1 {
+            "session"
+        } else {
+            "sessions"
+        };
+        let status_label = if is_searching {
+            format!("{} matching {session_noun}", self.contents.session_count)
+        } else if has_attention {
+            let attention_verb = if self.contents.attention_count == 1 {
+                "needs"
+            } else {
+                "need"
             };
-            telemetry::event!("Sidebar Add Project Clicked", side = side);
-            window.dispatch_action(
-                Open {
-                    create_new_window: Some(false),
-                }
-                .boxed_clone(),
-                cx,
-            );
-        })
-        .on_clone_repo(|_, window, cx| {
-            window.dispatch_action(git::Clone.boxed_clone(), cx);
-        })
+            format!(
+                "{} {attention_verb} attention · {} total",
+                self.contents.attention_count, self.contents.session_count
+            )
+        } else {
+            format!("{} {session_noun} · caught up", self.contents.session_count)
+        };
+        let all_scope_label = format!("All {}", self.contents.session_count);
+        let attention_scope_label = format!("Attention {}", self.contents.attention_count);
+        let all_scope_aria_label =
+            format!("Show all {} {session_noun}", self.contents.session_count);
+        let attention_scope_aria_label = format!(
+            "Show {} sessions needing attention",
+            self.contents.attention_count
+        );
+        let all_scope_focus = self.focus_handle.clone();
+        let attention_scope_focus = self.focus_handle.clone();
+        let status_color = if has_attention && !is_searching {
+            Color::Warning
+        } else {
+            Color::Muted
+        };
+        let status_icon = if is_searching {
+            IconName::MagnifyingGlass
+        } else if has_attention {
+            IconName::Warning
+        } else {
+            IconName::Check
+        };
+
+        v_flex()
+            .flex_none()
+            .px_2()
+            .py_1p5()
+            .gap_1p5()
+            .border_b_1()
+            .border_color(cx.theme().colors().border)
+            .child(
+                h_flex()
+                    .w_full()
+                    .justify_between()
+                    .gap_2()
+                    .child(
+                        v_flex()
+                            .min_w_0()
+                            .gap_0p5()
+                            .child(Label::new("Sessions").size(LabelSize::Small))
+                            .child(
+                                h_flex()
+                                    .min_w_0()
+                                    .gap_1()
+                                    .child(
+                                        Icon::new(status_icon)
+                                            .size(IconSize::XSmall)
+                                            .color(status_color),
+                                    )
+                                    .child(
+                                        Label::new(status_label)
+                                            .size(LabelSize::XSmall)
+                                            .color(status_color),
+                                    ),
+                            ),
+                    )
+                    .child(
+                        Button::new("new-session", "New")
+                            .size(ButtonSize::Compact)
+                            .style(ButtonStyle::Filled)
+                            .start_icon(Icon::new(IconName::Plus).size(IconSize::XSmall))
+                            .aria_label("New Terminal Session")
+                            .tooltip(Tooltip::text("New Terminal Session"))
+                            .on_click(|_, window, cx| {
+                                window.dispatch_action(
+                                    NewCenterTerminal::default().boxed_clone(),
+                                    cx,
+                                );
+                            }),
+                    ),
+            )
+            .child(
+                h_flex()
+                    .w_full()
+                    .gap_1()
+                    .child(
+                        div().min_w_0().flex_1().child(
+                            Button::new("all-session-scope", all_scope_label)
+                                .full_width()
+                                .size(ButtonSize::Compact)
+                                .style(ButtonStyle::Subtle)
+                                .toggle_state(!self.attention_only)
+                                .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                                .aria_label(all_scope_aria_label)
+                                .tooltip(move |_window, cx| {
+                                    Tooltip::for_action_in(
+                                        "Toggle Attention Scope",
+                                        &ToggleAttentionFilter,
+                                        &all_scope_focus,
+                                        cx,
+                                    )
+                                })
+                                .on_click(cx.listener(|this, _, window, cx| {
+                                    this.set_attention_filter(false, window, cx);
+                                })),
+                        ),
+                    )
+                    .child(
+                        div().min_w_0().flex_1().child(
+                            Button::new("attention-session-scope", attention_scope_label)
+                                .full_width()
+                                .size(ButtonSize::Compact)
+                                .style(ButtonStyle::Subtle)
+                                .toggle_state(self.attention_only)
+                                .selected_style(ButtonStyle::Tinted(TintColor::Warning))
+                                .aria_label(attention_scope_aria_label)
+                                .tooltip(move |_window, cx| {
+                                    Tooltip::for_action_in(
+                                        "Toggle Attention Scope",
+                                        &ToggleAttentionFilter,
+                                        &attention_scope_focus,
+                                        cx,
+                                    )
+                                })
+                                .on_click(cx.listener(|this, _, window, cx| {
+                                    this.set_attention_filter(true, window, cx);
+                                })),
+                        ),
+                    ),
+            )
+    }
+
+    fn render_filter_input(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .min_w_0()
+            .flex_1()
+            .capture_action(
+                cx.listener(|this, _: &editor::actions::Newline, window, cx| {
+                    this.editor_confirm(window, cx);
+                }),
+            )
+            .child(self.filter_editor.clone())
+    }
+
+    fn render_session_search(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let has_query = self.has_filter_query(cx);
+
+        h_flex()
+            .flex_none()
+            .h(Tab::content_height(cx))
+            .px_1p5()
+            .gap_1()
+            .border_b_1()
+            .border_color(cx.theme().colors().border)
+            .child(
+                Icon::new(IconName::MagnifyingGlass)
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
+            )
+            .child(self.render_filter_input(cx))
+            .when(has_query, |this| {
+                this.child(
+                    IconButton::new("clear-session-search", IconName::Close)
+                        .size(ButtonSize::Medium)
+                        .icon_size(IconSize::Small)
+                        .aria_label("Clear Session Search")
+                        .tooltip(Tooltip::text("Clear Session Search"))
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.reset_filter_editor_text(window, cx);
+                            this.update_entries(cx);
+                        })),
+                )
+            })
+    }
+
+    fn render_empty_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        v_flex()
+            .id("sidebar-start-state")
+            .size_full()
+            .items_center()
+            .justify_center()
+            .p_4()
+            .child(
+                v_flex()
+                    .w_full()
+                    .max_w(px(280.0))
+                    .gap_2()
+                    .child(
+                        Icon::new(IconName::Terminal)
+                            .size(IconSize::Medium)
+                            .color(Color::Accent),
+                    )
+                    .child(Label::new("Start a workspace").size(LabelSize::Large))
+                    .child(
+                        Label::new("Open a terminal or file. Dez derives context from your work.")
+                            .size(LabelSize::Small)
+                            .color(Color::Muted),
+                    )
+                    .child(
+                        Button::new("start-terminal", "New Terminal")
+                            .full_width()
+                            .style(ButtonStyle::Filled)
+                            .start_icon(Icon::new(IconName::Terminal).size(IconSize::Small))
+                            .on_click(|_, window, cx| {
+                                window.dispatch_action(
+                                    NewCenterTerminal::default().boxed_clone(),
+                                    cx,
+                                );
+                            }),
+                    )
+                    .child(
+                        h_flex()
+                            .w_full()
+                            .gap_1()
+                            .child(
+                                Button::new("start-new-file", "New File")
+                                    .full_width()
+                                    .style(ButtonStyle::Outlined)
+                                    .on_click(|_, window, cx| {
+                                        window.dispatch_action(NewFile.boxed_clone(), cx);
+                                    }),
+                            )
+                            .child(
+                                Button::new("start-open", "Open…")
+                                    .full_width()
+                                    .style(ButtonStyle::Outlined)
+                                    .on_click(|_, window, cx| {
+                                        window.dispatch_action(
+                                            Open {
+                                                create_new_window: Some(false),
+                                            }
+                                            .boxed_clone(),
+                                            cx,
+                                        );
+                                    }),
+                            ),
+                    ),
+            )
+    }
+
+    fn render_terminal_host_status(&self, cx: &App) -> Option<AnyElement> {
+        let callout = match TerminalHostStartupStatus::state(cx) {
+            TerminalHostStartupState::Disabled | TerminalHostStartupState::Connected { .. } => {
+                return None;
+            }
+            TerminalHostStartupState::Connecting => Callout::new()
+                .severity(Severity::Info)
+                .icon(IconName::Info)
+                .title("Connecting durable terminals")
+                .description(
+                    "New local terminals will wait instead of starting a disposable fallback. No process has started yet.",
+                ),
+            TerminalHostStartupState::Reconnecting { message } => {
+                let details = message.clone();
+                Callout::new()
+                    .severity(Severity::Warning)
+                    .icon(IconName::Warning)
+                    .title("Reconnecting durable terminals")
+                    .description(format!(
+                        "Existing processes are left untouched and no replacement work will start. Wait for reconnection; if it persists, restart Dez. {}",
+                        util::truncate_and_trailoff(&message, 180)
+                    ))
+                    .actions_slot(
+                        Button::new("copy-host-reconnect-details", "Copy Details")
+                            .size(ButtonSize::Compact)
+                            .style(ButtonStyle::Outlined)
+                            .aria_label("Copy Durable Host Reconnection Details")
+                            .on_click(move |_, _window, cx| {
+                                cx.write_to_clipboard(ClipboardItem::new_string(details.clone()));
+                            }),
+                    )
+            }
+            TerminalHostStartupState::Failed { message } => {
+                let details = message.clone();
+                Callout::new()
+                    .severity(Severity::Error)
+                    .icon(IconName::Warning)
+                    .title("Durable terminal host unavailable")
+                    .description(format!(
+                        "No fallback terminal was started, so no replacement computation exists. Check the helper error, then restart Dez; to return to ordinary GUI-owned shells on the next launch, omit DEZ_EXPERIMENTAL_TERMINAL_HOST=1. {}",
+                        util::truncate_and_trailoff(&message, 180)
+                    ))
+                    .actions_slot(
+                        Button::new("copy-host-failure-details", "Copy Details")
+                            .size(ButtonSize::Compact)
+                            .style(ButtonStyle::Outlined)
+                            .aria_label("Copy Durable Host Failure Details")
+                            .on_click(move |_, _window, cx| {
+                                cx.write_to_clipboard(ClipboardItem::new_string(details.clone()));
+                            }),
+                    )
+            }
+        };
+        Some(callout.into_any_element())
     }
 
     fn render_sidebar_header(&self, window: &Window, cx: &mut Context<Self>) -> impl IntoElement {
@@ -8549,7 +11271,7 @@ impl Sidebar {
             return false;
         };
         let project = workspace.read(cx).project().clone();
-        let Ok(rel_path) = util::rel_path::RelPath::unix("AGENTS.md") else {
+        let Ok(rel_path) = util::rel_path::RelPath::from_unix_str("AGENTS.md") else {
             return false;
         };
         project
@@ -8595,7 +11317,9 @@ impl Sidebar {
         PopoverMenu::new("agent-sidebar-options-menu")
             .trigger_with_tooltip(
                 IconButton::new("agent-sidebar-options-menu", IconName::Robot)
-                    .icon_size(IconSize::Small),
+                    .size(ButtonSize::Medium)
+                    .icon_size(IconSize::Small)
+                    .aria_label("Agent Menu"),
                 Tooltip::text("Agent Menu"),
             )
             .anchor(if on_right {
@@ -8660,8 +11384,13 @@ impl Sidebar {
 
                         menu = menu
                             .header("MCP Servers")
-                            .action("Add Custom Server…", Box::new(AddContextServer::local()))
-                            .action("Add Remote Server…", Box::new(AddContextServer::remote()))
+                            .action(
+                                "Add Server…",
+                                Box::new(zed_actions::OpenSettingsAt {
+                                    path: "context_servers".to_string(),
+                                    target: None,
+                                }),
+                            )
                             .action(
                                 "Install New Servers…",
                                 Box::new(zed_actions::Extensions {
@@ -8725,6 +11454,11 @@ impl Sidebar {
 
     fn render_sidebar_bottom_bar(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
         let is_archive = matches!(self.view, SidebarView::Archive(..));
+        let history_label = if is_archive {
+            "Hide Thread History"
+        } else {
+            "Show Thread History"
+        };
         let on_right = self.side(cx) == SidebarSide::Right;
 
         v_flex()
@@ -8740,15 +11474,12 @@ impl Sidebar {
                     .child(self.render_agent_options_menu(cx))
                     .child(
                         IconButton::new("history", IconName::Clock)
+                            .size(ButtonSize::Medium)
                             .icon_size(IconSize::Small)
                             .toggle_state(is_archive)
+                            .aria_label(history_label)
                             .tooltip(move |_, cx| {
-                                let label = if is_archive {
-                                    "Hide Thread History"
-                                } else {
-                                    "Show Thread History"
-                                };
-                                Tooltip::for_action(label, &ToggleThreadHistory, cx)
+                                Tooltip::for_action(history_label, &ToggleThreadHistory, cx)
                             })
                             .on_click(cx.listener(|this, _, window, cx| {
                                 this.toggle_archive(&ToggleThreadHistory, window, cx);
@@ -8757,6 +11488,37 @@ impl Sidebar {
                     .child(div().flex_1())
                     .child(self.render_recent_projects_button(cx)),
             )
+    }
+
+    fn toggle_attention_filter(
+        &mut self,
+        _: &ToggleAttentionFilter,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.set_attention_filter(!self.attention_only, window, cx);
+    }
+
+    fn set_attention_filter(
+        &mut self,
+        attention_only: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if matches!(self.view, SidebarView::Archive(_)) {
+            self.show_thread_list(window, cx);
+        }
+        if self.attention_only != attention_only {
+            self.attention_only = attention_only;
+            self.update_entries(cx);
+            if self.selection.is_none() {
+                self.select_first_entry();
+            }
+            if let Some(index) = self.selection {
+                self.list_state.scroll_to_reveal_item(index);
+            }
+        }
+        self.focus_handle.focus(window, cx);
     }
 
     fn toggle_agent_options_menu(
@@ -8850,12 +11612,12 @@ impl Sidebar {
         });
         render_import_onboarding_banner(
             "acp",
-            "Looking for threads from external agents?",
-            "Import threads from agents like Claude Agent, Codex, and more, whether started in Zed or another client.",
+            "Agent history found",
+            "Import conversations from Claude Agent, Codex, and other ACP clients as normal workspace surfaces.",
             if verbose_labels {
-                "Import Threads from External Agents"
+                "Import Agent History"
             } else {
-                "Import Threads"
+                "Import History"
             },
             |_, _window, cx| AcpThreadImportOnboarding::dismiss(cx),
             on_import,
@@ -9033,7 +11795,9 @@ fn render_import_onboarding_banner(
                         SharedString::from(format!("close-{id}-onboarding")),
                         IconName::Close,
                     )
+                    .size(ButtonSize::Medium)
                     .icon_size(IconSize::Small)
+                    .aria_label("Dismiss")
                     .on_click(on_dismiss),
                 ),
         )
@@ -9074,8 +11838,7 @@ impl WorkspaceSidebar for Sidebar {
 
     fn has_notifications(&self, cx: &App) -> bool {
         WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention
-            && (!self.contents.notified_threads.is_empty()
-                || !self.contents.notified_terminals.is_empty())
+            && self.contents.has_attention
     }
 
     fn is_threads_list_view_active(&self) -> bool {
@@ -9199,8 +11962,12 @@ impl Render for Sidebar {
         let color = cx.theme().colors();
         let bg = color.editor_background;
 
-        let no_open_projects = !self.contents.has_open_projects;
         let no_search_results = self.contents.entries.is_empty();
+        let has_query = self.has_filter_query(cx);
+        let show_start_state = !self.contents.has_open_projects
+            && self.contents.session_count == 0
+            && !has_query
+            && !self.attention_only;
 
         v_flex()
             .id("workspace-sidebar")
@@ -9226,6 +11993,8 @@ impl Render for Sidebar {
             .on_action(cx.listener(Self::new_thread_in_group))
             .on_action(cx.listener(Self::new_terminal_thread))
             .on_action(cx.listener(Self::toggle_archive))
+            .on_action(cx.listener(Self::toggle_attention_filter))
+            .on_action(cx.listener(Self::open_selected_review_brief))
             .on_action(cx.listener(Self::focus_sidebar_filter))
             .on_action(cx.listener(Self::on_toggle_thread_switcher))
             .on_action(cx.listener(Self::on_next_project))
@@ -9286,36 +12055,69 @@ impl Render for Sidebar {
             .border_color(color.border)
             .child(self.render_sidebar_header(window, cx))
             .map(|this| match &self.view {
-                SidebarView::ThreadList => this.map(|this| {
-                    if no_open_projects {
-                        this.child(self.render_empty_state(cx))
-                    } else {
-                        this.child(
-                            v_flex()
-                                .relative()
-                                .flex_1()
-                                .overflow_hidden()
-                                .child(
-                                    list(
-                                        self.list_state.clone(),
-                                        cx.processor(Self::render_list_entry),
-                                    )
+                SidebarView::ThreadList => {
+                    this.child(self.render_session_overview(cx)).map(|this| {
+                        if show_start_state {
+                            this.when_some(self.render_terminal_host_status(cx), |this, status| {
+                                this.child(status)
+                            })
+                            .child(self.render_empty_state(cx))
+                        } else {
+                            this.child(
+                                v_flex()
                                     .flex_1()
-                                    .size_full(),
-                                )
-                                .when(no_search_results, |this| {
-                                    this.child(self.render_no_results(cx))
-                                })
-                                .when_some(sticky_header, |this, header| this.child(header))
-                                .custom_scrollbars(
-                                    Scrollbars::new(ScrollAxes::Vertical)
-                                        .tracked_scroll_handle(&self.list_state),
-                                    window,
-                                    cx,
-                                ),
-                        )
-                    }
-                }),
+                                    .overflow_hidden()
+                                    .when_some(
+                                        self.render_terminal_host_status(cx),
+                                        |this, status| this.child(status),
+                                    )
+                                    .child(self.render_session_search(cx))
+                                    .child(
+                                        v_flex()
+                                            .relative()
+                                            .flex_1()
+                                            .overflow_hidden()
+                                            .child(
+                                                list(
+                                                    self.list_state.clone(),
+                                                    cx.processor(Self::render_list_entry),
+                                                )
+                                                .flex_1()
+                                                .size_full(),
+                                            )
+                                            .when(no_search_results && has_query, |this| {
+                                                this.child(self.render_no_results(cx))
+                                            })
+                                            .when(
+                                                no_search_results
+                                                    && !has_query
+                                                    && self.attention_only,
+                                                |this| {
+                                                    this.child(
+                                                        self.render_attention_empty_state(cx),
+                                                    )
+                                                },
+                                            )
+                                            .when(
+                                                no_search_results
+                                                    && !has_query
+                                                    && !self.attention_only,
+                                                |this| this.child(self.render_no_results(cx)),
+                                            )
+                                            .when_some(sticky_header, |this, header| {
+                                                this.child(header)
+                                            })
+                                            .custom_scrollbars(
+                                                Scrollbars::new(ScrollAxes::Vertical)
+                                                    .tracked_scroll_handle(&self.list_state),
+                                                window,
+                                                cx,
+                                            ),
+                                    ),
+                            )
+                        }
+                    })
+                }
                 SidebarView::Archive(archive_view) => this.child(archive_view.clone()),
             })
             .map(|this| {
@@ -9355,6 +12157,7 @@ fn all_thread_infos_for_workspace(
             is_background: false,
             is_title_generating: info.is_title_generating,
             diff_stats: info.diff_stats,
+            changed_files: info.changed_files,
         })
 }
 

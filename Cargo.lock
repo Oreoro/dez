@@ -5207,6 +5207,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "dez_terminal_host"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "clap",
+ "futures-lite 1.13.0",
+ "net",
+ "smol",
+ "terminal",
+]
+
+[[package]]
 name = "diagnostics"
 version = "0.1.0"
 dependencies = [
@@ -17046,6 +17058,7 @@ dependencies = [
  "serde_json",
  "settings",
  "telemetry",
+ "terminal",
  "terminal_view",
  "theme",
  "theme_settings",
@@ -18524,13 +18537,16 @@ dependencies = [
  "itertools 0.14.0",
  "libc",
  "log",
+ "net",
  "parking_lot",
  "percent-encoding",
+ "polling",
  "rand 0.9.4",
  "regex",
  "release_channel",
  "schemars 1.0.4",
  "serde",
+ "serde_json",
  "settings",
  "sysinfo 0.37.2",
  "task",
@@ -18541,6 +18557,7 @@ dependencies = [
  "urlencoding",
  "util",
  "util_macros",
+ "uuid",
  "vte",
  "windows 0.61.3",
 ]
@@ -22686,6 +22703,7 @@ dependencies = [
  "menu",
  "node_runtime",
  "parking_lot",
+ "paths",
  "postage",
  "pretty_assertions",
  "project",
@@ -23153,7 +23171,7 @@ dependencies = [
 
 [[package]]
 name = "zed"
-version = "1.13.0"
+version = "0.0.1"
 dependencies = [
  "acp_thread",
  "acp_tools",
@@ -23293,6 +23311,7 @@ dependencies = [
  "telemetry",
  "telemetry_events",
  "tempfile",
+ "terminal",
  "terminal_view",
  "theme",
  "theme_extension",

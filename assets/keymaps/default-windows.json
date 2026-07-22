@@ -744,6 +744,8 @@
     "use_key_equivalents": true,
     "bindings": {
       "space": "menu::Confirm",
+      "shift-a": "sidebar::ToggleAttentionFilter",
+      "shift-v": "sidebar::OpenSelectedReviewBrief",
       "shift-r": "agent::RenameSelectedThread",
     },
   },

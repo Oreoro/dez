@@ -51,6 +51,7 @@ members = [
     "crates/debug_adapter_extension",
     "crates/debugger_tools",
     "crates/debugger_ui",
+    "crates/dez_terminal_host",
     "crates/deepseek",
     "crates/dev_container",
     "crates/diagnostics",
@@ -739,6 +740,7 @@ proxyvars = "0.2"
 prost = "0.9"
 prost-build = "0.9"
 prost-types = "0.9"
+polling = "3.11.0"
 pollster = "0.4.0"
 pulldown-cmark = { version = "0.13.0", default-features = false }
 quick-xml = "0.38"

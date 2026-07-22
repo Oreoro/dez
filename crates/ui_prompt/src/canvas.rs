@@ -1,5 +1,6 @@
-use gpui::{App, Div, Hsla, Pixels, Stateful, prelude::*, px};
+use gpui::{App, Div, Hsla, Pixels, prelude::*, px};
 use settings::Settings;
+use ui::ActiveTheme;
 use workspace::DesignSystemSettings;
 
 pub(crate) fn prompt_backdrop(cx: &App) -> Hsla {
@@ -54,7 +55,7 @@ pub(crate) fn prompt_action_gap(cx: &App) -> Pixels {
     }
 }
 
-pub(crate) fn prompt_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+pub(crate) fn prompt_radius(element: Div, cx: &App) -> Div {
     match DesignSystemSettings::get_global(cx).radius {
         settings::CanvasRadius::None => element,
         settings::CanvasRadius::Subtle => element.rounded_md(),

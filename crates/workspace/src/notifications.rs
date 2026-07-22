@@ -1275,10 +1275,16 @@ pub mod simple_message_notification {
             });
 
             let with_primary_action = cx.new(|cx| {
-                MessageNotification::new("A new version of Zed is available for download.", cx)
-                    .with_title("Update Available")
-                    .primary_message("Restart Now")
-                    .primary_icon(IconName::ArrowCircle)
+                MessageNotification::new(
+                    format!(
+                        "A new version of {} is available for download.",
+                        paths::APP_NAME
+                    ),
+                    cx,
+                )
+                .with_title("Update Available")
+                .primary_message("Restart Now")
+                .primary_icon(IconName::ArrowCircle)
             });
 
             let with_end_icon_action = cx.new(|cx| {
@@ -1378,7 +1384,13 @@ pub mod simple_message_notification {
                     "Linux desktop portal initialization failed.".into()
                 }
                 fn secondary_message(&self) -> Option<SharedString> {
-                    Some("Zed needs an xdg-desktop-portal implementation to open files.".into())
+                    Some(
+                        format!(
+                            "{} needs an xdg-desktop-portal implementation to open files.",
+                            paths::APP_NAME
+                        )
+                        .into(),
+                    )
                 }
                 fn severity(&self) -> ErrorSeverity {
                     ErrorSeverity::Critical
@@ -1396,13 +1408,13 @@ pub mod simple_message_notification {
             struct UpdateRequiredError;
             impl WorkspaceError for UpdateRequiredError {
                 fn primary_message(&self) -> SharedString {
-                    "An update is required to continue using Zed AI.".into()
+                    "This upstream agent service requires an app update to continue.".into()
                 }
                 fn severity(&self) -> ErrorSeverity {
                     ErrorSeverity::Critical
                 }
                 fn primary_action(&self) -> ErrorAction {
-                    ErrorAction::link("Update Zed", "https://zed.dev/releases")
+                    ErrorAction::link("View upstream releases", "https://zed.dev/releases")
                 }
                 fn secondary_action(&self) -> Option<ErrorAction> {
                     Some(ErrorAction::dismiss())

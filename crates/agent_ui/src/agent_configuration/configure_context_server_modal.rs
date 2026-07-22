@@ -6,8 +6,8 @@ use editor::{Editor, EditorElement, EditorStyle};
 use extension_host::ExtensionStore;
 use gpui::{
     AsyncWindowContext, DismissEvent, Div, Entity, EventEmitter, FocusHandle, Focusable, Hsla,
-    Pixels, ScrollHandle, Stateful, Subscription, Task, TextStyle, TextStyleRefinement,
-    UnderlineStyle, WeakEntity, prelude::*,
+    Pixels, ScrollHandle, Subscription, Task, TextStyle, TextStyleRefinement, UnderlineStyle,
+    WeakEntity, prelude::*,
 };
 use language::{Language, LanguageRegistry};
 use markdown::{Markdown, MarkdownElement, MarkdownStyle};
@@ -85,7 +85,7 @@ fn context_server_modal_compact_gap(cx: &App) -> Pixels {
     }
 }
 
-fn context_server_modal_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+fn context_server_modal_radius(element: Div, cx: &App) -> Div {
     match DesignSystemSettings::get_global(cx).radius {
         settings::CanvasRadius::None => element,
         settings::CanvasRadius::Subtle => element.rounded_md(),
@@ -93,7 +93,7 @@ fn context_server_modal_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div
     }
 }
 
-fn context_server_editor_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+fn context_server_editor_radius(element: Div, cx: &App) -> Div {
     match DesignSystemSettings::get_global(cx).radius {
         settings::CanvasRadius::None => element,
         settings::CanvasRadius::Subtle => element.rounded_sm(),
@@ -1300,7 +1300,7 @@ fn wait_for_context_server(
                 Err(Arc::from("Context server store was dropped"))
             }
             futures::future::Either::Right(_) => Err(Arc::from(format!(
-                "Timed out waiting for context server `{}` to start. Check the Zed log for details.",
+                "Timed out waiting for context server `{}` to start. Check the Dez log for details.",
                 context_server_id_for_timeout
             ))),
         }

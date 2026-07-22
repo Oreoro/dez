@@ -4,8 +4,8 @@ use client::UserStore;
 use collections::HashMap;
 use component::{ComponentId, ComponentMetadata, ComponentStatus, components};
 use gpui::{
-    App, Div, Entity, EventEmitter, FocusHandle, Focusable, Hsla, Pixels, Stateful, Task,
-    WeakEntity, Window, list, prelude::*, px,
+    App, Div, Entity, EventEmitter, FocusHandle, Focusable, Hsla, Pixels, Task, WeakEntity, Window,
+    list, prelude::*, px,
 };
 use gpui::{ListState, ScrollHandle, ScrollStrategy, UniformListScrollHandle};
 use language::LanguageRegistry;
@@ -135,7 +135,7 @@ fn canvas_component_gap(cx: &App) -> Pixels {
     }
 }
 
-fn canvas_component_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+fn canvas_component_radius(element: Div, cx: &App) -> Div {
     match DesignSystemSettings::get_global(cx).radius {
         settings::CanvasRadius::None => element,
         settings::CanvasRadius::Subtle => element.rounded_sm(),

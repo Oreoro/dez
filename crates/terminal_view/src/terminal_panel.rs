@@ -1285,9 +1285,12 @@ impl Render for FailedToSpawnTerminal {
                     .items_center()
                     .justify_center()
                     .text_center()
-                    .child(Label::new("Failed to spawn terminal"))
+                    .child(Label::new("Terminal did not start"))
                     .child(
-                        Label::new(self.error.to_string())
+                        Label::new(format!(
+                            "{}\n\nNo terminal process was started. Review terminal settings, then use New Terminal to try again.",
+                            self.error
+                        ))
                             .size(LabelSize::Small)
                             .color(Color::Muted)
                             .mb_4(),
@@ -1310,7 +1313,7 @@ impl workspace::Item for FailedToSpawnTerminal {
     type Event = ();
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
-        SharedString::new_static("Failed to spawn terminal")
+        SharedString::new_static("Terminal did not start")
     }
 }
 

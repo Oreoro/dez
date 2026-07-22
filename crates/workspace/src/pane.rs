@@ -1,7 +1,8 @@
 use crate::{
     CloseWindow, NewCenterTerminal, NewFile, NewTerminal, OpenInTerminal, OpenOptions,
-    OpenTerminal, OpenVisible, SidebarSide, SplitDirection, ToggleFileFinder, ToggleProjectSymbols,
-    ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
+    OpenTerminal, OpenVisible, SidebarSide, SplitDirection, ToggleAgentPane, ToggleFileFinder,
+    ToggleProjectPane, ToggleProjectSymbols, ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn,
+    ZoomOut,
     focus_follows_mouse::FocusFollowsMouse as _,
     invalid_item_view::InvalidItemView,
     item::{
@@ -50,8 +51,8 @@ use std::{
 use theme_settings::ThemeSettings;
 use ui::{
     ContextMenu, ContextMenuEntry, ContextMenuItem, DecoratedIcon, IconButtonShape, IconDecoration,
-    IconDecorationKind, Indicator, PopoverMenu, PopoverMenuHandle, Tab, TabBar, TabContrast,
-    TabDensity, TabPosition, TabRadius, Tooltip, prelude::*, right_click_menu,
+    IconDecorationKind, Indicator, KeyBinding, PopoverMenu, PopoverMenuHandle, Tab, TabBar,
+    TabContrast, TabDensity, TabPosition, TabRadius, Tooltip, prelude::*, right_click_menu,
 };
 use util::{
     ResultExt, debug_panic, markdown::MarkdownInlineCode, maybe, paths::PathStyle,
@@ -129,6 +130,14 @@ pub enum PaneKind {
 impl PaneKind {
     pub fn is_tabbed(self) -> bool {
         self == Self::Tabs
+    }
+
+    fn accessibility_label(self) -> &'static str {
+        match self {
+            Self::Tabs => "Editor pane",
+            Self::Project => "Project pane",
+            Self::Agent => "Agent pane",
+        }
     }
 
     pub fn can_host_tabs(self) -> bool {
@@ -696,13 +705,11 @@ impl Pane {
             can_drop_predicate,
             can_split_predicate: None,
             can_toggle_zoom: true,
-            should_display_tab_bar: Rc::new(|pane, cx| {
+            should_display_tab_bar: Rc::new(|_, cx| {
                 if !TabBarSettings::get_global(cx).show {
                     return false;
                 }
-
-                let pane_grid_settings = PaneGridSettings::get_global(cx);
-                !(pane_grid_settings.auto_hide_single_tab_bar && pane.items_len() <= 1)
+                true
             }),
             should_display_welcome_page: false,
             render_tab_bar_buttons: Rc::new(default_render_tab_bar_buttons),
@@ -930,6 +937,153 @@ impl Pane {
 
     pub fn activation_history(&self) -> &[ActivationHistoryEntry] {
         &self.activation_history
+    }
+
+    fn render_empty_project_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let open_file_focus = self.focus_handle.clone();
+        let new_file_focus = self.focus_handle.clone();
+        let terminal_focus = self.focus_handle.clone();
+
+        v_flex()
+            .id("empty-project-state")
+            .track_focus(&self.focus_handle(cx))
+            .max_w_112()
+            .w_full()
+            .px_8()
+            .gap_5()
+            .child(
+                v_flex()
+                    .gap_1p5()
+                    .child(
+                        h_flex()
+                            .gap_2()
+                            .child(
+                                Icon::new(IconName::FolderOpen)
+                                    .size(IconSize::Small)
+                                    .color(Color::Muted),
+                            )
+                            .child(Headline::new("Project ready")),
+                    )
+                    .child(
+                        Label::new(
+                            "Open a file, create one, or start a terminal in this workspace.",
+                        )
+                        .size(LabelSize::Small)
+                        .color(Color::Muted),
+                    ),
+            )
+            .child(
+                v_flex()
+                    .gap_1()
+                    .child(
+                        Button::new("empty-project-open-file", "Find File")
+                            .full_width()
+                            .tab_index(0isize)
+                            .style(ButtonStyle::Filled)
+                            .start_icon(Icon::new(IconName::FolderSearch))
+                            .key_binding(KeyBinding::for_action_in(
+                                &ToggleFileFinder::default(),
+                                &self.focus_handle,
+                                cx,
+                            ))
+                            .on_click(move |_, window, cx| {
+                                open_file_focus.dispatch_action(
+                                    &ToggleFileFinder::default(),
+                                    window,
+                                    cx,
+                                );
+                            }),
+                    )
+                    .child(
+                        Button::new("empty-project-new-file", "New File")
+                            .full_width()
+                            .tab_index(1isize)
+                            .style(ButtonStyle::Subtle)
+                            .start_icon(Icon::new(IconName::Plus))
+                            .key_binding(KeyBinding::for_action_in(
+                                &NewFile,
+                                &self.focus_handle,
+                                cx,
+                            ))
+                            .on_click(move |_, window, cx| {
+                                new_file_focus.dispatch_action(&NewFile, window, cx);
+                            }),
+                    )
+                    .child(
+                        Button::new("empty-project-terminal", "New Terminal")
+                            .full_width()
+                            .tab_index(2isize)
+                            .style(ButtonStyle::Subtle)
+                            .start_icon(Icon::new(IconName::Terminal))
+                            .key_binding(KeyBinding::for_action_in(
+                                &NewTerminal::default(),
+                                &self.focus_handle,
+                                cx,
+                            ))
+                            .on_click(move |_, window, cx| {
+                                terminal_focus.dispatch_action(&NewTerminal::default(), window, cx);
+                            }),
+                    ),
+            )
+    }
+
+    fn render_empty_panel_state(&self, cx: &mut Context<Self>) -> AnyElement {
+        let pane_kind = self.pane_kind;
+        let (id, icon, title, description, key_binding) = match pane_kind {
+            PaneKind::Project => (
+                "empty-project-panel-state",
+                IconName::FileTree,
+                "Project tools unavailable",
+                "Project navigation did not attach to this pane.",
+                KeyBinding::for_action_in(&ToggleProjectPane, &self.focus_handle, cx),
+            ),
+            PaneKind::Agent => (
+                "empty-agent-panel-state",
+                IconName::Chat,
+                "Agent tools unavailable",
+                "Agent controls did not attach. Local editing is still available.",
+                KeyBinding::for_action_in(&ToggleAgentPane, &self.focus_handle, cx),
+            ),
+            PaneKind::Tabs => return gpui::Empty.into_any_element(),
+        };
+
+        v_flex()
+            .id(id)
+            .max_w_112()
+            .w_full()
+            .px_8()
+            .gap_5()
+            .child(
+                v_flex()
+                    .gap_1p5()
+                    .child(
+                        h_flex()
+                            .gap_2()
+                            .child(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
+                            .child(Headline::new(title)),
+                    )
+                    .child(
+                        Label::new(description)
+                            .size(LabelSize::Small)
+                            .color(Color::Muted),
+                    ),
+            )
+            .child(
+                Button::new((id, "return-to-editor"), "Return to Editor")
+                    .full_width()
+                    .tab_index(0isize)
+                    .style(ButtonStyle::Filled)
+                    .start_icon(Icon::new(IconName::ArrowLeft))
+                    .key_binding(key_binding)
+                    .on_click(move |_, window, cx| match pane_kind {
+                        PaneKind::Project => {
+                            window.dispatch_action(Box::new(ToggleProjectPane), cx)
+                        }
+                        PaneKind::Agent => window.dispatch_action(Box::new(ToggleAgentPane), cx),
+                        PaneKind::Tabs => {}
+                    }),
+            )
+            .into_any_element()
     }
 
     pub fn set_should_display_tab_bar<F>(&mut self, should_display_tab_bar: F)
@@ -3077,6 +3231,11 @@ impl Pane {
                 .shape(IconButtonShape::Square)
                 .icon_color(Color::Muted)
                 .icon_size(IconSize::Small)
+                .aria_label(if toggleable {
+                    "Unlock File"
+                } else {
+                    "Locked File"
+                })
                 .disabled(!toggleable)
                 .tooltip(move |_, cx| {
                     if toggleable {
@@ -3246,6 +3405,7 @@ impl Pane {
                 };
 
                 let Some(end_slot_control) = end_slot_control.map(|this| {
+                    let this = this.aria_label(end_slot_tooltip_text);
                     if is_active {
                         let focus_handle = focus_handle.clone();
                         this.tooltip(move |window, cx| {
@@ -3659,7 +3819,9 @@ impl Pane {
         let focus_handle = self.focus_handle.clone();
 
         let navigate_backward = IconButton::new("navigate_backward", IconName::ArrowLeft)
+            .size(ButtonSize::Medium)
             .icon_size(IconSize::Small)
+            .aria_label("Go Back")
             .on_click({
                 let entity = cx.entity();
                 move |_, window, cx| {
@@ -3682,7 +3844,9 @@ impl Pane {
             });
 
         let navigate_forward = IconButton::new("navigate_forward", IconName::ArrowRight)
+            .size(ButtonSize::Medium)
             .icon_size(IconSize::Small)
+            .aria_label("Go Forward")
             .on_click({
                 let entity = cx.entity();
                 move |_, window, cx| {
@@ -3865,7 +4029,7 @@ impl Pane {
         tab_count: usize,
         navigate_backward: IconButton,
         navigate_forward: IconButton,
-        show_tab_overflow_menu: bool,
+        _show_tab_overflow_menu: bool,
         window: &mut Window,
         cx: &mut Context<Pane>,
     ) -> AnyElement {
@@ -3900,6 +4064,7 @@ impl Pane {
         tab_count: usize,
         navigate_backward: IconButton,
         navigate_forward: IconButton,
+        show_tab_overflow_menu: bool,
         window: &mut Window,
         cx: &mut Context<Pane>,
     ) -> AnyElement {
@@ -3978,7 +4143,9 @@ impl Pane {
         PopoverMenu::new("pane-tab-overflow-menu")
             .trigger_with_tooltip(
                 IconButton::new("pane-tab-overflow-menu-button", IconName::ListTree)
-                    .icon_size(IconSize::Small),
+                    .size(ButtonSize::Medium)
+                    .icon_size(IconSize::Small)
+                    .aria_label("Open Tab"),
                 Tooltip::text("Open Tab"),
             )
             .anchor(Anchor::TopRight)
@@ -4976,17 +5143,36 @@ impl Pane {
     }
 
     fn render_pane_drag_handle(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let handle_color = if self.was_focused {
+            cx.theme().colors().border_selected.opacity(0.7)
+        } else {
+            cx.theme().colors().border_variant.opacity(0.45)
+        };
+
         div()
             .id("pane_drag_handle")
             .absolute()
             .top_0()
             .left_1_2()
             .w_16()
-            .h(px(5.))
+            .h_3()
             .ml(rems(-2.))
             .cursor_move()
-            .rounded_b_sm()
-            .hover(|this| this.bg(cx.theme().colors().element_hover))
+            .group("pane-drag-handle")
+            .h_flex()
+            .items_start()
+            .justify_center()
+            .child(
+                div()
+                    .mt_0p5()
+                    .w_8()
+                    .h(px(3.))
+                    .rounded_full()
+                    .bg(handle_color)
+                    .group_hover("pane-drag-handle", |this| {
+                        this.bg(cx.theme().colors().border_focused.opacity(0.85))
+                    }),
+            )
             .on_drag(
                 DraggedPane { pane: cx.entity() },
                 |dragged_pane, _, _, cx| cx.new(|_| dragged_pane.clone()),
@@ -5073,7 +5259,10 @@ fn default_render_tab_bar_buttons(
         .child(
             PopoverMenu::new("pane-tab-bar-popover-menu")
                 .trigger_with_tooltip(
-                    IconButton::new("plus", IconName::Plus).icon_size(IconSize::Small),
+                    IconButton::new("plus", IconName::Plus)
+                        .size(ButtonSize::Medium)
+                        .icon_size(IconSize::Small)
+                        .aria_label("New Item"),
                     Tooltip::text("New…"),
                 )
                 .anchor(Anchor::TopRight)
@@ -5098,7 +5287,9 @@ fn default_render_tab_bar_buttons(
             PopoverMenu::new("pane-tab-bar-split")
                 .trigger_with_tooltip(
                     IconButton::new("split", IconName::Split)
+                        .size(ButtonSize::Medium)
                         .icon_size(IconSize::Small)
+                        .aria_label("Split Pane")
                         .disabled(!can_clone && !can_split_move),
                     Tooltip::text("Split Pane"),
                 )
@@ -5130,16 +5321,17 @@ fn default_render_tab_bar_buttons(
 
 pub(crate) fn render_toggle_zoom_button(pane: &Pane, cx: &mut Context<Pane>) -> IconButton {
     let zoomed = pane.is_zoomed();
+    let label = if zoomed { "Zoom Out" } else { "Zoom In" };
     IconButton::new("toggle_zoom", IconName::Maximize)
+        .size(ButtonSize::Medium)
         .icon_size(IconSize::Small)
+        .aria_label(label)
         .toggle_state(zoomed)
         .selected_icon(IconName::Minimize)
         .on_click(cx.listener(|pane, _, window, cx| {
             pane.toggle_zoom(&crate::ToggleZoom, window, cx);
         }))
-        .tooltip(move |_window, cx| {
-            Tooltip::for_action(if zoomed { "Zoom Out" } else { "Zoom In" }, &ToggleZoom, cx)
-        })
+        .tooltip(move |_window, cx| Tooltip::for_action(label, &ToggleZoom, cx))
 }
 
 impl Focusable for Pane {
@@ -5161,13 +5353,18 @@ impl Render for Pane {
             .contribute_context(&mut key_context, cx);
 
         let should_display_tab_bar = self.should_display_tab_bar.clone();
-        let display_tab_bar = should_display_tab_bar(window, cx);
+        let auto_hide_single_tab_bar = PaneGridSettings::get_global(cx).auto_hide_single_tab_bar;
+        let display_tab_bar = should_display_tab_bar(window, cx)
+            && !(auto_hide_single_tab_bar && self.items_len() <= 1);
         let Some(project) = self.project.upgrade() else {
             return div().track_focus(&self.focus_handle(cx));
         };
         let is_local = project.read(cx).is_local();
 
         v_flex()
+            .id(("pane", cx.entity_id()))
+            .role(gpui::Role::Pane)
+            .aria_label(self.pane_kind.accessibility_label())
             .key_context(key_context)
             .track_focus(&self.focus_handle(cx))
             .relative()
@@ -5371,8 +5568,12 @@ impl Render for Pane {
                                         }
                                     },
                                 ));
-                            if has_worktrees || !self.should_display_welcome_page {
+                            if self.pane_kind != PaneKind::Tabs {
+                                placeholder.child(self.render_empty_panel_state(cx))
+                            } else if !self.should_display_welcome_page {
                                 placeholder
+                            } else if has_worktrees {
+                                placeholder.child(self.render_empty_project_state(cx))
                             } else {
                                 if self.welcome_page.is_none() {
                                     let workspace = self.workspace.clone();
@@ -9476,6 +9677,23 @@ mod tests {
         });
         //  Non-pinned tab of other pane should be active
         assert_item_labels(&pane2, ["B*"], cx);
+    }
+
+    #[gpui::test]
+    async fn test_empty_tabbed_panes_display_launch_surface(cx: &mut TestAppContext) {
+        init_test(cx);
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, None, cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        let first_pane = workspace.read_with(cx, |workspace, _| workspace.active_pane().clone());
+        let second_pane = workspace.update_in(cx, |workspace, window, cx| {
+            workspace.split_pane(first_pane.clone(), SplitDirection::Right, window, cx)
+        });
+
+        assert!(first_pane.read_with(cx, |pane, _| pane.should_display_welcome_page));
+        assert!(second_pane.read_with(cx, |pane, _| pane.should_display_welcome_page));
     }
 
     #[gpui::test]

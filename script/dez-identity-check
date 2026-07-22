@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+require_pattern() {
+    local file="$1"
+    local pattern="$2"
+    local description="$3"
+
+    if ! rg --quiet "$pattern" "$file"; then
+        echo "Dez identity check failed: $description" >&2
+        exit 1
+    fi
+}
+
+reject_pattern() {
+    local file="$1"
+    local pattern="$2"
+    local description="$3"
+
+    if rg --quiet "$pattern" "$file"; then
+        echo "Dez identity check failed: $description" >&2
+        exit 1
+    fi
+}
+
+require_multiline_pattern() {
+    local file="$1"
+    local pattern="$2"
+    local description="$3"
+
+    if ! rg --quiet --multiline --multiline-dotall "$pattern" "$file"; then
+        echo "Dez identity check failed: $description" >&2
+        exit 1
+    fi
+}
+
+require_pattern crates/paths/src/paths.rs \
+    '^pub const APP_NAME: &str = "Dez";' \
+    'public application name is not Dez'
+require_pattern crates/paths/src/paths.rs \
+    '^pub const APP_STORAGE_NAME: &str = "Superzed";' \
+    'the documented legacy storage boundary changed without a migration'
+require_pattern crates/zed/Cargo.toml \
+    '^version = "0\.0\.1"$' \
+    'application version is not 0.0.1'
+require_pattern crates/zed/Cargo.toml \
+    '^default-run = "dez"$' \
+    'default executable is not dez'
+require_pattern crates/zed/Cargo.toml \
+    '^name = "dez"$' \
+    'the Dez binary target is missing'
+require_pattern assets/settings/default.json \
+    '^  "auto_update": false,$' \
+    'automatic binary updates are enabled by default'
+require_pattern crates/release_channel/src/lib.rs \
+    'ReleaseChannel::Stable => "Dez"' \
+    'stable release display name is not Dez'
+require_pattern crates/release_channel/src/lib.rs \
+    'ReleaseChannel::Stable => "dev\.dez\.Dez"' \
+    'stable bundle identifier is not isolated'
+require_multiline_pattern crates/release_channel/src/lib.rs \
+    'pub fn poll_for_updates\(&self\) -> bool \{.*?\n        false\n    \}' \
+    'the fork update gate no longer returns false'
+require_pattern script/bundle-mac \
+    'Contents/MacOS/dez' \
+    'the macOS bundle does not package the Dez executable'
+require_pattern crates/dez_terminal_host/Cargo.toml \
+    '^name = "dez-terminal-host"$' \
+    'the durable terminal helper binary target is missing'
+require_pattern script/bundle-mac \
+    'Contents/MacOS/dez-terminal-host' \
+    'the macOS bundle does not package the durable terminal helper'
+require_pattern crates/terminal/src/terminal.rs \
+    'env\.insert\("DEZ_TERM"\.to_string\(\), "true"\.to_string\(\)\);' \
+    'terminal sessions do not expose the Dez capability marker'
+require_pattern crates/terminal/src/terminal.rs \
+    'env\.insert\("TERM_PROGRAM"\.to_string\(\), "dez"\.to_string\(\)\);' \
+    'terminal sessions do not identify TERM_PROGRAM as Dez'
+
+reject_pattern crates/release_channel/src/lib.rs \
+    'dev\.zed\.Zed' \
+    'an official Zed bundle identifier is active in Dez release channels'
+reject_pattern crates/terminal/src/terminal.rs \
+    'env\.insert\("TERM_PROGRAM"\.to_string\(\), "zed"\.to_string\(\)\);' \
+    'terminal sessions still identify the public product as Zed'
+reject_pattern crates/oauth_callback_server/src/oauth_callback_server.rs \
+    '<div class="brand">Zed</div>|return to Zed' \
+    'the OAuth browser handoff still presents the local product as Zed'
+reject_pattern crates/extensions_ui/src/extensions_ui.rs \
+    'built-in to Zed|built into Zed|version of Zed' \
+    'the extension surface still presents the local product as Zed'
+reject_pattern crates/open_router/src/open_router.rs \
+    '"X-Title", "Zed Editor"' \
+    'OpenRouter requests still identify the local product as Zed'
+reject_pattern crates/edit_prediction/src/zeta.rs \
+    'ErrorAction::link\("Update Zed"' \
+    'an upstream Zed installer is still offered as a Dez recovery action'
+reject_pattern crates/system_specs/src/system_specs.rs \
+    '"Zed: v\{\}' \
+    'system diagnostics still label the running product as Zed'
+
+echo "Dez identity checks passed"

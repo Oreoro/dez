@@ -1,4 +1,3 @@
-use collab_ui::collab_panel;
 use gpui::{App, Menu, MenuItem, OsAction};
 use paths::APP_NAME;
 use release_channel::ReleaseChannel;
@@ -22,11 +21,6 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
         "Outline Tab"
     } else {
         "Outline Panel"
-    };
-    let collab_surface_label = if panels_as_pane_tabs {
-        "Collab Tab"
-    } else {
-        "Collab Panel"
     };
     let terminal_surface_label = if panels_as_pane_tabs {
         "Terminal Tab"
@@ -67,6 +61,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             zed_actions::ResetAllZoom { persist: false },
         ),
         MenuItem::separator(),
+        MenuItem::action("Session Rail", workspace::ToggleSidebar),
         MenuItem::action(project_pane_label, workspace::ToggleProjectPane),
         MenuItem::submenu(Menu {
             name: "Editor Layout".into(),
@@ -81,7 +76,6 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
         MenuItem::separator(),
         MenuItem::action(project_surface_label, project_panel::ToggleFocus),
         MenuItem::action(outline_surface_label, outline_panel::ToggleFocus),
-        MenuItem::action(collab_surface_label, collab_panel::ToggleFocus),
         MenuItem::action(terminal_surface_label, terminal_panel::Toggle),
         MenuItem::action(debugger_surface_label, debug_panel::ToggleFocus),
         MenuItem::action(agent_surface_label, assistant::ToggleFocus),
@@ -169,7 +163,8 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             name: "File".into(),
             disabled: false,
             items: vec![
-                MenuItem::action("New", workspace::NewFile),
+                MenuItem::action("New Terminal", workspace::NewTerminal),
+                MenuItem::action("New File", workspace::NewFile),
                 MenuItem::action("New Window", workspace::NewWindow),
                 MenuItem::separator(),
                 #[cfg(not(target_os = "macos"))]
@@ -357,29 +352,13 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                 MenuItem::action("View Dependency Licenses", zed_actions::OpenLicenses),
                 MenuItem::action("Show Welcome", onboarding::ShowWelcome),
                 MenuItem::separator(),
-                MenuItem::action("File Bug Report...", zed_actions::feedback::FileBugReport),
-                MenuItem::action("Request Feature...", zed_actions::feedback::RequestFeature),
-                MenuItem::action("Email Us...", zed_actions::feedback::EmailZed),
-                MenuItem::separator(),
                 MenuItem::action(
-                    "Documentation",
+                    "Upstream Zed Documentation",
                     super::OpenBrowser {
                         url: "https://zed.dev/docs".into(),
                     },
                 ),
                 MenuItem::action("Upstream Zed Repository", feedback::OpenZedRepo),
-                MenuItem::action(
-                    "Upstream Zed X",
-                    super::OpenBrowser {
-                        url: "https://twitter.com/zeddotdev".into(),
-                    },
-                ),
-                MenuItem::action(
-                    "Join the Team",
-                    super::OpenBrowser {
-                        url: "https://zed.dev/jobs".into(),
-                    },
-                ),
             ],
         },
     ]

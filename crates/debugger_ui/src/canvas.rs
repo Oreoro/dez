@@ -1,5 +1,6 @@
 use gpui::{App, Div, Hsla, Pixels, Stateful, prelude::*, px};
 use settings::Settings;
+use ui::ActiveTheme;
 use workspace::DesignSystemSettings;
 
 pub(crate) fn debugger_background(cx: &App) -> Hsla {
@@ -83,7 +84,7 @@ pub(crate) fn debugger_panel_padding(cx: &App) -> Pixels {
     }
 }
 
-pub(crate) fn debugger_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+pub(crate) fn debugger_radius(element: Div, cx: &App) -> Div {
     match DesignSystemSettings::get_global(cx).radius {
         settings::CanvasRadius::None => element,
         settings::CanvasRadius::Subtle => element.rounded_sm(),
@@ -91,11 +92,15 @@ pub(crate) fn debugger_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div>
     }
 }
 
-pub(crate) fn debugger_row_surface(
-    element: Stateful<Div>,
-    selected: bool,
-    cx: &App,
-) -> Stateful<Div> {
+pub(crate) fn debugger_stateful_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_sm(),
+        settings::CanvasRadius::Rounded => element.rounded_md(),
+    }
+}
+
+pub(crate) fn debugger_row_surface(element: Div, selected: bool, cx: &App) -> Div {
     let background = debugger_row_background(selected, cx);
     let hover_background = debugger_row_hover_background(cx);
     let border_color = debugger_row_border_color(background, selected, cx);

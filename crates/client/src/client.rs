@@ -103,6 +103,7 @@ actions!(
 #[derive(Deserialize, RegisterSetting)]
 pub struct ClientSettings {
     pub server_url: String,
+    pub auto_connect: bool,
     /// Overrides the key used to store credentials in the system keychain.
     /// Defaults to `server_url` when unset.
     ///
@@ -119,11 +120,13 @@ impl Settings for ClientSettings {
         if let Some(server_url) = &*ZED_SERVER_URL {
             return Self {
                 server_url: server_url.clone(),
+                auto_connect: content.auto_connect.unwrap(),
                 credentials_url: content.credentials_url.clone(),
             };
         }
         Self {
             server_url: content.server_url.clone().unwrap(),
+            auto_connect: content.auto_connect.unwrap(),
             credentials_url: content.credentials_url.clone(),
         }
     }

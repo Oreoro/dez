@@ -24,6 +24,7 @@ use crate::{
     TerminalView, default_working_directory,
     terminal_panel::{TerminalPanel, new_terminal_pane},
 };
+use terminal::session_host::{TerminalHostId, TerminalSessionId, TerminalSessionRef};
 
 const TERMINAL_PANEL_KEY: &str = "TerminalPanel";
 
@@ -508,6 +509,16 @@ impl<'de> Deserialize<'de> for SerializedAxis {
 
 pub struct TerminalDb(ThreadSafeConnection);
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum StoredTerminalSessionRef {
+    /// Rows created before host/session persistence retain legacy restoration.
+    Legacy,
+    Valid(TerminalSessionRef),
+    /// A partially written or malformed binding must never fall back to
+    /// creating replacement computation.
+    Invalid,
+}
+
 impl Domain for TerminalDb {
     const NAME: &str = stringify!(TerminalDb);
 
@@ -548,6 +559,10 @@ impl Domain for TerminalDb {
         ),
         sql! (
             ALTER TABLE terminals ADD COLUMN custom_title TEXT;
+        ),
+        sql! (
+            ALTER TABLE terminals ADD COLUMN terminal_host_id TEXT;
+            ALTER TABLE terminals ADD COLUMN terminal_session_id TEXT;
         ),
     ];
 }
@@ -638,6 +653,78 @@ impl TerminalDb {
             SELECT custom_title
             FROM terminals
             WHERE item_id = ? AND workspace_id = ?
+        }
+    }
+
+    query! {
+        async fn save_session_ref_parts(
+            item_id: ItemId,
+            workspace_id: WorkspaceId,
+            terminal_host_id: String,
+            terminal_session_id: String
+        ) -> Result<()> {
+            INSERT INTO terminals (
+                item_id,
+                workspace_id,
+                terminal_host_id,
+                terminal_session_id
+            )
+            VALUES (?1, ?2, ?3, ?4)
+            ON CONFLICT (workspace_id, item_id) DO UPDATE SET
+                terminal_host_id = excluded.terminal_host_id,
+                terminal_session_id = excluded.terminal_session_id
+        }
+    }
+
+    pub async fn save_session_ref(
+        &self,
+        item_id: ItemId,
+        workspace_id: WorkspaceId,
+        session_ref: TerminalSessionRef,
+    ) -> Result<()> {
+        self.save_session_ref_parts(
+            item_id,
+            workspace_id,
+            session_ref.host_id.to_string(),
+            session_ref.session_id.to_string(),
+        )
+        .await
+    }
+
+    query! {
+        fn get_session_ref_parts(
+            item_id: ItemId,
+            workspace_id: WorkspaceId
+        ) -> Result<Option<(Option<String>, Option<String>)>> {
+            SELECT terminal_host_id, terminal_session_id
+            FROM terminals
+            WHERE item_id = ? AND workspace_id = ?
+        }
+    }
+
+    pub fn get_session_ref(
+        &self,
+        item_id: ItemId,
+        workspace_id: WorkspaceId,
+    ) -> Result<StoredTerminalSessionRef> {
+        let Some((host_id, session_id)) = self.get_session_ref_parts(item_id, workspace_id)? else {
+            return Ok(StoredTerminalSessionRef::Legacy);
+        };
+        match (host_id, session_id) {
+            (None, None) => Ok(StoredTerminalSessionRef::Legacy),
+            (Some(host_id), Some(session_id)) => {
+                let Ok(host_id) = host_id.parse::<TerminalHostId>() else {
+                    return Ok(StoredTerminalSessionRef::Invalid);
+                };
+                let Ok(session_id) = session_id.parse::<TerminalSessionId>() else {
+                    return Ok(StoredTerminalSessionRef::Invalid);
+                };
+                Ok(StoredTerminalSessionRef::Valid(TerminalSessionRef {
+                    host_id,
+                    session_id,
+                }))
+            }
+            _ => Ok(StoredTerminalSessionRef::Invalid),
         }
     }
 }

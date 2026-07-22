@@ -13,7 +13,7 @@ use editor::{
 };
 use gpui::{
     Action, Div, Entity, EntityId, EventEmitter, FocusHandle, Focusable, Hsla, KeyContext, Pixels,
-    Stateful, Subscription, Task, TextStyle, WeakEntity, actions, prelude::*,
+    Subscription, Task, TextStyle, WeakEntity, actions, prelude::*,
 };
 use markdown::Markdown;
 use multi_buffer::{Anchor, MultiBufferOffset, MultiBufferSnapshot};
@@ -89,7 +89,7 @@ fn thread_search_compact_gap(cx: &App) -> Pixels {
     }
 }
 
-fn thread_search_input_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+fn thread_search_input_radius(element: Div, cx: &App) -> Div {
     match DesignSystemSettings::get_global(cx).radius {
         settings::CanvasRadius::None => element,
         settings::CanvasRadius::Subtle => element.rounded_sm(),

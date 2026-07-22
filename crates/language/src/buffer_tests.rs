@@ -236,7 +236,7 @@ fn test_select_language(cx: &mut App) {
 }
 
 #[gpui::test]
-fn test_superzed_config_files_use_jsonc(cx: &mut App) {
+fn test_dez_and_legacy_superzed_config_files_use_jsonc(cx: &mut App) {
     init_settings(cx, |_| {});
 
     let registry = Arc::new(LanguageRegistry::test(cx.background_executor().clone()));
@@ -258,6 +258,11 @@ fn test_superzed_config_files_use_jsonc(cx: &mut App) {
     }
 
     for path in [
+        ".config/dez/settings.json",
+        ".config/Dez/settings.json",
+        ".config/dez/keymap.json",
+        "AppData/Roaming/Dez/tasks.json",
+        "AppData/Roaming/Dez/debug.json",
         ".config/superzed/settings.json",
         ".config/Superzed/settings.json",
         ".config/superzed/keymap.json",

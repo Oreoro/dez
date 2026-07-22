@@ -325,9 +325,24 @@ impl Settings for SidebarSettings {
                 settings::CanvasSide::Left => SidebarDockPosition::Left,
                 settings::CanvasSide::Right => SidebarDockPosition::Right,
             });
+        let canvas_panel_tabs = content.pane_grid.as_ref().is_some_and(|pane_grid| {
+            !pane_grid.show_legacy_docks.unwrap_or(false)
+                && pane_grid.draggable_panel_tabs.unwrap_or(true)
+                && matches!(
+                    pane_grid.panel_surface.unwrap_or_default(),
+                    settings::CanvasPanelSurface::PaneTab
+                )
+        });
+        let sidebar_starts_open = if canvas_panel_tabs {
+            false
+        } else {
+            sidebar.starts_open.unwrap()
+        };
+        let starts_open = !session_rail_hidden && (sidebar_starts_open || session_rail_always_open);
+
         Self {
             side: session_rail_side.unwrap_or_else(|| sidebar.side.unwrap()),
-            starts_open: sidebar.starts_open.unwrap() || session_rail_always_open,
+            starts_open,
             always_open: session_rail_always_open,
             show_project_pane_button: sidebar.show_project_pane_button.unwrap(),
         }

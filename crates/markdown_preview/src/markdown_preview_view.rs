@@ -20,7 +20,7 @@ use markdown::{
     MarkdownOptions, MarkdownStyle,
 };
 use project::search::SearchQuery;
-use project::{Project, ProjectItem as _, ProjectPath};
+use project::{Project, ProjectPath};
 use settings::{MarkdownPreviewOpenMode, SeedQuerySetting, Settings, update_settings_file};
 use theme::{SystemAppearance, Theme, ThemeRegistry};
 use theme_settings::ThemeSettings;
@@ -107,7 +107,7 @@ impl project::ProjectItem for MarkdownPreviewProjectItem {
         let buffer = <Buffer as project::ProjectItem>::try_open(project, path, cx)?;
         Some(cx.spawn(async move |cx| {
             let buffer = buffer.await?;
-            cx.update(|cx| cx.new(|_| Self { buffer }))
+            Ok(cx.new(|_| Self { buffer }))
         }))
     }
 
@@ -1384,13 +1384,16 @@ impl Render for MarkdownPreviewView {
             .map(|theme| theme.colors().editor_background)
             .unwrap_or_else(|| cx.theme().colors().editor_background);
         let design_system = DesignSystemSettings::get_global(cx);
+        let density = design_system.density;
+        let contrast = design_system.contrast;
+        let radius = design_system.radius;
         let colors = cx.theme().colors();
-        let (scroll_padding, sheet_padding_x, sheet_padding_y) = match design_system.density {
+        let (scroll_padding, sheet_padding_x, sheet_padding_y) = match density {
             settings::CanvasDensity::Compact => (px(12.), px(12.), px(10.)),
             settings::CanvasDensity::Balanced => (px(16.), px(20.), px(16.)),
             settings::CanvasDensity::Spacious => (px(24.), px(28.), px(24.)),
         };
-        let sheet_bg = match design_system.contrast {
+        let sheet_bg = match contrast {
             settings::CanvasContrast::Low => bg_color,
             settings::CanvasContrast::Standard => {
                 bg_color.blend(colors.panel_background.opacity(0.08))
@@ -1399,7 +1402,7 @@ impl Render for MarkdownPreviewView {
                 bg_color.blend(colors.element_background.opacity(0.16))
             }
         };
-        let sheet_border = match design_system.contrast {
+        let sheet_border = match contrast {
             settings::CanvasContrast::Low => colors.border.opacity(0.45),
             settings::CanvasContrast::Standard => colors.border,
             settings::CanvasContrast::High => colors.border_variant,
@@ -1506,13 +1509,12 @@ impl Render for MarkdownPreviewView {
                                         .py(sheet_padding_y)
                                 })
                                 .when(
-                                    show_readable_sheet
-                                        && design_system.radius == settings::CanvasRadius::Subtle,
+                                    show_readable_sheet && radius == settings::CanvasRadius::Subtle,
                                     |this| this.rounded_md(),
                                 )
                                 .when(
                                     show_readable_sheet
-                                        && design_system.radius == settings::CanvasRadius::Rounded,
+                                        && radius == settings::CanvasRadius::Rounded,
                                     |this| this.rounded_lg(),
                                 )
                                 .child(content)

@@ -77,6 +77,8 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
         version_control_page(),
         collaboration_page(),
         ai_page(cx),
+        attention_page(),
+        evidence_page(),
         network_page(),
         developer_page(cx),
     ]
@@ -130,7 +132,7 @@ fn developer_page(cx: &App) -> SettingsPage {
     }));
 
     SettingsPage {
-        title: "Developer",
+        title: "Advanced",
         items: items.into_boxed_slice(),
     }
 }
@@ -141,7 +143,7 @@ fn general_page(cx: &App) -> SettingsPage {
             SettingsPageItem::SectionHeader("General Settings"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Accessible Mode",
-                description: "Optimize Zed's interface for assistive technology such as screen readers. When enabled, otherwise-collapsed controls stay expanded and keyboard-reachable.",
+                description: "Optimize Dez for assistive technology such as screen readers. When enabled, otherwise-collapsed controls stay expanded and keyboard-reachable.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("accessible_mode"),
@@ -299,7 +301,7 @@ fn general_page(cx: &App) -> SettingsPage {
             SettingsPageItem::SectionHeader("Security"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Trust All Projects By Default",
-                description: "When opening Zed, avoid Restricted Mode by auto-trusting all projects, enabling use of all features without having to give permission to each new project.",
+                description: "When opening Dez, avoid Restricted Mode by auto-trusting all projects. This enables every project feature without a per-project trust decision.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("session.trust_all_projects"),
@@ -349,7 +351,7 @@ fn general_page(cx: &App) -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Restore On Startup",
-                description: "What to restore from the previous session when opening Zed.",
+                description: "What to restore from the previous App Session when opening Dez.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("restore_on_startup"),
@@ -370,7 +372,7 @@ fn general_page(cx: &App) -> SettingsPage {
             SettingsPageItem::SettingItem(SettingItem {
                 files: USER,
                 title: "Preview Channel",
-                description: "Which settings should be activated only in Preview build of Zed.",
+                description: "Which settings should be activated only in Dez Preview builds.",
                 field: Box::new(
                     SettingField {
                         organization_override: None,
@@ -427,7 +429,7 @@ fn general_page(cx: &App) -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Telemetry Metrics",
-                description: "Send anonymized usage data like what languages you're using Zed with.",
+                description: "Send anonymized usage data such as which languages you use with Dez.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("telemetry.metrics"),
@@ -490,7 +492,7 @@ fn general_page(cx: &App) -> SettingsPage {
     }
 
     SettingsPage {
-        title: "General",
+        title: "Workspace & Privacy",
         items: concat_sections!(
             @vec,
             general_settings_section(cx),
@@ -691,7 +693,7 @@ fn appearance_page() -> SettingsPage {
                 discriminant: SettingItem {
                     files: USER,
                     title: "Icon Theme",
-                    description: "The custom set of icons Zed will associate with files and directories.",
+                    description: "The custom set of icons Dez associates with files and directories.",
                     field: Box::new(SettingField {
                         organization_override: None,
                         json_path: Some("icon_theme$"),
@@ -3755,7 +3757,7 @@ fn search_and_files_page() -> SettingsPage {
             SettingsPageItem::SectionHeader("File Scan"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "File Scan Exclusions",
-                description: "Files or globs of files that will be excluded by Zed entirely. They will be skipped during file scans, file searches, and not be displayed in the project file tree. Takes precedence over \"File Scan Inclusions\"",
+                description: "Files or globs Dez excludes entirely. They are skipped during file scans and searches and hidden from the project tree. Takes precedence over \"File Scan Inclusions\".",
                 field: Box::new(
                     SettingField {
                         organization_override: None,
@@ -3778,7 +3780,7 @@ fn search_and_files_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "File Scan Inclusions",
-                description: "Files or globs of files that will be included by Zed, even when ignored by git. This is useful for files that are not tracked by git, but are still important to your project. Note that globs that are overly broad can slow down Zed's file scanning. \"File Scan Exclusions\" takes precedence over these inclusions",
+                description: "Files or globs Dez includes even when ignored by Git. Broad globs can slow file scanning. \"File Scan Exclusions\" takes precedence.",
                 field: Box::new(
                     SettingField {
                         organization_override: None,
@@ -4040,12 +4042,12 @@ fn window_and_layout_page() -> SettingsPage {
         ]
     }
 
-    fn sidebar_chrome_section() -> [SettingsPageItem; 11] {
+    fn sidebar_chrome_section() -> [SettingsPageItem; 8] {
         [
-            SettingsPageItem::SectionHeader("Sidebar"),
+            SettingsPageItem::SectionHeader("Session Rail Chrome"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Project Pane Button",
-                description: "Show the project pane toggle button in the sidebar header.",
+                description: "Show the project pane toggle button in the Session Rail header.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_project_pane_button"),
@@ -4068,7 +4070,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Branch Status Icon",
-                description: "Show git status indicators on the branch icon in the sidebar.",
+                description: "Show Git status indicators on the branch icon in the Session Rail.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_branch_status_icon"),
@@ -4091,7 +4093,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Branch Name",
-                description: "Show the branch name button in the sidebar.",
+                description: "Show the branch name button in the Session Rail.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_branch_name"),
@@ -4114,7 +4116,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Project Items",
-                description: "Show the project host and name in the sidebar.",
+                description: "Show the Workspace host and project name in the Session Rail.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_project_items"),
@@ -4137,7 +4139,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Onboarding Banner",
-                description: "Show banners announcing new features in the sidebar.",
+                description: "Show relevant feature guidance in the Session Rail.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_onboarding_banner"),
@@ -4159,69 +4161,8 @@ fn window_and_layout_page() -> SettingsPage {
                 files: USER,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Show Sign In",
-                description: "Show the sign in button in the sidebar.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("sidebar.show_sign_in"),
-                    pick: |settings_content| {
-                        settings_content.sidebar.as_ref()?.show_sign_in.as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .sidebar
-                            .get_or_insert_default()
-                            .show_sign_in = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Show User Menu",
-                description: "Show the user menu button in the sidebar.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("sidebar.show_user_menu"),
-                    pick: |settings_content| {
-                        settings_content.sidebar.as_ref()?.show_user_menu.as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .sidebar
-                            .get_or_insert_default()
-                            .show_user_menu = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Show User Picture",
-                description: "Show user picture in the sidebar.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("sidebar.show_user_picture"),
-                    pick: |settings_content| {
-                        settings_content
-                            .sidebar
-                            .as_ref()?
-                            .show_user_picture
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .sidebar
-                            .get_or_insert_default()
-                            .show_user_picture = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Menus",
-                description: "Show the menus in the sidebar.",
+                description: "Show application menus in the Session Rail header.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_menus"),
@@ -4243,7 +4184,7 @@ fn window_and_layout_page() -> SettingsPage {
                     files: USER,
                     title: "Button Layout",
                     description:
-                        "(Linux only) choose how window control buttons are laid out in the sidebar.",
+                        "(Linux only) choose how window control buttons are laid out in the Session Rail.",
                     field: Box::new(SettingField {
                         organization_override: None,
                         json_path: Some("sidebar.button_layout$"),
@@ -4877,7 +4818,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Window Decorations",
-                description: "(Linux only) whether Zed or your compositor should draw window decorations.",
+                description: "On Linux, choose whether Dez or the compositor draws window decorations.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("window_decorations"),
@@ -6452,7 +6393,7 @@ fn debugger_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Save Breakpoints",
-                description: "Whether breakpoints should be reused across Zed sessions.",
+                description: "Whether breakpoints should be reused across Dez App Sessions.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("debugger.save_breakpoints"),
@@ -6489,7 +6430,7 @@ fn debugger_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Log DAP Communications",
-                description: "Whether to log messages between active debug adapters and Zed.",
+                description: "Whether to log messages between active debug adapters and Dez.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("debugger.log_dap_communications"),
@@ -7407,7 +7348,7 @@ fn terminal_page() -> SettingsPage {
     }
 
     SettingsPage {
-        title: "Terminal",
+        title: "Sessions & Terminal",
         items: concat_sections![
             environment_section(),
             font_section(),
@@ -7429,7 +7370,7 @@ fn version_control_page() -> SettingsPage {
                 discriminant: SettingItem {
                     files: USER,
                     title: "Disable Git Integration",
-                    description: "Disable all Git integration features in Zed.",
+                    description: "Disable all Git integration features in Dez.",
                     field: Box::new(SettingField::<bool> {
                         organization_override: None,
                         json_path: Some("git.disable_git"),
@@ -7994,7 +7935,7 @@ fn ai_page(cx: &App) -> SettingsPage {
             SettingsPageItem::SectionHeader("General"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Disable AI",
-                description: "Whether to disable all AI features in Zed.",
+                description: "Whether to disable all AI features in Dez.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("disable_ai"),
@@ -8007,8 +7948,8 @@ fn ai_page(cx: &App) -> SettingsPage {
                 files: USER | PROJECT,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Sidebar Side",
-                description: "Which side of the window the sidebar appears on.",
+                title: "Session Rail Side",
+                description: "Which side of the window the Session Rail appears on.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.side"),
@@ -8302,7 +8243,7 @@ fn ai_page(cx: &App) -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Terminal Thread Init Command",
-                description: "Command to automatically run when Zed creates a Terminal Thread shell in the agent panel. Runs in your configured shell.",
+                description: "Command to run when Dez creates a terminal-agent shell. Runs in your configured shell.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("agent.terminal_init_command"),
@@ -8556,7 +8497,7 @@ fn ai_page(cx: &App) -> SettingsPage {
     }
 
     SettingsPage {
-        title: "AI",
+        title: "Agents",
         items: concat_sections!(
             @vec,
             general_section(),
@@ -8568,10 +8509,222 @@ fn ai_page(cx: &App) -> SettingsPage {
     }
 }
 
+fn attention_page() -> SettingsPage {
+    let items = vec![
+        SettingsPageItem::SectionHeader("Attention"),
+        SettingsPageItem::SettingItem(SettingItem {
+            title: "Show Attention Status",
+            description: "Show the action-needed summary in the workspace bar and Session Rail.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("workspace_bar.show_agent_attention"),
+                pick: |settings_content| {
+                    settings_content
+                        .workspace_bar
+                        .as_ref()
+                        .and_then(|settings| settings.show_agent_attention.as_ref())
+                },
+                write: |settings_content, value, _| {
+                    settings_content
+                        .workspace_bar
+                        .get_or_insert_default()
+                        .show_agent_attention = value;
+                },
+            }),
+            metadata: None,
+            files: USER,
+        }),
+        SettingsPageItem::SettingItem(SettingItem {
+            title: "Notify on Attention",
+            description: "Notify when a background terminal or agent raises a new unread attention condition.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("agent_ui.notify_on_attention"),
+                pick: |settings_content| {
+                    settings_content
+                        .agent_ui
+                        .as_ref()
+                        .and_then(|settings| settings.notify_on_attention.as_ref())
+                },
+                write: |settings_content, value, _| {
+                    settings_content
+                        .agent_ui
+                        .get_or_insert_default()
+                        .notify_on_attention = value;
+                },
+            }),
+            metadata: None,
+            files: USER,
+        }),
+        SettingsPageItem::SettingItem(SettingItem {
+            title: "Announce Attention",
+            description: "Request an accessible window announcement when agent attention changes.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("accessibility.announce_agent_attention"),
+                pick: |settings_content| {
+                    settings_content
+                        .accessibility
+                        .as_ref()
+                        .and_then(|settings| settings.announce_agent_attention.as_ref())
+                },
+                write: |settings_content, value, _| {
+                    settings_content
+                        .accessibility
+                        .get_or_insert_default()
+                        .announce_agent_attention = value;
+                },
+            }),
+            metadata: None,
+            files: USER,
+        }),
+        SettingsPageItem::SettingItem(SettingItem {
+            title: "Pane Attention Ring",
+            description: "Use a visible pane outline in addition to labels and icons when a surface needs action.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("pane_grid.attention_ring"),
+                pick: |settings_content| {
+                    settings_content
+                        .pane_grid
+                        .as_ref()
+                        .and_then(|settings| settings.attention_ring.as_ref())
+                },
+                write: |settings_content, value, _| {
+                    settings_content
+                        .pane_grid
+                        .get_or_insert_default()
+                        .attention_ring = value;
+                },
+            }),
+            metadata: None,
+            files: USER,
+        }),
+    ];
+
+    SettingsPage {
+        title: "Attention",
+        items: items.into_boxed_slice(),
+    }
+}
+
+fn evidence_page() -> SettingsPage {
+    let items = vec![
+        SettingsPageItem::SectionHeader("Evidence & Trust"),
+        SettingsPageItem::SettingItem(SettingItem {
+            title: "Show Detection Confidence",
+            description: "Label process-name detection as lower-confidence until structured adapter evidence is available.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("agent_ui.show_detection_confidence"),
+                pick: |settings_content| {
+                    settings_content
+                        .agent_ui
+                        .as_ref()
+                        .and_then(|settings| settings.show_detection_confidence.as_ref())
+                },
+                write: |settings_content, value, _| {
+                    settings_content
+                        .agent_ui
+                        .get_or_insert_default()
+                        .show_detection_confidence = value;
+                },
+            }),
+            metadata: None,
+            files: USER,
+        }),
+        SettingsPageItem::SettingItem(SettingItem {
+            title: "Detect Terminal Agents",
+            description: "Observe known agent process names as a local, lower-confidence fallback. This does not read terminal transcripts.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("agent_ui.detect_terminal_agents"),
+                pick: |settings_content| {
+                    settings_content
+                        .agent_ui
+                        .as_ref()
+                        .and_then(|settings| settings.detect_terminal_agents.as_ref())
+                },
+                write: |settings_content, value, _| {
+                    settings_content
+                        .agent_ui
+                        .get_or_insert_default()
+                        .detect_terminal_agents = value;
+                },
+            }),
+            metadata: None,
+            files: USER,
+        }),
+        SettingsPageItem::SettingItem(SettingItem {
+            title: "Connect Structured Hooks",
+            description: "Accept authenticated lifecycle evidence from terminal-agent adapters you configured. Dez does not install hooks or edit provider configuration automatically.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("agent_ui.connect_hooks"),
+                pick: |settings_content| {
+                    settings_content
+                        .agent_ui
+                        .as_ref()
+                        .and_then(|settings| settings.connect_hooks.as_ref())
+                },
+                write: |settings_content, value, _| {
+                    settings_content
+                        .agent_ui
+                        .get_or_insert_default()
+                        .connect_hooks = value;
+                },
+            }),
+            metadata: None,
+            files: USER,
+        }),
+        SettingsPageItem::SettingItem(SettingItem {
+            title: "Restore Session Metadata",
+            description: "Restore bounded session identity, attention, and evidence metadata after restart without restoring transcripts.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("agent_ui.resume_sessions_on_restart"),
+                pick: |settings_content| {
+                    settings_content
+                        .agent_ui
+                        .as_ref()
+                        .and_then(|settings| settings.resume_sessions_on_restart.as_ref())
+                },
+                write: |settings_content, value, _| {
+                    settings_content
+                        .agent_ui
+                        .get_or_insert_default()
+                        .resume_sessions_on_restart = value;
+                },
+            }),
+            metadata: None,
+            files: USER,
+        }),
+    ];
+
+    SettingsPage {
+        title: "Evidence",
+        items: items.into_boxed_slice(),
+    }
+}
+
 fn network_page() -> SettingsPage {
-    fn network_section() -> [SettingsPageItem; 3] {
+    fn network_section() -> [SettingsPageItem; 4] {
         [
             SettingsPageItem::SectionHeader("Network"),
+            SettingsPageItem::SettingItem(SettingItem {
+                title: "Connect on Startup",
+                description: "Authenticate and connect to configured cloud services when Dez starts.",
+                field: Box::new(SettingField {
+                    organization_override: None,
+                    json_path: Some("auto_connect"),
+                    pick: |settings_content| settings_content.auto_connect.as_ref(),
+                    write: |settings_content, value, _| {
+                        settings_content.auto_connect = value;
+                    },
+                }),
+                metadata: None,
+                files: USER,
+            }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Proxy",
                 description: "The proxy to use for network requests.",
@@ -8591,7 +8744,7 @@ fn network_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Server URL",
-                description: "The URL of the Zed server to connect to.",
+                description: "The URL of the configured collaboration server.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("server_url"),
@@ -8610,7 +8763,7 @@ fn network_page() -> SettingsPage {
     }
 
     SettingsPage {
-        title: "Network",
+        title: "Network & Compatibility",
         items: concat_sections![network_section()],
     }
 }
@@ -9151,7 +9304,7 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
             SettingsPageItem::SectionHeader("Autoclose"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Use Autoclose",
-                description: "Whether to automatically type closing characters for you. For example, when you type '(', Zed will automatically add a closing ')' at the correct position.",
+                description: "Whether Dez automatically types closing characters. For example, typing '(' adds the matching ')'.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("languages.$(language).use_autoclose"),
@@ -9171,7 +9324,7 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Use Auto Surround",
-                description: "Whether to automatically surround text with characters for you. For example, when you select text and type '(', Zed will automatically surround text with ().",
+                description: "Whether Dez automatically surrounds selected text with paired characters.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("languages.$(language).use_auto_surround"),
@@ -9719,7 +9872,7 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Prefer LSP",
-                description: "Use LSP tasks over Zed language extension tasks.",
+                description: "Use LSP tasks before tasks supplied by language extensions.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("languages.$(language).tasks.prefer_lsp"),
@@ -10441,18 +10594,21 @@ fn edit_prediction_language_settings_section() -> [SettingsPageItem; 5] {
             title: "Configure Providers".into(),
             r#type: Default::default(),
             json_path: Some("edit_predictions.providers"),
-            description: Some("Set up different edit prediction providers in complement to Zed's built-in Zeta model.".into()),
+            description: Some(
+                "Configure edit-prediction providers alongside the built-in Zeta model.".into(),
+            ),
             search_aliases: &[],
             in_json: false,
             files: USER,
-            render: render_edit_prediction_setup_page
+            render: render_edit_prediction_setup_page,
         }),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Data Collection",
-            description: "Controls whether Zed may collect training data when using Zed's Edit Predictions. Data is only collected for files in projects detected as open source. The default value uses the preference previously set via the status-bar toggle, or false if no preference has been stored.",
+            description: "Controls whether the upstream Zed Edit Predictions service may collect training data. Data is collected only for files in projects detected as open source. The default uses the preference previously set from the status bar, or false when no preference is stored.",
             field: Box::new(SettingField {
                 organization_override: Some(|org_settings| {
-                    const DATA_COLLECTION_DISABLED: EditPredictionDataCollectionChoice = EditPredictionDataCollectionChoice::No;
+                    const DATA_COLLECTION_DISABLED: EditPredictionDataCollectionChoice =
+                        EditPredictionDataCollectionChoice::No;
 
                     if !org_settings.edit_prediction.is_feedback_enabled {
                         Some(&DATA_COLLECTION_DISABLED)

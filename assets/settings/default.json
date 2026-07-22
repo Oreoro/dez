@@ -1,13 +1,13 @@
 {
   "$schema": "zed://schemas/settings",
-  // The name of the Zed theme to use for the UI.
+  // The name of the theme to use for the Dez UI.
   //
   // `mode` is one of:
   // - "system": Use the theme that corresponds to the system's appearance
   // - "light": Use the theme indicated by the "light" field
   // - "dark": Use the theme indicated by the "dark" field
   "theme": {
-    "mode": "system",
+    "mode": "dark",
     "light": "Lumin Light",
     "dark": "Lumin Blur",
   },
@@ -86,10 +86,10 @@
   // Active pane styling settings.
   "active_pane_modifiers": {
     // Inset border size of the active pane, in pixels.
-    "border_size": 0.0,
+    "border_size": 2.0,
     // Opacity of the inactive panes. 0 means transparent, 1 means opaque.
     // Values are clamped to the [0.0, 1.0] range.
-    "inactive_opacity": 1.0,
+    "inactive_opacity": 0.94,
   },
   // The direction that you want to split panes horizontally. Defaults to "down"
   "pane_split_direction_horizontal": "down",
@@ -152,9 +152,9 @@
   // after the mouse moves away from the hover target.
   // Only applies when `hover_popover_sticky` is enabled.
   "hover_popover_hiding_delay": 300,
-  // Whether to confirm before quitting Zed.
+  // Whether to confirm before quitting Dez.
   "confirm_quit": false,
-  // Whether to restore last closed project when fresh Zed instance is opened
+  // Whether to restore the last closed project when a fresh Dez instance opens.
   // May take 3 values:
   //  1. All workspaces open during last session
   //         "restore_on_startup": "last_session"
@@ -167,7 +167,7 @@
   // an explicit `-e` (existing window) or `-n` (new window) flag.
   //
   // May take 2 values:
-  //  1. Open directories as a new workspace in the current Zed window's sidebar
+  //  1. Open directories as a new workspace in the current Dez window's Session Rail
   //         "cli_default_open_behavior": "existing_window"
   //  2. Open paths in a new window, unless they are subpaths of an existing project
   //         "cli_default_open_behavior": "new_window"
@@ -175,7 +175,7 @@
   // The default behavior when opening projects from the UI.
   //
   // May take 2 values:
-  //  1. Open projects as a new workspace in the current Zed window's sidebar
+  //  1. Open projects as a new workspace in the current Dez window's Session Rail
   //         "default_open_behavior": "existing_window"
   //  2. Open projects in a new window
   //         "default_open_behavior": "new_window"
@@ -231,26 +231,26 @@
   //
   // Default: true
   "zoomed_padding": true,
-  // What draws Zed's window decorations (titlebar):
-  // 1. Client application (Zed) draws its own window decorations
+  // What draws Dez's window decorations (titlebar):
+  // 1. The Dez client draws its own window decorations
   //    "client"
   // 2. Display server draws the window decorations. Not supported by GNOME Wayland.
   //    "server"
   //
-  // This requires restarting Zed for changes to take effect.
+  // This requires restarting Dez for changes to take effect.
   //
   // Default: "client"
   "window_decorations": "client",
-  // Whether to optimize Zed's interface for assistive technology such as screen
+  // Whether to optimize Dez's interface for assistive technology such as screen
   // readers.
   "accessible_mode": false,
   // Whether to use the system provided dialogs for Open and Save As.
-  // When set to false, Zed will use the built-in keyboard-first pickers.
+  // When set to false, Dez uses its built-in keyboard-first pickers.
   "use_system_path_prompts": true,
   // Whether to use the system provided dialogs for prompts, such as confirmation
   // prompts.
-  // When set to false, Zed will use its built-in prompts. Note that on Linux,
-  // this option is ignored and Zed will always use the built-in prompts.
+  // When set to false, Dez uses its built-in prompts. Note that on Linux,
+  // this option is ignored and Dez always uses the built-in prompts.
   "use_system_prompts": true,
   // Whether the cursor blinks in the editor.
   "cursor_blink": true,
@@ -463,11 +463,11 @@
   "use_on_type_format": true,
   // Whether to automatically add matching closing characters when typing
   // opening parenthesis, bracket, brace, single or double quote characters.
-  // For example, when you type '(', Zed will add a closing ) at the correct position.
+  // For example, when you type '(', Dez adds a closing ) at the correct position.
   "use_autoclose": true,
   // Whether to automatically surround selected text when typing opening parenthesis,
   // bracket, brace, single or double quote characters.
-  // For example, when you select text and type '(', Zed will surround the text with ().
+  // For example, when you select text and type '(', Dez surrounds the text with ().
   "use_auto_surround": true,
   // Controls automatic indentation behavior when typing.
   // - "syntax_aware": Adjusts indentation based on syntax context (default)
@@ -528,7 +528,7 @@
     "space": "•",
     "tab": "→",
   },
-  // Settings related to calls in Zed
+  // Settings related to calls in Dez
   "calls": {
     // Join calls with the microphone live by default
     "mute_on_join": false,
@@ -795,7 +795,7 @@
     // Default width of the project panel.
     "default_width": 240,
     // Where to dock the project panel. Can be 'left' or 'right'.
-    "dock": "right",
+    "dock": "left",
     // Spacing between worktree entries in the project panel. Can be 'comfortable' or 'standard'.
     "entry_spacing": "comfortable",
     // Whether to show file icons in the project panel.
@@ -912,7 +912,7 @@
     // Default width of the outline panel.
     "default_width": 300,
     // Where to dock the outline panel. Can be 'left' or 'right'.
-    "dock": "right",
+    "dock": "left",
     // Whether to show file icons in the outline panel.
     "file_icons": true,
     // Whether to show folder icons or chevrons for directories in the outline panel.
@@ -964,7 +964,7 @@
     // Whether to show the collaboration panel button in the status bar.
     "button": false,
     // Where to dock the collaboration panel. Can be 'left' or 'right'.
-    "dock": "right",
+    "dock": "left",
     // Default width of the collaboration panel.
     "default_width": 240,
   },
@@ -972,7 +972,7 @@
     // Whether to show the git panel button in the status bar.
     "button": true,
     // Where to dock the git panel. Can be 'left' or 'right'.
-    "dock": "right",
+    "dock": "left",
     // Default width of the git panel.
     "default_width": 360,
     // Style of the git status indicator in the panel.
@@ -1046,8 +1046,8 @@
   "sidebar": {
     // Where to position the sidebar. Can be 'left' or 'right'.
     "side": "left",
-    // Whether the sidebar should start open in new windows.
-    "starts_open": true,
+    // Whether the sidebar/session rail should start open in new windows.
+    "starts_open": false,
     // Whether to show the project pane toggle button in the sidebar header.
     "show_project_pane_button": true,
     // Whether to show git status indicators on the branch icon in the sidebar.
@@ -1069,7 +1069,7 @@
     // The layout of window control buttons in the sidebar (Linux only).
     "button_layout": "platform_default",
   },
-  // Settings for the Zed Canvas design system.
+  // Settings for the Dez design system.
   "design_system": {
     "family": "zed_canvas",
     "density": "balanced",
@@ -1171,7 +1171,7 @@
     // Whether to show the agent panel button in the status bar.
     "button": true,
     // Where to dock the agent panel. Can be 'left', 'right' or 'bottom'.
-    "dock": "left",
+    "dock": "right",
     // Whether the agent panel should use flexible (proportional) sizing.
     //
     // Default: true
@@ -1361,7 +1361,7 @@
     //
     // Default: true
     "expand_terminal_card": true,
-    // Command to automatically run when Zed creates a Terminal Thread shell in the agent panel.
+    // Command to run when Dez creates a terminal-agent shell.
     // The command is sent to the shell as if typed, so it is interpreted by your
     // configured shell (including on Windows and remote/WSL projects).
     // Set to "" to disable.
@@ -1436,7 +1436,7 @@
   //
   // 1. Never automatically save:
   //     "autosave": "off",
-  // 2. Save when changing focus away from the Zed window:
+  // 2. Save when changing focus away from the Dez window:
   //     "autosave": "on_window_change",
   // 3. Save when changing focus away from a specific buffer:
   //     "autosave": "on_focus_change",
@@ -1658,21 +1658,21 @@
   //
   // Default: true
   "word_diff_enabled": true,
-  // Control what info is collected by Zed.
+  // Dez is local-first. Telemetry is opt-in rather than sent by default.
   "telemetry": {
     // Send debug info like crash reports.
-    "diagnostics": true,
-    // Send anonymized usage data like what languages you're using Zed with.
-    "metrics": true,
+    "diagnostics": false,
+    // Send anonymized usage data like what languages you're using Dez with.
+    "metrics": false,
     // Allow sending requests to Anthropic models that cannot be offered with
     // Zero Data Retention
     "anthropic_retention": false,
   },
-  // Whether to disable all AI features in Zed.
+  // Whether to disable all AI features in Dez.
   //
   // Default: false
   "disable_ai": false,
-  // Automatically update the app. Superzed disables self-updates by default;
+  // Automatically update the app. Dez disables self-updates by default;
   // rebuild the local fork to update.
   "auto_update": false,
   // How to render LSP `textDocument/documentColor` colors in the editor.
@@ -1700,7 +1700,7 @@
     //
     // Default: true
     "include_warnings": true,
-    // Settings for using LSP pull diagnostics mechanism in Zed.
+    // Settings for using the LSP pull-diagnostics mechanism in Dez.
     "lsp_pull_diagnostics": {
       // Whether to pull for diagnostics or not.
       "enabled": true,
@@ -1727,7 +1727,7 @@
       "max_severity": null,
     },
   },
-  // Files or globs of files that will be excluded by Zed entirely. They will be skipped during file
+  // Files or globs that Dez excludes entirely. They are skipped during file
   // scans, file searches, and not be displayed in the project file tree. Takes precedence over `file_scan_inclusions`.
   "file_scan_exclusions": [
     "**/.git",
@@ -1742,9 +1742,9 @@
     "**/.classpath",
     "**/.settings",
   ],
-  // Files or globs of files that will be included by Zed, even when ignored by git. This is useful
+  // Files or globs that Dez includes even when ignored by Git. This is useful
   // for files that are not tracked by git, but are still important to your project. Note that globs
-  // that are overly broad can slow down Zed's file scanning. `file_scan_exclusions` takes
+  // that are overly broad can slow down Dez's file scanning. `file_scan_exclusions` takes
   // precedence over these inclusions.
   "file_scan_inclusions": [".env*"],
   // When to scan content of linked directories.
@@ -1855,7 +1855,7 @@
   "load_direnv": "direct",
   "edit_predictions": {
     // Which edit prediction provider to use.
-    "provider": "zed",
+    "provider": "none",
     // A list of globs representing files that edit predictions should be disabled for.
     // There's a sensible default list of globs already included.
     // Any addition to this list will be merged with the default list.
@@ -1870,8 +1870,8 @@
       "**/.dev.vars",
       "**/secrets.yml",
       "**/.zed/settings.json", // project settings
-      "/**/{zed,Zed,superzed,Superzed}/settings.json", // user settings
-      "/**/{zed,Zed,superzed,Superzed}/keymap.json",
+      "/**/{zed,Zed,dez,Dez,superzed,Superzed}/settings.json", // user settings
+      "/**/{zed,Zed,dez,Dez,superzed,Superzed}/keymap.json",
     ],
     // When to show edit predictions previews in buffer.
     // This setting takes two possible values:
@@ -2222,7 +2222,7 @@
     "JSONC": [
       "**/.zed/*.json",
       "**/.vscode/**/*.json",
-      "**/{zed,Zed,superzed,Superzed}/{settings,keymap,tasks,debug}.json",
+      "**/{zed,Zed,dez,Dez,superzed,Superzed}/{settings,keymap,tasks,debug}.json",
       "tsconfig*.json",
     ],
     "Markdown": [".rules", ".cursorrules", ".windsurfrules", ".clinerules"],
@@ -2231,7 +2231,7 @@
   // Settings for which version of Node.js and NPM to use when installing
   // language servers and Copilot.
   //
-  // Note: changing this setting currently requires restarting Zed.
+  // Note: changing this setting currently requires restarting Dez.
   "node": {
     // By default, Zed will look for `node` and `npm` on your `$PATH`, and use the
     // existing executables if their version is recent enough. Set this to `true`
@@ -2244,7 +2244,7 @@
     "path": null,
     "npm_path": null,
   },
-  // The extensions that Zed should automatically install on startup.
+  // The extensions that Dez should automatically install on startup.
   //
   // If you don't want any of these extensions, add this field to your settings
   // and change the value to `false`.
@@ -2615,7 +2615,7 @@
     // Default: false
     "trust_all_worktrees": false,
   },
-  // Zed's Prettier integration settings.
+  // Dez's upstream-compatible Prettier integration settings.
   // Allows to enable/disable formatting with Prettier
   // and configure default Prettier, used when no project-level Prettier installation is found.
   "prettier": {
@@ -2763,12 +2763,15 @@
   // The server to connect to. If the environment variable
   // ZED_SERVER_URL is set, it will override this setting.
   "server_url": "https://zed.dev",
-  // Settings overrides to use when using Zed Preview.
+  // Whether to authenticate and connect to cloud services during startup.
+  // Dez stays local until an explicit sign-in/reconnect by default.
+  "auto_connect": false,
+  // Settings overrides to use when using Dez Preview.
   // Mostly useful for developers who are managing multiple instances of Zed.
   "preview": {
     // "theme": "Andromeda"
   },
-  // Settings overrides to use when using Zed Nightly.
+  // Settings overrides to use when using Dez Nightly.
   // Mostly useful for developers who are managing multiple instances of Zed.
   "nightly": {
     // "theme": "Andromeda"
@@ -2778,12 +2781,12 @@
       },
     },
   },
-  // Settings overrides to use when using Zed Stable.
+  // Settings overrides to use when using Dez Stable.
   // Mostly useful for developers who are managing multiple instances of Zed.
   "stable": {
     // "theme": "Andromeda"
   },
-  // Settings overrides to use when using Zed Dev.
+  // Settings overrides to use when using Dez Dev.
   // Mostly useful for developers who are managing multiple instances of Zed.
   "dev": {
     // "theme": "Andromeda"
@@ -2817,7 +2820,7 @@
   // Supported URI scheme: `http`, `https`, `socks4`, `socks4a`, `socks5`,
   // `socks5h`. `http` will be used when no scheme is specified.
   //
-  // By default no proxy will be used, or Zed will try get proxy settings from
+  // By default no proxy is used, or Dez reads proxy settings from
   // environment variables. If certain hosts should not be proxied,
   // set the `no_proxy` environment variable and provide a comma-separated list.
   //
@@ -2835,7 +2838,7 @@
   "command_aliases": {},
   // ssh_connections is an array of ssh connections.
   // You can configure these from `project: Open Remote` in the command palette.
-  // Zed's ssh support will pull configuration from your ~/.ssh too.
+  // Dez's SSH support also reads configuration from your ~/.ssh.
   // Examples:
   // [
   //   {
@@ -2881,7 +2884,7 @@
   // Each profile has an optional `base` ("user" or "default") and a `settings`
   // object. When `base` is "user" (the default), the profile applies on top of
   // your user settings. When `base` is "default", user settings are ignored and
-  // the profile applies on top of Zed's defaults.
+  // the profile applies on top of Dez's defaults.
   //
   // Examples:
   // "profiles": {

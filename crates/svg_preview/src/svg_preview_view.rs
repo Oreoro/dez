@@ -4,12 +4,13 @@ use std::sync::Arc;
 use file_icons::FileIcons;
 use gpui::{
     App, Context, Div, Entity, EventEmitter, FocusHandle, Focusable, Hsla, IntoElement,
-    ParentElement, Pixels, Render, RenderImage, Stateful, Styled, Subscription, Task, WeakEntity,
-    Window, div, img, px,
+    ParentElement, Pixels, Render, RenderImage, Styled, Subscription, Task, WeakEntity, Window,
+    div, img, px,
 };
 use language::{Buffer, BufferEvent};
 use multi_buffer::MultiBuffer;
 use settings::Settings;
+use ui::ActiveTheme;
 use ui::prelude::*;
 use workspace::item::Item;
 use workspace::{DesignSystemSettings, Pane, Workspace};
@@ -51,7 +52,7 @@ fn canvas_svg_empty_padding(cx: &App) -> Pixels {
     }
 }
 
-fn canvas_svg_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+fn canvas_svg_radius(element: Div, cx: &App) -> Div {
     match DesignSystemSettings::get_global(cx).radius {
         settings::CanvasRadius::None => element,
         settings::CanvasRadius::Subtle => element.rounded_sm(),
@@ -59,7 +60,7 @@ fn canvas_svg_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
     }
 }
 
-fn canvas_svg_empty_card(cx: &App) -> Stateful<Div> {
+fn canvas_svg_empty_card(cx: &App) -> Div {
     canvas_svg_radius(
         div()
             .p(canvas_svg_empty_padding(cx))

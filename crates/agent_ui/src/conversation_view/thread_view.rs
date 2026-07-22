@@ -45,7 +45,7 @@ use ui::{
     ButtonLike, CalloutBorderPosition, Checkbox, SpinnerLabel, SpinnerVariant, SplitButton,
     SplitButtonStyle, Tab, ToggleState,
 };
-use workspace::{OpenOptions, SERIALIZATION_THROTTLE_TIME};
+use workspace::{OpenOptions, SERIALIZATION_THROTTLE_TIME, SplitDirection};
 
 use super::elicitation::{
     ElicitationCard, ElicitationCardHandlers, ElicitationFormState, should_render_elicitation,
@@ -730,6 +730,27 @@ pub fn open_markdown_in_workspace(
     window: &mut Window,
     cx: &mut App,
 ) -> Task<Result<()>> {
+    open_markdown_in_workspace_with_placement(title, markdown, workspace, false, window, cx)
+}
+
+pub fn open_markdown_beside_in_workspace(
+    title: String,
+    markdown: String,
+    workspace: Entity<Workspace>,
+    window: &mut Window,
+    cx: &mut App,
+) -> Task<Result<()>> {
+    open_markdown_in_workspace_with_placement(title, markdown, workspace, true, window, cx)
+}
+
+fn open_markdown_in_workspace_with_placement(
+    title: String,
+    markdown: String,
+    workspace: Entity<Workspace>,
+    open_beside: bool,
+    window: &mut Window,
+    cx: &mut App,
+) -> Task<Result<()>> {
     let markdown_language_task = workspace
         .read(cx)
         .app_state()
@@ -754,19 +775,17 @@ pub fn open_markdown_in_workspace(
         workspace.update_in(cx, |workspace, window, cx| {
             let buffer = cx.new(|cx| MultiBuffer::singleton(buffer, cx).with_title(title.clone()));
 
-            workspace.add_item_to_active_pane(
-                Box::new(cx.new(|cx| {
-                    let mut editor =
-                        Editor::for_multibuffer(buffer, Some(project.clone()), window, cx);
-                    editor.set_breadcrumb_header(title);
-                    editor.disable_mouse_wheel_zoom();
-                    editor
-                })),
-                None,
-                true,
-                window,
-                cx,
-            );
+            let item = Box::new(cx.new(|cx| {
+                let mut editor = Editor::for_multibuffer(buffer, Some(project.clone()), window, cx);
+                editor.set_breadcrumb_header(title);
+                editor.disable_mouse_wheel_zoom();
+                editor
+            }));
+            if open_beside {
+                workspace.split_item(SplitDirection::Right, item, window, cx);
+            } else {
+                workspace.add_item_to_active_pane(item, None, true, window, cx);
+            }
         })?;
         anyhow::Ok(())
     })
@@ -1887,7 +1906,7 @@ impl ThreadView {
                 ThreadError::PaymentRequired => (
                     "payment_required",
                     None,
-                    "You reached your free usage limit. Upgrade to Zed Pro for more prompts."
+                    "The configured provider reported a usage or billing limit. Check that provider or choose another model."
                         .into(),
                 ),
                 ThreadError::Refusal => {
@@ -4536,7 +4555,7 @@ impl ThreadView {
 
                 Some(ContextMenu::build(window, cx, |mut menu, _window, _cx| {
                     menu = menu.item(
-                        ContextMenuEntry::new("Zed Agent")
+                        ContextMenuEntry::new("Dez Agent")
                             .icon(IconName::ZedAgent)
                             .icon_color(Color::Muted)
                             .handler({
@@ -6743,7 +6762,11 @@ impl ThreadView {
         CanvasAgentUiSettings::get_global(cx).presentation
     }
 
-    fn apply_user_message_spacing(&self, element: Div, cx: &Context<Self>) -> Div {
+    fn apply_user_message_spacing(
+        &self,
+        element: Stateful<Div>,
+        cx: &Context<Self>,
+    ) -> Stateful<Div> {
         match self.agent_presentation(cx) {
             settings::AgentPresentation::Compact => element.pb_2().px_1().gap_1(),
             settings::AgentPresentation::Chat => element.pb_2().px_2().gap_1p5(),
@@ -7128,8 +7151,7 @@ impl ThreadView {
             .then(|| {
                 (self.is_subagent() && self.is_thread_feedback_enabled(cx)).then(|| {
                     let feedback = self.thread_feedback.feedback;
-                    let tooltip_meta =
-                        "Rating the thread sends all of your current conversation to the Zed team.";
+                    let tooltip_meta = "Rating the thread sends the current conversation to the upstream agent service.";
 
                     h_flex()
                         .child(
@@ -11304,7 +11326,7 @@ impl ThreadView {
                 "API Error",
                 format!(
                     "{provider}'s API returned an unexpected error. \
-                    If the problem persists, try switching models or restarting Zed."
+                    If the problem persists, try switching models or restarting Dez."
                 )
                 .into(),
                 true,
@@ -11354,18 +11376,16 @@ impl ThreadView {
     }
 
     fn render_payment_required_error(&self, cx: &mut Context<Self>) -> Callout {
-        const ERROR_MESSAGE: &str =
-            "You reached your free usage limit. Upgrade to Zed Pro for more prompts.";
+        const ERROR_MESSAGE: &str = "The configured provider reported a usage or billing limit. Check that provider or choose another model.";
 
         Callout::new()
             .severity(Severity::Error)
             .icon(IconName::XCircle)
-            .title("Free Usage Exceeded")
+            .title("Provider Limit Reached")
             .description(ERROR_MESSAGE)
             .actions_slot(
                 h_flex()
                     .gap_0p5()
-                    .child(self.upgrade_button(cx))
                     .child(self.create_copy_button(ERROR_MESSAGE)),
             )
             .dismiss_action(self.dismiss_error_button(cx))

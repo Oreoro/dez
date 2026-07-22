@@ -274,8 +274,14 @@ pub struct SettingsContent {
     /// Default: off
     pub reduce_motion: Option<ReduceMotionMode>,
 
-    /// The URL of the Zed server to connect to.
+    /// The URL of the configured collaboration server.
     pub server_url: Option<String>,
+
+    /// Whether to authenticate and connect to cloud services during startup.
+    /// Manual sign-in and reconnect actions remain available when this is off.
+    ///
+    /// Default: false
+    pub auto_connect: Option<bool>,
 
     /// The URL used as the key for credential storage.
     ///

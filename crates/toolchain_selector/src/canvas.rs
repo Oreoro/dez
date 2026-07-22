@@ -1,7 +1,7 @@
-use gpui::{App, Div, Hsla, Pixels, Stateful, prelude::*, px};
+use gpui::{App, Div, Hsla, Pixels, prelude::*, px};
 use picker::{PickerSurfaceContrast, PickerSurfaceDensity, PickerSurfaceRadius};
 use settings::Settings;
-use ui::ListItemSpacing;
+use ui::{ActiveTheme, ListItemSpacing};
 use workspace::DesignSystemSettings;
 
 pub(crate) fn toolchain_picker_density(cx: &App) -> PickerSurfaceDensity {
@@ -88,7 +88,7 @@ pub(crate) fn toolchain_editor_padding(cx: &App) -> Pixels {
     }
 }
 
-pub(crate) fn toolchain_modal_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+pub(crate) fn toolchain_modal_radius(element: Div, cx: &App) -> Div {
     match DesignSystemSettings::get_global(cx).radius {
         settings::CanvasRadius::None => element,
         settings::CanvasRadius::Subtle => element.rounded_md(),

@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{path::PathBuf, rc::Rc};
 
 use acp_thread::{AcpThread, ThreadStatus};
 use agent::{NativeAgentServer, ThreadStore};
@@ -17,7 +17,7 @@ use gpui::{
     Global, Render, SharedString, Subscription, Task, WeakEntity, Window,
 };
 use language_model::LanguageModelRegistry;
-use project::{AgentId, Project};
+use project::{AgentId, Project, ProjectItem as _};
 use ui::{Color, Icon, IconName, IconSize, IntoElement, Label, LabelCommon, prelude::*};
 use workspace::{
     ItemId, PathList, SaveIntent, SerializableItem, Workspace, WorkspaceId, delete_unloaded_items,
@@ -232,6 +232,18 @@ impl AgentThreadItem {
             }
         };
 
+        let action_log = thread.action_log().read(cx);
+        let diff_stats = action_log.diff_stats(cx);
+        let mut changed_files = action_log
+            .changed_buffers(cx)
+            .filter_map(|(buffer, _diff)| {
+                let project_path = buffer.read(cx).project_path(cx)?;
+                thread.project().read(cx).absolute_path(&project_path, cx)
+            })
+            .collect::<Vec<_>>();
+        changed_files.sort();
+        changed_files.dedup();
+
         Some(AgentThreadInfo {
             thread_id,
             session_id: thread.session_id().clone(),
@@ -242,7 +254,8 @@ impl AgentThreadItem {
             is_title_generating: thread_view
                 .as_native_thread(cx)
                 .is_some_and(|native_thread| native_thread.read(cx).is_generating_title()),
-            diff_stats: thread.action_log().read(cx).diff_stats(cx),
+            diff_stats,
+            changed_files,
         })
     }
 }
@@ -437,6 +450,7 @@ pub struct AgentThreadInfo {
     pub icon_from_external_svg: Option<SharedString>,
     pub is_title_generating: bool,
     pub diff_stats: action_log::DiffStats,
+    pub changed_files: Vec<PathBuf>,
 }
 
 pub use ui::AgentThreadStatus;

@@ -154,6 +154,14 @@ impl OpenRequest {
         }
 
         for url in request.urls {
+            // Dez owns the public URL scheme. Normalize it to the established
+            // internal route grammar so existing zed:// links remain compatible
+            // while newly registered dez:// links reach the same handlers.
+            let url = if let Some(path) = dez_url_path(&url) {
+                format!("zed://{path}")
+            } else {
+                url
+            };
             if let Some(server_name) = url.strip_prefix("zed-cli://") {
                 this.kind = Some(OpenRequestKind::CliConnection(connect_to_cli(server_name)?));
             } else if let Some(action_index) = url.strip_prefix("zed-dock-action://") {
@@ -318,6 +326,12 @@ impl OpenRequest {
         self.parse_file_path(url.path());
         Ok(())
     }
+}
+
+fn dez_url_path(url: &str) -> Option<&str> {
+    ["dez://", "dez-dev://", "dez-nightly://", "dez-preview://"]
+        .into_iter()
+        .find_map(|scheme| url.strip_prefix(scheme))
 }
 
 fn parse_ssh_url(url: &str) -> Result<url::Url> {
@@ -1578,7 +1592,17 @@ mod tests {
     fn test_parse_focus_app_url(cx: &mut TestAppContext) {
         let _app_state = init_test(cx);
 
-        for url in ["zed://", "zed://open", "zed://open/"] {
+        for url in [
+            "dez://",
+            "dez://open",
+            "dez://open/",
+            "dez-dev://open",
+            "dez-nightly://open",
+            "dez-preview://open",
+            "zed://",
+            "zed://open",
+            "zed://open/",
+        ] {
             let request = cx.update(|cx| {
                 OpenRequest::parse(
                     RawOpenRequest {

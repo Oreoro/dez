@@ -647,7 +647,7 @@ impl StackFrameList {
                                     .border_color(restart_hover_border_color)
                                     .cursor_pointer()
                             })
-                            .map(|this| crate::canvas::debugger_radius(this, cx))
+                            .map(|this| crate::canvas::debugger_stateful_radius(this, cx))
                             .child(
                                 IconButton::new(
                                     ("restart-stack-frame", stack_frame.id),

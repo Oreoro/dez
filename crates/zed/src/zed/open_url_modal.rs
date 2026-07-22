@@ -27,7 +27,7 @@ impl OpenUrlModal {
     pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let editor = cx.new(|cx| {
             let mut editor = Editor::single_line(window, cx);
-            editor.set_placeholder_text("zed://...", window, cx);
+            editor.set_placeholder_text("dez://...", window, cx);
             editor
         });
 
@@ -53,8 +53,14 @@ impl OpenUrlModal {
             return;
         }
 
-        // Handle zed:// URLs internally.
-        if url.starts_with("zed://") || url.starts_with("zed-cli://") {
+        // Handle Dez URLs and legacy Zed URLs internally.
+        if url.starts_with("dez://")
+            || url.starts_with("dez-dev://")
+            || url.starts_with("dez-nightly://")
+            || url.starts_with("dez-preview://")
+            || url.starts_with("zed://")
+            || url.starts_with("zed-cli://")
+        {
             OpenListener::global(cx).open(RawOpenRequest {
                 urls: vec![url],
                 ..Default::default()

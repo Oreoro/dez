@@ -1708,6 +1708,7 @@ impl Render for DebugPanel {
         let panel_background = debugger_background(cx);
         let secondary_panel_background = debugger_panel_background(cx);
         let panel_padding = debugger_panel_padding(cx);
+        let docked_to_bottom = self.position(window, cx) == DockPosition::Bottom;
 
         v_flex()
             .size_full()

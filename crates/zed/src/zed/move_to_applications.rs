@@ -4,6 +4,7 @@ use gpui::{
     App, AsyncWindowContext, Context, DismissEvent, EventEmitter, FocusHandle, Focusable,
     PromptButton, PromptLevel, Render, WeakEntity, Window,
 };
+use release_channel::RELEASE_CHANNEL;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -70,13 +71,16 @@ impl MoveToApplicationsRequest {
         workspace: WeakEntity<MultiWorkspace>,
         cx: &mut AsyncWindowContext,
     ) -> Result<()> {
+        let app_name = RELEASE_CHANNEL.display_name();
+        let prompt_title = format!("Move {app_name} to Applications?");
+        let prompt_description = format!(
+            "{app_name} is running from a temporary location. Move it to Applications to finish installing it."
+        );
         let response = cx
             .prompt(
                 PromptLevel::Info,
-                "Move Zed to Applications?",
-                Some(
-                    "Zed is running from a temporary location. Move it to Applications to finish installing it.",
-                ),
+                &prompt_title,
+                Some(&prompt_description),
                 &[
                     PromptButton::ok("Yes"),
                     PromptButton::cancel("No"),
@@ -103,7 +107,7 @@ impl MoveToApplicationsRequest {
                         .ok();
                     cx.prompt(
                         PromptLevel::Critical,
-                        "Failed to move Zed to Applications",
+                        &format!("Failed to move {app_name} to Applications"),
                         Some(&error.to_string()),
                         &["OK"],
                     )
@@ -167,6 +171,7 @@ impl Focusable for InstallingZedModal {
 impl Render for InstallingZedModal {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.theme();
+        let app_name = RELEASE_CHANNEL.display_name();
 
         v_flex()
             .elevation_3(cx)
@@ -178,7 +183,7 @@ impl Render for InstallingZedModal {
                     .py_3()
                     .border_b_1()
                     .border_color(theme.colors().border_variant)
-                    .child(Label::new("Installing Zed…")),
+                    .child(Label::new(format!("Installing {app_name}…"))),
             )
             .child(
                 h_flex()
@@ -196,11 +201,13 @@ impl Render for InstallingZedModal {
                     .child(
                         v_flex()
                             .gap_1()
-                            .child(Label::new("Moving Zed to Applications"))
+                            .child(Label::new(format!("Moving {app_name} to Applications")))
                             .child(
-                                Label::new("Zed will reopen when installation is complete.")
-                                    .size(LabelSize::Small)
-                                    .color(Color::Muted),
+                                Label::new(format!(
+                                    "{app_name} will reopen when installation is complete."
+                                ))
+                                .size(LabelSize::Small)
+                                .color(Color::Muted),
                             ),
                     ),
             )

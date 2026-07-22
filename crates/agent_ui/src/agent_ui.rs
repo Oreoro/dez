@@ -25,6 +25,7 @@ mod mode_selector;
 mod model_selector;
 mod model_selector_popover;
 mod profile_selector;
+mod run_review;
 mod terminal_codegen;
 mod terminal_inline_assistant;
 pub mod terminal_thread_metadata_store;
@@ -82,10 +83,14 @@ pub use crate::agent_thread_item::{
 };
 pub use crate::inline_assistant::InlineAssistant;
 pub use crate::message_editor::MessageEditorEvent;
+pub use crate::run_review::{
+    ObservedRunActivity, ObservedRunCheck, ObservedRunCheckStatus, ObservedRunCommand,
+    ObservedWorkspaceEvidence, RunReviewBrief, RunReviewState, WorkspaceEvidenceKind,
+};
 pub use crate::thread_metadata_store::ThreadId;
 pub use agent_diff::{AgentDiffPane, AgentDiffToolbar};
-pub use conversation_view::open_markdown_in_workspace;
 pub use conversation_view::{ConversationView, StateChange};
+pub use conversation_view::{open_markdown_beside_in_workspace, open_markdown_in_workspace};
 pub use external_source_prompt::ExternalSourcePrompt;
 pub use favorite_models::toggle_in_settings as toggle_favorite_model;
 pub use language_model_selector::{LanguageModelSelector, language_model_selector};
@@ -332,10 +337,8 @@ actions!(
         RejectOnce,
         /// Follows the agent's suggestions.
         Follow,
-        /// Resets the trial upsell notification.
-        ResetTrialUpsell,
-        /// Resets the trial end upsell notification.
-        ResetTrialEndUpsell,
+        /// Resets the Dez agent onboarding card.
+        ResetAgentOnboarding,
         /// Re-enables the fast mode warning for every provider and model.
         ResetFastModeWarnings,
         /// Opens the "Add Context" menu in the message editor.
@@ -523,7 +526,7 @@ impl Agent {
 
     pub fn label(&self) -> SharedString {
         match self {
-            Self::NativeAgent => "Zed Agent".into(),
+            Self::NativeAgent => "Dez Agent".into(),
             Self::Custom { id, .. } => id.0.clone(),
             #[cfg(any(test, feature = "test-support"))]
             Self::Stub => "Stub Agent".into(),

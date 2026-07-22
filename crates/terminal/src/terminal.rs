@@ -2,6 +2,7 @@ mod mappings;
 
 mod alacritty;
 mod pty_info;
+pub mod session_host;
 pub mod terminal_settings;
 
 #[cfg(not(windows))]
@@ -634,14 +635,17 @@ const DEBUG_TERMINAL_HEIGHT: Pixels = px(30.);
 const DEBUG_CELL_WIDTH: Pixels = px(5.);
 const DEBUG_LINE_HEIGHT: Pixels = px(5.);
 
-/// Inserts Zed-specific environment variables for terminal sessions.
+/// Inserts Dez terminal identity and the upstream compatibility marker.
 /// Used by both local terminals and remote terminals (via SSH).
 pub fn insert_zed_terminal_env(
     env: &mut HashMap<String, String>,
     version: &impl std::fmt::Display,
 ) {
+    env.insert("DEZ_TERM".to_string(), "true".to_string());
+    // Preserve the upstream integration marker until shell integrations expose
+    // a vendor-neutral capability probe.
     env.insert("ZED_TERM".to_string(), "true".to_string());
-    env.insert("TERM_PROGRAM".to_string(), "zed".to_string());
+    env.insert("TERM_PROGRAM".to_string(), "dez".to_string());
     env.insert("TERM".to_string(), "xterm-256color".to_string());
     env.insert("COLORTERM".to_string(), "truecolor".to_string());
     env.insert("TERM_PROGRAM_VERSION".to_string(), version.to_string());
@@ -652,6 +656,7 @@ pub fn insert_zed_terminal_env(
 pub enum Event {
     TitleChanged,
     BreadcrumbsChanged,
+    ProcessExited { exit_code: Option<i32> },
     CloseTerminal,
     Bell,
     Wakeup,
@@ -917,6 +922,64 @@ pub struct TerminalBuilder {
 }
 
 impl TerminalBuilder {
+    pub fn new_hosted(
+        session_id: session_host::TerminalSessionId,
+        controller: Arc<dyn HostedTerminalController>,
+        working_directory: Option<PathBuf>,
+        shell: Shell,
+        env: HashMap<String, String>,
+        cursor_shape: SettingsCursorShape,
+        alternate_scroll: AlternateScroll,
+        max_scroll_history_lines: Option<usize>,
+        path_hyperlink_regexes: Vec<String>,
+        path_hyperlink_timeout_ms: u64,
+        window_id: u64,
+        background_executor: &BackgroundExecutor,
+        activation_script: Vec<String>,
+        path_style: PathStyle,
+    ) -> TerminalBuilder {
+        let mut builder = Self::new_display_only(
+            cursor_shape,
+            alternate_scroll,
+            max_scroll_history_lines,
+            window_id,
+            background_executor,
+            path_style,
+        );
+        builder.terminal.session_id = session_id;
+        builder.terminal.terminal_type = TerminalType::Hosted { controller };
+        builder.terminal.hosted_working_directory = working_directory;
+        builder.terminal.title_override = match &shell {
+            Shell::WithArguments { title_override, .. } => title_override.clone(),
+            Shell::System | Shell::Program(_) => None,
+        };
+        builder.terminal.hyperlink_regex_searches =
+            RegexSearches::new(&path_hyperlink_regexes, path_hyperlink_timeout_ms);
+        builder.terminal.activation_script = activation_script.clone();
+        builder.terminal.template = CopyTemplate {
+            shell: shell.clone(),
+            env,
+            cursor_shape,
+            alternate_scroll,
+            max_scroll_history_lines,
+            path_hyperlink_regexes,
+            path_hyperlink_timeout_ms,
+            window_id,
+        };
+        if !activation_script.is_empty() {
+            let shell_kind = shell.shell_kind(path_style.is_windows());
+            for script in activation_script {
+                builder.terminal.write_to_pty(script.into_bytes());
+                builder.terminal.write_to_pty(b"\x0d");
+            }
+            builder
+                .terminal
+                .write_to_pty(shell_kind.clear_screen_command().as_bytes());
+            builder.terminal.write_to_pty(b"\x0d");
+        }
+        builder
+    }
+
     pub fn new_display_only(
         cursor_shape: SettingsCursorShape,
         alternate_scroll: AlternateScroll,
@@ -956,6 +1019,7 @@ impl TerminalBuilder {
         let term = new_term(&config, terminal_bounds, events_tx, alternate_scroll);
 
         let terminal = Terminal {
+            session_id: session_host::TerminalSessionId::new(),
             task: None,
             terminal_type: TerminalType::DisplayOnly,
             subprocess: None,
@@ -963,6 +1027,7 @@ impl TerminalBuilder {
             term,
             term_config: config,
             output_processor: Processor::<StdSyncHandler>::new(),
+            output_previous_byte_was_cr: false,
             title_override: None,
             events: VecDeque::with_capacity(10),
             last_content: Content {
@@ -981,6 +1046,7 @@ impl TerminalBuilder {
             hyperlink_regex_searches: RegexSearches::default(),
             vi_mode_enabled: false,
             is_remote_terminal: false,
+            hosted_working_directory: None,
             last_mouse_move_time: Instant::now(),
             last_hyperlink_search_position: None,
             mouse_down_hyperlink: None,
@@ -998,6 +1064,8 @@ impl TerminalBuilder {
                 window_id,
             },
             child_exited: None,
+            observed_exit_code: None,
+            process_exited: false,
             keyboard_input_sent: false,
             init_command_startup_marker: None,
             init_command_startup_tx: None,
@@ -1014,6 +1082,23 @@ impl TerminalBuilder {
             terminal,
             events_rx,
         }
+    }
+
+    /// Adds trusted, static text to a display-only terminal before it is
+    /// attached to a view.
+    ///
+    /// This is intended for terminal-shaped recovery and status surfaces. It
+    /// must not be used to append output while a PTY event loop is active.
+    pub fn with_display_text(mut self, title: impl Into<String>, lines: &[&str]) -> Self {
+        debug_assert!(matches!(
+            self.terminal.terminal_type,
+            TerminalType::DisplayOnly
+        ));
+        self.terminal.title_override = Some(title.into());
+        // SAFETY: display-only builders have no PTY producer, and this method
+        // runs before `subscribe`, so no other writer can mutate the grid.
+        unsafe { append_text_to_term(&mut self.terminal.term.lock(), lines) };
+        self
     }
 
     pub fn new(
@@ -1229,6 +1314,7 @@ impl TerminalBuilder {
 
             let no_task = task.is_none();
             let terminal = Terminal {
+                session_id: session_host::TerminalSessionId::new(),
                 task,
                 terminal_type,
                 subprocess,
@@ -1236,6 +1322,7 @@ impl TerminalBuilder {
                 term,
                 term_config: config,
                 output_processor: Processor::<StdSyncHandler>::new(),
+                output_previous_byte_was_cr: false,
                 title_override: terminal_title_override,
                 events: VecDeque::with_capacity(10), //Should never get this high.
                 last_content: Default::default(),
@@ -1254,6 +1341,7 @@ impl TerminalBuilder {
                 ),
                 vi_mode_enabled: false,
                 is_remote_terminal,
+                hosted_working_directory: None,
                 last_mouse_move_time: Instant::now(),
                 last_hyperlink_search_position: None,
                 mouse_down_hyperlink: None,
@@ -1271,6 +1359,8 @@ impl TerminalBuilder {
                     window_id,
                 },
                 child_exited: None,
+                observed_exit_code: None,
+                process_exited: false,
                 keyboard_input_sent: false,
                 init_command_startup_marker: None,
                 init_command_startup_tx: None,
@@ -1401,10 +1491,26 @@ enum TerminalType {
         pty_tx: PtySender,
         info: Arc<PtyProcessInfo>,
     },
+    Hosted {
+        controller: Arc<dyn HostedTerminalController>,
+    },
     DisplayOnly,
 }
 
+/// Synchronous command boundary used by a client-side terminal emulator whose
+/// PTY is owned by a terminal host process.
+///
+/// Implementations should enqueue transport work and return quickly; these
+/// methods are called from the GPUI foreground thread.
+pub trait HostedTerminalController: Send + Sync {
+    fn input(&self, bytes: Vec<u8>) -> Result<()>;
+    fn resize(&self, columns: u16, rows: u16) -> Result<()>;
+    fn detach(&self) -> Result<()>;
+    fn terminate(&self) -> Result<()>;
+}
+
 pub struct Terminal {
+    session_id: session_host::TerminalSessionId,
     terminal_type: TerminalType,
     /// Set for non-PTY terminals (see [`HeadlessTerminal`]); owns the spawned
     /// subprocess and the task pumping its output into the grid.
@@ -1413,6 +1519,7 @@ pub struct Terminal {
     term: Arc<AlacrittyTermLock>,
     term_config: AlacrittyTermConfig,
     output_processor: Processor<StdSyncHandler>,
+    output_previous_byte_was_cr: bool,
     events: VecDeque<InternalEvent>,
     /// This is only used for mouse mode cell change detection
     last_mouse: Option<(Point, SelectionSide)>,
@@ -1432,6 +1539,7 @@ pub struct Terminal {
     task: Option<TaskState>,
     vi_mode_enabled: bool,
     is_remote_terminal: bool,
+    hosted_working_directory: Option<PathBuf>,
     last_mouse_move_time: Instant,
     last_hyperlink_search_position: Option<GpuiPoint<Pixels>>,
     mouse_down_hyperlink: Option<HyperlinkMatch>,
@@ -1440,6 +1548,8 @@ pub struct Terminal {
     template: CopyTemplate,
     activation_script: Vec<String>,
     child_exited: Option<ExitStatus>,
+    observed_exit_code: Option<i32>,
+    process_exited: bool,
     keyboard_input_sent: bool,
     init_command_startup_marker: Option<String>,
     init_command_startup_tx: Option<Sender<()>>,
@@ -1505,6 +1615,33 @@ const FIND_HYPERLINK_THROTTLE_PX: Pixels = px(5.0);
 const SELECTION_DRAG_THRESHOLD: f64 = 2.0;
 
 impl Terminal {
+    pub fn session_id(&self) -> session_host::TerminalSessionId {
+        self.session_id
+    }
+
+    pub fn exit_code(&self) -> Option<i32> {
+        self.child_exited
+            .and_then(|status| status.code())
+            .or(self.observed_exit_code)
+    }
+
+    pub fn process_exited(&self) -> bool {
+        self.process_exited
+    }
+
+    pub fn hosted_process_exited(&mut self, exit_code: Option<i32>, cx: &mut Context<Self>) {
+        self.observed_exit_code = exit_code;
+        if !self.process_exited {
+            self.process_exited = true;
+            self.complete_init_command_startup_handshake();
+            cx.emit(Event::ProcessExited { exit_code });
+        }
+    }
+
+    pub fn set_hosted_replay_task(&mut self, task: Task<Result<()>>) {
+        self.event_loop_task = task;
+    }
+
     fn process_pty_event(&mut self, event: PtyEvent, cx: &mut Context<Self>) {
         match event {
             PtyEvent::Event(event) => self.process_event(event, cx),
@@ -1612,6 +1749,13 @@ impl Terminal {
 
                 if let TerminalType::Pty { pty_tx, .. } = &self.terminal_type {
                     pty_tx.resize(new_bounds);
+                } else if let TerminalType::Hosted { controller } = &self.terminal_type
+                    && let Err(error) = controller.resize(
+                        u16::try_from(new_bounds.num_columns()).unwrap_or(u16::MAX),
+                        u16::try_from(new_bounds.num_lines()).unwrap_or(u16::MAX),
+                    )
+                {
+                    log::warn!("failed to resize hosted terminal: {error:#}");
                 }
 
                 resize(term, new_bounds);
@@ -1831,8 +1975,7 @@ impl Terminal {
     pub fn write_output(&mut self, bytes: &[u8], cx: &mut Context<Self>) {
         // Inject bytes directly into the terminal emulator and refresh the UI.
         // This bypasses the PTY/event loop for display-only terminals.
-        let mut previous_byte_was_cr = false;
-        let converted = convert_lf_to_crlf(bytes, &mut previous_byte_was_cr);
+        let converted = convert_lf_to_crlf(bytes, &mut self.output_previous_byte_was_cr);
 
         let mut term = self.term.lock();
         self.output_processor.advance(&mut *term, &converted);
@@ -1977,15 +2120,23 @@ impl Terminal {
         let input = input.into();
         #[cfg(any(test, feature = "test-support"))]
         self.pty_write_log.borrow_mut().push(input.to_vec());
-        if let TerminalType::Pty { pty_tx, .. } = &self.terminal_type {
-            if log::log_enabled!(log::Level::Debug) {
-                if let Ok(str) = str::from_utf8(&input) {
-                    log::debug!("Writing to PTY: {:?}", str);
-                } else {
-                    log::debug!("Writing to PTY: {:?}", input);
+        match &self.terminal_type {
+            TerminalType::Pty { pty_tx, .. } => {
+                if log::log_enabled!(log::Level::Debug) {
+                    if let Ok(str) = str::from_utf8(&input) {
+                        log::debug!("Writing to PTY: {:?}", str);
+                    } else {
+                        log::debug!("Writing to PTY: {:?}", input);
+                    }
+                }
+                pty_tx.notify(input);
+            }
+            TerminalType::Hosted { controller } => {
+                if let Err(error) = controller.input(input.into_owned()) {
+                    log::warn!("failed to write to hosted terminal: {error:#}");
                 }
             }
-            pty_tx.notify(input);
+            TerminalType::DisplayOnly => {}
         }
     }
 
@@ -2065,7 +2216,14 @@ impl Terminal {
     }
 
     pub fn is_pty(&self) -> bool {
-        matches!(self.terminal_type, TerminalType::Pty { .. })
+        matches!(
+            self.terminal_type,
+            TerminalType::Pty { .. } | TerminalType::Hosted { .. }
+        )
+    }
+
+    pub fn is_hosted(&self) -> bool {
+        matches!(self.terminal_type, TerminalType::Hosted { .. })
     }
 
     pub fn write_init_command_after_startup(
@@ -2709,7 +2867,7 @@ impl Terminal {
                 .read()
                 .as_ref()
                 .and_then(|process| foreground_process_command_from_argv(&process.argv)),
-            TerminalType::DisplayOnly => None,
+            TerminalType::Hosted { .. } | TerminalType::DisplayOnly => None,
         }
     }
 
@@ -2726,6 +2884,7 @@ impl Terminal {
                 .read()
                 .as_ref()
                 .map(|process| process.cwd.clone()),
+            TerminalType::Hosted { .. } => self.hosted_working_directory.clone(),
             TerminalType::DisplayOnly => None,
         }
     }
@@ -2776,6 +2935,11 @@ impl Terminal {
                         subprocess.kill();
                     }
                 }
+                TerminalType::Hosted { controller } => {
+                    if let Err(error) = controller.terminate() {
+                        log::warn!("failed to terminate hosted task: {error:#}");
+                    }
+                }
             }
         }
     }
@@ -2783,14 +2947,14 @@ impl Terminal {
     pub fn pid(&self) -> Option<sysinfo::Pid> {
         match &self.terminal_type {
             TerminalType::Pty { info, .. } => info.pid(),
-            TerminalType::DisplayOnly => None,
+            TerminalType::Hosted { .. } | TerminalType::DisplayOnly => None,
         }
     }
 
     pub fn pid_getter(&self) -> Option<&ProcessIdGetter> {
         match &self.terminal_type {
             TerminalType::Pty { info, .. } => Some(info.pid_getter()),
-            TerminalType::DisplayOnly => None,
+            TerminalType::Hosted { .. } | TerminalType::DisplayOnly => None,
         }
     }
 
@@ -2820,6 +2984,12 @@ impl Terminal {
         }
         if let Some(e) = exit_status {
             self.child_exited = Some(e);
+        }
+        if !self.process_exited {
+            self.process_exited = true;
+            cx.emit(Event::ProcessExited {
+                exit_code: exit_status.and_then(|status| status.code()),
+            });
         }
         self.complete_init_command_startup_handshake();
         let task = match &mut self.task {
@@ -3086,25 +3256,62 @@ fn spawn_task_subprocess(
     })
 }
 
-impl Drop for Terminal {
-    fn drop(&mut self) {
+impl Terminal {
+    fn shut_down_process(&mut self) {
         if let Some(subprocess) = self.subprocess.take() {
             subprocess.kill();
         }
-        if let TerminalType::Pty { pty_tx, info } =
-            std::mem::replace(&mut self.terminal_type, TerminalType::DisplayOnly)
-        {
-            pty_tx.shutdown();
-            info.terminate_child_process();
+        match std::mem::replace(&mut self.terminal_type, TerminalType::DisplayOnly) {
+            TerminalType::Pty { pty_tx, info } => {
+                pty_tx.shutdown();
+                info.terminate_child_process();
 
-            let timer = self.background_executor.timer(Duration::from_millis(100));
-            self.background_executor
-                .spawn(async move {
-                    timer.await;
-                    info.kill_child_process();
-                })
-                .detach();
+                let timer = self.background_executor.timer(Duration::from_millis(100));
+                self.background_executor
+                    .spawn(async move {
+                        timer.await;
+                        info.kill_child_process();
+                    })
+                    .detach();
+            }
+            TerminalType::Hosted { controller } => {
+                if let Err(error) = controller.detach() {
+                    log::warn!("failed to detach hosted terminal: {error:#}");
+                }
+            }
+            TerminalType::DisplayOnly => {}
         }
+    }
+
+    /// Explicitly terminates this terminal's computation.
+    ///
+    /// Closing a view should detach it through `LocalTerminalHost`; this method
+    /// is reserved for the separate destructive terminate command.
+    pub fn terminate_process(&mut self, cx: &mut Context<Self>) {
+        let hosted_controller = match &self.terminal_type {
+            TerminalType::Hosted { controller } => Some(controller.clone()),
+            TerminalType::Pty { .. } | TerminalType::DisplayOnly => None,
+        };
+        if let Some(controller) = hosted_controller {
+            if let Err(error) = controller.terminate() {
+                log::warn!("failed to terminate hosted terminal: {error:#}");
+            }
+            self.terminal_type = TerminalType::DisplayOnly;
+        } else {
+            self.shut_down_process();
+        }
+        self.complete_init_command_startup_handshake();
+        if !self.process_exited {
+            self.process_exited = true;
+            cx.emit(Event::ProcessExited { exit_code: None });
+        }
+        cx.emit(Event::CloseTerminal);
+    }
+}
+
+impl Drop for Terminal {
+    fn drop(&mut self) {
+        self.shut_down_process();
     }
 }
 
@@ -4772,6 +4979,7 @@ mod tests {
                 info.pid_getter().fallback_pid(),
                 info.current.read().is_some()
             ),
+            TerminalType::Hosted { .. } => "hosted".to_string(),
             TerminalType::DisplayOnly => "display-only".to_string(),
         });
         panic!(

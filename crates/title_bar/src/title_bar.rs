@@ -800,15 +800,18 @@ impl Render for SidebarChrome {
                         self.render_canvas_prefix_indicator(window, cx),
                         |this, indicator| this.child(indicator),
                     )
-                    .children(self.render_connection_status(status, cx))
+                    .when(paths::APP_NAME == "Zed", |this| {
+                        this.children(self.render_connection_status(status, cx))
+                    })
                     .child(self.update_version.clone())
                     .when(
-                        user.is_none()
+                        paths::APP_NAME == "Zed"
+                            && user.is_none()
                             && is_signed_out_or_auth_error
                             && sidebar_settings.show_sign_in,
                         |this| this.child(self.render_sign_in_button(cx)),
                     )
-                    .when(is_signing_in, |this| {
+                    .when(paths::APP_NAME == "Zed" && is_signing_in, |this| {
                         this.child(
                             Label::new("Signing in…")
                                 .size(LabelSize::Small)
@@ -822,9 +825,10 @@ impl Render for SidebarChrome {
                                 ),
                         )
                     })
-                    .when(sidebar_settings.show_user_menu, |this| {
-                        this.child(self.render_user_menu_button(cx))
-                    }),
+                    .when(
+                        paths::APP_NAME == "Zed" && sidebar_settings.show_user_menu,
+                        |this| this.child(self.render_user_menu_button(cx)),
+                    ),
             )
             .into_any_element()
     }
@@ -1586,13 +1590,13 @@ impl SidebarChrome {
             client::Status::UpgradeRequired => {
                 let auto_updater = auto_update::AutoUpdater::get(cx);
                 let label = match auto_updater.map(|auto_update| auto_update.read(cx).status()) {
-                    Some(AutoUpdateStatus::Updated { .. }) => "Please restart Zed to Collaborate",
+                    Some(AutoUpdateStatus::Updated { .. }) => "Restart Dez to use Collaboration",
                     Some(AutoUpdateStatus::Installing { .. })
                     | Some(AutoUpdateStatus::Downloading { .. })
                     | Some(AutoUpdateStatus::Checking) => "Updating...",
                     Some(AutoUpdateStatus::Idle)
                     | Some(AutoUpdateStatus::Errored { .. })
-                    | None => "Please update Zed to Collaborate",
+                    | None => "Collaboration needs a newer Dez build",
                 };
 
                 Some(
@@ -1956,7 +1960,7 @@ impl SidebarChrome {
                                     .w_full()
                                     .gap_1()
                                     .justify_between()
-                                    .child(Label::new("Restart to update Zed").color(Color::Accent))
+                                    .child(Label::new("Restart to update Dez").color(Color::Accent))
                                     .child(
                                         Icon::new(IconName::Download)
                                             .size(IconSize::Small)
@@ -2354,7 +2358,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .action_checked_with_disabled(
-                                    restore_saved_canvas_layout_slot_1_label,
+                                    restore_saved_canvas_layout_slot_1_label.clone(),
                                     RestoreSavedCanvasLayout.boxed_clone(),
                                     false,
                                     !has_saved_canvas_layout_slot_1,
@@ -2388,7 +2392,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .action_checked_with_disabled(
-                                    restore_saved_canvas_layout_slot_2_label,
+                                    restore_saved_canvas_layout_slot_2_label.clone(),
                                     RestoreSavedCanvasLayoutSlot2.boxed_clone(),
                                     false,
                                     !has_saved_canvas_layout_slot_2,
@@ -2422,7 +2426,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .action_checked_with_disabled(
-                                    restore_saved_canvas_layout_slot_3_label,
+                                    restore_saved_canvas_layout_slot_3_label.clone(),
                                     RestoreSavedCanvasLayoutSlot3.boxed_clone(),
                                     false,
                                     !has_saved_canvas_layout_slot_3,

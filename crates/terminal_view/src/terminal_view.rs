@@ -12,13 +12,13 @@ use editor::{
 };
 use futures::{channel::oneshot, future::join_all};
 use gpui::{
-    Action, Anchor, AnyElement, App, AsyncApp, ClipboardEntry, DismissEvent, Entity, EventEmitter,
-    ExternalPaths, FocusHandle, Focusable, Font, KeyContext, KeyDownEvent, Keystroke, MouseButton,
-    MouseDownEvent, Pixels, Point as GpuiPoint, Render, ScrollWheelEvent, Styled, Subscription,
-    Task, TaskExt, WeakEntity, actions, anchored, deferred, div,
+    Action, Anchor, AnyElement, App, AsyncApp, AsyncWindowContext, ClipboardEntry, DismissEvent,
+    Entity, EventEmitter, ExternalPaths, FocusHandle, Focusable, Font, KeyContext, KeyDownEvent,
+    Keystroke, MouseButton, MouseDownEvent, Pixels, Point as GpuiPoint, Render, ScrollWheelEvent,
+    Styled, Subscription, Task, TaskExt, WeakEntity, actions, anchored, deferred, div,
 };
 use menu;
-use persistence::TerminalDb;
+use persistence::{StoredTerminalSessionRef, TerminalDb};
 use project::{Project, ProjectEntryId, search::SearchQuery};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -46,8 +46,8 @@ use terminal_element::TerminalElement;
 use terminal_path_like_target::{hover_path_like_target, open_path_like_target};
 use terminal_scrollbar::TerminalScrollHandle;
 use ui::{
-    ButtonLike, ContextMenu, Divider, PopoverMenu, ScrollAxes, Scrollbars, SplitButton, Tooltip,
-    WithScrollbar,
+    ButtonLike, Callout, ContextMenu, Divider, PopoverMenu, ScrollAxes, Scrollbars, Severity,
+    SplitButton, Tooltip, WithScrollbar,
     prelude::*,
     scrollbars::{self, ScrollbarVisibility},
 };
@@ -78,6 +78,8 @@ fn viewport_line_for_point(point: Point, display_offset: usize) -> Option<usize>
 }
 
 const CURSOR_BLINK_INTERVAL: Duration = Duration::from_millis(500);
+const TERMINAL_HOST_RESTORE_ATTEMPTS: usize = 40;
+const TERMINAL_HOST_RESTORE_INTERVAL: Duration = Duration::from_millis(50);
 
 /// Event to transmit the scroll from the element to the view
 #[derive(Clone, Debug, PartialEq)]
@@ -98,6 +100,8 @@ actions!(
     [
         /// Reruns the last executed task in the terminal.
         RerunTask,
+        /// Explicitly ends the process owned by the current terminal session.
+        TerminateSession,
     ]
 );
 
@@ -304,7 +308,7 @@ impl WorkspaceTerminalProviderState {
                 .await?;
 
             workspace.update_in(cx, |workspace, window, cx| {
-                add_terminal_to_workspace(
+                attach_terminal_to_workspace(
                     workspace,
                     select_terminal_target_pane(workspace, cx),
                     terminal.clone(),
@@ -418,7 +422,7 @@ where
         workspace.update_in(cx, |workspace, window, cx| match terminal {
             Ok(terminal) => {
                 let pane = workspace.active_pane().clone();
-                add_terminal_to_workspace(workspace, pane, terminal.clone(), true, window, cx);
+                attach_terminal_to_workspace(workspace, pane, terminal.clone(), true, window, cx);
                 Ok(terminal.downgrade())
             }
             Err(error) => {
@@ -434,15 +438,15 @@ where
     })
 }
 
-fn add_terminal_to_workspace(
+pub fn attach_terminal_to_workspace(
     workspace: &mut Workspace,
     pane: Entity<Pane>,
     terminal: Entity<Terminal>,
     focus: bool,
     window: &mut Window,
     cx: &mut Context<Workspace>,
-) {
-    let terminal_view = Box::new(cx.new(|cx| {
+) -> Entity<TerminalView> {
+    let terminal_view = cx.new(|cx| {
         TerminalView::new(
             terminal,
             workspace.weak_handle(),
@@ -451,8 +455,17 @@ fn add_terminal_to_workspace(
             window,
             cx,
         )
-    }));
-    workspace.add_item(pane, terminal_view, None, focus, focus, window, cx);
+    });
+    workspace.add_item(
+        pane,
+        Box::new(terminal_view.clone()),
+        None,
+        focus,
+        focus,
+        window,
+        cx,
+    );
+    terminal_view
 }
 
 fn select_terminal_target_pane(workspace: &Workspace, cx: &App) -> Entity<Pane> {
@@ -540,9 +553,12 @@ impl Render for FailedToSpawnTerminal {
                     .items_center()
                     .justify_center()
                     .text_center()
-                    .child(Label::new("Failed to spawn terminal"))
+                    .child(Label::new("Terminal did not start"))
                     .child(
-                        Label::new(self.error.to_string())
+                        Label::new(format!(
+                            "{}\n\nNo terminal process was started. Review terminal settings, then use New Terminal to try again.",
+                            self.error
+                        ))
                             .size(LabelSize::Small)
                             .color(Color::Muted)
                             .mb_4(),
@@ -565,7 +581,7 @@ impl workspace::Item for FailedToSpawnTerminal {
     type Event = ();
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
-        SharedString::new_static("Failed to spawn terminal")
+        SharedString::new_static("Terminal did not start")
     }
 }
 
@@ -597,6 +613,8 @@ pub struct TerminalView {
     show_workspace_actions: Option<bool>,
     blinking_terminal_enabled: bool,
     needs_serialize: bool,
+    session_ref_needs_serialize: bool,
+    session_unavailable: bool,
     custom_title: Option<String>,
     hover: Option<HoverTarget>,
     hover_tooltip_update: Task<()>,
@@ -725,6 +743,14 @@ impl TerminalView {
         });
 
         let subscriptions = vec![
+            cx.on_release(|this, cx| {
+                let session_id = this.terminal.read(cx).session_id();
+                if let Some(host) = terminal::session_host::LocalTerminalHost::try_global(cx) {
+                    host.update(cx, |host, _cx| {
+                        host.detach(session_id);
+                    });
+                }
+            }),
             focus_in,
             focus_out,
             cx.observe(&blink_manager, |_, _, cx| cx.notify()),
@@ -751,6 +777,8 @@ impl TerminalView {
             scroll_top: Pixels::ZERO,
             scroll_handle,
             needs_serialize: false,
+            session_ref_needs_serialize: true,
+            session_unavailable: false,
             custom_title: None,
             ime_state: None,
             self_handle: cx.entity().downgrade(),
@@ -781,6 +809,11 @@ impl TerminalView {
     /// visibility is derived from the terminal's `mode`.
     pub fn set_show_workspace_actions(&mut self, show: bool, cx: &mut Context<Self>) {
         self.show_workspace_actions = Some(show);
+        cx.notify();
+    }
+
+    pub fn set_session_unavailable(&mut self, unavailable: bool, cx: &mut Context<Self>) {
+        self.session_unavailable = unavailable;
         cx.notify();
     }
 
@@ -1009,13 +1042,15 @@ impl TerminalView {
                     },
                 )
                 .when(self.shows_workspace_actions(), |menu| {
-                    menu.separator().action(
-                        "Close Terminal Tab",
-                        Box::new(CloseActiveItem {
-                            save_intent: None,
-                            close_pinned: true,
-                        }),
-                    )
+                    menu.separator()
+                        .action(
+                            "Close Terminal Tab",
+                            Box::new(CloseActiveItem {
+                                save_intent: None,
+                                close_pinned: true,
+                            }),
+                        )
+                        .action("Terminate Terminal Process", Box::new(TerminateSession))
                 })
         });
 
@@ -1108,6 +1143,19 @@ impl TerminalView {
             .map(|task| terminal_rerun_override(&task.spawned_task.id))
             .unwrap_or_default();
         window.dispatch_action(Box::new(task), cx);
+    }
+
+    fn terminate_session(&mut self, _: &TerminateSession, _: &mut Window, cx: &mut Context<Self>) {
+        let session_id = self.terminal.read(cx).session_id();
+        if let Some(host) = terminal::session_host::LocalTerminalHost::try_global(cx) {
+            host.update(cx, |host, cx| {
+                host.terminate(session_id, cx);
+            });
+        } else {
+            self.terminal
+                .update(cx, |terminal, cx| terminal.terminate_process(cx));
+        }
+        cx.emit(ItemEvent::CloseItem);
     }
 
     fn clear(&mut self, _: &Clear, _: &mut Window, cx: &mut Context<Self>) {
@@ -1571,13 +1619,32 @@ fn subscribe_for_terminal_events(
         window,
         move |terminal_view, terminal, event, window, cx| {
             let current_cwd = terminal.read(cx).working_directory();
+            let terminal_session_id = terminal.read(cx).session_id().to_string();
             if current_cwd != previous_cwd {
-                previous_cwd = current_cwd;
+                previous_cwd = current_cwd.clone();
                 terminal_view.needs_serialize = true;
+                workspace
+                    .update(cx, |workspace, cx| {
+                        workspace.set_terminal_working_directory_evidence(
+                            terminal_session_id.clone(),
+                            current_cwd,
+                            cx,
+                        );
+                    })
+                    .ok();
             }
 
             match event {
                 Event::Wakeup => {
+                    workspace
+                        .update(cx, |workspace, cx| {
+                            workspace.set_terminal_evidence_lifecycle(
+                                &terminal_session_id,
+                                workspace::evidence::WorkspaceEvidenceLifecycle::Current,
+                                cx,
+                            );
+                        })
+                        .ok();
                     cx.notify();
                     window.invalidate_character_coordinates();
                     cx.emit(Event::Wakeup);
@@ -1672,6 +1739,18 @@ fn subscribe_for_terminal_events(
                     ),
                 },
                 Event::BreadcrumbsChanged => cx.emit(ItemEvent::UpdateBreadcrumbs),
+                Event::ProcessExited { .. } => {
+                    workspace
+                        .update(cx, |workspace, cx| {
+                            workspace.set_terminal_evidence_lifecycle(
+                                &terminal_session_id,
+                                workspace::evidence::WorkspaceEvidenceLifecycle::Stale,
+                                cx,
+                            );
+                        })
+                        .ok();
+                    cx.emit(ItemEvent::UpdateTab)
+                }
                 Event::CloseTerminal => cx.emit(ItemEvent::CloseItem),
                 Event::SelectionsChanged => {
                     window.invalidate_character_coordinates();
@@ -1813,6 +1892,7 @@ impl Render for TerminalView {
             .on_action(cx.listener(TerminalView::show_character_palette))
             .on_action(cx.listener(TerminalView::select_all))
             .on_action(cx.listener(TerminalView::rerun_task))
+            .on_action(cx.listener(TerminalView::terminate_session))
             .on_action(cx.listener(TerminalView::rename_terminal))
             .on_key_down(cx.listener(Self::key_down))
             .on_mouse_down(
@@ -1864,6 +1944,34 @@ impl Render for TerminalView {
                         )
                     }),
             )
+            .when(self.session_unavailable, |this| {
+                this.child(
+                    div()
+                        .absolute()
+                        .top_0()
+                        .left_0()
+                        .right_0()
+                        .child(
+                            Callout::new()
+                                .severity(Severity::Warning)
+                                .icon(IconName::Warning)
+                                .title("Saved session unavailable")
+                                .description(
+                                    "Dez started no replacement process. Keep this surface for context or start fresh explicitly.",
+                                )
+                                .actions_slot(
+                                    Button::new("new-terminal-from-unavailable", "New Terminal")
+                                        .style(ButtonStyle::Filled)
+                                        .on_click(|_, window, cx| {
+                                            window.dispatch_action(
+                                                NewCenterTerminal::default().boxed_clone(),
+                                                cx,
+                                            );
+                                        }),
+                                ),
+                        ),
+                )
+            })
             .children(self.context_menu.as_ref().map(|(menu, position, _)| {
                 deferred(
                     anchored()
@@ -2225,14 +2333,31 @@ impl SerializableItem for TerminalView {
             return None;
         }
 
-        if !self.needs_serialize {
+        if !self.needs_serialize && !self.session_ref_needs_serialize {
             return None;
         }
 
         let workspace_id = self.workspace_id?;
         let cwd = terminal.working_directory();
         let custom_title = self.custom_title.clone();
+        let session_ref = terminal::session_host::LocalTerminalHost::try_global(cx)
+            .and_then(|host| {
+                host.read(cx)
+                    .session_ref_if_registered(terminal.session_id())
+            })
+            .or_else(|| {
+                if !terminal.is_hosted() {
+                    return None;
+                }
+                let connection =
+                    terminal::session_host::transport::TerminalHostConnection::try_global(cx)?;
+                Some(terminal::session_host::TerminalSessionRef {
+                    host_id: connection.host_id(),
+                    session_id: terminal.session_id(),
+                })
+            });
         self.needs_serialize = false;
+        self.session_ref_needs_serialize = false;
 
         let db = TerminalDb::global(cx);
         Some(cx.background_spawn(async move {
@@ -2242,12 +2367,16 @@ impl SerializableItem for TerminalView {
             }
             db.save_custom_title(item_id, workspace_id, custom_title)
                 .await?;
+            if let Some(session_ref) = session_ref {
+                db.save_session_ref(item_id, workspace_id, session_ref)
+                    .await?;
+            }
             Ok(())
         }))
     }
 
     fn should_serialize(&self, _: &Self::Event) -> bool {
-        self.needs_serialize
+        self.needs_serialize || self.session_ref_needs_serialize
     }
 
     fn deserialize(
@@ -2259,7 +2388,7 @@ impl SerializableItem for TerminalView {
         cx: &mut App,
     ) -> Task<anyhow::Result<Entity<Self>>> {
         window.spawn(cx, async move |cx| {
-            let (cwd, custom_title) = cx
+            let (cwd, custom_title, stored_session_ref) = cx
                 .update(|_window, cx| {
                     let db = TerminalDb::global(cx);
                     let from_db = db
@@ -2281,14 +2410,92 @@ impl SerializableItem for TerminalView {
                         .log_err()
                         .flatten()
                         .filter(|title| !title.trim().is_empty());
-                    (cwd, custom_title)
+                    let stored_session_ref = db
+                        .get_session_ref(item_id, workspace_id)
+                        .unwrap_or_else(|error| {
+                            log::error!("failed to restore terminal session reference: {error:#}");
+                            StoredTerminalSessionRef::Invalid
+                        });
+                    (cwd, custom_title, stored_session_ref)
                 })
                 .ok()
-                .unwrap_or((None, None));
+                .unwrap_or((None, None, StoredTerminalSessionRef::Invalid));
 
-            let terminal = project
-                .update(cx, |project, cx| project.create_terminal_shell(cwd, cx))
-                .await?;
+            let (terminal, session_unavailable) = match stored_session_ref {
+                StoredTerminalSessionRef::Legacy => {
+                    (
+                        project
+                            .update(cx, |project, cx| project.create_terminal_shell(cwd, cx))
+                            .await?,
+                        false,
+                    )
+                }
+                StoredTerminalSessionRef::Valid(session_ref) => {
+                    let attached = cx
+                        .update(|_window, cx| {
+                            let host = terminal::session_host::LocalTerminalHost::try_global(cx)?;
+                            if host.read(cx).host_id() != session_ref.host_id {
+                                return None;
+                            }
+                            host.update(cx, |host, _cx| {
+                                host.attach(session_ref.session_id, None).terminal
+                            })
+                        })
+                        .ok()
+                        .flatten();
+                    if let Some(terminal) = attached {
+                        (terminal, false)
+                    } else if let Some(connection) =
+                        wait_for_hosted_terminal_connection(session_ref.host_id, cx).await
+                    {
+                        match restore_hosted_terminal(
+                            &project,
+                            connection,
+                            session_ref,
+                            cwd,
+                            cx,
+                        )
+                        .await?
+                        {
+                            Some(terminal) => (terminal, false),
+                            None => (
+                                cx.update(|window, cx| {
+                                    session_unavailable_terminal(
+                                        &project,
+                                        "The terminal host no longer owns this saved session.",
+                                        window,
+                                        cx,
+                                    )
+                                })?,
+                                true,
+                            ),
+                        }
+                    } else {
+                        (
+                            cx.update(|window, cx| {
+                                session_unavailable_terminal(
+                                    &project,
+                                    "The saved terminal process is no longer available on this Dez host.",
+                                    window,
+                                    cx,
+                                )
+                            })?,
+                            true,
+                        )
+                    }
+                }
+                StoredTerminalSessionRef::Invalid => (
+                    cx.update(|window, cx| {
+                        session_unavailable_terminal(
+                            &project,
+                            "The saved terminal session reference is incomplete or invalid.",
+                            window,
+                            cx,
+                        )
+                    })?,
+                    true,
+                ),
+            };
             cx.update(|window, cx| {
                 cx.new(|cx| {
                     let mut view = TerminalView::new(
@@ -2299,14 +2506,165 @@ impl SerializableItem for TerminalView {
                         window,
                         cx,
                     );
-                    if custom_title.is_some() {
+                    if custom_title.is_some() && !session_unavailable {
                         view.custom_title = custom_title;
                     }
+                    view.session_unavailable = session_unavailable;
                     view
                 })
             })
         })
     }
+}
+
+pub async fn restore_hosted_terminal(
+    project: &Entity<Project>,
+    connection: Arc<terminal::session_host::transport::TerminalHostConnection>,
+    session_ref: terminal::session_host::TerminalSessionRef,
+    fallback_working_directory: Option<PathBuf>,
+    cx: &mut AsyncWindowContext,
+) -> anyhow::Result<Option<Entity<Terminal>>> {
+    let response = connection
+        .command(terminal::session_host::TerminalSessionCommand::Attach {
+            session_id: session_ref.session_id,
+            replay_after_sequence: Some(0),
+        })
+        .await?;
+    let attachment = match response {
+        terminal::session_host::transport::TerminalHostResponse::Attachment { attachment } => {
+            attachment
+        }
+        terminal::session_host::transport::TerminalHostResponse::Error { message }
+        | terminal::session_host::transport::TerminalHostResponse::Unsupported { message } => {
+            log::warn!("terminal host restore failed: {message}");
+            return Ok(None);
+        }
+        terminal::session_host::transport::TerminalHostResponse::Sessions { .. }
+        | terminal::session_host::transport::TerminalHostResponse::Snapshot { .. }
+        | terminal::session_host::transport::TerminalHostResponse::Heartbeat { .. }
+        | terminal::session_host::transport::TerminalHostResponse::Events { .. } => {
+            log::warn!("terminal host returned an invalid attach response during restore");
+            return Ok(None);
+        }
+    };
+    if matches!(
+        attachment.snapshot.state,
+        terminal::session_host::TerminalSessionState::Missing
+            | terminal::session_host::TerminalSessionState::Incompatible { .. }
+    ) {
+        return Ok(None);
+    }
+    let working_directory = attachment
+        .snapshot
+        .working_directory
+        .or(fallback_working_directory);
+    let session_id = session_ref.session_id;
+    cx.update(|window, cx| {
+        let settings = TerminalSettings::get_global(cx);
+        let builder = terminal::TerminalBuilder::new_hosted(
+            session_id,
+            connection.controller(session_id),
+            working_directory,
+            Shell::System,
+            HashMap::default(),
+            settings.cursor_shape,
+            settings.alternate_scroll,
+            settings.max_scroll_history_lines,
+            settings.path_hyperlink_regexes.clone(),
+            settings.path_hyperlink_timeout_ms,
+            window.window_handle().window_id().as_u64(),
+            cx.background_executor(),
+            Vec::new(),
+            project.read(cx).path_style(cx),
+        );
+        let terminal = cx.new(|cx| builder.subscribe(cx));
+        connection.observe_terminal(&terminal, cx);
+        let replay_task = connection.follow_session(terminal.downgrade(), session_id, cx);
+        terminal.update(cx, |terminal, _cx| {
+            terminal.set_hosted_replay_task(replay_task);
+        });
+        Some(terminal)
+    })
+}
+
+/// Waits briefly for the opt-in terminal host startup task to publish its
+/// authenticated connection. Persisted views restore concurrently with app
+/// startup, so a synchronous lookup would turn a healthy session into a false
+/// "unavailable" state.
+pub async fn wait_for_hosted_terminal_connection(
+    host_id: terminal::session_host::TerminalHostId,
+    cx: &mut AsyncWindowContext,
+) -> Option<Arc<terminal::session_host::transport::TerminalHostConnection>> {
+    let should_wait =
+        std::env::var(terminal::session_host::transport::EXPERIMENTAL_TERMINAL_HOST_ENV).as_deref()
+            == Ok("1");
+    let attempts = if should_wait {
+        TERMINAL_HOST_RESTORE_ATTEMPTS
+    } else {
+        0
+    };
+    for attempt in 0..=attempts {
+        let connection = cx
+            .update(|_window, cx| {
+                let startup_state =
+                    terminal::session_host::transport::TerminalHostStartupStatus::state(cx);
+                let connection =
+                    terminal::session_host::transport::TerminalHostConnection::try_global(cx)?;
+                matches!(
+                    startup_state,
+                    terminal::session_host::transport::TerminalHostStartupState::Connected {
+                        host_id: connected_host_id,
+                    } if connected_host_id == host_id
+                )
+                .then_some(connection)
+            })
+            .ok()
+            .flatten()
+            .filter(|connection| connection.host_id() == host_id);
+        if connection.is_some() || attempt == attempts {
+            return connection;
+        }
+        cx.background_executor()
+            .timer(TERMINAL_HOST_RESTORE_INTERVAL)
+            .await;
+    }
+    None
+}
+
+/// Builds a terminal-shaped recovery surface without starting a process.
+/// Callers use this when a persisted session identity cannot be reconciled.
+pub fn session_unavailable_terminal(
+    project: &Entity<Project>,
+    reason: &str,
+    window: &mut Window,
+    cx: &mut App,
+) -> Entity<Terminal> {
+    let settings = TerminalSettings::get_global(cx);
+    let cursor_shape = settings.cursor_shape;
+    let alternate_scroll = settings.alternate_scroll;
+    let max_scroll_history_lines = settings.max_scroll_history_lines;
+    let path_style = project.read(cx).path_style(cx);
+    let window_id = window.window_handle().window_id().as_u64();
+    let builder = terminal::TerminalBuilder::new_display_only(
+        cursor_shape,
+        alternate_scroll,
+        max_scroll_history_lines,
+        window_id,
+        cx.background_executor(),
+        path_style,
+    );
+    cx.new(|cx| {
+        builder
+            .with_display_text(
+                "Session unavailable",
+                &[
+                    "Dez did not start a replacement process.",
+                    reason,
+                    "Use New Terminal when you are ready to start fresh computation.",
+                ],
+            )
+            .subscribe(cx)
+    })
 }
 
 impl SearchableItem for TerminalView {

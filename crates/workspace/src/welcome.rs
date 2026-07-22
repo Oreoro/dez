@@ -1,6 +1,6 @@
 use crate::{
-    NewFile, Open, OpenMode, PathList, RecentWorkspace, SerializedWorkspaceLocation, ToggleSidebar,
-    Workspace, WorkspaceSettings,
+    NewCenterTerminal, NewFile, Open, OpenMode, PathList, RecentWorkspace,
+    SerializedWorkspaceLocation, ToggleSidebar, Workspace, WorkspaceSettings,
     item::{Item, ItemEvent},
     persistence::WorkspaceDb,
 };
@@ -12,11 +12,12 @@ use gpui::{
 };
 use gpui::{WeakEntity, linear_color_stop, linear_gradient};
 use menu::{SelectNext, SelectPrevious};
+use paths::APP_NAME;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use settings::{DefaultOpenBehavior, Settings};
-use ui::{ButtonLike, Divider, DividerColor, KeyBinding, Vector, VectorName, prelude::*};
+use ui::{ButtonLike, Divider, DividerColor, KeyBinding, prelude::*};
 use util::ResultExt;
 use zed_actions::{
     Extensions, OpenKeymap, OpenOnboarding, OpenSettings, assistant::ToggleFocus, command_palette,
@@ -32,7 +33,7 @@ pub struct OpenRecentProject {
 actions!(
     zed,
     [
-        /// Show the Zed welcome screen
+        /// Show the Dez welcome screen
         ShowWelcome
     ]
 );
@@ -53,14 +54,18 @@ impl SectionHeader {
 impl RenderOnce for SectionHeader {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         h_flex()
+            .w_full()
+            .min_w_0()
             .px_1()
             .mb_2()
             .gap_2()
             .child(
-                Label::new(self.title.to_ascii_uppercase())
-                    .buffer_font(cx)
-                    .color(Color::Muted)
-                    .size(LabelSize::XSmall),
+                div().flex_none().child(
+                    Label::new(self.title.to_ascii_uppercase())
+                        .buffer_font(cx)
+                        .color(Color::Muted)
+                        .size(LabelSize::XSmall),
+                ),
             )
             .child(Divider::horizontal().color(DividerColor::BorderVariant))
     }
@@ -160,10 +165,18 @@ impl SectionEntry {
     }
 }
 
-const CONTENT: (Section<4>, Section<3>) = (
+const NEW_CENTER_TERMINAL: NewCenterTerminal = NewCenterTerminal { local: false };
+
+const CONTENT: (Section<5>, Section<3>) = (
     Section {
         title: "Get Started",
         entries: [
+            SectionEntry {
+                icon: IconName::Terminal,
+                title: "New Terminal",
+                action: &NEW_CENTER_TERMINAL,
+                visibility_guard: SectionVisibility::Always,
+            },
             SectionEntry {
                 icon: IconName::Plus,
                 title: "New File",
@@ -448,9 +461,9 @@ impl Render for WelcomePage {
         };
 
         let welcome_label = if self.fallback_to_recent_projects {
-            "Welcome back to Zed"
+            format!("Welcome back to {APP_NAME}")
         } else {
-            "Welcome to Zed"
+            format!("Welcome to {APP_NAME}")
         };
 
         h_flex()
@@ -466,7 +479,7 @@ impl Render for WelcomePage {
                 v_flex()
                     .id("welcome-content")
                     .p_8()
-                    .max_w_128()
+                    .max_w(rems_from_px(680.))
                     .size_full()
                     .gap_6()
                     .justify_center()
@@ -477,10 +490,22 @@ impl Render for WelcomePage {
                             .justify_center()
                             .mb_4()
                             .gap_4()
-                            .child(Vector::square(VectorName::ZedLogo, rems_from_px(45.)))
+                            .child(
+                                h_flex()
+                                    .flex_none()
+                                    .w_12()
+                                    .h_12()
+                                    .rounded_md()
+                                    .border_1()
+                                    .border_color(cx.theme().colors().border_variant)
+                                    .bg(cx.theme().colors().panel_background)
+                                    .items_center()
+                                    .justify_center()
+                                    .child(Label::new("D").buffer_font(cx).size(LabelSize::Large)),
+                            )
                             .child(
                                 v_flex().child(Headline::new(welcome_label)).child(
-                                    Label::new("The editor for what's next")
+                                    Label::new("Write. Delegate. Watch. Verify.")
                                         .size(LabelSize::Small)
                                         .color(Color::Muted)
                                         .italic(),

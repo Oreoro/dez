@@ -68,6 +68,17 @@ impl PanelItem {
     pub fn is_panel<T: Panel>(&self) -> bool {
         self.panel.to_any().downcast::<T>().is_ok()
     }
+
+    fn tab_label(&self) -> &'static str {
+        match self.panel.panel_key() {
+            "ProjectPanel" => "Project",
+            "GitPanel" => "Git",
+            "OutlinePanel" => "Outline",
+            "CollaborationPanel" => "Collab",
+            AGENT_PANEL_KEY => "Agent",
+            _ => self.panel.persistent_name(),
+        }
+    }
 }
 
 impl Focusable for PanelItem {
@@ -88,17 +99,20 @@ impl Item for PanelItem {
     type Event = ();
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
-        self.panel.persistent_name().into()
+        self.tab_label().into()
     }
 
     fn tab_content(&self, params: TabContentParams, window: &Window, cx: &App) -> gpui::AnyElement {
         h_flex()
+            .min_w_0()
             .gap_1()
             .when_some(self.tab_icon(window, cx), |this, icon| {
-                this.child(icon.size(IconSize::XSmall))
+                this.child(div().flex_none().child(icon.size(IconSize::XSmall)))
             })
             .child(
                 Label::new(self.tab_content_text(params.detail.unwrap_or_default(), cx))
+                    .single_line()
+                    .truncate()
                     .color(params.text_color()),
             )
             .into_any_element()

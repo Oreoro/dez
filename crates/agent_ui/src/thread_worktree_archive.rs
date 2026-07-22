@@ -275,7 +275,7 @@ async fn verify_created_by_zed(root: &RootPlan, cx: &mut AsyncApp) -> Result<()>
         .map_err(|_| anyhow!("worktree creation time check was canceled"))?
         .with_context(|| {
             format!(
-                "refusing to delete worktree at {}: failed to verify that Zed created it",
+                "refusing to delete worktree at {}: failed to verify that Dez created it",
                 root.root_path.display()
             )
         })?;
@@ -1620,7 +1620,7 @@ mod tests {
             .await
             .expect_err("remove_root should refuse to delete a recreated worktree");
         assert!(
-            error.to_string().contains("not the worktree Zed created"),
+            error.to_string().contains("not the worktree Dez created"),
             "unexpected error: {error:#}"
         );
 

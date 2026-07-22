@@ -1,0 +1,144 @@
+name: Dez guards
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  identity:
+    name: Fork identity
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out Dez
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+      - name: Verify identity and updater isolation
+        run: ./script/dez-identity-check
+
+  upstream:
+    name: Upstream drift and merge rehearsal
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+    outputs:
+      upstream_sha: ${{ steps.rehearsal.outputs.upstream_sha }}
+      behind_count: ${{ steps.rehearsal.outputs.behind_count }}
+      conflict_count: ${{ steps.rehearsal.outputs.conflict_count }}
+      merge_status: ${{ steps.rehearsal.outputs.merge_status }}
+    steps:
+      - name: Check out Dez history
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          fetch-depth: 0
+
+      - name: Fetch canonical upstream
+        run: |
+          git remote add upstream https://github.com/zed-industries/zed.git
+          git fetch upstream main --no-tags --prune
+
+      - id: rehearsal
+        name: Measure drift and rehearse merge
+        run: |
+          set -euo pipefail
+          mkdir -p upstream-rehearsal
+
+          upstream_sha=$(git rev-parse upstream/main)
+          behind_count=$(git rev-list --count HEAD..upstream/main)
+          merge_base=$(git merge-base HEAD upstream/main)
+
+          set +e
+          git merge --no-commit --no-ff upstream/main \
+            >upstream-rehearsal/merge.log 2>&1
+          merge_status=$?
+          set -e
+
+          git diff --name-only --diff-filter=U \
+            >upstream-rehearsal/conflicts.txt
+          git status --short >upstream-rehearsal/status.txt
+          conflict_count=$(sed '/^$/d' upstream-rehearsal/conflicts.txt | wc -l | tr -d ' ')
+
+          {
+            echo "upstream_sha=$upstream_sha"
+            echo "behind_count=$behind_count"
+            echo "conflict_count=$conflict_count"
+            echo "merge_status=$merge_status"
+          } >>"$GITHUB_OUTPUT"
+
+          {
+            echo "## Upstream rehearsal"
+            echo
+            echo "- Dez SHA: \`$(git rev-parse HEAD)\`"
+            echo "- Upstream SHA: \`$upstream_sha\`"
+            echo "- Merge base: \`$merge_base\`"
+            echo "- Upstream commits after Dez: $behind_count"
+            echo "- Conflicted files: $conflict_count"
+            echo "- Merge exit status: $merge_status"
+          } >>"$GITHUB_STEP_SUMMARY"
+
+          if git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+            git merge --abort
+          fi
+
+      - name: Upload rehearsal evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: upstream-rehearsal-${{ steps.rehearsal.outputs.upstream_sha }}
+          path: upstream-rehearsal/
+          if-no-files-found: error
+
+      - name: Create or update upstream status issue
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
+        env:
+          UPSTREAM_SHA: ${{ steps.rehearsal.outputs.upstream_sha }}
+          BEHIND_COUNT: ${{ steps.rehearsal.outputs.behind_count }}
+          CONFLICT_COUNT: ${{ steps.rehearsal.outputs.conflict_count }}
+          MERGE_STATUS: ${{ steps.rehearsal.outputs.merge_status }}
+        with:
+          script: |
+            const title = "[automation] Upstream Zed synchronization";
+            const body = [
+              "This issue is maintained by the scheduled Dez upstream rehearsal.",
+              "",
+              `- Dez SHA: \`${context.sha}\``,
+              `- Upstream SHA: \`${process.env.UPSTREAM_SHA}\``,
+              `- Commits behind upstream: ${process.env.BEHIND_COUNT}`,
+              `- Conflicted files: ${process.env.CONFLICT_COUNT}`,
+              `- Merge exit status: ${process.env.MERGE_STATUS}`,
+              `- Evidence: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              "",
+              "A conflict is a review queue, not permission to push an automatic resolution.",
+            ].join("\n");
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = issues.find((issue) => issue.title === title && !issue.pull_request);
+
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+              });
+            }

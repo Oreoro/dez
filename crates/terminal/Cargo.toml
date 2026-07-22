@@ -30,10 +30,12 @@ gpui.workspace = true
 itertools.workspace = true
 libc.workspace = true
 log.workspace = true
+net.workspace = true
 regex.workspace = true
 release_channel.workspace = true
 schemars.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 settings.workspace = true
 sysinfo.workspace = true
 task.workspace = true
@@ -43,9 +45,11 @@ thiserror.workspace = true
 url.workspace = true
 util.workspace = true
 urlencoding.workspace = true
+uuid.workspace = true
 vte.workspace = true
 parking_lot.workspace = true
 percent-encoding.workspace = true
+polling.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 windows.workspace = true

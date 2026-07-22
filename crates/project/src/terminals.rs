@@ -12,10 +12,19 @@ use std::{
     borrow::Cow,
     path::{Path, PathBuf},
     sync::Arc,
+    time::Duration,
 };
 use task::{Shell, ShellBuilder, ShellKind, SpawnInTerminal};
 use terminal::{
     TaskState, TaskStatus, Terminal, TerminalBuilder, insert_zed_terminal_env,
+    session_host::{
+        TerminalSessionCommand, TerminalSessionId, TerminalSessionShell,
+        transport::{
+            TERMINAL_HOST_BIN_ENV, TERMINAL_HOST_ID_ENV, TERMINAL_HOST_SOCKET_ENV,
+            TERMINAL_HOST_TOKEN_FILE_ENV, TERMINAL_SESSION_ID_ENV, TerminalHostConnection,
+            TerminalHostResponse, terminal_host_executable_path,
+        },
+    },
     terminal_settings::TerminalSettings,
 };
 use util::{
@@ -23,6 +32,9 @@ use util::{
 };
 
 use crate::{Project, ProjectPath};
+
+const TERMINAL_HOST_CREATE_ATTEMPTS: usize = 40;
+const TERMINAL_HOST_CREATE_INTERVAL: Duration = Duration::from_millis(50);
 
 pub struct Terminals {
     pub(crate) local_handles: Vec<WeakEntity<terminal::Terminal>>,
@@ -264,6 +276,14 @@ impl Project {
             project.update(cx, move |this, cx| {
                 let terminal_handle = cx.new(|cx| builder.subscribe(cx));
 
+                if !is_via_remote
+                    && let Some(host) = terminal::session_host::LocalTerminalHost::try_global(cx)
+                {
+                    host.update(cx, |host, cx| {
+                        host.register(terminal_handle.clone(), cx);
+                    });
+                }
+
                 this.terminals
                     .local_handles
                     .push(terminal_handle.downgrade());
@@ -402,19 +422,139 @@ impl Project {
             .await
             .unwrap_or_default();
 
-            let builder = project
-                .update(cx, move |_, cx| {
-                    let (shell, env) = {
-                        match remote_client {
-                            Some(remote_client) => {
-                                create_remote_shell(None, env, path, remote_client, cx)?
+            let helper_enabled = std::env::var(
+                terminal::session_host::transport::EXPERIMENTAL_TERMINAL_HOST_ENV,
+            )
+            .as_deref()
+                == Ok("1");
+            let mut hosted_connection = if is_via_remote {
+                None
+            } else {
+                cx.update(|cx| TerminalHostConnection::try_global(cx))
+            };
+            if helper_enabled && !is_via_remote && hosted_connection.is_none() {
+                for _ in 0..TERMINAL_HOST_CREATE_ATTEMPTS {
+                    cx.background_executor()
+                        .timer(TERMINAL_HOST_CREATE_INTERVAL)
+                        .await;
+                    hosted_connection = cx.update(|cx| TerminalHostConnection::try_global(cx));
+                    if hosted_connection.is_some() {
+                        break;
+                    }
+                }
+                if hosted_connection.is_none() {
+                    let detail = cx.update(|cx| {
+                        match terminal::session_host::transport::TerminalHostStartupStatus::state(
+                            cx,
+                        ) {
+                            terminal::session_host::transport::TerminalHostStartupState::Failed {
+                                message,
                             }
-                            None => (settings.shell, env),
+                            | terminal::session_host::transport::TerminalHostStartupState::Reconnecting {
+                                message,
+                            } => Some(message),
+                            terminal::session_host::transport::TerminalHostStartupState::Disabled
+                            | terminal::session_host::transport::TerminalHostStartupState::Connecting
+                            | terminal::session_host::transport::TerminalHostStartupState::Connected {
+                                ..
+                            } => None,
                         }
-                    };
-                    anyhow::Ok(TerminalBuilder::new(
-                        local_path.map(|path| path.to_path_buf()),
-                        None,
+                    });
+                    match detail {
+                        Some(detail) => anyhow::bail!(
+                            "the experimental Dez terminal host is unavailable: {detail}; no disposable fallback shell was started"
+                        ),
+                        None => anyhow::bail!(
+                            "the experimental Dez terminal host is unavailable; no disposable fallback shell was started"
+                        ),
+                    }
+                }
+            }
+            let (builder, hosted_session) = if let Some(connection) = hosted_connection {
+                let session_id = TerminalSessionId::new();
+                let working_directory = local_path.map(|path| path.to_path_buf());
+                let shell = settings.shell;
+                env.remove("SHLVL");
+                if std::env::var("LANG").is_err() {
+                    env.entry("LANG".to_owned())
+                        .or_insert_with(|| "en_US.UTF-8".to_owned());
+                }
+                cx.update(|cx| {
+                    insert_zed_terminal_env(&mut env, &release_channel::AppVersion::global(cx));
+                });
+                let terminal_host_directory = paths::state_dir().join("terminal-host");
+                if let Ok(helper) = terminal_host_executable_path() {
+                    env.insert(
+                        TERMINAL_HOST_BIN_ENV.to_owned(),
+                        helper.to_string_lossy().into_owned(),
+                    );
+                }
+                env.insert(
+                    TERMINAL_HOST_SOCKET_ENV.to_owned(),
+                    terminal_host_directory
+                        .join("local.sock")
+                        .to_string_lossy()
+                        .into_owned(),
+                );
+                env.insert(
+                    TERMINAL_HOST_TOKEN_FILE_ENV.to_owned(),
+                    terminal_host_directory
+                        .join("auth.token")
+                        .to_string_lossy()
+                        .into_owned(),
+                );
+                env.insert(TERMINAL_HOST_ID_ENV.to_owned(), connection.host_id().to_string());
+                env.insert(TERMINAL_SESSION_ID_ENV.to_owned(), session_id.to_string());
+                let hosted_shell = match &shell {
+                    Shell::System => None,
+                    Shell::Program(program) => Some(TerminalSessionShell {
+                        program: program.clone(),
+                        args: Vec::new(),
+                    }),
+                    Shell::WithArguments { program, args, .. } => Some(TerminalSessionShell {
+                        program: program.clone(),
+                        args: args.clone(),
+                    }),
+                };
+                let response = connection
+                    .command(TerminalSessionCommand::Create {
+                        session_id,
+                        working_directory: working_directory.clone(),
+                        shell: hosted_shell,
+                        environment: env
+                            .iter()
+                            .map(|(name, value)| (name.clone(), value.clone()))
+                            .collect(),
+                        columns: 80,
+                        rows: 24,
+                    })
+                    .await?;
+                match response {
+                    TerminalHostResponse::Snapshot { snapshot } if snapshot.state.may_be_live() => {
+                    }
+                    TerminalHostResponse::Error { message }
+                    | TerminalHostResponse::Unsupported { message } => {
+                        anyhow::bail!("terminal host could not create a shell: {message}");
+                    }
+                    TerminalHostResponse::Snapshot { snapshot } => {
+                        anyhow::bail!(
+                            "terminal host created a non-live shell state: {}",
+                            snapshot.state.label()
+                        );
+                    }
+                    TerminalHostResponse::Sessions { .. }
+                    | TerminalHostResponse::Attachment { .. }
+                    | TerminalHostResponse::Heartbeat { .. }
+                    | TerminalHostResponse::Events { .. } => {
+                        anyhow::bail!("terminal host returned an invalid create response");
+                    }
+                }
+                let controller = connection.controller(session_id);
+                let builder = project.update(cx, move |_, cx| {
+                    TerminalBuilder::new_hosted(
+                        session_id,
+                        controller,
+                        working_directory,
                         shell,
                         env,
                         settings.cursor_shape,
@@ -422,17 +562,62 @@ impl Project {
                         settings.max_scroll_history_lines,
                         settings.path_hyperlink_regexes,
                         settings.path_hyperlink_timeout_ms,
-                        is_via_remote,
                         cx.entity_id().as_u64(),
-                        None,
-                        cx,
+                        cx.background_executor(),
                         activation_script,
                         path_style,
-                    ))
-                })??
-                .await?;
+                    )
+                })?;
+                (builder, Some((connection, session_id)))
+            } else {
+                let builder = project
+                    .update(cx, move |_, cx| {
+                        let (shell, env) = {
+                            match remote_client {
+                                Some(remote_client) => {
+                                    create_remote_shell(None, env, path, remote_client, cx)?
+                                }
+                                None => (settings.shell, env),
+                            }
+                        };
+                        anyhow::Ok(TerminalBuilder::new(
+                            local_path.map(|path| path.to_path_buf()),
+                            None,
+                            shell,
+                            env,
+                            settings.cursor_shape,
+                            settings.alternate_scroll,
+                            settings.max_scroll_history_lines,
+                            settings.path_hyperlink_regexes,
+                            settings.path_hyperlink_timeout_ms,
+                            is_via_remote,
+                            cx.entity_id().as_u64(),
+                            None,
+                            cx,
+                            activation_script,
+                            path_style,
+                        ))
+                    })??
+                    .await?;
+                (builder, None)
+            };
             project.update(cx, move |this, cx| {
                 let terminal_handle = cx.new(|cx| builder.subscribe(cx));
+
+                if let Some((connection, session_id)) = hosted_session {
+                    connection.observe_terminal(&terminal_handle, cx);
+                    let replay_task =
+                        connection.follow_session(terminal_handle.downgrade(), session_id, cx);
+                    terminal_handle.update(cx, |terminal, _cx| {
+                        terminal.set_hosted_replay_task(replay_task);
+                    });
+                } else if !is_via_remote
+                    && let Some(host) = terminal::session_host::LocalTerminalHost::try_global(cx)
+                {
+                    host.update(cx, |host, cx| {
+                        host.register(terminal_handle.clone(), cx);
+                    });
+                }
 
                 this.terminals
                     .local_handles

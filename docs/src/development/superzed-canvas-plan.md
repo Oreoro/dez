@@ -1,5 +1,9 @@
 # Superzed Canvas implementation plan
 
+> This file is retained as implementation history and detailed design input.
+> The [Dez Fork Notes](./dez/fork-notes.md) are the permanent source of truth,
+> and the [Dez Roadmap](./dez/roadmap.md) defines current execution order.
+
 This plan integrates the Superzed upstream merge request with the Zed Canvas
 product and design-system specifications:
 
@@ -539,9 +543,10 @@ Use the existing panel-as-pane bridge as the migration path:
   restore by migrating dock-hosted panels into pane tabs and closing legacy dock
   chrome.
 - Runtime panel migration and Canvas recipes now require
-  `pane_grid.panel_surface = "pane_tab"`, `pane_grid.draggable_panel_tabs =
-  true`, and `pane_grid.show_legacy_docks = false`; opting out disables
-  automatic panel-pane creation without deleting existing manual pane state.
+  `pane_grid.panel_surface = "pane_tab"`,
+  `pane_grid.draggable_panel_tabs = true`, and
+  `pane_grid.show_legacy_docks = false`. Opting out disables automatic
+  panel-pane creation without deleting existing manual pane state.
 - Runtime active-pane border rendering now honors `pane_grid.focus_indicator`:
   `title` suppresses the border, while `border`, `border_and_title`, and
   `ring` use the existing active-pane border treatment.

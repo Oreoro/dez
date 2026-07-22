@@ -4,7 +4,8 @@ use agent::ThreadStore;
 use agent_ui::{
     ThreadId,
     terminal_thread_metadata_store::{
-        TerminalThreadMetadata, TerminalThreadMetadataStore, TestTerminalMetadataDbName,
+        TerminalAttentionState, TerminalThreadMetadata, TerminalThreadMetadataStore,
+        TestTerminalMetadataDbName,
     },
     test_support::{
         active_session_id, active_thread_id, open_thread_with_connection,
@@ -1803,7 +1804,7 @@ async fn test_closing_last_agent_panel_terminal_restores_empty_header(cx: &mut T
     // placeholder row, so the header reports having threads.
     assert_eq!(
         visible_entries_as_strings(&sidebar, cx),
-        vec!["v [my-project]", "  New Zed Agent Thread"]
+        vec!["v [my-project]", "  New Dez Agent Thread"]
     );
     assert_project_header_has_threads(&sidebar, "my-project", true, cx);
 
@@ -1916,6 +1917,8 @@ async fn test_terminal_metadata_is_deduped_across_project_groups(cx: &mut TestAp
         .unwrap(),
         remote_connection: None,
         working_directory: None,
+        attention: TerminalAttentionState::default(),
+        session_ref: None,
     };
 
     cx.update(|_, cx| {
@@ -3107,6 +3110,8 @@ async fn test_thread_switcher_includes_terminal_metadata_for_open_project_group(
         .unwrap(),
         remote_connection: None,
         working_directory: None,
+        attention: TerminalAttentionState::default(),
+        session_ref: None,
     };
     cx.update(|_, cx| {
         TerminalThreadMetadataStore::global(cx).update(cx, |store, cx| {
@@ -3214,6 +3219,8 @@ async fn test_thread_switcher_preserves_closed_terminal_linked_worktree_workspac
         .unwrap(),
         remote_connection: None,
         working_directory: None,
+        attention: TerminalAttentionState::default(),
+        session_ref: None,
     };
     cx.update(|_, cx| {
         TerminalThreadMetadataStore::global(cx).update(cx, |store, cx| {
@@ -3362,6 +3369,8 @@ async fn test_archive_selected_terminal_archives_closed_linked_worktree(cx: &mut
         .unwrap(),
         remote_connection: None,
         working_directory: None,
+        attention: TerminalAttentionState::default(),
+        session_ref: None,
     };
     cx.update(|_, cx| {
         TerminalThreadMetadataStore::global(cx).update(cx, |store, cx| {
