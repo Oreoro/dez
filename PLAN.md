@@ -74,7 +74,7 @@ end-to-end interaction proof.
 | Area                   | Evidence now                                                                                                                                                                                                                         | Completion gap                                                                                                                                       |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Upstream               | Integrated `upstream/main` `9d0ef37a2571` through two-parent merge `2be63cfea347`; eleven conflicts are resolved and classified; consolidated build provenance is recorded                                                           | Complete runtime regression, installed coexistence, and design-partner proof                                                                         |
-| Identity               | Dez source guards pass; the arm64 debug app, CLI, helper, and `dev.dez.Dez-Dev`/`dez-dev` ad-hoc bundle are audited                                                                                                                  | Official-Zed install coexistence, public signing/notarization, updater, remote, and visual proof                                                     |
+| Identity               | Dez source guards pass, including the local-first launch boundary; the arm64 debug app, CLI, helper, and `dev.dez.Dez-Dev`/`dez-dev` ad-hoc bundle are audited                                                                       | Rebuild the local-first policy, then official-Zed install coexistence, public signing/notarization, updater, remote, and visual proof                |
 | App Session            | Restore barrier, lifecycle state, ordered Workspace registry, explicit ordered viewport records, active selection, and unresolved identity retention exist in source                                                                 | Live viewport/entity composition and consolidated runtime proof                                                                                      |
 | Workspace and Surfaces | Pane/Canvas repair, panel-to-pane work, startup request ordering, and typed path projection exist                                                                                                                                    | Authoritative EvidenceSet, scoped tools, movement proof, and shared-store isolation                                                                  |
 | Local Host             | Protocol 4 app/helper builds and focused tests pass; an authenticated packaged-runtime Session retained one shell PID, 88 replay chunks, both pre/post-resize dimensions, and explicit Detached state                                | GUI-exit/same-Session reattach proof and default-backend decision                                                                                    |
@@ -474,8 +474,12 @@ chrome; every state is truthful, accessible, and visually coherent.
       retain useful upstream capability behind appropriately named entry points.
       Dez no longer renders upstream sign-in/user-plan/connection chrome, the
       View menu omits Collab, and Help no longer routes to upstream bug, feature,
-      email, social, or hiring flows; upstream docs/repository links remain
-      explicitly attributed.
+      email, social, or hiring flows. Commits `1d5c03d88b` and `9318b270d9`
+      also prevent inherited settings from silently auto-connecting the Zed
+      cloud, disable inherited Zed/Mercury edit-prediction providers while
+      preserving explicit Copilot/Codestral/custom providers, and stop eagerly
+      constructing the Collab panel. Upstream docs/repository links remain
+      explicitly attributed; post-build runtime proof remains open.
 - [ ] Ensure opening a file, folder, repository, URL, remote target, recent
       Workspace, or empty Workspace routes into the existing App Session
       without creating an accidental parallel universe.
@@ -738,3 +742,12 @@ Notes decision:
   model assertion covers loaded versus no-worktree selection. Formatting and
   diff checks pass; the running signed bundle and incomplete storage-bound test
   build predate this fix.
+- 2026-07-23: Closed a hidden local-first launch violation exposed by the stale
+  bundle log. Despite hidden collaboration/account chrome and a false default,
+  inherited user settings still started the upstream Zed websocket, LiveKit
+  reconnection, and Zed-hosted edit prediction. Commit `1d5c03d88b` gates
+  automatic cloud authentication and the Collab panel to the official Zed
+  product and ignores inherited Zed/Mercury prediction providers in Dez while
+  retaining explicit non-Zed providers. Commit `9318b270d9` makes those
+  boundaries part of `script/dez-identity-check`, which passes. The source is
+  not yet rebuilt, so the running bundle is not runtime evidence for this fix.

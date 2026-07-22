@@ -157,6 +157,17 @@ Terminal actions; no-worktree welcome suppression retains its old meaning. A
 focused model assertion covers both cases, but it shares the unfinished
 storage-bound test target and is not recorded as passing.
 
+The stale bundle log supplied a separate runtime finding: inherited user
+settings could still start the upstream Zed websocket, LiveKit reconnection,
+and Zed-hosted edit prediction even though Dez defaults `auto_connect` to false
+and hides collaboration/account chrome. Commit `1d5c03d88b` gates automatic
+cloud authentication and eager Collab-panel construction to the official Zed
+product, and treats inherited Zed/Mercury prediction providers as unavailable
+in Dez while retaining explicit Copilot, Codestral, Ollama, and compatible API
+providers. Commit `9318b270d9` adds static identity-policy checks for all of
+these boundaries. The checks pass; the running bundle predates them, so offline
+and quiet-launch runtime proof remains open.
+
 The audited `Dez Dev.app` is now registered and launched as launchd child PID
 `57957`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 The desktop is currently locked, and the approved accessibility controller
@@ -178,7 +189,9 @@ that scenario still requires the unlocked UI and a graceful application quit.
 - [x] `cargo fmt --all -- --check`
 - [x] `git diff --check`
 - [x] `cargo metadata --offline --no-deps --format-version 1`
-- [x] `./script/dez-identity-check`
+- [x] `./script/dez-identity-check`, including false cloud auto-connect
+      defaults, the product-level automatic-connection gate, upstream
+      prediction-provider gates, and lazy Collab-panel construction
 - [x] `bash -n script/bundle-mac`
 - [x] Focused Prettier checks for the canonical Dez documentation slices
 - [x] Focused tests: 15 terminal client/model tests, 8 Host/helper tests, and
@@ -215,6 +228,9 @@ that scenario still requires the unlocked UI and a graceful application quit.
       is fixed only in source at `79f69b273c`, so rebuild and fresh capture both
       remain open)
 - [ ] Offline, failed-Host, and incompatible-Host rendered states
+- [ ] Quiet local-first launch with no Zed websocket, LiveKit room, or
+      Zed-hosted edit-prediction request unless an explicit compatibility action
+      is invoked
 - [ ] Persistent terminal GUI-exit/restart/reattach proof
 - [ ] Structured Codex attention/review/restart proof
 - [ ] Visual state matrix and keyboard/pointer parity

@@ -628,6 +628,14 @@ code, all launch gates pass, and known limitations are documented.
       crushed rail. Find File, New File, and New Terminal remain the deliberate
       recovery actions. The focused assertion is authored; the shared
       storage-bound test target, rebuild, and rendered proof remain open.
+- [x] 2026-07-23: Enforce a quiet local-first launch in source. The stale
+      bundle log showed inherited settings starting Zed websocket, LiveKit, and
+      Zed-hosted prediction activity behind removed chrome. Commit
+      `1d5c03d88b` gates automatic upstream authentication and eager Collab
+      panel construction to official Zed, and ignores inherited Zed/Mercury
+      prediction providers while preserving explicit non-Zed providers. Commit
+      `9318b270d9` guards the policy statically. Rebuild and runtime network proof
+      remain open.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
