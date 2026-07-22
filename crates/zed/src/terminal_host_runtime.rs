@@ -27,11 +27,7 @@ struct GlobalTerminalHostRuntime(Entity<TerminalHostRuntime>);
 
 impl Global for GlobalTerminalHostRuntime {}
 
-pub struct TerminalHostRuntime {
-    connection: Option<Arc<TerminalHostConnection>>,
-    error: Option<String>,
-    enabled: bool,
-}
+pub struct TerminalHostRuntime;
 
 impl TerminalHostRuntime {
     pub fn init(host_id: TerminalHostId, cx: &mut App) -> Entity<Self> {
@@ -42,11 +38,7 @@ impl TerminalHostRuntime {
         terminal::session_host::transport::TerminalHostSnapshotRevision::init(cx);
         TerminalHostStartupStatus::init(cx);
         let enabled = std::env::var(EXPERIMENTAL_TERMINAL_HOST_ENV).as_deref() == Ok("1");
-        let runtime = cx.new(|_| Self {
-            connection: None,
-            error: None,
-            enabled,
-        });
+        let runtime = cx.new(|_| Self);
         cx.set_global(GlobalTerminalHostRuntime(runtime.clone()));
         if !enabled {
             return runtime;
@@ -58,12 +50,11 @@ impl TerminalHostRuntime {
         cx.spawn(async move |cx| {
             let result = connect_or_launch(host_id, &background_executor).await;
             runtime_handle
-                .update(cx, |runtime, cx| {
+                .update(cx, |_runtime, cx| {
                     match result {
                         Ok(connection) => {
                             let connection = Arc::new(connection);
-                            TerminalHostConnection::set_global(connection.clone(), cx);
-                            runtime.connection = Some(connection);
+                            TerminalHostConnection::set_global(connection, cx);
                         }
                         Err(error) => {
                             let message = format!("{error:#}");
@@ -74,7 +65,6 @@ impl TerminalHostRuntime {
                                 },
                                 cx,
                             );
-                            runtime.error = Some(message);
                         }
                     }
                     cx.notify();
@@ -88,18 +78,6 @@ impl TerminalHostRuntime {
     pub fn try_global(cx: &App) -> Option<Entity<Self>> {
         cx.try_global::<GlobalTerminalHostRuntime>()
             .map(|runtime| runtime.0.clone())
-    }
-
-    pub fn connection(&self) -> Option<Arc<TerminalHostConnection>> {
-        self.connection.clone()
-    }
-
-    pub fn enabled(&self) -> bool {
-        self.enabled
-    }
-
-    pub fn error(&self) -> Option<&str> {
-        self.error.as_deref()
     }
 }
 

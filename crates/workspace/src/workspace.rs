@@ -7373,23 +7373,28 @@ impl Workspace {
                     return None;
                 }
 
-                let pane_state = pane.read(cx);
-                let mut restored_project_paths = pane_state
-                    .items()
-                    .filter_map(|item| item.project_path(cx))
-                    .collect::<HashSet<_>>();
-                let mut restored_serializable_items = pane_state
-                    .items()
-                    .filter_map(|item| {
-                        let item = item.to_serializable_item_handle(cx)?;
-                        Some((
-                            item.serialized_item_kind().to_string(),
-                            item.item_id().as_u64(),
-                        ))
-                    })
-                    .collect::<HashSet<_>>();
-                let pane_kind = pane_state.pane_kind();
-                drop(pane_state);
+                let (mut restored_project_paths, mut restored_serializable_items, pane_kind) = {
+                    let pane_state = pane.read(cx);
+                    let restored_project_paths = pane_state
+                        .items()
+                        .filter_map(|item| item.project_path(cx))
+                        .collect::<HashSet<_>>();
+                    let restored_serializable_items = pane_state
+                        .items()
+                        .filter_map(|item| {
+                            let item = item.to_serializable_item_handle(cx)?;
+                            Some((
+                                item.serialized_item_kind().to_string(),
+                                item.item_id().as_u64(),
+                            ))
+                        })
+                        .collect::<HashSet<_>>();
+                    (
+                        restored_project_paths,
+                        restored_serializable_items,
+                        pane_state.pane_kind(),
+                    )
+                };
 
                 let mut tabs = pane_snapshot
                     .tabs

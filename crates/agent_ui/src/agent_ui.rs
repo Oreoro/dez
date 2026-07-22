@@ -84,8 +84,9 @@ pub use crate::agent_thread_item::{
 pub use crate::inline_assistant::InlineAssistant;
 pub use crate::message_editor::MessageEditorEvent;
 pub use crate::run_review::{
-    ObservedRunActivity, ObservedRunCheck, ObservedRunCheckStatus, ObservedRunCommand,
-    ObservedWorkspaceEvidence, RunReviewBrief, RunReviewState, WorkspaceEvidenceKind,
+    ObservedRepositoryEvidence, ObservedRunActivity, ObservedRunCheck, ObservedRunCheckStatus,
+    ObservedRunCommand, ObservedWorkspaceEvidence, RunReviewBrief, RunReviewState,
+    WorkspaceEvidenceKind,
 };
 pub use crate::thread_metadata_store::ThreadId;
 pub use agent_diff::{AgentDiffPane, AgentDiffToolbar};

@@ -4965,44 +4965,6 @@ Run the {#action theme_selector::Toggle} action in the command palette to see a 
 
 Run the {#action theme_selector::Toggle} action in the command palette to see a current list of valid theme names.
 
-## Title Bar
-
-- Description: Whether or not to show various elements in the title bar
-- Setting: `title_bar`
-- Default:
-
-```json [settings]
-{
-  "title_bar": {
-    "show": true,
-    "show_branch_status_icon": false,
-    "show_branch_name": true,
-    "show_worktree_name": true,
-    "show_project_items": true,
-    "show_onboarding_banner": true,
-    "show_user_picture": true,
-    "show_user_menu": true,
-    "show_sign_in": true,
-    "show_menus": false,
-    "button_layout": "platform_default"
-  }
-}
-```
-
-**Options**
-
-- `show`: Whether to show the title bar
-- `show_branch_status_icon`: Whether to show git status indicators on the branch icon in the titlebar
-- `show_branch_name`: Whether to show the branch name button in the titlebar
-- `show_worktree_name`: Whether to show the worktree name button in the titlebar
-- `show_project_items`: Whether to show the project host and name in the titlebar
-- `show_onboarding_banner`: Whether to show onboarding banners in the titlebar
-- `show_user_picture`: Whether to show user picture in the titlebar
-- `show_user_menu`: Whether to show the user menu button in the titlebar (the one that displays your avatar by default and contains options like Settings, Keymap, Themes, etc.)
-- `show_sign_in`: Whether to show the sign in button in the titlebar
-- `show_menus`: Whether to show the menus in the titlebar
-- `button_layout`: The layout of window control buttons in the title bar (Linux only). Can be set to `"platform_default"` to follow the system setting, `"standard"` to use Zed's built-in layout, or a custom format like `"close:minimize,maximize"`
-
 ## Vim
 
 - Description: Whether or not to enable vim mode.
@@ -5449,8 +5411,18 @@ Visit [AI Quick Start](../ai/quick-start.md) under the AI section to learn more 
 ## Sidebar
 
 - `side`: Which side of the window the sidebar appears on. Default: `"left"`
-- `starts_open`: Whether the sidebar should start open in new windows. Default: `true`
+- `starts_open`: Whether the session rail should start open in new windows. Default: `false`
 - `show_project_pane_button`: Whether to show the project pane toggle button in the sidebar header. Default: `true`
+- `show_branch_status_icon`: Whether the branch icon reflects repository status. Default: `false`
+- `show_branch_name`: Whether to show the branch picker. Default: `true`
+- `show_worktree_name`: Whether to show the worktree picker. Default: `true`
+- `show_project_items`: Whether to show the workspace host and project name. Default: `true`
+- `show_onboarding_banner`: Whether to show contextual onboarding. Default: `true`
+- `show_user_picture`: Whether to show the signed-in user's picture. Default: `true`
+- `show_user_menu`: Whether to show the user menu. Default: `true`
+- `show_sign_in`: Whether to show the sign-in action. Default: `true`
+- `show_menus`: Whether to place app menus in the session rail. Default: `false`
+- `button_layout`: Window-button layout on Linux. Default: `"platform_default"`
 
 ## Collaboration Panel
 

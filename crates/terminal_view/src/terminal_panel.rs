@@ -813,26 +813,6 @@ impl TerminalPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Task<Result<WeakEntity<Terminal>>> {
-        self.add_terminal_shell_internal(false, cwd, reveal_strategy, window, cx)
-    }
-
-    fn add_local_terminal_shell(
-        &mut self,
-        reveal_strategy: RevealStrategy,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Task<Result<WeakEntity<Terminal>>> {
-        self.add_terminal_shell_internal(true, None, reveal_strategy, window, cx)
-    }
-
-    fn add_terminal_shell_internal(
-        &mut self,
-        force_local: bool,
-        cwd: Option<PathBuf>,
-        reveal_strategy: RevealStrategy,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Task<Result<WeakEntity<Terminal>>> {
         let workspace = self.workspace.clone();
 
         cx.spawn_in(window, async move |terminal_panel, cx| {
@@ -844,15 +824,9 @@ impl TerminalPanel {
                 terminal_panel.active_pane.clone()
             })?;
             let project = workspace.read_with(cx, |workspace, _| workspace.project().clone())?;
-            let terminal = if force_local {
-                project
-                    .update(cx, |project, cx| project.create_local_terminal(cx))
-                    .await
-            } else {
-                project
-                    .update(cx, |project, cx| project.create_terminal_shell(cwd, cx))
-                    .await
-            };
+            let terminal = project
+                .update(cx, |project, cx| project.create_terminal_shell(cwd, cx))
+                .await;
 
             match terminal {
                 Ok(terminal) => {

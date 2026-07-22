@@ -123,11 +123,11 @@ To disable this behavior use:
 }
 ```
 
-### Titlebar
+### Session Rail
 
 ```json [settings]
-  // Control which items are shown/hidden in the title bar
-  "title_bar": {
+  // Control which items are shown/hidden in the session rail
+  "sidebar": {
     "show_branch_status_icon": false, // Show git status on branch icon
     "show_branch_name": true,       // Show/hide branch name
     "show_worktree_name": true,     // Show/hide worktree name
@@ -136,7 +136,7 @@ To disable this behavior use:
     "show_user_picture": true,      // Show/hide user avatar
     "show_user_menu": true,         // Show/hide app user button
     "show_sign_in": true,           // Show/hide sign-in button
-    "show_menus": false             // Show/hide menus
+    "show_menus": false            // Show/hide menus
   },
 ```
 

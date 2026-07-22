@@ -394,6 +394,14 @@ impl ThreadsArchiveView {
         self.selection = None;
     }
 
+    pub fn is_filter_editor_focused(&self, window: &Window, cx: &App) -> bool {
+        self.filter_editor.read(cx).is_focused(window)
+    }
+
+    pub fn focus_filter_editor(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.filter_editor.focus_handle(cx).focus(window, cx);
+    }
+
     pub fn mark_restoring(&mut self, thread_id: &ThreadId, cx: &mut Context<Self>) {
         self.restoring.insert(*thread_id);
         cx.notify();

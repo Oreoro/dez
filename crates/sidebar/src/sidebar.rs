@@ -3364,6 +3364,7 @@ impl Sidebar {
                         let (icon, icon_from_external_svg) = resolve_agent_icon(&row.agent_id);
                         let worktrees =
                             worktree_info_from_thread_paths(&row.worktree_paths, &branch_by_path);
+                        let is_draft = row.is_draft();
                         Arc::new(ThreadEntry {
                             metadata: row,
                             icon,
@@ -3373,7 +3374,7 @@ impl Sidebar {
                             is_live: false,
                             is_background: false,
                             is_title_generating: false,
-                            draft: None,
+                            draft: is_draft.then_some(DraftKind::Empty),
                             highlight_positions: Vec::new(),
                             worktrees,
                             diff_stats: DiffStats::default(),
@@ -3390,9 +3391,6 @@ impl Sidebar {
                     .entries_for_main_worktree_path(group_key.path_list(), group_host.as_ref())
                     .cloned()
                 {
-                    if row.is_draft() {
-                        continue;
-                    }
                     if !seen_thread_ids.insert(row.thread_id) {
                         continue;
                     }
@@ -3409,9 +3407,6 @@ impl Sidebar {
                     .entries_for_path(group_key.path_list(), group_host.as_ref())
                     .cloned()
                 {
-                    if row.is_draft() {
-                        continue;
-                    }
                     if !seen_thread_ids.insert(row.thread_id) {
                         continue;
                     }
@@ -3440,9 +3435,6 @@ impl Sidebar {
                         .entries_for_path(&ws_paths, group_host.as_ref())
                         .cloned()
                     {
-                        if row.is_draft() {
-                            continue;
-                        }
                         if !seen_thread_ids.insert(row.thread_id) {
                             continue;
                         }
@@ -3460,9 +3452,6 @@ impl Sidebar {
                         .entries_for_path(worktree_path_list, group_host.as_ref())
                         .cloned()
                     {
-                        if row.is_draft() {
-                            continue;
-                        }
                         if !seen_thread_ids.insert(row.thread_id) {
                             continue;
                         }
@@ -4496,7 +4485,6 @@ impl Sidebar {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let focus_handle = self.focus_handle.clone();
-        let sidebar = cx.weak_entity();
 
         let menu_handle = self
             .project_header_new_thread_menu_handles
@@ -5479,6 +5467,15 @@ impl Sidebar {
 
     fn editor_move_up(&mut self, _: &MoveUp, window: &mut Window, cx: &mut Context<Self>) {
         self.select_previous(&SelectPrevious, window, cx);
+        if self.selection.is_some() {
+            self.focus_handle.focus(window, cx);
+        }
+    }
+
+    fn editor_confirm(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.selection.is_none() {
+            self.select_next(&SelectNext, window, cx);
+        }
         if self.selection.is_some() {
             self.focus_handle.focus(window, cx);
         }
@@ -9663,6 +9660,12 @@ impl Sidebar {
         let workspace = terminal.workspace.clone();
         let source = terminal.source.clone();
         let sidebar = cx.weak_entity();
+        let review_action_metadata = metadata.clone();
+        let review_action_workspace = workspace.clone();
+        let review_action_source = source.clone();
+        let close_action_metadata = metadata.clone();
+        let close_action_workspace = workspace.clone();
+        let close_action_source = source.clone();
         let review_brief = terminal.review_brief(cx);
         let evidence_label =
             observed_run_evidence_label(&review_brief.checks, review_brief.commands.len());
@@ -9860,9 +9863,9 @@ impl Sidebar {
                                     .on_click({
                                         let review_brief = review_brief.clone();
                                         let sidebar = sidebar.clone();
-                                        let metadata = metadata.clone();
-                                        let workspace = workspace.clone();
-                                        let source = source.clone();
+                                        let metadata = review_action_metadata.clone();
+                                        let workspace = review_action_workspace.clone();
+                                        let source = review_action_source.clone();
                                         move |_, window, cx| {
                                             Self::open_terminal_run_review(
                                                 sidebar.clone(),
@@ -9897,9 +9900,9 @@ impl Sidebar {
                                 })
                                 .on_click(cx.listener(move |this, _, window, cx| {
                                     this.close_terminal_with_confirmation(
-                                        metadata.clone(),
-                                        workspace.clone(),
-                                        source.clone(),
+                                        close_action_metadata.clone(),
+                                        close_action_workspace.clone(),
+                                        close_action_source.clone(),
                                         requires_termination_confirmation,
                                         window,
                                         cx,
@@ -11046,7 +11049,7 @@ impl Sidebar {
             })
     }
 
-    fn render_empty_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_empty_state(&self, _cx: &mut Context<Self>) -> impl IntoElement {
         v_flex()
             .id("sidebar-start-state")
             .size_full()

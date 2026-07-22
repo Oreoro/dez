@@ -163,7 +163,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             name: "File".into(),
             disabled: false,
             items: vec![
-                MenuItem::action("New Terminal", workspace::NewTerminal),
+                MenuItem::action("New Terminal", workspace::NewTerminal::default()),
                 MenuItem::action("New File", workspace::NewFile),
                 MenuItem::action("New Window", workspace::NewWindow),
                 MenuItem::separator(),

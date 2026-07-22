@@ -326,17 +326,18 @@ fn render_dez_workflow_section(tab_index: &mut isize, cx: &mut App) -> impl Into
                     .color(Color::Muted),
                 )
                 .child(
-                    Button::new("onboarding-new-terminal", "New Terminal")
-                        .flex_none()
-                        .tab_index(*tab_index)
-                        .style(ButtonStyle::Filled)
-                        .start_icon(Icon::new(IconName::Terminal).size(IconSize::Small))
-                        .on_click(|_, window, cx| {
-                            window.dispatch_action(
-                                Box::new(NewCenterTerminal { local: false }),
-                                cx,
-                            );
-                        }),
+                    div().flex_shrink_0().child(
+                        Button::new("onboarding-new-terminal", "New Terminal")
+                            .tab_index(*tab_index)
+                            .style(ButtonStyle::Filled)
+                            .start_icon(Icon::new(IconName::Terminal).size(IconSize::Small))
+                            .on_click(|_, window, cx| {
+                                window.dispatch_action(
+                                    Box::new(NewCenterTerminal { local: false }),
+                                    cx,
+                                );
+                            }),
+                    ),
                 ),
         )
 }
@@ -350,9 +351,7 @@ fn render_telemetry_section(tab_index: &mut isize, cx: &App) -> impl IntoElement
             SwitchField::new(
                 "onboarding-telemetry-metrics",
                 None::<&str>,
-                Some(format!(
-                    "Help improve {APP_NAME} by sending anonymous usage data"
-                )),
+                Some(format!("Help improve {APP_NAME} by sending anonymous usage data").into()),
                 if TelemetrySettings::get_global(cx).metrics {
                     ui::ToggleState::Selected
                 } else {
@@ -391,9 +390,10 @@ fn render_telemetry_section(tab_index: &mut isize, cx: &App) -> impl IntoElement
             SwitchField::new(
                 "onboarding-telemetry-crash-reports",
                 None::<&str>,
-                Some(format!(
-                    "Help fix {APP_NAME} by sending crash reports for critical issues"
-                )),
+                Some(
+                    format!("Help fix {APP_NAME} by sending crash reports for critical issues")
+                        .into(),
+                ),
                 if TelemetrySettings::get_global(cx).diagnostics {
                     ui::ToggleState::Selected
                 } else {
@@ -539,9 +539,7 @@ fn render_worktree_auto_trust_switch(tab_index: &mut isize, cx: &mut App) -> imp
     SwitchField::new(
         "onboarding-auto-trust-worktrees",
         Some("Trust All Projects By Default"),
-        Some(format!(
-            "Automatically trust new workspaces and allow their developer services to run"
-        )),
+        Some("Automatically trust new workspaces and allow their developer services to run".into()),
         toggle_state,
         {
             let fs = <dyn Fs>::global(cx);

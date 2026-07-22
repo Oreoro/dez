@@ -4042,7 +4042,7 @@ fn window_and_layout_page() -> SettingsPage {
         ]
     }
 
-    fn sidebar_chrome_section() -> [SettingsPageItem; 8] {
+    fn sidebar_chrome_section() -> [SettingsPageItem; 9] {
         [
             SettingsPageItem::SectionHeader("Session Rail Chrome"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -4119,17 +4119,17 @@ fn window_and_layout_page() -> SettingsPage {
                 description: "Show the worktree name button in the titlebar.",
                 field: Box::new(SettingField {
                     organization_override: None,
-                    json_path: Some("title_bar.show_worktree_name"),
+                    json_path: Some("sidebar.show_worktree_name"),
                     pick: |settings_content| {
                         settings_content
-                            .title_bar
+                            .sidebar
                             .as_ref()?
                             .show_worktree_name
                             .as_ref()
                     },
                     write: |settings_content, value, _| {
                         settings_content
-                            .title_bar
+                            .sidebar
                             .get_or_insert_default()
                             .show_worktree_name = value;
                     },

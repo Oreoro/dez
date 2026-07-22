@@ -142,6 +142,10 @@ pub struct SidebarSettingsContent {
     ///
     /// Default: true
     pub show_branch_name: Option<bool>,
+    /// Whether to show the worktree name button in the sidebar.
+    ///
+    /// Default: true
+    pub show_worktree_name: Option<bool>,
     /// Whether to show the project host and name in the sidebar.
     ///
     /// Default: true

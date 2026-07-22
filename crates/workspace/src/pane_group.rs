@@ -791,6 +791,8 @@ impl Member {
                     return PaneRenderResult {
                         element: div().into_any(),
                         contains_active_pane: false,
+                        #[cfg(any(test, feature = "test-support"))]
+                        decorated_pane_ix: None,
                     };
                 }
 
@@ -1520,6 +1522,8 @@ impl PaneAxis {
             return PaneRenderResult {
                 element: div().into_any(),
                 contains_active_pane: false,
+                #[cfg(any(test, feature = "test-support"))]
+                decorated_pane_ix: None,
             };
         }
 

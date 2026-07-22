@@ -555,7 +555,7 @@ async fn serve(
         notifier,
     )));
     loop {
-        let (stream, ()) = listener
+        let (stream, _) = listener
             .accept()
             .await
             .context("accept terminal host client")?;
@@ -1062,7 +1062,7 @@ fn handle_pty_event(
     };
     match event {
         TerminalHostPtyEvent::Output(bytes) => {
-            if let Err(error) = model.push_output(session_id, bytes) {
+            if let Err(error) = model.record_output(session_id, bytes) {
                 eprintln!("failed to retain output for terminal session {session_id}: {error}");
             }
         }

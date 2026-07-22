@@ -231,6 +231,11 @@ fn setup_sidebar_closed(
 ) -> Entity<Sidebar> {
     let multi_workspace = multi_workspace.clone();
     let sidebar = cx.update(|window, cx| {
+        if call::ActiveCall::try_global(cx).is_none() {
+            let workspace = multi_workspace.read(cx).workspace().clone();
+            let app_state = workspace.read(cx).app_state().clone();
+            call::init(app_state.client.clone(), app_state.user_store.clone(), cx);
+        }
         let sidebar = cx.new(|cx| Sidebar::new(multi_workspace.clone(), window, cx));
         multi_workspace.update(cx, |mw, cx| {
             mw.register_sidebar(sidebar.clone(), window, cx);
@@ -812,6 +817,7 @@ async fn test_restore_serialized_archive_view_does_not_panic(cx: &mut TestAppCon
     let serialized = serde_json::to_string(&SerializedSidebar {
         width: Some(400.0),
         active_view: SerializedSidebarView::History,
+        manual_entry_order: Vec::new(),
     })
     .expect("serialization should succeed");
 
@@ -1089,8 +1095,9 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 key: ProjectGroupKey::new(None, expanded_path.clone()),
                 label: "expanded-project".into(),
                 highlight_positions: Vec::new(),
+                layout_label: None,
                 has_running_threads: false,
-                waiting_thread_count: 0,
+                attention_thread_count: 0,
                 has_notifications: false,
                 is_active: true,
                 has_threads: true,
@@ -1120,6 +1127,7 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 highlight_positions: Vec::new(),
                 worktrees: Vec::new(),
                 diff_stats: DiffStats::default(),
+                changed_files: Vec::new(),
             })),
             // Active thread with Running status
             ListEntry::Thread(Arc::new(ThreadEntry {
@@ -1147,6 +1155,7 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 highlight_positions: Vec::new(),
                 worktrees: Vec::new(),
                 diff_stats: DiffStats::default(),
+                changed_files: Vec::new(),
             })),
             // Active thread with Error status
             ListEntry::Thread(Arc::new(ThreadEntry {
@@ -1174,6 +1183,7 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 highlight_positions: Vec::new(),
                 worktrees: Vec::new(),
                 diff_stats: DiffStats::default(),
+                changed_files: Vec::new(),
             })),
             // Thread with WaitingForConfirmation status, not active
             // remote_connection: None,
@@ -1202,6 +1212,7 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 highlight_positions: Vec::new(),
                 worktrees: Vec::new(),
                 diff_stats: DiffStats::default(),
+                changed_files: Vec::new(),
             })),
             // Background thread that completed (should show notification)
             // remote_connection: None,
@@ -1230,14 +1241,16 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 highlight_positions: Vec::new(),
                 worktrees: Vec::new(),
                 diff_stats: DiffStats::default(),
+                changed_files: Vec::new(),
             })),
             // Collapsed project header
             ListEntry::ProjectHeader {
                 key: ProjectGroupKey::new(None, collapsed_path.clone()),
                 label: "collapsed-project".into(),
                 highlight_positions: Vec::new(),
+                layout_label: None,
                 has_running_threads: false,
-                waiting_thread_count: 0,
+                attention_thread_count: 0,
                 has_notifications: false,
                 is_active: false,
                 has_threads: false,
@@ -1774,21 +1787,34 @@ async fn test_closing_last_agent_panel_terminal_restores_empty_header(cx: &mut T
 
     assert_project_header_has_threads(&sidebar, "my-project", true, cx);
 
-    let (terminal_metadata, terminal_workspace) = sidebar.read_with(cx, |sidebar, _cx| {
-        sidebar
-            .contents
-            .entries
-            .iter()
-            .find_map(|entry| match entry {
-                ListEntry::Terminal(terminal) if terminal.metadata.terminal_id == terminal_id => {
-                    Some((terminal.metadata.clone(), terminal.workspace.clone()))
-                }
-                _ => None,
-            })
-            .expect("terminal should be visible in sidebar")
-    });
+    let (terminal_metadata, terminal_workspace, terminal_source) =
+        sidebar.read_with(cx, |sidebar, _cx| {
+            sidebar
+                .contents
+                .entries
+                .iter()
+                .find_map(|entry| match entry {
+                    ListEntry::Terminal(terminal)
+                        if terminal.metadata.terminal_id == terminal_id =>
+                    {
+                        Some((
+                            terminal.metadata.clone(),
+                            terminal.workspace.clone(),
+                            terminal.source.clone(),
+                        ))
+                    }
+                    _ => None,
+                })
+                .expect("terminal should be visible in sidebar")
+        });
     sidebar.update_in(cx, |sidebar, window, cx| {
-        sidebar.close_terminal(&terminal_metadata, &terminal_workspace, window, cx);
+        sidebar.close_terminal(
+            &terminal_metadata,
+            &terminal_workspace,
+            &terminal_source,
+            window,
+            cx,
+        );
     });
     cx.run_until_parked();
 
@@ -3821,23 +3847,34 @@ async fn test_closing_active_agent_panel_terminal_activates_neighbor(cx: &mut Te
         .expect("server test terminal should be inserted");
     cx.run_until_parked();
 
-    let (server_metadata, server_workspace) = sidebar.read_with(cx, |sidebar, _cx| {
-        sidebar
-            .contents
-            .entries
-            .iter()
-            .find_map(|entry| match entry {
-                ListEntry::Terminal(terminal)
-                    if terminal.metadata.terminal_id == server_terminal_id =>
-                {
-                    Some((terminal.metadata.clone(), terminal.workspace.clone()))
-                }
-                _ => None,
-            })
-            .expect("server terminal should be visible in sidebar")
-    });
+    let (server_metadata, server_workspace, server_source) =
+        sidebar.read_with(cx, |sidebar, _cx| {
+            sidebar
+                .contents
+                .entries
+                .iter()
+                .find_map(|entry| match entry {
+                    ListEntry::Terminal(terminal)
+                        if terminal.metadata.terminal_id == server_terminal_id =>
+                    {
+                        Some((
+                            terminal.metadata.clone(),
+                            terminal.workspace.clone(),
+                            terminal.source.clone(),
+                        ))
+                    }
+                    _ => None,
+                })
+                .expect("server terminal should be visible in sidebar")
+        });
     sidebar.update_in(cx, |sidebar, window, cx| {
-        sidebar.close_terminal(&server_metadata, &server_workspace, window, cx);
+        sidebar.close_terminal(
+            &server_metadata,
+            &server_workspace,
+            &server_source,
+            window,
+            cx,
+        );
     });
     cx.run_until_parked();
 

@@ -11591,18 +11591,6 @@ impl ThreadView {
             }))
     }
 
-    fn upgrade_button(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        Button::new("upgrade", "Upgrade")
-            .label_size(LabelSize::Small)
-            .style(ButtonStyle::Tinted(ui::TintColor::Accent))
-            .on_click(cx.listener({
-                move |this, _, _, cx| {
-                    this.clear_thread_error(cx);
-                    cx.open_url(&zed_urls::upgrade_to_zed_pro_url(cx));
-                }
-            }))
-    }
-
     fn authenticate_button(&self, cx: &mut Context<Self>) -> impl IntoElement {
         Button::new("authenticate", "Authenticate")
             .label_size(LabelSize::Small)
