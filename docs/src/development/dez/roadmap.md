@@ -619,35 +619,43 @@ code, all launch gates pass, and known limitations are documented.
       and client-decoration roots paint at the same mode-resolved width the
       workspace reserves: 240 px compact, 56 px icon, and at least 380 px
       detailed. Regression assertions cover all three modes. Formatting and
-      diff checks pass; the focused test build and post-fix bundle remain open
-      under the documented storage gate, so no rendered or test pass is
-      inferred from the source correction.
+      diff checks pass. The complete post-fix app and signed bundle now build;
+      the focused test and rendered proof remain open, so neither is inferred
+      from compilation.
 - [x] 2026-07-22: Keep an empty loaded project actionable after restoration.
       Commit `4829f6b052` makes the visible-worktree launch surface outrank a
       missing legacy welcome flag, preventing the blank center shown beside the
       crushed rail. Find File, New File, and New Terminal remain the deliberate
       recovery actions. The focused assertion is authored; the shared
-      storage-bound test target, rebuild, and rendered proof remain open.
+      storage-bound test target and rendered proof remain open; the complete
+      corrected app and signed bundle build pass.
 - [x] 2026-07-23: Enforce a quiet local-first launch in source. The stale
       bundle log showed inherited settings starting Zed websocket, LiveKit, and
       Zed-hosted prediction activity behind removed chrome. Commit
       `1d5c03d88b` gates automatic upstream authentication and eager Collab
       panel construction to official Zed, and ignores inherited Zed/Mercury
       prediction providers while preserving explicit non-Zed providers. Commit
-      `9318b270d9` guards the policy statically. Rebuild and runtime network proof
-      remain open.
+      `9318b270d9` guards the policy statically. The corrected bundle rebuild
+      passes and the running app held no established or listening TCP socket
+      during the recorded soak.
 - [x] 2026-07-23: Bound the lower workspace footer under narrow widths and real
       repository names. Commit `0d8496969f` gives project identity and
       worktree/branch controls independent shrinkable, overflow-hidden regions,
       allowing their existing one-line truncation and tooltips to work without
       colliding in the fixed-height row. Formatting and diff checks pass;
-      compile, rebuild, and rendered proof remain open.
+      compile and bundle rebuild pass; rendered narrow-width proof remains open.
 - [x] 2026-07-23: Consolidate the lower utility chrome. Commit `abc4f8bedb`
       removes the standalone Dez Command Search row, preserves the action and
       accessible tooltip in the existing icon bar, suppresses the unowned
       upstream update surface, and keeps the Canvas prefix row on demand.
       Official Zed behavior is unchanged. Formatting and diff checks pass;
-      compile, rebuild, and rendered proof remain open.
+      compile and bundle rebuild pass; rendered proof remains open.
+- [x] 2026-07-23: Rebuild and audit the corrected source head
+      `679cdc28445c`. The arm64 app and protocol-4 terminal Host complete, the
+      inside-out ad-hoc bundle passes deep-strict verification with CDHash
+      `0dc2e1e872b88cbd6288f1bea5455fbc48271cc5`, and live PID `85053` resolves
+      to the exact intended bundle executable. The Mac remains locked, so the
+      corrected visual and accessibility matrix is still an explicit gate.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

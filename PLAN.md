@@ -67,23 +67,23 @@ Dez v0.0.1 is complete only when all of the following are true:
 
 ## Current evidence baseline
 
-Status below reflects repository evidence on 2026-07-22. The consolidated app,
-CLI, and helper builds now exist; build proof still does not imply rendered or
-end-to-end interaction proof.
+Status below reflects repository evidence through 2026-07-23. The corrected
+app, CLI, helper, and signed bundle now exist; build proof still does not imply
+rendered or end-to-end interaction proof.
 
-| Area                   | Evidence now                                                                                                                                                                                                                            | Completion gap                                                                                                                                       |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Upstream               | Integrated `upstream/main` `9d0ef37a2571` through two-parent merge `2be63cfea347`; eleven conflicts are resolved and classified; consolidated build provenance is recorded                                                              | Complete runtime regression, installed coexistence, and design-partner proof                                                                         |
-| Identity               | Dez source guards pass, including the local-first launch boundary; the arm64 debug app, CLI, helper, and `dev.dez.Dez-Dev`/`dez-dev` ad-hoc bundle are audited                                                                          | Rebuild the local-first policy, then official-Zed install coexistence, public signing/notarization, updater, remote, and visual proof                |
-| App Session            | Restore barrier, lifecycle state, ordered Workspace registry, explicit ordered viewport records, active selection, and unresolved identity retention exist in source                                                                    | Live viewport/entity composition and consolidated runtime proof                                                                                      |
-| Workspace and Surfaces | Pane/Canvas repair, panel-to-pane work, startup request ordering, and typed path projection exist                                                                                                                                       | Authoritative EvidenceSet, scoped tools, movement proof, and shared-store isolation                                                                  |
-| Local Host             | Protocol 4 app/helper builds and focused tests pass; an authenticated packaged-runtime Session retained one shell PID, 88 replay chunks, both pre/post-resize dimensions, and explicit Detached state                                   | GUI-exit/same-Session reattach proof and default-backend decision                                                                                    |
-| Terminal recovery      | Host/Session references, attach/detach/terminate, recovery surfaces, honest transport states, and dimension-aware replay exist in source and packaged runtime                                                                           | Full GUI restart scenario, stale-host cleanup, and rendered UX verification                                                                          |
-| Agent adapter          | Structured Codex hook path, observation-only capabilities, bounded file targets, objective/context projection, and onboarding exist                                                                                                     | Live hook proof and a second adapter after the PMF gate                                                                                              |
-| Attention              | Session Rail projection, restart-safe attention, acknowledgement, mute, resolution, priority, and stale handling exist                                                                                                                  | Consolidated runtime and accessibility proof                                                                                                         |
-| Review                 | Native and terminal review briefs consume observed commands/checks, Git/worktree state, bounded file targets, cwd provenance, risks, and missing-evidence labels                                                                        | Compiled proof, live navigation, and side-by-side hero-flow validation                                                                               |
-| UI/UX                  | The full-window rail defect is fixed; `79f69b273c` synchronizes rail reservation/paint widths, `4829f6b052` restores the launch surface, `0d8496969f` bounds footer identity, and `abc4f8bedb` removes the redundant command-search row | Rebuild the post-`abc4f8bedb` source, capture it, then complete shell hierarchy, outward polish, onboarding, accessibility, and state-by-state audit |
-| Release                | Static gates, focused tests, consolidated protocol-4 app/helper builds, exact signed-bundle launch, authenticated runtime Session exercise, and deep-strict ad-hoc bundle audit pass                                                    | Full GUI Session restart, visual/a11y, app-facing lint, public signing/install, coexistence, and partner proof                                       |
+| Area                   | Evidence now                                                                                                                                                                                                                                                           | Completion gap                                                                                                                     |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Upstream               | Integrated `upstream/main` `9d0ef37a2571` through two-parent merge `2be63cfea347`; eleven conflicts are resolved and classified; consolidated build provenance is recorded                                                                                             | Complete runtime regression, installed coexistence, and design-partner proof                                                       |
+| Identity               | Dez source guards pass; the corrected arm64 app, CLI, helper, and `dev.dez.Dez-Dev`/`dez-dev` ad-hoc bundle are audited, and the launched app held no TCP connection or listener during the recorded soak                                                              | Official-Zed install coexistence, public signing/notarization, updater, remote, and visual proof                                   |
+| App Session            | Restore barrier, lifecycle state, ordered Workspace registry, explicit ordered viewport records, active selection, and unresolved identity retention exist in source                                                                                                   | Live viewport/entity composition and consolidated runtime proof                                                                    |
+| Workspace and Surfaces | Pane/Canvas repair, panel-to-pane work, startup request ordering, and typed path projection exist                                                                                                                                                                      | Authoritative EvidenceSet, scoped tools, movement proof, and shared-store isolation                                                |
+| Local Host             | Protocol 4 app/helper builds and focused tests pass; an authenticated packaged-runtime Session retained one shell PID, 88 replay chunks, both pre/post-resize dimensions, and explicit Detached state                                                                  | GUI-exit/same-Session reattach proof and default-backend decision                                                                  |
+| Terminal recovery      | Host/Session references, attach/detach/terminate, recovery surfaces, honest transport states, and dimension-aware replay exist in source and packaged runtime                                                                                                          | Full GUI restart scenario, stale-host cleanup, and rendered UX verification                                                        |
+| Agent adapter          | Structured Codex hook path, observation-only capabilities, bounded file targets, objective/context projection, and onboarding exist                                                                                                                                    | Live hook proof and a second adapter after the PMF gate                                                                            |
+| Attention              | Session Rail projection, restart-safe attention, acknowledgement, mute, resolution, priority, and stale handling exist                                                                                                                                                 | Consolidated runtime and accessibility proof                                                                                       |
+| Review                 | Native and terminal review briefs consume observed commands/checks, Git/worktree state, bounded file targets, cwd provenance, risks, and missing-evidence labels                                                                                                       | Compiled proof, live navigation, and side-by-side hero-flow validation                                                             |
+| UI/UX                  | The full-window rail defect is fixed; `79f69b273c` synchronizes rail reservation/paint widths, `4829f6b052` restores the launch surface, `0d8496969f` bounds footer identity, and `abc4f8bedb` removes the redundant command-search row; all are in the rebuilt bundle | Capture the corrected artifact, then complete shell hierarchy, outward polish, onboarding, accessibility, and state-by-state audit |
+| Release                | Static gates, focused tests, the corrected protocol-4 app/helper build at `679cdc28445c`, exact signed-bundle launch, authenticated runtime Session exercise, and deep-strict ad-hoc bundle audit pass                                                                 | Full GUI Session restart, visual/a11y, app-facing lint, public signing/install, coexistence, and partner proof                     |
 
 The intended raw executable was used for the first consolidated runtime gate;
 the current gate launches only
@@ -101,12 +101,13 @@ painting, with compact, detailed, and icon regression assertions. The exact
 same screenshot also showed a blank center despite a loaded worktree. Commit
 `4829f6b052` makes any empty tabbed pane with a loaded project render the
 Project ready launch surface even if a legacy/restored pane predates the welcome
-flag; the flag still controls the no-project welcome surface. The exact packaged
-app also predates `0d8496969f`, which bounds project, worktree, and branch
-controls inside the fixed-height footer so their existing truncation can work.
-The packaged app predates all four source corrections and macOS is locked, so
-a fresh corrected-artifact capture remains open and no broader visual claim is
-inferred from source, build, or protocol evidence.
+flag; the flag still controls the no-project welcome surface. Commit
+`0d8496969f` bounds project, worktree, and branch controls inside the
+fixed-height footer so their existing truncation can work, while `abc4f8bedb`
+removes the redundant Command Search row. The exact arm64 bundle now contains
+all four corrections and passes deep-strict signing verification. macOS is
+locked, so a fresh corrected-artifact capture remains open and no broader
+visual claim is inferred from source, build, or protocol evidence.
 
 ## Execution plan
 
@@ -736,8 +737,9 @@ Notes decision:
 - 2026-07-22: Exposed Session Rail as a named `Complementary` accessibility
   landmark and made its overview and empty-Workspace status copy truncate at
   narrow widths rather than re-enter word-level wrapping. The complete
-  `sidebar` dependency graph passes focused `cargo check`; the signed bundle
-  predates this source slice and must be rebuilt before rendered evidence.
+  `sidebar` dependency graph passes focused `cargo check`; the corrected bundle
+  now contains this source slice, while rendered accessibility evidence remains
+  open.
 - 2026-07-22: Traced the supplied crushed-rail screenshot to a second concrete
   layout contract violation. Compact mode reserved 240 px through
   `WorkspaceSidebar::width`, while both decoration branches still painted the
@@ -746,15 +748,15 @@ Notes decision:
   three modes. Formatting and diff checks pass. The focused test build was
   attempted but intentionally stopped after the volume twice exhausted its
   remaining link space while reconstructing deleted dependency caches; this is
-  not recorded as a passing test, and the running signed bundle predates the
-  fix.
+  not recorded as a passing focused test. The complete corrected app and bundle
+  build now contain the fix; rendered proof remains open.
 - 2026-07-22: Removed the screenshot's blank-center failure in source. Commit
   `4829f6b052` gives a loaded project priority over the legacy welcome-page flag
   when selecting empty-pane content, so an empty restored tabbed pane renders
   Project ready with Find File, New File, and New Terminal actions. A focused
   model assertion covers loaded versus no-worktree selection. Formatting and
-  diff checks pass; the running signed bundle and incomplete storage-bound test
-  build predate this fix.
+  diff checks pass. The corrected app and bundle build now contain the fix; the
+  storage-bound focused test and rendered interaction remain open.
 - 2026-07-23: Closed a hidden local-first launch violation exposed by the stale
   bundle log. Despite hidden collaboration/account chrome and a false default,
   inherited user settings still started the upstream Zed websocket, LiveKit
@@ -762,18 +764,26 @@ Notes decision:
   automatic cloud authentication and the Collab panel to the official Zed
   product and ignores inherited Zed/Mercury prediction providers in Dez while
   retaining explicit non-Zed providers. Commit `9318b270d9` makes those
-  boundaries part of `script/dez-identity-check`, which passes. The source is
-  not yet rebuilt, so the running bundle is not runtime evidence for this fix.
+  boundaries part of `script/dez-identity-check`, which passes. The rebuilt
+  bundle held no established or listening TCP socket during the recorded soak.
 - 2026-07-23: Repaired the remaining footer layout contract exposed by the
   supplied screenshot. Commit `0d8496969f` places project identity and
   worktree/branch controls in bounded, shrinkable, overflow-hidden regions,
   allowing their existing one-line truncation and tooltips to work inside the
-  fixed-height row. Formatting and diff checks pass. Build and rendered
-  narrow-width evidence remain open, and the running signed bundle predates the
-  correction.
+  fixed-height row. Formatting, diff, and complete app/bundle build checks pass;
+  rendered narrow-width evidence remains open.
 - 2026-07-23: Removed the screenshot's redundant stacked footer utility row.
   Commit `abc4f8bedb` moves Command Search into the existing icon bar with an
   accessible action tooltip, suppresses Dez's otherwise empty upstream
   workspace/update row, and still shows the Canvas prefix indicator on demand.
   Upstream Zed behavior remains gated to the Zed product. Formatting and diff
-  checks pass; the running bundle predates this source-only correction.
+  checks pass.
+- 2026-07-23: Rebuilt the complete arm64 Dez app and protocol-4 terminal Host
+  from source head `679cdc28445c`, including all four screenshot-driven shell
+  corrections and the local-first boundary. The ad-hoc `Dez Dev.app` passes
+  deep-strict verification with CDHash
+  `0dc2e1e872b88cbd6288f1bea5455fbc48271cc5`, and PID `85053` resolves to its
+  exact bundle executable. A runtime soak observed no established or listening
+  TCP sockets. The approved UI controller still reports a locked desktop, so
+  corrected visual and accessibility evidence remains open rather than
+  inferred. The excluded `dist/Superzed.app` remains unopened.

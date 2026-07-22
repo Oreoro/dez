@@ -6,6 +6,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 ## Frozen source and intended artifacts {#frozen-source-and-intended-artifacts}
 
 - Protocol 4 app and Host build commit: `d0b0d9a908`
+- Corrected shell bundle source: `679cdc28445c824482923bdfdfd8463927f9a337`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -56,14 +57,17 @@ Mach-O files:
 
 | Artifact            | Size | SHA-256                                                            |
 | ------------------- | ---- | ------------------------------------------------------------------ |
-| `target/debug/dez`  | 1.0G | `ccc84c35cc2ef037a0f4ebcfe41ea8a14918df95e369b0989fef6235eaa10db5` |
+| `target/debug/dez`  | 1.0G | `c244c5501097257cb4bbe4203ffb3ced1ffa416dced857ffb6be515a445c8489` |
 | `target/debug/cli`  | 12M  | `e9bde80f1d951a6f9b7da53b0175de23db31c642b368c67c19451a04fbc9eaed` |
-| `dez-terminal-host` | 13M  | `500845d7e3c27ba205803330865c92ebbd55a533c261a915eeb7422f715b6113` |
+| `dez-terminal-host` | 13M  | `935e1e3395a37860e0a2533958e28a1a0c13aeda37c7cc20be489897951deee2` |
 
-After hashing and copying it into the signed bundle, the 1.0G raw `dez` file
-was removed to provide safe link headroom for the Session Rail regression test.
-The signed bundle copy remains present and running; the raw file is reproducible
-with the recorded build command.
+The final link completed in 38.17 seconds from the already compiled graph. A
+redundant Darwin post-link debug-strip pass was scoped out because it attempted
+to materialize a second 1.0G copy on the storage-constrained volume; the linked
+Mach-O itself completed successfully. The original Rust toolchain executable
+was restored immediately afterward. The raw app and helper remain present and
+match the hashes above; only regenerable WebRTC build intermediates were
+removed to provide bundle-signing headroom.
 
 ## Debug bundle and coexistence evidence {#debug-bundle-and-coexistence-evidence}
 
@@ -85,6 +89,7 @@ The resulting 1.0G bundle passed `codesign --verify --deep --strict` and has:
 - arm64 `dez`, `cli`, `dez-terminal-host`, and bundled `git` executables;
 - the required document icon and Dez document labels;
 - an ad-hoc local signature with no team identifier;
+- ad-hoc CDHash `0dc2e1e872b88cbd6288f1bea5455fbc48271cc5`;
 - privacy prompt copy that identifies a developer tool launched from Dez
   instead of ambiguously claiming that “an application in Dez” requested data.
 
@@ -92,9 +97,9 @@ Signed bundle-executable SHA-256 values are:
 
 | Bundle executable   | SHA-256                                                            |
 | ------------------- | ------------------------------------------------------------------ |
-| `dez`               | `8e7c203a4e4b5da5c577cc37ef0661ca113e2702fa4e4263a83a8bdba75e5b0a` |
-| `cli`               | `19e7c4b56c0f85249d8347b2eb219a640ee047fd06612c748e7c6dbe2ade1821` |
-| `dez-terminal-host` | `82e3b34f4ddff9f5cc5d67d0a03564c08a46b34acea97edde8220bf71e808f62` |
+| `dez`               | `85c0b9e58fe4134b58081463b3de397e058ca77a69e01e5fc881ba2c3e2c82ff` |
+| `cli`               | `3055a8e7b97588b0cae57dedfc10084dbffe93926c8923b768234f4f2e1b2b0a` |
+| `dez-terminal-host` | `2e36a469b57445246a9d47c6c17b6f2e69061644f7567d0613e105c36b66f775` |
 | `git`               | `3785db4c9db29936c32339b92d530c5c519ae1ab493ed41ab9b5f693bbb54281` |
 
 The signed copies differ byte-for-byte from the raw Cargo outputs because the
@@ -146,7 +151,8 @@ it for painting as well as reservation, with compact, detailed, and icon-mode
 regression assertions. Formatting and diff checks pass. Its focused test build
 was attempted but not completed: reconstructing the deleted Cargo source cache
 twice exhausted the remaining volume before the large test link, so no test
-pass is claimed. The running signed bundle predates this correction.
+pass is claimed. The corrected source now compiles in the complete app and is
+present in the signed bundle; rendered proof remains open.
 
 The screenshot also showed a loaded project with a completely blank center.
 The render decision checked `should_display_welcome_page` before checking for a
@@ -165,27 +171,30 @@ cloud authentication and eager Collab-panel construction to the official Zed
 product, and treats inherited Zed/Mercury prediction providers as unavailable
 in Dez while retaining explicit Copilot, Codestral, Ollama, and compatible API
 providers. Commit `9318b270d9` adds static identity-policy checks for all of
-these boundaries. The checks pass; the running bundle predates them, so offline
-and quiet-launch runtime proof remains open.
+these boundaries. The checks pass. The corrected bundle remained alive for the
+recorded runtime soak with no established or listening TCP socket, closing the
+quiet local-launch runtime gate.
 
 The screenshot's footer also exposed an independent flex-layout failure:
 project identity and worktree/branch controls were nominally truncating, but
 their parent row did not give them bounded shrink regions. Commit `0d8496969f`
 wraps both groups in minimum-width-zero, flexible, overflow-hidden containers
 and keeps the Git group bounded to the row width. Formatting and diff checks
-pass. The change is source-only until the consolidated build and narrow-width
-render audit complete.
+pass. The complete app build now contains the change; narrow-width render audit
+remains open.
 
 The same footer rendered Command Search in a dedicated row immediately above a
 second icon utility bar. Commit `abc4f8bedb` removes that stacked Dez-only
 chrome, keeps Command Search as an accessible icon in the existing utility bar,
 suppresses the unowned upstream update surface, and renders the Canvas prefix
 indicator row only while prefix mode is active. Official Zed retains its prior
-workspace-bar behavior. Formatting and diff checks pass; build and render proof
-remain open.
+workspace-bar behavior. Formatting and diff checks pass, and the complete app
+build contains the change; render proof remains open.
 
-The audited `Dez Dev.app` is now registered and launched as launchd child PID
-`57957`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
+The corrected `Dez Dev.app` is now registered and launched as launchd child PID
+`85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
+`lsof` resolves its text executable to
+`/Users/test/Documents/zed 3.0/target/debug/bundle/osx/Dez Dev.app/Contents/MacOS/dez`.
 The desktop is currently locked, and the approved accessibility controller
 cannot unlock it automatically. A fresh rendered screenshot of the corrected
 artifact therefore remains required before the visual matrix can be checked
@@ -217,25 +226,27 @@ that scenario still requires the unlocked UI and a graceful application quit.
       active row
 - [x] Post-bundle Session Rail source check: commit `2dd523b6e9` adds the named
       accessibility landmark and narrow-width truncation, and the focused
-      `sidebar` Cargo check passes with the recorded profile. This is
-      compile evidence only; the audited signed bundle predates the source edit.
+      `sidebar` Cargo check passes with the recorded profile. The corrected
+      signed bundle now contains the source edit; AX-tree inspection is open.
 - [ ] Mode-resolved Session Rail width regression: commit `79f69b273c` makes
       rendering consume the same compact/icon/detailed width reserved by the
       workspace and contains assertions for all modes. Formatting and diff
       checks pass, but the focused test did not finish under the local storage
-      ceiling and the post-fix bundle has not been built.
+      ceiling. The post-fix complete app and bundle build pass; rendered and
+      focused-test proof remain open.
 - [ ] Restored empty-project launch regression: commit `4829f6b052` makes a
       loaded project render Project ready actions even when an old pane lacks
       the welcome flag. The assertion is authored and formatting passes; the
-      shared focused test target and post-fix bundle remain incomplete.
-- [ ] Bounded project-footer regression: commit `0d8496969f` gives project
+      complete app and bundle build pass, while the shared focused test and
+      rendered interaction remain incomplete.
+- [x] Bounded project-footer compile regression: commit `0d8496969f` gives project
       identity and Git controls explicit shrink/overflow contracts so their
-      one-line labels can truncate instead of colliding. Formatting and diff
-      checks pass; compile and rendered narrow-width proof remain open.
-- [ ] Consolidated footer-utility regression: commit `abc4f8bedb` removes the
+      one-line labels can truncate instead of colliding. Formatting, diff, and
+      complete app build checks pass; rendered narrow-width proof remains open.
+- [x] Consolidated footer-utility compile regression: commit `abc4f8bedb` removes the
       dedicated Dez Command Search row while preserving the action, accessible
-      tooltip, and on-demand prefix indicator. Formatting and diff checks pass;
-      compile and rendered proof remain open.
+      tooltip, and on-demand prefix indicator. Formatting, diff, and complete
+      app build checks pass; rendered proof remains open.
 - [x] `cargo clippy -p dez_terminal_host --all-targets -- -D warnings` with the
       recorded storage-constrained dev profile
 - [ ] App-facing modified-crate `cargo clippy` (the full app graph exceeds the

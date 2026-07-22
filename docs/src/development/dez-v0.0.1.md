@@ -15,8 +15,10 @@ The Dez documentation set wins when priorities or defaults conflict.
 
 ## Current release-candidate status {#current-release-candidate-status}
 
-The exact protocol 4 `Dez Dev.app` is now built, ad-hoc signed, deep-strict
-verified, registered, and launched through its audited bundle path. The
+The corrected protocol 4 `Dez Dev.app` at source head `679cdc28445c` is now
+built, ad-hoc signed, deep-strict verified, registered, and launched through
+its audited bundle path. The live process resolved to that exact executable and
+held no established or listening TCP socket during the recorded soak. The
 packaged Host created a real PTY Session with one shell PID, retained 88 bounded
 replay chunks across an 80x24 to 132x41 resize, preserved output markers and
 dimensions on both sides of that resize, and reported explicit Detached state.
