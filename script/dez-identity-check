@@ -97,6 +97,9 @@ require_pattern crates/settings_ui/src/page_data.rs \
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'dez_network_setting_visible\(paths::APP_NAME' \
     'Dez Settings can regress to exposing inherited cloud connection controls'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'dez_edit_prediction_setting_visible\(\s*paths::APP_NAME' \
+    'Dez Settings can regress to exposing upstream edit-prediction data collection'
 require_pattern crates/workspace/src/welcome.rs \
     'APP_NAME == "Zed" && !self.fallback_to_recent_projects' \
     'the Dez welcome surface can route back into upstream onboarding'

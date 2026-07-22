@@ -3883,6 +3883,10 @@ fn dez_network_setting_visible(app_name: &str, json_path: Option<&str>) -> bool 
     app_name == "Zed" || matches!(json_path, Some("proxy"))
 }
 
+fn dez_edit_prediction_setting_visible(app_name: &str, json_path: Option<&str>) -> bool {
+    app_name == "Zed" || json_path != Some("edit_predictions.allow_data_collection")
+}
+
 fn window_and_layout_page() -> SettingsPage {
     fn status_bar_section() -> [SettingsPageItem; 10] {
         [
@@ -10713,16 +10717,19 @@ fn non_editor_language_settings_data() -> Box<[SettingsPageItem]> {
     )
 }
 
-fn edit_prediction_language_settings_section() -> [SettingsPageItem; 5] {
+fn edit_prediction_language_settings_section() -> Vec<SettingsPageItem> {
+    let provider_description = if paths::APP_NAME == "Zed" {
+        "Configure edit-prediction providers alongside the built-in Zeta model."
+    } else {
+        "Configure explicit edit-prediction providers. Dez does not enable upstream Zed-hosted providers."
+    };
     [
         SettingsPageItem::SectionHeader("Edit Predictions"),
         SettingsPageItem::SubPageLink(SubPageLink {
             title: "Configure Providers".into(),
             r#type: Default::default(),
             json_path: Some("edit_predictions.providers"),
-            description: Some(
-                "Configure edit-prediction providers alongside the built-in Zeta model.".into(),
-            ),
+            description: Some(provider_description.into()),
             search_aliases: &[],
             in_json: false,
             files: USER,
@@ -10808,6 +10815,18 @@ fn edit_prediction_language_settings_section() -> [SettingsPageItem; 5] {
             files: USER | PROJECT,
         }),
     ]
+    .into_iter()
+    .filter(|item| match item {
+        SettingsPageItem::SettingItem(item) => dez_edit_prediction_setting_visible(
+            paths::APP_NAME,
+            item.field.json_path(),
+        ),
+        SettingsPageItem::SectionHeader(_)
+        | SettingsPageItem::SubPageLink(_)
+        | SettingsPageItem::DynamicItem(_)
+        | SettingsPageItem::ActionLink(_) => true,
+    })
+    .collect()
 }
 
 fn show_scrollbar_or_editor(
@@ -10903,6 +10922,19 @@ mod tests {
         assert!(!dez_network_setting_visible("Dez", Some("server_url")));
         assert!(dez_network_setting_visible("Zed", Some("auto_connect")));
         assert!(dez_network_setting_visible("Zed", Some("server_url")));
+
+        assert!(!dez_edit_prediction_setting_visible(
+            "Dez",
+            Some("edit_predictions.allow_data_collection")
+        ));
+        assert!(dez_edit_prediction_setting_visible(
+            "Dez",
+            Some("languages.$(language).show_edit_predictions")
+        ));
+        assert!(dez_edit_prediction_setting_visible(
+            "Zed",
+            Some("edit_predictions.allow_data_collection")
+        ));
     }
 
     #[test]
