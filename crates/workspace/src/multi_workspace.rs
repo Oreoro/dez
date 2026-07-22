@@ -1104,8 +1104,10 @@ impl MultiWorkspace {
         Self::subscribe_to_workspace(workspace, window, cx);
         let weak_self = cx.weak_entity();
         let active_workspace_id = self.active_workspace_id.clone();
+        let viewport_id = self.window_id.as_u64();
         workspace.update(cx, |workspace, cx| {
             workspace.set_multi_workspace(weak_self, active_workspace_id, cx);
+            workspace.mark_durable_session_present(viewport_id, cx);
         });
 
         let entity = cx.entity();

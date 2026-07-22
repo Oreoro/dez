@@ -79,6 +79,9 @@ require_pattern crates/zed/src/zed.rs \
 require_pattern crates/zed/src/zed.rs \
     'app_name == "Zed"' \
     'blank-file seeding is not restricted to the official Zed product'
+require_pattern crates/workspace/src/multi_workspace.rs \
+    'workspace\.mark_durable_session_present\(viewport_id, cx\);' \
+    'background Workspace registration is absent from durable viewport composition'
 require_pattern crates/sidebar/src/sidebar.rs \
     '"No sessions yet"\.to_owned\(\)' \
     'the zero-session overview still presents completed-work copy'

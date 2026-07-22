@@ -367,33 +367,12 @@ impl AppSession {
             return false;
         }
 
-        let viewport = if let Some(index) = self
-            .durable_viewports
-            .iter()
-            .position(|viewport| viewport.viewport_id == viewport_id)
-        {
-            &mut self.durable_viewports[index]
-        } else {
-            self.durable_viewports.push(DurableViewportRecord {
-                viewport_id,
-                workspace_ids: Vec::new(),
-                active_workspace_id: None,
-            });
-            self.durable_viewports
-                .last_mut()
-                .expect("viewport was just inserted")
-        };
-
-        let mut changed = false;
-        if !viewport.workspace_ids.contains(&workspace_id) {
-            viewport.workspace_ids.push(workspace_id);
-            changed = true;
-        }
-        if make_active && viewport.active_workspace_id != Some(workspace_id) {
-            viewport.active_workspace_id = Some(workspace_id);
-            changed = true;
-        }
-        if !changed {
+        if !attach_workspace_to_viewport_records(
+            &mut self.durable_viewports,
+            viewport_id,
+            workspace_id,
+            make_active,
+        ) {
             return false;
         }
 
@@ -505,6 +484,38 @@ impl AppSession {
             store_durable_workspace_state(db, &state).await;
         }));
     }
+}
+
+fn attach_workspace_to_viewport_records(
+    viewports: &mut Vec<DurableViewportRecord>,
+    viewport_id: u64,
+    workspace_id: i64,
+    make_active: bool,
+) -> bool {
+    let viewport = if let Some(index) = viewports
+        .iter()
+        .position(|viewport| viewport.viewport_id == viewport_id)
+    {
+        &mut viewports[index]
+    } else {
+        viewports.push(DurableViewportRecord {
+            viewport_id,
+            workspace_ids: Vec::new(),
+            active_workspace_id: None,
+        });
+        viewports.last_mut().expect("viewport was just inserted")
+    };
+
+    let mut changed = false;
+    if !viewport.workspace_ids.contains(&workspace_id) {
+        viewport.workspace_ids.push(workspace_id);
+        changed = true;
+    }
+    if make_active && viewport.active_workspace_id != Some(workspace_id) {
+        viewport.active_workspace_id = Some(workspace_id);
+        changed = true;
+    }
+    changed
 }
 
 fn collect_workspace_memberships(
@@ -738,9 +749,10 @@ async fn store_durable_workspace_state(db: KeyValueStore, state: &DurableAppSess
 mod tests {
     use super::{
         DurableAppSessionState, DurableViewportRecord, DurableWorkspaceMembership,
-        DurableWorkspaceResolution, WorkspaceRestoreState, collect_durable_viewports,
-        collect_workspace_memberships, migrate_durable_viewports, reconcile_durable_viewports,
-        reconcile_workspace_memberships, remove_workspace_from_viewport_records,
+        DurableWorkspaceResolution, WorkspaceRestoreState, attach_workspace_to_viewport_records,
+        collect_durable_viewports, collect_workspace_memberships, migrate_durable_viewports,
+        reconcile_durable_viewports, reconcile_workspace_memberships,
+        remove_workspace_from_viewport_records,
     };
 
     #[test]
@@ -749,6 +761,43 @@ mod tests {
         assert!(WorkspaceRestoreState::Restoring.can_transition_to(WorkspaceRestoreState::Ready));
         assert!(!WorkspaceRestoreState::Pending.can_transition_to(WorkspaceRestoreState::Ready));
         assert!(!WorkspaceRestoreState::Ready.can_transition_to(WorkspaceRestoreState::Restoring));
+    }
+
+    #[test]
+    fn live_viewport_attachment_is_idempotent_and_preserves_order() {
+        let mut viewports = Vec::new();
+        assert!(attach_workspace_to_viewport_records(
+            &mut viewports,
+            1,
+            10,
+            false,
+        ));
+        assert!(!attach_workspace_to_viewport_records(
+            &mut viewports,
+            1,
+            10,
+            false,
+        ));
+        assert!(attach_workspace_to_viewport_records(
+            &mut viewports,
+            2,
+            10,
+            false,
+        ));
+        assert!(attach_workspace_to_viewport_records(
+            &mut viewports,
+            2,
+            10,
+            true,
+        ));
+
+        assert_eq!(viewports.len(), 2);
+        assert_eq!(viewports[0].viewport_id, 1);
+        assert_eq!(viewports[0].workspace_ids, [10]);
+        assert_eq!(viewports[0].active_workspace_id, None);
+        assert_eq!(viewports[1].viewport_id, 2);
+        assert_eq!(viewports[1].workspace_ids, [10]);
+        assert_eq!(viewports[1].active_workspace_id, Some(10));
     }
 
     #[test]

@@ -11363,6 +11363,20 @@ impl Workspace {
         });
     }
 
+    pub(crate) fn mark_durable_session_present(&self, viewport_id: u64, cx: &mut App) {
+        let Some(workspace_id) = self.database_id else {
+            return;
+        };
+        self.app_state.session.update(cx, |session, cx| {
+            session.attach_durable_workspace_to_viewport(
+                viewport_id,
+                workspace_id.into(),
+                false,
+                cx,
+            );
+        });
+    }
+
     fn force_remove_pane(
         &mut self,
         pane: &Entity<Pane>,
