@@ -114,13 +114,12 @@ shell or rerun the agent initialization command. Legacy rows with no pair keep
 their compatibility restoration path. Cross-process continuity still depends
 on the planned local helper.
 
-The first helper source slice now exists as `dez-terminal-host`. It uses a
+The first helper boundary exists as `dez-terminal-host`. It uses a
 private local socket and token-file handshake, owns raw PTYs outside GPUI,
 retains bounded sequence-addressed output, and implements the Host lifecycle
-commands including input, resize, detach, and terminate. This is infrastructure
-evidence, not a successful-run claim: the default app does not start or connect
-to the helper, and the helper binary has not been compiled or run under the
-deferred build agreement.
+commands including input, resize, detach, and terminate. The helper is now
+compiled and its focused protocol/lifecycle tests pass. It remains opt-in until
+the full hosted-Session restart scenario is proven.
 
 The macOS bundle now includes and signs that helper. An experimental runtime
 supervisor can connect to an existing helper or launch the bundled sibling when
@@ -131,9 +130,9 @@ into the Session Rail; terminal-item and agent restores wait briefly for host
 startup and reattach without spawning replacement work. Task terminals remain
 on the existing backend. When the host is explicitly enabled, startup and
 reconnection health appear in the rail and new shells fail visibly rather than
-falling back to a disposable GUI process. This source path still does not
-satisfy the restart-recovery acceptance test until the deferred build and live
-smoke gate produce evidence.
+falling back to a disposable GUI process. The intended app now launches and
+reuses the helper across a GUI restart, but same hosted-Session replay remains
+open until a live PTY can be created and reattached.
 
 Unavailable saved sessions remain visible as evidence. Their terminal-shaped
 surface states that no replacement was started and provides one explicit New
@@ -172,9 +171,10 @@ cross-GUI survival.
 The Dez shell no longer renders upstream sign-in, plan/user, collaboration
 connection, or Collab-menu chrome. Misleading upstream support, social, and
 hiring links are removed; retained upstream documentation, repository,
-provider, protocol, and compatibility labels are explicit. No current Dez,
-Zed, or Superzed process was available for a new visual inspection after these
-source changes, and no alternate binary was launched.
+provider, protocol, and compatibility labels are explicit. The exact intended
+raw Dez executable was later launched; no alternate Superzed binary or
+generated bundle was opened. The desktop remained locked, so this is runtime
+evidence rather than a new rendered visual inspection.
 
 The outward supervision pass now gives Session Rail live All/Attention totals,
 stable identity-based keyboard selection, per-Workspace New Terminal recovery,
@@ -202,6 +202,39 @@ models, Edit Predictions, documentation, and repository links are labeled as
 upstream. A prediction-client mismatch can be dismissed but cannot route users
 to install Zed over Dez. Compatibility storage and format names remain unchanged
 until a migration exists.
+
+## Consolidated gate observed on July 22, 2026
+
+The warning-free arm64 app/helper build completed from
+`da562e14bb403af815cbab9802225dda0b2418c8`; the intended CLI completed with the
+same locked low-disk profile. Fifteen terminal tests, eight Host/helper tests,
+and three Session Rail terminal lifecycle tests passed. Final launch of only
+`target/debug/dez` no longer panics on stale onboarding keybindings and, with
+`auto_connect = false`, does not eagerly authenticate cloud model providers.
+
+With `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, helper PID `48768` survived GUI PID
+`48519`, reparented to PID 1, and was reused by relaunched GUI PID `50092` with
+the same socket and Host ID and no second helper. That proves Host-process
+continuity, not yet terminal-Session continuity: the locked desktop prevented
+creating a hosted shell and capturing its Session ID, child PID, replay cursor,
+and same-process reattachment.
+
+Packaging commit `ce11c4ed3d` produces
+`target/debug/bundle/osx/Dez Dev.app` without rebuilding the consolidated debug
+graph. The 1.0G ad-hoc bundle passes deep strict signature verification and
+contains arm64 `dez`, `cli`, `dez-terminal-host`, and bundled `git`. Its public
+identity is `Dez Dev` 0.0.1, bundle identifier `dev.dez.Dez-Dev`, and only the
+`dez-dev` URL scheme. Privacy prompts identify developer-tool requests instead
+of using ambiguous application copy. This is local structural evidence, not
+Developer ID signing, notarization, installed official-Zed coexistence, or a
+public release claim.
+
+The remaining launch blockers are the live hosted-terminal reattach and Codex
+review hero flows, restored/degraded UI states, visual and accessibility audit,
+modified-crate Clippy, public signing/notarization/install checks, official Zed
+coexistence, and design-partner validation. The current macOS desktop must be
+unlocked before the rendered gates can be completed through the approved UI
+control path.
 
 ## Interaction model
 

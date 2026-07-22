@@ -549,6 +549,29 @@ code, all launch gates pass, and known limitations are documented.
       Stale without deleting review history; and Run Briefs disclose the stale
       observation as a risk. Explicit removal and reconnect reconciliation
       remain open.
+- [x] 2026-07-22: Complete the upstream-integration compatibility repair and
+      focused runtime-facing test slice. Fifteen terminal tests, eight helper
+      tests, and three Session Rail terminal lifecycle tests pass. Stale
+      onboarding actions no longer panic built-in keymap loading, draft agent
+      rows remain visible, and local startup no longer authenticates cloud
+      providers when `auto_connect` is false.
+- [x] 2026-07-22: Complete the warning-free consolidated arm64 app and helper
+      build at `da562e14bb403af815cbab9802225dda0b2418c8`, then build the CLI
+      with the same locked low-disk profile. Launch only the exact
+      `target/debug/dez`; exclude and do not open the historical untracked
+      `dist/Superzed.app`.
+- [x] 2026-07-22: Prove the external helper's process-level lifetime. Helper
+      PID `48768` survives GUI PID `48519`, reparents to PID 1, and is reused by
+      relaunched GUI PID `50092` with one instance, the same socket, and Host ID
+      `d9670db8-e498-5537-a9d8-f99ad098f4aa`. Same hosted-Session replay and
+      child-PID reattachment remain unproven because the desktop is locked.
+- [x] 2026-07-22: Harden and audit local debug packaging at `ce11c4ed3d`. The
+      bundle script reuses the consolidated host artifacts, restores its
+      manifest after failures, avoids the pinned bundler's broken colour path,
+      and skips release-only remote-server work. The ad-hoc arm64 bundle passes
+      deep strict signature verification with identifier `dev.dez.Dez-Dev`,
+      version `0.0.1`, scheme `dez-dev`, and app, CLI, helper, and bundled Git.
+      Permission prompts now describe developer-tool requests truthfully.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
@@ -804,14 +827,32 @@ Completed for the first helper-process source slice:
 - no Rust compile, test, helper launch, application launch, or cross-process
   recovery claim.
 
-Still required at the consolidated gate:
+Completed at the 2026-07-22 consolidated gate:
 
-- focused tests for modified crates;
-- `cargo build -p zed --bin dez`;
-- production-like `dez` run and macOS visual smoke test;
-- bundle identity and signing audit;
-- end-to-end restart, pane restoration, offline, accessibility, agent-state,
-  and session-recovery scenarios.
+- warning-free locked app/helper build and locked CLI build using the recorded
+  single-codegen-unit, non-incremental dev profile;
+- 15 focused terminal tests, 8 focused helper tests, and 3 Session Rail
+  lifecycle tests;
+- exact raw-binary launch with the keymap and local-first startup regressions
+  corrected;
+- helper PID/Host/socket survival and single-instance reuse across GUI exit and
+  exact-client relaunch;
+- debug bundle creation, bundle identity and executable inventory, permission
+  copy, SHA-256 capture, and deep strict ad-hoc signature verification;
+- `cargo fmt --all -- --check`, offline Cargo metadata, identity, Bash syntax,
+  and diff checks.
 
-The full build remains deferred by the active work agreement. Do not report the
-release as verified until the consolidated gate runs.
+Still required after the consolidated gate:
+
+- modified-crate Clippy when enough local build storage is available;
+- a live hosted PTY with Session ID, child PID, replay cursor, and
+  same-computation restart/reattach proof;
+- restored/empty/offline/failed/incompatible UI scenarios and the structured
+  Codex attention/review/restart hero flow;
+- visual density/theme/width matrix, keyboard/pointer parity, and macOS
+  accessibility audit after the desktop is unlocked;
+- Developer ID signing, notarization, installation/uninstallation, official
+  Zed coexistence, and design-partner proof.
+
+The build gate has run, but the public release remains unverified until these
+remaining runtime, visual, accessibility, distribution, and partner gates pass.

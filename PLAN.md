@@ -67,27 +67,29 @@ Dez v0.0.1 is complete only when all of the following are true:
 
 ## Current evidence baseline
 
-Status below reflects repository evidence on 2026-07-22. “Source present” does
-not imply compiled or live-verified behavior.
+Status below reflects repository evidence on 2026-07-22. The consolidated app,
+CLI, and helper builds now exist; build proof still does not imply rendered or
+end-to-end interaction proof.
 
-| Area                   | Evidence now                                                                                                                                                         | Completion gap                                                                                |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Upstream               | Integrated `upstream/main` `9d0ef37a2571` through two-parent merge `2be63cfea347`; eleven conflicts are resolved and classified                                      | Complete compiled/runtime regression proof and record final artifact provenance               |
-| Identity               | Dez names, executable, schemes, bundle/update guards, identity script, and CI workflow exist in source                                                               | Compile, package, install/coexistence, updater, remote, and first-party visual proof          |
-| App Session            | Restore barrier, lifecycle state, ordered Workspace registry, explicit ordered viewport records, active selection, and unresolved identity retention exist in source | Live viewport/entity composition and consolidated runtime proof                               |
-| Workspace and Surfaces | Pane/Canvas repair, panel-to-pane work, startup request ordering, and typed path projection exist                                                                    | Authoritative EvidenceSet, scoped tools, movement proof, and shared-store isolation           |
-| Local Host             | Authenticated versioned helper, PTY ownership, replay, lifecycle commands, supervisor, and packaging seam exist behind an opt-in flag                                | Compile, liveness/security tests, GUI-exit survival proof, and default-backend decision       |
-| Terminal recovery      | Host/Session references, attach/detach/terminate, recovery surfaces, and honest transport states exist in source                                                     | Full restart scenario, task-terminal policy, stale-host cleanup, and UX verification          |
-| Agent adapter          | Structured Codex hook path, observation-only capabilities, bounded file targets, objective/context projection, and onboarding exist                                  | Live hook proof and a second adapter after the PMF gate                                       |
-| Attention              | Session Rail projection, restart-safe attention, acknowledgement, mute, resolution, priority, and stale handling exist                                               | Consolidated runtime and accessibility proof                                                  |
-| Review                 | Native and terminal review briefs consume observed commands/checks, Git/worktree state, bounded file targets, cwd provenance, risks, and missing-evidence labels     | Compiled proof, live navigation, and side-by-side hero-flow validation                        |
-| UI/UX                  | Repaired Canvas states, pane focus, Session Rail search/start states, density and contrast work exist                                                                | Complete shell hierarchy, outward polish, onboarding, accessibility, and state-by-state audit |
-| Release                | Static formatting, metadata, identity, and documentation checks have passed for source slices                                                                        | Consolidated build, intended-binary live audit, restart, packaging, and design-partner proof  |
+| Area                   | Evidence now                                                                                                                                                               | Completion gap                                                                                   |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Upstream               | Integrated `upstream/main` `9d0ef37a2571` through two-parent merge `2be63cfea347`; eleven conflicts are resolved and classified; consolidated build provenance is recorded | Complete runtime regression, installed coexistence, and design-partner proof                     |
+| Identity               | Dez source guards pass; the arm64 debug app, CLI, helper, and `dev.dez.Dez-Dev`/`dez-dev` ad-hoc bundle are audited                                                        | Official-Zed install coexistence, public signing/notarization, updater, remote, and visual proof |
+| App Session            | Restore barrier, lifecycle state, ordered Workspace registry, explicit ordered viewport records, active selection, and unresolved identity retention exist in source       | Live viewport/entity composition and consolidated runtime proof                                  |
+| Workspace and Surfaces | Pane/Canvas repair, panel-to-pane work, startup request ordering, and typed path projection exist                                                                          | Authoritative EvidenceSet, scoped tools, movement proof, and shared-store isolation              |
+| Local Host             | The compiled authenticated helper passes focused tests; its exact PID survives GUI exit and is reused by the relaunched intended client                                    | Live hosted-Session replay/reattach proof and default-backend decision                           |
+| Terminal recovery      | Host/Session references, attach/detach/terminate, recovery surfaces, and honest transport states exist in source                                                           | Full restart scenario, task-terminal policy, stale-host cleanup, and UX verification             |
+| Agent adapter          | Structured Codex hook path, observation-only capabilities, bounded file targets, objective/context projection, and onboarding exist                                        | Live hook proof and a second adapter after the PMF gate                                          |
+| Attention              | Session Rail projection, restart-safe attention, acknowledgement, mute, resolution, priority, and stale handling exist                                                     | Consolidated runtime and accessibility proof                                                     |
+| Review                 | Native and terminal review briefs consume observed commands/checks, Git/worktree state, bounded file targets, cwd provenance, risks, and missing-evidence labels           | Compiled proof, live navigation, and side-by-side hero-flow validation                           |
+| UI/UX                  | Repaired Canvas states, pane focus, Session Rail search/start states, density and contrast work exist                                                                      | Complete shell hierarchy, outward polish, onboarding, accessibility, and state-by-state audit    |
+| Release                | Static gates, focused tests, consolidated app/helper/CLI builds, exact-binary launch, Host reuse, and an ad-hoc debug-bundle audit pass                                    | Full Session restart, visual/a11y, lint, public signing/install, coexistence, and partner proof  |
 
-No Dez process was running when this plan was refreshed. Do not claim a visual
-or runtime result until the intended binary is built and inspected at the
-consolidated gate. Never open an alternate SuperZed/Dez binary merely to obtain
-convenient evidence.
+Only `/Users/test/Documents/zed 3.0/target/debug/dez` was launched during the
+consolidated gate. Its sibling helper survived the first GUI process and was
+reused by the second. The generated bundle and the excluded untracked
+`dist/Superzed.app` were not opened. The locked desktop prevented rendered UI
+and accessibility inspection, so no visual claim is inferred from the launch.
 
 ## Execution plan
 
@@ -108,7 +110,7 @@ convenient evidence.
       Superzed identity.
 - [ ] Prove Dez and official Zed coexist without overwriting binaries, data,
       schemes, channels, or updates.
-- [ ] Record source commit, upstream base, toolchain, dependency lock,
+- [x] Record source commit, upstream base, toolchain, dependency lock,
       packaging inputs, and release provenance.
 
 Acceptance: the upstream ledger is current, identity checks pass, coexistence
@@ -194,7 +196,7 @@ Workspace or eagerly scanning a broad directory.
       uncertain command replay, and silent disposable fallback.
 - [x] Provide explicit display-only recovery surfaces for missing,
       incompatible, malformed, and unavailable saved Sessions.
-- [ ] Compile and run focused protocol, framing, permissions, lifecycle,
+- [x] Compile and run focused protocol, framing, permissions, lifecycle,
       replay, slow-client, reconnection, process-reaping, and failure tests.
 - [x] Negotiate additive Host capabilities during the authenticated handshake
       and carry provider-neutral adapter evidence capabilities in structured
@@ -212,7 +214,9 @@ Workspace or eagerly scanning a broad directory.
       resync after retention loss remain explicit; older helpers use the
       bounded polling fallback.
 - [ ] Prove the helper remains alive after GUI exit and reattaches the same
-      computation without spawning a replacement shell.
+      computation without spawning a replacement shell. Helper PID, Host ID,
+      socket, and single-instance reuse are proven; creating and reattaching a
+      hosted PTY remains blocked by the locked desktop.
 - [ ] Verify detach, close, reconnect, terminate, observed exit, missing,
       incompatible, and stale copy/actions in rendered UI.
 - [x] Keep task terminals GUI-owned and non-durable in v0.0.1. Their rerun,
@@ -469,7 +473,7 @@ feels complete for daily work and remains maintainable as a Zed fork.
       bundle paths before launching anything.
 - [ ] Run formatting, metadata, identity, documentation, lint, focused unit,
       integration, and migration gates at scope appropriate to the changes.
-- [ ] Compile the intended Dez app and helper once at the consolidated gate;
+- [x] Compile the intended Dez app and helper once at the consolidated gate;
       do not open a second historical SuperZed/Dez binary.
 - [ ] Inspect first launch, normal launch, restored launch, offline launch,
       failed-host launch, and incompatible-host launch.
@@ -635,3 +639,33 @@ Notes decision:
   a transient set of active attention session IDs, and requests OS window
   attention once for each newly raised condition when the accessibility setting
   allows it. Acknowledgement removes the ID so a future condition can announce.
+- 2026-07-22: Integrated the selected upstream base, repaired post-merge
+  settings/sidebar/lifecycle compatibility, removed stale onboarding keymap
+  actions that panicked the final binary, and kept `auto_connect = false`
+  genuinely local by preventing eager cloud-provider authentication. Fifteen
+  focused terminal tests, eight helper tests, and three Session Rail lifecycle
+  tests passed before the consolidated build.
+- 2026-07-22: Completed the warning-free consolidated arm64 app/helper build at
+  `da562e14bb403af815cbab9802225dda0b2418c8`, then built the intended CLI with
+  the same locked low-disk profile. The exact raw Dez executable launched
+  without the corrected keymap or provider-auth failures; no historical
+  Superzed artifact was opened.
+- 2026-07-22: Proved the external Host boundary survives the GUI lifecycle.
+  Helper PID `48768` stayed alive and reparented to PID 1 after GUI PID `48519`
+  exited; GUI PID `50092` reused that exact helper, socket, and Host ID with one
+  helper instance. A live hosted PTY was not created, so same-Session replay and
+  child-PID reattachment remain open rather than inferred.
+- 2026-07-22: Hardened debug packaging in `ce11c4ed3d`. The macOS script now
+  reuses a complete host debug artifact set without materializing a duplicate
+  target graph, restores its temporary manifest on failure, uses the pinned
+  bundler's plain-output fallback, and omits release-only remote-server work.
+  The 1.0G ad-hoc bundle passes deep strict signature verification with
+  `dev.dez.Dez-Dev`, version `0.0.1`, scheme `dez-dev`, and arm64 app, CLI,
+  helper, and Git executables. Privacy prompts now identify developer-tool
+  requests clearly. Public signing, notarization, installation, and official
+  Zed coexistence remain separate gates.
+- 2026-07-22: Retried live UI inspection exclusively through the approved
+  macOS accessibility/computer-control path. The desktop remained locked and
+  automatic unlock failed, so the visual state matrix, keyboard/pointer audit,
+  accessibility tree, and full hosted-terminal recovery scenario remain
+  explicitly unverified.
