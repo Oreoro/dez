@@ -5546,12 +5546,23 @@ impl Workspace {
                 }
             }
 
+            // A database-backed workspace remains part of the durable App
+            // Session when its viewport closes. Replacing it inside an
+            // existing viewport is the explicit removal path. This keeps
+            // close-window and quit symmetric: both can restore the same
+            // Workspace later without making an OS window its owner.
+            let preserves_durable_workspace = close_intent != CloseIntent::ReplaceWindow
+                && this
+                    .read_with(cx, |workspace, _| workspace.database_id.is_some())
+                    .unwrap_or(false);
+
             // Hot-exit silently writes dirty buffers to the DB; only allow it
-            // if the workspace will be reachable again, either via session
-            // restore or by reopening its folder paths. Otherwise prompt, so
-            // we don't orphan the buffers.
+            // if the workspace will be reachable again, either through the
+            // durable App Session or by reopening its folder paths. Otherwise
+            // prompt, so we don't orphan the buffers.
             let allow_hot_exit_serialization = close_intent == CloseIntent::Quit
                 || save_last_workspace
+                || preserves_durable_workspace
                 || this
                     .read_with(cx, |workspace, cx| {
                         workspace
@@ -5573,9 +5584,11 @@ impl Workspace {
                 })?
                 .await;
 
-            // If we're not quitting, but closing, we remove the workspace from
-            // the current session.
-            if close_intent != CloseIntent::Quit
+            // Replacing a Workspace is an explicit removal from this App
+            // Session. Closing a viewport is not: it leaves the durable
+            // Workspace and serialized window association available for the
+            // next viewport or launch.
+            if close_intent == CloseIntent::ReplaceWindow
                 && !save_last_workspace
                 && save_result.as_ref().is_ok_and(|&res| res)
             {
@@ -16691,6 +16704,48 @@ mod tests {
         cx.executor().run_until_parked();
 
         assert!(task.await.unwrap());
+    }
+
+    #[cfg(target_os = "macos")]
+    #[gpui::test]
+    async fn test_close_window_preserves_database_backed_workspace_session(
+        cx: &mut TestAppContext,
+    ) {
+        init_test(cx);
+
+        cx.update(|cx| {
+            register_serializable_item::<TestItem>(cx);
+        });
+
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, None, cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
+        workspace.update(cx, |workspace, _| workspace.set_random_database_id());
+
+        let item = cx.new(|cx| {
+            TestItem::new(cx)
+                .with_dirty(true)
+                .with_serialize(|| Some(Task::ready(Ok(()))))
+        });
+        workspace.update_in(cx, |workspace, window, cx| {
+            workspace.add_item_to_active_pane(Box::new(item), None, true, window, cx);
+        });
+
+        let task = workspace.update_in(cx, |workspace, window, cx| {
+            workspace.prepare_to_close(CloseIntent::CloseWindow, window, cx)
+        });
+        cx.executor().run_until_parked();
+
+        assert!(
+            !cx.has_pending_prompt(),
+            "a database-backed workspace remains recoverable through App Session"
+        );
+        assert!(task.await.unwrap());
+        assert!(
+            workspace.read_with(cx, |workspace, _| workspace.session_id().is_some()),
+            "closing a viewport must not remove durable App Session ownership"
+        );
     }
 
     #[gpui::test]
