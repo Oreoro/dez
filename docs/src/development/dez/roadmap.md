@@ -766,6 +766,15 @@ code, all launch gates pass, and known limitations are documented.
       compiling inherited audio/WebRTC dependencies, before a final code
       result. Formatting, diff, and identity gates pass; compiled UI and
       rendered proof remain open.
+- [x] 2026-07-23: Isolate Dez launch endpoints from official Zed in source.
+      Commit `c101fe6a43` moves macOS single-instance channels off upstream
+      Zed's 43737 range to Dez-owned 45737/45837/45937/46037 bases, renames the
+      Linux app/CLI listener to `dez-{channel}.sock`, and removes Linux/Windows
+      CLI autodetection fallbacks that could silently launch an official Zed
+      executable. Identity guards freeze each boundary. The standalone CLI
+      check passes in 1m22s; formatting, diff, and identity gates pass. Actual
+      installed coexistence remains open because this machine has no official
+      Zed app or CLI to inspect side by side.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

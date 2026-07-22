@@ -127,7 +127,11 @@ visual claim is inferred from source, build, or protocol evidence.
       collaboration copy, telemetry labels, and first-party UI for stale Zed or
       Superzed identity.
 - [ ] Prove Dez and official Zed coexist without overwriting binaries, data,
-      schemes, channels, or updates.
+      schemes, channels, or updates. Source now isolates bundle IDs, schemes,
+      CLI installation, updater/cloud gates, Linux listener sockets, Windows
+      instance IDs, and macOS single-instance ports; the Dez CLI can no longer
+      silently autodetect an official Zed executable. Installed side-by-side
+      proof remains open because no official Zed app or CLI is present here.
 - [x] Record source commit, upstream base, toolchain, dependency lock,
       packaging inputs, and release provenance.
 
@@ -956,3 +960,13 @@ Notes decision:
   dependencies, before the final crate produced a result; only artifacts from
   that attempt were cleared. No bundle was built or launched, so compiled UI
   and rendered interaction claims remain open.
+- 2026-07-23: Closed three source-level Zed coexistence collisions in
+  `c101fe6a43`. macOS Dez channels now own ports 45737/45837/45937/46037 before
+  per-user offsets instead of official Zed's 43737 range; Linux listener and
+  CLI endpoints now agree on `dez-{channel}.sock`; and Linux/Windows CLI
+  autodetection refuses to fall through to official Zed executables when its
+  matching Dez app is absent. Identity guards freeze all three boundaries.
+  `cargo check --locked -p cli --bin cli -j1` passes in 1m22s, and formatting,
+  diff, and identity gates pass. No other executable was launched. Installed
+  side-by-side proof remains open because the inspected app and command
+  locations contain no official Zed installation.

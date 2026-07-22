@@ -20,6 +20,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Failed-restore durable truth source: `d10d90648d`
 - Actionable failed-restore notice source: `31cc1b1205`
 - Persistent Session Rail recovery source: `fbf8443359`
+- Zed coexistence endpoint isolation source: `c101fe6a43`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -122,6 +123,17 @@ ad-hoc signing step rewrites Mach-O signatures. Static identity checks pass.
 No official Zed installation or CLI was present in the inspected system app and
 command locations, so installed coexistence cannot be demonstrated and remains
 open; no alternate application was launched during that audit.
+
+Commit `c101fe6a43` closes the source-level endpoint collisions found during the
+coexistence audit. macOS Dez channels now use bases
+45737/45837/45937/46037 before per-user offsets rather than official Zed's
+43737 range. Linux app and CLI use the product-isolated
+`dez-{channel}.sock`. Linux and Windows CLI discovery now fails clearly when a
+matching Dez executable is absent instead of silently launching a neighboring
+official Zed binary. Identity checks enforce all three boundaries, and
+`cargo check --locked -p cli --bin cli -j1` passes in 1m22s. Installed
+side-by-side proof is still not claimed because no official Zed installation
+exists in the inspected locations.
 
 ## Runtime evidence {#runtime-evidence}
 
@@ -229,8 +241,8 @@ complete.
 
 Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`,
-`47e769da5d`, `d10d90648d`, `31cc1b1205`, and `fbf8443359` are newer than that
-running bundle. The first passes all nine focused Session tests, including duplicate viewport
+`47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, and `c101fe6a43` are
+newer than that running bundle. The first passes all nine focused Session tests, including duplicate viewport
 replacement without reordering or membership loss. The second makes Project
 ready terminal-first, prevents New Window and startup fallback paths from
 covering Dez's actionable launch surface with an unsolicited blank editor, and
@@ -435,7 +447,9 @@ that scenario still requires the unlocked UI and a graceful application quit.
 - [ ] Visual state matrix and keyboard/pointer parity
 - [ ] Accessibility tree, focus order, labels, contrast, and reduced-motion audit
 - [ ] Official Zed installed coexistence without scheme, bundle, storage, CLI,
-      or updater takeover
+      or updater takeover. Commit `c101fe6a43` isolates macOS instance ports,
+      Linux sockets, and CLI autodetection in source; installed proof remains
+      open because official Zed is absent here.
 - [x] Local bundle identity, helper inclusion, entitlements, and ad-hoc
       signature audit
 - [ ] Developer ID signing, notarization, install, launch, and uninstall audit
@@ -444,7 +458,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `fbf8443359` or
+visual evidence: the exact bundle must first be rebuilt from `c101fe6a43` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -454,6 +468,6 @@ credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
 running and contains the corrected shell source through `679cdc28445c`, but
-predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`, `47e769da5d`, `d10d90648d`, `31cc1b1205`, and `fbf8443359`. A rebuild/re-audit and an unlocked
+predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`, `47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, and `c101fe6a43`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.
