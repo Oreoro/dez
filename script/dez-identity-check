@@ -58,6 +58,21 @@ require_pattern crates/zed/Cargo.toml \
 require_pattern assets/settings/default.json \
     '^  "auto_update": false,$' \
     'automatic binary updates are enabled by default'
+require_pattern assets/settings/default.json \
+    '^  "auto_connect": false,$' \
+    'upstream cloud auto-connect is enabled by default'
+require_pattern crates/zed/src/main.rs \
+    'paths::APP_NAME == "Zed" && client::ClientSettings::get_global\(cx\)\.auto_connect' \
+    'inherited settings can auto-connect Dez to the upstream Zed cloud'
+require_pattern crates/zed/src/zed/edit_prediction_registry.rs \
+    'EditPredictionProvider::Zed if paths::APP_NAME != "Zed" => None' \
+    'the upstream Zed edit-prediction provider is reachable in Dez'
+require_pattern crates/zed/src/zed/edit_prediction_registry.rs \
+    'EditPredictionProvider::Mercury if paths::APP_NAME != "Zed" => None' \
+    'the upstream Mercury edit-prediction provider is reachable in Dez'
+require_multiline_pattern crates/zed/src/zed.rs \
+    'let channels_panel = \(APP_NAME == "Zed"\)\.then\(\|\| \{.*?CollabPanel::load' \
+    'Dez eagerly loads the upstream collaboration panel'
 require_pattern crates/release_channel/src/lib.rs \
     'ReleaseChannel::Stable => "Dez"' \
     'stable release display name is not Dez'
