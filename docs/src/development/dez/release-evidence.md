@@ -18,6 +18,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Shared-App-Session New Window proof source: `2334fbdcfc`
 - Queued-open startup barrier source: `47e769da5d`
 - Failed-restore durable truth source: `d10d90648d`
+- Actionable failed-restore notice source: `31cc1b1205`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -227,8 +228,8 @@ complete.
 
 Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`,
-`47e769da5d`, and `d10d90648d` are newer than that running bundle. The first
-passes all nine focused Session tests, including duplicate viewport
+`47e769da5d`, `d10d90648d`, and `31cc1b1205` are newer than that running bundle.
+The first passes all nine focused Session tests, including duplicate viewport
 replacement without reordering or membership loss. The second makes Project
 ready terminal-first, prevents New Window and startup fallback paths from
 covering Dez's actionable launch surface with an unsolicited blank editor, and
@@ -302,6 +303,13 @@ and leaves resolved neighbors unchanged. `cargo test --locked -p session --lib
 The full Dez integration check and user-facing recovery surface remain open,
 so no packaged runtime claim is inferred.
 
+Commit `31cc1b1205` makes the failed-restore notification persistent and
+actionable. Its concise copy exposes **Open Dez log**, uses one stable
+notification identity to avoid duplicate stacks, and falls back to the durable
+empty recovery Workspace when the active-window toast update itself fails.
+Formatting, diff, and identity gates pass. Full Dez compilation and rendered
+interaction proof remain open.
+
 The packaged helper also accepted a direct authenticated protocol 4 exercise.
 Host ID `d9670db8-e498-5537-a9d8-f99ad098f4aa` created Session
 `040b4465-5f0a-416b-9cb3-549da1a2a28b` with shell PID `53394`, emitted 88
@@ -370,6 +378,9 @@ that scenario still requires the unlocked UI and a graceful application quit.
       retains ordering while changing only the failed identity to unresolved;
       all 11 focused Session tests pass. Full startup integration and rendered
       retry/remove recovery proof remain open.
+- [ ] Actionable failed-restore notice: commit `31cc1b1205` provides a stable
+      non-autohiding toast and direct log action in source. Compiled and
+      rendered click-through proof remains open.
 - [ ] Restored empty-project launch regression: commit `4829f6b052` makes a
       loaded project render Project ready actions even when an old pane lacks
       the welcome flag. The assertion is authored and formatting passes; the
@@ -417,7 +428,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `d10d90648d` or
+visual evidence: the exact bundle must first be rebuilt from `31cc1b1205` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -427,6 +438,6 @@ credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
 running and contains the corrected shell source through `679cdc28445c`, but
-predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`, `47e769da5d`, and `d10d90648d`. A rebuild/re-audit and an unlocked
+predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`, `47e769da5d`, `d10d90648d`, and `31cc1b1205`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.

@@ -186,7 +186,8 @@ official Zed.
       failed restoration now marks the affected identity unresolved without
       removing its ordered membership or viewport placement, and all 11
       focused Session tests pass. The full startup integration check and
-      recovery UI remain open.
+      retry/remove recovery UI remain open; the failure toast now stays visible
+      and exposes a direct Open Dez log action instead of dead-end copy.
 
 Acceptance: a mixed set of populated, empty, and unresolved Workspaces returns
 in the same order and selection; later launch requests apply only after
@@ -929,3 +930,11 @@ Notes decision:
   2m08s; formatting, diff, and identity gates pass. The full Dez integration
   check and user-facing unresolved-Workspace recovery surface remain open, and
   no application bundle was built or launched.
+- 2026-07-23: Made the existing failed-restore notice actionable in
+  `31cc1b1205`. The toast now uses concise recovery copy, remains visible, and
+  offers **Open Dez log** directly; one stable notification identity prevents
+  duplicate failure stacks. The active-window path now reports success only
+  when the toast update actually succeeds, so an unusable window still falls
+  through to the durable empty recovery Workspace. Formatting, diff, and
+  identity gates pass. Full Dez compilation and rendered interaction proof
+  remain in the consolidated build gate.

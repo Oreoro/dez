@@ -746,6 +746,13 @@ code, all launch gates pass, and known limitations are documented.
       11 focused Session tests pass in 2m08s. The full startup integration check
       and polished retry/remove recovery UI remain open; no bundle was built or
       launched.
+- [x] 2026-07-23: Replace the failed-restore dead end with an actionable notice.
+      Commit `31cc1b1205` keeps one stable, non-autohiding toast with concise
+      copy and an **Open Dez log** action, and only treats an active-window
+      update as successful when the toast was actually installed. A failed
+      update therefore still opens the durable empty recovery Workspace.
+      Formatting, diff, and identity gates pass; compiled and rendered proof
+      remains deferred to the consolidated build gate.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
