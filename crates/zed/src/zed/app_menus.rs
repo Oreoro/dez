@@ -350,7 +350,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                 ),
                 MenuItem::action("View Telemetry", zed_actions::OpenTelemetryLog),
                 MenuItem::action("View Dependency Licenses", zed_actions::OpenLicenses),
-                MenuItem::action("Show Welcome", onboarding::ShowWelcome),
+                MenuItem::action("Getting Started", onboarding::ShowWelcome),
                 MenuItem::separator(),
                 MenuItem::action(
                     "Upstream Zed Documentation",

@@ -185,7 +185,7 @@ const CONTENT: (Section<5>, Section<3>) = (
             },
             SectionEntry {
                 icon: IconName::FolderOpen,
-                title: "Open Project",
+                title: "Open Workspace",
                 action: &Open::DEFAULT,
                 visibility_guard: SectionVisibility::Always,
             },
@@ -343,7 +343,7 @@ impl WelcomePage {
         let focus = self.focus_handle.clone();
         let color = cx.theme().colors();
 
-        let description = "Run multiple threads at once, mix and match any ACP-compatible agent, and keep work conflict-free with worktrees.";
+        let description = "Supervise terminal and ACP agents side by side, isolate changes with worktrees, and review evidence before you act.";
 
         v_flex()
             .w_full()
@@ -364,7 +364,7 @@ impl WelcomePage {
                             .color(Color::Muted)
                             .size(IconSize::Small),
                     )
-                    .child(Label::new("Collaborate with Agents")),
+                    .child(Label::new("Supervise agent work")),
             )
             .child(
                 Label::new(description)
@@ -373,7 +373,7 @@ impl WelcomePage {
                     .mb_2(),
             )
             .child(
-                Button::new("open-agent", "Open Agent Panel")
+                Button::new("open-agent", "Open Agent")
                     .full_width()
                     .tab_index(tab_index as isize)
                     .style(ButtonStyle::Outlined)
@@ -394,7 +394,7 @@ impl WelcomePage {
     ) -> impl IntoElement {
         v_flex()
             .w_full()
-            .child(SectionHeader::new("Recent Projects"))
+            .child(SectionHeader::new("Recent Workspaces"))
             .children(recent_projects)
     }
 
@@ -519,19 +519,23 @@ impl Render for WelcomePage {
                         next_tab_index += 1;
                         this.child(self.render_agent_card(agent_tab_index, cx))
                     })
-                    .when(!self.fallback_to_recent_projects, |this| {
-                        this.child(
-                            v_flex().gap_4().child(Divider::horizontal()).child(
-                                Button::new("welcome-exit", "Return to Onboarding")
-                                    .tab_index(next_tab_index as isize)
-                                    .full_width()
-                                    .label_size(LabelSize::XSmall)
-                                    .on_click(|_, window, cx| {
-                                        window.dispatch_action(OpenOnboarding.boxed_clone(), cx);
-                                    }),
-                            ),
-                        )
-                    }),
+                    .when(
+                        APP_NAME == "Zed" && !self.fallback_to_recent_projects,
+                        |this| {
+                            this.child(
+                                v_flex().gap_4().child(Divider::horizontal()).child(
+                                    Button::new("welcome-exit", "Return to Onboarding")
+                                        .tab_index(next_tab_index as isize)
+                                        .full_width()
+                                        .label_size(LabelSize::XSmall)
+                                        .on_click(|_, window, cx| {
+                                            window
+                                                .dispatch_action(OpenOnboarding.boxed_clone(), cx);
+                                        }),
+                                ),
+                            )
+                        },
+                    ),
             )
     }
 }

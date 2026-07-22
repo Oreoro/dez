@@ -801,9 +801,10 @@ impl Render for SidebarChrome {
                         .child(self.render_call_controls(window, cx)),
                 )
             })
-            .when(sidebar_settings.show_onboarding_banner, |this| {
-                this.when_some(self.banner.clone(), |this, banner| this.child(banner))
-            })
+            .when(
+                paths::APP_NAME == "Zed" && sidebar_settings.show_onboarding_banner,
+                |this| this.when_some(self.banner.clone(), |this, banner| this.child(banner)),
+            )
             .when(show_workspace_bar, |this| {
                 this.child(
                     h_flex()

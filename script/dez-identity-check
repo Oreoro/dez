@@ -82,6 +82,12 @@ require_pattern crates/zed/src/zed/edit_prediction_registry.rs \
 require_multiline_pattern crates/zed/src/zed.rs \
     'let channels_panel = \(APP_NAME == "Zed"\)\.then\(\|\| \{.*?CollabPanel::load' \
     'Dez eagerly loads the upstream collaboration panel'
+require_pattern crates/title_bar/src/title_bar.rs \
+    'paths::APP_NAME == "Zed" && sidebar_settings.show_onboarding_banner' \
+    'Dez can render upstream onboarding promotions in its title bar'
+require_pattern crates/workspace/src/welcome.rs \
+    'APP_NAME == "Zed" && !self.fallback_to_recent_projects' \
+    'the Dez welcome surface can route back into upstream onboarding'
 require_pattern crates/zed/src/zed.rs \
     'should_seed_empty_workspace_with_blank_file\(app_name: &str\) -> bool' \
     'empty Dez viewports can bypass the actionable launch surface'
