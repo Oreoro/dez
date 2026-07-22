@@ -71,6 +71,30 @@ fn session_rail_render_width_matches_reserved_width_for_each_mode() {
     );
 }
 
+#[test]
+fn session_overview_copy_distinguishes_empty_search_attention_and_caught_up_states() {
+    assert_eq!(
+        session_overview_status_label(0, 0, false),
+        "No sessions yet"
+    );
+    assert_eq!(
+        session_overview_status_label(0, 0, true),
+        "0 matching sessions"
+    );
+    assert_eq!(
+        session_overview_status_label(3, 1, false),
+        "1 needs attention · 3 total"
+    );
+    assert_eq!(
+        session_overview_status_label(3, 2, false),
+        "2 need attention · 3 total"
+    );
+    assert_eq!(
+        session_overview_status_label(3, 0, false),
+        "3 sessions · caught up"
+    );
+}
+
 #[track_caller]
 fn assert_active_thread(sidebar: &Sidebar, session_id: &acp::SessionId, msg: &str) {
     let active = sidebar.active_entry.as_ref();

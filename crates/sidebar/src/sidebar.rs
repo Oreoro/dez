@@ -241,6 +241,32 @@ fn session_rail_labels_visible(
     !session_rail_settings.is_icon_mode() && design_system.show_contextual_labels()
 }
 
+fn session_overview_status_label(
+    session_count: usize,
+    attention_count: usize,
+    is_searching: bool,
+) -> String {
+    let session_noun = if session_count == 1 {
+        "session"
+    } else {
+        "sessions"
+    };
+    if is_searching {
+        format!("{session_count} matching {session_noun}")
+    } else if session_count == 0 {
+        "No sessions yet".to_owned()
+    } else if attention_count > 0 {
+        let attention_verb = if attention_count == 1 {
+            "needs"
+        } else {
+            "need"
+        };
+        format!("{attention_count} {attention_verb} attention · {session_count} total")
+    } else {
+        format!("{session_count} {session_noun} · caught up")
+    }
+}
+
 fn canvas_thread_item_style(
     thread_item: ThreadItem,
     design_system: &DesignSystemSettings,
@@ -10818,6 +10844,13 @@ impl Sidebar {
                                 .style(ButtonStyle::Filled)
                                 .label_size(LabelSize::Small)
                                 .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                                .tooltip(|_, cx| {
+                                    Tooltip::for_action(
+                                        "New Terminal",
+                                        &NewCenterTerminal::default(),
+                                        cx,
+                                    )
+                                })
                                 .on_click(|_, window, cx| {
                                     window.dispatch_action(
                                         NewCenterTerminal::default().boxed_clone(),
@@ -10866,21 +10899,11 @@ impl Sidebar {
         } else {
             "sessions"
         };
-        let status_label = if is_searching {
-            format!("{} matching {session_noun}", self.contents.session_count)
-        } else if has_attention {
-            let attention_verb = if self.contents.attention_count == 1 {
-                "needs"
-            } else {
-                "need"
-            };
-            format!(
-                "{} {attention_verb} attention · {} total",
-                self.contents.attention_count, self.contents.session_count
-            )
-        } else {
-            format!("{} {session_noun} · caught up", self.contents.session_count)
-        };
+        let status_label = session_overview_status_label(
+            self.contents.session_count,
+            self.contents.attention_count,
+            is_searching,
+        );
         let all_scope_label = format!("All {}", self.contents.session_count);
         let attention_scope_label = format!("Attention {}", self.contents.attention_count);
         let all_scope_aria_label =
@@ -10900,6 +10923,8 @@ impl Sidebar {
             IconName::MagnifyingGlass
         } else if has_attention {
             IconName::Warning
+        } else if self.contents.session_count == 0 {
+            IconName::Terminal
         } else {
             IconName::Check
         };
@@ -10939,12 +10964,18 @@ impl Sidebar {
                             ),
                     )
                     .child(
-                        Button::new("new-session", "New")
+                        Button::new("new-session", "New Terminal")
                             .size(ButtonSize::Compact)
                             .style(ButtonStyle::Filled)
                             .start_icon(Icon::new(IconName::Plus).size(IconSize::XSmall))
                             .aria_label("New Terminal Session")
-                            .tooltip(Tooltip::text("New Terminal Session"))
+                            .tooltip(|_, cx| {
+                                Tooltip::for_action(
+                                    "New Terminal Session",
+                                    &NewCenterTerminal::default(),
+                                    cx,
+                                )
+                            })
                             .on_click(|_, window, cx| {
                                 window.dispatch_action(
                                     NewCenterTerminal::default().boxed_clone(),
@@ -11064,17 +11095,26 @@ impl Sidebar {
                             .size(IconSize::Medium)
                             .color(Color::Accent),
                     )
-                    .child(Label::new("Start a workspace").size(LabelSize::Large))
+                    .child(Label::new("Start working").size(LabelSize::Large))
                     .child(
-                        Label::new("Open a terminal or file. Dez derives context from your work.")
-                            .size(LabelSize::Small)
-                            .color(Color::Muted),
+                        Label::new(
+                            "Open a terminal or file. Dez derives context from what you open.",
+                        )
+                        .size(LabelSize::Small)
+                        .color(Color::Muted),
                     )
                     .child(
                         Button::new("start-terminal", "New Terminal")
                             .full_width()
                             .style(ButtonStyle::Filled)
                             .start_icon(Icon::new(IconName::Terminal).size(IconSize::Small))
+                            .tooltip(|_, cx| {
+                                Tooltip::for_action(
+                                    "New Terminal",
+                                    &NewCenterTerminal::default(),
+                                    cx,
+                                )
+                            })
                             .on_click(|_, window, cx| {
                                 window.dispatch_action(
                                     NewCenterTerminal::default().boxed_clone(),

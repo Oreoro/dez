@@ -140,8 +140,7 @@ struct Args {
     #[cfg(target_os = "windows")]
     #[arg(long, value_name = "USER@DISTRO")]
     wsl: Option<String>,
-    /// Not supported in the Dez CLI, only on the Dez binary
-    /// Will attempt to give the correct command to run
+    /// Not supported in the Dez CLI. Returns the command for the Dez binary.
     #[arg(long)]
     system_specs: bool,
     /// Open the project in a dev container.

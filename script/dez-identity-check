@@ -79,6 +79,15 @@ require_pattern crates/zed/src/zed.rs \
 require_pattern crates/zed/src/zed.rs \
     'app_name == "Zed"' \
     'blank-file seeding is not restricted to the official Zed product'
+require_pattern crates/sidebar/src/sidebar.rs \
+    '"No sessions yet"\.to_owned\(\)' \
+    'the zero-session overview still presents completed-work copy'
+require_pattern crates/sidebar/src/sidebar.rs \
+    'Button::new\("new-session", "New Terminal"\)' \
+    'the primary Session Rail creation action is ambiguous'
+require_pattern crates/sidebar/src/sidebar.rs \
+    'Label::new\("Start working"\)' \
+    'the empty Session Rail funnels terminal-native work into a project-first frame'
 require_pattern crates/release_channel/src/lib.rs \
     'ReleaseChannel::Stable => "Dez"' \
     'stable release display name is not Dez'
