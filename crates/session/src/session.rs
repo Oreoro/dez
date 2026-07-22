@@ -352,6 +352,28 @@ impl AppSession {
         cx.notify();
     }
 
+    /// Records that a database-backed Workspace identity could not be
+    /// materialized during restoration. Its ordered membership and viewport
+    /// placement are intentionally retained so a recovery surface can retry or
+    /// explicitly remove it instead of silently forgetting user state.
+    pub fn mark_durable_workspace_unresolved(
+        &mut self,
+        workspace_id: i64,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if !set_workspace_resolution(
+            &mut self.durable_workspace_memberships,
+            workspace_id,
+            DurableWorkspaceResolution::Unresolved,
+        ) {
+            return false;
+        }
+        cx.emit(AppSessionEvent::DurableWorkspaceMembershipChanged);
+        self.serialize_durable_workspace_state(cx);
+        cx.notify();
+        true
+    }
+
     pub fn attach_durable_workspace_to_viewport(
         &mut self,
         viewport_id: u64,
@@ -516,6 +538,24 @@ fn attach_workspace_to_viewport_records(
         changed = true;
     }
     changed
+}
+
+fn set_workspace_resolution(
+    memberships: &mut [DurableWorkspaceMembership],
+    workspace_id: i64,
+    resolution: DurableWorkspaceResolution,
+) -> bool {
+    let Some(membership) = memberships
+        .iter_mut()
+        .find(|membership| membership.workspace_id == workspace_id)
+    else {
+        return false;
+    };
+    if membership.resolution == resolution {
+        return false;
+    }
+    membership.resolution = resolution;
+    true
 }
 
 fn collect_workspace_memberships(
@@ -752,7 +792,7 @@ mod tests {
         DurableWorkspaceResolution, WorkspaceRestoreState, attach_workspace_to_viewport_records,
         collect_durable_viewports, collect_workspace_memberships, migrate_durable_viewports,
         reconcile_durable_viewports, reconcile_workspace_memberships,
-        remove_workspace_from_viewport_records,
+        remove_workspace_from_viewport_records, set_workspace_resolution,
     };
 
     #[test]
@@ -761,6 +801,53 @@ mod tests {
         assert!(WorkspaceRestoreState::Restoring.can_transition_to(WorkspaceRestoreState::Ready));
         assert!(!WorkspaceRestoreState::Pending.can_transition_to(WorkspaceRestoreState::Ready));
         assert!(!WorkspaceRestoreState::Ready.can_transition_to(WorkspaceRestoreState::Restoring));
+    }
+
+    #[test]
+    fn failed_restore_becomes_unresolved_without_losing_order() {
+        let mut memberships = vec![
+            DurableWorkspaceMembership {
+                workspace_id: 20,
+                viewport_id: None,
+                resolution: DurableWorkspaceResolution::Resolved,
+            },
+            DurableWorkspaceMembership {
+                workspace_id: 10,
+                viewport_id: None,
+                resolution: DurableWorkspaceResolution::Resolved,
+            },
+        ];
+
+        assert!(set_workspace_resolution(
+            &mut memberships,
+            20,
+            DurableWorkspaceResolution::Unresolved,
+        ));
+        assert_eq!(
+            memberships
+                .iter()
+                .map(|membership| membership.workspace_id)
+                .collect::<Vec<_>>(),
+            [20, 10]
+        );
+        assert_eq!(
+            memberships[0].resolution,
+            DurableWorkspaceResolution::Unresolved
+        );
+        assert_eq!(
+            memberships[1].resolution,
+            DurableWorkspaceResolution::Resolved
+        );
+        assert!(!set_workspace_resolution(
+            &mut memberships,
+            20,
+            DurableWorkspaceResolution::Unresolved,
+        ));
+        assert!(!set_workspace_resolution(
+            &mut memberships,
+            999,
+            DurableWorkspaceResolution::Unresolved,
+        ));
     }
 
     #[test]

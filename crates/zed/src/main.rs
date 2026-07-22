@@ -1435,6 +1435,7 @@ pub(crate) async fn restore_or_create_workspace(
     if let Some(multi_workspaces) = restorable_workspaces(cx, &app_state).await {
         let mut error_count = 0;
         for multi_workspace in multi_workspaces {
+            let restoring_workspace_id: i64 = multi_workspace.active_workspace.workspace_id.into();
             let result = match &multi_workspace.active_workspace.location {
                 SerializedWorkspaceLocation::Local => {
                     restore_multiworkspace(multi_workspace, app_state.clone(), cx)
@@ -1482,6 +1483,11 @@ pub(crate) async fn restore_or_create_workspace(
 
             if let Err(error) = result {
                 log::error!("Failed to restore workspace: {error:#}");
+                cx.update(|cx| {
+                    app_state.session.update(cx, |session, cx| {
+                        session.mark_durable_workspace_unresolved(restoring_workspace_id, cx);
+                    });
+                });
                 error_count += 1;
             }
         }
