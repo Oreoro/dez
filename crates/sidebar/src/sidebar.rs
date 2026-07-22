@@ -280,6 +280,10 @@ fn session_overview_visible(show_start_state: bool) -> bool {
     !show_start_state
 }
 
+fn session_overview_create_action_visible(session_count: usize) -> bool {
+    session_count > 0
+}
+
 fn canvas_thread_item_style(
     thread_item: ThreadItem,
     design_system: &DesignSystemSettings,
@@ -10991,25 +10995,30 @@ impl Sidebar {
                                     ),
                             ),
                     )
-                    .child(
-                        Button::new("new-session", "New Terminal")
-                            .size(ButtonSize::Compact)
-                            .style(ButtonStyle::Filled)
-                            .start_icon(Icon::new(IconName::Plus).size(IconSize::XSmall))
-                            .aria_label("New Terminal Session")
-                            .tooltip(|_, cx| {
-                                Tooltip::for_action(
-                                    "New Terminal Session",
-                                    &NewCenterTerminal::default(),
-                                    cx,
-                                )
-                            })
-                            .on_click(|_, window, cx| {
-                                window.dispatch_action(
-                                    NewCenterTerminal::default().boxed_clone(),
-                                    cx,
-                                );
-                            }),
+                    .when(
+                        session_overview_create_action_visible(self.contents.session_count),
+                        |this| {
+                            this.child(
+                                Button::new("new-session", "New Terminal")
+                                    .size(ButtonSize::Compact)
+                                    .style(ButtonStyle::Filled)
+                                    .start_icon(Icon::new(IconName::Plus).size(IconSize::XSmall))
+                                    .aria_label("New Terminal Session")
+                                    .tooltip(|_, cx| {
+                                        Tooltip::for_action(
+                                            "New Terminal Session",
+                                            &NewCenterTerminal::default(),
+                                            cx,
+                                        )
+                                    })
+                                    .on_click(|_, window, cx| {
+                                        window.dispatch_action(
+                                            NewCenterTerminal::default().boxed_clone(),
+                                            cx,
+                                        );
+                                    }),
+                            )
+                        },
                     ),
             )
             .when(
