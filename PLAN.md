@@ -539,7 +539,11 @@ chrome; every state is truthful, accessible, and visually coherent.
       cloud, disable inherited Zed/Mercury edit-prediction providers while
       preserving explicit Copilot/Codestral/custom providers, and stop eagerly
       constructing the Collab panel. Upstream docs/repository links remain
-      explicitly attributed; post-build runtime proof remains open.
+      explicitly attributed. Commit `699cbd1bc8` also restricts upstream
+      title-bar onboarding promotions and Return to Onboarding to official Zed,
+      renames Help's entry to Getting Started, and aligns the optional Dez
+      welcome surface with Workspace and supervision language. Post-build
+      runtime proof remains open.
 - [ ] Ensure opening a file, folder, repository, URL, remote target, recent
       Workspace, or empty Workspace routes into the existing App Session
       without creating an accidental parallel universe.
@@ -970,3 +974,11 @@ Notes decision:
   diff, and identity gates pass. No other executable was launched. Installed
   side-by-side proof remains open because the inspected app and command
   locations contain no official Zed installation.
+- 2026-07-23: Removed the remaining upstream onboarding route from Dez chrome
+  in `699cbd1bc8`. Title-bar promotion banners and the welcome page's Return to
+  Onboarding action are now official-Zed-only. Dez Help says **Getting
+  Started**; its optional welcome surface says Open Workspace, Recent
+  Workspaces, and Supervise agent work, with evidence-first explanatory copy.
+  Identity guards freeze both onboarding gates. Formatting, diff, and identity
+  checks pass; compiled and rendered proof remains in the consolidated build
+  gate, and no application bundle was built or launched.

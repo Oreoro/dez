@@ -775,6 +775,13 @@ code, all launch gates pass, and known limitations are documented.
       check passes in 1m22s; formatting, diff, and identity gates pass. Actual
       installed coexistence remains open because this machine has no official
       Zed app or CLI to inspect side by side.
+- [x] 2026-07-23: Remove the final upstream onboarding route from Dez chrome.
+      Commit `699cbd1bc8` makes title-bar promotion banners and Return to
+      Onboarding official-Zed-only, renames the Help entry to **Getting
+      Started**, and rewrites the optional welcome surface around Workspaces,
+      supervision, worktree isolation, and review evidence. Identity guards
+      freeze the onboarding gates. Formatting, diff, and identity checks pass;
+      compiled and rendered proof remains deferred to the consolidated build.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
