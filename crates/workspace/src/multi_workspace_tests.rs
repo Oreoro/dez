@@ -195,7 +195,9 @@ async fn test_project_group_keys_add_workspace(cx: &mut TestAppContext) {
 }
 
 #[gpui::test]
-async fn test_open_new_window_does_not_open_sidebar_on_existing_window(cx: &mut TestAppContext) {
+async fn test_open_new_window_preserves_existing_sidebar_and_joins_app_session(
+    cx: &mut TestAppContext,
+) {
     init_test(cx);
 
     let app_state = cx.update(AppState::test);
@@ -207,7 +209,22 @@ async fn test_open_new_window_does_not_open_sidebar_on_existing_window(cx: &mut 
 
     let project = Project::test(app_state.fs.clone(), [path!("/project_a").as_ref()], cx).await;
 
-    let window = cx.add_window(|window, cx| MultiWorkspace::test_new(project, window, cx));
+    let db = cx.update(|cx| crate::persistence::WorkspaceDb::global(cx));
+    let original_workspace_id = db.next_id().await.expect("allocate original workspace ID");
+    let original_app_state = app_state.clone();
+
+    let window = cx.add_window(|window, cx| {
+        let workspace = cx.new(|cx| {
+            Workspace::new(
+                Some(original_workspace_id),
+                project,
+                original_app_state,
+                window,
+                cx,
+            )
+        });
+        MultiWorkspace::new(workspace, window, cx)
+    });
 
     window
         .read_with(cx, |mw, _cx| {
@@ -218,7 +235,7 @@ async fn test_open_new_window_does_not_open_sidebar_on_existing_window(cx: &mut 
     cx.update(|cx| {
         open_paths(
             &[PathBuf::from(path!("/project_b"))],
-            app_state,
+            app_state.clone(),
             OpenOptions {
                 open_mode: OpenMode::NewWindow,
                 ..OpenOptions::default()
@@ -237,6 +254,54 @@ async fn test_open_new_window_does_not_open_sidebar_on_existing_window(cx: &mut 
             );
         })
         .unwrap();
+
+    let original_viewport_id = window.window_id().as_u64();
+    let new_window = cx
+        .windows()
+        .into_iter()
+        .filter_map(|window| window.downcast::<MultiWorkspace>())
+        .find(|candidate| candidate.window_id() != window.window_id())
+        .expect("NewWindow should create a second MultiWorkspace viewport");
+    let new_viewport_id = new_window.window_id().as_u64();
+    let new_workspace_id = new_window
+        .read_with(cx, |mw, cx| mw.workspace().read(cx).database_id())
+        .expect("read new window")
+        .expect("new-window workspace should have a durable ID");
+
+    assert_ne!(
+        original_viewport_id, new_viewport_id,
+        "each OS window must have a distinct durable viewport"
+    );
+    assert_ne!(
+        original_workspace_id, new_workspace_id,
+        "opening a different project must retain distinct Workspace identity"
+    );
+
+    app_state.session.read_with(cx, |session, _cx| {
+        let memberships = session.durable_workspace_memberships().collect::<Vec<_>>();
+        assert!(
+            memberships
+                .iter()
+                .any(|membership| membership.workspace_id == i64::from(original_workspace_id)),
+            "the original Workspace should remain in the shared App Session"
+        );
+        assert!(
+            memberships
+                .iter()
+                .any(|membership| membership.workspace_id == i64::from(new_workspace_id)),
+            "the new-window Workspace should join the shared App Session"
+        );
+        assert_eq!(
+            session.active_durable_workspace(original_viewport_id),
+            Some(i64::from(original_workspace_id)),
+            "the original viewport should retain its active Workspace"
+        );
+        assert_eq!(
+            session.active_durable_workspace(new_viewport_id),
+            Some(i64::from(new_workspace_id)),
+            "the new viewport should select its new Workspace"
+        );
+    });
 }
 
 #[gpui::test]
