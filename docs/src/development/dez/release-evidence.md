@@ -127,17 +127,26 @@ This proves Host-process survival and reuse. It does **not** by itself prove the
 complete terminal acceptance scenario.
 
 The desktop later became available and exposed a blocking macOS shell defect:
-the Session Rail occupied the whole client area, compressed its contents into
-word-level wrapping, covered the welcome/editor surface, and clipped the lower
-workspace chrome. The client-decoration render branch had absolute positioning
-with both horizontal edges pinned and, unlike the server-decoration branch, no
-explicit rail width. Commit `36d8024280` gives the rail its configured width,
-anchors only the active edge, and replaces the cramped empty-project row with
-a vertical empty state and full-width New Terminal action. Follow-up work
+the Session Rail occupied the whole client area, covered the welcome/editor
+surface, and clipped the lower workspace chrome. The client-decoration render
+branch had absolute positioning with both horizontal edges pinned and no
+explicit rail width. Commit `36d8024280` gives that branch an explicit width,
+anchors only the active edge, and replaces the cramped empty-project row with a
+vertical empty state and full-width New Terminal action. Follow-up work
 preserves recorded terminal dimensions for every replay fragment, keeps durable
 Workspace identity after the last viewport closes, projects ordinary live
-shells into the Session Rail, and constrains footer content to a single
-truncating row.
+shells into the Session Rail, and constrains footer content to one line.
+
+A later screenshot of the running signed bundle exposed a separate compact-mode
+contract mismatch. `WorkspaceSidebar::width` reserved the capped 240 px width,
+but the root render element still painted at the stored 300 px width in both
+decoration branches. The clipped 60 px explains the crushed header, rows, and
+footer in that screenshot. Commit `79f69b273c` resolves the width once and uses
+it for painting as well as reservation, with compact, detailed, and icon-mode
+regression assertions. Formatting and diff checks pass. Its focused test build
+was attempted but not completed: reconstructing the deleted Cargo source cache
+twice exhausted the remaining volume before the large test link, so no test
+pass is claimed. The running signed bundle predates this correction.
 
 The audited `Dez Dev.app` is now registered and launched as launchd child PID
 `57957`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
@@ -172,6 +181,11 @@ that scenario still requires the unlocked UI and a graceful application quit.
       accessibility landmark and narrow-width truncation, and the focused
       `sidebar` Cargo check passes with the recorded profile. This is
       compile evidence only; the audited signed bundle predates the source edit.
+- [ ] Mode-resolved Session Rail width regression: commit `79f69b273c` makes
+      rendering consume the same compact/icon/detailed width reserved by the
+      workspace and contains assertions for all modes. Formatting and diff
+      checks pass, but the focused test did not finish under the local storage
+      ceiling and the post-fix bundle has not been built.
 - [x] `cargo clippy -p dez_terminal_host --all-targets -- -D warnings` with the
       recorded storage-constrained dev profile
 - [ ] App-facing modified-crate `cargo clippy` (the full app graph exceeds the
@@ -183,9 +197,10 @@ that scenario still requires the unlocked UI and a graceful application quit.
 ## Runtime and manual gates {#runtime-and-manual-gates}
 
 - [x] Intended raw-binary first launch and exact signed-bundle normal launch
-- [ ] Restored and empty-workspace interaction audit (the full-window Session
-      Rail overlay found in the first unlocked screenshot is fixed in source
-      and rebuilt; a fresh corrected-artifact capture remains open)
+- [ ] Restored and empty-workspace interaction audit (the first full-window
+      overlay is fixed in the running bundle; the later compact-width clipping
+      is fixed only in source at `79f69b273c`, so rebuild and fresh capture both
+      remain open)
 - [ ] Offline, failed-Host, and incompatible-Host rendered states
 - [ ] Persistent terminal GUI-exit/restart/reattach proof
 - [ ] Structured Codex attention/review/restart proof
@@ -200,7 +215,9 @@ that scenario still requires the unlocked UI and a graceful application quit.
 The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
-path is used as a substitute.
+path is used as a substitute. Unlock alone is no longer sufficient for final
+visual evidence: the exact bundle must first be rebuilt from `79f69b273c` or
+later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
 
@@ -208,6 +225,6 @@ Public Developer ID signing and Apple notarization require Dez publisher
 credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
-already running; unlocking the desktop is the remaining environmental
-prerequisite for its visual, interaction, accessibility, and GUI-driven
-hosted-PTY recovery matrix.
+running but predates `79f69b273c`; a rebuild/re-audit and an unlocked desktop
+are both prerequisites for the visual, interaction, accessibility, and
+GUI-driven hosted-PTY recovery matrix.

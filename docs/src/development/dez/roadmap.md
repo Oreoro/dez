@@ -614,6 +614,14 @@ code, all launch gates pass, and known limitations are documented.
       status instead of permitting word-level wrapping. The focused `sidebar`
       graph compiles; bundle rebuild and accessibility-tree inspection remain
       separate gates.
+- [x] 2026-07-22: Repair the compact Session Rail width contract exposed by the
+      later running-bundle screenshot. Commit `79f69b273c` makes both server-
+      and client-decoration roots paint at the same mode-resolved width the
+      workspace reserves: 240 px compact, 56 px icon, and at least 380 px
+      detailed. Regression assertions cover all three modes. Formatting and
+      diff checks pass; the focused test build and post-fix bundle remain open
+      under the documented storage gate, so no rendered or test pass is
+      inferred from the source correction.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
