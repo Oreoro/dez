@@ -745,7 +745,8 @@ code, all launch gates pass, and known limitations are documented.
       membership or viewport placement. The transition is idempotent and all
       11 focused Session tests pass in 2m08s. The full startup integration check
       and polished retry/remove recovery UI remain open; no bundle was built or
-      launched.
+      launched. Commit `fbf8443359` later refines this into the distinct
+      `RestoreFailed` state and persistent recovery callout described below.
 - [x] 2026-07-23: Replace the failed-restore dead end with an actionable notice.
       Commit `31cc1b1205` keeps one stable, non-autohiding toast with concise
       copy and an **Open Dez log** action, and only treats an active-window
@@ -753,6 +754,18 @@ code, all launch gates pass, and known limitations are documented.
       update therefore still opens the durable empty recovery Workspace.
       Formatting, diff, and identity gates pass; compiled and rendered proof
       remains deferred to the consolidated build gate.
+- [x] 2026-07-23: Give failed Workspace restoration a durable Session Rail
+      recovery surface without false alarms. Commit `fbf8443359` introduces a
+      distinct `RestoreFailed` resolution so identities merely skipped by the
+      active restore policy remain ordinary unresolved records. Actual failures
+      persist in order and render a compact warning callout with **Open Recent**
+      and **Dismiss**; Dismiss removes the App Session reference but does not
+      directly delete recent-workspace storage. All 12 focused Session tests
+      pass in 4.89s, and the offline lock change adds only Sidebar -> Session.
+      The Sidebar library check was stopped at the 3.4 GiB storage floor while
+      compiling inherited audio/WebRTC dependencies, before a final code
+      result. Formatting, diff, and identity gates pass; compiled UI and
+      rendered proof remain open.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

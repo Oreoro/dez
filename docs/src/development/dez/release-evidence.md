@@ -19,6 +19,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Queued-open startup barrier source: `47e769da5d`
 - Failed-restore durable truth source: `d10d90648d`
 - Actionable failed-restore notice source: `31cc1b1205`
+- Persistent Session Rail recovery source: `fbf8443359`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -228,8 +229,8 @@ complete.
 
 Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`,
-`47e769da5d`, `d10d90648d`, and `31cc1b1205` are newer than that running bundle.
-The first passes all nine focused Session tests, including duplicate viewport
+`47e769da5d`, `d10d90648d`, `31cc1b1205`, and `fbf8443359` are newer than that
+running bundle. The first passes all nine focused Session tests, including duplicate viewport
 replacement without reordering or membership loss. The second makes Project
 ready terminal-first, prevents New Window and startup fallback paths from
 covering Dez's actionable launch surface with an unsolicited blank editor, and
@@ -296,12 +297,11 @@ runtime claim is inferred.
 
 Commit `d10d90648d` makes failed restoration visible in durable ownership
 state. When a database-backed Workspace window cannot materialize, startup
-marks that identity unresolved while preserving its global order and viewport
-placement for future retry or explicit removal. The transition is idempotent
-and leaves resolved neighbors unchanged. `cargo test --locked -p session --lib
--j1` passes all 11 tests in 2m08s; formatting, diff, and identity gates pass.
-The full Dez integration check and user-facing recovery surface remain open,
-so no packaged runtime claim is inferred.
+initially marks that identity unresolved while preserving its global order and
+viewport placement for future retry or explicit removal. Commit `fbf8443359`
+refines that state to the distinct durable `RestoreFailed` variant so an
+identity merely skipped by the active restore policy never raises a false
+failure warning.
 
 Commit `31cc1b1205` makes the failed-restore notification persistent and
 actionable. Its concise copy exposes **Open Dez log**, uses one stable
@@ -309,6 +309,18 @@ notification identity to avoid duplicate stacks, and falls back to the durable
 empty recovery Workspace when the active-window toast update itself fails.
 Formatting, diff, and identity gates pass. Full Dez compilation and rendered
 interaction proof remain open.
+
+Commit `fbf8443359` projects only `RestoreFailed` identities into a persistent
+Session Rail warning with **Open Recent** and **Dismiss** actions. Dismiss removes
+the unresolved App Session reference while leaving recent-workspace storage
+untouched. The failure state survives reconciliation until real resolution or
+explicit removal. All 12 focused Session tests pass in 4.89s; the offline
+lockfile update adds only the direct Sidebar -> Session dependency. Formatting,
+diff, and identity gates pass. A focused Sidebar library check was stopped at
+the 3.4 GiB free-space floor while compiling inherited audio/WebRTC
+dependencies, before the final crate returned a result; only artifacts from
+that attempt were removed. Compiled UI and rendered interaction claims remain
+open.
 
 The packaged helper also accepted a direct authenticated protocol 4 exercise.
 Host ID `d9670db8-e498-5537-a9d8-f99ad098f4aa` created Session
@@ -375,12 +387,16 @@ that scenario still requires the unlocked UI and a graceful application quit.
       check reached the storage floor before compiling the regression, so its
       executed result and packaged GUI proof remain open.
 - [x] Failed-restore durable resolution regression: commit `d10d90648d`
-      retains ordering while changing only the failed identity to unresolved;
-      all 11 focused Session tests pass. Full startup integration and rendered
-      retry/remove recovery proof remain open.
+      retains ordering while changing only the failed identity; commit
+      `fbf8443359` makes that state distinctly `RestoreFailed`. All 12 focused
+      Session tests pass. Full startup integration remains open.
 - [ ] Actionable failed-restore notice: commit `31cc1b1205` provides a stable
       non-autohiding toast and direct log action in source. Compiled and
       rendered click-through proof remains open.
+- [ ] Persistent Session Rail restore-failure recovery: commit `fbf8443359`
+      renders only actual failures with Open Recent and Dismiss actions in
+      source. Its 12 owning state tests pass; the Sidebar library check hit the
+      storage floor before returning a result, and rendered proof remains open.
 - [ ] Restored empty-project launch regression: commit `4829f6b052` makes a
       loaded project render Project ready actions even when an old pane lacks
       the welcome flag. The assertion is authored and formatting passes; the
@@ -428,7 +444,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `31cc1b1205` or
+visual evidence: the exact bundle must first be rebuilt from `fbf8443359` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -438,6 +454,6 @@ credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
 running and contains the corrected shell source through `679cdc28445c`, but
-predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`, `47e769da5d`, `d10d90648d`, and `31cc1b1205`. A rebuild/re-audit and an unlocked
+predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`, `47e769da5d`, `d10d90648d`, `31cc1b1205`, and `fbf8443359`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.
