@@ -584,6 +584,28 @@ code, all launch gates pass, and known limitations are documented.
       Current Clippy exposed one equal-operands normalization in the fallback
       theme dependency; `3ad224dfd6` replaces `100 / 100` with the identical
       `1.0`, after which the complete Host lint graph passes.
+- [x] 2026-07-22: Preserve replay geometry as protocol truth. Protocol 4 records
+      terminal dimensions in snapshots and replay fragments; resize updates
+      them at the Host boundary, and the renderer applies the matching size
+      while replaying. Focused model, hosted-renderer, and helper lifecycle
+      tests pass.
+- [x] 2026-07-22: Make ordinary live shells first-class Session Rail rows and
+      repair the workspace footer. Detection now classifies an agent instead of
+      deciding whether a terminal exists, active shells select correctly, the
+      footer stays on one line, dynamic labels truncate, and a redundant
+      default `main` worktree label is suppressed.
+- [x] 2026-07-22: Exercise the packaged protocol 4 boundary with a live PTY.
+      Host `d9670db8-e498-5537-a9d8-f99ad098f4aa` created Session
+      `040b4465-5f0a-416b-9cb3-549da1a2a28b` with shell PID `53394`; 88 replay
+      chunks retained 80x24 and 132x41 geometry plus output markers on both
+      sides of resize, then reported explicit Detached state. GUI-driven
+      restart and same-process reattachment remain open while macOS is locked.
+- [x] 2026-07-22: Make local macOS packaging deterministic. Commit
+      `fcd1d06564` signs the CLI, terminal Host, Git, and main executable
+      inside-out before sealing the app. The resulting arm64 `Dez Dev.app`
+      passes deep strict verification with ad-hoc CDHash
+      `4aff38edc9de37515e5488a216c2d648a53c0b01` and launches through the exact
+      audited bundle path; `dist/Superzed.app` remains unopened.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

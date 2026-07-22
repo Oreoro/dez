@@ -5,9 +5,9 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 
 ## Frozen source and intended artifacts {#frozen-source-and-intended-artifacts}
 
-- App and Host build commit: `da562e14bb403af815cbab9802225dda0b2418c8`
-- App and Host build tree: `56cb7714537073db1aeff2e6cf24809c9a79fb95`
-- Packaging and permission-copy commit: `ce11c4ed3db138fe6ca0a8890bfb6db8b7f7bd52`
+- Protocol 4 app and Host build commit: `d0b0d9a908`
+- Packaging and permission-copy foundation: `ce11c4ed3d`
+- Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
 - Integration merge: `2be63cfea347006e407934754086bbef62d482c2`
 - Incorporated upstream: `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
@@ -27,12 +27,16 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Legacy untracked artifact excluded from all evidence:
   `/Users/test/Documents/zed 3.0/dist/Superzed.app`
 
-Only the intended raw `target/debug/dez` executable was launched. The excluded
-Superzed artifact and the generated Dez bundle were not opened.
+The initial gate launched only the intended raw `target/debug/dez`. The current
+gate launches the matching `Dez Dev.app` through LaunchServices so the approved
+macOS visual and accessibility path can target it when the desktop is unlocked.
+The excluded Superzed artifact has never been opened.
 
 ## Build evidence {#build-evidence}
 
-The app and helper completed together, warning-free, in 25 minutes 31 seconds:
+The original app and helper completed together, warning-free, in 25 minutes 31
+seconds. After the Session Rail and replay corrections, the protocol 4 app and
+helper completed again with the same locked, storage-constrained profile:
 
 ```sh
 cargo build --locked --profile dev \
@@ -51,9 +55,9 @@ single-codegen-unit profile. Unsigned build artifacts are arm64 Mach-O files:
 
 | Artifact            | Size | SHA-256                                                            |
 | ------------------- | ---- | ------------------------------------------------------------------ |
-| `target/debug/dez`  | 1.0G | `3a44def40b063ad2c5edb413d6a6b860942f8cc4a219dbd24229ef0d0fb64598` |
+| `target/debug/dez`  | 1.0G | `ccc84c35cc2ef037a0f4ebcfe41ea8a14918df95e369b0989fef6235eaa10db5` |
 | `target/debug/cli`  | 12M  | `e9bde80f1d951a6f9b7da53b0175de23db31c642b368c67c19451a04fbc9eaed` |
-| `dez-terminal-host` | 13M  | `2ac370c716c76e6a37979ab8e8c5454cdabc42847a96a949b14b20e4f7177ea8` |
+| `dez-terminal-host` | 13M  | `500845d7e3c27ba205803330865c92ebbd55a533c261a915eeb7422f715b6113` |
 
 ## Debug bundle and coexistence evidence {#debug-bundle-and-coexistence-evidence}
 
@@ -61,6 +65,9 @@ single-codegen-unit profile. Unsigned build artifacts are arm64 Mach-O files:
 the temporary manifest on bundler failure, works around the pinned bundler's
 invalid terminal-colour failure through its plain-output path, omits the
 release-only remote server, and creates the bundle without a second app build.
+Local ad-hoc signing now signs nested executables inside-out before sealing the
+app, matching the reliable release ordering instead of relying on one fragile
+`codesign --deep` pass.
 
 The resulting 1.0G bundle passed `codesign --verify --deep --strict` and has:
 
@@ -79,10 +86,10 @@ Signed bundle-executable SHA-256 values are:
 
 | Bundle executable   | SHA-256                                                            |
 | ------------------- | ------------------------------------------------------------------ |
-| `dez`               | `331d757b8367c67ba2b5189c17abe7bfb0b3a45bcd35c14110e497f0bd3aeef4` |
-| `cli`               | `bd55c3c41241664551d6e971fb20869e2c323ec9947b2e96e403ff358b18b2f0` |
-| `dez-terminal-host` | `d0b36ef644c1321983b8aaee2bd05d5e374749de109308e65554445c573dac0b` |
-| `git`               | `831f1e097bde9599afe7c298637fdc7f26f8788846eec78365d50d470f29bc47` |
+| `dez`               | `8e7c203a4e4b5da5c577cc37ef0661ca113e2702fa4e4263a83a8bdba75e5b0a` |
+| `cli`               | `19e7c4b56c0f85249d8347b2eb219a640ee047fd06612c748e7c6dbe2ade1821` |
+| `dez-terminal-host` | `82e3b34f4ddff9f5cc5d67d0a03564c08a46b34acea97edde8220bf71e808f62` |
+| `git`               | `3785db4c9db29936c32339b92d530c5c519ae1ab493ed41ab9b5f693bbb54281` |
 
 The signed copies differ byte-for-byte from the raw Cargo outputs because the
 ad-hoc signing step rewrites Mach-O signatures. Static identity checks pass,
@@ -110,10 +117,8 @@ Host survival and reuse were observed directly:
    one helper existed and Host ID
    `d9670db8-e498-5537-a9d8-f99ad098f4aa` remained unchanged.
 
-This proves Host-process survival and reuse. It does **not** prove the complete
-terminal acceptance scenario because the locked desktop prevented creating an
-ordinary hosted PTY and capturing Session ID, child PID, output cursor, replay,
-and same-process reattachment.
+This proves Host-process survival and reuse. It does **not** by itself prove the
+complete terminal acceptance scenario.
 
 The desktop later became available and exposed a blocking macOS shell defect:
 the Session Rail occupied the whole client area, compressed its contents into
@@ -122,17 +127,27 @@ workspace chrome. The client-decoration render branch had absolute positioning
 with both horizontal edges pinned and, unlike the server-decoration branch, no
 explicit rail width. Commit `36d8024280` gives the rail its configured width,
 anchors only the active edge, and replaces the cramped empty-project row with
-a vertical empty state and full-width New Terminal action. The corrected raw
-arm64 executable built successfully and is running as PID `11523`, reusing
-helper PID `48768` and Host ID
-`d9670db8-e498-5537-a9d8-f99ad098f4aa`.
+a vertical empty state and full-width New Terminal action. Follow-up work
+preserves recorded terminal dimensions for every replay fragment, keeps durable
+Workspace identity after the last viewport closes, projects ordinary live
+shells into the Session Rail, and constrains footer content to a single
+truncating row.
 
-Bare Mach-O GUI processes are not exposed as targetable applications by the
-approved macOS accessibility surface, so the corrected raw process cannot be
-captured through that interface by executable path. No packaged Dez or
-Superzed application was opened as a substitute. A fresh rendered screenshot
-of the corrected artifact therefore remains required before the visual matrix
-can be checked complete.
+The audited `Dez Dev.app` is now registered and launched as launchd child PID
+`57957`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
+The desktop is currently locked, and the approved accessibility controller
+cannot unlock it automatically. A fresh rendered screenshot of the corrected
+artifact therefore remains required before the visual matrix can be checked
+complete.
+
+The packaged helper also accepted a direct authenticated protocol 4 exercise.
+Host ID `d9670db8-e498-5537-a9d8-f99ad098f4aa` created Session
+`040b4465-5f0a-416b-9cb3-549da1a2a28b` with shell PID `53394`, emitted 88
+bounded replay chunks, resized from 80x24 to 132x41, retained both dimensions
+and both before/after markers in replay, and ended in explicit `Detached` state
+at sequence 88. This proves the packaged protocol boundary, PTY ownership,
+resize retention, and detach truth. It does not prove GUI-exit reattachment;
+that scenario still requires the unlocked UI and a graceful application quit.
 
 ## Automated gates {#automated-gates}
 
@@ -154,7 +169,7 @@ can be checked complete.
 
 ## Runtime and manual gates {#runtime-and-manual-gates}
 
-- [x] Intended raw-binary first and corrected normal launch
+- [x] Intended raw-binary first launch and exact signed-bundle normal launch
 - [ ] Restored and empty-workspace interaction audit (the full-window Session
       Rail overlay found in the first unlocked screenshot is fixed in source
       and rebuilt; a fresh corrected-artifact capture remains open)
@@ -169,17 +184,17 @@ can be checked complete.
       signature audit
 - [ ] Developer ID signing, notarization, install, launch, and uninstall audit
 
-The approved macOS UI-control path was retried after the corrected launch. The
-desktop was available, but the bare raw executable was not registered as a
-targetable application. No alternate screenshot, accessibility, AppleScript,
-packaged Dez, or historical binary path was used as a substitute.
+The approved macOS UI-control path was retried after the exact packaged launch.
+The application is targetable, but the desktop is locked and automatic unlock
+fails. No alternate screenshot mechanism, AppleScript, or historical binary
+path is used as a substitute.
 
 ## Known external release dependencies {#known-external-release-dependencies}
 
 Public Developer ID signing and Apple notarization require Dez publisher
 credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
-separate from local engineering verification. A fresh capture of the running
-raw artifact, or a future explicitly approved launch of the matching packaged
-artifact, is required to finish the visual, interaction, accessibility, and
+separate from local engineering verification. The exact packaged artifact is
+already running; unlocking the desktop is the remaining environmental
+prerequisite for its visual, interaction, accessibility, and GUI-driven
 hosted-PTY recovery matrix.
