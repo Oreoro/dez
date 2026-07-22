@@ -689,6 +689,13 @@ code, all launch gates pass, and known limitations are documented.
       branch refuses to manage the official `zed` command. Formatting, diff,
       identity, CLI build/help, and the full `zed --bin dez` source check pass.
       Install interaction and consolidated bundle proof remain open.
+- [x] 2026-07-23: Seed terminal scope before the first PTY event. Commit
+      `7a20dc1d19` records a new terminal's initial cwd in its Workspace-owned
+      EvidenceSet during event subscription, so an idle shell no longer has to
+      emit output before review can name its scope. Existing cwd, wakeup, and
+      exit events still update Current/Stale lifecycle truth. Formatting, diff,
+      identity, and full `zed --bin dez` source checks pass; runtime restoration
+      proof remains open.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

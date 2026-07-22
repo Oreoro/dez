@@ -11,6 +11,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Terminal-first empty-workspace source: `e4fbc22a3a`
 - Honest Session Rail zero-state source: `d9688490ad`
 - Reachable isolated CLI installer source: `704314cc92`
+- Initial terminal-scope evidence source: `7a20dc1d19`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -227,6 +228,12 @@ launch-handshake errors identify Dez, and the official-Zed compatibility branch
 refuses to manage the upstream command. Static and compile gates pass; the
 installation interaction remains a manual release gate.
 
+Commit `7a20dc1d19` additionally seeds a new terminal's initial working
+directory into Workspace evidence before the first PTY event. This closes a
+source-level gap where an idle new shell could open a review brief without cwd
+scope. Full Dez source checks pass; runtime review and restoration proof remain
+open.
+
 The packaged helper also accepted a direct authenticated protocol 4 exercise.
 Host ID `d9670db8-e498-5537-a9d8-f99ad098f4aa` created Session
 `040b4465-5f0a-416b-9cb3-549da1a2a28b` with shell PID `53394`, emitted 88
@@ -316,7 +323,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `704314cc92` or
+visual evidence: the exact bundle must first be rebuilt from `7a20dc1d19` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -326,6 +333,6 @@ credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
 running and contains the corrected shell source through `679cdc28445c`, but
-predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, and `704314cc92`. A rebuild/re-audit and an unlocked
+predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, and `7a20dc1d19`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.

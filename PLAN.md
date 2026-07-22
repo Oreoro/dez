@@ -187,7 +187,8 @@ restoration; opening or closing a viewport does not change durable ownership.
       Session attach/reconnect, Workspace restore, and explicit user choice.
       Visible root and remote-Host evidence recomputes on worktree/remote
       changes; live terminal cwd changes update stable session-provenanced
-      records. Open pane files recompute on add/remove/title-path changes with
+      records, and a newly opened idle terminal seeds its initial cwd before
+      the first PTY event. Open pane files recompute on add/remove/title-path changes with
       stable IDs, deduplication, a 256-record cap, and truncation. Explicit
       selection and consolidated restore/runtime proof remain.
 - [ ] Ensure generic tool, settings, search, Git, and conversation surfaces do
@@ -839,3 +840,10 @@ Notes decision:
   CLI hash is
   `31ea17a6ddf2adf159cb55adca81c5f10d07c77c66608f6ec36242bc0c411e80`;
   bundle rebuild and interaction proof remain open.
+- 2026-07-23: Closed the idle-terminal scope gap in `7a20dc1d19`. Terminal
+  views now seed their current working directory into the Workspace-owned
+  EvidenceSet during subscription, before the first PTY event, so a quiet new
+  shell can produce an honest review brief. Later cwd changes, wakeups, and
+  process exit retain their existing Current/Stale lifecycle behavior. The full
+  `zed --bin dez` source check, formatting, diff, and identity gates pass;
+  consolidated runtime and bundle proof remain open.
