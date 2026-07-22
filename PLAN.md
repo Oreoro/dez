@@ -560,7 +560,10 @@ chrome; every state is truthful, accessible, and visually coherent.
       title-bar onboarding promotions and Return to Onboarding to official Zed,
       renames Help's entry to Getting Started, and aligns the optional Dez
       welcome surface with Workspace and supervision language. Post-build
-      runtime proof remains open.
+      runtime proof remains open. Commit `a20074de26` removes the inherited
+      Calls/Collaboration settings page and GUI controls for Zed auto-connect
+      and collaboration-server configuration while retaining compatibility
+      parsing and the live proxy control.
 - [ ] Ensure opening a file, folder, repository, URL, remote target, recent
       Workspace, or empty Workspace routes into the existing App Session
       without creating an accidental parallel universe.
@@ -1042,3 +1045,9 @@ Notes decision:
   window-button controls remain exposed. A model test and identity guard cover
   the filter. Formatting, diff, and identity checks pass; no bundle was built
   or launched.
+- 2026-07-23: Removed inherited cloud/call surfaces from Dez Settings in
+  `a20074de26`. Calls/Collaboration is no longer a Settings page, Network keeps
+  only the live proxy control, and GUI paths for Zed auto-connect/server URL are
+  absent. Compatibility keys remain readable and official Zed is unchanged.
+  Attention copy no longer names the removed workspace bar. A model test and
+  identity guards cover the boundary; no bundle was built or launched.

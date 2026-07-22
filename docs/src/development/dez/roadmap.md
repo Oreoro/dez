@@ -832,6 +832,14 @@ code, all launch gates pass, and known limitations are documented.
       focused model test and identity guard cover the product filter.
       Formatting, diff, and identity checks pass; compiled Settings UI proof
       remains in the consolidated gate.
+- [x] 2026-07-23: Remove inherited cloud and call settings from Dez. Commit
+      `a20074de26` omits the Calls/Collaboration page, leaves Network with its
+      live proxy control, and removes the graphical paths for inherited Zed
+      auto-connect and collaboration-server configuration. Compatibility keys
+      remain readable and official Zed keeps the full UI. Attention copy no
+      longer names the removed workspace bar. A product-boundary model test and
+      identity guards pass; compiled Settings UI proof remains in the
+      consolidated gate.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
