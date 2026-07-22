@@ -787,6 +787,14 @@ code, all launch gates pass, and known limitations are documented.
       glyph and extends the identity guard so it cannot silently return.
       Formatting, diff, and identity checks pass; rendered proof remains in the
       consolidated build gate.
+- [x] 2026-07-23: Collapse the empty Session Rail to one activation hierarchy.
+      Commit `4e6292ff0a` suppresses the ordinary overview while the full start
+      state is visible, so New Terminal appears once instead of competing with
+      itself. The state is now titled **Start a session**, explains that live
+      state returns to the rail, and icons its New File and Open alternatives.
+      An authored model assertion and identity guard cover the handoff.
+      Formatting, diff, and identity checks pass; compile and rendered proof
+      remain in the consolidated gate.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

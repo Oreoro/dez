@@ -456,11 +456,12 @@ with new labels.
       File and New File. New Window and startup fallbacks preserve this surface
       in Dez instead of covering it with an unsolicited blank editor. The full
       Session Rail zero state now says No sessions yet, exposes New Terminal,
-      starts with Start working instead of implying finished work or requiring
-      a project, and suppresses the inert All 0 / Attention 0 scopes and search
-      field until a real session exists. An existing query remains visible so
-      it can always be cleared. The full state audit and rendered proof remain
-      open.
+      and suppresses the inert All 0 / Attention 0 scopes and search field until
+      a real session exists. Commit `4e6292ff0a` goes further: the full **Start
+      a session** state owns the only creation action instead of stacking below
+      a duplicate Sessions overview, and its New File and Open alternatives
+      have distinct icons. An existing query remains visible so it can always
+      be cleared. The full state audit and rendered proof remain open.
 - [ ] Remove dead buttons, unsupported provider actions, duplicate navigation,
       noisy badges, ambiguous icon-only controls, and success copy unsupported
       by observed evidence. The compiled Zed Pro trial-end overlay/reset action
@@ -986,3 +987,10 @@ Notes decision:
   `869cddcce0`. The supervision card now uses the neutral Robot icon, and the
   identity suite rejects reintroducing Zed Assistant there. Formatting, diff,
   and identity checks pass; no application bundle was built or launched.
+- 2026-07-23: Collapsed the empty Session Rail to one activation hierarchy in
+  `4e6292ff0a`. The full **Start a session** state now owns the only New Terminal
+  action; the ordinary Sessions overview returns once content exists. New File
+  and Open have distinct icons, and a model assertion plus identity guard cover
+  the handoff. Formatting, diff, and identity checks pass. Compilation and
+  rendered proof remain deferred to the consolidated build; no application
+  bundle was built or launched.
