@@ -88,6 +88,9 @@ require_pattern crates/title_bar/src/title_bar.rs \
 require_multiline_pattern crates/title_bar/src/title_bar.rs \
     'sidebar_project_identity_visible\(\s*paths::APP_NAME' \
     'Dez can regress to duplicating project identity in the Session Rail footer'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'dez_sidebar_chrome_setting_visible\(\s*paths::APP_NAME' \
+    'Dez Settings can regress to exposing controls for removed Session Rail chrome'
 require_pattern crates/workspace/src/welcome.rs \
     'APP_NAME == "Zed" && !self.fallback_to_recent_projects' \
     'the Dez welcome surface can route back into upstream onboarding'

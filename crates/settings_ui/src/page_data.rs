@@ -3858,6 +3858,18 @@ fn search_and_files_page() -> SettingsPage {
     }
 }
 
+fn dez_sidebar_chrome_setting_visible(app_name: &str, json_path: Option<&str>) -> bool {
+    app_name == "Zed"
+        || matches!(
+            json_path,
+            Some(
+                "sidebar.show_project_pane_button"
+                    | "sidebar.show_menus"
+                    | "sidebar.button_layout$"
+            )
+        )
+}
+
 fn window_and_layout_page() -> SettingsPage {
     fn status_bar_section() -> [SettingsPageItem; 10] {
         [
@@ -4042,12 +4054,22 @@ fn window_and_layout_page() -> SettingsPage {
         ]
     }
 
-    fn sidebar_chrome_section() -> [SettingsPageItem; 9] {
+    fn sidebar_chrome_section() -> Vec<SettingsPageItem> {
+        let project_pane_title = if paths::APP_NAME == "Zed" {
+            "Project Pane Button"
+        } else {
+            "Files Pane Button"
+        };
+        let project_pane_description = if paths::APP_NAME == "Zed" {
+            "Show the project pane toggle button in the Session Rail header."
+        } else {
+            "Show the file-tree toggle button in the Session Rail header."
+        };
         [
             SettingsPageItem::SectionHeader("Session Rail Chrome"),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Project Pane Button",
-                description: "Show the project pane toggle button in the Session Rail header.",
+                title: project_pane_title,
+                description: project_pane_description,
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_project_pane_button"),
@@ -4321,6 +4343,20 @@ fn window_and_layout_page() -> SettingsPage {
                     .collect(),
             }),
         ]
+        .into_iter()
+        .filter(|item| match item {
+            SettingsPageItem::SectionHeader(_) => true,
+            SettingsPageItem::SettingItem(item) => dez_sidebar_chrome_setting_visible(
+                paths::APP_NAME,
+                item.field.json_path(),
+            ),
+            SettingsPageItem::DynamicItem(item) => dez_sidebar_chrome_setting_visible(
+                paths::APP_NAME,
+                item.discriminant.field.json_path(),
+            ),
+            SettingsPageItem::SubPageLink(_) | SettingsPageItem::ActionLink(_) => false,
+        })
+        .collect()
     }
 
     fn tab_bar_section() -> [SettingsPageItem; 9] {
@@ -10789,6 +10825,39 @@ fn write_helix_mode_inner(settings: &mut SettingsContent, value: Option<bool>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn dez_hides_settings_for_removed_session_rail_chrome() {
+        assert!(dez_sidebar_chrome_setting_visible(
+            "Dez",
+            Some("sidebar.show_project_pane_button")
+        ));
+        assert!(dez_sidebar_chrome_setting_visible(
+            "Dez",
+            Some("sidebar.show_menus")
+        ));
+        assert!(dez_sidebar_chrome_setting_visible(
+            "Dez",
+            Some("sidebar.button_layout$")
+        ));
+
+        for removed_path in [
+            "sidebar.show_branch_status_icon",
+            "sidebar.show_branch_name",
+            "sidebar.show_worktree_name",
+            "sidebar.show_project_items",
+            "sidebar.show_onboarding_banner",
+        ] {
+            assert!(!dez_sidebar_chrome_setting_visible(
+                "Dez",
+                Some(removed_path)
+            ));
+            assert!(dez_sidebar_chrome_setting_visible(
+                "Zed",
+                Some(removed_path)
+            ));
+        }
+    }
 
     #[test]
     fn test_write_vim_helix_mode() {
