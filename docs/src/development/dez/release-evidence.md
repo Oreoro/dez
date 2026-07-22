@@ -168,6 +168,10 @@ that scenario still requires the unlocked UI and a graceful application quit.
 - [x] Plain workspace-shell regression: the Session Rail includes a non-agent
       terminal as `Live`, leaves its agent classification empty, and selects its
       active row
+- [x] Post-bundle Session Rail source check: commit `2dd523b6e9` adds the named
+      accessibility landmark and narrow-width truncation, and the focused
+      `sidebar` Cargo check passes with the recorded profile. This is
+      compile evidence only; the audited signed bundle predates the source edit.
 - [x] `cargo clippy -p dez_terminal_host --all-targets -- -D warnings` with the
       recorded storage-constrained dev profile
 - [ ] App-facing modified-crate `cargo clippy` (the full app graph exceeds the

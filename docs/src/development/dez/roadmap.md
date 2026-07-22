@@ -608,6 +608,12 @@ code, all launch gates pass, and known limitations are documented.
       passes deep strict verification with ad-hoc CDHash
       `4aff38edc9de37515e5488a216c2d648a53c0b01` and launches through the exact
       audited bundle path; `dist/Superzed.app` remains unopened.
+- [x] 2026-07-22: Give Session Rail an explicit macOS accessibility landmark
+      and harden narrow-width copy. Commit `2dd523b6e9` exposes the rail as a
+      named `Complementary` region and truncates overview and empty-Workspace
+      status instead of permitting word-level wrapping. The focused `sidebar`
+      graph compiles; bundle rebuild and accessibility-tree inspection remain
+      separate gates.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

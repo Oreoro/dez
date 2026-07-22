@@ -703,3 +703,8 @@ Notes decision:
   recovery semantics, state-specific safe actions, known limitations,
   verification rules, rollback, and public-preview promotion gates without
   upgrading local ad-hoc evidence into a public-release claim.
+- 2026-07-22: Exposed Session Rail as a named `Complementary` accessibility
+  landmark and made its overview and empty-Workspace status copy truncate at
+  narrow widths rather than re-enter word-level wrapping. The complete
+  `sidebar` dependency graph passes focused `cargo check`; the signed bundle
+  predates this source slice and must be rebuilt before rendered evidence.
