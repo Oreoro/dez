@@ -479,7 +479,10 @@ with new labels.
       noisy badges, ambiguous icon-only controls, and success copy unsupported
       by observed evidence. The compiled Zed Pro trial-end overlay/reset action
       is removed and provider-limit recovery no longer exposes its upstream
-      subscription CTA; the app-wide audit remains open.
+      subscription CTA. Commit `ad59a60926` also hides five Session Rail
+      settings whose branch/worktree/project/onboarding surfaces are removed in
+      Dez while preserving their compatibility schema; the app-wide audit
+      remains open.
 - [x] Replace remaining reachable stale Zed/Superzed product copy while
       preserving
       necessary compatibility, file-format, upstream attribution, and
@@ -1032,3 +1035,10 @@ Notes decision:
   says Command Palette, and New File/Open expose explicit accessible labels and
   action-aware tooltips. An identity rejection freezes those visible names.
   Formatting, diff, and identity checks pass; no bundle was built or launched.
+- 2026-07-23: Removed dead Session Rail controls from Dez Settings in
+  `ad59a60926`. Branch status/name, worktree name, duplicate project identity,
+  and upstream onboarding toggles are hidden because their surfaces no longer
+  render. Compatibility schema remains readable; live Files Pane, menus, and
+  window-button controls remain exposed. A model test and identity guard cover
+  the filter. Formatting, diff, and identity checks pass; no bundle was built
+  or launched.

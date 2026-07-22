@@ -824,6 +824,14 @@ code, all launch gates pass, and known limitations are documented.
       tooltips to the New File and Open alternatives. An identity rejection
       freezes the visible names. Formatting, diff, and identity checks pass;
       compiled interaction proof remains in the consolidated gate.
+- [x] 2026-07-23: Remove dead Session Rail settings from Dez. Commit
+      `ad59a60926` hides branch status/name, worktree name, duplicate project
+      identity, and upstream onboarding controls whose surfaces no longer
+      render in Dez. Compatibility schema remains readable; Files Pane, menus,
+      and platform button-layout controls remain because they are live. A
+      focused model test and identity guard cover the product filter.
+      Formatting, diff, and identity checks pass; compiled Settings UI proof
+      remains in the consolidated gate.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

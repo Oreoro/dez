@@ -28,6 +28,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Unified Session Rail Workspace vocabulary source: `ff91b34a81`
 - Workspace-scoped zero-session creation source: `4fc53b860f`
 - Clear Session Rail utility actions source: `8bcd11f4b6`
+- Dead Session Rail settings removal source: `ad59a60926`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -285,6 +286,15 @@ File/Open expose explicit accessible labels plus action-aware shortcut
 tooltips. An identity rejection freezes the visible utility names. Formatting,
 diff, and identity checks pass; compiled interaction proof remains deferred.
 
+Commit `ad59a60926` removes five now-inert Session Rail Chrome controls from
+Dez's Settings UI: branch status, branch name, worktree name, duplicate project
+identity, and the upstream onboarding banner. Their schema remains readable for
+upstream/legacy compatibility. Files Pane, application menus, and Linux window
+button layout remain exposed because they still affect rendered behavior. A
+focused model test covers the full allow/remove set and an identity guard
+freezes product gating. Formatting, diff, and identity checks pass; compiled
+Settings UI proof remains deferred.
+
 The corrected `Dez Dev.app` is now registered and launched as launchd child PID
 `85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 `lsof` resolves its text executable to
@@ -298,7 +308,7 @@ Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`,
 `47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, `c101fe6a43`,
 `699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`, and
-`4fc53b860f` and `8bcd11f4b6` are newer than that running bundle. The first passes all nine focused Session tests, including duplicate viewport
+`4fc53b860f`, `8bcd11f4b6`, and `ad59a60926` are newer than that running bundle. The first passes all nine focused Session tests, including duplicate viewport
 replacement without reordering or membership loss. The second makes Project
 ready terminal-first, prevents New Window and startup fallback paths from
 covering Dez's actionable launch surface with an unsolicited blank editor, and
@@ -514,7 +524,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `8bcd11f4b6` or
+visual evidence: the exact bundle must first be rebuilt from `ad59a60926` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -524,6 +534,6 @@ credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
 running and contains the corrected shell source through `679cdc28445c`, but
-predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`, `47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, `c101fe6a43`, `699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`, `4fc53b860f`, and `8bcd11f4b6`. A rebuild/re-audit and an unlocked
+predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`, `47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, `c101fe6a43`, `699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`, `4fc53b860f`, `8bcd11f4b6`, and `ad59a60926`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.
