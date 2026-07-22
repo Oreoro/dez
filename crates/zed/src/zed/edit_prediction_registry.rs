@@ -119,6 +119,7 @@ fn edit_prediction_provider_config_for_settings(cx: &App) -> Option<EditPredicti
     match provider {
         EditPredictionProvider::None => None,
         EditPredictionProvider::Copilot => Some(EditPredictionProviderConfig::Copilot),
+        EditPredictionProvider::Zed if paths::APP_NAME != "Zed" => None,
         EditPredictionProvider::Zed => {
             Some(EditPredictionProviderConfig::Zed(EditPredictionModel::Zeta))
         }
@@ -149,6 +150,7 @@ fn edit_prediction_provider_config_for_settings(cx: &App) -> Option<EditPredicti
             }
         }
 
+        EditPredictionProvider::Mercury if paths::APP_NAME != "Zed" => None,
         EditPredictionProvider::Mercury => Some(EditPredictionProviderConfig::Zed(
             EditPredictionModel::Mercury,
         )),

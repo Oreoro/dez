@@ -882,7 +882,10 @@ fn main() {
 
         cx.activate(true);
 
-        if client::ClientSettings::get_global(cx).auto_connect {
+        // Dez keeps the upstream client available for explicit compatibility
+        // actions, but inherited Superzed/Zed settings must not silently start
+        // the Zed cloud websocket during an ordinary local launch.
+        if paths::APP_NAME == "Zed" && client::ClientSettings::get_global(cx).auto_connect {
             cx.spawn({
                 let client = app_state.client.clone();
                 async move |cx| authenticate(client, cx).await
