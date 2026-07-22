@@ -7,6 +7,8 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 
 - Protocol 4 app and Host build commit: `d0b0d9a908`
 - Corrected shell bundle source: `679cdc28445c824482923bdfdfd8463927f9a337`
+- Durable viewport test source: `a91b04809ce0fa9d26407bc1685726ef36a0f03f`
+- Terminal-first empty-workspace source: `e4fbc22a3a`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -52,13 +54,13 @@ cargo build --locked --profile dev \
 ```
 
 The CLI completed separately with the same locked, non-incremental,
-single-codegen-unit profile. The captured unsigned build artifacts were arm64
-Mach-O files:
+single-codegen-unit profile and was rebuilt after the public-help cleanup. The
+captured unsigned build artifacts were arm64 Mach-O files:
 
 | Artifact            | Size | SHA-256                                                            |
 | ------------------- | ---- | ------------------------------------------------------------------ |
 | `target/debug/dez`  | 1.0G | `c244c5501097257cb4bbe4203ffb3ced1ffa416dced857ffb6be515a445c8489` |
-| `target/debug/cli`  | 12M  | `e9bde80f1d951a6f9b7da53b0175de23db31c642b368c67c19451a04fbc9eaed` |
+| `target/debug/cli`  | 12M  | `cc8d62764f0892da5306aeefb9206732e8f25584f9213e84631184d2ae8d9787` |
 | `dez-terminal-host` | 13M  | `935e1e3395a37860e0a2533958e28a1a0c13aeda37c7cc20be489897951deee2` |
 
 The final link completed in 38.17 seconds from the already compiled graph. A
@@ -67,7 +69,9 @@ to materialize a second 1.0G copy on the storage-constrained volume; the linked
 Mach-O itself completed successfully. The original Rust toolchain executable
 was restored immediately afterward. The raw app and helper remain present and
 match the hashes above; only regenerable WebRTC build intermediates were
-removed to provide bundle-signing headroom.
+removed to provide bundle-signing headroom. The raw CLI is newer than the
+signed bundle copy. A consolidated app and bundle rebuild is required before
+the newest source can be called a release artifact.
 
 ## Debug bundle and coexistence evidence {#debug-bundle-and-coexistence-evidence}
 
@@ -103,8 +107,10 @@ Signed bundle-executable SHA-256 values are:
 | `git`               | `3785db4c9db29936c32339b92d530c5c519ae1ab493ed41ab9b5f693bbb54281` |
 
 The signed copies differ byte-for-byte from the raw Cargo outputs because the
-ad-hoc signing step rewrites Mach-O signatures. Static identity checks pass,
-but an installed coexistence exercise with official Zed remains open.
+ad-hoc signing step rewrites Mach-O signatures. Static identity checks pass.
+No official Zed installation or CLI was present in the inspected system app and
+command locations, so installed coexistence cannot be demonstrated and remains
+open; no alternate application was launched during that audit.
 
 ## Runtime evidence {#runtime-evidence}
 
@@ -200,6 +206,15 @@ cannot unlock it automatically. A fresh rendered screenshot of the corrected
 artifact therefore remains required before the visual matrix can be checked
 complete.
 
+Commits `a91b04809c` and `e4fbc22a3a` are newer than that running bundle. The
+first passes all nine focused Session tests, including duplicate viewport
+replacement without reordering or membership loss. The second makes Project
+ready terminal-first, prevents New Window and startup fallback paths from
+covering Dez's actionable launch surface with an unsolicited blank editor, and
+cleans the public CLI help while keeping the legacy alias hidden for
+compatibility. The full `zed --bin dez` source check and rebuilt CLI pass, but
+these changes require the next consolidated app rebuild and rendered audit.
+
 The packaged helper also accepted a direct authenticated protocol 4 exercise.
 Host ID `d9670db8-e498-5537-a9d8-f99ad098f4aa` created Session
 `040b4465-5f0a-416b-9cb3-549da1a2a28b` with shell PID `53394`, emitted 88
@@ -216,11 +231,19 @@ that scenario still requires the unlocked UI and a graceful application quit.
 - [x] `cargo metadata --offline --no-deps --format-version 1`
 - [x] `./script/dez-identity-check`, including false cloud auto-connect
       defaults, the product-level automatic-connection gate, upstream
-      prediction-provider gates, and lazy Collab-panel construction
+      prediction-provider gates, lazy Collab-panel construction, terminal-first
+      empty-workspace seeding, and public CLI branding
 - [x] `bash -n script/bundle-mac`
 - [x] Focused Prettier checks for the canonical Dez documentation slices
 - [x] Focused tests: 15 terminal client/model tests, 8 Host/helper tests, and
       three Session Rail terminal lifecycle tests
+- [x] Nine focused App Session tests covering durable ordering, reconciliation,
+      duplicate viewport replacement, multi-viewport membership, one-copy
+      removal, legacy migration, and serialization round trips
+- [x] Full `cargo check -p zed --bin dez` with the recorded locked,
+      storage-constrained dev profile after the terminal-first source slice
+- [x] Rebuilt raw CLI help exposes `--dez <PATH>`, uses Dez product copy, and
+      keeps the legacy `--zed` compatibility alias out of public help
 - [x] Plain workspace-shell regression: the Session Rail includes a non-agent
       terminal as `Live`, leaves its agent classification empty, and selects its
       active row
@@ -259,9 +282,10 @@ that scenario still requires the unlocked UI and a graceful application quit.
 
 - [x] Intended raw-binary first launch and exact signed-bundle normal launch
 - [ ] Restored and empty-workspace interaction audit (the first full-window
-      overlay is fixed in the running bundle; the later compact-width clipping
-      is fixed only in source at `79f69b273c`, so rebuild and fresh capture both
-      remain open)
+      overlay, compact-width clipping, and blank-center defects are fixed in the
+      running bundle; the newer terminal-first action order and no-blank-editor
+      startup behavior are source-only, so rebuild and fresh capture remain
+      open)
 - [ ] Offline, failed-Host, and incompatible-Host rendered states
 - [ ] Quiet local-first launch with no Zed websocket, LiveKit room, or
       Zed-hosted edit-prediction request unless an explicit compatibility action
@@ -280,9 +304,8 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `abc4f8bedb` or
-later, including the rail, launch-surface, and local-first corrections, and
-re-audited.
+visual evidence: the exact bundle must first be rebuilt from `e4fbc22a3a` or
+later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
 
@@ -290,7 +313,7 @@ Public Developer ID signing and Apple notarization require Dez publisher
 credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
-running but predates `79f69b273c`, `4829f6b052`, `0d8496969f`, and
-`abc4f8bedb`; a
-rebuild/re-audit and an unlocked desktop are both prerequisites for the visual,
-interaction, accessibility, and GUI-driven hosted-PTY recovery matrix.
+running and contains the corrected shell source through `679cdc28445c`, but
+predates `a91b04809c` and `e4fbc22a3a`. A rebuild/re-audit and an unlocked
+desktop are both prerequisites for the visual, interaction, accessibility, and
+GUI-driven hosted-PTY recovery matrix.

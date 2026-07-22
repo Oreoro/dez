@@ -656,6 +656,23 @@ code, all launch gates pass, and known limitations are documented.
       `0dc2e1e872b88cbd6288f1bea5455fbc48271cc5`, and live PID `85053` resolves
       to the exact intended bundle executable. The Mac remains locked, so the
       corrected visual and accessibility matrix is still an explicit gate.
+- [x] 2026-07-23: Prove durable viewport normalization in the focused Session
+      slice. Commit `a91b04809c` fixes an uncovered round-trip type annotation
+      and adds duplicate-viewport replacement coverage. All nine
+      `cargo test -p session --lib` cases pass: ordering, deduplication,
+      unresolved composition, multi-viewport membership, one-copy removal,
+      legacy migration, reconciliation, and serialization are covered. Live
+      viewport/entity composition and restart proof remain open.
+- [x] 2026-07-23: Preserve a terminal-first empty Workspace instead of opening
+      an unsolicited draft. Commit `e4fbc22a3a` makes New Terminal the primary
+      Project ready action and gates New Window and startup blank-file seeding
+      to official Zed. The same slice removes stale Zed wording from public CLI
+      help, hides the legacy compatibility alias, and names `--dez` input
+      `<PATH>`. The rebuilt CLI hash is
+      `cc8d62764f0892da5306aeefb9206732e8f25584f9213e84631184d2ae8d9787`.
+      Formatting, diff, identity, CLI build/help, and full `zed --bin dez`
+      source checks pass. Consolidated app rebuild and rendered proof remain
+      open.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
