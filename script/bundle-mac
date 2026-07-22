@@ -247,7 +247,16 @@ function sign_app_binaries() {
         # entitlement. A public artifact must use the Dez publisher's identity.
         cat crates/zed/resources/zed.entitlements | sed '/com.apple.developer.associated-domains/,+1d' > "${app_path}/Contents/Resources/zed.entitlements"
 
-        codesign --force --deep --entitlements "${app_path}/Contents/Resources/zed.entitlements" --sign "${MACOS_SIGNING_KEY:--}" "${app_path}" -v
+        # Sign inside-out just like the release path. A single `--deep` pass can
+        # leave large debug bundles with a linker signature on the main binary
+        # but no sealed resources on the app, and has produced intermittent
+        # Code Signing subsystem failures on macOS.
+        local local_identity="${MACOS_SIGNING_KEY:--}"
+        /usr/bin/codesign --force --sign "$local_identity" "${app_path}/Contents/MacOS/cli" -v
+        /usr/bin/codesign --force --sign "$local_identity" "${app_path}/Contents/MacOS/dez-terminal-host" -v
+        /usr/bin/codesign --force --sign "$local_identity" "${app_path}/Contents/MacOS/git" -v
+        /usr/bin/codesign --force --entitlements "${app_path}/Contents/Resources/zed.entitlements" --sign "$local_identity" "${app_path}/Contents/MacOS/dez" -v
+        /usr/bin/codesign --force --entitlements "${app_path}/Contents/Resources/zed.entitlements" --sign "$local_identity" "${app_path}" -v
     fi
 
     bundle_name=$(basename "$app_path")
