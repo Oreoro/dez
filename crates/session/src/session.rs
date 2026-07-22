@@ -900,6 +900,42 @@ mod tests {
     }
 
     #[test]
+    fn duplicate_viewport_updates_in_place_without_reordering() {
+        let memberships = [10, 20, 30].map(|workspace_id| DurableWorkspaceMembership {
+            workspace_id,
+            viewport_id: None,
+            resolution: DurableWorkspaceResolution::Resolved,
+        });
+        let viewports = collect_durable_viewports(
+            [
+                DurableViewportRecord {
+                    viewport_id: 1,
+                    workspace_ids: vec![10],
+                    active_workspace_id: Some(10),
+                },
+                DurableViewportRecord {
+                    viewport_id: 2,
+                    workspace_ids: vec![20],
+                    active_workspace_id: Some(20),
+                },
+                DurableViewportRecord {
+                    viewport_id: 1,
+                    workspace_ids: vec![30, 30, 999],
+                    active_workspace_id: Some(999),
+                },
+            ],
+            &memberships,
+        );
+
+        assert_eq!(viewports.len(), 2);
+        assert_eq!(viewports[0].viewport_id, 1);
+        assert_eq!(viewports[0].workspace_ids, [30]);
+        assert_eq!(viewports[0].active_workspace_id, None);
+        assert_eq!(viewports[1].viewport_id, 2);
+        assert_eq!(viewports[1].workspace_ids, [20]);
+    }
+
+    #[test]
     fn viewport_reconciliation_preserves_prior_order_and_unresolved_composition() {
         let memberships = [
             DurableWorkspaceMembership {
@@ -993,7 +1029,8 @@ mod tests {
         };
 
         let json = serde_json::to_string(&state).expect("serialize durable workspace state");
-        let restored = serde_json::from_str(&json).expect("deserialize durable workspace state");
+        let restored: DurableAppSessionState =
+            serde_json::from_str(&json).expect("deserialize durable workspace state");
 
         assert_eq!(restored, state);
     }
