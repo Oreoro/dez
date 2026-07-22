@@ -419,7 +419,10 @@ with new labels.
       identity across reorder/filter updates and choose the nearest actionable
       row if the selected session disappears; the cross-surface audit remains.
 - [ ] Give pointer and keyboard users the same actions, descriptions, disabled
-      reasons, confirmation semantics, and recovery paths.
+      reasons, confirmation semantics, and recovery paths. Commit `8bcd11f4b6`
+      gives the empty rail's New File and Open alternatives explicit accessible
+      labels plus action-aware shortcut tooltips, and aligns Agent History and
+      Command Palette utility names with their actual behavior.
 - [ ] Ensure hover-only actions also exist in context menus or command palette
       and expose accurate accessibility names. Session Rail review, terminal
       lifecycle, attention, hook setup, and evidence-copy actions now have
@@ -1024,3 +1027,8 @@ Notes decision:
   unchanged. An authored model assertion and identity guard cover the
   transition. Formatting, diff, and identity checks pass; no bundle was built
   or launched.
+- 2026-07-23: Clarified the remaining Session Rail utility actions in
+  `8bcd11f4b6`. The clock now says Agent History, the command icon consistently
+  says Command Palette, and New File/Open expose explicit accessible labels and
+  action-aware tooltips. An identity rejection freezes those visible names.
+  Formatting, diff, and identity checks pass; no bundle was built or launched.

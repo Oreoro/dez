@@ -818,6 +818,12 @@ code, all launch gates pass, and known limitations are documented.
       assertion and identity guard cover the transition. Formatting, diff, and
       identity checks pass; compile and rendered proof remain in the
       consolidated gate.
+- [x] 2026-07-23: Clarify the remaining Session Rail utilities. Commit
+      `8bcd11f4b6` calls the clock Agent History, uses Command Palette
+      consistently, and adds explicit accessible labels plus action-aware
+      tooltips to the New File and Open alternatives. An identity rejection
+      freezes the visible names. Formatting, diff, and identity checks pass;
+      compiled interaction proof remains in the consolidated gate.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
