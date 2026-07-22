@@ -4425,19 +4425,25 @@ impl Sidebar {
                 .w_full()
                 .child(header)
                 .child(
-                    h_flex()
+                    v_flex()
                         .px_2()
                         .pt_1()
                         .pb_2()
-                        .gap(px(7.))
-                        .child(Icon::new(IconName::Circle).size(IconSize::Small).color(
-                            Color::Custom(cx.theme().colors().icon_placeholder.opacity(0.1)),
-                        ))
+                        .gap_1()
                         .child(
-                            Label::new("No sessions yet")
-                                .size(LabelSize::Small)
-                                .color(Color::Placeholder)
-                                .flex_1(),
+                            h_flex()
+                                .min_w_0()
+                                .gap_1p5()
+                                .child(Icon::new(IconName::Circle).size(IconSize::XSmall).color(
+                                    Color::Custom(
+                                        cx.theme().colors().icon_placeholder.opacity(0.2),
+                                    ),
+                                ))
+                                .child(
+                                    Label::new("No sessions in this workspace")
+                                        .size(LabelSize::XSmall)
+                                        .color(Color::Placeholder),
+                                ),
                         )
                         .child(
                             Button::new(
@@ -4446,8 +4452,9 @@ impl Sidebar {
                                 )),
                                 "New Terminal",
                             )
+                            .full_width()
                             .size(ButtonSize::Compact)
-                            .style(ButtonStyle::Subtle)
+                            .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
                             .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
                             .aria_label("Start Terminal in This Workspace")
                             .on_click(cx.listener(
@@ -12022,18 +12029,17 @@ impl Render for Sidebar {
                     // rounded corners.
                     Decorations::Client { tiling, .. } => el
                         .absolute()
+                        .w(self.width)
                         .top(if tiling.top { px(0.) } else { px(-1.) })
                         .bottom(if tiling.bottom { px(0.) } else { px(-1.) })
                         .when(!tiling.top, |el| el.pt_px())
                         .when(!tiling.bottom, |el| el.pb_px())
                         .map(|el| {
                             if on_left {
-                                el.right(px(0.))
-                                    .left(if tiling.left { px(0.) } else { px(-1.) })
+                                el.left(if tiling.left { px(0.) } else { px(-1.) })
                                     .when(!tiling.left, |el| el.pl(px(1.)))
                             } else {
-                                el.left(px(0.))
-                                    .right(if tiling.right { px(0.) } else { px(-1.) })
+                                el.right(if tiling.right { px(0.) } else { px(-1.) })
                                     .when(!tiling.right, |el| el.pr(px(1.)))
                             }
                         })
