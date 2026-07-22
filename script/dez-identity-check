@@ -121,6 +121,9 @@ require_pattern crates/sidebar/src/sidebar.rs \
 reject_pattern crates/sidebar/src/sidebar.rs \
     '"(Remote Project|Project Options|Open Project in New Window|Focus Last Project|Focus Project|Add Project|Open Project Rules)"' \
     'the Session Rail mixes upstream Project terminology into the Workspace hierarchy'
+reject_pattern crates/sidebar/src/sidebar.rs \
+    '"(Show Thread History|Hide Thread History|Command Search)"' \
+    'the Session Rail exposes ambiguous or internally inconsistent utility labels'
 require_pattern crates/release_channel/src/lib.rs \
     'ReleaseChannel::Stable => "Dez"' \
     'stable release display name is not Dez'

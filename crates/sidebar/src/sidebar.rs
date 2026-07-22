@@ -11173,6 +11173,8 @@ impl Sidebar {
                                     .full_width()
                                     .style(ButtonStyle::Outlined)
                                     .start_icon(Icon::new(IconName::File).size(IconSize::XSmall))
+                                    .aria_label("Create New File")
+                                    .tooltip(|_, cx| Tooltip::for_action("New File", &NewFile, cx))
                                     .on_click(|_, window, cx| {
                                         window.dispatch_action(NewFile.boxed_clone(), cx);
                                     }),
@@ -11184,6 +11186,16 @@ impl Sidebar {
                                     .start_icon(
                                         Icon::new(IconName::FolderOpen).size(IconSize::XSmall),
                                     )
+                                    .aria_label("Open File or Workspace")
+                                    .tooltip(|_, cx| {
+                                        Tooltip::for_action(
+                                            "Open File or Workspace",
+                                            &Open {
+                                                create_new_window: Some(false),
+                                            },
+                                            cx,
+                                        )
+                                    })
                                     .on_click(|_, window, cx| {
                                         window.dispatch_action(
                                             Open {
@@ -11626,9 +11638,9 @@ impl Sidebar {
     fn render_sidebar_bottom_bar(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
         let is_archive = matches!(self.view, SidebarView::Archive(..));
         let history_label = if is_archive {
-            "Hide Thread History"
+            "Hide Agent History"
         } else {
-            "Show Thread History"
+            "Show Agent History"
         };
         let on_right = self.side(cx) == SidebarSide::Right;
 
@@ -11663,7 +11675,7 @@ impl Sidebar {
                             .aria_label("Open Command Palette")
                             .tooltip(|_, cx| {
                                 Tooltip::for_action(
-                                    "Command Search",
+                                    "Command Palette",
                                     &zed_actions::command_palette::Toggle,
                                     cx,
                                 )
