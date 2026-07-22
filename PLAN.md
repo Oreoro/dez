@@ -456,6 +456,8 @@ with new labels.
       remains deliberately manual, but eligible detected Codex rows now show a
       visible Hook setup state and one-click copy action with context-menu
       parity. Rendered flow verification remains open.
+      Dez also exposes its isolated Install CLI action instead of hiding it
+      behind the official Zed product gate; install interaction remains open.
 - [ ] Group Dez settings by Workspace, Sessions, Agents, Attention, Evidence,
       Appearance, Privacy, and Advanced compatibility; hide experimental
       internals from the default path. The settings shell now names Workspace
@@ -827,3 +829,13 @@ Notes decision:
   second 1 GiB WebRTC graph on the storage-constrained volume. The current raw
   CLI hash is
   `06f2b4e799b9fc4dcc1178d3095cecea0a0dd2636f77a9d1827b98fc16a5563b`.
+- 2026-07-23: Restored the reachable Dez CLI installation flow in
+  `704314cc92`. The application menu now exposes Install CLI for Dez, the
+  handler installs only `/usr/local/bin/dez`, Linux guidance names the bundled
+  `dez` executable and preserves the official `zed` command, and launch
+  handshake failures identify Dez. The official-Zed compatibility branch
+  refuses to manage upstream CLI ownership. Formatting, diff, identity, CLI
+  build/help, and the full `zed --bin dez` source check pass. The current raw
+  CLI hash is
+  `31ea17a6ddf2adf159cb55adca81c5f10d07c77c66608f6ec36242bc0c411e80`;
+  bundle rebuild and interaction proof remain open.

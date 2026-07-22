@@ -682,6 +682,13 @@ code, all launch gates pass, and known limitations are documented.
       `zed --bin dez` source check pass. The focused sidebar test target is not
       claimed because its separate WebRTC graph exceeded safe local storage
       headroom. Consolidated rebuild and rendered proof remain open.
+- [x] 2026-07-23: Make the isolated CLI installer reachable from Dez. Commit
+      `704314cc92` moves Install CLI out of the official-Zed-only menu branch,
+      keeps the target at `/usr/local/bin/dez`, replaces upstream Linux package
+      guidance, and makes handshake failures identify Dez. The compatibility
+      branch refuses to manage the official `zed` command. Formatting, diff,
+      identity, CLI build/help, and the full `zed --bin dez` source check pass.
+      Install interaction and consolidated bundle proof remain open.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
