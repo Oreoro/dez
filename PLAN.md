@@ -465,7 +465,7 @@ feels complete for daily work and remains maintainable as a Zed fork.
 
 ### 7. Consolidated verification and public preview
 
-- [ ] Freeze the source slice and record the exact intended Dez executable and
+- [x] Freeze the source slice and record the exact intended Dez executable and
       bundle paths before launching anything.
 - [ ] Run formatting, metadata, identity, documentation, lint, focused unit,
       integration, and migration gates at scope appropriate to the changes.

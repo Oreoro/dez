@@ -1114,17 +1114,17 @@ fn register_actions(
                 }
             }
         })
-        .register_action(|_, _: &install_cli::RegisterZedScheme, window, cx| {
+        .register_action(|_, _: &install_cli::RegisterDezScheme, window, cx| {
             cx.spawn_in(window, async move |workspace, cx| {
-                install_cli::register_zed_scheme(cx).await?;
+                install_cli::register_dez_scheme(cx).await?;
                 workspace.update_in(cx, |workspace, _, cx| {
-                    struct RegisterZedScheme;
+                    struct RegisterDezScheme;
 
                     workspace.show_toast(
                         Toast::new(
-                            NotificationId::unique::<RegisterZedScheme>(),
+                            NotificationId::unique::<RegisterDezScheme>(),
                             format!(
-                                "Dez and legacy Zed links will now open in {}.",
+                                "Dez links will now open in {}.",
                                 ReleaseChannel::global(cx).display_name()
                             ),
                         ),
@@ -1134,7 +1134,7 @@ fn register_actions(
                 Ok(())
             })
             .detach_and_prompt_err(
-                "Error registering URL schemes",
+                "Error registering the Dez URL scheme",
                 window,
                 cx,
                 |_, _, _| None,

@@ -1,4 +1,4 @@
-use super::register_zed_scheme;
+use super::register_dez_scheme;
 use anyhow::Result;
 use gpui::{AppContext as _, AsyncApp, Context, PromptLevel, Window, actions};
 use release_channel::ReleaseChannel;
@@ -12,12 +12,10 @@ use workspace::{Toast, Workspace};
 actions!(
     cli,
     [
-        /// Installs the Zed CLI tool to the system PATH.
+        /// Installs the Dez CLI tool to the system PATH.
         InstallCliBinary,
     ]
 );
-
-const CANT_INSTALL_DOCS_URL: &str = "https://zed.dev/docs/macos#cant-install-cli";
 
 /// Attempts to install the CLI symlink. Returns the installed path on success,
 /// or `None` if the user dismissed the macOS administrator authentication
@@ -25,7 +23,7 @@ const CANT_INSTALL_DOCS_URL: &str = "https://zed.dev/docs/macos#cant-install-cli
 /// commonly because the user is not an admin.
 async fn install_script(cx: &AsyncApp) -> Result<Option<PathBuf>> {
     let cli_path = cx.update(|cx| cx.path_for_auxiliary_executable("cli"))?;
-    let link_path = Path::new("/usr/local/bin/zed");
+    let link_path = Path::new("/usr/local/bin/dez");
     let bin_dir_path = link_path.parent().unwrap();
 
     // Don't re-create symlink if it points to the same CLI binary.
@@ -98,7 +96,7 @@ pub fn install_cli_binary(window: &mut Window, cx: &mut Context<Workspace>) {
             // The user dismissed the administrator prompt; nothing to do.
             Ok(None) => return Ok(()),
             Err(error) => {
-                log::error!("failed to install zed CLI: {error:#}");
+                log::error!("failed to install Dez CLI: {error:#}");
                 workspace.update(cx, |workspace, cx| {
                     struct CliInstallFailed;
 
@@ -108,12 +106,10 @@ pub fn install_cli_binary(window: &mut Window, cx: &mut Context<Workspace>) {
                         |cx| {
                             cx.new(|cx| {
                                 MessageNotification::new(
-                                    "You can add `zed` to your PATH manually.",
+                                    "You can add the bundled `cli` executable to your PATH as `dez` manually.",
                                     cx,
                                 )
-                                .with_title("Couldn't install the Zed CLI")
-                                .more_info_message("Show me how")
-                                .more_info_url(CANT_INSTALL_DOCS_URL)
+                                .with_title("Couldn't install the Dez CLI")
                             })
                         },
                     );
@@ -123,13 +119,13 @@ pub fn install_cli_binary(window: &mut Window, cx: &mut Context<Workspace>) {
         };
 
         workspace.update_in(cx, |workspace, _, cx| {
-            struct InstalledZedCli;
+            struct InstalledDezCli;
 
             workspace.show_toast(
                 Toast::new(
-                    NotificationId::unique::<InstalledZedCli>(),
+                    NotificationId::unique::<InstalledDezCli>(),
                     format!(
-                        "Installed `zed` to {}. You can launch {} from your terminal.",
+                        "Installed `dez` to {}. You can launch {} from your terminal.",
                         path.to_string_lossy(),
                         ReleaseChannel::global(cx).display_name()
                     ),
@@ -137,8 +133,8 @@ pub fn install_cli_binary(window: &mut Window, cx: &mut Context<Workspace>) {
                 cx,
             )
         })?;
-        register_zed_scheme(cx).await.log_err();
+        register_dez_scheme(cx).await.log_err();
         Ok(())
     })
-    .detach_and_prompt_err("Cannot install the Zed CLI", window, cx, |_, _, _| None);
+    .detach_and_prompt_err("Cannot install the Dez CLI", window, cx, |_, _, _| None);
 }

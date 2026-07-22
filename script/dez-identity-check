@@ -52,6 +52,9 @@ require_pattern crates/zed/Cargo.toml \
 require_pattern crates/zed/Cargo.toml \
     '^name = "dez"$' \
     'the Dez binary target is missing'
+require_pattern crates/zed/Cargo.toml \
+    '^osx_url_schemes = \["dez"\]$' \
+    'the stable bundle does not exclusively own the canonical dez URL scheme'
 require_pattern assets/settings/default.json \
     '^  "auto_update": false,$' \
     'automatic binary updates are enabled by default'
@@ -83,6 +86,15 @@ require_pattern crates/terminal/src/terminal.rs \
 reject_pattern crates/release_channel/src/lib.rs \
     'dev\.zed\.Zed' \
     'an official Zed bundle identifier is active in Dez release channels'
+reject_pattern crates/zed/Cargo.toml \
+    '^osx_url_schemes = .*"zed(-[a-z]+)?"' \
+    'the Dez bundle still claims an official Zed URL scheme'
+reject_pattern crates/install_cli/src/register_zed_scheme.rs \
+    'ZED_URL_SCHEME|"zed(-[a-z]+)?"' \
+    'the Dez installer still registers an official Zed URL scheme'
+reject_pattern crates/install_cli/src/install_cli_binary.rs \
+    '/usr/local/bin/zed|InstalledZedCli|Zed CLI' \
+    'the Dez CLI installer still overwrites or presents the official Zed CLI'
 reject_pattern crates/terminal/src/terminal.rs \
     'env\.insert\("TERM_PROGRAM"\.to_string\(\), "zed"\.to_string\(\)\);' \
     'terminal sessions still identify the public product as Zed'

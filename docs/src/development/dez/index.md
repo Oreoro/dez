@@ -25,6 +25,8 @@ documents according to their authority, not their age.
    rejected. It is an intake record, not a competing source of truth.
 9. [Dez v0.0.1](../dez-v0.0.1.md) is the current release snapshot and launch
    checklist.
+10. [Release Evidence](./release-evidence.md) records direct build, runtime,
+    visual, coexistence, and packaging proof for the current release candidate.
 
 The older Superzed and Canvas documents remain design research and
 implementation history. They do not override this section.

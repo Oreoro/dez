@@ -282,7 +282,7 @@ identifier = "dev.dez.Dez-Dev"
 name = "Dez Dev"
 osx_minimum_system_version = "10.15.7"
 osx_info_plist_exts = ["resources/info/*"]
-osx_url_schemes = ["dez-dev", "zed-dev"]
+osx_url_schemes = ["dez-dev"]
 
 [package.metadata.bundle-nightly]
 icon = ["resources/app-icon-nightly@2x.png", "resources/app-icon-nightly.png"]
@@ -290,7 +290,7 @@ identifier = "dev.dez.Dez-Nightly"
 name = "Dez Nightly"
 osx_minimum_system_version = "10.15.7"
 osx_info_plist_exts = ["resources/info/*"]
-osx_url_schemes = ["dez-nightly", "zed-nightly"]
+osx_url_schemes = ["dez-nightly"]
 
 [package.metadata.bundle-preview]
 icon = ["resources/app-icon-preview@2x.png", "resources/app-icon-preview.png"]
@@ -298,7 +298,7 @@ identifier = "dev.dez.Dez-Preview"
 name = "Dez Preview"
 osx_minimum_system_version = "10.15.7"
 osx_info_plist_exts = ["resources/info/*"]
-osx_url_schemes = ["dez-preview", "zed-preview"]
+osx_url_schemes = ["dez-preview"]
 
 [package.metadata.bundle-stable]
 icon = ["resources/app-icon@2x.png", "resources/app-icon.png"]
@@ -306,7 +306,7 @@ identifier = "dev.dez.Dez"
 name = "Dez"
 osx_minimum_system_version = "10.15.7"
 osx_info_plist_exts = ["resources/info/*"]
-osx_url_schemes = ["dez", "zed"]
+osx_url_schemes = ["dez"]
 
 [package.metadata.cargo-machete]
 ignored = ["profiling", "zstd", "tracing"]
