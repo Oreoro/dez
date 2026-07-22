@@ -803,6 +803,13 @@ code, all launch gates pass, and known limitations are documented.
       model tests and an identity guard cover those boundaries. Formatting,
       diff, and identity checks pass; compile and rendered proof remain in the
       consolidated gate.
+- [x] 2026-07-23: Normalize the Session Rail on Workspace vocabulary. Commit
+      `ff91b34a81` changes its remaining visible Remote Project, Project
+      Options, focus/open-new-window, Add Project, and Project Rules labels to
+      Workspace equivalents. The bottom entry uses a Folder Open glyph.
+      Internal upstream types remain intact, and an identity rejection freezes
+      the visible language. Formatting, diff, and identity checks pass;
+      rendered proof remains in the consolidated gate.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

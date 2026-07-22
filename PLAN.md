@@ -358,7 +358,10 @@ with new labels.
 #### Shell and hierarchy
 
 - [ ] Establish one stable shell grammar for App Session, Workspace, Surface,
-      Session Rail, command center, status, and transient overlays.
+      Session Rail, command center, status, and transient overlays. Commit
+      `ff91b34a81` removes the rail's remaining user-facing Project/Workspace
+      split across remote, options, focus, new-window, recent, and rules
+      controls while preserving internal upstream types.
 - [ ] Give every primary region a visible purpose, stable placement, clear
       focus treatment, and predictable resize/collapse behavior. The app View
       menu, title-bar/sidebar chrome, and collapsed status control now call the
@@ -1005,3 +1008,9 @@ Notes decision:
   Zed is unchanged. Two model tests and an identity guard cover those
   boundaries. Formatting, diff, and identity checks pass; no bundle was built
   or launched.
+- 2026-07-23: Unified the Session Rail's visible Workspace vocabulary in
+  `ff91b34a81`. Remote, options, focus, new-window, recent, and rules controls
+  no longer alternate between Project and Workspace, and the recent entry uses
+  a Folder Open glyph. Internal upstream types are unchanged; an identity
+  rejection freezes the visible terminology. Formatting, diff, and identity
+  checks pass; no bundle was built or launched.
