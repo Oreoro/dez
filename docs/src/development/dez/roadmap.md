@@ -636,6 +636,12 @@ code, all launch gates pass, and known limitations are documented.
       prediction providers while preserving explicit non-Zed providers. Commit
       `9318b270d9` guards the policy statically. Rebuild and runtime network proof
       remain open.
+- [x] 2026-07-23: Bound the lower workspace footer under narrow widths and real
+      repository names. Commit `0d8496969f` gives project identity and
+      worktree/branch controls independent shrinkable, overflow-hidden regions,
+      allowing their existing one-line truncation and tooltips to work without
+      colliding in the fixed-height row. Formatting and diff checks pass;
+      compile, rebuild, and rendered proof remain open.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

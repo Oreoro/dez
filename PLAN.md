@@ -71,19 +71,19 @@ Status below reflects repository evidence on 2026-07-22. The consolidated app,
 CLI, and helper builds now exist; build proof still does not imply rendered or
 end-to-end interaction proof.
 
-| Area                   | Evidence now                                                                                                                                                                                                                         | Completion gap                                                                                                                                       |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Upstream               | Integrated `upstream/main` `9d0ef37a2571` through two-parent merge `2be63cfea347`; eleven conflicts are resolved and classified; consolidated build provenance is recorded                                                           | Complete runtime regression, installed coexistence, and design-partner proof                                                                         |
-| Identity               | Dez source guards pass, including the local-first launch boundary; the arm64 debug app, CLI, helper, and `dev.dez.Dez-Dev`/`dez-dev` ad-hoc bundle are audited                                                                       | Rebuild the local-first policy, then official-Zed install coexistence, public signing/notarization, updater, remote, and visual proof                |
-| App Session            | Restore barrier, lifecycle state, ordered Workspace registry, explicit ordered viewport records, active selection, and unresolved identity retention exist in source                                                                 | Live viewport/entity composition and consolidated runtime proof                                                                                      |
-| Workspace and Surfaces | Pane/Canvas repair, panel-to-pane work, startup request ordering, and typed path projection exist                                                                                                                                    | Authoritative EvidenceSet, scoped tools, movement proof, and shared-store isolation                                                                  |
-| Local Host             | Protocol 4 app/helper builds and focused tests pass; an authenticated packaged-runtime Session retained one shell PID, 88 replay chunks, both pre/post-resize dimensions, and explicit Detached state                                | GUI-exit/same-Session reattach proof and default-backend decision                                                                                    |
-| Terminal recovery      | Host/Session references, attach/detach/terminate, recovery surfaces, honest transport states, and dimension-aware replay exist in source and packaged runtime                                                                        | Full GUI restart scenario, stale-host cleanup, and rendered UX verification                                                                          |
-| Agent adapter          | Structured Codex hook path, observation-only capabilities, bounded file targets, objective/context projection, and onboarding exist                                                                                                  | Live hook proof and a second adapter after the PMF gate                                                                                              |
-| Attention              | Session Rail projection, restart-safe attention, acknowledgement, mute, resolution, priority, and stale handling exist                                                                                                               | Consolidated runtime and accessibility proof                                                                                                         |
-| Review                 | Native and terminal review briefs consume observed commands/checks, Git/worktree state, bounded file targets, cwd provenance, risks, and missing-evidence labels                                                                     | Compiled proof, live navigation, and side-by-side hero-flow validation                                                                               |
-| UI/UX                  | The full-window rail defect is fixed; `79f69b273c` synchronizes rail reservation/paint widths and `4829f6b052` prevents a restored loaded project from degrading to a blank center, while live shells and footer copy remain bounded | Rebuild the post-`4829f6b052` source, capture it, then complete shell hierarchy, outward polish, onboarding, accessibility, and state-by-state audit |
-| Release                | Static gates, focused tests, consolidated protocol-4 app/helper builds, exact signed-bundle launch, authenticated runtime Session exercise, and deep-strict ad-hoc bundle audit pass                                                 | Full GUI Session restart, visual/a11y, app-facing lint, public signing/install, coexistence, and partner proof                                       |
+| Area                   | Evidence now                                                                                                                                                                                                                                            | Completion gap                                                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Upstream               | Integrated `upstream/main` `9d0ef37a2571` through two-parent merge `2be63cfea347`; eleven conflicts are resolved and classified; consolidated build provenance is recorded                                                                              | Complete runtime regression, installed coexistence, and design-partner proof                                                                         |
+| Identity               | Dez source guards pass, including the local-first launch boundary; the arm64 debug app, CLI, helper, and `dev.dez.Dez-Dev`/`dez-dev` ad-hoc bundle are audited                                                                                          | Rebuild the local-first policy, then official-Zed install coexistence, public signing/notarization, updater, remote, and visual proof                |
+| App Session            | Restore barrier, lifecycle state, ordered Workspace registry, explicit ordered viewport records, active selection, and unresolved identity retention exist in source                                                                                    | Live viewport/entity composition and consolidated runtime proof                                                                                      |
+| Workspace and Surfaces | Pane/Canvas repair, panel-to-pane work, startup request ordering, and typed path projection exist                                                                                                                                                       | Authoritative EvidenceSet, scoped tools, movement proof, and shared-store isolation                                                                  |
+| Local Host             | Protocol 4 app/helper builds and focused tests pass; an authenticated packaged-runtime Session retained one shell PID, 88 replay chunks, both pre/post-resize dimensions, and explicit Detached state                                                   | GUI-exit/same-Session reattach proof and default-backend decision                                                                                    |
+| Terminal recovery      | Host/Session references, attach/detach/terminate, recovery surfaces, honest transport states, and dimension-aware replay exist in source and packaged runtime                                                                                           | Full GUI restart scenario, stale-host cleanup, and rendered UX verification                                                                          |
+| Agent adapter          | Structured Codex hook path, observation-only capabilities, bounded file targets, objective/context projection, and onboarding exist                                                                                                                     | Live hook proof and a second adapter after the PMF gate                                                                                              |
+| Attention              | Session Rail projection, restart-safe attention, acknowledgement, mute, resolution, priority, and stale handling exist                                                                                                                                  | Consolidated runtime and accessibility proof                                                                                                         |
+| Review                 | Native and terminal review briefs consume observed commands/checks, Git/worktree state, bounded file targets, cwd provenance, risks, and missing-evidence labels                                                                                        | Compiled proof, live navigation, and side-by-side hero-flow validation                                                                               |
+| UI/UX                  | The full-window rail defect is fixed; `79f69b273c` synchronizes rail reservation/paint widths, `4829f6b052` prevents a restored loaded project from degrading to a blank center, and `0d8496969f` gives footer identity controls bounded shrink regions | Rebuild the post-`0d8496969f` source, capture it, then complete shell hierarchy, outward polish, onboarding, accessibility, and state-by-state audit |
+| Release                | Static gates, focused tests, consolidated protocol-4 app/helper builds, exact signed-bundle launch, authenticated runtime Session exercise, and deep-strict ad-hoc bundle audit pass                                                                    | Full GUI Session restart, visual/a11y, app-facing lint, public signing/install, coexistence, and partner proof                                       |
 
 The intended raw executable was used for the first consolidated runtime gate;
 the current gate launches only
@@ -102,9 +102,11 @@ same screenshot also showed a blank center despite a loaded worktree. Commit
 `4829f6b052` makes any empty tabbed pane with a loaded project render the
 Project ready launch surface even if a legacy/restored pane predates the welcome
 flag; the flag still controls the no-project welcome surface. The exact packaged
-app predates both source corrections and macOS is locked, so a fresh
-corrected-artifact capture remains open and no broader visual claim is inferred
-from source, build, or protocol evidence.
+app also predates `0d8496969f`, which bounds project, worktree, and branch
+controls inside the fixed-height footer so their existing truncation can work.
+The packaged app predates all three source corrections and macOS is locked, so
+a fresh corrected-artifact capture remains open and no broader visual claim is
+inferred from source, build, or protocol evidence.
 
 ## Execution plan
 
@@ -330,6 +332,11 @@ with new labels.
       mode-resolved width for workspace reservation and root painting instead
       of painting compact mode 60 px wider than its allocation; a rebuilt
       rendered resize/collapse audit remains.
+- [ ] Keep fixed shell chrome bounded under real project names and narrow
+      widths. Commit `0d8496969f` gives the project identity and Git controls
+      explicit shrinkable, overflow-hidden regions so their one-line labels do
+      not collide with footer controls. Formatting and diff checks pass;
+      compiled and rendered narrow-width proof remain in the consolidated gate.
 - [x] Make Session Rail orientation explicit in source with a named header,
       visible counted All and Attention scopes, truthful action-needed state,
       search, and a clear creation path. Singular/plural and accessibility
@@ -751,3 +758,10 @@ Notes decision:
   retaining explicit non-Zed providers. Commit `9318b270d9` makes those
   boundaries part of `script/dez-identity-check`, which passes. The source is
   not yet rebuilt, so the running bundle is not runtime evidence for this fix.
+- 2026-07-23: Repaired the remaining footer layout contract exposed by the
+  supplied screenshot. Commit `0d8496969f` places project identity and
+  worktree/branch controls in bounded, shrinkable, overflow-hidden regions,
+  allowing their existing one-line truncation and tooltips to work inside the
+  fixed-height row. Formatting and diff checks pass. Build and rendered
+  narrow-width evidence remain open, and the running signed bundle predates the
+  correction.

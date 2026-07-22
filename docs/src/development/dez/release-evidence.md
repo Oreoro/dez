@@ -168,6 +168,14 @@ providers. Commit `9318b270d9` adds static identity-policy checks for all of
 these boundaries. The checks pass; the running bundle predates them, so offline
 and quiet-launch runtime proof remains open.
 
+The screenshot's footer also exposed an independent flex-layout failure:
+project identity and worktree/branch controls were nominally truncating, but
+their parent row did not give them bounded shrink regions. Commit `0d8496969f`
+wraps both groups in minimum-width-zero, flexible, overflow-hidden containers
+and keeps the Git group bounded to the row width. Formatting and diff checks
+pass. The change is source-only until the consolidated build and narrow-width
+render audit complete.
+
 The audited `Dez Dev.app` is now registered and launched as launchd child PID
 `57957`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 The desktop is currently locked, and the approved accessibility controller
@@ -212,6 +220,10 @@ that scenario still requires the unlocked UI and a graceful application quit.
       loaded project render Project ready actions even when an old pane lacks
       the welcome flag. The assertion is authored and formatting passes; the
       shared focused test target and post-fix bundle remain incomplete.
+- [ ] Bounded project-footer regression: commit `0d8496969f` gives project
+      identity and Git controls explicit shrink/overflow contracts so their
+      one-line labels can truncate instead of colliding. Formatting and diff
+      checks pass; compile and rendered narrow-width proof remain open.
 - [x] `cargo clippy -p dez_terminal_host --all-targets -- -D warnings` with the
       recorded storage-constrained dev profile
 - [ ] App-facing modified-crate `cargo clippy` (the full app graph exceeds the
@@ -245,8 +257,9 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `79f69b273c` or
-later, including `4829f6b052`, and re-audited.
+visual evidence: the exact bundle must first be rebuilt from `0d8496969f` or
+later, including the rail, launch-surface, and local-first corrections, and
+re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
 
@@ -254,6 +267,6 @@ Public Developer ID signing and Apple notarization require Dez publisher
 credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
-running but predates `79f69b273c` and `4829f6b052`; a rebuild/re-audit and an
-unlocked desktop are both prerequisites for the visual, interaction,
-accessibility, and GUI-driven hosted-PTY recovery matrix.
+running but predates `79f69b273c`, `4829f6b052`, and `0d8496969f`; a
+rebuild/re-audit and an unlocked desktop are both prerequisites for the visual,
+interaction, accessibility, and GUI-driven hosted-PTY recovery matrix.
