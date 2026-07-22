@@ -91,6 +91,12 @@ require_multiline_pattern crates/title_bar/src/title_bar.rs \
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'dez_sidebar_chrome_setting_visible\(\s*paths::APP_NAME' \
     'Dez Settings can regress to exposing controls for removed Session Rail chrome'
+require_pattern crates/settings_ui/src/page_data.rs \
+    'dez_settings_page_visible\(paths::APP_NAME, "Collaboration"\)' \
+    'Dez Settings can regress to exposing the inherited Calls and Collaboration page'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'dez_network_setting_visible\(paths::APP_NAME' \
+    'Dez Settings can regress to exposing inherited cloud connection controls'
 require_pattern crates/workspace/src/welcome.rs \
     'APP_NAME == "Zed" && !self.fallback_to_recent_projects' \
     'the Dez welcome surface can route back into upstream onboarding'

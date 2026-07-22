@@ -63,7 +63,7 @@ macro_rules! concat_sections {
 }
 
 pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
-    vec![
+    let mut pages = vec![
         general_page(cx),
         appearance_page(),
         keymap_page(),
@@ -75,13 +75,22 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
         debugger_page(),
         terminal_page(),
         version_control_page(),
-        collaboration_page(),
+    ];
+    if dez_settings_page_visible(paths::APP_NAME, "Collaboration") {
+        pages.push(collaboration_page());
+    }
+    pages.extend([
         ai_page(cx),
         attention_page(),
         evidence_page(),
         network_page(),
         developer_page(cx),
-    ]
+    ]);
+    pages
+}
+
+fn dez_settings_page_visible(app_name: &str, title: &str) -> bool {
+    app_name == "Zed" || title != "Collaboration"
 }
 
 fn developer_page(cx: &App) -> SettingsPage {
@@ -3868,6 +3877,10 @@ fn dez_sidebar_chrome_setting_visible(app_name: &str, json_path: Option<&str>) -
                     | "sidebar.button_layout$"
             )
         )
+}
+
+fn dez_network_setting_visible(app_name: &str, json_path: Option<&str>) -> bool {
+    app_name == "Zed" || matches!(json_path, Some("proxy"))
 }
 
 fn window_and_layout_page() -> SettingsPage {
@@ -8603,11 +8616,16 @@ fn ai_page(cx: &App) -> SettingsPage {
 }
 
 fn attention_page() -> SettingsPage {
+    let attention_status_description = if paths::APP_NAME == "Zed" {
+        "Show the action-needed summary in the workspace bar and Session Rail."
+    } else {
+        "Show the action-needed summary in the Session Rail."
+    };
     let items = vec![
         SettingsPageItem::SectionHeader("Attention"),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Show Attention Status",
-            description: "Show the action-needed summary in the workspace bar and Session Rail.",
+            description: attention_status_description,
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("workspace_bar.show_agent_attention"),
@@ -8801,7 +8819,7 @@ fn evidence_page() -> SettingsPage {
 }
 
 fn network_page() -> SettingsPage {
-    fn network_section() -> [SettingsPageItem; 4] {
+    fn network_section() -> Vec<SettingsPageItem> {
         [
             SettingsPageItem::SectionHeader("Network"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -8853,10 +8871,25 @@ fn network_page() -> SettingsPage {
                 files: USER,
             }),
         ]
+        .into_iter()
+        .filter(|item| match item {
+            SettingsPageItem::SectionHeader(_) => true,
+            SettingsPageItem::SettingItem(item) => {
+                dez_network_setting_visible(paths::APP_NAME, item.field.json_path())
+            }
+            SettingsPageItem::SubPageLink(_)
+            | SettingsPageItem::DynamicItem(_)
+            | SettingsPageItem::ActionLink(_) => false,
+        })
+        .collect()
     }
 
     SettingsPage {
-        title: "Network & Compatibility",
+        title: if paths::APP_NAME == "Zed" {
+            "Network & Compatibility"
+        } else {
+            "Network"
+        },
         items: concat_sections![network_section()],
     }
 }
@@ -10857,6 +10890,19 @@ mod tests {
                 Some(removed_path)
             ));
         }
+    }
+
+    #[test]
+    fn dez_hides_inherited_collaboration_and_cloud_connection_controls() {
+        assert!(!dez_settings_page_visible("Dez", "Collaboration"));
+        assert!(dez_settings_page_visible("Dez", "Agents"));
+        assert!(dez_settings_page_visible("Zed", "Collaboration"));
+
+        assert!(dez_network_setting_visible("Dez", Some("proxy")));
+        assert!(!dez_network_setting_visible("Dez", Some("auto_connect")));
+        assert!(!dez_network_setting_visible("Dez", Some("server_url")));
+        assert!(dez_network_setting_visible("Zed", Some("auto_connect")));
+        assert!(dez_network_setting_visible("Zed", Some("server_url")));
     }
 
     #[test]
