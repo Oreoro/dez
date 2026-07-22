@@ -730,6 +730,15 @@ code, all launch gates pass, and known limitations are documented.
       side-dock model. The full workspace test configuration compiles with one
       unrelated dead-code warning; direct test execution was cancelled during
       sustained codegen/I/O pressure, so packaged runtime proof remains open.
+- [x] 2026-07-23: Extract queued-open startup ordering into one explicit
+      completion barrier. Commit `47e769da5d` routes the continuing listener
+      through an ordered dispatcher and authors a focused regression for
+      pre-barrier retention, ordered release, and continued delivery after
+      restoration completes. Failure fallback releases the same completion
+      signal, so queued user intent is not discarded when restoration reports
+      an error. Formatting, diff, and identity gates pass; a cold Dez source
+      check was stopped at the 3.4 GiB storage floor before returning a code
+      result, so compiled-test and packaged runtime proof remain open.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

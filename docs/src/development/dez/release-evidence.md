@@ -16,6 +16,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Live background viewport attachment source: `962b611605`
 - Durable empty-fallback Workspace source: `e9a595fcff`
 - Shared-App-Session New Window proof source: `2334fbdcfc`
+- Queued-open startup barrier source: `47e769da5d`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -224,10 +225,10 @@ artifact therefore remains required before the visual matrix can be checked
 complete.
 
 Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
-`7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, and `2334fbdcfc`
-are newer than that running bundle. The first passes all nine focused Session
-tests, including duplicate viewport replacement without reordering or
-membership loss. The second makes Project
+`7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`, and
+`47e769da5d` are newer than that running bundle. The first passes all nine
+focused Session tests, including duplicate viewport replacement without
+reordering or membership loss. The second makes Project
 ready terminal-first, prevents New Window and startup fallback paths from
 covering Dez's actionable launch surface with an unsolicited blank editor, and
 cleans the public CLI help while keeping the legacy alias hidden for
@@ -279,6 +280,17 @@ call with the supported flexible side-dock assertion. A full
 dead-code warning. Direct execution of the single test was attempted but
 cancelled during sustained codegen/I/O saturation, so no executed-test or GUI
 runtime claim is made.
+
+Commit `47e769da5d` extracts the continuing open listener's restoration gate
+into a named ordered dispatcher. Queued requests cannot dispatch until startup
+signals completion, then retain arrival order and continue flowing. The signal
+is completion-based because both successful restoration and visible
+failure-fallback handling must release queued user intent. A focused regression
+is authored for retention and ordering. Formatting, diff, and identity gates
+pass; a cold `cargo check --locked -p zed --bin dez -j1` was stopped at the
+3.4 GiB free-space safety floor before producing a code result. Only generated
+artifacts from that attempt were removed. No compile, executed-test, bundle, or
+runtime claim is inferred.
 
 The packaged helper also accepted a direct authenticated protocol 4 exercise.
 Host ID `d9670db8-e498-5537-a9d8-f99ad098f4aa` created Session
@@ -339,6 +351,11 @@ that scenario still requires the unlocked UI and a graceful application quit.
       and independent active selections. The complete workspace test
       configuration compiles. Direct test execution and packaged GUI proof
       remain open.
+- [ ] Queued-open startup barrier regression: commit `47e769da5d` authors
+      pre-barrier retention, ordered release, and post-barrier delivery
+      coverage. Formatting, diff, and identity gates pass; the cold Dez target
+      check reached the storage floor before compiling the regression, so its
+      executed result and packaged GUI proof remain open.
 - [ ] Restored empty-project launch regression: commit `4829f6b052` makes a
       loaded project render Project ready actions even when an old pane lacks
       the welcome flag. The assertion is authored and formatting passes; the
@@ -386,7 +403,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `2334fbdcfc` or
+visual evidence: the exact bundle must first be rebuilt from `47e769da5d` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -396,6 +413,6 @@ credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
 running and contains the corrected shell source through `679cdc28445c`, but
-predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, and `2334fbdcfc`. A rebuild/re-audit and an unlocked
+predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`, and `47e769da5d`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.
