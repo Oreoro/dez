@@ -982,3 +982,7 @@ Notes decision:
   Identity guards freeze both onboarding gates. Formatting, diff, and identity
   checks pass; compiled and rendered proof remains in the consolidated build
   gate, and no application bundle was built or launched.
+- 2026-07-23: Removed the last Zed-branded glyph from Dez getting started in
+  `869cddcce0`. The supervision card now uses the neutral Robot icon, and the
+  identity suite rejects reintroducing Zed Assistant there. Formatting, diff,
+  and identity checks pass; no application bundle was built or launched.

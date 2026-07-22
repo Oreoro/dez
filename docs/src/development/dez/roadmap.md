@@ -782,6 +782,11 @@ code, all launch gates pass, and known limitations are documented.
       supervision, worktree isolation, and review evidence. Identity guards
       freeze the onboarding gates. Formatting, diff, and identity checks pass;
       compiled and rendered proof remains deferred to the consolidated build.
+- [x] 2026-07-23: Remove the last Zed-branded glyph from Dez getting started.
+      Commit `869cddcce0` replaces the Zed Assistant icon with the neutral Robot
+      glyph and extends the identity guard so it cannot silently return.
+      Formatting, diff, and identity checks pass; rendered proof remains in the
+      consolidated build gate.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
