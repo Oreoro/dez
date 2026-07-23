@@ -647,7 +647,11 @@ with new labels.
       durable Host and Workspace-recovery callouts. Commit `a90fae5873` raises
       compact Workspace headers and their primary creation, scope, and recovery
       controls to the shared 28 px medium target, eliminating the prior 24/28 px
-      header/control mismatch. The rendered matrix remains open.
+      header/control mismatch. Commit `f6318ea907` makes the keyboard-selected
+      Workspace or Session row the active accessibility descendant; the shared
+      animation layer already collapses repeated activity rotation to one
+      static frame when Dez resolves reduced motion. The rendered matrix remains
+      open.
 - [ ] Capture a visual state matrix at compact, balanced, and spacious density
       in representative light and dark themes and at narrow/normal/wide rail
       widths.
@@ -1408,3 +1412,10 @@ Notes decision:
   New Terminal, All/Attention scope, Host-detail, and failed-Workspace recovery
   controls use the same medium target instead of 18 px compact buttons. Static
   identity guards pass; rendered density and zoom proof remains deferred.
+- 2026-07-23: Connected Session Rail keyboard navigation to accessibility focus
+  in `f6318ea907`. The focused Workspace header or Session row now claims
+  active-descendant focus while the rail retains actual keyboard focus, so row
+  labels and state can follow Up/Down navigation. The audit also confirmed that
+  GPUI renders one static frame for repeating activity animations when Dez's
+  reduced-motion setting resolves true. Identity guards pass; platform focus
+  and motion inspection remains deferred.

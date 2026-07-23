@@ -234,6 +234,12 @@ controls and moves high-frequency rail creation, scope, Host-detail, and
 Workspace-recovery actions from 18 px compact buttons to the shared medium
 target. Identity checks pass; rendered density and zoom proof remains deferred.
 
+Commit `f6318ea907` makes the keyboard-selected Workspace header or Session row
+the active accessibility descendant while the rail retains keyboard focus. The
+same audit confirmed that GPUI collapses repeating activity animations to a
+single static frame when Dez resolves reduced motion. Identity checks pass;
+platform focus and motion inspection remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -1074,6 +1080,11 @@ code, all launch gates pass, and known limitations are documented.
       raises primary creation, scope, Host-detail, and Workspace-recovery
       actions from compact to medium size. Identity checks pass; rendered
       density and zoom proof remains consolidated.
+- [x] 2026-07-23: Connect keyboard selection to accessibility focus. Commit
+      `f6318ea907` marks the focused Workspace header or Session row as the
+      active descendant while the Session Rail keeps real keyboard focus. The
+      audit also confirms the existing static-frame reduced-motion fallback.
+      Identity checks pass; platform focus/motion proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the
