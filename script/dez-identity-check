@@ -577,6 +577,12 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
     'fn session_switcher_title.*?"Thread Switcher".*?"Switch Sessions".*?fn session_switcher_count.*?"1 recent session".*?"\{count\} recent sessions".*?id\("session-switcher"\).*?Role::Dialog.*?aria_label\(title\).*?Release shortcut to open.*?Choose a session' \
     'the Dez Session Switcher can regress to an anonymous fixed-width Thread list without interaction guidance'
+require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
+    'fn session_switcher_entry_type_visible.*?app_name == "Zed".*?id\("thread-switcher-list"\).*?Role::List.*?aria_label\("Recent sessions"\).*?actor_label\(entry\.session_type_label\(paths::APP_NAME\)\).*?actor_label_visible\(session_switcher_entry_type_visible\(paths::APP_NAME\)\).*?selected\(ix == selected_index\).*?focused\(ix == selected_index\)' \
+    'the Session Switcher can regress to repeated visible type labels or lose its accessible list selection'
+reject_pattern crates/sidebar/src/thread_switcher.rs \
+    '\.on_hover' \
+    'merely hovering a Session Switcher row can preview and activate unrelated work'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn switcher_selection_for_active_entry.*?ThreadSwitcherEntry::Thread.*?entry.metadata.thread_id.*?ThreadSwitcherEntry::Terminal.*?entry.metadata.terminal_id.*?let original_selection = self.switcher_selection_for_active_entry.*?ThreadSwitcherEvent::Dismissed.*?preview_switcher_selection\(selection' \
     'cancelling Session Switcher preview can regress to restoring terminals through the retired Agent-terminal path'

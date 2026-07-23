@@ -241,6 +241,10 @@ fn session_switcher_entry_type_label(app_name: &str, is_terminal: bool) -> &'sta
     }
 }
 
+fn session_switcher_entry_type_visible(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 pub(super) enum ThreadSwitcherEvent {
     Preview(ThreadSwitcherSelection),
     Confirmed(ThreadSwitcherSelection),
@@ -353,16 +357,6 @@ impl ThreadSwitcher {
         }
     }
 
-    fn select_index(&mut self, index: usize, cx: &mut Context<Self>) {
-        if index >= self.entries.len() || index == self.selected_index {
-            return;
-        }
-        self.selected_index = index;
-        self.scroll_handle.scroll_to_item(index);
-        self.emit_preview(cx);
-        cx.notify();
-    }
-
     fn cancel(&mut self, _: &menu::Cancel, _window: &mut gpui::Window, cx: &mut Context<Self>) {
         cx.emit(ThreadSwitcherEvent::Dismissed);
         cx.emit(DismissEvent);
@@ -466,6 +460,8 @@ impl Render for ThreadSwitcher {
             .child(
                 v_flex()
                     .id("thread-switcher-list")
+                    .role(gpui::Role::List)
+                    .aria_label("Recent sessions")
                     .gap(row_gap)
                     .py_1()
                     .max_h_128()
@@ -480,6 +476,7 @@ impl Render for ThreadSwitcher {
                         )
                         .icon(entry.icon())
                         .actor_label(entry.session_type_label(paths::APP_NAME))
+                        .actor_label_visible(session_switcher_entry_type_visible(paths::APP_NAME))
                         .when(entry.is_draft(), |this| {
                             this.icon_color(Color::Custom(
                                 cx.theme().colors().icon_muted.opacity(0.2),
@@ -501,13 +498,8 @@ impl Render for ThreadSwitcher {
                             this.removed(diff_stats.lines_removed as usize)
                         })
                         .selected(ix == selected_index)
+                        .focused(ix == selected_index)
                         .base_bg(cx.theme().colors().elevated_surface_background)
-                        .on_hover(cx.listener(move |this, hovered: &bool, _window, cx| {
-                            if *hovered {
-                                this.select_index(ix, cx);
-                            }
-                        }))
-                        // TODO: This is not properly propagating to the tread item.
                         .on_click(cx.listener(
                             move |this, _event: &gpui::ClickEvent, _window, cx| {
                                 this.select_and_confirm(ix, cx);
@@ -577,5 +569,7 @@ mod product_copy_tests {
             "Terminal Session"
         );
         assert_eq!(session_switcher_entry_type_label("Zed", false), "Thread");
+        assert!(!session_switcher_entry_type_visible("Dez"));
+        assert!(session_switcher_entry_type_visible("Zed"));
     }
 }
