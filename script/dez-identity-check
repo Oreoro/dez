@@ -725,11 +725,14 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_close_label.*?"Detach Terminal".*?"Close Terminal Tab"' \
     'durable terminal closure is still labeled like local tab disposal'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'fn terminal_terminate_label.*?"Terminate Terminal Process"' \
+    'fn terminal_terminate_label.*?"Terminate Terminal Process…".*?fn terminal_termination_available.*?!session_unavailable && !process_exited' \
     'terminal lifecycle actions can regress to generic Session wording'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'is_hosted = self\.terminal\.read\(cx\)\.is_hosted\(\).*?terminal_close_label\(is_hosted\)' \
+    'let \(is_hosted, can_terminate\).*?terminal\.is_hosted\(\).*?terminal_termination_available.*?terminal_close_label\(is_hosted\).*?\.action\(\s*close_label.*?\.when\(can_terminate.*?\.separator\(\).*?\.action\(terminate_label, Box::new\(TerminateSession\)\)' \
     'durable terminal closure can regress during Host reconnection'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'fn terminate_session.*?terminal_termination_available.*?window\.prompt\(\s*PromptLevel::Critical.*?"Terminate Process", "Cancel".*?confirmation\.await\.log_err\(\) != Some\(0\).*?terminal\.terminate_process\(cx\)' \
+    'terminal termination can bypass confirmation or route through a global Host instead of the terminal controller'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'accessibility_title = self\.tab_content_text.*?accessibility_status.*?\.aria_label\(format!' \
     'terminal panes do not expose their identity and lifecycle to assistive technology'

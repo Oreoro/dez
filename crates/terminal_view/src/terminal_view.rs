@@ -14,8 +14,9 @@ use futures::{channel::oneshot, future::join_all};
 use gpui::{
     Action, Anchor, AnyElement, App, AsyncApp, AsyncWindowContext, ClipboardEntry, DismissEvent,
     Entity, EventEmitter, ExternalPaths, FocusHandle, Focusable, Font, KeyContext, KeyDownEvent,
-    Keystroke, MouseButton, MouseDownEvent, Pixels, Point as GpuiPoint, Render, ScrollWheelEvent,
-    Styled, Subscription, Task, TaskExt, WeakEntity, actions, anchored, deferred, div,
+    Keystroke, MouseButton, MouseDownEvent, Pixels, Point as GpuiPoint, PromptLevel, Render,
+    ScrollWheelEvent, Styled, Subscription, Task, TaskExt, WeakEntity, actions, anchored, deferred,
+    div,
 };
 use menu;
 use persistence::{StoredTerminalSessionRef, TerminalDb};
@@ -113,8 +114,29 @@ fn terminal_close_label(is_hosted: bool) -> &'static str {
     }
 }
 
-fn terminal_terminate_label(_is_hosted: bool) -> &'static str {
-    "Terminate Terminal Process"
+fn terminal_terminate_label() -> &'static str {
+    "Terminate Terminal Process…"
+}
+
+fn terminal_termination_available(session_unavailable: bool, process_exited: bool) -> bool {
+    !session_unavailable && !process_exited
+}
+
+fn terminal_termination_confirmation(is_hosted: bool, title: &str) -> (String, String) {
+    let title = match title.trim() {
+        "" => "Terminal",
+        title => title,
+    };
+    let detail = if is_hosted {
+        format!(
+            "This permanently stops the durable process owned by “{title}” and closes its terminal surface. Closing the terminal without this action only detaches it."
+        )
+    } else {
+        format!(
+            "This stops the shell and any foreground process owned by “{title}”, then closes its terminal surface. This cannot be undone."
+        )
+    };
+    ("Terminate terminal process?".to_owned(), detail)
 }
 
 /// Event to transmit the scroll from the element to the view
@@ -1043,9 +1065,15 @@ impl TerminalView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let is_hosted = self.terminal.read(cx).is_hosted();
+        let (is_hosted, can_terminate) = {
+            let terminal = self.terminal.read(cx);
+            (
+                terminal.is_hosted(),
+                terminal_termination_available(self.session_unavailable, terminal.process_exited()),
+            )
+        };
         let close_label = terminal_close_label(is_hosted);
-        let terminate_label = terminal_terminate_label(is_hosted);
+        let terminate_label = terminal_terminate_label();
         let context_menu = ContextMenu::build(window, cx, |menu, _, _| {
             menu.context(self.focus_handle.clone())
                 .when(self.shows_workspace_actions(), |menu| {
@@ -1085,7 +1113,10 @@ impl TerminalView {
                                 close_pinned: true,
                             }),
                         )
-                        .action(terminate_label, Box::new(TerminateSession))
+                        .when(can_terminate, |menu| {
+                            menu.separator()
+                                .action(terminate_label, Box::new(TerminateSession))
+                        })
                 })
         });
 
@@ -1180,17 +1211,44 @@ impl TerminalView {
         window.dispatch_action(Box::new(task), cx);
     }
 
-    fn terminate_session(&mut self, _: &TerminateSession, _: &mut Window, cx: &mut Context<Self>) {
-        let session_id = self.terminal.read(cx).session_id();
-        if let Some(host) = terminal::session_host::LocalTerminalHost::try_global(cx) {
-            host.update(cx, |host, cx| {
-                host.terminate(session_id, cx);
-            });
-        } else {
-            self.terminal
-                .update(cx, |terminal, cx| terminal.terminate_process(cx));
+    fn terminate_session(
+        &mut self,
+        _: &TerminateSession,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let (is_hosted, process_exited) = {
+            let terminal = self.terminal.read(cx);
+            (terminal.is_hosted(), terminal.process_exited())
+        };
+        if !terminal_termination_available(self.session_unavailable, process_exited) {
+            return;
         }
-        cx.emit(ItemEvent::CloseItem);
+
+        let title = self.tab_content_text(1, cx);
+        let (message, detail) = terminal_termination_confirmation(is_hosted, &title);
+        let confirmation = window.prompt(
+            PromptLevel::Critical,
+            &message,
+            Some(&detail),
+            &["Terminate Process", "Cancel"],
+            cx,
+        );
+
+        cx.spawn_in(window, async move |this, cx| -> anyhow::Result<()> {
+            if confirmation.await.log_err() != Some(0) {
+                return Ok(());
+            }
+            this.update(cx, |this, cx| {
+                // The terminal controller is authoritative. A global Host can
+                // coexist with ordinary GUI-owned terminals and must never
+                // choose which process this action terminates.
+                this.terminal
+                    .update(cx, |terminal, cx| terminal.terminate_process(cx));
+            })?;
+            Ok(())
+        })
+        .detach_and_log_err(cx);
     }
 
     fn clear(&mut self, _: &Clear, _: &mut Window, cx: &mut Context<Self>) {
@@ -3173,11 +3231,17 @@ mod tests {
         assert_eq!(terminal_tab_status(false, false, None), "Active");
         assert_eq!(terminal_close_label(true), "Detach Terminal");
         assert_eq!(terminal_close_label(false), "Close Terminal Tab");
-        assert_eq!(terminal_terminate_label(true), "Terminate Terminal Process");
-        assert_eq!(
-            terminal_terminate_label(false),
-            "Terminate Terminal Process"
-        );
+        assert_eq!(terminal_terminate_label(), "Terminate Terminal Process…");
+        assert!(terminal_termination_available(false, false));
+        assert!(!terminal_termination_available(true, false));
+        assert!(!terminal_termination_available(false, true));
+        let (message, detail) = terminal_termination_confirmation(true, "build");
+        assert_eq!(message, "Terminate terminal process?");
+        assert!(detail.contains("durable process owned by “build”"));
+        assert!(detail.contains("only detaches it"));
+        let (_, detail) = terminal_termination_confirmation(false, "");
+        assert!(detail.contains("shell and any foreground process"));
+        assert!(detail.contains("owned by “Terminal”"));
     }
 
     fn expected_drop_text(paths: &[PathBuf]) -> String {
