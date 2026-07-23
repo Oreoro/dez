@@ -9,6 +9,18 @@ fn terminal_panel_surface_visible(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn product_menu_label(
+    app_name: &str,
+    dez_label: &'static str,
+    zed_label: &'static str,
+) -> &'static str {
+    if app_name == "Zed" {
+        zed_label
+    } else {
+        dez_label
+    }
+}
+
 fn workspace_tools_menu_label(app_name: &str, panels_as_pane_tabs: bool) -> &'static str {
     if app_name != "Zed" {
         "Workspace Tools"
@@ -143,8 +155,18 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
         MenuItem::submenu(Menu::new("Settings").items([
             MenuItem::action("Open Settings", zed_actions::OpenSettings),
             MenuItem::action("Open Settings File", super::OpenSettingsFile),
-            MenuItem::action("Open Project Settings", zed_actions::OpenProjectSettings),
-            MenuItem::action("Open Project Settings File", super::OpenProjectSettingsFile),
+            MenuItem::action(
+                product_menu_label(APP_NAME, "Open Workspace Settings", "Open Project Settings"),
+                zed_actions::OpenProjectSettings,
+            ),
+            MenuItem::action(
+                product_menu_label(
+                    APP_NAME,
+                    "Open Workspace Settings File",
+                    "Open Project Settings File",
+                ),
+                super::OpenProjectSettingsFile,
+            ),
             MenuItem::action("Open Default Settings", super::OpenDefaultSettings),
             MenuItem::separator(),
             MenuItem::action("Open Keymap", zed_actions::OpenKeymap),
@@ -191,6 +213,45 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
     app_items.push(MenuItem::separator());
     app_items.push(MenuItem::action(format!("Quit {APP_NAME}"), Quit));
 
+    let mut help_items = vec![
+        MenuItem::action("Getting Started", onboarding::ShowWelcome),
+        MenuItem::action(
+            product_menu_label(APP_NAME, "Release Notes", "View Release Notes Locally"),
+            auto_update_ui::ViewReleaseNotesLocally,
+        ),
+        MenuItem::separator(),
+        MenuItem::action(
+            product_menu_label(APP_NAME, "Open Local Diagnostics Log", "View Telemetry"),
+            zed_actions::OpenTelemetryLog,
+        ),
+        MenuItem::action(
+            product_menu_label(APP_NAME, "Open Source Licenses", "View Dependency Licenses"),
+            zed_actions::OpenLicenses,
+        ),
+        MenuItem::separator(),
+    ];
+    if APP_NAME == "Zed" {
+        help_items.extend([
+            MenuItem::action(
+                "Upstream Zed Documentation",
+                super::OpenBrowser {
+                    url: "https://zed.dev/docs".into(),
+                },
+            ),
+            MenuItem::action("Upstream Zed Repository", feedback::OpenZedRepo),
+        ]);
+    } else {
+        help_items.push(MenuItem::submenu(Menu::new("Upstream Zed").items([
+            MenuItem::action(
+                "Documentation",
+                super::OpenBrowser {
+                    url: "https://zed.dev/docs".into(),
+                },
+            ),
+            MenuItem::action("Repository", feedback::OpenZedRepo),
+        ])));
+    }
+
     vec![
         Menu {
             name: APP_NAME.into(),
@@ -218,7 +279,14 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                 MenuItem::action("Open Recent…", zed_actions::OpenRecent::default()),
                 MenuItem::action("Open Remote…", zed_actions::OpenRemote::default()),
                 MenuItem::separator(),
-                MenuItem::action("Add Folder to Project…", workspace::AddFolderToProject),
+                MenuItem::action(
+                    product_menu_label(
+                        APP_NAME,
+                        "Add Folder to Workspace…",
+                        "Add Folder to Project…",
+                    ),
+                    workspace::AddFolderToProject,
+                ),
                 MenuItem::separator(),
                 MenuItem::action("Save", workspace::Save { save_intent: None }),
                 MenuItem::action("Save As…", workspace::SaveAs),
@@ -231,7 +299,10 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                         close_pinned: true,
                     },
                 ),
-                MenuItem::action("Close Project", workspace::CloseProject),
+                MenuItem::action(
+                    product_menu_label(APP_NAME, "Close Workspace", "Close Project"),
+                    workspace::CloseProject,
+                ),
                 MenuItem::action("Close Window", workspace::CloseWindow),
             ],
         },
@@ -248,7 +319,10 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                 MenuItem::os_action("Paste", editor::actions::Paste, OsAction::Paste),
                 MenuItem::separator(),
                 MenuItem::action("Find", search::buffer_search::Deploy::find()),
-                MenuItem::action("Find in Project", workspace::DeploySearch::default()),
+                MenuItem::action(
+                    product_menu_label(APP_NAME, "Find in Workspace", "Find in Project"),
+                    workspace::DeploySearch::default(),
+                ),
                 MenuItem::separator(),
                 MenuItem::action(
                     "Toggle Line Comment",
@@ -319,7 +393,6 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                 MenuItem::action("Command Palette...", zed_actions::command_palette::Toggle),
                 MenuItem::separator(),
                 MenuItem::action("Go to File...", workspace::ToggleFileFinder::default()),
-                // MenuItem::action("Go to Symbol in Project", project_symbols::Toggle),
                 MenuItem::action(
                     "Go to Symbol in Editor...",
                     zed_actions::outline::ToggleOutline,
@@ -381,23 +454,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
         Menu {
             name: "Help".into(),
             disabled: false,
-            items: vec![
-                MenuItem::action(
-                    "View Release Notes Locally",
-                    auto_update_ui::ViewReleaseNotesLocally,
-                ),
-                MenuItem::action("View Telemetry", zed_actions::OpenTelemetryLog),
-                MenuItem::action("View Dependency Licenses", zed_actions::OpenLicenses),
-                MenuItem::action("Getting Started", onboarding::ShowWelcome),
-                MenuItem::separator(),
-                MenuItem::action(
-                    "Upstream Zed Documentation",
-                    super::OpenBrowser {
-                        url: "https://zed.dev/docs".into(),
-                    },
-                ),
-                MenuItem::action("Upstream Zed Repository", feedback::OpenZedRepo),
-            ],
+            items: help_items,
         },
     ]
 }
@@ -405,7 +462,8 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
 #[cfg(test)]
 mod tests {
     use super::{
-        developer_surface_menu_label, terminal_panel_surface_visible, workspace_tools_menu_label,
+        developer_surface_menu_label, product_menu_label, terminal_panel_surface_visible,
+        workspace_tools_menu_label,
     };
 
     #[test]
@@ -429,6 +487,26 @@ mod tests {
         assert_eq!(
             developer_surface_menu_label("Zed", false, "Files", "Project Tab", "Project Panel"),
             "Project Panel"
+        );
+    }
+
+    #[test]
+    fn dez_top_level_menus_use_workspace_and_local_diagnostics_language() {
+        assert_eq!(
+            product_menu_label("Dez", "Close Workspace", "Close Project"),
+            "Close Workspace"
+        );
+        assert_eq!(
+            product_menu_label("Dez", "Find in Workspace", "Find in Project"),
+            "Find in Workspace"
+        );
+        assert_eq!(
+            product_menu_label("Dez", "Open Local Diagnostics Log", "View Telemetry"),
+            "Open Local Diagnostics Log"
+        );
+        assert_eq!(
+            product_menu_label("Zed", "Close Workspace", "Close Project"),
+            "Close Project"
         );
     }
 }

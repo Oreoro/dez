@@ -433,6 +433,12 @@ require_multiline_pattern crates/zed/src/zed/app_menus.rs \
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'fn workspace_tools_menu_label.*?"Workspace Tools".*?fn developer_surface_menu_label.*?if app_name != "Zed".*?dez_label' \
     'the Dez View menu can regress to implementation-flavored Project Tab and Panel labels'
+require_multiline_pattern crates/zed/src/zed/app_menus.rs \
+    'fn product_menu_label.*?if app_name == "Zed".*?zed_label.*?dez_label.*?"Open Workspace Settings".*?"Add Folder to Workspace…".*?"Close Workspace".*?"Find in Workspace"' \
+    'top-level Dez menus can regress to upstream Project vocabulary'
+require_multiline_pattern crates/zed/src/zed/app_menus.rs \
+    '"Open Local Diagnostics Log".*?"Open Source Licenses".*?Menu::new\("Upstream Zed"\).*?"Documentation".*?"Repository"' \
+    'the Dez Help menu can regress to telemetry jargon and loose upstream links'
 require_pattern crates/zed/src/zed.rs \
     '"terminal_panel::",' \
     'inherited Terminal Panel keybindings can reintroduce the removed Dez surface'
