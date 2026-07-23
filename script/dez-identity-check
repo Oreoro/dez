@@ -128,11 +128,11 @@ reject_pattern crates/title_bar/src/title_bar.rs \
     'Canvas UI:|Panel hosting:|Prefix commands:|Canvas: (Full|Agent Control|Focus Editor|Code, Run, Observe|Review|Debug)' \
     'the Canvas Layout menu regressed to redundant labels or disabled implementation diagnostics'
 require_multiline_pattern crates/title_bar/src/title_bar.rs \
-    'submenu\(layout_menu_label.*?"Full".*?"Agent Control".*?"Focus Editor".*?"Code, Run, Observe".*?"Review".*?"Debug".*?"Cycle Canvas Layout"' \
+    'submenu\(layout_menu_label.*?"Full".*?"Agent Control".*?"Focus Editor".*?"Code, Run, Observe".*?"Review".*?"Debug".*?"Cycle Layout".*?"Save Layout As…".*?"Manage Saved Layouts…".*?"Restore Previous Layout"' \
     'the public Canvas Layout menu lost its curated v0.0.1 workflow set'
 reject_pattern crates/title_bar/src/title_bar.rs \
-    '"(Even Columns|Even Rows|Main \+ Stack|Main Top|Golden Split|Documentation Studio|Browser Development|Agent Operations Center|Four-Agent Matrix|Six-Agent Supervisor|Worktree Matrix|Remote Operations|Pair Programming|Incident Response|Portrait Display)"' \
-    'the public Canvas Layout menu regressed to an uncurated preset catalogue'
+    '"(Even Columns|Even Rows|Main \+ Stack|Main Top|Golden Split|Documentation Studio|Browser Development|Agent Operations Center|Four-Agent Matrix|Six-Agent Supervisor|Worktree Matrix|Remote Operations|Pair Programming|Incident Response|Portrait Display|Clear All Canvas Saved Layouts…|Copy Canvas Saved Layouts JSON|Import Canvas Saved Layouts JSON from Clipboard…|Save Canvas Layout: Slot [123]|Rename Canvas Layout: Slot [123]|Duplicate Canvas Layout: Slot [123]|Clear Canvas Layout: Slot [123])"' \
+    'the public Canvas Layout menu regressed to an uncurated preset or storage-management catalogue'
 require_pattern crates/title_bar/src/title_bar.rs \
     'paths::APP_NAME == "Zed" && sidebar_settings.show_onboarding_banner' \
     'Dez can render upstream onboarding promotions in its title bar'

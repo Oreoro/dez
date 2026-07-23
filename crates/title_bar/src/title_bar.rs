@@ -2130,178 +2130,20 @@ impl SidebarChrome {
                                     },
                                 )
                                 .entry(
-                                    "Cycle Canvas Layout",
+                                    "Cycle Layout",
                                     Some(CycleCanvasLayout.boxed_clone()),
                                     move |window, cx| {
                                         window.dispatch_action(CycleCanvasLayout.boxed_clone(), cx);
                                     },
                                 )
+                                .separator()
+                                .action("Save Layout As…", SaveCurrentCanvasLayoutAs.boxed_clone())
                                 .action(
-                                    "Save Canvas Layout As…",
-                                    SaveCurrentCanvasLayoutAs.boxed_clone(),
-                                )
-                                .action(
-                                    "Manage Canvas Saved Layouts…",
+                                    "Manage Saved Layouts…",
                                     ManageSavedCanvasLayouts.boxed_clone(),
                                 )
                                 .action_checked_with_disabled(
-                                    "Clear All Canvas Saved Layouts…",
-                                    ClearAllSavedCanvasLayouts.boxed_clone(),
-                                    false,
-                                    saved_canvas_layout_count == 0,
-                                )
-                                .action_checked_with_disabled(
-                                    "Copy Canvas Saved Layouts JSON",
-                                    CopySavedCanvasLayoutsToClipboard.boxed_clone(),
-                                    false,
-                                    saved_canvas_layout_count == 0,
-                                )
-                                .action(
-                                    "Import Canvas Saved Layouts JSON from Clipboard…",
-                                    ImportSavedCanvasLayoutsFromClipboard.boxed_clone(),
-                                )
-                                .entry(
-                                    "Save Canvas Layout: Slot 1",
-                                    Some(SaveCurrentCanvasLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            SaveCurrentCanvasLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .action_checked_with_disabled(
-                                    restore_saved_canvas_layout_slot_1_label.clone(),
-                                    RestoreSavedCanvasLayout.boxed_clone(),
-                                    false,
-                                    !has_saved_canvas_layout_slot_1,
-                                )
-                                .action_checked_with_disabled(
-                                    "Rename Canvas Layout: Slot 1",
-                                    RenameSavedCanvasLayoutSlot { slot: 1 }.boxed_clone(),
-                                    false,
-                                    !has_saved_canvas_layout_slot_1,
-                                )
-                                .action_checked_with_disabled(
-                                    "Duplicate Canvas Layout: Slot 1",
-                                    DuplicateSavedCanvasLayoutSlot { slot: 1 }.boxed_clone(),
-                                    false,
-                                    !has_saved_canvas_layout_slot_1,
-                                )
-                                .action_checked_with_disabled(
-                                    "Clear Canvas Layout: Slot 1",
-                                    ClearSavedCanvasLayoutSlot { slot: 1 }.boxed_clone(),
-                                    false,
-                                    !has_saved_canvas_layout_slot_1,
-                                )
-                                .entry(
-                                    "Save Canvas Layout: Slot 2",
-                                    Some(SaveCurrentCanvasLayoutSlot2.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            SaveCurrentCanvasLayoutSlot2.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .action_checked_with_disabled(
-                                    restore_saved_canvas_layout_slot_2_label.clone(),
-                                    RestoreSavedCanvasLayoutSlot2.boxed_clone(),
-                                    false,
-                                    !has_saved_canvas_layout_slot_2,
-                                )
-                                .action_checked_with_disabled(
-                                    "Rename Canvas Layout: Slot 2",
-                                    RenameSavedCanvasLayoutSlot { slot: 2 }.boxed_clone(),
-                                    false,
-                                    !has_saved_canvas_layout_slot_2,
-                                )
-                                .action_checked_with_disabled(
-                                    "Duplicate Canvas Layout: Slot 2",
-                                    DuplicateSavedCanvasLayoutSlot { slot: 2 }.boxed_clone(),
-                                    false,
-                                    !has_saved_canvas_layout_slot_2,
-                                )
-                                .action_checked_with_disabled(
-                                    "Clear Canvas Layout: Slot 2",
-                                    ClearSavedCanvasLayoutSlot { slot: 2 }.boxed_clone(),
-                                    false,
-                                    !has_saved_canvas_layout_slot_2,
-                                )
-                                .entry(
-                                    "Save Canvas Layout: Slot 3",
-                                    Some(SaveCurrentCanvasLayoutSlot3.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            SaveCurrentCanvasLayoutSlot3.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .action_checked_with_disabled(
-                                    restore_saved_canvas_layout_slot_3_label.clone(),
-                                    RestoreSavedCanvasLayoutSlot3.boxed_clone(),
-                                    false,
-                                    !has_saved_canvas_layout_slot_3,
-                                )
-                                .action_checked_with_disabled(
-                                    "Rename Canvas Layout: Slot 3",
-                                    RenameSavedCanvasLayoutSlot { slot: 3 }.boxed_clone(),
-                                    false,
-                                    !has_saved_canvas_layout_slot_3,
-                                )
-                                .action_checked_with_disabled(
-                                    "Duplicate Canvas Layout: Slot 3",
-                                    DuplicateSavedCanvasLayoutSlot { slot: 3 }.boxed_clone(),
-                                    false,
-                                    !has_saved_canvas_layout_slot_3,
-                                )
-                                .action_checked_with_disabled(
-                                    "Clear Canvas Layout: Slot 3",
-                                    ClearSavedCanvasLayoutSlot { slot: 3 }.boxed_clone(),
-                                    false,
-                                    !has_saved_canvas_layout_slot_3,
-                                )
-                                .when(!saved_canvas_named_layouts.is_empty(), |menu| {
-                                    let mut menu = menu.separator();
-                                    for (name, label) in saved_canvas_named_layouts.clone() {
-                                        menu = menu
-                                            .action_checked_with_disabled(
-                                                format!("Restore Saved Canvas Layout — {label}"),
-                                                RestoreSavedCanvasLayoutNamed {
-                                                    name: name.clone(),
-                                                }
-                                                .boxed_clone(),
-                                                false,
-                                                false,
-                                            )
-                                            .action_checked_with_disabled(
-                                                format!("Rename Saved Canvas Layout — {label}"),
-                                                RenameSavedCanvasLayoutNamed { name: name.clone() }
-                                                    .boxed_clone(),
-                                                false,
-                                                false,
-                                            )
-                                            .action_checked_with_disabled(
-                                                format!("Duplicate Saved Canvas Layout — {label}"),
-                                                DuplicateSavedCanvasLayoutNamed {
-                                                    name: name.clone(),
-                                                }
-                                                .boxed_clone(),
-                                                false,
-                                                false,
-                                            )
-                                            .action_checked_with_disabled(
-                                                format!("Clear Saved Canvas Layout — {label}"),
-                                                ClearSavedCanvasLayoutNamed { name }.boxed_clone(),
-                                                false,
-                                                false,
-                                            );
-                                    }
-                                    menu
-                                })
-                                .action_checked_with_disabled(
-                                    "Restore Previous Canvas Layout",
+                                    "Restore Previous Layout",
                                     RestorePreviousCanvasLayout.boxed_clone(),
                                     false,
                                     !has_previous_canvas_layout,
