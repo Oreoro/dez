@@ -799,6 +799,15 @@ reject_pattern crates/terminal_view/src/terminal_view.rs \
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_surface_accessibility_label.*?"Terminal Session: \{title\}\. Status: \{status\}".*?accessibility_title = self\.tab_content_text.*?accessibility_status.*?\.aria_label\(terminal_surface_accessibility_label' \
     'terminal panes do not expose their identity and lifecycle to assistive technology'
+require_multiline_pattern crates/workspace/src/item.rs \
+    'fn force_show_tab_bar\(&self\) -> bool \{[[:space:]]*false.*?fn force_show_tab_bar\(&self, cx: &App\) -> bool;.*?fn force_show_tab_bar\(&self, cx: &App\) -> bool \{[[:space:]]*self\.read\(cx\)\.force_show_tab_bar\(\)' \
+    'session-oriented Surfaces can lose their explicit single-tab header contract'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    'let active_item_forces_tab_bar = self.*?active_item\(\).*?force_show_tab_bar\(cx\).*?auto_hide_single_tab_bar && self\.items_len\(\) <= 1 && !active_item_forces_tab_bar' \
+    'the pane renderer can regress to hiding headers required by session-oriented Surfaces'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'impl Item for TerminalView.*?fn force_show_tab_bar\(&self\) -> bool \{[[:space:]]*true' \
+    'a single terminal can regress to an unanchored shell canvas without visible Surface identity'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     '"Start New Terminal".*?\.aria_label\("Start New Terminal in Main Work Area"\).*?Tooltip::for_action\([[:space:]]*"Start New Terminal in Main Work Area".*?NewCenterTerminal::default' \
     'the unavailable-terminal recovery action can regress to an ambiguous or unnamed destination'
