@@ -1983,6 +1983,8 @@ impl Render for TerminalView {
 
         div()
             .id("terminal-view")
+            .role(gpui::Role::Group)
+            .aria_label("Terminal session")
             .size_full()
             .relative()
             .track_focus(&self.focus_handle(cx))

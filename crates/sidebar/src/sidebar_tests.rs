@@ -2015,6 +2015,44 @@ async fn test_plain_workspace_shell_appears_in_session_rail(cx: &mut TestAppCont
 }
 
 #[gpui::test]
+async fn test_empty_workspace_shell_appears_in_session_rail(cx: &mut TestAppContext) {
+    init_test(cx);
+
+    let fs = FakeFs::new(cx.executor());
+    cx.update(|cx| <dyn Fs>::set_global(fs.clone(), cx));
+    let project = project::Project::test(fs, [], cx).await;
+    let (multi_workspace, cx) =
+        cx.add_window_view(|window, cx| MultiWorkspace::test_new(project.clone(), window, cx));
+    let sidebar = setup_sidebar(&multi_workspace, cx);
+    let workspace = multi_workspace.read_with(cx, |mw, _cx| mw.workspace().clone());
+    let terminal_view = add_workspace_shell(&workspace, &project, cx);
+    let terminal_id = workspace.read_with(cx, |_workspace, cx| {
+        standalone_terminal_id(&workspace, &terminal_view, cx)
+    });
+
+    multi_workspace.update_in(cx, |_, _window, cx| cx.notify());
+    cx.run_until_parked();
+
+    sidebar.read_with(cx, |sidebar, _cx| {
+        assert!(
+            sidebar.contents.entries.iter().any(|entry| {
+                matches!(
+                    entry,
+                    ListEntry::Terminal(terminal)
+                        if terminal.metadata.terminal_id == terminal_id
+                )
+            }),
+            "terminal-only empty workspaces should still appear in the Session Rail"
+        );
+        assert_eq!(sidebar.contents.session_count, 1);
+        assert!(matches!(
+            sidebar.contents.entries.first(),
+            Some(ListEntry::ProjectHeader { label, .. }) if label.as_ref() == "Empty Workspace"
+        ));
+    });
+}
+
+#[gpui::test]
 async fn test_agent_panel_terminals_appear_in_sidebar_and_search(cx: &mut TestAppContext) {
     let project = init_test_project_with_agent_panel("/my-project", cx).await;
     let (multi_workspace, cx) =

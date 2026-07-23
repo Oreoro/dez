@@ -3531,7 +3531,10 @@ impl Sidebar {
                     .has_notification
                     .then_some(terminal.metadata.terminal_id)
             }));
-            if group_key.path_list().paths().is_empty() {
+            // Empty workspaces are valid terminal-first canvases. Keep hiding a
+            // completely empty group, but do not discard live terminal rows just
+            // because the user has not opened a project yet.
+            if group_key.path_list().paths().is_empty() && terminals.is_empty() {
                 continue;
             }
 
