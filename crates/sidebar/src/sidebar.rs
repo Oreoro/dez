@@ -473,7 +473,7 @@ impl ThreadEntryWorkspace {
         &self,
         terminal_session_id: Option<&str>,
         cx: &App,
-    ) -> Option<(Vec<ObservedWorkspaceEvidence>, bool, bool)> {
+    ) -> Option<(Vec<ObservedWorkspaceEvidence>, bool, bool, bool)> {
         let Self::Open(workspace) = self else {
             return None;
         };
@@ -507,6 +507,9 @@ impl ThreadEntryWorkspace {
         let has_stale_evidence = records
             .iter()
             .any(|record| record.lifecycle == WorkspaceEvidenceLifecycle::Stale);
+        let has_unresolved_evidence = records
+            .iter()
+            .any(|record| record.lifecycle == WorkspaceEvidenceLifecycle::Unresolved);
         Some((
             records
                 .into_iter()
@@ -530,6 +533,7 @@ impl ThreadEntryWorkspace {
                 .collect(),
             evidence.is_truncated(),
             has_stale_evidence,
+            has_unresolved_evidence,
         ))
     }
 
@@ -1371,7 +1375,7 @@ impl ThreadEntry {
                     .to_owned(),
             );
         }
-        let (workspace_evidence, evidence_truncated, evidence_stale) = self
+        let (workspace_evidence, evidence_truncated, evidence_stale, evidence_unresolved) = self
             .workspace
             .authoritative_workspace_evidence(None, cx)
             .unwrap_or_else(|| {
@@ -1388,6 +1392,7 @@ impl ThreadEntry {
                         .collect(),
                     false,
                     false,
+                    false,
                 )
             });
         if evidence_truncated {
@@ -1395,6 +1400,9 @@ impl ThreadEntry {
         }
         if evidence_stale {
             observed_risks.push("Workspace evidence includes stale observations.".to_owned());
+        }
+        if evidence_unresolved {
+            observed_risks.push("Workspace evidence includes unresolved observations.".to_owned());
         }
         let (repository_evidence, repository_evidence_truncated) = self
             .workspace
@@ -1570,32 +1578,39 @@ impl TerminalEntry {
             .metadata
             .session_ref
             .map(|session_ref| session_ref.session_id.to_string());
-        let (mut workspace_evidence, evidence_truncated, evidence_stale) = self
-            .workspace
-            .authoritative_workspace_evidence(terminal_session_id.as_deref(), cx)
-            .unwrap_or_else(|| {
-                (
-                    self.metadata
-                        .worktree_paths
-                        .folder_path_list()
-                        .paths()
-                        .iter()
-                        .cloned()
-                        .map(|path| ObservedWorkspaceEvidence {
-                            kind: WorkspaceEvidenceKind::WorkspaceRoot,
-                            path,
-                        })
-                        .collect::<Vec<_>>(),
-                    false,
-                    false,
-                )
-            });
+        let (mut workspace_evidence, evidence_truncated, evidence_stale, evidence_unresolved) =
+            self.workspace
+                .authoritative_workspace_evidence(terminal_session_id.as_deref(), cx)
+                .unwrap_or_else(|| {
+                    (
+                        self.metadata
+                            .worktree_paths
+                            .folder_path_list()
+                            .paths()
+                            .iter()
+                            .cloned()
+                            .map(|path| ObservedWorkspaceEvidence {
+                                kind: WorkspaceEvidenceKind::WorkspaceRoot,
+                                path,
+                            })
+                            .collect::<Vec<_>>(),
+                        false,
+                        false,
+                        false,
+                    )
+                });
         if evidence_truncated {
             observed_risks.push("Workspace evidence is truncated.".to_owned());
         }
         if evidence_stale {
             observed_risks
                 .push("The owning terminal's working-directory evidence is stale.".to_owned());
+        }
+        if evidence_unresolved {
+            observed_risks.push(
+                "The owning terminal's working-directory evidence is unresolved until the saved Session reattaches."
+                    .to_owned(),
+            );
         }
         if let Some(path) = self.metadata.working_directory.clone() {
             if !workspace_evidence.iter().any(|evidence| {

@@ -378,6 +378,28 @@ mod tests {
     }
 
     #[test]
+    fn terminal_reattach_replaces_unresolved_evidence_with_current_truth() {
+        let mut evidence = WorkspaceEvidenceSet::default();
+        evidence.set_terminal_working_directory(
+            Some(7),
+            "session-1",
+            Some(Arc::<Path>::from(Path::new("/last-observed"))),
+            WorkspaceEvidenceHost::Local,
+        );
+        evidence.set_terminal_lifecycle("session-1", WorkspaceEvidenceLifecycle::Unresolved);
+
+        assert!(evidence.set_terminal_working_directory(
+            Some(7),
+            "session-1",
+            Some(Arc::<Path>::from(Path::new("/reattached"))),
+            WorkspaceEvidenceHost::Local,
+        ));
+        let record = evidence.records().first().unwrap();
+        assert_eq!(record.path.as_ref(), Path::new("/reattached"));
+        assert_eq!(record.lifecycle, WorkspaceEvidenceLifecycle::Current);
+    }
+
+    #[test]
     fn open_files_are_stable_deduplicated_and_bounded() {
         let mut evidence = WorkspaceEvidenceSet::default();
         assert!(evidence.replace_open_files(

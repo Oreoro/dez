@@ -2438,6 +2438,11 @@ impl SerializableItem for TerminalView {
                 .ok()
                 .unwrap_or((None, None, StoredTerminalSessionRef::Invalid));
 
+            let restored_session_ref = match stored_session_ref {
+                StoredTerminalSessionRef::Valid(session_ref) => Some(session_ref),
+                StoredTerminalSessionRef::Legacy | StoredTerminalSessionRef::Invalid => None,
+            };
+            let fallback_evidence_cwd = cwd.clone();
             let (terminal, session_unavailable) = match stored_session_ref {
                 StoredTerminalSessionRef::Legacy => {
                     (
@@ -2514,6 +2519,24 @@ impl SerializableItem for TerminalView {
                 ),
             };
             cx.update(|window, cx| {
+                if session_unavailable
+                    && let Some(session_ref) = restored_session_ref
+                {
+                    workspace
+                        .update(cx, |workspace, cx| {
+                            workspace.set_terminal_working_directory_evidence(
+                                session_ref.session_id.to_string(),
+                                fallback_evidence_cwd,
+                                cx,
+                            );
+                            workspace.set_terminal_evidence_lifecycle(
+                                &session_ref.session_id.to_string(),
+                                workspace::evidence::WorkspaceEvidenceLifecycle::Unresolved,
+                                cx,
+                            );
+                        })
+                        .ok();
+                }
                 cx.new(|cx| {
                     let mut view = TerminalView::new(
                         terminal,
