@@ -85,6 +85,12 @@ require_multiline_pattern crates/edit_prediction_ui/src/edit_prediction_button.r
 require_pattern crates/settings_ui/src/pages/edit_prediction_provider_setup.rs \
     '^        \(paths::APP_NAME == "Zed"\)\.then\(\|\| \{$' \
     'Dez settings still advertise the unavailable Mercury provider'
+require_multiline_pattern crates/agent_ui/src/agent_ui.rs \
+    'if show_zed_predict_onboarding \{.*?filter\.show_namespace\("zed_predict_onboarding"\);.*?\} else \{.*?filter\.hide_namespace\("zed_predict_onboarding"\);.*?OpenZedPredictOnboarding' \
+    'the Agent UI can re-enable upstream Zed Predict onboarding in Dez'
+require_multiline_pattern crates/agent_ui/src/agent_ui.rs \
+    'EditPredictionProvider::Zed \| EditPredictionProvider::Mercury if app_name != "Zed" => \{.*?EditPredictionProvider::None' \
+    'the Agent UI treats unavailable upstream prediction providers as active in Dez'
 require_multiline_pattern crates/zed/src/zed.rs \
     'let channels_panel = \(APP_NAME == "Zed"\)\.then\(\|\| \{.*?CollabPanel::load' \
     'Dez eagerly loads the upstream collaboration panel'

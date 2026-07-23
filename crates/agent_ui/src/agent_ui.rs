@@ -855,9 +855,13 @@ fn update_command_palette_filter(cx: &mut App) {
     let disable_ai = DisableAiSettings::get_global(cx).disable_ai;
     let agent_enabled = AgentSettings::get_global(cx).enabled;
 
-    let edit_prediction_provider = AllLanguageSettings::get_global(cx)
-        .edit_predictions
-        .provider;
+    let edit_prediction_provider = effective_edit_prediction_provider(
+        paths::APP_NAME,
+        AllLanguageSettings::get_global(cx)
+            .edit_predictions
+            .provider,
+    );
+    let show_zed_predict_onboarding = paths::APP_NAME == "Zed";
 
     CommandPaletteFilter::update_global(cx, |filter, _| {
         use editor::actions::{
@@ -923,8 +927,13 @@ fn update_command_palette_filter(cx: &mut App) {
                 }
             }
 
-            filter.show_namespace("zed_predict_onboarding");
-            filter.show_action_types(&[TypeId::of::<zed_actions::OpenZedPredictOnboarding>()]);
+            if show_zed_predict_onboarding {
+                filter.show_namespace("zed_predict_onboarding");
+                filter.show_action_types(&[TypeId::of::<zed_actions::OpenZedPredictOnboarding>()]);
+            } else {
+                filter.hide_namespace("zed_predict_onboarding");
+                filter.hide_action_types(&[TypeId::of::<zed_actions::OpenZedPredictOnboarding>()]);
+            }
 
             filter.show_namespace("multi_workspace");
         }
@@ -941,6 +950,18 @@ fn update_command_palette_filter(cx: &mut App) {
             filter.hide_action_types(&skill_creator_actions);
         }
     });
+}
+
+fn effective_edit_prediction_provider(
+    app_name: &str,
+    provider: EditPredictionProvider,
+) -> EditPredictionProvider {
+    match provider {
+        EditPredictionProvider::Zed | EditPredictionProvider::Mercury if app_name != "Zed" => {
+            EditPredictionProvider::None
+        }
+        provider => provider,
+    }
 }
 
 fn init_language_model_settings(cx: &mut App) {
@@ -1021,6 +1042,26 @@ mod tests {
     use settings::{
         DockPosition, NotifyWhenAgentWaiting, PlaySoundWhenAgentDone, Settings, SettingsStore,
     };
+
+    #[test]
+    fn dez_treats_upstream_edit_prediction_providers_as_unavailable() {
+        assert_eq!(
+            effective_edit_prediction_provider("Dez", EditPredictionProvider::Zed),
+            EditPredictionProvider::None
+        );
+        assert_eq!(
+            effective_edit_prediction_provider("Dez", EditPredictionProvider::Mercury),
+            EditPredictionProvider::None
+        );
+        assert_eq!(
+            effective_edit_prediction_provider("Dez", EditPredictionProvider::Codestral),
+            EditPredictionProvider::Codestral
+        );
+        assert_eq!(
+            effective_edit_prediction_provider("Zed", EditPredictionProvider::Zed),
+            EditPredictionProvider::Zed
+        );
+    }
 
     #[gpui::test]
     fn test_agent_command_palette_visibility(cx: &mut TestAppContext) {
