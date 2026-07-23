@@ -64,6 +64,21 @@ require_pattern assets/settings/default.json \
 require_pattern crates/zed/src/main.rs \
     'paths::APP_NAME == "Zed" && client::ClientSettings::get_global\(cx\)\.auto_connect' \
     'inherited settings can auto-connect Dez to the upstream Zed cloud'
+require_multiline_pattern crates/zed/src/main.rs \
+    'if app_name == "Zed" \{.*?should_install_crash_handler\(release_channel\).*?\} else \{.*?matches!\(dez_generate_minidumps, Some\("true" \| "1"\)\)' \
+    'Dez can install the inherited stable-channel crash handler without an explicit fork opt-in'
+require_pattern crates/zed/src/main.rs \
+    '^    let dez_generate_minidumps = env::var\("DEZ_GENERATE_MINIDUMPS"\)\.ok\(\);$' \
+    'Dez minidump generation is not isolated behind a fork-owned environment variable'
+require_pattern crates/zed/src/main.rs \
+    '^        println!\("\{\} is already running", paths::APP_NAME\);$' \
+    'the duplicate-instance message still identifies Zed'
+require_pattern crates/zed/src/main.rs \
+    '^                    binary: paths::APP_NAME_LOWERCASE\.to_string\(\),$' \
+    'crash metadata still identifies the Dez executable as Zed'
+require_pattern crates/zed/src/main.rs \
+    'format!\("\{\}-crash-handler-\{pid\}", paths::APP_NAME_LOWERCASE\)' \
+    'Dez crash-handler artifacts still use the upstream Zed prefix'
 require_pattern crates/zed/src/zed/mac_only_instance.rs \
     '^const DEZ_INSTANCE_PORT_BASE: u16 = 45737;$' \
     'Dez still shares official Zed macOS single-instance ports'

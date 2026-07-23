@@ -72,6 +72,7 @@ use workspace::{
     notifications::{NotificationId, NotifyResultExt},
     restore_multiworkspace,
 };
+
 use zed::{
     OpenListener, OpenRequest, RawOpenRequest, app_menus, build_window_options,
     derive_paths_with_position, dispatch_open_requests_after_startup, edit_prediction_registry,
@@ -80,6 +81,18 @@ use zed::{
 };
 
 use crate::zed::{CrashHandler, OpenRequestKind, eager_load_active_theme_and_icon_theme};
+
+fn should_install_product_crash_handler(
+    app_name: &str,
+    release_channel: ReleaseChannel,
+    dez_generate_minidumps: Option<&str>,
+) -> bool {
+    if app_name == "Zed" {
+        client::telemetry::should_install_crash_handler(release_channel)
+    } else {
+        matches!(dez_generate_minidumps, Some("true" | "1"))
+    }
+}
 
 #[cfg(feature = "mimalloc")]
 #[global_allocator]
@@ -331,7 +344,8 @@ fn main() {
         .unwrap();
 
     log::info!(
-        "========== starting zed version {}, sha {} ==========",
+        "========== starting {} version {}, sha {} ==========",
+        paths::APP_NAME,
         app_version,
         app_commit_sha
             .as_ref()
@@ -381,12 +395,16 @@ fn main() {
         }
     };
     if failed_single_instance_check {
-        println!("zed is already running");
+        println!("{} is already running", paths::APP_NAME);
         return;
     }
 
-    let should_install_crash_handler =
-        client::telemetry::should_install_crash_handler(*release_channel::RELEASE_CHANNEL);
+    let dez_generate_minidumps = env::var("DEZ_GENERATE_MINIDUMPS").ok();
+    let should_install_crash_handler = should_install_product_crash_handler(
+        paths::APP_NAME,
+        *release_channel::RELEASE_CHANNEL,
+        dez_generate_minidumps.as_deref(),
+    );
 
     let crash_handler = if should_install_crash_handler {
         Some(
@@ -400,7 +418,7 @@ fn main() {
                         app_version.patch,
                     )
                     .to_string(),
-                    binary: "zed".to_string(),
+                    binary: paths::APP_NAME_LOWERCASE.to_string(),
                     release_channel: release_channel::RELEASE_CHANNEL_NAME.clone(),
                     commit_sha: app_commit_sha
                         .as_ref()
@@ -413,7 +431,10 @@ fn main() {
                         background_executor1.spawn(task).detach();
                     }
                 },
-                |pid| paths::temp_dir().join(format!("zed-crash-handler-{pid}")),
+                |pid| {
+                    paths::temp_dir()
+                        .join(format!("{}-crash-handler-{pid}", paths::APP_NAME_LOWERCASE))
+                },
                 move |duration| background_executor.timer(duration),
             )),
         )
@@ -2085,6 +2106,35 @@ fn dump_all_gpui_actions() {
         serde_json::to_string_pretty(&output).unwrap().as_bytes(),
     )
     .unwrap();
+}
+
+#[cfg(test)]
+mod product_crash_handler_tests {
+    use super::*;
+
+    #[test]
+    fn dez_minidumps_require_explicit_dez_opt_in() {
+        assert!(!should_install_product_crash_handler(
+            "Dez",
+            ReleaseChannel::Stable,
+            None
+        ));
+        assert!(!should_install_product_crash_handler(
+            "Dez",
+            ReleaseChannel::Stable,
+            Some("false")
+        ));
+        assert!(should_install_product_crash_handler(
+            "Dez",
+            ReleaseChannel::Stable,
+            Some("true")
+        ));
+        assert!(should_install_product_crash_handler(
+            "Dez",
+            ReleaseChannel::Dev,
+            Some("1")
+        ));
+    }
 }
 
 #[cfg(target_os = "windows")]
