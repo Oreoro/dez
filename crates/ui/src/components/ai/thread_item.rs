@@ -725,7 +725,7 @@ impl RenderOnce for ThreadItem {
                         labels_visible && self.is_truncated && opaque_window,
                         |this| this.child(gradient_overlay),
                     )
-                    .when(self.hovered, |this| {
+                    .when(self.hovered || self.focused, |this| {
                         this.when_some(self.action_slot, |this, slot| {
                             this.child(
                                 h_flex()

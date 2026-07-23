@@ -289,6 +289,15 @@ reject_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn terminal_row_owner_label.*?"Persistent".*?"Remote".*?"Local"' \
     'Session Rail terminal ownership can regress to implementation-heavy Host/process labels'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn session_row_actions_visible.*?\(is_hovered \|\| is_focused\) && !is_renaming.*?pointer_and_keyboard_selection_reveal_the_same_row_actions' \
+    'Session Rail row controls can regress to pointer-hover-only discovery'
+require_pattern crates/ui/src/components/ai/thread_item.rs \
+    '\.when\(self\.hovered \|\| self\.focused, \|this\|' \
+    'the shared Session row can hide its supplied actions from keyboard selection'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'IconButton::new\(\("rename-thread".*?\.tab_index\(0isize\).*?IconButton::new\("stop-thread".*?\.tab_index\(0isize\).*?IconButton::new\("archive-thread".*?\.tab_index\(0isize\).*?IconButton::new\("close-terminal".*?\.tab_index\(0isize\)' \
+    'visible Session Rail row actions can regress out of the keyboard tab order'
 reject_pattern crates/sidebar/src/sidebar.rs \
     '\.actor_label\("Terminal Session"\)' \
     'plain terminal rows can regress to repeating their type as a fake actor label'

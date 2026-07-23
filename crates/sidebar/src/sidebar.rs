@@ -290,6 +290,10 @@ fn session_rail_supplemental_metadata_visible(width: Pixels) -> bool {
     width >= SUPPLEMENTAL_METADATA_MIN_WIDTH
 }
 
+fn session_row_actions_visible(is_hovered: bool, is_focused: bool, is_renaming: bool) -> bool {
+    (is_hovered || is_focused) && !is_renaming
+}
+
 fn session_overview_status_label(
     session_count: usize,
     attention_count: usize,
@@ -1097,6 +1101,19 @@ mod session_start_state_tests {
                 "Open Workspace…"
             )
         );
+    }
+}
+
+#[cfg(test)]
+mod session_row_action_tests {
+    use super::*;
+
+    #[test]
+    fn pointer_and_keyboard_selection_reveal_the_same_row_actions() {
+        assert!(session_row_actions_visible(true, false, false));
+        assert!(session_row_actions_visible(false, true, false));
+        assert!(!session_row_actions_visible(false, false, false));
+        assert!(!session_row_actions_visible(true, true, true));
     }
 }
 
@@ -9753,6 +9770,7 @@ impl Sidebar {
         );
         let has_changes = thread.diff_stats.lines_added > 0 || thread.diff_stats.lines_removed > 0;
         let is_renaming = self.renaming_thread_id == Some(thread.metadata.thread_id);
+        let show_row_actions = session_row_actions_visible(is_hovered, is_focused, is_renaming);
 
         let thread_id_for_actions = thread.metadata.thread_id;
         let session_id_for_delete = thread.metadata.session_id.clone();
@@ -9905,10 +9923,11 @@ impl Sidebar {
                             .child(title_editor),
                     )
                 })
-                .when(is_hovered && !is_renaming, |this| {
+                .when(show_row_actions, |this| {
                     let rename_button = IconButton::new(("rename-thread", ix), IconName::Pencil)
                         .size(ButtonSize::Medium)
                         .icon_size(IconSize::Small)
+                        .tab_index(0isize)
                         .aria_label(rename_label)
                         .tooltip({
                             let focus_handle = focus_handle.clone();
@@ -9939,6 +9958,7 @@ impl Sidebar {
                             IconButton::new("stop-thread", IconName::Stop)
                                 .size(ButtonSize::Medium)
                                 .icon_size(IconSize::Small)
+                                .tab_index(0isize)
                                 .icon_color(Color::Error)
                                 .style(ButtonStyle::Tinted(TintColor::Error))
                                 .aria_label("Stop Generation")
@@ -9955,6 +9975,7 @@ impl Sidebar {
                                 IconButton::new("discard_thread", IconName::Close)
                                     .size(ButtonSize::Medium)
                                     .icon_size(IconSize::Small)
+                                    .tab_index(0isize)
                                     .aria_label("Discard Draft")
                                     .tooltip(Tooltip::text("Discard Draft"))
                                     .on_click({
@@ -9974,6 +9995,7 @@ impl Sidebar {
                                 IconButton::new("archive-thread", IconName::Archive)
                                     .size(ButtonSize::Medium)
                                     .icon_size(IconSize::Small)
+                                    .tab_index(0isize)
                                     .aria_label(archive_label)
                                     .tooltip({
                                         let focus_handle = focus_handle.clone();
@@ -10010,6 +10032,7 @@ impl Sidebar {
                                     IconButton::new(("review-thread-changes", ix), IconName::Diff)
                                         .size(ButtonSize::Medium)
                                         .icon_size(IconSize::Small)
+                                        .tab_index(0isize)
                                         .aria_label("Review Changes")
                                         .tooltip(Tooltip::text("Review Changes"))
                                         .on_click(cx.listener(move |this, _, window, cx| {
@@ -10043,6 +10066,7 @@ impl Sidebar {
                                         )
                                         .size(ButtonSize::Medium)
                                         .icon_size(IconSize::Small)
+                                        .tab_index(0isize)
                                         .aria_label("Open Review Brief")
                                         .aria_keyshortcuts("Shift+V")
                                         .tooltip({
@@ -10482,7 +10506,7 @@ impl Sidebar {
                 }
                 cx.notify();
             }))
-            .when(is_hovered, |this| {
+            .when(is_hovered || is_focused, |this| {
                 this.action_slot(
                     h_flex()
                         .gap_0p5()
@@ -10491,6 +10515,7 @@ impl Sidebar {
                                 IconButton::new("copy-codex-hook-setup", IconName::Copy)
                                     .size(ButtonSize::Medium)
                                     .icon_size(IconSize::Small)
+                                    .tab_index(0isize)
                                     .icon_color(Color::Muted)
                                     .aria_label("Copy Codex Hook Setup")
                                     .tooltip(Tooltip::text("Copy Codex Hook Setup"))
@@ -10506,6 +10531,7 @@ impl Sidebar {
                                 IconButton::new("review-terminal-run", IconName::ListTodo)
                                     .size(ButtonSize::Medium)
                                     .icon_size(IconSize::Small)
+                                    .tab_index(0isize)
                                     .icon_color(Color::Muted)
                                     .aria_label("Open Review Brief")
                                     .aria_keyshortcuts("Shift+V")
@@ -10545,6 +10571,7 @@ impl Sidebar {
                             IconButton::new("close-terminal", close_icon)
                                 .size(ButtonSize::Medium)
                                 .icon_size(IconSize::Small)
+                                .tab_index(0isize)
                                 .icon_color(close_icon_color)
                                 .aria_label(close_label)
                                 .tooltip({
