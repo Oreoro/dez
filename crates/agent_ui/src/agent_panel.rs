@@ -4086,7 +4086,15 @@ impl AgentPanel {
 
     fn copy_thread_to_clipboard(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(thread) = self.active_native_agent_thread(cx) else {
-            Self::show_deferred_toast(&self.workspace, "No active native thread to copy", cx);
+            Self::show_deferred_toast(
+                &self.workspace,
+                agent_panel_session_label(
+                    paths::APP_NAME,
+                    "No active native thread to copy",
+                    "No active built-in Agent Session to copy",
+                ),
+                cx,
+            );
             return;
         };
 
@@ -4107,7 +4115,11 @@ impl AgentPanel {
                         workspace.show_toast(
                             workspace::Toast::new(
                                 workspace::notifications::NotificationId::unique::<ThreadCopiedToast>(),
-                                "Thread copied to clipboard (base64 encoded)",
+                                agent_panel_session_label(
+                                    paths::APP_NAME,
+                                    "Thread copied to clipboard (base64 encoded)",
+                                    "Agent Session copied to clipboard (base64 encoded)",
+                                ),
                             )
                             .autohide(),
                             cx,
@@ -4151,7 +4163,7 @@ impl AgentPanel {
                 if paths::APP_NAME == "Zed" {
                     "Open a project to load a thread"
                 } else {
-                    "Open a workspace to load a thread"
+                    "Open a Workspace to load an Agent Session"
                 },
                 cx,
             );
@@ -4186,7 +4198,11 @@ impl AgentPanel {
             Err(_) => {
                 Self::show_deferred_toast(
                     &self.workspace,
-                    "Failed to parse thread data from clipboard",
+                    agent_panel_session_label(
+                        paths::APP_NAME,
+                        "Failed to parse thread data from clipboard",
+                        "Failed to parse Agent Session data from clipboard",
+                    ),
                     cx,
                 );
                 return;
@@ -4217,7 +4233,11 @@ impl AgentPanel {
                         workspace.show_toast(
                             workspace::Toast::new(
                                 workspace::notifications::NotificationId::unique::<ThreadLoadedToast>(),
-                                "Thread loaded from clipboard",
+                                agent_panel_session_label(
+                                    paths::APP_NAME,
+                                    "Thread loaded from clipboard",
+                                    "Agent Session loaded from clipboard",
+                                ),
                             )
                             .autohide(),
                             cx,
@@ -4238,23 +4258,51 @@ impl AgentPanel {
         cx: &mut Context<Self>,
     ) {
         let Some(thread_id) = self.active_thread_id(cx) else {
-            Self::show_deferred_toast(&self.workspace, "No active thread", cx);
+            Self::show_deferred_toast(
+                &self.workspace,
+                agent_panel_session_label(
+                    paths::APP_NAME,
+                    "No active thread",
+                    "No active Agent Session",
+                ),
+                cx,
+            );
             return;
         };
 
         let Some(store) = ThreadMetadataStore::try_global(cx) else {
-            Self::show_deferred_toast(&self.workspace, "Thread metadata store not available", cx);
+            Self::show_deferred_toast(
+                &self.workspace,
+                agent_panel_session_label(
+                    paths::APP_NAME,
+                    "Thread metadata store not available",
+                    "Agent Session metadata is unavailable",
+                ),
+                cx,
+            );
             return;
         };
 
         let Some(metadata) = store.read(cx).entry(thread_id).cloned() else {
-            Self::show_deferred_toast(&self.workspace, "No metadata found for active thread", cx);
+            Self::show_deferred_toast(
+                &self.workspace,
+                agent_panel_session_label(
+                    paths::APP_NAME,
+                    "No metadata found for active thread",
+                    "No metadata found for the active Agent Session",
+                ),
+                cx,
+            );
             return;
         };
 
         let json = thread_metadata_to_debug_json(&metadata);
         let text = serde_json::to_string_pretty(&json).unwrap_or_default();
-        let title = format!("Thread Metadata: {}", metadata.display_title());
+        let title = format!(
+            "{}: {}",
+            agent_panel_session_label(paths::APP_NAME, "Thread Metadata", "Agent Session Metadata",),
+            metadata.display_title()
+        );
 
         self.open_json_buffer(title, text, window, cx);
     }
@@ -4266,7 +4314,15 @@ impl AgentPanel {
         cx: &mut Context<Self>,
     ) {
         let Some(store) = ThreadMetadataStore::try_global(cx) else {
-            Self::show_deferred_toast(&self.workspace, "Thread metadata store not available", cx);
+            Self::show_deferred_toast(
+                &self.workspace,
+                agent_panel_session_label(
+                    paths::APP_NAME,
+                    "Thread metadata store not available",
+                    "Agent Session metadata is unavailable",
+                ),
+                cx,
+            );
             return;
         };
 
@@ -4280,7 +4336,17 @@ impl AgentPanel {
         let json = serde_json::Value::Array(entries);
         let text = serde_json::to_string_pretty(&json).unwrap_or_default();
 
-        self.open_json_buffer("All Sidebar Thread Metadata".to_string(), text, window, cx);
+        self.open_json_buffer(
+            agent_panel_session_label(
+                paths::APP_NAME,
+                "All Sidebar Thread Metadata",
+                "All Session Rail Agent Session Metadata",
+            )
+            .to_string(),
+            text,
+            window,
+            cx,
+        );
     }
 
     fn open_json_buffer(

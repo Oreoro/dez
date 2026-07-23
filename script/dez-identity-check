@@ -283,6 +283,9 @@ require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'fn agent_panel_session_label.*?app_name == "Zed".*?upstream_thread_label.*?dez_session_label.*?"Current Thread".*?"Current Agent Session".*?"Regenerate Thread Title".*?"Regenerate Agent Session Title".*?"Open Thread as Markdown".*?"Open Agent Session as Markdown".*?"Settings".*?"Agent Settings".*?"Toggle Sidebar".*?"Toggle Session Rail".*?"New Thread\\u\{2026\}".*?"New Agent Session\\u\{2026\}"' \
     'the Dez Agent pane toolbar and menu can regress to mixed vocabulary or ambiguous destinations'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    '"No active native thread to copy".*?"No active built-in Agent Session to copy".*?"Thread copied to clipboard \(base64 encoded\)".*?"Agent Session copied to clipboard \(base64 encoded\)".*?"Open a project to load a thread".*?"Open a Workspace to load an Agent Session".*?"Failed to parse thread data from clipboard".*?"Failed to parse Agent Session data from clipboard".*?"Thread loaded from clipboard".*?"Agent Session loaded from clipboard".*?"No active thread".*?"No active Agent Session".*?"All Sidebar Thread Metadata".*?"All Session Rail Agent Session Metadata"' \
+    'Agent clipboard and metadata diagnostics can regress to upstream Thread/Sidebar terminology'
 require_multiline_pattern crates/agent_ui/src/completion_provider.rs \
     'fn prompt_context_type_label.*?PromptContextType::Thread if app_name == "Zed".*?"Threads".*?PromptContextType::Thread => "Agent Sessions".*?Self::Thread => "thread".*?prompt_context_type_label\(paths::APP_NAME, \*self\)' \
     'the Dez Agent context picker can regress to visible Thread terminology or break the compatible @thread keyword'
@@ -535,6 +538,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
     'fn session_switcher_title.*?app_name == "Zed".*?"Thread Switcher".*?"Switch Sessions".*?fn session_switcher_count.*?"1 recent session".*?"\{count\} recent sessions".*?viewport_size\(\)\.width \* 0\.9.*?Role::Dialog.*?aria_label\(title\).*?"session-switcher-header".*?"Release shortcut to open".*?"Choose a session".*?KeyBinding::for_action_in.*?menu::Confirm.*?KeyBinding::for_action_in.*?menu::Cancel' \
     'the keyboard session switcher can regress to an unbounded, unnamed row stack without interaction guidance'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn switcher_selection_for_active_entry.*?ActiveEntry::Thread.*?session_id.*?ThreadSwitcherEntry::Thread.*?switcher_entry\.selection\(\).*?ActiveEntry::Terminal.*?ThreadSwitcherEntry::Terminal.*?terminal_id.*?switcher_entry\.selection\(\).*?let original_selection = self\.switcher_selection_for_active_entry.*?ThreadSwitcherEvent::Dismissed.*?preview_switcher_selection\(selection' \
+    'cancelling a session-switcher preview can regress to restoring terminals through the wrong ownership surface'
 reject_pattern crates/workspace/src/pane.rs \
     '"(Project ready|Project tools unavailable|Project navigation did not attach to this pane\.)"' \
     'the Dez center surface mixes Project terminology into the Workspace hierarchy'
