@@ -562,3 +562,9 @@ defer it.
   configuration, documentation, and adapter discovery. Breakpoints remain
   visible before a session and their empty state teaches the editor-gutter
   entry point. Internal Debugger and DebugPanel types remain compatible.
+- **2026-07-23: Unavailable Terminal Sessions have one recovery surface.** The
+  PTY grid never carries synthetic application copy or an inert cursor. The
+  warning outside the grid preserves the terminal's original title, names the
+  exact failure, and confirms that no replacement shell started. **Start Fresh
+  Terminal** creates separate computation in the Main Work Area; it is not a
+  reconnect or replay action.

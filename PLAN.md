@@ -2274,3 +2274,15 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   presentation. Pure copy assertions and identity guards protect the product
   branch. Formatting, Bash syntax, identity, locked offline metadata, and diff
   checks pass; no build, test binary, or visual launch was performed.
+- 2026-07-23: Removed the duplicated fake-terminal recovery presentation for
+  unavailable Terminal Sessions in `8dc53f4077`. A failed reconnect now
+  preserves the original custom terminal title, hides the inert cursor, leaves
+  the PTY grid free of synthetic recovery output, and reports the actual Host,
+  process, or saved-reference failure in one **Terminal Session unavailable**
+  warning. Dez still starts no replacement process automatically. The recovery
+  action is now **Start Fresh Terminal**, names its Main Work Area destination,
+  and explains that it creates separate computation rather than reattaching.
+  Pure description assertions and identity guards cover title, reason, cursor,
+  blank recovery grid, and action semantics. Formatting, Bash syntax, identity,
+  locked offline metadata, and diff checks pass; no build, test binary, or
+  visual launch was performed.

@@ -74,6 +74,18 @@ These actions have deliberately different meanings:
 Termination always goes through the selected terminal's own controller. The
 presence of another local Host does not change which process the action owns.
 
+## Unavailable Sessions
+
+When Dez cannot reconnect a saved Terminal Session, it preserves the original
+Surface title and shows one **Terminal Session unavailable** warning outside the
+terminal grid. The warning names the concrete failure and confirms that Dez did
+not start a replacement shell. The inactive grid contains no synthetic output
+or fake cursor.
+
+Choose **Start Fresh Terminal** only when you want separate computation in the
+Main Work Area. It does not reconnect, replay, or replace the unavailable
+Session.
+
 ## Configuring the Shell
 
 By default, Dez uses your system's default shell (from `/etc/passwd` on Unix systems). To use a different shell:

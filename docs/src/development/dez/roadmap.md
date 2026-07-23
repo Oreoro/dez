@@ -1394,9 +1394,11 @@ code, all launch gates pass, and known limitations are documented.
       `72cec1f285` hides Copy without a selection, distinguishes clipboard and
       text-only paste, names Clear Screen, and presents detach/close separately
       from hosted-Session/local-process termination. Failed restore uses
-      **This terminal cannot reconnect** and **Start New Terminal** instead of
-      Host-oriented copy, and the permanently disabled terminal Agent branch is
-      removed. Focused pure assertions and static identity guards pass;
+      product language instead of Host-oriented copy, and the permanently
+      disabled terminal Agent branch is removed. Commit `8dc53f4077` later
+      consolidates that state into **Terminal Session unavailable** and **Start
+      Fresh Terminal**, preserving the exact reason without synthetic PTY
+      output. Focused pure assertions and static identity guards pass;
       compilation and rendered context-menu proof remain deferred.
 - [x] 2026-07-23: Finish the top-level Workspace vocabulary pass. Commit
       `218e346ede` product-gates Workspace Settings, Add Folder to Workspace,
@@ -2449,6 +2451,23 @@ Completed for the idle Debug-experience slice:
 - replaced **No Breakpoints Set** with a named **No breakpoints yet** status
   that teaches the editor-gutter entry point;
 - added pure product-copy assertions and static identity guards;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
+Completed for the unavailable Terminal Session slice:
+
+- removed duplicate synthetic recovery text from the terminal grid;
+- hid the inert cursor on unavailable display-only terminals;
+- preserved the saved custom terminal title through unavailable restoration;
+- carried the concrete Host, process, or saved-reference failure into one
+  **Terminal Session unavailable** warning;
+- retained the no-silent-fallback rule and renamed recovery to **Start Fresh
+  Terminal**;
+- made the recovery action name its Main Work Area destination and separate
+  computation effect;
+- added pure copy assertions and guards for title, reason, cursor, blank grid,
+  and action semantics;
 - `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
   locked offline Cargo metadata, and `git diff --check`;
 - no build, test binary, alternate binary, or visual launch was performed.

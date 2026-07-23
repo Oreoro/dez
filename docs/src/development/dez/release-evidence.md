@@ -1298,7 +1298,12 @@ the later running-app reports, the source advanced through:
   and separate safe-directory documentation path; and
 - `e2b237025d`, which aligns the idle Dez **Debug** region and tab, prioritizes
   **Start Debug Session**, separates configuration/documentation/adapters, and
-  teaches the editor-gutter breakpoint path through named accessible states.
+  teaches the editor-gutter breakpoint path through named accessible states;
+  and
+- `8dc53f4077`, which removes duplicate synthetic recovery output and the inert
+  cursor from unavailable terminals, preserves the saved title and concrete
+  failure reason, and makes **Start Fresh Terminal** an explicit separate
+  computation in the Main Work Area.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

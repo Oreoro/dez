@@ -904,6 +904,12 @@ reject_pattern crates/terminal_view/src/terminal_view.rs \
 require_multiline_pattern docs/src/terminal.md \
     'Dez has no separate Terminal Panel destination.*?Every ordinary \*\*New Terminal\*\*.*?main-area terminal Surface.*?\*\*Detach Terminal\*\*.*?\*\*Terminate Terminal Session…\*\*.*?selected terminal.s own controller' \
     'the public terminal guide can regress to the removed Terminal Panel model or ambiguous lifecycle ownership'
+require_multiline_pattern docs/src/terminal.md \
+    '## Unavailable Sessions.*?preserves the original.*?Terminal Session unavailable.*?no synthetic output.*?fake cursor' \
+    'the public terminal guide can regress to duplicate fake recovery output or imply that fresh computation reconnects'
+require_multiline_pattern docs/src/terminal.md \
+    'Start Fresh Terminal.*?separate computation in the.*?Main Work Area.*?does not reconnect, replay, or replace' \
+    'the public terminal guide can regress to implying that fresh computation reconnects an unavailable Session'
 reject_pattern docs/src/terminal.md \
     'Toggle terminal panel|Terminal Panel vs Center Terminal' \
     'the public terminal guide still teaches the removed Dez Terminal Panel'
