@@ -942,7 +942,7 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
         "agent::NewThread" => return "agent::NewAgentSession".to_owned(),
         "agent::NewExternalAgentThread" => return "agent::NewExternalAgentSession".to_owned(),
         "agent::ArchiveSelectedThread" => {
-            return "agent::ArchiveSelectedAgentSession".to_owned();
+            return "session_rail::RemoveSelectedSession".to_owned();
         }
         "agent::RemoveSelectedThread" => return "agent::RemoveSelectedAgentSession".to_owned(),
         "agent::RenameSelectedThread" => return "agent::RenameSelectedAgentSession".to_owned(),
@@ -1140,8 +1140,16 @@ mod tests {
             "session rail: toggle agent history"
         );
         assert_eq!(
+            humanize_action_name_for_product("agent::ArchiveSelectedThread", "Dez"),
+            "session rail: remove selected session"
+        );
+        assert_eq!(
             humanize_action_name_for_product("agent::RenameSelectedThread", "Zed"),
             "agent: rename selected thread"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("agent::ArchiveSelectedThread", "Zed"),
+            "agent: archive selected thread"
         );
         assert_eq!(
             humanize_action_name_for_product("project_panel::ToggleFocus", "Zed"),

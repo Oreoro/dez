@@ -1020,19 +1020,19 @@ fn terminal_row_close_presentation(
     runtime_state: Option<TerminalRuntimeState>,
 ) -> (&'static str, bool) {
     match (is_host_session, runtime_state) {
-        (true, Some(TerminalRuntimeState::Live)) => ("Terminate Running Terminal", true),
-        (true, Some(TerminalRuntimeState::Detached)) => ("Terminate Detached Terminal", true),
+        (true, Some(TerminalRuntimeState::Live)) => ("Terminate Running Terminal…", true),
+        (true, Some(TerminalRuntimeState::Detached)) => ("Terminate Detached Terminal…", true),
         (true, Some(TerminalRuntimeState::Reconnecting)) => {
-            ("Terminate Reconnecting Terminal", true)
+            ("Terminate Reconnecting Terminal…", true)
         }
         (true, Some(TerminalRuntimeState::Exited)) => ("Remove Exited Terminal", false),
         (true, Some(TerminalRuntimeState::Missing)) => ("Remove Missing Terminal", false),
         (true, Some(TerminalRuntimeState::Incompatible)) => ("Remove Incompatible Terminal", false),
         (true, None) => ("Remove Saved Terminal", false),
         (false, Some(TerminalRuntimeState::Live)) => ("Detach Live Terminal", false),
-        (false, Some(TerminalRuntimeState::Detached)) => ("Terminate Detached Terminal", true),
+        (false, Some(TerminalRuntimeState::Detached)) => ("Terminate Detached Terminal…", true),
         (false, Some(TerminalRuntimeState::Reconnecting)) => {
-            ("Terminate Reconnecting Terminal", true)
+            ("Terminate Reconnecting Terminal…", true)
         }
         (false, Some(TerminalRuntimeState::Exited)) => ("Close Exited Terminal", false),
         (false, Some(TerminalRuntimeState::Missing)) => ("Remove Missing Terminal", false),
@@ -1041,6 +1041,15 @@ fn terminal_row_close_presentation(
         }
         (false, None) => ("Remove Saved Terminal", false),
     }
+}
+
+fn terminal_termination_confirmation_copy(title: &str) -> (&'static str, String) {
+    (
+        "Terminate Terminal Session?",
+        format!(
+            "“{title}” will stop immediately, including its shell and any foreground process. This cannot be undone."
+        ),
+    )
 }
 
 fn terminal_row_owner_label(has_session_ref: bool, is_remote: bool) -> &'static str {
@@ -1099,11 +1108,11 @@ mod terminal_runtime_label_tests {
     fn host_owned_session_actions_never_present_termination_as_detach() {
         assert_eq!(
             terminal_row_close_presentation(true, Some(TerminalRuntimeState::Live)),
-            ("Terminate Running Terminal", true)
+            ("Terminate Running Terminal…", true)
         );
         assert_eq!(
             terminal_row_close_presentation(true, Some(TerminalRuntimeState::Detached)),
-            ("Terminate Detached Terminal", true)
+            ("Terminate Detached Terminal…", true)
         );
         assert_eq!(
             terminal_row_close_presentation(true, Some(TerminalRuntimeState::Exited)),
@@ -1113,6 +1122,16 @@ mod terminal_runtime_label_tests {
             terminal_row_close_presentation(false, Some(TerminalRuntimeState::Live)),
             ("Detach Live Terminal", false)
         );
+    }
+
+    #[test]
+    fn terminal_termination_confirmation_names_the_irreversible_effect() {
+        let (heading, detail) = terminal_termination_confirmation_copy("tests");
+        assert_eq!(heading, "Terminate Terminal Session?");
+        assert!(detail.contains("“tests”"));
+        assert!(detail.contains("shell and any foreground process"));
+        assert!(detail.contains("cannot be undone"));
+        assert!(!detail.contains("durable"));
     }
 
     #[test]
@@ -8284,12 +8303,10 @@ impl Sidebar {
         }
 
         let title = metadata.display_title();
-        let detail = format!(
-            "This permanently stops the durable session “{title}”. Closing or detaching a live terminal does not stop its process; this action does."
-        );
+        let (heading, detail) = terminal_termination_confirmation_copy(title.as_ref());
         let prompt = window.prompt(
             PromptLevel::Critical,
-            "Terminate durable session?",
+            heading,
             Some(&detail),
             &["Terminate", "Cancel"],
             cx,
@@ -9046,13 +9063,12 @@ impl Sidebar {
                 let metadata = terminal.metadata.clone();
                 let workspace = terminal.workspace.clone();
                 let source = terminal.source.clone();
-                let requires_termination_confirmation =
-                    terminal.runtime.as_ref().is_some_and(|runtime| {
-                        matches!(
-                            runtime.state,
-                            TerminalRuntimeState::Detached | TerminalRuntimeState::Reconnecting
-                        )
-                    });
+                let is_host_session =
+                    matches!(&terminal.source, TerminalEntrySource::HostSession(_));
+                let (_, requires_termination_confirmation) = terminal_row_close_presentation(
+                    is_host_session,
+                    terminal.runtime.as_ref().map(|runtime| runtime.state),
+                );
                 self.close_terminal_with_confirmation(
                     metadata,
                     workspace,
