@@ -1482,6 +1482,15 @@ code, all launch gates pass, and known limitations are documented.
       that the action cannot be undone. Archive and restore remain immediate
       reversible operations. Focused prompt-copy assertions and static identity
       guards pass; compilation and rendered modal/focus proof remain deferred.
+- [x] 2026-07-23: Keep Workspace hierarchy visible and document region
+      ownership. Commit `799147c525` makes each Workspace disclosure arrow
+      persistent instead of hover-only. Commit `5a64bc9af1` adds the permanent
+      interface composition contract to Fork Notes: Session Rail projects and
+      navigates existing work, Workspace Tools and Agent occupy hideable
+      pane-grid regions, and terminals remain ordinary main-area Surfaces.
+      Static identity, formatting, locked offline metadata, and documentation
+      format checks pass; compilation and rendered hierarchy proof remain
+      deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

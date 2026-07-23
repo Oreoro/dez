@@ -1086,7 +1086,10 @@ the later running-app reports, the source advanced through:
   fallback, restore focus when needed, and persist the resulting layout; and
 - `9615b513d4`, which routes pointer and keyboard deletion of archived Agent
   Sessions through a critical, named, explicitly irreversible confirmation
-  while preserving archive and restore as reversible actions.
+  while preserving archive and restore as reversible actions; and
+- `799147c525`, which keeps Workspace expansion state discoverable without
+  hover, plus `5a64bc9af1`, which records the region ownership and terminal
+  placement contract in permanent Fork Notes.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
