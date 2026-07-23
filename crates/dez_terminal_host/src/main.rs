@@ -1171,14 +1171,14 @@ mod tests {
         let mut event = codex_event("PostToolUse");
         event.tool_name = Some("Bash".to_owned());
         event.tool_input = Some(serde_json::json!({
-            "command": "API_TOKEN=super-secret MODE=check cargo test"
+            "command": "API_TOKEN=super-secret MODE=check deploy --api-key cli-secret"
         }));
 
         let update = codex_hook_update(&event)?;
 
         assert_eq!(
             update.command.as_deref(),
-            Some("API_TOKEN=\"[REDACTED]\" MODE=check cargo test")
+            Some("API_TOKEN=\"[REDACTED]\" MODE=check deploy --api-key \"[REDACTED]\"")
         );
         Ok(())
     }

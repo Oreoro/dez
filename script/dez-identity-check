@@ -193,6 +193,9 @@ require_pattern crates/sidebar/src/sidebar.rs \
 require_pattern crates/dez_terminal_host/src/main.rs \
     'map\(util::redact::redact_command\)' \
     'structured command evidence is retained without secret-environment redaction'
+require_pattern crates/util/src/redact.rs \
+    'REDACT_CLI_FLAG_REGEX' \
+    'structured command redaction does not cover explicit secret CLI flags'
 require_pattern crates/settings_ui/src/page_data.rs \
     'title: "Observe Terminal Evidence"' \
     'Evidence settings still imply Dez only connects provider hooks'
