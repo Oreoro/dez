@@ -6383,8 +6383,12 @@ fn panels_page() -> SettingsPage {
         ]
     }
 
-    fn collaboration_panel_section() -> [SettingsPageItem; 4] {
-        [
+    fn collaboration_panel_section() -> Vec<SettingsPageItem> {
+        if !dez_settings_page_visible(paths::APP_NAME, "Collaboration") {
+            return Vec::new();
+        }
+
+        vec![
             SettingsPageItem::SectionHeader("Collaboration Panel"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Collaboration Panel Button",

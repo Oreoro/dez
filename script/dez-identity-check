@@ -283,6 +283,9 @@ require_pattern crates/settings_ui/src/page_data.rs \
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn auto_update_setting_visible\(app_name: &str\) -> bool \{[[:space:]]*app_name == "Zed"' \
     'Dez Settings exposes an updater toggle even though the fork updater is disabled'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'fn collaboration_panel_section\(\) -> Vec<SettingsPageItem> \{.*?!dez_settings_page_visible\(paths::APP_NAME, "Collaboration"\).*?return Vec::new\(\);' \
+    'the Panels page still exposes controls for the removed Dez Collaboration Panel'
 require_pattern crates/sidebar/src/sidebar.rs \
     'session_overview_visible\(show_start_state\)' \
     'the empty Session Rail can regress to duplicating its creation action'
