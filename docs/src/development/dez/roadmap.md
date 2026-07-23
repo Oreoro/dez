@@ -267,6 +267,11 @@ the Dez Panels page now that the page, panel entry points, and commands are
 removed. Compatibility parsing and official Zed UI remain intact. Identity
 checks pass; rendered Settings proof remains deferred.
 
+Commit `33f7ff5893` adds non-visual shortcut metadata to shared text and icon
+buttons. Session scope controls now announce Shift+A and Review Brief controls
+announce Shift+V, matching their visible action-aware tooltips. Identity checks
+pass; platform announcement proof remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -1134,6 +1139,10 @@ code, all launch gates pass, and known limitations are documented.
       `9239006d4b` hides its button/dock/width section in Dez while preserving
       compatibility and official Zed UI. Identity checks pass; rendered
       Settings proof remains consolidated.
+- [x] 2026-07-23: Expose high-value Session Rail shortcuts accessibly. Commit
+      `33f7ff5893` reports Shift+A on scope controls and Shift+V on Review Brief
+      buttons without adding cramped visual labels. Identity checks pass;
+      platform announcement proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

@@ -669,7 +669,10 @@ with new labels.
       retires the unfinished 56 px icon presentation: legacy `icon`
       configuration remains readable but safely resolves to the smallest
       complete compact rail instead of clipping supervision, search, evidence,
-      and recovery controls. The rendered matrix remains open.
+      and recovery controls. Commit `33f7ff5893` adds non-visual shortcut
+      metadata to shared text/icon buttons and exposes Shift+A and Shift+V on
+      the Session scope and Review Brief controls, matching their tooltips. The
+      rendered matrix remains open.
 - [ ] Capture a visual state matrix at compact, balanced, and spacious density
       in representative light and dark themes and at narrow/normal/wide rail
       widths.
@@ -1465,3 +1468,8 @@ Notes decision:
   whose page and commands are already absent. Compatibility parsing and official
   Zed UI remain intact. Identity guards pass; Settings rendering remains
   consolidated.
+- 2026-07-23: Exposed Session Rail shortcuts to assistive technology in
+  `33f7ff5893`. Shared text and icon buttons can now report a shortcut without
+  drawing a key label; All/Attention announces Shift+A and Review Brief buttons
+  announce Shift+V, matching the visible action-aware tooltips. Identity guards
+  pass; platform announcement proof remains consolidated.
