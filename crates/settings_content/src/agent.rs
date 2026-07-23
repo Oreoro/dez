@@ -269,10 +269,10 @@ pub struct AgentSettingsContent {
     ///
     /// Default: true
     pub expand_terminal_card: Option<bool>,
-    /// Command to automatically run when Zed creates a Terminal Thread shell in the agent panel.
-    /// The command is sent to the shell as if typed, so it is interpreted by your
-    /// configured shell (including on Windows and remote/WSL projects).
-    /// An empty string disables this behavior.
+    /// Compatibility setting for automatically running a command in an
+    /// official-Zed Terminal Thread shell in the Agent Panel. Dez retains the
+    /// stored key for migration and upstream synchronization but does not
+    /// expose it because terminals open in the Main Work Area.
     ///
     /// Default: ""
     pub terminal_init_command: Option<String>,

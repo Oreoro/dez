@@ -572,8 +572,8 @@ require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn collaboration_panel_section\(\) -> Vec<SettingsPageItem> \{.*?!dez_settings_page_visible\(paths::APP_NAME, "Collaboration"\).*?return Vec::new\(\);' \
     'the Panels page still exposes controls for the removed Dez Collaboration Panel'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
-    'fn terminal_session_init_setting_copy.*?app_name == "Zed".*?"Terminal Thread Init Command".*?"Terminal Session Startup Command".*?terminal_session_init_setting_copy\(paths::APP_NAME\)' \
-    'Dez Settings can regress to presenting terminal-backed work as a Terminal Thread'
+    'fn terminal_session_init_setting_visible\(app_name: &str\) -> bool \{[[:space:]]*app_name == "Zed".*?if terminal_session_init_setting_visible\(paths::APP_NAME\).*?Some\("agent\.terminal_init_command"\)' \
+    'Dez Settings can regress to exposing the legacy Agent-Panel terminal startup control even though Main Work Area terminals do not consume it'
 require_pattern crates/sidebar/src/sidebar.rs \
     'session_overview_visible\(show_start_state\)' \
     'the empty Session Rail can regress to duplicating its creation action'

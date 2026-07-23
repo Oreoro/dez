@@ -127,6 +127,10 @@ fn terminal_session_init_setting_copy(app_name: &str) -> (&'static str, &'static
     }
 }
 
+fn terminal_session_init_setting_visible(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 fn developer_page(cx: &App) -> SettingsPage {
     use feature_flags::FeatureFlagAppExt as _;
 
@@ -8572,7 +8576,10 @@ fn ai_page(cx: &App) -> SettingsPage {
                 metadata: None,
                 files: USER,
             }),
-            SettingsPageItem::SettingItem(SettingItem {
+        ]);
+
+        if terminal_session_init_setting_visible(paths::APP_NAME) {
+            items.push(SettingsPageItem::SettingItem(SettingItem {
                 title: terminal_session_init_setting_copy(paths::APP_NAME).0,
                 description: terminal_session_init_setting_copy(paths::APP_NAME).1,
                 field: Box::new(SettingField {
@@ -8601,7 +8608,10 @@ fn ai_page(cx: &App) -> SettingsPage {
                     ..Default::default()
                 })),
                 files: USER,
-            }),
+            }));
+        }
+
+        items.extend([
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Thinking Display",
                 description: "How thinking blocks should be displayed by default. 'Auto' fully expands during streaming, then auto-collapses when done. 'Preview' auto-expands with a height constraint during streaming. 'Always Expanded' shows full content. 'Always Collapsed' keeps them collapsed.",
@@ -11208,7 +11218,9 @@ mod tests {
     }
 
     #[test]
-    fn terminal_startup_setting_uses_session_language_in_dez() {
+    fn legacy_terminal_startup_setting_is_hidden_in_dez() {
+        assert!(!terminal_session_init_setting_visible("Dez"));
+        assert!(terminal_session_init_setting_visible("Zed"));
         assert_eq!(
             terminal_session_init_setting_copy("Dez"),
             (
