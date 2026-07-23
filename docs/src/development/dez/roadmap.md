@@ -1018,9 +1018,13 @@ code, all launch gates pass, and known limitations are documented.
       state is visible, so New Terminal appears once instead of competing with
       itself. The state is now titled **Start a session**, explains that live
       state returns to the rail, and icons its New File and Open alternatives.
-      An authored model assertion and identity guard cover the handoff.
-      Formatting, diff, and identity checks pass; compile and rendered proof
-      remain in the consolidated gate.
+      Later overview work restored the persistent rail title and status without
+      restoring its zero-session creation button. Commit `d53cd5d656` completes
+      that hierarchy by removing the now-duplicated start-state title and icon
+      card, retaining one filled **New Terminal** action and one outlined
+      **Open Workspace…** alternative. Authored model assertions and identity
+      guards cover the handoff. Formatting, diff, and identity checks pass;
+      compile and rendered proof remain in the consolidated gate.
 - [x] 2026-07-23: Remove duplicate project identity from the Dez rail footer.
       Commit `a9b1a961c0` leaves Workspace/project identity in the Session Rail
       group hierarchy instead of repeating and wrapping it above the utility
@@ -1728,6 +1732,9 @@ code, all launch gates pass, and known limitations are documented.
       that terminals open in the main work area while live status and attention
       appear in the rail. Workspace scan progress is now an accessible status,
       and automatic trust names its folder scope plus the services it enables.
+      Commit `d53cd5d656` removes the duplicate empty-state headline and
+      decorative card, capitalizes the **Main Work Area** destination, and
+      presents **Open Workspace…** as the clearly secondary action.
       Official Zed retains its Project terminology. Formatting, locked offline
       metadata, identity, and diff checks pass; compilation and rendered
       first-use proof remain deferred.
@@ -1937,6 +1944,11 @@ code, all launch gates pass, and known limitations are documented.
   click confirmation, and exposes selection through a named accessibility
   list. Session type remains semantic and available in tooltips without
   becoming a repeated second line on every Dez row.
+- **2026-07-23:** An empty rail has one status and one primary action. Commit
+  `d53cd5d656` lets the overview own **No sessions yet**, removes the second
+  empty-state title and decorative icon card, and keeps the start block compact
+  and top-anchored. **New Terminal** names the Main Work Area destination;
+  **Open Workspace…** is the outlined alternative.
 
 ## Verification {#verification}
 
@@ -2006,6 +2018,18 @@ Completed for the quiet Session Switcher slice:
 - `git diff --check`;
 - pure assertions authored for visible type-label policy and official-Zed
   compatibility;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the compact Session Rail start-state slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the canonical Dez documentation;
+- Bash syntax and Dez identity checks, including duplicate-copy rejection;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- pure assertions authored for the single zero-session creation action and
+  destination-specific copy;
 - no application build, Rust test binary, bundle, alternate binary, or visual
   launch.
 

@@ -79,6 +79,12 @@ Agent Session row focuses its existing conversation Surface. A row may compose
 actor, lifecycle, attention, evidence, changes, and recency, but it never
 becomes a second owner of those facts.
 
+At zero sessions, the overview owns the rail title and **No sessions yet**
+status. The compact start block does not repeat an empty-state headline or
+decorative card: it explains that terminals open in the Main Work Area, then
+offers one filled **New Terminal** action and one outlined **Open Workspace…**
+alternative. Both name their destination in accessibility output.
+
 Workspace Tools and Agent are ordinary pane-grid regions with stable placement
 and normal focus behavior. Hiding one keeps its items available, returns focus
 to a visible editor or terminal pane, and persists the layout. Opening a named

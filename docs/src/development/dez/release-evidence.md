@@ -24,6 +24,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Dez-only onboarding chrome source: `699cbd1bc8`
 - Neutral getting-started agent icon source: `869cddcce0`
 - Single-action empty Session Rail source: `4e6292ff0a`
+- Compact Session Rail start-state source: `d53cd5d656`
 - Deduplicated Session Rail footer source: `a9b1a961c0`
 - Unified Session Rail Workspace vocabulary source: `ff91b34a81`
 - Workspace-scoped zero-session creation source: `4fc53b860f`
@@ -322,13 +323,15 @@ visible so it can be cleared. The focused visibility assertion is authored and
 a clean `cargo check --locked -p sidebar --lib -j1` passes in 14m34s. No
 rendered claim is inferred from that source check.
 
-Follow-up `4e6292ff0a` removes the empty rail's remaining duplicate creation
-hierarchy. The full start state now owns the only New Terminal action; the
-ordinary Sessions overview returns as soon as the rail has content. The state
-is titled **Start a session**, explains where live state will appear, and gives
-the New File and Open alternatives distinct icons. An authored model assertion
-and identity guard freeze the overview handoff. Formatting, diff, and identity
-checks pass; compilation and rendered proof remain in the consolidated gate.
+Follow-up `4e6292ff0a` first removed the empty rail's duplicate creation
+hierarchy. Later overview work restored the persistent rail title and status
+without restoring its zero-session creation action. Commit `d53cd5d656`
+finishes the current composition: the overview owns **No sessions yet**; the
+compact start block has no repeated title or decorative card; and one filled
+**New Terminal** action is paired with an outlined **Open Workspace…**
+alternative. Authored model assertions and identity guards freeze the handoff.
+Formatting, diff, and identity checks pass; compilation and rendered proof
+remain in the consolidated gate.
 
 Commit `a9b1a961c0` removes the second project/branch identity row from Dez's
 Session Rail footer. Project identity remains in the rail's project headers;
@@ -1214,7 +1217,10 @@ the later running-app reports, the source advanced through:
   landmarks for all three regions; and
 - `79e87f2351`, which removes repeated visible type metadata from Dez Session
   Switcher rows while retaining it in accessibility and tooltips, makes hover
-  non-activating, and exposes the selected row through a named list.
+  non-activating, and exposes the selected row through a named list; and
+- `d53cd5d656`, which removes the Session Rail's repeated empty-state heading
+  and icon card, retains one Main Work Area terminal action, and presents
+  **Open Workspace…** as the secondary first-use path.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

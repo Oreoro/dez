@@ -2053,3 +2053,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Thread/Terminal labels. Pure copy assertions, formatting, Bash syntax,
   identity, locked offline metadata, and diff checks pass; no build, test
   binary, or visual launch was performed.
+- 2026-07-23: Collapsed the remaining first-use Session Rail duplication in
+  `d53cd5d656`. The overview now owns the **No sessions yet** status while the
+  top-anchored start block only explains the Main Work Area handoff and offers
+  one filled **New Terminal** action plus one outlined **Open Workspace…**
+  alternative. The repeated **No running sessions / Start a terminal** heading,
+  decorative icon card, and folder-scoped label are gone. Both actions expose
+  destination-specific accessibility names. Pure copy assertions, formatting,
+  Bash syntax, identity, locked offline metadata, and diff checks pass; no
+  build, test binary, or visual launch was performed.
