@@ -1165,6 +1165,13 @@ code, all launch gates pass, and known limitations are documented.
       selections as unavailable when filtering prediction actions. Supported
       explicit providers and official Zed remain unchanged. Source and identity
       checks pass; rendered command-palette proof remains consolidated.
+- [x] 2026-07-23: Isolate crash recovery identity and opt-in. Commit
+      `aab0e5f2f2` prevents an inherited upstream endpoint from enabling the
+      crash handler in Dez; fork minidumps require explicit
+      `DEZ_GENERATE_MINIDUMPS=1|true`. Startup/duplicate-instance messages,
+      crash metadata, and temporary artifacts use Dez identity while official
+      Zed remains unchanged. Source and identity checks pass; compiled recovery
+      proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

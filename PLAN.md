@@ -650,7 +650,11 @@ with new labels.
       setup controls disappear, and explicit local or user-configured providers
       remain available. Commit `b909b31d45` closes a later command-palette
       override that could re-enable Zed Predict onboarding and prediction
-      actions after the product filter ran.
+      actions after the product filter ran. Commit `aab0e5f2f2` also prevents a
+      non-Zed stable build from installing the inherited crash handler merely
+      because an upstream endpoint was compiled in. Dez minidumps now require
+      explicit `DEZ_GENERATE_MINIDUMPS=1|true`, and recovery metadata/artifacts
+      use fork identity.
 - [ ] Audit focus order, accessible roles/names/descriptions, key shortcuts,
       minimum hit targets, screen-reader announcements, zoom, reduced motion,
       contrast, truncation, and localization-resistant layouts. Shared Session
@@ -1502,3 +1506,10 @@ Notes decision:
   prediction commands exist. Explicit supported providers and official Zed are
   unchanged. Focused source assertions and identity guards pass; rendered
   command-palette proof remains consolidated.
+- 2026-07-23: Isolated crash recovery and duplicate-instance identity in
+  `aab0e5f2f2`. Ordinary Dez launches no longer install the inherited
+  stable-channel crash handler based on an upstream endpoint; local minidump
+  generation requires explicit `DEZ_GENERATE_MINIDUMPS=1|true`. Startup logs,
+  duplicate-instance output, crash metadata, and temporary artifacts identify
+  Dez. Official Zed retains its existing policy. Focused source assertions and
+  identity guards pass; compiled crash-path proof remains consolidated.
