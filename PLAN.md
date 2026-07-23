@@ -1655,3 +1655,12 @@ Notes decision:
   PTY prompt content, not a TerminalView overlay; Dez must not restyle them.
   Focused pure assertions, formatting, identity, and diff checks pass; rendered
   menu/callout proof remains deferred.
+- 2026-07-23: Normalized top-level Dez menus on user-facing Workspace language
+  in `218e346ede`. Settings now opens Workspace Settings, File adds folders to
+  and closes a Workspace, and Edit finds in a Workspace while official Zed
+  retains Project labels. Help leads with Getting Started and Release Notes,
+  calls the retained local event viewer **Open Local Diagnostics Log**, calls
+  dependency notices **Open Source Licenses**, and consolidates attribution
+  links under one **Upstream Zed** submenu. Focused label assertions, static
+  identity, formatting, and diff checks pass; rendered native-menu proof
+  remains deferred.

@@ -1048,7 +1048,10 @@ the later running-app reports, the source advanced through:
   utilities truthful icons, accessible names, tooltips, and command labels; and
 - `72cec1f285`, which makes terminal edit/lifecycle commands and failed-session
   recovery copy explicit while removing a permanently disabled Agent menu
-  branch.
+  branch; and
+- `218e346ede`, which aligns top-level menus with Workspace vocabulary and
+  consolidates local diagnostics, licenses, and upstream attribution into a
+  deliberate Help hierarchy.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

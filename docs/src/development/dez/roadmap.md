@@ -1394,6 +1394,14 @@ code, all launch gates pass, and known limitations are documented.
       Host-oriented copy, and the permanently disabled terminal Agent branch is
       removed. Focused pure assertions and static identity guards pass;
       compilation and rendered context-menu proof remain deferred.
+- [x] 2026-07-23: Finish the top-level Workspace vocabulary pass. Commit
+      `218e346ede` product-gates Workspace Settings, Add Folder to Workspace,
+      Close Workspace, and Find in Workspace while retaining official Zed
+      labels. The Dez Help menu now distinguishes local diagnostics and
+      open-source licenses and groups attribution links under **Upstream Zed**
+      instead of presenting loose upstream commands. Focused pure assertions
+      and static identity guards pass; compilation and rendered native-menu
+      proof remain deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
