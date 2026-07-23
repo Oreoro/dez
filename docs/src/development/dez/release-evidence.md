@@ -1055,7 +1055,12 @@ the later running-app reports, the source advanced through:
 - `35c516a5bb`, which replaces inherited implementation namespaces in the Dez
   Command Palette with Session Rail, Files, Workspace Search, Workspace
   Symbols, Workspace Tools, and Dez presentation while preserving action
-  identity and official Zed behavior.
+  identity and official Zed behavior;
+- `be1a20dae1`, which distinguishes detaching an attached center terminal from
+  terminating a Host-only running Session, requires confirmation for the
+  latter, and makes terminal ownership explicit in Session Rail rows; and
+- `ddd7f25f4e`, which gives blank PTY titles a Terminal fallback in the Session
+  Rail instead of rendering an empty row.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

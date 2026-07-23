@@ -1410,6 +1410,16 @@ code, all launch gates pass, and known limitations are documented.
       keymaps, telemetry, and dispatch remain unchanged. Focused pure
       assertions, formatting, and static identity guards pass; compilation and
       rendered palette proof remain deferred.
+- [x] 2026-07-23: Make terminal-tab and Session-Rail lifecycle actions
+      truthful. Commit `be1a20dae1` keeps the attached center tab as the
+      interactive surface and labels its closure as detach, while a Host-only
+      running row says **Terminate Running Session**, uses destructive
+      presentation, and requires confirmation. Stale and completed rows use
+      close/remove language, and row ownership reads **Durable Host**,
+      **Remote Workspace**, or **Workspace process**. Commit `ddd7f25f4e`
+      gives empty PTY titles a **Terminal** fallback so a valid Session cannot
+      render as a blank row. Focused pure assertions and static identity guards
+      pass; compilation and rendered proof remain deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

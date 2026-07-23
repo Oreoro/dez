@@ -1672,3 +1672,14 @@ Notes decision:
   action IDs, keymaps, telemetry, and dispatch remain unchanged. Formatting,
   static identity, and diff checks pass; rendered palette proof remains
   deferred.
+- 2026-07-23: Made the center-terminal/Session-Rail lifecycle truthful in
+  `be1a20dae1`. An attached center tab remains the interactive terminal and
+  closes by detaching its view; a Host-only running row now says
+  **Terminate Running Session**, uses destructive presentation, and requires
+  confirmation before stopping computation. Exited, missing, incompatible, and
+  saved rows use close/remove language, and ownership reads **Durable Host**,
+  **Remote Workspace**, or **Workspace process**. Commit `ddd7f25f4e` also
+  gives empty PTY titles the same **Terminal** fallback in the Session Rail
+  that terminal tabs already used, preventing valid Sessions from rendering as
+  blank rows. Focused pure assertions, formatting, identity, and diff checks
+  pass; rendered row/action proof remains deferred.
