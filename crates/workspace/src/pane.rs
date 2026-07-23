@@ -1,8 +1,8 @@
 use crate::{
-    AddActiveFileToEvidence, CloseWindow, NewCenterTerminal, NewFile, NewTerminal, OpenInTerminal,
-    OpenOptions, OpenTerminal, OpenVisible, RemoveActiveFileFromEvidence, SidebarSide,
-    SplitDirection, ToggleAgentPane, ToggleFileFinder, ToggleProjectPane, ToggleProjectSymbols,
-    ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
+    AddActiveFileToEvidence, CloseWindow, MultiWorkspace, NewCenterTerminal, NewFile, NewTerminal,
+    OpenInTerminal, OpenOptions, OpenTerminal, OpenVisible, RemoveActiveFileFromEvidence,
+    SidebarSide, SplitDirection, ToggleAgentPane, ToggleFileFinder, ToggleProjectPane,
+    ToggleProjectSymbols, ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
     focus_follows_mouse::FocusFollowsMouse as _,
     invalid_item_view::InvalidItemView,
     item::{
@@ -3698,6 +3698,19 @@ impl Pane {
                             });
 
                             let entry_abs_path = pane.read(cx).entry_abs_path(entry, cx);
+                            let is_selected_review_evidence =
+                                entry_abs_path.as_deref().is_some_and(|path| {
+                                    window.root::<MultiWorkspace>().flatten().is_some_and(
+                                        |multi_workspace| {
+                                            multi_workspace
+                                                .read(cx)
+                                                .workspace()
+                                                .read(cx)
+                                                .evidence_set()
+                                                .is_user_selected_path(path)
+                                        },
+                                    )
+                                });
                             let reveal_path = entry_abs_path.clone();
                             let parent_abs_path = entry_abs_path
                                 .as_deref()
@@ -3749,28 +3762,32 @@ impl Pane {
                                         }),
                                     )
                                 })
-                                .entry(
-                                    "Add to Review Evidence",
-                                    Some(Box::new(AddActiveFileToEvidence)),
-                                    window.handler_for(&pane, move |pane, window, cx| {
-                                        pane.activate_item(ix, true, true, window, cx);
-                                        window.dispatch_action(
-                                            AddActiveFileToEvidence.boxed_clone(),
-                                            cx,
-                                        );
-                                    }),
-                                )
-                                .entry(
-                                    "Remove from Review Evidence",
-                                    Some(Box::new(RemoveActiveFileFromEvidence)),
-                                    window.handler_for(&pane, move |pane, window, cx| {
-                                        pane.activate_item(ix, true, true, window, cx);
-                                        window.dispatch_action(
-                                            RemoveActiveFileFromEvidence.boxed_clone(),
-                                            cx,
-                                        );
-                                    }),
-                                )
+                                .when(!is_selected_review_evidence, |menu| {
+                                    menu.entry(
+                                        "Add to Review Evidence",
+                                        Some(Box::new(AddActiveFileToEvidence)),
+                                        window.handler_for(&pane, move |pane, window, cx| {
+                                            pane.activate_item(ix, true, true, window, cx);
+                                            window.dispatch_action(
+                                                AddActiveFileToEvidence.boxed_clone(),
+                                                cx,
+                                            );
+                                        }),
+                                    )
+                                })
+                                .when(is_selected_review_evidence, |menu| {
+                                    menu.entry(
+                                        "Remove from Review Evidence",
+                                        Some(Box::new(RemoveActiveFileFromEvidence)),
+                                        window.handler_for(&pane, move |pane, window, cx| {
+                                            pane.activate_item(ix, true, true, window, cx);
+                                            window.dispatch_action(
+                                                RemoveActiveFileFromEvidence.boxed_clone(),
+                                                cx,
+                                            );
+                                        }),
+                                    )
+                                })
                                 .when(is_local, |menu| {
                                     menu.when_some(reveal_path, |menu, reveal_path| {
                                         menu.separator().entry(
