@@ -15,7 +15,8 @@ use ui::{App, prelude::*};
 use workspace::{SplitDirection, Workspace};
 
 pub use edit_prediction_button::{
-    EditPredictionButton, ToggleMenu, get_available_providers, set_completion_provider,
+    EditPredictionButton, ToggleMenu, effective_edit_prediction_provider, get_available_providers,
+    set_completion_provider,
 };
 
 use crate::rate_prediction_modal::PredictEditsRatePredictionsFeatureFlag;
