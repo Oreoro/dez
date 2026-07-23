@@ -118,9 +118,9 @@ impl RenderOnce for ProjectEmptyState {
             .track_focus(&self.focus_handle)
             .child(
                 v_flex()
-                    .w_64()
                     .max_w_full()
-                    .gap_2()
+                    .when(has_title, |this| this.w_64().gap_2())
+                    .when(!has_title, |this| this.w_48().gap_1())
                     .children(self.title.map(|title| {
                         h_flex()
                             .gap_1p5()
@@ -132,9 +132,13 @@ impl RenderOnce for ProjectEmptyState {
                             .child(Label::new(title).size(LabelSize::Large))
                     }))
                     .child(
-                        Label::new(description)
-                            .size(LabelSize::Small)
-                            .color(Color::Muted),
+                        div()
+                            .when(!has_title, |this| this.text_center().mb_2())
+                            .child(
+                                Label::new(description)
+                                    .size(LabelSize::Small)
+                                    .color(Color::Muted),
+                            ),
                     )
                     .child(open_project_button)
                     .when(!has_title, |this| {

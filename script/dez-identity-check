@@ -569,7 +569,7 @@ reject_pattern crates/agent_ui/src/agent_configuration/manage_profiles_modal.rs 
     'IconName::ZedAssistant' \
     'Dez Agent profile controls still hard-code the upstream Assistant glyph'
 require_multiline_pattern crates/ui/src/components/project_empty_state.rs \
-    'pub fn with_copy.*?pub fn top_aligned.*?ButtonStyle::Filled.*?IconName::FolderOpen.*?Role::Region.*?justify_start\(\)\.pt_8\(\)' \
+    'pub fn with_copy.*?pub fn top_aligned.*?ButtonStyle::Filled.*?IconName::FolderOpen.*?Role::Region.*?justify_start\(\)\.pt_8\(\).*?when\(has_title,.*?w_64\(\)\.gap_2\(\).*?when\(!has_title,.*?w_48\(\)\.gap_1\(\).*?text_center\(\)\.mb_2\(\)' \
     'the shared Workspace recovery state lost its compact hierarchy or accessible region semantics'
 require_multiline_pattern crates/project_panel/src/project_panel.rs \
     'paths::APP_NAME == "Zed".*?with_copy\(.*?"Open a Workspace".*?"Open Workspace…".*?top_aligned\(\)' \
