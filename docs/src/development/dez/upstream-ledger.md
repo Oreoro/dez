@@ -6,18 +6,19 @@ Dez treatment of user-visible changes. Update it during every merge train.
 ## Integration target {#integration-target}
 
 - Source checkpoint: `4cbe99da2263e781f7aa8725e4dc67ea3d05afc3`
-- Integration merge: pending the current two-parent merge commit
+- Integration merge: `6eabc1961e20c684edce44439c95f6d3c22f82a7`
 - Incorporated `upstream/main`:
   `b0f145f4aec671970340a528cb8197181e969e8c`
 - Merge base before integration:
   `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
-- Divergence before integration: 615 Dez commits and 46 upstream commits
+- Current merge base: `b0f145f4aec671970340a528cb8197181e969e8c`
+- Current divergence: 616 Dez commits and 0 upstream commits
 - Latest stable release reference: `v1.12.0`
 - Integration date: 2026-07-24
 
-The merge is being integrated on `agent/v0.0.2-upstream-parity` after the Dez
-source slice was checkpointed. It will retain two explicit parents and will not
-be squashed or rebased.
+The merge was integrated on `agent/v0.0.2-upstream-parity` after the Dez source
+slice was checkpointed. It retains two explicit parents and was not squashed or
+rebased.
 
 ## Integration result {#integration-result}
 

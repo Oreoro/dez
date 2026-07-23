@@ -7,7 +7,8 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 
 On 2026-07-24, the parity branch incorporated upstream target
 `b0f145f4aec671970340a528cb8197181e969e8c` from Dez checkpoint
-`4cbe99da2263e781f7aa8725e4dc67ea3d05afc3`. The locked macOS arm64 build
+`4cbe99da2263e781f7aa8725e4dc67ea3d05afc3` in two-parent merge
+`6eabc1961e20c684edce44439c95f6d3c22f82a7`. The locked macOS arm64 build
 completed for the application and terminal host:
 
 ```sh

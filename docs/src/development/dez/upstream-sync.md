@@ -24,21 +24,22 @@ stable tag as the release-quality compatibility floor.
 Refreshed on 2026-07-24:
 
 - Dez source checkpoint: `4cbe99da2263e781f7aa8725e4dc67ea3d05afc3`
-- integration merge: pending the current two-parent merge commit
+- integration merge: `6eabc1961e20c684edce44439c95f6d3c22f82a7`
 - incorporated `upstream/main`: `b0f145f4aec671970340a528cb8197181e969e8c`
 - merge base before integration:
   `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
-- divergence before integration: 615 Dez commits and 46 upstream commits after
-  the merge base
+- current merge base: `b0f145f4aec671970340a528cb8197181e969e8c`
+- current divergence: 616 Dez commits and 0 upstream commits after the merge
+  base
 - latest stable release reference: `v1.12.0`
 - canonical public repository: `Oreoro/dez`
 - active integration branch: `agent/v0.0.2-upstream-parity`
 - build gate: locked `dez` and `dez-terminal-host` build passed on macOS arm64
 
-The 2026-07-24 train resolved four textual conflicts according to Fork Notes.
-Additional compile-time adaptations were required where upstream tightened GPUI
-accessibility, tooltip lifetime, keybinding, and crate-dependency APIs. The
-exact treatment is in the
+The 2026-07-24 train is a real two-parent merge. It resolved four textual
+conflicts according to Fork Notes. Additional compile-time adaptations were
+required where upstream tightened GPUI accessibility, tooltip lifetime,
+keybinding, and crate-dependency APIs. The exact treatment is in the
 [Upstream Feature Ledger](./upstream-ledger.md).
 
 ## Merge train {#merge-train}
