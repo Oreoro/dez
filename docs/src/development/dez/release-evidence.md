@@ -83,6 +83,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Dez CLI and skill-import guidance source: `2efbf166b7`
 - Frozen workspace lock repair source: `c3dfb7aa79`
 - Callout accessibility compile repair source: `5a25a72f92`
+- Callout stateful-role compile repair source: `42ff77e99c`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -719,11 +720,12 @@ and `paths` edge for `project_panel`; no package version or registry/source
 entry changed. Full `cargo metadata --locked` resolves and the candidate hash
 above records the resulting lockfile.
 
-The consolidated candidate compile then exposed a missing GPUI `Role` import in
-the shared Callout accessibility slice. Commit `5a25a72f92` repairs that compile
-boundary without changing the authored alert/status mapping. The failed build
-stopped before replacing any executable; formatting and identity checks pass
-before resuming the same locked graph.
+The consolidated candidate compile then exposed a missing GPUI `Role` import
+and stateful-element requirement in the shared Callout accessibility slice.
+Commits `5a25a72f92` and `42ff77e99c` import the role and derive a stable
+call-site ID before applying it without changing the authored alert/status
+mapping. The focused `ui` build passes in 2m33s. Both failed full-build attempts
+stopped before replacing any executable.
 
 The corrected `Dez Dev.app` is now registered and launched as launchd child PID
 `85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
@@ -958,7 +960,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `5a25a72f92` or
+visual evidence: the exact bundle must first be rebuilt from `42ff77e99c` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -983,7 +985,7 @@ predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `e28b78ed57`, `a90fae5873`, `f6318ea907`, `9930e86677`, `4a102fc50e`, and
 `933e3f515f`, `2680937952`, `9239006d4b`, `33f7ff5893`, `2fc5226a51`, and
 `cc2509e8b8`, `b909b31d45`, `aab0e5f2f2`, `0ddf84161e`, `2efbf166b7`, and
-`c3dfb7aa79`, and `5a25a72f92`. A rebuild/re-audit
+`c3dfb7aa79`, `5a25a72f92`, and `42ff77e99c`. A rebuild/re-audit
 and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.
