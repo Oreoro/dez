@@ -2007,8 +2007,22 @@ code, all launch gates pass, and known limitations are documented.
   threshold instead of reusing the 380 px detailed-row threshold. The default
   compact rail therefore names Agent Tools, History, and Workspaces; narrower
   rails retain named, tooltip-backed icon mode.
+- **2026-07-23:** Revealed labels need an explicit space budget. Commit
+  `ef35bf40a7` switches the three labeled Session Rail utilities from medium
+  standalone padding to compact utility padding, preserving their full
+  semantics inside the 280 px default footer.
 
 ## Verification {#verification}
+
+Completed for the labeled compact-utility sizing slice:
+
+- `cargo fmt --all -- --check`;
+- Bash syntax and Dez identity checks, including compact-size guards for Agent
+  Tools, History, and Workspaces;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
 
 Completed for the compact Session Rail footer-label slice:
 

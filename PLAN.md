@@ -2141,3 +2141,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   label threshold aligned. Formatting, Bash syntax, identity, locked offline
   metadata, and diff checks pass; no build, test binary, or visual launch was
   performed.
+- 2026-07-23: Made the labeled compact footer fit its own breakpoint in
+  `ef35bf40a7`. Agent Tools, History, and Workspaces now use compact control
+  padding rather than three medium standalone buttons inside the 280 px utility
+  strip. Their labels, small typography, icons, accessible names, tooltips, and
+  actions remain intact. Static guards cover all three controls. Formatting,
+  Bash syntax, identity, locked offline metadata, and diff checks pass; no
+  build, test binary, or visual launch was performed.

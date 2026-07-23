@@ -32,6 +32,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Unified terminal Surface lifecycle language source: `7f8fd167c2`
 - Precise terminal tab identity metadata source: `88948b869a`
 - Self-labeling default Session Rail footer source: `b43503e3fe`
+- Compact labeled Session Rail utility sizing source: `ef35bf40a7`
 - Deduplicated Session Rail footer source: `a9b1a961c0`
 - Unified Session Rail Workspace vocabulary source: `ff91b34a81`
 - Workspace-scoped zero-session creation source: `4fc53b860f`
@@ -1254,7 +1255,9 @@ the later running-app reports, the source advanced through:
   ownership plus Working directory, Process ID, and Session ID labels; and
 - `b43503e3fe`, which keeps Agent Tools, History, and Workspaces visible at the
   default compact Session Rail width while preserving accessible icon mode
-  below it.
+  below it; and
+- `ef35bf40a7`, which gives those three labeled utilities compact padding so
+  they fit the 280 px strip without losing names, icons, or actions.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

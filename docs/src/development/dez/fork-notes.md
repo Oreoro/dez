@@ -480,3 +480,7 @@ defer it.
   supplemental row metadata. The default compact width must keep Agent Tools,
   History, and Workspaces visible; only genuinely narrower rails collapse those
   labels into named, tooltip-backed icons.
+- **2026-07-23: Responsive labels reserve space before they appear.** Controls
+  made visible at a compact breakpoint use compact padding and typography. A
+  breakpoint is incomplete if its newly revealed labels can only fit by
+  clipping, wrapping, or stealing the primary content measure.
