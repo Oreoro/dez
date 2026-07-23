@@ -9730,6 +9730,7 @@ impl Sidebar {
                                         .size(ButtonSize::Medium)
                                         .icon_size(IconSize::Small)
                                         .aria_label("Open Review Brief")
+                                        .aria_keyshortcuts("Shift+V")
                                         .tooltip({
                                             let focus_handle = focus_handle.clone();
                                             move |_window, cx| {
@@ -10203,6 +10204,7 @@ impl Sidebar {
                                     .icon_size(IconSize::Small)
                                     .icon_color(Color::Muted)
                                     .aria_label("Open Review Brief")
+                                    .aria_keyshortcuts("Shift+V")
                                     .tooltip({
                                         let focus_handle = focus_handle.clone();
                                         move |_window, cx| {
@@ -11333,6 +11335,7 @@ impl Sidebar {
                                         .toggle_state(!self.attention_only)
                                         .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                                         .aria_label(all_scope_aria_label)
+                                        .aria_keyshortcuts("Shift+A")
                                         .aria_description("Show every session in the rail")
                                         .tooltip(move |_window, cx| {
                                             Tooltip::for_action_in(
@@ -11356,6 +11359,7 @@ impl Sidebar {
                                         .toggle_state(self.attention_only)
                                         .selected_style(ButtonStyle::Tinted(TintColor::Warning))
                                         .aria_label(attention_scope_aria_label)
+                                        .aria_keyshortcuts("Shift+A")
                                         .aria_description("Show only sessions that need attention")
                                         .tooltip(move |_window, cx| {
                                             Tooltip::for_action_in(

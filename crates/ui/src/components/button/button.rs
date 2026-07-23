@@ -130,6 +130,13 @@ impl Button {
         self
     }
 
+    /// Sets the keyboard shortcut announced by assistive technology without
+    /// adding a visible keybinding label to the button.
+    pub fn aria_keyshortcuts(mut self, keyshortcuts: impl Into<SharedString>) -> Self {
+        self.base = self.base.aria_keyshortcuts(keyshortcuts);
+        self
+    }
+
     /// Sets the supplementary description announced by assistive technology
     /// after the button's name, role, and value.
     pub fn aria_description(mut self, description: impl Into<SharedString>) -> Self {
