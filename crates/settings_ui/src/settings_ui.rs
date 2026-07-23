@@ -1002,6 +1002,7 @@ fn open_settings_editor_with(
         existing_window
             .update(cx, |settings_window, window, cx| {
                 settings_window.original_window = workspace_handle;
+                settings_window.fetch_files(window, cx);
 
                 window.activate_window();
                 callback(settings_window, window, cx);
@@ -6291,6 +6292,7 @@ pub mod test {
             });
             MultiWorkspace::new(workspace, window, cx)
         });
+        let workspace1_handle = cx.window_handle().downcast::<MultiWorkspace>().unwrap();
 
         let (_multi_workspace2, cx) = cx.add_window_view(|window, cx| {
             let workspace = cx.new(|cx| {
@@ -6351,6 +6353,28 @@ pub mod test {
                 unique_project_files.len(),
                 "Should have no duplicate project files, but found duplicates. All files: {:?}",
                 project_files
+            );
+        });
+
+        settings_window.update_in(cx, |settings_window, window, cx| {
+            settings_window.original_window = Some(workspace1_handle);
+            settings_window.fetch_files(window, cx);
+        });
+
+        settings_window.read_with(cx, |settings_window, _| {
+            let worktree_names: Vec<_> = settings_window
+                .worktree_root_dirs
+                .values()
+                .cloned()
+                .collect();
+
+            assert!(worktree_names.iter().any(|name| name == "worktree_a"));
+            assert!(worktree_names.iter().any(|name| name == "worktree_b"));
+            assert!(!worktree_names.iter().any(|name| name == "worktree_c"));
+            assert_eq!(
+                worktree_names.len(),
+                2,
+                "reusing Settings from another window must replace, not merge, project scope"
             );
         });
     }
