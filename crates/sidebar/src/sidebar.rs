@@ -12210,7 +12210,14 @@ impl Sidebar {
 
                         menu = menu
                             .action("Agent Profiles", Box::new(ManageProfiles::default()))
-                            .action("Open Settings", Box::new(OpenSettings))
+                            .action(
+                                agent_session_label(
+                                    APP_NAME,
+                                    "Open Settings",
+                                    "Agent Settings",
+                                ),
+                                Box::new(OpenSettings),
+                            )
                             .separator()
                             .action(
                                 if APP_NAME == "Zed" {

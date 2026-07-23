@@ -174,6 +174,10 @@ impl ThreadSwitcherEntry {
         }
     }
 
+    fn session_type_label(&self, app_name: &str) -> &'static str {
+        session_switcher_entry_type_label(app_name, matches!(self, Self::Terminal(_)))
+    }
+
     #[cfg(test)]
     pub fn thread_id(&self) -> Option<agent_ui::ThreadId> {
         match self {
@@ -225,6 +229,15 @@ fn session_switcher_count(entry_count: usize) -> String {
     match entry_count {
         1 => "1 recent session".to_owned(),
         count => format!("{count} recent sessions"),
+    }
+}
+
+fn session_switcher_entry_type_label(app_name: &str, is_terminal: bool) -> &'static str {
+    match (app_name == "Zed", is_terminal) {
+        (true, false) => "Thread",
+        (true, true) => "Terminal",
+        (false, false) => "Agent Session",
+        (false, true) => "Terminal Session",
     }
 }
 
@@ -466,6 +479,7 @@ impl Render for ThreadSwitcher {
                             &design_system,
                         )
                         .icon(entry.icon())
+                        .actor_label(entry.session_type_label(paths::APP_NAME))
                         .when(entry.is_draft(), |this| {
                             this.icon_color(Color::Custom(
                                 cx.theme().colors().icon_muted.opacity(0.2),
@@ -554,5 +568,14 @@ mod product_copy_tests {
         assert_eq!(session_switcher_title("Zed"), "Thread Switcher");
         assert_eq!(session_switcher_count(1), "1 recent session");
         assert_eq!(session_switcher_count(4), "4 recent sessions");
+        assert_eq!(
+            session_switcher_entry_type_label("Dez", false),
+            "Agent Session"
+        );
+        assert_eq!(
+            session_switcher_entry_type_label("Dez", true),
+            "Terminal Session"
+        );
+        assert_eq!(session_switcher_entry_type_label("Zed", false), "Thread");
     }
 }

@@ -265,6 +265,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     '"Rename Thread", "Rename Agent Session".*?"Archive Thread", "Archive Agent Session".*?"Regenerate Thread Title".*?"Regenerate Agent Session Title".*?"Open Thread as Markdown".*?"Open Agent Session as Markdown"' \
     'Session Rail Agent Session actions can regress to mixed Thread terminology'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    '"Agent Profiles".*?agent_session_label\([[:space:]]*APP_NAME,[[:space:]]*"Open Settings",[[:space:]]*"Agent Settings".*?"Toggle Sidebar".*?"Hide Session Rail"' \
+    'the Session Rail Agent Tools menu can regress to ambiguous Settings or Sidebar destinations'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
     '"agent::RenameSelectedThread".*?"agent::RenameSelectedAgentSession".*?"sidebar::NewThreadInGroup".*?"session_rail::NewAgentSessionInWorkspace".*?"sidebar::ToggleThreadHistory".*?"session_rail::ToggleAgentHistory"' \
     'the Dez Command Palette can regress to Thread terminology for Agent Sessions'
@@ -283,6 +286,9 @@ require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'fn agent_panel_session_label.*?app_name == "Zed".*?upstream_thread_label.*?dez_session_label.*?"Current Thread".*?"Current Agent Session".*?"Regenerate Thread Title".*?"Regenerate Agent Session Title".*?"Open Thread as Markdown".*?"Open Agent Session as Markdown".*?"Settings".*?"Agent Settings".*?"Toggle Sidebar".*?"Toggle Session Rail".*?"New Thread\\u\{2026\}".*?"New Agent Session\\u\{2026\}"' \
     'the Dez Agent pane toolbar and menu can regress to mixed vocabulary or ambiguous destinations'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'fn icon_tooltip.*?agent_panel_session_label\([[:space:]]*paths::APP_NAME,[[:space:]]*"Agent Panel",[[:space:]]*"Agent"' \
+    'the retained Dez Agent control can regress to exposing Panel implementation terminology'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     '"No active native thread to copy".*?"No active built-in Agent Session to copy".*?"Thread copied to clipboard \(base64 encoded\)".*?"Agent Session copied to clipboard \(base64 encoded\)".*?"Open a project to load a thread".*?"Open a Workspace to load an Agent Session".*?"Failed to parse thread data from clipboard".*?"Failed to parse Agent Session data from clipboard".*?"Thread loaded from clipboard".*?"Agent Session loaded from clipboard".*?"No active thread".*?"No active Agent Session".*?"All Sidebar Thread Metadata".*?"All Session Rail Agent Session Metadata"' \
     'Agent clipboard and metadata diagnostics can regress to upstream Thread/Sidebar terminology'
@@ -539,7 +545,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\([[:space:]]*"agent-sidebar-options-menu".*?if labels_visible \{ "Agent Tools" \} else \{ "" \}.*?IconName::Settings.*?aria_label\("Agent Tools and Settings"\).*?header\("Agent Context"\).*?"Hide Session Rail"' \
     'the Session Rail footer can regress to a Robot icon that does not open Agent'
 require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
-    'fn session_switcher_title.*?app_name == "Zed".*?"Thread Switcher".*?"Switch Sessions".*?fn session_switcher_count.*?"1 recent session".*?"\{count\} recent sessions".*?viewport_size\(\)\.width \* 0\.9.*?Role::Dialog.*?aria_label\(title\).*?"session-switcher-header".*?"Release shortcut to open".*?"Choose a session".*?KeyBinding::for_action_in.*?menu::Confirm.*?KeyBinding::for_action_in.*?menu::Cancel' \
+    'fn session_switcher_title.*?app_name == "Zed".*?"Thread Switcher".*?"Switch Sessions".*?fn session_switcher_count.*?"1 recent session".*?"\{count\} recent sessions".*?fn session_switcher_entry_type_label.*?"Thread".*?"Terminal".*?"Agent Session".*?"Terminal Session".*?viewport_size\(\)\.width \* 0\.9.*?Role::Dialog.*?aria_label\(title\).*?"session-switcher-header".*?actor_label\(entry\.session_type_label\(paths::APP_NAME\)\).*?"Release shortcut to open".*?"Choose a session".*?KeyBinding::for_action_in.*?menu::Confirm.*?KeyBinding::for_action_in.*?menu::Cancel' \
     'the keyboard session switcher can regress to an unbounded, unnamed row stack without interaction guidance'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn switcher_selection_for_active_entry.*?ActiveEntry::Thread.*?session_id.*?ThreadSwitcherEntry::Thread.*?switcher_entry\.selection\(\).*?ActiveEntry::Terminal.*?ThreadSwitcherEntry::Terminal.*?terminal_id.*?switcher_entry\.selection\(\).*?let original_selection = self\.switcher_selection_for_active_entry.*?ThreadSwitcherEvent::Dismissed.*?preview_switcher_selection\(selection' \

@@ -5469,7 +5469,11 @@ impl Panel for AgentPanel {
     }
 
     fn icon_tooltip(&self, _window: &Window, _cx: &App) -> Option<&'static str> {
-        Some("Agent Panel")
+        Some(agent_panel_session_label(
+            paths::APP_NAME,
+            "Agent Panel",
+            "Agent",
+        ))
     }
 
     fn toggle_action(&self) -> Box<dyn Action> {
