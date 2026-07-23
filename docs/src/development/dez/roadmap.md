@@ -1595,11 +1595,12 @@ code, all launch gates pass, and known limitations are documented.
       workflow set. Commit `ed5750c0ce` moves slot/JSON/named-layout storage
       detail behind **Manage Saved Layouts…**, leaving Cycle, **Save Layout
       As…**, and Restore Previous as concise immediate actions. Commit
-      `1364249bc5` exposes those controls through Dez's always-reachable
-      **Workspace Menu** without reviving inherited account or organization
-      chrome. Advanced actions remain registered for deliberate workflows.
-      Static identity, formatting, locked offline metadata, and diff checks
-      pass; rendered menu height/selection/manager proof remains deferred.
+      `df8864833d` exposes those controls through the active Workspace's
+      persistent **Workspace Options** control in the Session Rail without
+      adding global chrome or changing official Zed's account behavior.
+      Advanced actions remain registered for deliberate workflows. Static
+      identity, formatting, locked offline metadata, and diff checks pass;
+      rendered menu height/selection/manager proof remains deferred.
 - [x] 2026-07-23: Restore cancelled Session Switcher previews through their
       original source. Commit `67a8152db7` preserves center Workspace items,
       durable Host Sessions, retained compatibility terminals, and Agent

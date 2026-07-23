@@ -1174,9 +1174,9 @@ the later running-app reports, the source advanced through:
 - `cdedb6a23a`, `75fb4bc5c9`, and `ed5750c0ce`, which remove Canvas Layout
   diagnostics and prefix documentation, curate six v0.0.1 workflow presets,
   and consolidate saved-layout storage behind **Manage Saved Layouts…**; and
-- `1364249bc5`, which makes the curated control reachable as Dez's
-  **Workspace Menu** while keeping official Zed account and organization
-  sections gated to official Zed.
+- `df8864833d`, which makes the curated submenu reachable through the active
+  Workspace's persistent **Workspace Options** control without adding another
+  global chrome row or changing official Zed account behavior.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

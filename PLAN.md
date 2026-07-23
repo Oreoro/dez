@@ -1943,10 +1943,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   uncurated matrix, operations, specialty, and generic geometry catalogue from
   the public menu. Commit `ed5750c0ce` consolidates saved-layout storage behind
   **Save Layout As…** and **Manage Saved Layouts…**, retaining only Cycle and
-  Restore Previous as immediate actions. Commit `1364249bc5` mounts that
-  curated control as Dez's always-reachable **Workspace Menu** without exposing
-  official Zed account, organization, sign-in, or sign-out chrome. The
-  underlying advanced actions remain available to deliberate workflows without
-  dominating routine UI.
+  Restore Previous as immediate actions. Commit `df8864833d` places that
+  curated submenu on the active Workspace's existing, persistent **Workspace
+  Options** control in the Session Rail. This avoids another global chrome row
+  and leaves official Zed account, organization, sign-in, and sign-out behavior
+  untouched. The underlying advanced actions remain available to deliberate
+  workflows without dominating routine UI.
   Formatting, locked offline metadata, identity, and diff checks pass; rendered
   menu height, selection, and saved-layout-manager proof remain deferred.
