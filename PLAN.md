@@ -526,7 +526,10 @@ with new labels.
       subscription CTA. Commit `ad59a60926` also hides five Session Rail
       settings whose branch/worktree/project/onboarding surfaces are removed in
       Dez while preserving their compatibility schema; the app-wide audit
-      remains open.
+      remains open. Commit `e969abda4a` also removes inherited collaboration,
+      feedback, account, docs, status, and merchandise commands from Dez's
+      palette while retaining explicit upstream documentation/repository links
+      in Help.
 - [x] Replace remaining reachable stale Zed/Superzed product copy while
       preserving
       necessary compatibility, file-format, upstream attribution, and
@@ -543,6 +546,11 @@ with new labels.
       makes copied Settings links use the active Dez release-channel scheme
       while preserving legacy input compatibility. Commit `526218a972` removes
       the upstream Zed Assistant glyph from Codex rows and the session switcher.
+      Commit `e969abda4a` closes a missed unsupported-GPU boundary: the dialog
+      now identifies Dez, uses `DEZ_ALLOW_EMULATED_GPU`, attributes the linked
+      upstream guide, and replaces placeholder copy. Database-load recovery now
+      explains that files are untouched, names the state at risk, and opens
+      local logs instead of filing an upstream Zed issue.
 
 #### Onboarding, settings, and accessibility
 
@@ -1256,3 +1264,11 @@ Notes decision:
   use the product's outward language. Official Zed retains Project copy through
   explicit branches; internal actions and schema remain compatible. Formatting,
   Bash syntax, diff, and identity checks pass; compile/render proof is deferred.
+- 2026-07-23: Removed the remaining reachable upstream recovery/promotional
+  traps in `e969abda4a`. Dez's unsupported-GPU dialog uses Dez identity and
+  override environment, explicitly attributes the upstream rendering guide,
+  and avoids placeholder copy. The Command Palette hides inherited cloud,
+  feedback, account, docs, status, and merchandise actions; Help retains
+  explicit upstream references. Database failure now states file safety and
+  Session/Workspace risk and opens local logs. Static gates pass; compile and
+  interaction proof remain deferred.

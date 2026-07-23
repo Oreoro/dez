@@ -151,6 +151,13 @@ MCP/external-agent empty states, scoped Settings, status controls, and the full
 Files settings section. Official Zed branches and internal schema/action names
 remain compatible. Static gates pass; compilation and render proof are deferred.
 
+Commit `e969abda4a` removes reachable upstream recovery and promotion traps:
+the GPU dialog uses Dez identity and `DEZ_ALLOW_EMULATED_GPU`, the palette hides
+inherited collaboration/feedback/account/docs/status/merchandise commands, and
+database failure explains local safety and opens logs instead of an upstream
+issue form. Explicit upstream Help links remain. Static gates pass; compilation
+and interaction proof are deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -925,6 +932,11 @@ code, all launch gates pass, and known limitations are documented.
       evidence, skills, scoped Settings, status, and Files configuration UI.
       Official Zed and internal compatibility names remain intact. Identity and
       formatting gates pass; compile/render proof remains consolidated.
+- [x] 2026-07-23: Remove stale upstream recovery and promotion actions. Commit
+      `e969abda4a` fixes the GPU warning identity/override, hides inherited
+      palette actions, and replaces upstream issue filing in database recovery
+      with truthful local diagnostics. Authored assertions and identity guards
+      cover the product boundary; compiled interaction proof remains deferred.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the
