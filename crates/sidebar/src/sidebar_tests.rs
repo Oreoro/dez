@@ -72,6 +72,24 @@ fn session_rail_render_width_matches_reserved_width_for_each_mode() {
 }
 
 #[test]
+fn compact_session_rows_prioritize_actions_and_evidence_over_recency() {
+    assert!(session_rail_row_is_compact(px(300.0)));
+    assert!(!session_rail_row_is_compact(DETAILED_MIN_WIDTH));
+    assert!(
+        !session_rail_recency_visible(px(300.0), true),
+        "compact rows must keep stronger change or check evidence instead of timestamp noise"
+    );
+    assert!(
+        session_rail_recency_visible(px(300.0), false),
+        "recency remains useful when no stronger metadata competes for width"
+    );
+    assert!(
+        session_rail_recency_visible(DETAILED_MIN_WIDTH, true),
+        "detailed rows have enough room for evidence and recency"
+    );
+}
+
+#[test]
 fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
     assert!(!session_scope_controls_visible(0));
     assert!(!session_search_visible(0, false));

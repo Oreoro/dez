@@ -540,6 +540,45 @@ impl RenderOnce for ThreadItem {
             accessibility_label.push_str(&format!(", {removed} lines removed"));
         }
 
+        let tooltip_title = self.title.clone();
+        let mut tooltip_metadata = [
+            self.project_name.as_ref(),
+            self.actor_label.as_ref(),
+            self.state_label.as_ref(),
+            self.host_label.as_ref(),
+            self.evidence_label.as_ref(),
+        ]
+        .into_iter()
+        .flatten()
+        .map(|label| label.to_string())
+        .collect::<Vec<_>>();
+        if self.state_label.is_none() {
+            match self.status {
+                AgentThreadStatus::Running => tooltip_metadata.push("Running".to_owned()),
+                AgentThreadStatus::WaitingForConfirmation => {
+                    tooltip_metadata.push("Waiting for permission".to_owned())
+                }
+                AgentThreadStatus::Error => tooltip_metadata.push("Error".to_owned()),
+                AgentThreadStatus::Completed => {}
+            }
+        }
+        if self.notified {
+            tooltip_metadata.push("Unread activity".to_owned());
+        }
+        if self.is_remote {
+            tooltip_metadata.push("Remote host".to_owned());
+        }
+        if self.archived {
+            tooltip_metadata.push("Archived".to_owned());
+        }
+        if let Some(added) = self.added {
+            tooltip_metadata.push(format!("+{added}"));
+        }
+        if let Some(removed) = self.removed {
+            tooltip_metadata.push(format!("−{removed}"));
+        }
+        let tooltip_metadata = tooltip_metadata.into_iter().join(" · ");
+
         let title = self.title;
         let highlight_positions = self.highlight_positions;
 
@@ -599,10 +638,7 @@ impl RenderOnce for ThreadItem {
         let has_timestamp = !self.timestamp.is_empty();
         let timestamp = self.timestamp;
 
-        let show_tooltip = matches!(
-            self.status,
-            AgentThreadStatus::Error | AgentThreadStatus::WaitingForConfirmation
-        );
+        let show_tooltip = self.is_truncated || !tooltip_metadata.is_empty();
 
         let linked_worktrees: Vec<ThreadItemWorktreeInfo> = self
             .worktrees
@@ -886,27 +922,21 @@ impl RenderOnce for ThreadItem {
                 )
             })
             .when(show_tooltip, |this| {
-                let status = self.status;
-                this.tooltip(Tooltip::element(move |_, _| match status {
-                    AgentThreadStatus::Error => h_flex()
+                this.tooltip(Tooltip::element(move |_, _| {
+                    v_flex()
+                        .min_w(px(220.0))
+                        .max_w(px(420.0))
                         .gap_1()
-                        .child(
-                            Icon::new(IconName::Close)
-                                .size(IconSize::Small)
-                                .color(Color::Error),
-                        )
-                        .child(Label::new("Thread has an Error"))
-                        .into_any_element(),
-                    AgentThreadStatus::WaitingForConfirmation => h_flex()
-                        .gap_1()
-                        .child(
-                            Icon::new(IconName::Warning)
-                                .size(IconSize::Small)
-                                .color(Color::Warning),
-                        )
-                        .child(Label::new("Waiting for Permission"))
-                        .into_any_element(),
-                    _ => gpui::Empty.into_any_element(),
+                        .whitespace_normal()
+                        .child(Label::new(tooltip_title.clone()))
+                        .when(!tooltip_metadata.is_empty(), |this| {
+                            this.child(
+                                Label::new(tooltip_metadata.clone())
+                                    .size(LabelSize::Small)
+                                    .color(Color::Muted),
+                            )
+                        })
+                        .into_any_element()
                 }))
             })
             .when_some(self.on_click, |this, on_click| this.on_click(on_click))

@@ -344,6 +344,15 @@ require_pattern crates/sidebar/src/sidebar.rs \
     'session_overview_create_action_visible\(self\.contents\.session_count\)' \
     'the zero-session Workspace state can regress to duplicating its creation action'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn session_rail_row_is_compact.*?width < DETAILED_MIN_WIDTH.*?fn session_rail_recency_visible' \
+    'compact Session rows do not have an explicit metadata hierarchy'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    '\.when\(!compact_row.*?rename_button.*?\.when\(!compact_row && has_changes' \
+    'compact native-agent rows can regress to covering titles with secondary actions'
+require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
+    'tooltip_title = self\.title\.clone.*?tooltip_metadata.*?show_tooltip = self\.is_truncated.*?whitespace_normal' \
+    'truncated Session rows can hide their full identity and state'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'if APP_NAME == "Zed" \{.*?channels_with_threads\(cx\)' \
     'Dez still scans inherited Zed release channels for thread migration'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \

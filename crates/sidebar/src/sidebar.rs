@@ -244,6 +244,14 @@ fn session_rail_labels_visible(design_system: &DesignSystemSettings) -> bool {
     design_system.show_contextual_labels()
 }
 
+fn session_rail_row_is_compact(width: Pixels) -> bool {
+    width < DETAILED_MIN_WIDTH
+}
+
+fn session_rail_recency_visible(width: Pixels, has_priority_metadata: bool) -> bool {
+    !session_rail_row_is_compact(width) || !has_priority_metadata
+}
+
 fn session_overview_status_label(
     session_count: usize,
     attention_count: usize,
@@ -9477,18 +9485,21 @@ impl Sidebar {
         let color = cx.theme().colors();
         let sidebar_bg = color.editor_background;
         let session_rail_settings = SessionRailSettings::get_global(cx);
+        let rail_width = session_rail_settings.width(self.width);
+        let compact_row = session_rail_row_is_compact(rail_width);
         let design_system = DesignSystemSettings::get_global(cx);
         let labels_visible = session_rail_labels_visible(&design_system);
         let show_agent_attention =
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
 
-        let timestamp: SharedString = if is_empty_draft {
-            SharedString::default()
-        } else if !session_rail_settings.show_latest_attention_metadata {
-            SharedString::default()
-        } else {
-            format_history_entry_timestamp(Self::thread_display_time(&thread.metadata)).into()
-        };
+        let timestamp: SharedString =
+            if is_empty_draft || !session_rail_recency_visible(rail_width, has_changes) {
+                SharedString::default()
+            } else if !session_rail_settings.show_latest_attention_metadata {
+                SharedString::default()
+            } else {
+                format_history_entry_timestamp(Self::thread_display_time(&thread.metadata)).into()
+            };
 
         let is_remote = thread.workspace.is_remote(cx);
 
@@ -9694,8 +9705,8 @@ impl Sidebar {
                     this.action_slot(
                         h_flex()
                             .gap_0p5()
-                            .child(rename_button)
-                            .when(has_changes, |this| {
+                            .when(!compact_row, |this| this.child(rename_button))
+                            .when(!compact_row && has_changes, |this| {
                                 let metadata = thread.metadata.clone();
                                 let owner_workspace = thread.workspace.clone();
                                 this.child(
@@ -10036,6 +10047,8 @@ impl Sidebar {
         };
         let focus_handle = self.focus_handle.clone();
         let session_rail_settings = SessionRailSettings::get_global(cx);
+        let rail_width = session_rail_settings.width(self.width);
+        let has_evidence = evidence_label.is_some();
         let worktrees = if session_rail_settings.show_worktree_metadata {
             apply_worktree_label_mode(
                 terminal.worktrees.clone(),
@@ -10161,10 +10174,10 @@ impl Sidebar {
                 this.evidence(label, status)
             })
             .timestamp(
-                session_rail_settings
-                    .show_latest_attention_metadata
-                    .then_some(timestamp)
-                    .unwrap_or_default(),
+                (session_rail_settings.show_latest_attention_metadata
+                    && session_rail_recency_visible(rail_width, has_evidence))
+                .then_some(timestamp)
+                .unwrap_or_default(),
             )
             .labels_visible(labels_visible)
             .notified(
