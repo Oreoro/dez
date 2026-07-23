@@ -10,13 +10,8 @@ use gpui::{
 use std::sync::Arc;
 use ui::{Icon, IconSize, Label, LabelCommon, prelude::*};
 
-pub const PROJECT_TOOL_PANEL_KEYS: &[&str] = &[
-    "ProjectPanel",
-    "GitPanel",
-    "OutlinePanel",
-    "DebugPanel",
-    "CollaborationPanel",
-];
+pub const PROJECT_TOOL_PANEL_KEYS: &[&str] =
+    &["ProjectPanel", "GitPanel", "OutlinePanel", "DebugPanel"];
 
 const AGENT_PANEL_KEY: &str = "agent_panel";
 
@@ -32,7 +27,7 @@ impl PanelPaneKind {
     }
 
     fn for_panel_key_and_app(panel_key: &str, app_name: &str) -> Option<Self> {
-        if panel_key == "TerminalPanel" {
+        if matches!(panel_key, "TerminalPanel" | "CollaborationPanel") {
             (app_name == "Zed").then_some(Self::Project)
         } else if PROJECT_TOOL_PANEL_KEYS.contains(&panel_key) {
             Some(Self::Project)
@@ -184,6 +179,16 @@ mod tests {
             PanelPaneKind::for_panel_key_and_app("TerminalPanel", "Zed"),
             Some(PanelPaneKind::Project),
             "official Zed keeps its inherited Terminal Panel behavior"
+        );
+        assert_eq!(
+            PanelPaneKind::for_panel_key_and_app("CollaborationPanel", "Dez"),
+            None,
+            "Dez Workspace Tools must not regain the removed Collaboration surface"
+        );
+        assert_eq!(
+            PanelPaneKind::for_panel_key_and_app("CollaborationPanel", "Zed"),
+            Some(PanelPaneKind::Project),
+            "official Zed keeps its inherited Collaboration Panel behavior"
         );
         assert_eq!(
             PanelPaneKind::for_panel_key("agent_panel"),
