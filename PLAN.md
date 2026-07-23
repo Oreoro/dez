@@ -430,7 +430,11 @@ with new labels.
       rendered resize/collapse audit remains. Commit `1ebb7c79d4` raises the
       compact cap from 240 px to 280 px and the resize floor from 200 px to
       240 px so the visible labels and actions are no longer designed into a
-      crushed column. The focused `sidebar` source check passes.
+      crushed column. The focused `sidebar` source check passes. Commit
+      `56f7c46db6` keeps the persistent terminal header useful without adding
+      another status bar: its tooltip now always identifies lifecycle,
+      ownership, folder, and available process or Session details, including
+      durable terminals that have no local PID.
 - [ ] Keep fixed shell chrome bounded under real project names and narrow
       widths. Commit `0d8496969f` gives the project identity and Git controls
       explicit shrinkable, overflow-hidden regions so their one-line labels do
@@ -465,7 +469,9 @@ with new labels.
       preserve meaning in low contrast and for color-vision deficiencies.
       Commit `7893762cd5` closes the restored-attention gap: active attention is
       included in the state label even when no live structured adapter snapshot
-      exists. The app-wide audit remains open.
+      exists. Commit `56f7c46db6` gives terminal panes a dynamic accessible name
+      containing their title and textual lifecycle state, so their meaning does
+      not depend on the tab icon color. The app-wide audit remains open.
 - [ ] Align density, spacing, radii, borders, typography, hover, focus,
       selection, and animation across panes, Canvas, rails, cards, callouts,
       menus, settings, and recovery surfaces. Commit `798df9ec04` replaces
@@ -513,7 +519,12 @@ with new labels.
       operational toast instead of failing only in logs. Commit `633dcc4bec`
       also renames the broader group action from ambiguous **Remove** to
       **Remove Workspace from Window**, separated from per-worktree closure.
-      The app-wide audit remains open.
+      Commit `56f7c46db6` applies the same distinction inside the terminal:
+      closing a hosted surface is labeled **Detach Terminal**, while
+      **Terminate Terminal Process** remains a separate destructive action.
+      Commit `dd2459eef9` derives that label from the terminal's backing type
+      rather than transient Host registration, preserving detach semantics
+      during reconnection. The app-wide audit remains open.
 - [ ] Use progressive disclosure: the default view communicates current work;
       details reveal provenance, capabilities, protocol, and diagnostics only
       when requested. Commit `bd36afd3f4` keeps the default evidence summary
@@ -528,7 +539,10 @@ with new labels.
       Rail now composes structured work state with non-live transport state so
       Running cannot conceal Detached, Reconnecting, Missing, Incompatible, or
       Exited; Review Briefs prioritize exceptional transport truth and state the
-      resulting evidence risk. Rendered inspection remains open.
+      resulting evidence risk. Commit `56f7c46db6` adds explicit Active,
+      Running, Completed, Failed, Exited, Status unknown, and Unavailable
+      terminal-header states with unavailable truth taking priority. Rendered
+      inspection remains open.
 - [ ] Every error states what happened, what Dez did not do, whether work is
       safe, and the next valid action. Center/panel terminal launch failures now
       state that no process started and direct users through settings to New

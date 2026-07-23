@@ -1339,6 +1339,16 @@ code, all launch gates pass, and known limitations are documented.
       release-channel migration work in Dez, and routes native-agent marks
       through one official-Zed-compatible icon policy. A focused icon-policy
       test is authored, and the static identity guard covers each boundary.
+- [x] 2026-07-23: Make the persistent terminal header identify real lifecycle
+      and ownership. Commit `56f7c46db6` replaces the local-PID-only tooltip
+      with a bounded identity card that also works for durable hosted Sessions,
+      adds textual task/process state to the terminal accessibility name,
+      labels hosted closure as Detach, preserves termination as a separate
+      destructive action, and aligns the terminal context menu with Dez's
+      center-first creation contract. Focused state and label assertions are
+      authored; compilation and rendered proof remain deferred. Commit
+      `dd2459eef9` then bases hosted ownership on the terminal backing type so
+      reconnecting Sessions cannot regress to local close terminology.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

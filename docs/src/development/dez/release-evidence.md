@@ -1019,7 +1019,12 @@ the later running-app reports, the source advanced through:
 - `dcd38968d3`, which makes unqualified terminal creation center-first, names
   the legacy terminal panel explicitly, suppresses inherited Zed
   release-channel migration in Dez, and centralizes official-Zed-compatible
-  native-agent icon identity.
+  native-agent icon identity; and
+- `56f7c46db6`, which makes terminal identity available without a local PID,
+  projects truthful lifecycle text into the tab tooltip and accessibility
+  label, calls hosted closure Detach, and keeps termination separate; and
+- `dd2459eef9`, which preserves hosted identity and detach semantics through
+  transient Host registration changes by reading the terminal backing type.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
