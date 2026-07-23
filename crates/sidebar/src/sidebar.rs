@@ -2133,6 +2133,22 @@ impl WorkspaceMenuWorktreeLabel {
     }
 }
 
+fn workspace_menu_worktree_accessible_name(labels: &[WorkspaceMenuWorktreeLabel]) -> String {
+    labels
+        .iter()
+        .map(|label| match &label.secondary_name {
+            Some(secondary_name) => {
+                format!(
+                    "{} / {}",
+                    label.primary_name.as_ref(),
+                    secondary_name.as_ref()
+                )
+            }
+            None => label.primary_name.as_ref().to_owned(),
+        })
+        .join(" • ")
+}
+
 fn workspace_menu_worktree_labels(
     workspace: &Entity<Workspace>,
     cx: &App,
@@ -5034,6 +5050,16 @@ impl Sidebar {
                     .iter()
                     .map(|workspace| active_workspace.as_ref() == Some(workspace))
                     .collect();
+                let closable_workspaces: Vec<_> = open_workspaces
+                    .iter()
+                    .cloned()
+                    .zip(workspace_labels.iter())
+                    .zip(workspace_is_active.iter().copied())
+                    .filter_map(|((workspace, labels), is_active_workspace)| {
+                        (!is_active_workspace)
+                            .then(|| (workspace, workspace_menu_worktree_accessible_name(labels)))
+                    })
+                    .collect();
 
                 let menu =
                     ContextMenu::build_persistent(window, cx, move |menu, _window, menu_cx| {
@@ -5277,6 +5303,29 @@ impl Sidebar {
                             menu
                         };
 
+                        let menu = menu.when(!closable_workspaces.is_empty(), |this| {
+                            let closable_workspaces = closable_workspaces.clone();
+                            let multi_workspace = multi_workspace.clone();
+                            this.separator().submenu(
+                                "Close Worktree from Window…",
+                                move |mut submenu, _window, _cx| {
+                                    for (workspace, label) in closable_workspaces.iter().cloned() {
+                                        let multi_workspace = multi_workspace.clone();
+                                        submenu = submenu.entry(label, None, move |window, cx| {
+                                            multi_workspace
+                                                .update(cx, |multi_workspace, cx| {
+                                                    multi_workspace
+                                                        .close_workspace(&workspace, window, cx)
+                                                        .detach_and_log_err(cx);
+                                                })
+                                                .ok();
+                                        });
+                                    }
+                                    submenu
+                                },
+                            )
+                        });
+
                         let menu = menu.when(show_reorder_entries, |this| {
                             let move_up_multi_workspace = multi_workspace.clone();
                             let move_up_key = project_group_key.clone();
@@ -5318,16 +5367,20 @@ impl Sidebar {
 
                         let project_group_key = project_group_key.clone();
                         let remove_multi_workspace = multi_workspace.clone();
-                        menu.separator().entry("Remove", None, move |window, cx| {
-                            remove_multi_workspace
-                                .update(cx, |multi_workspace, cx| {
-                                    multi_workspace
-                                        .remove_project_group(&project_group_key, window, cx)
-                                        .detach_and_log_err(cx);
-                                })
-                                .ok();
-                            weak_menu.update(cx, |_, cx| cx.emit(DismissEvent)).ok();
-                        })
+                        menu.separator().entry(
+                            "Remove Workspace from Window",
+                            None,
+                            move |window, cx| {
+                                remove_multi_workspace
+                                    .update(cx, |multi_workspace, cx| {
+                                        multi_workspace
+                                            .remove_project_group(&project_group_key, window, cx)
+                                            .detach_and_log_err(cx);
+                                    })
+                                    .ok();
+                                weak_menu.update(cx, |_, cx| cx.emit(DismissEvent)).ok();
+                            },
+                        )
                     });
 
                 let this = this.clone();

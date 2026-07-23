@@ -1809,6 +1809,27 @@ fn session_rail_default_creation_is_terminal_first() {
     assert_eq!(default_new_session_target(), NewEntryTarget::Terminal);
 }
 
+#[test]
+fn worktree_menu_accessible_name_preserves_multi_root_scope() {
+    let labels = [
+        WorkspaceMenuWorktreeLabel {
+            icon: Some(IconName::GitWorktree),
+            primary_name: "api".into(),
+            secondary_name: Some("feature/auth".into()),
+        },
+        WorkspaceMenuWorktreeLabel {
+            icon: None,
+            primary_name: "docs".into(),
+            secondary_name: None,
+        },
+    ];
+
+    assert_eq!(
+        workspace_menu_worktree_accessible_name(&labels),
+        "api / feature/auth • docs"
+    );
+}
+
 #[gpui::test]
 async fn test_selection_clamps_after_entry_removal(cx: &mut TestAppContext) {
     let project = init_test_project("/my-project", cx).await;
