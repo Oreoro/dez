@@ -566,8 +566,11 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn create_new_terminal.*?multi_workspace\.activate\(workspace\.clone\(\).*?workspace_focus\.dispatch_action\(&NewCenterTerminal::default\(\)' \
     'Workspace-scoped Session Rail actions can regress to opening inherited Agent terminal threads instead of main-area terminals'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn workspace_options_action_persistent.*?is_active \|\| is_menu_open.*?aria_label\("Workspace Options"\).*?Tooltip::text\("Workspace Options"\).*?!workspace_options_action_persistent\(is_active, is_menu_open\)' \
-    'the active Workspace options menu can regress to an unlabeled hover-only control'
+    'fn workspace_new_terminal_control_label.*?"New Terminal in \{workspace_name\}".*?fn workspace_options_control_label.*?"Workspace Options for \{workspace_name\}".*?render_new_session_button.*?workspace_name.*?aria_label\(new_terminal_label\.clone\(\)\).*?!workspace_new_terminal_action_persistent\(is_active, is_menu_open\).*?render_project_header_ellipsis_menu.*?workspace_name.*?aria_label\(workspace_options_label\.clone\(\)\).*?!workspace_options_action_persistent\(is_active, is_menu_open\)' \
+    'Workspace header controls can regress to internal IDs, ambiguous labels, or hover-only access'
+reject_pattern crates/sidebar/src/sidebar.rs \
+    'group_name\.as_ref\(\)' \
+    'a Workspace header control exposes its internal hover-group ID as user-facing copy'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'menu\.when\(is_active.*?submenu\("Canvas Layout".*?"Full".*?"Agent Control".*?"Focus Editor".*?"Code, Run, Observe".*?"Review".*?"Debug".*?"Cycle Layout".*?"Save Layout As…".*?"Manage Saved Layouts…".*?"Restore Previous Layout"' \
     'the active Workspace Options menu can lose its curated Canvas workflow controls'

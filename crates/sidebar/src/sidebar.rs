@@ -383,6 +383,14 @@ fn workspace_header_accessibility_label(
     label
 }
 
+fn workspace_new_terminal_control_label(workspace_name: &str) -> String {
+    format!("New Terminal in {workspace_name}")
+}
+
+fn workspace_options_control_label(workspace_name: &str) -> String {
+    format!("Workspace Options for {workspace_name}")
+}
+
 fn merge_unambiguous_branch(
     branches: &mut HashMap<PathBuf, SharedString>,
     ambiguous_paths: &mut HashSet<PathBuf>,
@@ -1034,6 +1042,25 @@ fn terminal_row_owner_label(has_session_ref: bool, is_remote: bool) -> &'static 
         "Remote"
     } else {
         "Local"
+    }
+}
+
+#[cfg(test)]
+mod workspace_header_label_tests {
+    use super::*;
+
+    #[test]
+    fn workspace_controls_name_their_actual_workspace() {
+        assert_eq!(
+            workspace_new_terminal_control_label("compiler"),
+            "New Terminal in compiler"
+        );
+        assert_eq!(
+            workspace_options_control_label("compiler"),
+            "Workspace Options for compiler"
+        );
+        assert!(!workspace_new_terminal_control_label("compiler").contains("header-group"));
+        assert!(!workspace_options_control_label("compiler").contains("header-group"));
     }
 }
 
@@ -4802,6 +4829,7 @@ impl Sidebar {
                         id_prefix,
                         key,
                         &group_name,
+                        &workspace_name,
                         is_active,
                         cx,
                     ))
@@ -4812,6 +4840,7 @@ impl Sidebar {
                         is_active,
                         has_threads,
                         &group_name,
+                        &workspace_name,
                         cx,
                     ))
                     .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
@@ -4920,6 +4949,7 @@ impl Sidebar {
         id_prefix: &str,
         key: &ProjectGroupKey,
         group_name: &SharedString,
+        workspace_name: &SharedString,
         is_active: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
@@ -4931,6 +4961,8 @@ impl Sidebar {
             .cloned()
             .unwrap_or_default();
         let is_menu_open = menu_handle.is_deployed();
+        let new_terminal_label =
+            SharedString::from(workspace_new_terminal_control_label(workspace_name));
 
         let button = IconButton::new(
             SharedString::from(format!("{id_prefix}workspace-new-session-{ix}")),
@@ -4939,10 +4971,7 @@ impl Sidebar {
         .size(ButtonSize::Medium)
         .selected_style(ButtonStyle::Tinted(TintColor::Accent))
         .icon_size(IconSize::Small)
-        .aria_label(SharedString::from(format!(
-            "New Terminal in {}",
-            group_name.as_ref()
-        )))
+        .aria_label(new_terminal_label.clone())
         .when(
             !workspace_new_terminal_action_persistent(is_active, is_menu_open),
             |this| this.visible_on_hover(group_name),
@@ -4956,10 +4985,11 @@ impl Sidebar {
 
         if open_workspaces.is_empty() {
             let key = key.clone();
+            let new_terminal_label = new_terminal_label.clone();
             return button
                 .tooltip(move |_, cx| {
                     Tooltip::for_action_in(
-                        "New Terminal in This Workspace",
+                        new_terminal_label.clone(),
                         &NewSessionInGroup,
                         &focus_handle,
                         cx,
@@ -4984,6 +5014,7 @@ impl Sidebar {
 
         let this = cx.weak_entity();
         let key = key.clone();
+        let new_terminal_tooltip = new_terminal_label.clone();
 
         PopoverMenu::new(SharedString::from(format!(
             "{id_prefix}workspace-new-session-menu-{ix}"
@@ -4991,7 +5022,7 @@ impl Sidebar {
         .with_handle(menu_handle)
         .trigger_with_tooltip(button, move |_, cx| {
             Tooltip::for_action_in(
-                "New Terminal in This Workspace",
+                new_terminal_tooltip.clone(),
                 &NewSessionInGroup,
                 &focus_handle,
                 cx,
@@ -5232,6 +5263,7 @@ impl Sidebar {
         is_active: bool,
         has_threads: bool,
         group_name: &SharedString,
+        workspace_name: &SharedString,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let multi_workspace = self.multi_workspace.clone();
@@ -5252,6 +5284,8 @@ impl Sidebar {
             .cloned()
             .unwrap_or_default();
         let is_menu_open = menu_handle.is_deployed();
+        let workspace_options_label =
+            SharedString::from(workspace_options_control_label(workspace_name));
 
         PopoverMenu::new(format!("{id_prefix}project-header-menu-{ix}"))
             .with_handle(menu_handle)
@@ -5260,8 +5294,8 @@ impl Sidebar {
                     .size(ButtonSize::Medium)
                     .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                     .icon_size(IconSize::Small)
-                    .aria_label("Workspace Options")
-                    .tooltip(Tooltip::text("Workspace Options"))
+                    .aria_label(workspace_options_label.clone())
+                    .tooltip(Tooltip::text(workspace_options_label))
                     .when(
                         !workspace_options_action_persistent(is_active, is_menu_open),
                         |el| el.visible_on_hover(group_name),
