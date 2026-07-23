@@ -1267,6 +1267,9 @@ the later running-app reports, the source advanced through:
 - `5e6c925fb5`, which removes the remaining hard-coded Thread vocabulary from
   live Dez Agent Session context, edit, feedback, and Markdown export controls
   while preserving official Zed and compatible internal syntax.
+- `7fbad3934e`, which guards the existing terminal-specific single-tab header
+  override so shell-emitted prompt status or artwork cannot visually replace
+  the Terminal Surface identity.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

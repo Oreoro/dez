@@ -502,3 +502,8 @@ defer it.
   history name Agent Sessions throughout Dez. Compatible internal Thread types,
   persistence keys, telemetry events, and `@thread` insertion syntax may
   remain. Official Zed keeps its upstream Thread vocabulary.
+- **2026-07-23: Terminal output is not application chrome.** Dez does not edit,
+  suppress, or reinterpret a shell prompt's escape-sequence output, including
+  prompt status, clocks, or artwork. Terminal Session identity and lifecycle
+  remain visible outside the PTY grid through the Surface tab header, even when
+  the general single-tab auto-hide preference is enabled.

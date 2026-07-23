@@ -2308,6 +2308,20 @@ Completed for the remaining live Agent Session terminology slice:
 - locked offline Cargo metadata and `git diff --check`;
 - no Rust compile, test, alternate binary launch, or live interaction claim.
 
+Completed for the terminal Surface composition audit:
+
+- confirmed the terminal renderer adds no decorative mascot or floating
+  success/time badge; those screenshot elements are shell-emitted PTY content;
+- preserved the existing terminal-specific override that keeps the Surface tab
+  header visible under single-tab auto-hide;
+- added identity guards for the Item opt-in contract, pane auto-hide policy,
+  and Terminal override;
+- Bash syntax and `./script/dez-identity-check`;
+- `cargo fmt --all -- --check`, locked offline Cargo metadata, and
+  `git diff --check`;
+- no terminal output was altered and no build, test binary, alternate binary,
+  or visual launch was performed.
+
 Completed for the first helper-process source slice:
 
 - new crate instructions and a rollbackable `dez_terminal_host` workspace

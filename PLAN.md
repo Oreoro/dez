@@ -2176,3 +2176,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   identity guard covers all four surfaces. Formatting, Bash syntax, identity,
   locked offline metadata, and diff checks pass; no build, test binary, or
   visual launch was performed.
+- 2026-07-23: Verified that the screenshot's check/time prompt and blue mascot
+  are PTY output, not Dez overlays: the terminal Surface renders the terminal
+  grid and only adds an unavailable-session recovery callout. Current source
+  already keeps a terminal tab header visible even when single-tab auto-hide is
+  enabled (`fb2b90e193`), preventing shell output from being mistaken for
+  application chrome. Commit `7fbad3934e` adds identity guards across the Item
+  contract, pane policy, and Terminal override. Bash syntax, identity, locked
+  offline metadata, formatting, and diff checks pass; no build, test binary, or
+  visual launch was performed.
