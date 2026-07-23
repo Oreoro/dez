@@ -1045,7 +1045,10 @@ the later running-app reports, the source advanced through:
 - `594296efa8`, which constrains welcome, empty Workspace, and unavailable-tool
   recovery content to deliberate compact measures and spacing; and
 - `9e14ca2db7`, which gives the Session Rail configuration and recent-Workspace
-  utilities truthful icons, accessible names, tooltips, and command labels.
+  utilities truthful icons, accessible names, tooltips, and command labels; and
+- `72cec1f285`, which makes terminal edit/lifecycle commands and failed-session
+  recovery copy explicit while removing a permanently disabled Agent menu
+  branch.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

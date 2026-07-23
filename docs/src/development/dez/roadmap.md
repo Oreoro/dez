@@ -1386,6 +1386,14 @@ code, all launch gates pass, and known limitations are documented.
       configuration command a specific noun and verb, and renames the folder
       utility **Open Recent Workspaces**. Static identity, formatting, and diff
       checks pass; rendered tooltip and popover proof remain deferred.
+- [x] 2026-07-23: Make terminal context and recovery actions explicit. Commit
+      `72cec1f285` hides Copy without a selection, distinguishes clipboard and
+      text-only paste, names Clear Screen, and presents detach/close separately
+      from hosted-Session/local-process termination. Failed restore uses
+      **This terminal cannot reconnect** and **Start New Terminal** instead of
+      Host-oriented copy, and the permanently disabled terminal Agent branch is
+      removed. Focused pure assertions and static identity guards pass;
+      compilation and rendered context-menu proof remain deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

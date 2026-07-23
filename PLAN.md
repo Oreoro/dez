@@ -1643,3 +1643,15 @@ Notes decision:
   **Open Recent Workspaces** instead of the broader Open Workspace. Formatting,
   static identity, and diff checks pass; rendered tooltip/menu proof remains
   deferred.
+- 2026-07-23: Polished terminal editing, lifecycle, and failed-reconnect actions
+  in `72cec1f285`. Copy appears only when a selection exists; Paste Clipboard,
+  Paste Text Only, Select All, and Clear Screen state their scope. A hosted
+  terminal offers Detach Terminal versus Terminate Session, while a local tab
+  offers Close Terminal Tab versus Terminate Terminal Process. Failed restore
+  now says **This terminal cannot reconnect** and **Start New Terminal** without
+  implying a replacement shell exists. The permanently disabled terminal
+  Inline Assist branch is removed. Source inspection also confirms the
+  right-aligned checkmark and clock in the supplied screenshot are shell-owned
+  PTY prompt content, not a TerminalView overlay; Dez must not restyle them.
+  Focused pure assertions, formatting, identity, and diff checks pass; rendered
+  menu/callout proof remains deferred.
