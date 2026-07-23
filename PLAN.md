@@ -573,7 +573,10 @@ with new labels.
       Commit `e969abda4a` also removes inherited collaboration,
       feedback, account, docs, status, and merchandise commands from Dez's
       palette while retaining explicit upstream documentation/repository links
-      in Help.
+      in Help. Commit `0ddf84161e` closes the keyboard/title-bar equivalents:
+      every keymap source filters channel, collaboration-panel, collaboration,
+      and follow-collaborator actions in Dez, and inherited call chrome is
+      official-Zed-only.
 - [x] Replace remaining reachable stale Zed/Superzed product copy while
       preserving
       necessary compatibility, file-format, upstream attribution, and
@@ -1513,3 +1516,10 @@ Notes decision:
   duplicate-instance output, crash metadata, and temporary artifacts identify
   Dez. Official Zed retains its existing policy. Focused source assertions and
   identity guards pass; compiled crash-path proof remains consolidated.
+- 2026-07-23: Removed inherited collaboration shortcuts and call chrome in
+  `0ddf84161e`. Dez filters channel/collaboration namespaces plus the
+  follow-collaborator action from every loaded keymap source, including user
+  bindings, so removed handlers cannot shadow useful editor commands. Title-bar
+  call controls are official-Zed-only. AI opt-out filtering and official Zed
+  behavior remain intact. Focused source assertions and identity guards pass;
+  compiled key-routing proof remains consolidated.

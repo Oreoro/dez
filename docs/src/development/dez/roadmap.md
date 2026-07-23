@@ -1172,6 +1172,13 @@ code, all launch gates pass, and known limitations are documented.
       crash metadata, and temporary artifacts use Dez identity while official
       Zed remains unchanged. Source and identity checks pass; compiled recovery
       proof remains consolidated.
+- [x] 2026-07-23: Remove inherited collaboration keybindings and call chrome.
+      Commit `0ddf84161e` filters channel/collaboration namespaces and the
+      follow-collaborator action from every keymap source in Dez, preventing
+      removed handlers from consuming useful chords. Title-bar call controls
+      are official-Zed-only; AI opt-out filtering and official Zed behavior are
+      preserved. Source and identity checks pass; compiled key-routing proof
+      remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the
