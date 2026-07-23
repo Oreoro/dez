@@ -260,7 +260,12 @@ These invariants win when an upstream merge exposes a product difference:
 11. Panes and tabs are the universal composition model. The sidebar is a
     projection and navigation surface, not a second pane system.
 12. Host-owned sessions distinguish close, detach, reconnect, and terminate.
+    A terminal's own backing controller is authoritative; the existence of a
+    global Host never changes which process an action owns.
 13. Closing or disconnecting the GUI does not imply terminating a session.
+    Destructive terminal termination is separated from close or detach,
+    unavailable after exit or failed restore, and requires an explicit critical
+    confirmation that names its effect.
 14. Agent state belongs to the actual terminal session or conversation that
     owns it. Sidebar rows focus that existing owner.
 15. A Run relates authoritative state; it does not duplicate terminal,

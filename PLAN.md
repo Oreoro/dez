@@ -532,7 +532,12 @@ with new labels.
       **Terminate Terminal Process** remains a separate destructive action.
       Commit `dd2459eef9` derives that label from the terminal's backing type
       rather than transient Host registration, preserving detach semantics
-      during reconnection. The app-wide audit remains open.
+      during reconnection. Commit `7664c6e59b` closes the remaining destructive
+      path: the selected terminal's controller is now authoritative even when a
+      different global Host exists, exited and unavailable terminals do not
+      advertise termination, the command is separated from close/detach and
+      marked with an ellipsis, and a critical prompt explains the exact
+      irreversible effect before dispatch. The app-wide audit remains open.
 - [ ] Use progressive disclosure: the default view communicates current work;
       details reveal provenance, capabilities, protocol, and diagnostics only
       when requested. Commit `bd36afd3f4` keeps the default evidence summary
@@ -2003,3 +2008,16 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   settings, every bundled font face, and both upstream licenses. Prettier
   parsing, documentation formatting, Bash syntax, locked offline metadata,
   identity, and diff checks pass; no build or visual launch was performed.
+- 2026-07-23: Made terminal termination deliberate and ownership-correct in
+  `7664c6e59b`. The action no longer infers ownership from a global local Host,
+  which could coexist with an ordinary GUI-owned terminal; the selected
+  terminal's own controller now performs the operation. Exited and unavailable
+  terminals omit the destructive item, close/detach and terminate occupy
+  separate context-menu groups, the ellipsis signals a follow-up, and a
+  critical confirmation distinguishes durable Host termination from stopping a
+  local shell and foreground process. The terminal emits its single canonical
+  close event after termination rather than also emitting a duplicate item
+  close. Pure lifecycle assertions and static guards cover availability,
+  wording, separation, confirmation, and controller routing. Formatting,
+  locked offline metadata, identity, Bash syntax, and diff checks pass; no
+  build, test binary, or visual launch was performed.

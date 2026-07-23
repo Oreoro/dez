@@ -745,6 +745,12 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
 reject_pattern crates/terminal_view/src/terminal_view.rs \
     '"New Terminal Panel"' \
     'the terminal context menu advertises a second terminal model'
+require_multiline_pattern docs/src/terminal.md \
+    'Dez has no separate Terminal Panel destination.*?Every ordinary \*\*New Terminal\*\*.*?main-area terminal Surface.*?\*\*Detach Terminal\*\*.*?\*\*Terminate Terminal Process…\*\*.*?selected terminal.s own controller' \
+    'the public terminal guide can regress to the removed Terminal Panel model or ambiguous lifecycle ownership'
+reject_pattern docs/src/terminal.md \
+    'Toggle terminal panel|Terminal Panel vs Center Terminal' \
+    'the public terminal guide still teaches the removed Dez Terminal Panel'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     '\.when\(has_selection.*?"Copy Selection".*?"Paste Clipboard".*?"Paste Text Only".*?"Clear Screen"' \
     'the terminal context menu can regress to ambiguous or inert editing actions'

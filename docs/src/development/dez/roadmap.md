@@ -1904,6 +1904,13 @@ code, all launch gates pass, and known limitations are documented.
   defaults, and first-run settings have static guards. Rendered dark/light,
   density, transparency, contrast, and fallback-font proof remains part of the
   consolidated visual matrix.
+- **2026-07-23:** Make the selected terminal's backing controller the only
+  authority for destructive termination. Commit `7664c6e59b` removes global
+  Host-based routing, suppresses termination for exited or unavailable
+  terminals, separates it from close/detach, and requires a critical,
+  effect-specific confirmation. This prevents an ordinary terminal from losing
+  its Surface while a coexisting Host receives an unrelated session ID.
+  Compiled interaction and prompt-focus proof remains in the consolidated gate.
 
 ## Verification {#verification}
 
@@ -1923,6 +1930,17 @@ Completed for the Lumin and JetBrains typography source slice:
 - locked offline Cargo metadata;
 - `git diff --check`;
 - no application build, test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the terminal termination safety slice:
+
+- `cargo fmt --all -- --check`;
+- Bash syntax and Dez identity checks;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- focused pure assertions authored for termination availability and local versus
+  durable confirmation copy;
+- no application build, Rust test binary, bundle, alternate binary, or visual
   launch.
 
 Completed for the 2026-07-22 documentation reconciliation:

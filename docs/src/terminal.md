@@ -1,38 +1,63 @@
 ---
-title: Built-in Terminal - Zed
-description: Zed's integrated terminal with multiple instances, custom shells, and deep editor integration.
+title: Built-in Terminal - Dez
+description: Dez's integrated terminal with main-area tabs, splits, durable sessions, custom shells, and editor integration.
 ---
 
 # Terminal
 
-Zed includes a built-in terminal emulator that supports multiple terminal instances, custom shells, and deep integration with the editor.
+Dez treats terminals as first-class Surfaces beside files, search, diagnostics,
+and review. A terminal opens in the main work area as a normal tab or split;
+the Session Rail only projects its live state and attention.
 
 ## Opening Terminals
 
-| Action                  | macOS           | Linux/Windows   |
-| ----------------------- | --------------- | --------------- |
-| Toggle terminal panel   | `` Ctrl+` ``    | `` Ctrl+` ``    |
-| Open new terminal       | `Ctrl+~`        | `Ctrl+~`        |
-| Open terminal in center | Command palette | Command palette |
+| Action            | macOS         | Linux/Windows  |
+| ----------------- | ------------- | -------------- |
+| Open new terminal | `` Ctrl+` ``  | `` Ctrl+` ``   |
+| Command palette   | `Cmd+Shift+P` | `Ctrl+Shift+P` |
+| Split terminal    | `Cmd+D`       | `Ctrl+Shift+5` |
 
-You can also open a terminal from the command palette with {#action terminal_panel::Toggle} or {#action workspace::NewTerminal}.
+You can also choose **New Terminal** from the Session Rail, an empty Workspace,
+the main-area Add menu, or the command palette.
 
-### Terminal Panel vs Center Terminal
+### One Terminal Model
 
-Terminals can open in two locations:
+Dez has no separate Terminal Panel destination. Every ordinary **New Terminal**
+action opens a main-area terminal Surface in the active Workspace. You can:
 
-- **Terminal Panel** — Docked at the bottom (default), left, or right of the workspace. Toggle with `` Ctrl+` ``.
-- **Center Pane** — Opens as a regular tab alongside your files. Use {#action workspace::NewCenterTerminal} from the command palette.
+- keep it as a tab beside files;
+- split it into the same pane grid;
+- move it with other Surfaces;
+- select its Session Rail row to return to the existing Surface; or
+- reattach a Host-owned terminal Session when durable terminals are enabled.
 
 ## Working with Multiple Terminals
 
-Create additional terminals with `Cmd+N` (macOS) or `Ctrl+N` (Linux/Windows) while focused in the terminal panel. Each terminal appears as a tab in the panel.
+Create additional terminals from **New Terminal**. Each terminal is an
+independent main-area tab and keeps the active Workspace's directory context.
 
 Split terminals horizontally with `Cmd+D` (macOS) or `Ctrl+Shift+5` (Linux/Windows).
 
+## Close, Detach, and Terminate
+
+These actions have deliberately different meanings:
+
+- **Close Terminal Tab** closes an ordinary GUI-owned terminal Surface. If its
+  shell is still running, Dez uses the normal dirty-item protection before
+  discarding it.
+- **Detach Terminal** closes a Host-owned terminal Surface without stopping
+  its durable process. Its Session remains available from the Session Rail.
+- **Terminate Terminal Process…** is destructive. It is separated from
+  close/detach in the terminal context menu and opens a critical confirmation
+  explaining which process will stop. It is not offered for an exited or
+  unavailable terminal.
+
+Termination always goes through the selected terminal's own controller. The
+presence of another local Host does not change which process the action owns.
+
 ## Configuring the Shell
 
-By default, Zed uses your system's default shell (from `/etc/passwd` on Unix systems). To use a different shell:
+By default, Dez uses your system's default shell (from `/etc/passwd` on Unix systems). To use a different shell:
 
 ```json [settings]
 {
@@ -63,13 +88,13 @@ To pass arguments to your shell:
 
 Control where new terminals start:
 
-| Value                                         | Behavior                                                                                                          |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `"current_file_directory"`                    | Uses the current file's directory, falling back to the project directory, then the first project in the workspace |
-| `"current_project_directory"`                 | Uses the current file's project directory (default)                                                               |
-| `"first_project_directory"`                   | Uses the first project in your workspace                                                                          |
-| `"always_home"`                               | Always starts in your home directory                                                                              |
-| `{ "always": { "directory": "~/projects" } }` | Always starts in a specific directory                                                                             |
+| Value                                         | Behavior                                                                            |
+| --------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `"current_file_directory"`                    | Uses the current file's directory, then its Workspace root, then the first root     |
+| `"current_project_directory"`                 | Uses the current file's compatible project directory within the Workspace (default) |
+| `"first_project_directory"`                   | Uses the first root in the Workspace                                                |
+| `"always_home"`                               | Always starts in your home directory                                                |
+| `{ "always": { "directory": "~/projects" } }` | Always starts in a specific directory                                               |
 
 ```json [settings]
 {
@@ -87,7 +112,7 @@ Add environment variables to all terminal sessions:
 {
   "terminal": {
     "env": {
-      "EDITOR": "zed --wait",
+      "EDITOR": "dez --wait",
       "MY_VAR": "value"
     }
   }
@@ -98,7 +123,7 @@ Add environment variables to all terminal sessions:
 
 ### Python Virtual Environment Detection
 
-Zed can automatically activate Python virtual environments when opening a terminal. By default, it searches for `.env`, `env`, `.venv`, and `venv` directories:
+Dez can automatically activate Python virtual environments when opening a terminal. By default, it searches for `.env`, `env`, `.venv`, and `venv` directories:
 
 ```json [settings]
 {
@@ -167,7 +192,7 @@ Blinking options: `"off"`, `"terminal_controlled"` (default), `"on"`
 
 ### Minimum Contrast
 
-Zed adjusts terminal colors to maintain readability. The default value of `45` ensures text remains visible. Set to `0` to disable contrast adjustment and use exact theme colors:
+Dez adjusts terminal colors to maintain readability. The default value of `45` ensures text remains visible. Set to `0` to disable contrast adjustment and use exact theme colors:
 
 ```json [settings]
 {
