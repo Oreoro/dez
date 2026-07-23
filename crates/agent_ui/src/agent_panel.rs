@@ -93,9 +93,9 @@ use ui::{
 };
 use util::ResultExt as _;
 use workspace::{
-    CollaboratorId, DesignSystemSettings, DraggedSelection, DraggedTab, MultiWorkspace, PaneKind,
-    PathList, SerializedPathList, ToggleSidebar, ToggleZoom, ToolbarItemView, Workspace,
-    WorkspaceId,
+    CollaboratorId, DesignSystemSettings, DraggedSelection, DraggedTab, MultiWorkspace,
+    NewCenterTerminal, PaneKind, PathList, SerializedPathList, ToggleSidebar, ToggleZoom,
+    ToolbarItemView, Workspace, WorkspaceId,
     dock::{DockPosition, Panel, PanelEvent},
     item::{ItemEvent, ItemHandle},
 };
@@ -135,6 +135,10 @@ fn canvas_agent_panel_background(cx: &App) -> Hsla {
             .panel_background
             .blend(colors.border_focused.opacity(0.06)),
     }
+}
+
+fn agent_panel_terminal_creation_visible(app_name: &str, supports_terminal: bool) -> bool {
+    app_name == "Zed" && supports_terminal
 }
 
 fn canvas_agent_panel_toolbar_background(cx: &App) -> Hsla {
@@ -468,16 +472,21 @@ pub fn init(cx: &mut App) {
                     );
                 })
                 .register_action(|workspace, _: &NewTerminalThread, window, cx| {
-                    if let Some(panel) = workspace.panel::<AgentPanel>(cx) {
-                        panel.update(cx, |panel, cx| {
-                            panel.new_terminal(
-                                Some(workspace),
-                                AgentThreadSource::AgentPanel,
-                                window,
-                                cx,
-                            )
-                        });
-                        workspace.focus_panel::<AgentPanel>(window, cx);
+                    if paths::APP_NAME == "Zed" {
+                        if let Some(panel) = workspace.panel::<AgentPanel>(cx) {
+                            panel.update(cx, |panel, cx| {
+                                panel.new_terminal(
+                                    Some(workspace),
+                                    AgentThreadSource::AgentPanel,
+                                    window,
+                                    cx,
+                                )
+                            });
+                            workspace.focus_panel::<AgentPanel>(window, cx);
+                        }
+                    } else {
+                        let workspace_focus = workspace.focus_handle(cx);
+                        workspace_focus.dispatch_action(&NewCenterTerminal::default(), window, cx);
                     }
                 })
                 .register_action(
@@ -2099,7 +2108,8 @@ impl AgentPanel {
     }
 
     pub fn should_create_terminal_for_new_entry(&self, cx: &App) -> bool {
-        self.last_created_entry_kind == AgentPanelEntryKind::Terminal
+        paths::APP_NAME == "Zed"
+            && self.last_created_entry_kind == AgentPanelEntryKind::Terminal
             && self.project.read(cx).supports_terminal(cx)
     }
 
@@ -6120,7 +6130,8 @@ impl AgentPanel {
         let focus_handle = self.focus_handle(cx);
 
         let can_create_entries = self.has_open_project(cx);
-        let supports_terminal = self.supports_terminal(cx);
+        let supports_terminal =
+            agent_panel_terminal_creation_visible(paths::APP_NAME, self.supports_terminal(cx));
         let showing_terminal = matches!(self.visible_surface(), VisibleSurface::Terminal(_));
 
         let (selected_agent_custom_icon, selected_agent_label) = if showing_terminal {
@@ -6742,7 +6753,12 @@ impl Render for AgentPanel {
             }))
             .on_action(cx.listener(|this, _: &NewTerminalThread, window, cx| {
                 cx.stop_propagation();
-                this.new_terminal(None, AgentThreadSource::AgentPanel, window, cx);
+                if paths::APP_NAME == "Zed" {
+                    this.new_terminal(None, AgentThreadSource::AgentPanel, window, cx);
+                } else if let Some(workspace) = this.workspace.upgrade() {
+                    let workspace_focus = workspace.read(cx).focus_handle(cx);
+                    workspace_focus.dispatch_action(&NewCenterTerminal::default(), window, cx);
+                }
             }))
             .on_action(cx.listener(|this, _: &OpenSettings, window, cx| {
                 this.open_configuration(window, cx);
@@ -7129,6 +7145,13 @@ mod tests {
         assert!(is_known_terminal_agent_command("codex"));
         assert!(!is_known_terminal_agent_command("cargo"));
         assert!(!is_known_terminal_agent_command("internal-agent"));
+    }
+
+    #[test]
+    fn dez_keeps_terminal_creation_out_of_the_agent_selector() {
+        assert!(!agent_panel_terminal_creation_visible("Dez", true));
+        assert!(agent_panel_terminal_creation_visible("Zed", true));
+        assert!(!agent_panel_terminal_creation_visible("Zed", false));
     }
 
     #[test]

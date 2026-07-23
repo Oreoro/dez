@@ -439,6 +439,12 @@ require_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn create_new_terminal.*?multi_workspace\.activate\(workspace\.clone\(\).*?workspace_focus\.dispatch_action\(&NewCenterTerminal::default\(\)' \
     'Workspace-scoped Session Rail actions can regress to opening inherited Agent terminal threads instead of main-area terminals'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'fn agent_panel_terminal_creation_visible.*?app_name == "Zed".*?register_action\(\|workspace, _: &NewTerminalThread.*?paths::APP_NAME == "Zed".*?NewCenterTerminal::default.*?pub fn should_create_terminal_for_new_entry.*?paths::APP_NAME == "Zed"' \
+    'the Dez Agent surface can regress to offering or repeating inherited terminal-thread creation'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'on_action\(cx\.listener\(\|this, _: &NewTerminalThread.*?paths::APP_NAME == "Zed".*?workspace_focus\.dispatch_action\(&NewCenterTerminal::default' \
+    'Agent-focused terminal creation can regress to opening the inherited terminal-thread canvas in Dez'
 require_pattern crates/sidebar/src/sidebar.rs \
     'session_overview_create_action_visible\(self\.contents\.session_count\)' \
     'the zero-session Workspace state can regress to duplicating its creation action'
