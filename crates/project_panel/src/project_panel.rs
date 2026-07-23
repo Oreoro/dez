@@ -1302,10 +1302,21 @@ impl ProjectPanel {
                             .when(!is_collab && is_root, |menu| {
                                 menu.separator()
                                     .action(
-                                        "Add Folders to Project…",
+                                        if paths::APP_NAME == "Zed" {
+                                            "Add Folders to Project…"
+                                        } else {
+                                            "Add Folders to Workspace…"
+                                        },
                                         Box::new(workspace::AddFolderToProject),
                                     )
-                                    .action("Remove from Project", Box::new(RemoveFromProject))
+                                    .action(
+                                        if paths::APP_NAME == "Zed" {
+                                            "Remove from Project"
+                                        } else {
+                                            "Remove from Workspace"
+                                        },
+                                        Box::new(RemoveFromProject),
+                                    )
                             })
                             .when(is_dir && !is_root, |menu| {
                                 menu.separator()

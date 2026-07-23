@@ -1209,7 +1209,11 @@ impl SidebarChrome {
                 Tooltip::with_meta(
                     "You're in Restricted Mode",
                     Some(&ToggleWorktreeSecurity),
-                    "Mark this project as trusted and unlock all features",
+                    project_or_workspace_label(
+                        paths::APP_NAME,
+                        "Mark this project as trusted and unlock all features",
+                        "Trust this workspace to unlock its configured tools",
+                    ),
                     cx,
                 )
             })

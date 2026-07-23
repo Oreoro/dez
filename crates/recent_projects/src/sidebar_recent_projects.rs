@@ -20,7 +20,10 @@ use workspace::{
 
 use zed_actions::OpenRemote;
 
-use crate::{highlights_for_path, icon_for_remote_connection, open_remote_project};
+use crate::{
+    highlights_for_path, icon_for_remote_connection, open_remote_project,
+    project_or_workspace_label,
+};
 
 pub struct SidebarRecentProjects {
     pub picker: Entity<Picker<SidebarRecentProjectsDelegate>>,
@@ -136,11 +139,15 @@ impl PickerDelegate for SidebarRecentProjectsDelegate {
     type ListItem = AnyElement;
 
     fn name() -> &'static str {
-        "sidebar recent projects"
+        project_or_workspace_label(
+            paths::APP_NAME,
+            "sidebar recent projects",
+            "sidebar recent workspaces",
+        )
     }
 
     fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
-        "Search projects…".into()
+        project_or_workspace_label(paths::APP_NAME, "Search projects…", "Search workspaces…").into()
     }
 
     fn match_count(&self) -> usize {
@@ -268,7 +275,11 @@ impl PickerDelegate for SidebarRecentProjectsDelegate {
                             .await
                     })
                     .detach_and_prompt_err(
-                        "Failed to open project",
+                        project_or_workspace_label(
+                            paths::APP_NAME,
+                            "Failed to open project",
+                            "Failed to open workspace",
+                        ),
                         window,
                         cx,
                         |_, _, _| None,
@@ -283,7 +294,11 @@ impl PickerDelegate for SidebarRecentProjectsDelegate {
 
     fn no_matches_text(&self, _window: &mut Window, _cx: &mut App) -> Option<SharedString> {
         let text = if self.workspaces.is_empty() {
-            "Recently opened projects will show up here"
+            project_or_workspace_label(
+                paths::APP_NAME,
+                "Recently opened projects will show up here",
+                "Recently opened workspaces will show up here",
+            )
         } else {
             "No matches"
         };
@@ -368,7 +383,11 @@ impl PickerDelegate for SidebarRecentProjectsDelegate {
                 )
                 .tooltip(move |_, cx| {
                     Tooltip::with_meta(
-                        "Open Project in This Window",
+                        project_or_workspace_label(
+                            paths::APP_NAME,
+                            "Open Project in This Window",
+                            "Open Workspace in This Window",
+                        ),
                         None,
                         tooltip_path.clone(),
                         cx,

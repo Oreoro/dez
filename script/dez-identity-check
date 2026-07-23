@@ -175,12 +175,27 @@ require_pattern crates/recent_projects/src/recent_projects.rs \
 require_pattern crates/recent_projects/src/recent_projects.rs \
     '"Remove from Recent Workspaces"' \
     'the Dez recent-work removal action still uses Project vocabulary'
+require_pattern crates/recent_projects/src/recent_projects.rs \
+    '"Search workspaces…"' \
+    'the Dez recent-work search still asks for Projects'
+require_pattern crates/recent_projects/src/recent_projects.rs \
+    '"Open Workspace in This Window"' \
+    'the Dez recent-work activation action still opens a Project'
 require_pattern crates/recent_projects/src/remote_servers.rs \
     '"Delete Remote Workspace"' \
     'the Dez remote-work deletion action still uses Project vocabulary'
 require_pattern crates/agent_ui/src/threads_archive_view.rs \
     '"Recent Workspaces"' \
     'the Dez agent-history picker still uses Project vocabulary'
+require_pattern crates/workspace/src/security_modal.rs \
+    '"Unrecognized Workspace"' \
+    'the Dez trust boundary still presents an unrecognized Project'
+require_pattern crates/workspace/src/security_modal.rs \
+    '"Workspace settings from being applied"' \
+    'the Dez Restricted Mode explanation still claims Project scope'
+require_pattern crates/project_panel/src/project_panel.rs \
+    '"Add Folders to Workspace…"' \
+    'the Dez Files menu still adds folders to a Project'
 require_pattern crates/release_channel/src/lib.rs \
     'ReleaseChannel::Stable => "Dez"' \
     'stable release display name is not Dez'

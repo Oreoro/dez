@@ -521,7 +521,11 @@ pub fn init(cx: &mut App) {
                 cx.spawn_in(window, async move |_, cx| {
                     cx.prompt(
                         gpui::PromptLevel::Critical,
-                        "Cannot open Dev Container from remote project",
+                        project_or_workspace_label(
+                            paths::APP_NAME,
+                            "Cannot open Dev Container from remote project",
+                            "Cannot open Dev Container from remote workspace",
+                        ),
                         None,
                         &["OK"],
                     )
@@ -935,11 +939,11 @@ impl PickerDelegate for RecentProjectsDelegate {
     type ListItem = AnyElement;
 
     fn name() -> &'static str {
-        "recent projects"
+        project_or_workspace_label(paths::APP_NAME, "recent projects", "recent workspaces")
     }
 
     fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
-        "Search projects…".into()
+        project_or_workspace_label(paths::APP_NAME, "Search projects…", "Search workspaces…").into()
     }
 
     fn match_count(&self) -> usize {
@@ -1229,7 +1233,12 @@ impl PickerDelegate for RecentProjectsDelegate {
 
     fn no_matches_text(&self, _window: &mut Window, _cx: &mut App) -> Option<SharedString> {
         let text = if self.workspaces.is_empty() && self.open_folders.is_empty() {
-            "Recently opened projects will show up here".into()
+            project_or_workspace_label(
+                paths::APP_NAME,
+                "Recently opened projects will show up here",
+                "Recently opened workspaces will show up here",
+            )
+            .into()
         } else {
             "No matches".into()
         };
@@ -1271,7 +1280,11 @@ impl PickerDelegate for RecentProjectsDelegate {
                                 let focus_handle = self.focus_handle.clone();
                                 move |_, cx| {
                                     Tooltip::for_action_in(
-                                        "Remove Folder from Project",
+                                        project_or_workspace_label(
+                                            paths::APP_NAME,
+                                            "Remove Folder from Project",
+                                            "Remove Folder from Workspace",
+                                        ),
                                         &RemoveSelected,
                                         &focus_handle,
                                         cx,
@@ -1436,7 +1449,11 @@ impl PickerDelegate for RecentProjectsDelegate {
                                     let focus_handle = self.focus_handle.clone();
                                     move |_, cx| {
                                         Tooltip::for_action_in(
-                                            "Remove Project from Window",
+                                            project_or_workspace_label(
+                                                paths::APP_NAME,
+                                                "Remove Project from Window",
+                                                "Remove Workspace from Window",
+                                            ),
                                             &RemoveSelected,
                                             &focus_handle,
                                             cx,
@@ -1525,9 +1542,17 @@ impl PickerDelegate for RecentProjectsDelegate {
                     .unzip();
 
                 let tooltip_title = if paths.len() > 1 {
-                    "Add Folders to this Project"
+                    project_or_workspace_label(
+                        paths::APP_NAME,
+                        "Add Folders to this Project",
+                        "Add Folders to this Workspace",
+                    )
                 } else {
-                    "Add Folder to this Project"
+                    project_or_workspace_label(
+                        paths::APP_NAME,
+                        "Add Folder to this Project",
+                        "Add Folder to this Workspace",
+                    )
                 };
 
                 let prefix = match &location {
@@ -1546,14 +1571,30 @@ impl PickerDelegate for RecentProjectsDelegate {
 
                 let focus_handle = self.focus_handle.clone();
                 let secondary_confirm_tooltip = if self.create_new_window {
-                    "Open Project in This Window"
+                    project_or_workspace_label(
+                        paths::APP_NAME,
+                        "Open Project in This Window",
+                        "Open Workspace in This Window",
+                    )
                 } else {
-                    "Open Project in New Window"
+                    project_or_workspace_label(
+                        paths::APP_NAME,
+                        "Open Project in New Window",
+                        "Open Workspace in New Window",
+                    )
                 };
                 let primary_confirm_tooltip = if self.create_new_window {
-                    "Open Project in New Window"
+                    project_or_workspace_label(
+                        paths::APP_NAME,
+                        "Open Project in New Window",
+                        "Open Workspace in New Window",
+                    )
                 } else {
-                    "Open Project in This Window"
+                    project_or_workspace_label(
+                        paths::APP_NAME,
+                        "Open Project in This Window",
+                        "Open Workspace in This Window",
+                    )
                 };
                 let secondary_confirm_icon = if self.create_new_window {
                     IconName::ThisWindow
@@ -1970,7 +2011,11 @@ impl PickerDelegate for RecentProjectsDelegate {
                                         menu.context(focus_handle)
                                             .when(show_add_to_workspace, |menu| {
                                                 menu.action(
-                                                    "Add Folder to this Project",
+                                                    project_or_workspace_label(
+                                                        paths::APP_NAME,
+                                                        "Add Folder to this Project",
+                                                        "Add Folder to this Workspace",
+                                                    ),
                                                     AddToWorkspace.boxed_clone(),
                                                 )
                                                 .separator()
@@ -2200,7 +2245,11 @@ impl RecentProjectsDelegate {
                         workspace
                             .open_workspace_for_paths(OpenMode::NewWindow, paths, window, cx)
                             .detach_and_prompt_err(
-                                "Failed to open project",
+                                project_or_workspace_label(
+                                    paths::APP_NAME,
+                                    "Failed to open project",
+                                    "Failed to open workspace",
+                                ),
                                 window,
                                 cx,
                                 |_, _, _| None,
@@ -2228,7 +2277,11 @@ impl RecentProjectsDelegate {
                             .await
                     })
                     .detach_and_prompt_err(
-                        "Failed to open project",
+                        project_or_workspace_label(
+                            paths::APP_NAME,
+                            "Failed to open project",
+                            "Failed to open workspace",
+                        ),
                         window,
                         cx,
                         |_, _, _| None,

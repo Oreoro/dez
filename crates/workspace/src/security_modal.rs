@@ -26,6 +26,18 @@ use util::paths::PathStyle;
 
 use crate::{DismissDecision, ModalView, ToggleWorktreeSecurity};
 
+fn project_or_workspace_label(
+    app_name: &str,
+    project_label: &'static str,
+    workspace_label: &'static str,
+) -> &'static str {
+    if app_name == "Zed" {
+        project_label
+    } else {
+        workspace_label
+    }
+}
+
 pub struct SecurityModal {
     restricted_paths: HashMap<WorktreeId, RestrictedPath>,
     home_dir: Option<PathBuf>,
@@ -85,9 +97,22 @@ impl Render for SecurityModal {
 
         let restricted_count = self.restricted_paths.len();
         let header_label: SharedString = if restricted_count == 1 {
-            "Unrecognized Project".into()
+            project_or_workspace_label(
+                paths::APP_NAME,
+                "Unrecognized Project",
+                "Unrecognized Workspace",
+            )
+            .into()
         } else {
-            format!("Unrecognized Projects ({})", restricted_count).into()
+            format!(
+                "{} ({restricted_count})",
+                project_or_workspace_label(
+                    paths::APP_NAME,
+                    "Unrecognized Projects",
+                    "Unrecognized Workspaces",
+                )
+            )
+            .into()
         };
 
         let trust_label = self.build_trust_label();
@@ -187,13 +212,21 @@ impl Render for SecurityModal {
                         v_flex()
                             .child(
                                 Label::new(
-                                    "Untrusted projects are opened in Restricted Mode to protect your system.",
+                                    project_or_workspace_label(
+                                        paths::APP_NAME,
+                                        "Untrusted projects are opened in Restricted Mode to protect your system.",
+                                        "Untrusted workspaces open in Restricted Mode to protect your system.",
+                                    ),
                                 )
                                 .color(Color::Muted),
                             )
                             .child(
                                 Label::new(
-                                    "Review .zed/settings.json for any extensions or commands configured by this project.",
+                                    project_or_workspace_label(
+                                        paths::APP_NAME,
+                                        "Review .zed/settings.json for any extensions or commands configured by this project.",
+                                        "Review .zed/settings.json before enabling tools configured by this workspace.",
+                                    ),
                                 )
                                 .color(Color::Muted),
                             ),
@@ -201,7 +234,11 @@ impl Render for SecurityModal {
                     .child(
                         v_flex()
                             .child(Label::new("Restricted Mode prevents:").color(Color::Muted))
-                            .child(ListBulletItem::new("Project settings from being applied"))
+                            .child(ListBulletItem::new(project_or_workspace_label(
+                                paths::APP_NAME,
+                                "Project settings from being applied",
+                                "Workspace settings from being applied",
+                            )))
                             .child(ListBulletItem::new("Language servers from running"))
                             .child(ListBulletItem::new("MCP Server integrations from installing")),
                     )
@@ -210,7 +247,7 @@ impl Render for SecurityModal {
                             return this;
                         };
                         match trust_input {
-                            // Single project: the editable scope field replaces
+                            // Single workspace: the editable scope field replaces
                             // the static folder name, inline with the checkbox.
                             Some(input) => this.child(
                                 // Top-aligned so the field's validation error
@@ -226,7 +263,11 @@ impl Render for SecurityModal {
                                             "trust-parents",
                                             ToggleState::from(self.trust_parents),
                                         )
-                                        .label("Trust all projects in")
+                                        .label(project_or_workspace_label(
+                                            paths::APP_NAME,
+                                            "Trust all projects in",
+                                            "Trust all workspaces in",
+                                        ))
                                         .on_click(cx.listener(
                                             |security_modal, state: &ToggleState, _, cx| {
                                                 let trust_parents = state.selected();
@@ -248,7 +289,7 @@ impl Render for SecurityModal {
                                     )
                                     .child(input),
                             ),
-                            // Zero or several projects: keep the static label.
+                            // Zero or several workspaces: keep the static label.
                             None => this.child(
                                 Checkbox::new(
                                     "trust-parents",
@@ -360,10 +401,19 @@ impl SecurityModal {
                 }
             }
             1 => Some(Cow::Owned(format!(
-                "Trust all projects in the {:} folder",
+                "{} {:} folder",
+                project_or_workspace_label(
+                    paths::APP_NAME,
+                    "Trust all projects in the",
+                    "Trust all workspaces in the",
+                ),
                 self.shorten_path(available_parents[0]).display()
             ))),
-            _ => Some(Cow::Borrowed("Trust all projects in the parent folders")),
+            _ => Some(Cow::Borrowed(project_or_workspace_label(
+                paths::APP_NAME,
+                "Trust all projects in the parent folders",
+                "Trust all workspaces in the parent folders",
+            ))),
         }
     }
 
@@ -394,7 +444,14 @@ impl SecurityModal {
             .upgrade()
             .map(|store| store.read(cx).path_style())
             .unwrap_or_else(PathStyle::local);
-        validate_trust_scope(&typed, &project, self.home_dir.as_deref(), path_style).map(Some)
+        validate_trust_scope(
+            &typed,
+            &project,
+            self.home_dir.as_deref(),
+            path_style,
+            paths::APP_NAME,
+        )
+        .map(Some)
     }
 
     fn trust_and_dismiss(&mut self, cx: &mut Context<Self>) {
@@ -506,6 +563,7 @@ fn validate_trust_scope(
     project: &Path,
     home_dir: Option<&Path>,
     path_style: PathStyle,
+    app_name: &str,
 ) -> Result<PathBuf, SharedString> {
     let trimmed = typed.trim();
     if trimmed.is_empty() {
@@ -522,7 +580,12 @@ fn validate_trust_scope(
         return Err("Enter an absolute folder path".into());
     }
     if !project.starts_with(&expanded) {
-        return Err("Must be a parent folder of the project".into());
+        return Err(project_or_workspace_label(
+            app_name,
+            "Must be a parent folder of the project",
+            "Must be a parent folder of the workspace",
+        )
+        .into());
     }
     Ok(expanded)
 }
@@ -536,28 +599,47 @@ mod tests {
         let project = Path::new("/Users/me/dev/delta/wt/t1");
         let style = PathStyle::Unix;
         assert_eq!(
-            validate_trust_scope("/Users/me/dev/delta/wt", project, None, style).unwrap(),
+            validate_trust_scope("/Users/me/dev/delta/wt", project, None, style, "Zed").unwrap(),
             PathBuf::from("/Users/me/dev/delta/wt"),
         );
         // Equal to the project itself is allowed.
         assert_eq!(
-            validate_trust_scope("/Users/me/dev/delta/wt/t1", project, None, style).unwrap(),
+            validate_trust_scope("/Users/me/dev/delta/wt/t1", project, None, style, "Zed").unwrap(),
             PathBuf::from("/Users/me/dev/delta/wt/t1"),
         );
         // A distant ancestor is allowed.
-        assert!(validate_trust_scope("/Users/me/dev", project, None, style).is_ok());
+        assert!(validate_trust_scope("/Users/me/dev", project, None, style, "Zed").is_ok());
     }
 
     #[test]
     fn rejects_non_ancestor_relative_or_empty() {
         let project = Path::new("/Users/me/dev/delta/wt/t1");
         let style = PathStyle::Unix;
-        assert!(validate_trust_scope("/Users/other", project, None, style).is_err());
-        assert!(validate_trust_scope("relative/path", project, None, style).is_err());
-        assert!(validate_trust_scope("   ", project, None, style).is_err());
+        assert!(validate_trust_scope("/Users/other", project, None, style, "Zed").is_err());
+        assert!(validate_trust_scope("relative/path", project, None, style, "Zed").is_err());
+        assert!(validate_trust_scope("   ", project, None, style, "Zed").is_err());
         // Deeper than the project is not an ancestor.
         assert!(
-            validate_trust_scope("/Users/me/dev/delta/wt/t1/sub", project, None, style).is_err()
+            validate_trust_scope("/Users/me/dev/delta/wt/t1/sub", project, None, style, "Zed")
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn dez_trust_scope_errors_use_workspace_vocabulary() {
+        let project = Path::new("/Users/me/dev/dez");
+        assert_eq!(
+            validate_trust_scope("/Users/other", project, None, PathStyle::Unix, "Dez")
+                .unwrap_err(),
+            "Must be a parent folder of the workspace"
+        );
+        assert_eq!(
+            project_or_workspace_label("Zed", "Unrecognized Project", "Unrecognized Workspace"),
+            "Unrecognized Project"
+        );
+        assert_eq!(
+            project_or_workspace_label("Dez", "Unrecognized Project", "Unrecognized Workspace"),
+            "Unrecognized Workspace"
         );
     }
 
@@ -567,11 +649,11 @@ mod tests {
         let project = Path::new("/Users/me/dev/wt/t1");
         let style = PathStyle::Unix;
         assert_eq!(
-            validate_trust_scope("~/dev/wt", project, Some(home), style).unwrap(),
+            validate_trust_scope("~/dev/wt", project, Some(home), style, "Zed").unwrap(),
             PathBuf::from("/Users/me/dev/wt"),
         );
         assert_eq!(
-            validate_trust_scope("~", project, Some(home), style).unwrap(),
+            validate_trust_scope("~", project, Some(home), style, "Zed").unwrap(),
             PathBuf::from("/Users/me"),
         );
     }
