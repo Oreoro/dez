@@ -1777,3 +1777,11 @@ Notes decision:
   panels. Formatting, locked offline metadata, identity, and diff checks pass;
   compilation and rendered multi-Workspace, modal, settings, and panel-routing
   proof remain deferred.
+- 2026-07-23: Restored Agent History search as a real interaction in
+  `5cf88897ba`. The existing editor and update subscription no longer feed a
+  hard-coded empty query; a visible Search region now filters Agent Session
+  titles and Workspace path names, exposes a clear action, and distinguishes
+  **No matching Agent Sessions** from genuinely empty history. Empty history
+  provides a full-width **Start New Agent Session** action. Product-copy,
+  search-binding, and empty-state assertions plus static guards pass;
+  compilation and rendered search/focus proof remain deferred.

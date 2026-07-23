@@ -1101,7 +1101,9 @@ the later running-app reports, the source advanced through:
   vocabulary, plus `037eebaf02`, which replaces the last visible terminal
   thread setting label with Terminal Session language; and
 - `d490735631`, which prevents the removed Collaboration Panel from entering
-  Dez Workspace Tools while preserving official Zed compatibility.
+  Dez Workspace Tools while preserving official Zed compatibility; and
+- `5cf88897ba`, which connects Agent History's visible search to the real query,
+  adds an explicit clear path, and distinguishes no results from empty history.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

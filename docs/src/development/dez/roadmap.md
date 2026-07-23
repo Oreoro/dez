@@ -1511,6 +1511,14 @@ code, all launch gates pass, and known limitations are documented.
       compatibility surfaces only. Focused source assertions, formatting,
       locked offline metadata, and static identity checks pass; compilation and
       rendered tool-registration proof remain deferred.
+- [x] 2026-07-23: Make Agent History search functional and truthful. Commit
+      `5cf88897ba` replaces the production hard-coded empty query with the
+      existing editor value, renders the Search region and clear control, and
+      filters by Agent Session title or Workspace path name. Search misses now
+      say **No matching Agent Sessions** and offer **Clear Search**; genuinely
+      empty history offers **Start New Agent Session** instead. Focused
+      product-copy assertions, formatting, locked offline metadata, and static
+      guards pass; compilation and rendered search/focus proof remain deferred.
 - [x] 2026-07-23: Confirm permanent Agent Session deletion. Commit
       `9615b513d4` routes both the archived-row trash control and keyboard
       remove action through one critical prompt. The prompt names the selected
