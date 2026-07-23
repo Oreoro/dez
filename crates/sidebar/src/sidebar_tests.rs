@@ -1768,7 +1768,7 @@ async fn test_keyboard_navigation_on_empty_list(cx: &mut TestAppContext) {
 }
 
 #[gpui::test]
-async fn test_new_entry_noops_without_open_project(cx: &mut TestAppContext) {
+async fn test_new_agent_thread_noops_without_open_project(cx: &mut TestAppContext) {
     init_test(cx);
 
     let fs = FakeFs::new(cx.executor());
@@ -1788,7 +1788,7 @@ async fn test_new_entry_noops_without_open_project(cx: &mut TestAppContext) {
     );
 
     sidebar.update_in(cx, |sidebar, window, cx| {
-        sidebar.create_new_entry(&workspace, window, cx);
+        sidebar.create_new_thread(&workspace, window, cx);
     });
     cx.run_until_parked();
 
@@ -1802,6 +1802,11 @@ async fn test_new_entry_noops_without_open_project(cx: &mut TestAppContext) {
         visible_entries_as_strings(&sidebar, cx),
         Vec::<String>::new()
     );
+}
+
+#[test]
+fn session_rail_default_creation_is_terminal_first() {
+    assert_eq!(default_new_session_target(), NewEntryTarget::Terminal);
 }
 
 #[gpui::test]

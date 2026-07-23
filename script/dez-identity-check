@@ -160,6 +160,24 @@ require_pattern crates/sidebar/src/sidebar.rs \
 require_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\("Ready for a session"\)' \
     'empty Workspace groups regress to repeated absence copy'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn default_new_session_target\(\) -> NewEntryTarget \{[[:space:]]*NewEntryTarget::Terminal' \
+    'the Session Rail default creation path is no longer terminal-first'
+require_pattern crates/sidebar/src/sidebar.rs \
+    'menu = menu\.header\("New Terminal In…"\)' \
+    'the Workspace creation picker has regressed to an ambiguous thread action'
+require_pattern crates/sidebar/src/sidebar.rs \
+    '"New Agent Thread",' \
+    'the secondary pane-native agent creation path is missing from Workspace options'
+require_pattern assets/keymaps/default-macos.json \
+    '"cmd-n": "sidebar::NewSessionInGroup"' \
+    'the macOS Session Rail creation shortcut is not terminal-first'
+require_pattern assets/keymaps/default-linux.json \
+    '"ctrl-n": "sidebar::NewSessionInGroup"' \
+    'the Linux Session Rail creation shortcut is not terminal-first'
+require_pattern assets/keymaps/default-windows.json \
+    '"ctrl-n": "sidebar::NewSessionInGroup"' \
+    'the Windows Session Rail creation shortcut is not terminal-first'
 require_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\("new-session", "New Terminal"\)' \
     'the primary Session Rail creation action is ambiguous'

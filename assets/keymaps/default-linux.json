@@ -724,7 +724,7 @@
     "context": "Sidebar",
     "use_key_equivalents": true,
     "bindings": {
-      "ctrl-n": "sidebar::NewThreadInGroup",
+      "ctrl-n": "sidebar::NewSessionInGroup",
       "left": "menu::SelectParent",
       "right": "menu::SelectChild",
       "enter": "menu::Confirm",

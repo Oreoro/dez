@@ -111,8 +111,10 @@ mod sidebar_tests;
 gpui::actions!(
     sidebar,
     [
-        /// Creates a new thread in the currently selected or active project group.
+        /// Creates a new agent thread in the currently selected or active Workspace.
         NewThreadInGroup,
+        /// Creates a new terminal session in the currently selected or active Workspace.
+        NewSessionInGroup,
         /// Moves the selected session rail row up within its project group.
         MoveSelectedEntryUp,
         /// Moves the selected session rail row down within its project group.
@@ -375,10 +377,14 @@ enum SerializedSidebarView {
     History,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum NewEntryTarget {
-    LastCreatedKind,
     Terminal,
+    AgentThread,
+}
+
+fn default_new_session_target() -> NewEntryTarget {
+    NewEntryTarget::Terminal
 }
 
 #[derive(Default, Serialize, Deserialize)]
@@ -2989,8 +2995,8 @@ impl Sidebar {
         cx.spawn_in(window, async move |this, cx| {
             let workspace = task.await?;
             this.update_in(cx, |this, window, cx| match target {
-                NewEntryTarget::LastCreatedKind => this.create_new_entry(&workspace, window, cx),
                 NewEntryTarget::Terminal => this.create_new_terminal(&workspace, window, cx),
+                NewEntryTarget::AgentThread => this.create_new_thread(&workspace, window, cx),
             })?;
             anyhow::Ok(())
         })
@@ -4527,7 +4533,7 @@ impl Sidebar {
                     .gap(px(1.0))
                     .pr(header_padding_right)
                     .children(opaque_window.then(|| gradient_overlay()))
-                    .child(self.render_new_thread_button(ix, id_prefix, key, &group_name, cx))
+                    .child(self.render_new_session_button(ix, id_prefix, key, &group_name, cx))
                     .child(self.render_project_header_ellipsis_menu(
                         ix,
                         id_prefix,
@@ -4637,7 +4643,7 @@ impl Sidebar {
         }
     }
 
-    fn render_new_thread_button(
+    fn render_new_session_button(
         &self,
         ix: usize,
         id_prefix: &str,
@@ -4655,13 +4661,13 @@ impl Sidebar {
         let is_menu_open = menu_handle.is_deployed();
 
         let button = IconButton::new(
-            SharedString::from(format!("{id_prefix}project-header-new-thread-{ix}")),
+            SharedString::from(format!("{id_prefix}workspace-new-session-{ix}")),
             IconName::Plus,
         )
         .size(ButtonSize::Medium)
         .selected_style(ButtonStyle::Tinted(TintColor::Accent))
         .icon_size(IconSize::Small)
-        .aria_label("Start New Agent Thread")
+        .aria_label("New Terminal")
         .when(!is_menu_open, |this| this.visible_on_hover(group_name));
 
         let open_workspaces = self
@@ -4674,17 +4680,22 @@ impl Sidebar {
             let key = key.clone();
             return button
                 .tooltip(move |_, cx| {
-                    Tooltip::for_action_in("Start New Agent Thread", &NewThread, &focus_handle, cx)
+                    Tooltip::for_action_in(
+                        "New Terminal in This Workspace",
+                        &NewSessionInGroup,
+                        &focus_handle,
+                        cx,
+                    )
                 })
                 .on_click(cx.listener(move |this, _, window, cx| {
                     this.set_group_expanded(&key, true, cx);
                     this.selection = None;
                     if let Some(workspace) = this.workspace_for_group(&key, cx) {
-                        this.create_new_entry(&workspace, window, cx);
+                        this.create_new_terminal(&workspace, window, cx);
                     } else {
                         this.open_workspace_and_create_entry(
                             &key,
-                            NewEntryTarget::LastCreatedKind,
+                            default_new_session_target(),
                             window,
                             cx,
                         );
@@ -4697,11 +4708,16 @@ impl Sidebar {
         let key = key.clone();
 
         PopoverMenu::new(SharedString::from(format!(
-            "{id_prefix}project-header-new-thread-menu-{ix}"
+            "{id_prefix}workspace-new-session-menu-{ix}"
         )))
         .with_handle(menu_handle)
         .trigger_with_tooltip(button, move |_, cx| {
-            Tooltip::for_action_in("Start New Agent Thread", &NewThread, &focus_handle, cx)
+            Tooltip::for_action_in(
+                "New Terminal in This Workspace",
+                &NewSessionInGroup,
+                &focus_handle,
+                cx,
+            )
         })
         .anchor(gpui::Anchor::TopLeft)
         .on_open(Rc::new({
@@ -4732,7 +4748,7 @@ impl Sidebar {
                 window,
                 cx,
                 move |mut menu, _window, cx| {
-                    menu = menu.header("New Thread In…");
+                    menu = menu.header("New Terminal In…");
 
                     for (workspace, labels) in open_workspaces
                         .iter()
@@ -4774,7 +4790,7 @@ impl Sidebar {
                                     this.update(cx, |sidebar, cx| {
                                         sidebar.set_group_expanded(&key, true, cx);
                                         sidebar.selection = None;
-                                        sidebar.create_new_entry(&workspace, window, cx);
+                                        sidebar.create_new_terminal(&workspace, window, cx);
                                     })
                                     .ok();
                                 }
@@ -5023,6 +5039,39 @@ impl Sidebar {
                     ContextMenu::build_persistent(window, cx, move |menu, _window, menu_cx| {
                         let menu = menu.end_slot_action(Box::new(menu::SecondaryConfirm));
                         let weak_menu = menu_cx.weak_entity();
+
+                        let new_agent_key = project_group_key.clone();
+                        let new_agent_sidebar = this_for_menu.clone();
+                        let new_agent_menu = weak_menu.clone();
+                        let menu = menu
+                            .entry(
+                                "New Agent Thread",
+                                Some(Box::new(NewThreadInGroup)),
+                                move |window, cx| {
+                                    new_agent_sidebar
+                                        .update(cx, |sidebar, cx| {
+                                            sidebar.set_group_expanded(&new_agent_key, true, cx);
+                                            sidebar.selection = None;
+                                            if let Some(workspace) =
+                                                sidebar.workspace_for_group(&new_agent_key, cx)
+                                            {
+                                                sidebar.create_new_thread(&workspace, window, cx);
+                                            } else {
+                                                sidebar.open_workspace_and_create_entry(
+                                                    &new_agent_key,
+                                                    NewEntryTarget::AgentThread,
+                                                    window,
+                                                    cx,
+                                                );
+                                            }
+                                        })
+                                        .ok();
+                                    new_agent_menu
+                                        .update(cx, |_, cx| cx.emit(DismissEvent))
+                                        .ok();
+                                },
+                            )
+                            .separator();
 
                         let menu = menu.when(show_multi_project_entries, |this| {
                             this.entry(
@@ -10296,17 +10345,38 @@ impl Sidebar {
             self.set_group_expanded(&key, true, cx);
             self.selection = None;
             if let Some(workspace) = self.workspace_for_group(&key, cx) {
-                self.create_new_entry(&workspace, window, cx);
+                self.create_new_thread(&workspace, window, cx);
+            } else {
+                self.open_workspace_and_create_entry(&key, NewEntryTarget::AgentThread, window, cx);
+            }
+        } else if let Some(workspace) = self.active_workspace(cx) {
+            self.create_new_thread(&workspace, window, cx);
+        }
+    }
+
+    fn new_session_in_group(
+        &mut self,
+        _: &NewSessionInGroup,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        cx.stop_propagation();
+
+        if let Some(key) = self.selected_group_key() {
+            self.set_group_expanded(&key, true, cx);
+            self.selection = None;
+            if let Some(workspace) = self.workspace_for_group(&key, cx) {
+                self.create_new_terminal(&workspace, window, cx);
             } else {
                 self.open_workspace_and_create_entry(
                     &key,
-                    NewEntryTarget::LastCreatedKind,
+                    default_new_session_target(),
                     window,
                     cx,
                 );
             }
         } else if let Some(workspace) = self.active_workspace(cx) {
-            self.create_new_entry(&workspace, window, cx);
+            self.create_new_terminal(&workspace, window, cx);
         }
     }
 
@@ -10633,31 +10703,6 @@ impl Sidebar {
         }
 
         self.update_entries(cx);
-    }
-
-    fn create_new_entry(
-        &mut self,
-        workspace: &Entity<Workspace>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        if workspace_path_list(workspace, cx).paths().is_empty() {
-            return;
-        }
-
-        if self.should_create_terminal_for_workspace(workspace, cx) {
-            self.create_new_terminal(workspace, window, cx);
-        } else {
-            self.create_new_thread(workspace, window, cx);
-        }
-    }
-
-    fn should_create_terminal_for_workspace(
-        &self,
-        _workspace: &Entity<Workspace>,
-        _cx: &App,
-    ) -> bool {
-        false
     }
 
     fn create_new_thread(
@@ -12047,7 +12092,7 @@ impl Sidebar {
                 ThreadsArchiveViewEvent::NewThread => {
                     this.show_thread_list(window, cx);
                     if let Some(workspace) = this.active_workspace(cx) {
-                        this.create_new_entry(&workspace, window, cx);
+                        this.create_new_thread(&workspace, window, cx);
                     }
                 }
             },
@@ -12305,6 +12350,7 @@ impl Render for Sidebar {
             .on_action(cx.listener(Self::move_selected_entry_up))
             .on_action(cx.listener(Self::move_selected_entry_down))
             .on_action(cx.listener(Self::new_thread_in_group))
+            .on_action(cx.listener(Self::new_session_in_group))
             .on_action(cx.listener(Self::new_terminal_thread))
             .on_action(cx.listener(Self::toggle_archive))
             .on_action(cx.listener(Self::toggle_attention_filter))

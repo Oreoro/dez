@@ -779,7 +779,7 @@
     "context": "Sidebar",
     "use_key_equivalents": true,
     "bindings": {
-      "cmd-n": "sidebar::NewThreadInGroup",
+      "cmd-n": "sidebar::NewSessionInGroup",
       "left": "menu::SelectParent",
       "right": "menu::SelectChild",
       "enter": "menu::Confirm",
