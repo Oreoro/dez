@@ -1153,6 +1153,12 @@ code, all launch gates pass, and known limitations are documented.
       `2fc5226a51` gates eager provider authentication on official Zed identity
       plus auto-connect, covering stale fork settings. Source and identity
       checks pass; compiled network proof remains consolidated.
+- [x] 2026-07-23: Hide unavailable upstream edit-prediction UI in Dez. Commit
+      `cc2509e8b8` normalizes legacy Zed/Mercury selections before rendering,
+      removes them from the provider picker, and hides Mercury setup while
+      preserving official Zed and explicit local/user-configured providers.
+      Focused source and identity checks pass; rendered Settings/status proof
+      remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

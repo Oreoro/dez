@@ -644,7 +644,11 @@ with new labels.
       Dez cannot post fork usage or crash data to the inherited Zed endpoint.
       Commit `2fc5226a51` applies the same non-Zed gate to eager language-model
       provider authentication, so an inherited `auto_connect: true` cannot turn
-      ordinary Dez startup into a cloud-provider discovery pass.
+      ordinary Dez startup into a cloud-provider discovery pass. Commit
+      `cc2509e8b8` closes the matching presentation leak: legacy Zed/Mercury edit
+      prediction selections normalize to unavailable in Dez, their status and
+      setup controls disappear, and explicit local or user-configured providers
+      remain available.
 - [ ] Audit focus order, accessible roles/names/descriptions, key shortcuts,
       minimum hit targets, screen-reader announcements, zoom, reduced motion,
       contrast, truncation, and localization-resistant layouts. Shared Session
@@ -1482,3 +1486,10 @@ Notes decision:
   provider at startup. The existing source test now derives its expectation
   from the product gate, and identity guards pass; compiled network proof
   remains consolidated.
+- 2026-07-23: Removed unavailable upstream edit-prediction presentation in
+  `cc2509e8b8`. Legacy Zed and Mercury selections now resolve to no provider in
+  Dez before the status item renders; neither provider appears in the picker,
+  and the Mercury setup card is absent. Official Zed behavior and explicit
+  Copilot, Codestral, Ollama, and compatible API paths remain intact. Focused
+  source assertions and identity guards pass; Settings/status rendering remains
+  consolidated.
