@@ -376,6 +376,12 @@ reject_pattern crates/sidebar/src/sidebar.rs \
 reject_pattern crates/sidebar/src/sidebar.rs \
     '"(Show Thread History|Hide Thread History|Command Search)"' \
     'the Session Rail exposes ambiguous or internally inconsistent utility labels'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'IconButton::new\("open-recent-workspaces", IconName::FolderOpen\).*?aria_label\("Open Recent Workspaces"\).*?Tooltip::for_action\("Open Recent Workspaces"' \
+    'the Session Rail footer can regress to an ambiguous Open Workspace utility'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'IconButton::new\("agent-sidebar-options-menu", IconName::Settings\).*?aria_label\("Agent Tools and Settings"\).*?header\("Agent Context"\).*?"Hide Session Rail"' \
+    'the Session Rail footer can regress to a Robot icon that does not open Agent'
 reject_pattern crates/workspace/src/pane.rs \
     '"(Project ready|Project tools unavailable|Project navigation did not attach to this pane\.)"' \
     'the Dez center surface mixes Project terminology into the Workspace hierarchy'

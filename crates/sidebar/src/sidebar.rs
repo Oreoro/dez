@@ -10486,12 +10486,14 @@ impl Sidebar {
                 })
             })
             .trigger_with_tooltip(
-                IconButton::new("open-project", IconName::FolderOpen)
+                IconButton::new("open-recent-workspaces", IconName::FolderOpen)
                     .size(ButtonSize::Medium)
                     .icon_size(IconSize::Small)
-                    .aria_label("Open Workspace")
+                    .aria_label("Open Recent Workspaces")
                     .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
-                |_window, cx| Tooltip::for_action("Open Workspace", &OpenRecent::default(), cx),
+                |_window, cx| {
+                    Tooltip::for_action("Open Recent Workspaces", &OpenRecent::default(), cx)
+                },
             )
             .offset(gpui::Point {
                 x: px(-2.0),
@@ -11871,11 +11873,11 @@ impl Sidebar {
 
         PopoverMenu::new("agent-sidebar-options-menu")
             .trigger_with_tooltip(
-                IconButton::new("agent-sidebar-options-menu", IconName::Robot)
+                IconButton::new("agent-sidebar-options-menu", IconName::Settings)
                     .size(ButtonSize::Medium)
                     .icon_size(IconSize::Small)
-                    .aria_label("Agent and Context Menu"),
-                Tooltip::text("Agent and Context Menu"),
+                    .aria_label("Agent Tools and Settings"),
+                Tooltip::text("Agent Tools and Settings"),
             )
             .anchor(if on_right {
                 gpui::Anchor::BottomRight
@@ -11940,14 +11942,14 @@ impl Sidebar {
                         menu = menu
                             .header("MCP Servers")
                             .action(
-                                "Add Server…",
+                                "Add MCP Server…",
                                 Box::new(zed_actions::OpenSettingsAt {
                                     path: "context_servers".to_string(),
                                     target: None,
                                 }),
                             )
                             .action(
-                                "Install New Servers…",
+                                "Browse MCP Extensions…",
                                 Box::new(zed_actions::Extensions {
                                     category_filter: Some(
                                         zed_actions::ExtensionCategoryFilter::ContextServers,
@@ -11956,8 +11958,8 @@ impl Sidebar {
                                 }),
                             )
                             .separator()
-                            .header("Context")
-                            .action("Skills", Box::new(ManageSkills));
+                            .header("Agent Context")
+                            .action("Manage Skills", Box::new(ManageSkills));
 
                         if global_agents_md_loaded || project_agents_md_exists {
                             if global_agents_md_loaded {
@@ -11974,10 +11976,17 @@ impl Sidebar {
                         }
 
                         menu = menu
-                            .action("Profiles", Box::new(ManageProfiles::default()))
-                            .action("Settings", Box::new(OpenSettings))
+                            .action("Agent Profiles", Box::new(ManageProfiles::default()))
+                            .action("Open Settings", Box::new(OpenSettings))
                             .separator()
-                            .action("Toggle Sidebar", Box::new(ToggleSidebar));
+                            .action(
+                                if APP_NAME == "Zed" {
+                                    "Toggle Sidebar"
+                                } else {
+                                    "Hide Session Rail"
+                                },
+                                Box::new(ToggleSidebar),
+                            );
 
                         if has_auth_methods || supports_logout {
                             menu = menu.separator();
