@@ -2242,3 +2242,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   protect the contract. Formatting, Bash syntax, identity, locked offline
   metadata, and diff checks pass; no build, test binary, or visual launch was
   performed.
+- 2026-07-23: Rebuilt Git's opened-Workspace/no-repository state in
+  `579e7448f7`. Dez now says **No repository in this Workspace**, explains that
+  Git initialization starts tracking the open folder, and presents one
+  full-width primary **Initialize Repository** action with Git-specific
+  identity and tooltip. The setup region follows the same top-aligned compact
+  hierarchy as other Workspace Tools and has an explicit accessibility name.
+  Official Zed retains its centered upstream state. A pure copy assertion and
+  identity guard protect the fork boundary. Formatting, Bash syntax, identity,
+  locked offline metadata, and diff checks pass; no build, test binary, or
+  visual launch was performed.

@@ -1289,7 +1289,10 @@ the later running-app reports, the source advanced through:
   direct **Clear Filter** recovery action while preserving official Zed; and
 - `f883f2f8a0`, which presents a clean Git repository as a top-aligned positive
   status, names its active branch, and offers an explained **Review Branch
-  Changes** action only where a base-branch comparison is relevant.
+  Changes** action only where a base-branch comparison is relevant; and
+- `579e7448f7`, which turns Git's opened-Workspace/no-repository placeholder
+  into a named top-aligned setup region with one explained primary
+  **Initialize Repository** action while preserving official Zed.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

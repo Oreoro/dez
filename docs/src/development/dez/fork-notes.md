@@ -544,3 +544,9 @@ defer it.
   the base-branch comparison; on `main` or `master` it does not advertise an
   irrelevant comparison. The state follows the same compact top-aligned
   Workspace Tool hierarchy.
+- **2026-07-23: Git setup names its Workspace effect.** When a Workspace has an
+  open folder but no repository, Git explains that initialization starts
+  tracking that folder and offers one primary **Initialize Repository** action.
+  The setup path is visually distinct from clean, unsafe, and unopened
+  Workspace states; those conditions must not collapse into one generic Git
+  placeholder.

@@ -2408,6 +2408,20 @@ Completed for the clean Git-state slice:
   locked offline Cargo metadata, and `git diff --check`;
 - no build, test binary, alternate binary, or visual launch was performed.
 
+Completed for the Git setup-state slice:
+
+- replaced the centered plural **No Git Repositories** placeholder with **No
+  repository in this Workspace**;
+- explained that initialization starts tracking changes in the open folder;
+- made **Initialize Repository** the one full-width primary recovery action
+  with Git iconography and an explicit tooltip;
+- exposed the setup content as a named top-aligned region;
+- preserved official Zed's upstream presentation;
+- added a pure copy assertion and static identity guard;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
 Completed for the first helper-process source slice:
 
 - new crate instructions and a rollbackable `dez_terminal_host` workspace
