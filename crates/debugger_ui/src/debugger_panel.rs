@@ -60,6 +60,28 @@ register_feature_flag!(DebuggerHistoryFeatureFlag);
 
 const DEBUG_PANEL_KEY: &str = "DebugPanel";
 
+fn debug_region_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Debugger"
+    } else {
+        "Debug"
+    }
+}
+
+fn dez_debug_idle_copy() -> (&'static str, &'static str) {
+    (
+        "Start debugging",
+        "Launch a configured debug task. Controls, variables, call stack, console, and breakpoints stay together in this Workspace.",
+    )
+}
+
+fn dez_breakpoint_empty_copy() -> (&'static str, &'static str) {
+    (
+        "No breakpoints yet",
+        "Set one from an editor gutter; it will appear here before or during a Debug Session.",
+    )
+}
+
 pub struct DebugPanel {
     active_session: Option<Entity<DebugSession>>,
     project: Entity<Project>,
@@ -732,7 +754,10 @@ impl DebugPanel {
                                 .gap_1()
                                 .w_full()
                                 .when(active_session.is_none(), |this| {
-                                    this.child(Label::new("Debugger").size(LabelSize::Small))
+                                    this.child(
+                                        Label::new(debug_region_label(paths::APP_NAME))
+                                            .size(LabelSize::Small),
+                                    )
                                 })
                                 .when_some(
                                     active_session
@@ -1616,7 +1641,7 @@ impl Item for DebugPanel {
     type Event = PanelEvent;
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
-        "Debugger".into()
+        debug_region_label(paths::APP_NAME).into()
     }
 
     fn tab_icon(&self, _window: &Window, _cx: &App) -> Option<Icon> {
@@ -1826,71 +1851,190 @@ impl Render for DebugPanel {
                             ),
                     )
                 } else {
-                    let welcome_experience = v_flex()
-                        .flex_1()
-                        .w_full()
-                        .min_h_0()
-                        .pr_8()
-                        .items_center()
-                        .justify_center()
-                        .gap_2()
-                        .child(
-                            Button::new("spawn-new-session-empty-state", "New Session")
-                                .start_icon(
-                                    Icon::new(IconName::Plus)
-                                        .size(IconSize::Small)
-                                        .color(Color::Muted),
+                    let welcome_experience = if paths::APP_NAME == "Zed" {
+                        v_flex()
+                            .flex_1()
+                            .w_full()
+                            .min_h_0()
+                            .pr_8()
+                            .items_center()
+                            .justify_center()
+                            .gap_2()
+                            .child(
+                                Button::new("spawn-new-session-empty-state", "New Session")
+                                    .start_icon(
+                                        Icon::new(IconName::Plus)
+                                            .size(IconSize::Small)
+                                            .color(Color::Muted),
+                                    )
+                                    .on_click(|_, window, cx| {
+                                        window.dispatch_action(crate::Start.boxed_clone(), cx);
+                                    }),
+                            )
+                            .child(
+                                Button::new("edit-debug-settings", "Edit debug.json")
+                                    .start_icon(
+                                        Icon::new(IconName::Code)
+                                            .size(IconSize::Small)
+                                            .color(Color::Muted),
+                                    )
+                                    .on_click(|_, window, cx| {
+                                        window.dispatch_action(
+                                            zed_actions::OpenProjectDebugTasks.boxed_clone(),
+                                            cx,
+                                        );
+                                    }),
+                            )
+                            .child(
+                                Button::new("open-debugger-docs", "Debugger Docs")
+                                    .start_icon(
+                                        Icon::new(IconName::Book)
+                                            .size(IconSize::Small)
+                                            .color(Color::Muted),
+                                    )
+                                    .on_click(|_, _, cx| {
+                                        cx.open_url("https://zed.dev/docs/debugger")
+                                    }),
+                            )
+                            .child(
+                                Button::new(
+                                    "spawn-new-session-install-extensions",
+                                    "Debugger Extensions",
                                 )
-                                .on_click(|_, window, cx| {
-                                    window.dispatch_action(crate::Start.boxed_clone(), cx);
-                                }),
-                        )
-                        .child(
-                            Button::new("edit-debug-settings", "Edit debug.json")
                                 .start_icon(
-                                    Icon::new(IconName::Code)
+                                    Icon::new(IconName::Blocks)
                                         .size(IconSize::Small)
                                         .color(Color::Muted),
                                 )
                                 .on_click(|_, window, cx| {
                                     window.dispatch_action(
-                                        zed_actions::OpenProjectDebugTasks.boxed_clone(),
+                                        zed_actions::Extensions {
+                                            category_filter: Some(
+                                                zed_actions::ExtensionCategoryFilter::DebugAdapters,
+                                            ),
+                                            id: None,
+                                        }
+                                        .boxed_clone(),
                                         cx,
                                     );
                                 }),
-                        )
-                        .child(
-                            Button::new("open-debugger-docs", "Debugger Docs")
-                                .start_icon(
-                                    Icon::new(IconName::Book)
-                                        .size(IconSize::Small)
-                                        .color(Color::Muted),
-                                )
-                                .on_click(|_, _, cx| cx.open_url("https://zed.dev/docs/debugger")),
-                        )
-                        .child(
-                            Button::new(
-                                "spawn-new-session-install-extensions",
-                                "Debugger Extensions",
                             )
-                            .start_icon(
-                                Icon::new(IconName::Blocks)
-                                    .size(IconSize::Small)
-                                    .color(Color::Muted),
+                    } else {
+                        let (title, description) = dez_debug_idle_copy();
+
+                        v_flex()
+                            .flex_1()
+                            .w_full()
+                            .min_h_0()
+                            .items_center()
+                            .justify_start()
+                            .px_4()
+                            .pt_8()
+                            .role(gpui::Role::Region)
+                            .aria_label(format!("{title}. {description}"))
+                            .child(
+                                v_flex()
+                                    .w_64()
+                                    .max_w_full()
+                                    .gap_2()
+                                    .child(
+                                        h_flex()
+                                            .gap_1p5()
+                                            .child(
+                                                Icon::new(IconName::Debug)
+                                                    .size(IconSize::Small)
+                                                    .color(Color::Accent),
+                                            )
+                                            .child(Label::new(title).size(LabelSize::Large)),
+                                    )
+                                    .child(
+                                        Label::new(description)
+                                            .size(LabelSize::Small)
+                                            .color(Color::Muted),
+                                    )
+                                    .child(
+                                        Button::new(
+                                            "spawn-new-session-empty-state",
+                                            "Start Debug Session",
+                                        )
+                                        .full_width()
+                                        .start_icon(
+                                            Icon::new(IconName::Debug).size(IconSize::Small),
+                                        )
+                                        .label_size(LabelSize::Small)
+                                        .style(ButtonStyle::Filled)
+                                        .on_click(|_, window, cx| {
+                                            window.dispatch_action(crate::Start.boxed_clone(), cx);
+                                        }),
+                                    )
+                                    .child(
+                                        Button::new(
+                                            "edit-debug-settings",
+                                            "Configure debug.json",
+                                        )
+                                        .full_width()
+                                        .start_icon(
+                                            Icon::new(IconName::Code).size(IconSize::Small),
+                                        )
+                                        .label_size(LabelSize::Small)
+                                        .style(ButtonStyle::Outlined)
+                                        .on_click(|_, window, cx| {
+                                            window.dispatch_action(
+                                                zed_actions::OpenProjectDebugTasks.boxed_clone(),
+                                                cx,
+                                            );
+                                        }),
+                                    )
+                                    .child(
+                                        v_flex()
+                                            .w_full()
+                                            .gap_1()
+                                            .child(
+                                                Button::new(
+                                                    "open-debugger-docs",
+                                                    "Documentation",
+                                                )
+                                                .full_width()
+                                                .start_icon(
+                                                    Icon::new(IconName::Book)
+                                                        .size(IconSize::Small),
+                                                )
+                                                .label_size(LabelSize::Small)
+                                                .style(ButtonStyle::Subtle)
+                                                .on_click(|_, _, cx| {
+                                                    cx.open_url(
+                                                        "https://zed.dev/docs/debugger",
+                                                    )
+                                                }),
+                                            )
+                                            .child(
+                                                Button::new(
+                                                    "spawn-new-session-install-extensions",
+                                                    "Debug Adapters",
+                                                )
+                                                .full_width()
+                                                .start_icon(
+                                                    Icon::new(IconName::Blocks)
+                                                        .size(IconSize::Small),
+                                                )
+                                                .label_size(LabelSize::Small)
+                                                .style(ButtonStyle::Subtle)
+                                                .on_click(|_, window, cx| {
+                                                    window.dispatch_action(
+                                                        zed_actions::Extensions {
+                                                            category_filter: Some(
+                                                                zed_actions::ExtensionCategoryFilter::DebugAdapters,
+                                                            ),
+                                                            id: None,
+                                                        }
+                                                        .boxed_clone(),
+                                                        cx,
+                                                    );
+                                                }),
+                                            ),
+                                    ),
                             )
-                            .on_click(|_, window, cx| {
-                                window.dispatch_action(
-                                    zed_actions::Extensions {
-                                        category_filter: Some(
-                                            zed_actions::ExtensionCategoryFilter::DebugAdapters,
-                                        ),
-                                        id: None,
-                                    }
-                                    .boxed_clone(),
-                                    cx,
-                                );
-                            }),
-                        );
+                    };
 
                     let has_breakpoints = self
                         .project
@@ -1928,13 +2072,38 @@ impl Render for DebugPanel {
                             this.child(self.breakpoint_list.clone())
                         })
                         .when(!has_breakpoints, |this| {
-                            this.child(
-                                v_flex().size_full().items_center().justify_center().child(
-                                    Label::new("No Breakpoints Set")
-                                        .size(LabelSize::Small)
-                                        .color(Color::Muted),
-                                ),
-                            )
+                            if paths::APP_NAME == "Zed" {
+                                this.child(
+                                    v_flex().size_full().items_center().justify_center().child(
+                                        Label::new("No Breakpoints Set")
+                                            .size(LabelSize::Small)
+                                            .color(Color::Muted),
+                                    ),
+                                )
+                            } else {
+                                let (title, description) = dez_breakpoint_empty_copy();
+                                this.child(
+                                    v_flex()
+                                        .size_full()
+                                        .items_center()
+                                        .justify_center()
+                                        .px_4()
+                                        .gap_1()
+                                        .role(gpui::Role::Status)
+                                        .aria_label(format!("{title}. {description}"))
+                                        .child(
+                                            Icon::new(IconName::DebugBreakpoint)
+                                                .size(IconSize::Small)
+                                                .color(Color::Muted),
+                                        )
+                                        .child(Label::new(title).size(LabelSize::Small))
+                                        .child(
+                                            Label::new(description)
+                                                .size(LabelSize::XSmall)
+                                                .color(Color::Muted),
+                                        ),
+                                )
+                            }
                         });
 
                     let dashboard = v_flex()
@@ -2029,5 +2198,30 @@ impl workspace::DebuggerProvider for DebuggerProvider {
         let session = self.0.read(cx).active_session()?;
         let thread = session.read(cx).running_state().read(cx).thread_id()?;
         session.read(cx).session(cx).read(cx).thread_state(thread)
+    }
+}
+
+#[cfg(test)]
+mod product_copy_tests {
+    use super::*;
+
+    #[test]
+    fn dez_debug_region_and_idle_states_use_workspace_language() {
+        assert_eq!(debug_region_label("Dez"), "Debug");
+        assert_eq!(debug_region_label("Zed"), "Debugger");
+        assert_eq!(
+            dez_debug_idle_copy(),
+            (
+                "Start debugging",
+                "Launch a configured debug task. Controls, variables, call stack, console, and breakpoints stay together in this Workspace."
+            )
+        );
+        assert_eq!(
+            dez_breakpoint_empty_copy(),
+            (
+                "No breakpoints yet",
+                "Set one from an editor gutter; it will appear here before or during a Debug Session."
+            )
+        );
     }
 }

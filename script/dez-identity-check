@@ -742,6 +742,12 @@ require_multiline_pattern crates/outline_panel/src/outline_panel.rs \
 require_multiline_pattern crates/debugger_ui/src/debugger_panel.rs \
     'fn icon_tooltip.*?paths::APP_NAME == "Zed".*?"Debug Panel".*?"Debug"' \
     'the Dez Debug tool can regress to exposing Panel implementation terminology'
+require_multiline_pattern crates/debugger_ui/src/debugger_panel.rs \
+    'fn debug_region_label.*?app_name == "Zed".*?"Debugger".*?"Debug".*?fn dez_debug_idle_copy.*?"Start debugging".*?stay together in this Workspace.*?Label::new\(debug_region_label\(paths::APP_NAME\)\).*?fn tab_content_text.*?debug_region_label\(paths::APP_NAME\).*?let welcome_experience = if paths::APP_NAME == "Zed".*?"New Session".*?role\(gpui::Role::Region\).*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?Button::new\([[:space:]]*"spawn-new-session-empty-state",[[:space:]]*"Start Debug Session".*?ButtonStyle::Filled.*?Button::new\([[:space:]]*"edit-debug-settings",[[:space:]]*"Configure debug\.json".*?"Documentation".*?"Debug Adapters"' \
+    'the idle Dez Debug region can regress to a centered button pile, ambiguous session action, or Debugger compatibility label'
+require_multiline_pattern crates/debugger_ui/src/debugger_panel.rs \
+    'fn dez_breakpoint_empty_copy.*?"No breakpoints yet".*?editor gutter.*?when\(!has_breakpoints.*?paths::APP_NAME == "Zed".*?"No Breakpoints Set".*?role\(gpui::Role::Status\).*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?IconName::DebugBreakpoint' \
+    'the idle Dez breakpoint list can regress to an unexplained empty sentence'
 require_multiline_pattern crates/git_ui/src/project_diff.rs \
     'send_review_to_agent_tooltip\(paths::APP_NAME\).*?fn send_review_to_agent_tooltip.*?app_name == "Zed".*?"Send all review comments to the Agent panel".*?"Send all review comments to Agent"' \
     'the Git review handoff can regress to describing Agent as an inherited Panel'
