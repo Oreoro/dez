@@ -208,6 +208,15 @@ require_pattern crates/sidebar/src/sidebar.rs \
 require_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\("Session Rail"\)' \
     'the supervision region has regressed to an ambiguous Sessions heading'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn terminal_row_close_presentation.*?"Terminate Running Session", true.*?"Detach Live Terminal", false' \
+    'a Host-owned running Session can regress to a non-destructive detach label'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn terminal_row_owner_label.*?"Durable Host".*?"Remote Workspace".*?"Workspace process"' \
+    'Session Rail terminal ownership can regress to ambiguous Host/process labels'
+require_pattern crates/sidebar/src/sidebar.rs \
+    '\.actor_label\("Terminal Session"\)' \
+    'plain terminal rows can regress to an ambiguous Terminal actor label'
 require_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\("Ready for a session"\)' \
     'empty Workspace groups regress to repeated absence copy'

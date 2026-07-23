@@ -953,9 +953,72 @@ impl TerminalRuntimeState {
     }
 }
 
+fn terminal_row_close_presentation(
+    is_host_session: bool,
+    runtime_state: Option<TerminalRuntimeState>,
+) -> (&'static str, bool) {
+    match (is_host_session, runtime_state) {
+        (true, Some(TerminalRuntimeState::Live)) => ("Terminate Running Session", true),
+        (true, Some(TerminalRuntimeState::Detached)) => ("Terminate Detached Session", true),
+        (true, Some(TerminalRuntimeState::Reconnecting)) => {
+            ("Terminate Reconnecting Session", true)
+        }
+        (true, Some(TerminalRuntimeState::Exited)) => ("Remove Exited Session", false),
+        (true, Some(TerminalRuntimeState::Missing)) => ("Remove Missing Session", false),
+        (true, Some(TerminalRuntimeState::Incompatible)) => ("Remove Incompatible Session", false),
+        (true, None) => ("Remove Saved Session", false),
+        (false, Some(TerminalRuntimeState::Live)) => ("Detach Live Terminal", false),
+        (false, Some(TerminalRuntimeState::Detached)) => ("Terminate Detached Session", true),
+        (false, Some(TerminalRuntimeState::Reconnecting)) => {
+            ("Terminate Reconnecting Session", true)
+        }
+        (false, Some(TerminalRuntimeState::Exited)) => ("Close Exited Terminal", false),
+        (false, Some(TerminalRuntimeState::Missing)) => ("Remove Missing Session", false),
+        (false, Some(TerminalRuntimeState::Incompatible)) => ("Remove Incompatible Session", false),
+        (false, None) => ("Remove Saved Terminal", false),
+    }
+}
+
+fn terminal_row_owner_label(has_session_ref: bool, is_remote: bool) -> &'static str {
+    if has_session_ref {
+        "Durable Host"
+    } else if is_remote {
+        "Remote Workspace"
+    } else {
+        "Workspace process"
+    }
+}
+
 #[cfg(test)]
 mod terminal_runtime_label_tests {
     use super::*;
+
+    #[test]
+    fn host_owned_session_actions_never_present_termination_as_detach() {
+        assert_eq!(
+            terminal_row_close_presentation(true, Some(TerminalRuntimeState::Live)),
+            ("Terminate Running Session", true)
+        );
+        assert_eq!(
+            terminal_row_close_presentation(true, Some(TerminalRuntimeState::Detached)),
+            ("Terminate Detached Session", true)
+        );
+        assert_eq!(
+            terminal_row_close_presentation(true, Some(TerminalRuntimeState::Exited)),
+            ("Remove Exited Session", false)
+        );
+        assert_eq!(
+            terminal_row_close_presentation(false, Some(TerminalRuntimeState::Live)),
+            ("Detach Live Terminal", false)
+        );
+    }
+
+    #[test]
+    fn terminal_row_ownership_is_explicit() {
+        assert_eq!(terminal_row_owner_label(true, false), "Durable Host");
+        assert_eq!(terminal_row_owner_label(false, true), "Remote Workspace");
+        assert_eq!(terminal_row_owner_label(false, false), "Workspace process");
+    }
 
     #[test]
     fn distinguishes_saved_live_and_attention_terminal_agents() {
@@ -10066,21 +10129,11 @@ impl Sidebar {
         let show_agent_attention =
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
         let terminal_agent_kind = terminal.detected_agent_kind;
-        let close_label = match terminal.runtime.as_ref().map(|runtime| runtime.state) {
-            Some(TerminalRuntimeState::Detached) => "Terminate Detached Session",
-            Some(TerminalRuntimeState::Reconnecting) => "Terminate Reconnecting Session",
-            Some(TerminalRuntimeState::Live) => "Detach Live Terminal",
-            Some(TerminalRuntimeState::Exited) => "Close Exited Terminal",
-            Some(TerminalRuntimeState::Missing) => "Remove Missing Session",
-            Some(TerminalRuntimeState::Incompatible) => "Remove Incompatible Session",
-            None => "Remove Saved Terminal",
-        };
-        let requires_termination_confirmation = terminal.runtime.as_ref().is_some_and(|runtime| {
-            matches!(
-                runtime.state,
-                TerminalRuntimeState::Detached | TerminalRuntimeState::Reconnecting
-            )
-        });
+        let is_host_session = matches!(&terminal.source, TerminalEntrySource::HostSession(_));
+        let (close_label, requires_termination_confirmation) = terminal_row_close_presentation(
+            is_host_session,
+            terminal.runtime.as_ref().map(|runtime| runtime.state),
+        );
         let close_icon = if requires_termination_confirmation {
             IconName::Stop
         } else {
@@ -10121,13 +10174,8 @@ impl Sidebar {
             TerminalEntrySource::WorkspaceItem(terminal_view) => Some(terminal_view.clone()),
             TerminalEntrySource::AgentPanel | TerminalEntrySource::HostSession(_) => None,
         };
-        let host_label = if terminal.metadata.session_ref.is_some() {
-            "Local Host"
-        } else if is_remote {
-            "Remote Host"
-        } else {
-            "Local process"
-        };
+        let host_label =
+            terminal_row_owner_label(terminal.metadata.session_ref.is_some(), is_remote);
         let (icon_char, title, highlight_positions) =
             match split_leading_icon_char(&display_title, &terminal.highlight_positions) {
                 Some((icon_char, title, positions)) => (Some(icon_char), title, positions),
@@ -10157,7 +10205,7 @@ impl Sidebar {
                     )
                 })
                 .when(terminal_agent_kind.is_none(), |this| {
-                    this.actor_label("Terminal")
+                    this.actor_label("Terminal Session")
                         .state_label(terminal_agent_state_label(
                             terminal.agent.as_ref(),
                             terminal.runtime.as_ref(),
