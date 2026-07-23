@@ -632,6 +632,55 @@ async fn test_remove_fallback_via_find_or_create_skips_removed_workspaces(cx: &m
 }
 
 #[gpui::test]
+async fn terminal_evidence_is_isolated_between_same_path_workspaces(cx: &mut TestAppContext) {
+    init_test(cx);
+    let fs = FakeFs::new(cx.executor());
+    fs.insert_tree("/shared", json!({ "file.txt": "" })).await;
+    let project_a = Project::test(fs.clone(), ["/shared".as_ref()], cx).await;
+    let project_b = Project::test(fs, ["/shared".as_ref()], cx).await;
+
+    let (multi_workspace, cx) =
+        cx.add_window_view(|window, cx| MultiWorkspace::test_new(project_a, window, cx));
+    let workspace_a = multi_workspace.read_with(cx, |mw, _| mw.workspace().clone());
+    let workspace_b = multi_workspace.update_in(cx, |mw, window, cx| {
+        mw.test_add_workspace(project_b, window, cx)
+    });
+
+    workspace_a.update(cx, |workspace, cx| {
+        workspace.set_terminal_working_directory_evidence(
+            "session-a",
+            Some(PathBuf::from("/shared/a")),
+            cx,
+        );
+    });
+    workspace_b.update(cx, |workspace, cx| {
+        workspace.set_terminal_working_directory_evidence(
+            "session-b",
+            Some(PathBuf::from("/shared/b")),
+            cx,
+        );
+    });
+
+    let terminal_record = |workspace: &Entity<Workspace>, cx: &App| {
+        workspace
+            .read(cx)
+            .evidence_set()
+            .records()
+            .iter()
+            .find(|record| {
+                record.kind == crate::evidence::WorkspaceEvidenceKind::TerminalWorkingDirectory
+            })
+            .cloned()
+            .unwrap()
+    };
+    let record_a = multi_workspace.read_with(cx, |_, cx| terminal_record(&workspace_a, cx));
+    let record_b = multi_workspace.read_with(cx, |_, cx| terminal_record(&workspace_b, cx));
+    assert_eq!(record_a.path.as_ref(), std::path::Path::new("/shared/a"));
+    assert_eq!(record_b.path.as_ref(), std::path::Path::new("/shared/b"));
+    assert_ne!(record_a.id, record_b.id);
+}
+
+#[gpui::test]
 async fn test_find_or_create_local_workspace_reuses_active_workspace_after_sidebar_open(
     cx: &mut TestAppContext,
 ) {

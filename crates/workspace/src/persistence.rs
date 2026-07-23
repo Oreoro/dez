@@ -4494,6 +4494,45 @@ mod tests {
     }
 
     #[gpui::test]
+    async fn test_user_selected_review_evidence_is_workspace_scoped() {
+        zlog::init_test();
+
+        let db =
+            WorkspaceDb::open_test_db("user_selected_review_evidence_is_workspace_scoped").await;
+        let workspace_a = workspace_with(
+            41,
+            &[Path::new("/repo")],
+            Default::default(),
+            Some("session"),
+        );
+        let workspace_b = workspace_with(
+            42,
+            &[Path::new("/repo-worktree")],
+            Default::default(),
+            Some("session"),
+        );
+        db.save_workspace(workspace_a.clone()).await;
+        db.save_workspace(workspace_b.clone()).await;
+
+        let selected_a = PathList::new(&["/repo/a.rs"]);
+        let selected_b = PathList::new(&["/repo-worktree/b.rs"]);
+        db.set_user_selected_review_evidence(workspace_a.id, selected_a.serialize().paths)
+            .await
+            .unwrap();
+        db.set_user_selected_review_evidence(workspace_b.id, selected_b.serialize().paths)
+            .await
+            .unwrap();
+
+        assert_eq!(db.user_selected_review_evidence(workspace_a.id), selected_a);
+        assert_eq!(db.user_selected_review_evidence(workspace_b.id), selected_b);
+        db.set_user_selected_review_evidence(workspace_a.id, String::new())
+            .await
+            .unwrap();
+        assert!(db.user_selected_review_evidence(workspace_a.id).is_empty());
+        assert_eq!(db.user_selected_review_evidence(workspace_b.id), selected_b);
+    }
+
+    #[gpui::test]
     async fn test_cleanup_panes() {
         zlog::init_test();
 
