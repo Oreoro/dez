@@ -81,13 +81,14 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Crash recovery identity and opt-in source: `aab0e5f2f2`
 - Collaboration shortcut and call-chrome isolation source: `0ddf84161e`
 - Dez CLI and skill-import guidance source: `2efbf166b7`
+- Frozen workspace lock repair source: `c3dfb7aa79`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
 - Integration merge: `2be63cfea347006e407934754086bbef62d482c2`
 - Incorporated upstream: `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
 - `Cargo.lock` SHA-256:
-  `64104e448242ff05034e6990c7ae7e7120edad21066ead5fb766e8dbb44b264e`
+  `830aca0d0439bf3d58ea2832fe1930c1f0b84fa0bce90bfdd078c59591c6a4df`
 - Toolchain: `rustc 1.95.0 (59807616e 2026-04-14)`,
   `cargo 1.95.0 (f2d3ce0bd 2026-03-21)`, host
   `aarch64-apple-darwin`
@@ -711,6 +712,12 @@ importer describes its `GITHUB_TOKEN` retry without claiming Zed performs it.
 Official Zed retains its CLI copy. Focused source assertions and identity guards
 pass; rendered Settings and skill-creator proof remain deferred.
 
+Commit `c3dfb7aa79` reconciles the locked workspace graph before the consolidated
+build. It adds only the already-declared `util` edge for `dez_terminal_host`
+and `paths` edge for `project_panel`; no package version or registry/source
+entry changed. Full `cargo metadata --locked` resolves and the candidate hash
+above records the resulting lockfile.
+
 The corrected `Dez Dev.app` is now registered and launched as launchd child PID
 `85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 `lsof` resolves its text executable to
@@ -944,7 +951,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `2efbf166b7` or
+visual evidence: the exact bundle must first be rebuilt from `c3dfb7aa79` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -968,7 +975,8 @@ predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `b39eedf724`, `9323af8008`, `80ff1df75f`, `c47637c2ac`, `7e91f00b69`, and
 `e28b78ed57`, `a90fae5873`, `f6318ea907`, `9930e86677`, `4a102fc50e`, and
 `933e3f515f`, `2680937952`, `9239006d4b`, `33f7ff5893`, `2fc5226a51`, and
-`cc2509e8b8`, `b909b31d45`, `aab0e5f2f2`, `0ddf84161e`, and `2efbf166b7`. A rebuild/re-audit
+`cc2509e8b8`, `b909b31d45`, `aab0e5f2f2`, `0ddf84161e`, `2efbf166b7`, and
+`c3dfb7aa79`. A rebuild/re-audit
 and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.

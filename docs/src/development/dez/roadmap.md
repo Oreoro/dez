@@ -1184,6 +1184,11 @@ code, all launch gates pass, and known limitations are documented.
       attribution that Zed performs private skill URL retries. Official Zed
       keeps its CLI copy. Source and identity checks pass; rendered
       Settings/skill proof remains consolidated.
+- [x] 2026-07-23: Reconcile the frozen workspace lock graph. Commit
+      `c3dfb7aa79` adds the already-declared `util` and `paths` direct edges for
+      `dez_terminal_host` and `project_panel`; no version or source changes.
+      Full locked metadata resolves and the candidate hash is updated in
+      Release Evidence.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

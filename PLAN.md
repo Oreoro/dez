@@ -1530,3 +1530,8 @@ Notes decision:
   URL importer describes its `GITHUB_TOKEN` retry without attributing the
   behavior to Zed. Official Zed retains its CLI copy. Focused source assertions
   and identity guards pass; rendered Settings/skill proof remains consolidated.
+- 2026-07-23: Reconciled the frozen workspace lock graph in `c3dfb7aa79`.
+  Full locked metadata exposed two previously omitted direct dependency edges:
+  `util` for `dez_terminal_host` and `paths` for `project_panel`. No package
+  version or source changed. Full locked metadata now resolves; the recorded
+  lockfile hash is updated in Release Evidence.
