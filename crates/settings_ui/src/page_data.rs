@@ -105,6 +105,14 @@ fn auto_update_setting_visible(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn cli_default_open_behavior_description(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "How `zed <path>` opens directories when no flag is specified."
+    } else {
+        "How `dez <path>` opens directories when no flag is specified."
+    }
+}
+
 fn developer_page(cx: &App) -> SettingsPage {
     use feature_flags::FeatureFlagAppExt as _;
 
@@ -281,7 +289,7 @@ fn general_page(cx: &App) -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "CLI Default Open Behavior",
-                description: "How `zed <path>` opens directories when no flag is specified.",
+                description: cli_default_open_behavior_description(paths::APP_NAME),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("cli_default_open_behavior"),
@@ -11129,6 +11137,18 @@ mod tests {
         ));
         assert!(!auto_update_setting_visible("Dez"));
         assert!(auto_update_setting_visible("Zed"));
+    }
+
+    #[test]
+    fn cli_open_behavior_uses_the_public_product_command() {
+        assert_eq!(
+            cli_default_open_behavior_description("Dez"),
+            "How `dez <path>` opens directories when no flag is specified."
+        );
+        assert_eq!(
+            cli_default_open_behavior_description("Zed"),
+            "How `zed <path>` opens directories when no flag is specified."
+        );
     }
 
     #[test]
