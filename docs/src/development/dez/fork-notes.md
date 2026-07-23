@@ -101,7 +101,9 @@ terminology:
 The active Workspace keeps **New Terminal** and **Workspace Options** visible.
 Inactive Workspace actions may reveal on hover because selecting the Workspace
 first makes the same controls persistent. Every icon-only control must retain
-an accessible name and tooltip.
+an accessible name and tooltip. Repeated Workspace-row controls include the
+visible Workspace name in both; internal element and hover-group identifiers
+are presentation-only and must never enter user-facing copy.
 
 Visible controls must also perform their advertised action: the Agent title
 pencil starts editing, worktree closure names its window scope, and the

@@ -91,6 +91,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Onboarding stateful landmark repair source: `2452d3b4ec`
 - Lumin and JetBrains visual-default source: `67001bf0ef`
 - Deliberate terminal-termination source: `7664c6e59b`
+- Workspace header control-identity source: `e0e8f119e0`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -1200,7 +1201,11 @@ the later running-app reports, the source advanced through:
 - `7664c6e59b`, which routes destructive termination through the selected
   terminal's controller, hides it when no live process can be terminated,
   separates it from close/detach, and requires effect-specific critical
-  confirmation.
+  confirmation; and
+- `e0e8f119e0`, which gives every repeated Workspace **New Terminal** and
+  **Workspace Options** control a visible, object-specific accessibility name
+  and matching tooltip while keeping internal hover-group IDs out of product
+  copy.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

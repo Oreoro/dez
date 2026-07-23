@@ -1911,6 +1911,12 @@ code, all launch gates pass, and known limitations are documented.
   effect-specific confirmation. This prevents an ordinary terminal from losing
   its Surface while a coexisting Host receives an unrelated session ID.
   Compiled interaction and prompt-focus proof remains in the consolidated gate.
+- **2026-07-23:** Repeated controls in list rows name the domain object the
+  person can see, never the private element used to coordinate hover or focus.
+  Commit `e0e8f119e0` applies that rule to **New Terminal** and **Workspace
+  Options** in every Workspace header, with the same specific name in
+  accessibility output and the visual tooltip. Active Workspace controls stay
+  persistent; inactive controls may reveal on hover without changing identity.
 
 ## Verification {#verification}
 
@@ -1940,6 +1946,19 @@ Completed for the terminal termination safety slice:
 - `git diff --check`;
 - focused pure assertions authored for termination availability and local versus
   durable confirmation copy;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the Workspace header control-identity slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the canonical Dez documentation;
+- Bash syntax and Dez identity checks, including the internal-ID rejection
+  guard;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- pure assertions authored for visible Workspace names and implementation-ID
+  exclusion;
 - no application build, Rust test binary, bundle, alternate binary, or visual
   launch.
 

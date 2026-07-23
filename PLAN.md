@@ -513,7 +513,10 @@ with new labels.
       Command Palette utility names with their actual behavior. Commit
       `633dcc4bec` adds a keyboard-addressable **Close Worktree from Window**
       submenu for the pointer-only hover control and preserves multi-root scope
-      in its labels.
+      in its labels. Commit `e0e8f119e0` makes the repeated **New Terminal** and
+      **Workspace Options** controls name their visible Workspace in both
+      accessibility labels and tooltips instead of leaking an internal hover
+      group identifier; active Workspace controls remain persistently visible.
 - [ ] Ensure hover-only actions also exist in context menus or command palette
       and expose accurate accessibility names. Session Rail review, terminal
       lifecycle, attention, hook setup, and evidence-copy actions now have
@@ -2021,3 +2024,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   wording, separation, confirmation, and controller routing. Formatting,
   locked offline metadata, identity, Bash syntax, and diff checks pass; no
   build, test binary, or visual launch was performed.
+- 2026-07-23: Corrected repeated Workspace header control identity in
+  `e0e8f119e0`. **New Terminal** and **Workspace Options** now include the
+  visible Workspace name in their accessibility labels and matching tooltips;
+  private hover-group IDs remain presentation-only. Focused pure label
+  assertions and the identity gate prevent that implementation detail from
+  returning. Formatting, locked offline metadata, Bash syntax, identity, and
+  diff checks pass; no build, test binary, or visual launch was performed.
