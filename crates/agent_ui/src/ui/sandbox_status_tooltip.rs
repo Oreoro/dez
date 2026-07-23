@@ -246,6 +246,18 @@ impl SandboxStatusTooltip {
     }
 }
 
+pub(crate) fn sandbox_session_label(
+    app_name: &str,
+    upstream_thread_label: &'static str,
+    dez_session_label: &'static str,
+) -> &'static str {
+    if app_name == "Zed" {
+        upstream_thread_label
+    } else {
+        dez_session_label
+    }
+}
+
 impl RenderOnce for SandboxStatusTooltip {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let content = match self {
@@ -260,7 +272,14 @@ impl RenderOnce for SandboxStatusTooltip {
                 .gap(sandbox_tooltip_gap(cx))
                 .child(div().opacity(0.5).child(settings.render(cx)))
                 .child(Divider::horizontal())
-                .child(Label::new("Sandboxing is disabled for this thread").size(LabelSize::Small))
+                .child(
+                    Label::new(sandbox_session_label(
+                        paths::APP_NAME,
+                        "Sandboxing is disabled for this thread",
+                        "Sandboxing is disabled for this Agent Session",
+                    ))
+                    .size(LabelSize::Small),
+                )
                 .into_any_element(),
             SandboxStatusTooltip::Enabled { settings, thread } => v_flex()
                 .gap(sandbox_tooltip_gap(cx))
@@ -313,11 +332,13 @@ impl Component for SandboxStatusTooltip {
                 SandboxRow::domain("*.npmjs.org"),
             ]));
 
-        let thread_section = SandboxSection::new("Allowed for this thread:")
-            .group(
-                SandboxGroup::new("Write Access").row(SandboxRow::path("/Users/you/project/build")),
-            )
-            .group(SandboxGroup::new("Network Access").row(SandboxRow::message("None")));
+        let thread_section = SandboxSection::new(sandbox_session_label(
+            paths::APP_NAME,
+            "Allowed for this thread:",
+            "Allowed for this Agent Session:",
+        ))
+        .group(SandboxGroup::new("Write Access").row(SandboxRow::path("/Users/you/project/build")))
+        .group(SandboxGroup::new("Network Access").row(SandboxRow::message("None")));
 
         let unrestricted_section = SandboxSection::new("Defined in your settings:")
             .group(SandboxGroup::new("Write Access").row(SandboxRow::message(
@@ -349,7 +370,11 @@ impl Component for SandboxStatusTooltip {
                         .into_any_element(),
                 ),
                 single_example(
-                    "Disabled for thread",
+                    sandbox_session_label(
+                        paths::APP_NAME,
+                        "Disabled for thread",
+                        "Disabled for Agent Session",
+                    ),
                     container()
                         .child(SandboxStatusTooltip::disabled_for_thread(settings_section))
                         .into_any_element(),
@@ -362,5 +387,30 @@ impl Component for SandboxStatusTooltip {
                 ),
             ]))
             .into_any_element()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sandbox_scope_uses_agent_session_language_in_dez() {
+        assert_eq!(
+            sandbox_session_label(
+                "Dez",
+                "Sandboxing is disabled for this thread",
+                "Sandboxing is disabled for this Agent Session",
+            ),
+            "Sandboxing is disabled for this Agent Session"
+        );
+        assert_eq!(
+            sandbox_session_label(
+                "Zed",
+                "Sandboxing is disabled for this thread",
+                "Sandboxing is disabled for this Agent Session",
+            ),
+            "Sandboxing is disabled for this thread"
+        );
     }
 }

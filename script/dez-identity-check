@@ -286,6 +286,12 @@ require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
 require_multiline_pattern crates/agent_ui/src/completion_provider.rs \
     'fn prompt_context_type_label.*?PromptContextType::Thread if app_name == "Zed".*?"Threads".*?PromptContextType::Thread => "Agent Sessions".*?Self::Thread => "thread".*?prompt_context_type_label\(paths::APP_NAME, \*self\)' \
     'the Dez Agent context picker can regress to visible Thread terminology or break the compatible @thread keyword'
+require_multiline_pattern crates/agent_ui/src/ui/sandbox_status_tooltip.rs \
+    'fn sandbox_session_label.*?app_name == "Zed".*?upstream_thread_label.*?dez_session_label.*?"Sandboxing is disabled for this thread".*?"Sandboxing is disabled for this Agent Session"' \
+    'the Dez sandbox status tooltip can regress to ambiguous Thread scope'
+require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
+    '"Allowed for this thread:".*?"Allowed for this Agent Session:".*?"Allowed for this thread after the sandbox failed".*?"Allowed for this Agent Session after the sandbox failed".*?"Unsandboxed execution is allowed for the rest of this thread.".*?"Unsandboxed execution is allowed for the rest of this Agent Session."' \
+    'Dez sandbox policy and failure warnings can regress to visible Thread scope'
 require_multiline_pattern crates/agent_ui/src/mention_set.rs \
     'fn unsupported_session_mention_message.*?app_name == "Zed".*?"Thread mentions are only supported for the native agent".*?"Agent Session mentions are only supported by the built-in Dez Agent".*?unsupported_session_mention_message\([[:space:]]*paths::APP_NAME' \
     'unsupported Agent Session mentions can regress to upstream Thread/native-agent language'

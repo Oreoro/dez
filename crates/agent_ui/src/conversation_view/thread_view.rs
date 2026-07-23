@@ -26,7 +26,7 @@ use crate::completion_provider::{AvailableSkill, PromptLocalCommand, pluralize};
 use crate::message_editor::SharedSessionCapabilities;
 use crate::ui::{
     SandboxGroup, SandboxRow, SandboxSection, SandboxStatusTooltip, TerminalSandboxWarning,
-    TerminalToolHeader,
+    TerminalToolHeader, sandbox_session_label,
 };
 use crate::unicode_confusables;
 
@@ -5126,8 +5126,17 @@ impl ThreadView {
                 let settings = augment_settings_sandbox_policy(&settings_policy, baseline);
                 let thread = SandboxPolicyDisplay::from_policy(&thread_policy);
                 // Omit the per-thread section when it grants nothing extra.
-                let thread = (!sandbox_policy_grants_nothing(&thread))
-                    .then(|| sandbox_section("Allowed for this thread:", &thread, false));
+                let thread = (!sandbox_policy_grants_nothing(&thread)).then(|| {
+                    sandbox_section(
+                        sandbox_session_label(
+                            paths::APP_NAME,
+                            "Allowed for this thread:",
+                            "Allowed for this Agent Session:",
+                        ),
+                        &thread,
+                        false,
+                    )
+                });
                 SandboxStatusTooltip::enabled(
                     sandbox_section("Defined in your settings:", &settings, true),
                     thread,
@@ -8381,12 +8390,22 @@ impl ThreadView {
                         .as_ref()
                         .map(|error| {
                             SharedString::from(format!(
-                                "Allowed for this thread after the sandbox failed: {}",
+                                "{}: {}",
+                                sandbox_session_label(
+                                    paths::APP_NAME,
+                                    "Allowed for this thread after the sandbox failed",
+                                    "Allowed for this Agent Session after the sandbox failed",
+                                ),
                                 error.user_facing_message()
                             ))
                         })
                         .unwrap_or_else(|| {
-                            "Unsandboxed execution is allowed for the rest of this thread.".into()
+                            sandbox_session_label(
+                                paths::APP_NAME,
+                                "Unsandboxed execution is allowed for the rest of this thread.",
+                                "Unsandboxed execution is allowed for the rest of this Agent Session.",
+                            )
+                            .into()
                         });
                     let docs_section = thread_error.as_ref().map(|error| error.docs_section());
                     ("Ran without sandbox".into(), detail, docs_section)
