@@ -35,6 +35,73 @@ use crate::{
 pub struct AcpThreadImportOnboarding;
 pub struct CrossChannelImportOnboarding;
 
+struct AgentImportCopy {
+    headline: &'static str,
+    description: &'static str,
+    empty_agents: &'static str,
+    fetching: &'static str,
+    import_action: &'static str,
+    unsupported: &'static str,
+}
+
+fn agent_import_copy(app_name: &str) -> AgentImportCopy {
+    if app_name == "Zed" {
+        AgentImportCopy {
+            headline: "Import External Agent Threads",
+            description: "Import threads from agents like Claude Agent, Codex, and more, whether started in Zed or another client. Choose which agents to include, and their threads will appear in your thread history.",
+            empty_agents: "No external agents available.",
+            fetching: "Fetching Agent Threads…",
+            import_action: "Import Threads",
+            unsupported: "Importing threads from this agent is not possible as it doesn't support ACP's session/list capability.",
+        }
+    } else {
+        AgentImportCopy {
+            headline: "Import External Agent Sessions",
+            description: "Import Agent Sessions from compatible agents such as Claude Agent and Codex, whether they were started in Dez or another client. Choose agents to include; imported sessions appear in Agent History.",
+            empty_agents: "No compatible agents found.",
+            fetching: "Fetching Agent Sessions…",
+            import_action: "Import Agent Sessions",
+            unsupported: "This agent cannot import Agent Sessions because it does not support the ACP session/list capability.",
+        }
+    }
+}
+
+fn importable_agent_record_count(app_name: &str, count: usize) -> String {
+    if app_name == "Zed" {
+        if count == 0 {
+            "No threads".to_owned()
+        } else if count == 1 {
+            "1 thread".to_owned()
+        } else {
+            format!("{count} threads")
+        }
+    } else if count == 0 {
+        "No Agent Sessions".to_owned()
+    } else if count == 1 {
+        "1 Agent Session".to_owned()
+    } else {
+        format!("{count} Agent Sessions")
+    }
+}
+
+fn agent_import_result_message(app_name: &str, imported_count: usize) -> String {
+    if app_name == "Zed" {
+        if imported_count == 0 {
+            "No threads found to import.".to_owned()
+        } else if imported_count == 1 {
+            "Imported 1 thread.".to_owned()
+        } else {
+            format!("Imported {imported_count} threads.")
+        }
+    } else if imported_count == 0 {
+        "No Agent Sessions found to import.".to_owned()
+    } else if imported_count == 1 {
+        "Imported 1 Agent Session.".to_owned()
+    } else {
+        format!("Imported {imported_count} Agent Sessions.")
+    }
+}
+
 impl AcpThreadImportOnboarding {
     pub fn dismissed(cx: &App) -> bool {
         <Self as Dismissable>::dismissed(cx)
@@ -120,7 +187,7 @@ impl AgentImportStatus {
         match self {
             Self::Loading => Some("Fetching Sessions…".into()),
             Self::Ready { .. } => None,
-            Self::Unsupported => Some("Importing threads from this agent is not possible as it doesn't support ACP's session/list capability.".into()),
+            Self::Unsupported => Some(agent_import_copy(paths::APP_NAME).unsupported.into()),
             Self::Error(error) => Some(format!("Failed to fetch sessions: {error}").into()),
         }
     }
@@ -388,8 +455,9 @@ impl ThreadImportModal {
     }
 
     fn show_imported_threads_toast(&self, imported_count: usize, cx: &mut App) {
+        let message = agent_import_result_message(paths::APP_NAME, imported_count);
         let status_toast = if imported_count == 0 {
-            StatusToast::new("No threads found to import.", cx, |this, _cx| {
+            StatusToast::new(message, cx, |this, _cx| {
                 this.icon(
                     Icon::new(IconName::Info)
                         .size(IconSize::Small)
@@ -398,11 +466,6 @@ impl ThreadImportModal {
                 .dismiss_button(true)
             })
         } else {
-            let message = if imported_count == 1 {
-                "Imported 1 thread.".to_string()
-            } else {
-                format!("Imported {imported_count} threads.")
-            };
             StatusToast::new(message, cx, |this, _cx| {
                 this.icon(
                     Icon::new(IconName::Check)
@@ -500,11 +563,8 @@ impl Render for ThreadImportModal {
                         AgentImportStatus::Ready {
                             importable_count: count,
                         } => {
-                            let label: SharedString = if count == 0 {
-                                "No threads".into()
-                            } else {
-                                format!("{} threads", count).into()
-                            };
+                            let label: SharedString =
+                                importable_agent_record_count(paths::APP_NAME, count).into();
                             this.child(Label::new(label).size(LabelSize::Small).color(Color::Muted))
                         }
                         AgentImportStatus::Unsupported => this.child(
@@ -570,13 +630,9 @@ impl Render for ThreadImportModal {
                 Modal::new("import-threads", None)
                     .header(
                         ModalHeader::new()
-                            .headline("Import External Agent Threads")
-                            .description(
-                                "Import threads from agents like Claude Agent, Codex, and more, whether started in Zed or another client. \
-                                Choose which agents to include, and their threads will appear in your thread history."
-                            )
+                            .headline(agent_import_copy(paths::APP_NAME).headline)
+                            .description(agent_import_copy(paths::APP_NAME).description)
                             .show_dismiss_button(true),
-
                     )
                     .section(
                         Section::new().child(
@@ -588,7 +644,7 @@ impl Render for ThreadImportModal {
                                 .when(has_agents, |this| this.children(agent_rows))
                                 .when(!has_agents, |this| {
                                     this.child(
-                                        Label::new("No external agents available.")
+                                        Label::new(agent_import_copy(paths::APP_NAME).empty_agents)
                                             .color(Color::Muted)
                                             .size(LabelSize::Small),
                                     )
@@ -607,10 +663,11 @@ impl Render for ThreadImportModal {
                                                 .color(Color::Muted)
                                                 .with_rotate_animation(3),
                                         )
-                                        .child(Label::new("Fetching Agent Threads…")
-                                            .size(LabelSize::Small)
-                                            .color(Color::Muted))
-
+                                        .child(
+                                            Label::new(agent_import_copy(paths::APP_NAME).fetching)
+                                                .size(LabelSize::Small)
+                                                .color(Color::Muted),
+                                        ),
                                 )
                             })
                             .when_some(self.last_error.clone(), |this, error| {
@@ -622,16 +679,21 @@ impl Render for ThreadImportModal {
                                 )
                             })
                             .end_slot(
-                                Button::new("import-threads", "Import Threads")
-                                    .loading(self.is_importing)
-                                    .disabled(disabled_import_thread)
-                                    .key_binding(
-                                        KeyBinding::for_action(&menu::SecondaryConfirm, cx)
-                                            .map(|kb| kb.size(rems_from_px(12.))),
-                                    )
-                                    .on_click(cx.listener(|this, _, window, cx| {
+                                Button::new(
+                                    "import-threads",
+                                    agent_import_copy(paths::APP_NAME).import_action,
+                                )
+                                .loading(self.is_importing)
+                                .disabled(disabled_import_thread)
+                                .key_binding(
+                                    KeyBinding::for_action(&menu::SecondaryConfirm, cx)
+                                        .map(|kb| kb.size(rems_from_px(12.))),
+                                )
+                                .on_click(cx.listener(
+                                    |this, _, window, cx| {
                                         this.import_threads(&menu::SecondaryConfirm, window, cx);
-                                    })),
+                                    },
+                                )),
                             ),
                     ),
             )
@@ -992,6 +1054,27 @@ mod tests {
     use gpui::TestAppContext;
     use std::path::Path;
     use workspace::PathList;
+
+    #[test]
+    fn agent_import_copy_uses_agent_sessions_in_dez() {
+        let dez = agent_import_copy("Dez");
+        assert_eq!(dez.headline, "Import External Agent Sessions");
+        assert_eq!(dez.import_action, "Import Agent Sessions");
+        assert!(dez.description.contains("Agent History"));
+        assert!(dez.unsupported.contains("Agent Sessions"));
+        assert_eq!(importable_agent_record_count("Dez", 0), "No Agent Sessions");
+        assert_eq!(importable_agent_record_count("Dez", 1), "1 Agent Session");
+        assert_eq!(
+            agent_import_result_message("Dez", 2),
+            "Imported 2 Agent Sessions."
+        );
+
+        let zed = agent_import_copy("Zed");
+        assert_eq!(zed.headline, "Import External Agent Threads");
+        assert_eq!(zed.import_action, "Import Threads");
+        assert_eq!(importable_agent_record_count("Zed", 1), "1 thread");
+        assert_eq!(agent_import_result_message("Zed", 2), "Imported 2 threads.");
+    }
 
     fn make_session(
         session_id: &str,

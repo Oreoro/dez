@@ -286,6 +286,15 @@ require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
 require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
     'IconButton::new\("new-thread".*?aria_label\(agent_history_label.*?"Start New Agent Session".*?IconButton::new\("thread-import".*?aria_label\(agent_history_label.*?"Import Agent Sessions".*?IconButton::new\("filter-archived-only".*?aria_label\(filter_label\)' \
     'Agent History toolbar actions can regress to unnamed icon controls'
+require_multiline_pattern crates/agent_ui/src/thread_import.rs \
+    'fn agent_import_copy.*?app_name == "Zed".*?"Import External Agent Threads".*?"Import External Agent Sessions".*?Agent History.*?fn importable_agent_record_count' \
+    'the Agent History import flow can regress to exposing imported records as Threads in Dez'
+require_multiline_pattern crates/agent_ui/src/thread_import.rs \
+    'fn importable_agent_record_count.*?"No Agent Sessions".*?fn agent_import_result_message.*?"Imported 1 Agent Session\."' \
+    'Agent Session import counts and completion feedback can regress to Thread terminology'
+require_multiline_pattern crates/agent_ui/src/thread_import.rs \
+    'headline\(agent_import_copy\(paths::APP_NAME\)\.headline\).*?agent_import_copy\(paths::APP_NAME\)\.empty_agents.*?agent_import_copy\(paths::APP_NAME\)\.fetching.*?agent_import_copy\(paths::APP_NAME\)\.import_action' \
+    'the Agent Session import modal can regress to bypassing product-specific copy'
 require_pattern crates/sidebar/src/sidebar.rs \
     '"Close Worktree from Window…"' \
     'the hover-only worktree close control has no keyboard-accessible menu path'
