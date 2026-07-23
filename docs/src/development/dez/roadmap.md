@@ -1366,6 +1366,12 @@ code, all launch gates pass, and known limitations are documented.
       ordinary split grid. Official Zed keeps its panel behavior. Focused pure
       visibility assertions and static identity guards pass; compilation and
       rendered proof remain deferred.
+- [x] 2026-07-23: Name developer surfaces by user intent instead of placement.
+      Commit `622acd1a61` changes Dez's View menu to **Workspace Tools**,
+      **Files**, **Outline**, **Debug**, **Agent**, and **Git** regardless of
+      whether compatibility internals use a pane tab or dock. Official Zed
+      retains its existing labels. Focused pure assertions and the static
+      identity guard pass; rendered proof remains deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

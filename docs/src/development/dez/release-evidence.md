@@ -1035,7 +1035,10 @@ the later running-app reports, the source advanced through:
   context menu; and
 - `ad2fdcf766`, which removes the inherited Terminal Panel from Dez's public
   interaction model and makes every visible New Terminal entry point mean a
-  center tab or split.
+  center tab or split; and
+- `622acd1a61`, which names the Dez View-menu destinations Workspace Tools,
+  Files, Outline, Debug, Agent, and Git without exposing pane/dock
+  implementation details.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

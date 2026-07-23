@@ -1614,3 +1614,10 @@ Notes decision:
   public center-tab/split behavior everywhere; official Zed keeps its existing
   panel presentation. Focused pure assertions, formatting, identity, and diff
   checks pass; rendered proof remains deferred by the no-build gate.
+- 2026-07-23: Removed implementation-placement language from the Dez View menu
+  in `622acd1a61`. The structural toggle is **Workspace Tools** and its
+  destinations are **Files**, **Outline**, **Debug**, **Agent**, and **Git**;
+  users no longer have to interpret Project Tab, Project Panel, or pane-versus-
+  dock implementation details. Official Zed retains its existing labels.
+  Focused pure assertions and the static identity guard pass; rendered proof
+  remains deferred.
