@@ -36,7 +36,7 @@ pub enum WorkspaceEvidenceKind {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum WorkspaceEvidenceSelectionOutcome {
+pub(crate) enum WorkspaceEvidenceSelectionOutcome {
     Added,
     Removed,
     Unchanged,
@@ -78,19 +78,19 @@ impl WorkspaceEvidenceSet {
         self.truncated
     }
 
-    pub fn is_user_selected_path(&self, path: &Path) -> bool {
+    pub(crate) fn is_user_selected_path(&self, path: &Path) -> bool {
         self.records.iter().any(|record| {
             record.kind == WorkspaceEvidenceKind::UserSelectedPath && record.path.as_ref() == path
         })
     }
 
-    pub fn user_selected_paths(&self) -> impl Iterator<Item = &Path> {
+    pub(crate) fn user_selected_paths(&self) -> impl Iterator<Item = &Path> {
         self.records.iter().filter_map(|record| {
             (record.kind == WorkspaceEvidenceKind::UserSelectedPath).then_some(record.path.as_ref())
         })
     }
 
-    pub fn add_user_selected_path(
+    pub(crate) fn add_user_selected_path(
         &mut self,
         workspace_id: Option<i64>,
         path: Arc<Path>,
@@ -127,7 +127,10 @@ impl WorkspaceEvidenceSet {
         WorkspaceEvidenceSelectionOutcome::Added
     }
 
-    pub fn remove_user_selected_path(&mut self, path: &Path) -> WorkspaceEvidenceSelectionOutcome {
+    pub(crate) fn remove_user_selected_path(
+        &mut self,
+        path: &Path,
+    ) -> WorkspaceEvidenceSelectionOutcome {
         let previous_len = self.records.len();
         self.records.retain(|record| {
             record.kind != WorkspaceEvidenceKind::UserSelectedPath || record.path.as_ref() != path
@@ -139,7 +142,7 @@ impl WorkspaceEvidenceSet {
         WorkspaceEvidenceSelectionOutcome::Removed
     }
 
-    pub fn clear_user_selected_paths(&mut self) -> usize {
+    pub(crate) fn clear_user_selected_paths(&mut self) -> usize {
         let previous_len = self.records.len();
         self.records
             .retain(|record| record.kind != WorkspaceEvidenceKind::UserSelectedPath);
@@ -150,7 +153,7 @@ impl WorkspaceEvidenceSet {
         removed
     }
 
-    pub fn replace_visible_worktree_roots(
+    pub(crate) fn replace_visible_worktree_roots(
         &mut self,
         workspace_id: Option<i64>,
         roots: impl IntoIterator<Item = Arc<Path>>,
@@ -191,7 +194,7 @@ impl WorkspaceEvidenceSet {
         true
     }
 
-    pub fn set_terminal_working_directory(
+    pub(crate) fn set_terminal_working_directory(
         &mut self,
         workspace_id: Option<i64>,
         session_id: impl Into<Arc<str>>,
@@ -231,7 +234,7 @@ impl WorkspaceEvidenceSet {
         true
     }
 
-    pub fn replace_open_files(
+    pub(crate) fn replace_open_files(
         &mut self,
         workspace_id: Option<i64>,
         paths: impl IntoIterator<Item = Arc<Path>>,
@@ -272,7 +275,7 @@ impl WorkspaceEvidenceSet {
         true
     }
 
-    pub fn set_terminal_lifecycle(
+    pub(crate) fn set_terminal_lifecycle(
         &mut self,
         session_id: &str,
         lifecycle: WorkspaceEvidenceLifecycle,
