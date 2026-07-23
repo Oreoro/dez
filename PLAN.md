@@ -1750,12 +1750,6 @@ Notes decision:
   Archive and restore remain immediate reversible actions. Product-specific
   prompt assertions, formatting, locked offline metadata, identity, and diff
   checks pass; rendered modal and focus-return proof remain deferred.
-- 2026-07-23: Restored visible hierarchy to Session Rail Workspace groups in
-  `799147c525`. Expand/collapse chevrons no longer disappear until pointer hover
-  or keyboard focus, so Workspace headers remain recognizable as disclosure
-  controls while secondary New Terminal and overflow actions stay progressive.
-  Formatting, locked offline metadata, identity, and diff checks pass; rendered
-  compact/detailed proof remains deferred.
 - 2026-07-23: Made the tool hierarchy legible before interaction. Commit
   `799147c525` keeps Workspace expand/collapse disclosure icons visible instead
   of hiding the only structural affordance until hover. Commit `5a64bc9af1`
