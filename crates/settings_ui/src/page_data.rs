@@ -3943,8 +3943,16 @@ fn dez_edit_prediction_setting_visible(app_name: &str, json_path: Option<&str>) 
     app_name == "Zed" || json_path != Some("edit_predictions.allow_data_collection")
 }
 
+fn dez_terminal_panel_setting_visible(app_name: &str, json_path: Option<&str>) -> bool {
+    app_name == "Zed"
+        || !matches!(
+            json_path,
+            Some("terminal.button" | "terminal.default_width" | "terminal.default_height")
+        )
+}
+
 fn window_and_layout_page() -> SettingsPage {
-    fn status_bar_section() -> [SettingsPageItem; 10] {
+    fn status_bar_section() -> Vec<SettingsPageItem> {
         [
             SettingsPageItem::SectionHeader("Status Bar"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -4137,6 +4145,17 @@ fn window_and_layout_page() -> SettingsPage {
                 files: USER,
             }),
         ]
+        .into_iter()
+        .filter(|item| match item {
+            SettingsPageItem::SettingItem(item) => {
+                dez_terminal_panel_setting_visible(paths::APP_NAME, item.field.json_path())
+            }
+            SettingsPageItem::SectionHeader(_)
+            | SettingsPageItem::SubPageLink(_)
+            | SettingsPageItem::DynamicItem(_)
+            | SettingsPageItem::ActionLink(_) => true,
+        })
+        .collect()
     }
 
     fn sidebar_chrome_section() -> Vec<SettingsPageItem> {
@@ -7435,7 +7454,11 @@ fn terminal_page() -> SettingsPage {
         ]
     }
 
-    fn layout_settings_section() -> [SettingsPageItem; 3] {
+    fn layout_settings_section() -> Vec<SettingsPageItem> {
+        if !dez_terminal_panel_setting_visible(paths::APP_NAME, Some("terminal.default_width")) {
+            return Vec::new();
+        }
+
         [
             SettingsPageItem::SectionHeader("Layout Settings"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -7477,6 +7500,7 @@ fn terminal_page() -> SettingsPage {
                 files: USER,
             }),
         ]
+        .into()
     }
 
     fn advanced_settings_section() -> [SettingsPageItem; 3] {
@@ -11117,6 +11141,24 @@ mod tests {
         assert!(dez_edit_prediction_setting_visible(
             "Zed",
             Some("edit_predictions.allow_data_collection")
+        ));
+        for removed_path in [
+            "terminal.button",
+            "terminal.default_width",
+            "terminal.default_height",
+        ] {
+            assert!(!dez_terminal_panel_setting_visible(
+                "Dez",
+                Some(removed_path)
+            ));
+            assert!(dez_terminal_panel_setting_visible(
+                "Zed",
+                Some(removed_path)
+            ));
+        }
+        assert!(dez_terminal_panel_setting_visible(
+            "Dez",
+            Some("terminal.shell$")
         ));
 
         assert!(!dez_privacy_setting_visible(

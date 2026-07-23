@@ -5,6 +5,10 @@ use settings::Settings as _;
 use terminal_view::terminal_panel;
 use zed_actions::{Quit, assistant, debug_panel, dev, git_panel, project_panel};
 
+fn terminal_panel_surface_visible(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 pub fn app_menus(cx: &mut App) -> Vec<Menu> {
     let panels_as_pane_tabs = workspace::PaneGridSettings::get_global(cx).panels_as_pane_tabs();
     let project_pane_label = if panels_as_pane_tabs {
@@ -21,11 +25,6 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
         "Outline Tab"
     } else {
         "Outline Panel"
-    };
-    let terminal_surface_label = if panels_as_pane_tabs {
-        "Terminal Tab"
-    } else {
-        "Terminal Panel"
     };
     let debugger_surface_label = if panels_as_pane_tabs {
         "Debugger Tab"
@@ -76,14 +75,26 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
         MenuItem::separator(),
         MenuItem::action(project_surface_label, project_panel::ToggleFocus),
         MenuItem::action(outline_surface_label, outline_panel::ToggleFocus),
-        MenuItem::action(terminal_surface_label, terminal_panel::Toggle),
+    ];
+    if terminal_panel_surface_visible(APP_NAME) {
+        let terminal_surface_label = if panels_as_pane_tabs {
+            "Terminal Tab"
+        } else {
+            "Terminal Panel"
+        };
+        view_items.push(MenuItem::action(
+            terminal_surface_label,
+            terminal_panel::Toggle,
+        ));
+    }
+    view_items.extend([
         MenuItem::action(debugger_surface_label, debug_panel::ToggleFocus),
         MenuItem::action(agent_surface_label, assistant::ToggleFocus),
         MenuItem::action(git_surface_label, git_panel::ToggleFocus),
         MenuItem::separator(),
         MenuItem::action("Diagnostics", diagnostics::Deploy),
         MenuItem::separator(),
-    ];
+    ]);
 
     if ReleaseChannel::try_global(cx) == Some(ReleaseChannel::Dev) {
         view_items.push(MenuItem::action(
@@ -362,4 +373,15 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             ],
         },
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::terminal_panel_surface_visible;
+
+    #[test]
+    fn terminal_panel_is_an_official_zed_compatibility_surface() {
+        assert!(!terminal_panel_surface_visible("Dez"));
+        assert!(terminal_panel_surface_visible("Zed"));
+    }
 }

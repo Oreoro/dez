@@ -28,7 +28,7 @@ use postage::{sink::Sink, stream::Stream};
 use settings::Settings;
 use ui::{HighlightedLabel, KeyBinding, ListItem, ListItemSpacing, prelude::*};
 use util::ResultExt;
-use workspace::{DesignSystemSettings, ModalView, Workspace, WorkspaceSettings};
+use workspace::{DesignSystemSettings, ModalView, NewCenterTerminal, Workspace, WorkspaceSettings};
 use zed_actions::{
     GetMerch, OpenAccountSettings, OpenDocs, OpenStatusPage, OpenZedUrl, command_palette::Toggle,
 };
@@ -47,7 +47,7 @@ fn product_hidden_action_namespaces(app_name: &str) -> &'static [&'static str] {
     if app_name == "Zed" {
         &[]
     } else {
-        &["collab", "feedback"]
+        &["collab", "feedback", "terminal_panel"]
     }
 }
 
@@ -60,6 +60,7 @@ fn product_hidden_action_types(app_name: &str) -> Vec<TypeId> {
             TypeId::of::<OpenDocs>(),
             TypeId::of::<OpenStatusPage>(),
             TypeId::of::<GetMerch>(),
+            TypeId::of::<NewCenterTerminal>(),
         ]
     }
 }
@@ -1061,7 +1062,7 @@ mod tests {
     fn dez_hides_inherited_cloud_and_promotion_commands() {
         assert_eq!(
             product_hidden_action_namespaces("Dez"),
-            &["collab", "feedback"]
+            &["collab", "feedback", "terminal_panel"]
         );
         assert!(product_hidden_action_namespaces("Zed").is_empty());
 
@@ -1071,6 +1072,7 @@ mod tests {
             TypeId::of::<OpenDocs>(),
             TypeId::of::<OpenStatusPage>(),
             TypeId::of::<GetMerch>(),
+            TypeId::of::<NewCenterTerminal>(),
         ] {
             assert!(hidden_types.contains(&action_type));
         }

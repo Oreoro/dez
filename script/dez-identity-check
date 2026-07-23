@@ -176,11 +176,14 @@ reject_pattern crates/zed/src/zed.rs \
     'Zed uses \{\} for rendering|awful performance' \
     'the unsupported-GPU dialog regressed to stale Zed or placeholder copy'
 require_pattern crates/command_palette/src/command_palette.rs \
-    '&\["collab", "feedback"\]' \
-    'the Dez Command Palette exposes inherited collaboration or upstream feedback actions'
+    '&\["collab", "feedback", "terminal_panel"\]' \
+    'the Dez Command Palette exposes inherited collaboration, upstream feedback, or the compatibility Terminal Panel'
 require_pattern crates/command_palette/src/command_palette.rs \
     'TypeId::of::<OpenAccountSettings>\(\)' \
     'the Dez Command Palette exposes the upstream account action'
+require_pattern crates/command_palette/src/command_palette.rs \
+    'TypeId::of::<NewCenterTerminal>\(\)' \
+    'the Dez Command Palette exposes a duplicate internal center-terminal command'
 require_pattern crates/workspace/src/workspace.rs \
     'recent Workspace and Session state may be unavailable' \
     'the Dez database failure state does not explain safety or impact'
@@ -380,8 +383,11 @@ require_multiline_pattern crates/workspace/src/pane.rs \
     'Button::new\("empty-project-terminal", "New Terminal"\).*?NewCenterTerminal::default\(\).*?dispatch_action.*?NewCenterTerminal::default\(\)' \
     'the empty Workspace primary terminal action can regress to the legacy panel'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?"New Terminal Panel"' \
-    'the Dez New Item menu does not distinguish center terminals from the legacy panel'
+    'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?else \{.*?"New Terminal".*?NewCenterTerminal::default' \
+    'the Dez New Item menu can regress from the single center-terminal model'
+reject_pattern crates/workspace/src/pane.rs \
+    '"New Terminal Panel"' \
+    'the Dez New Item menu advertises a second terminal model'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_tab_status.*?"Unavailable".*?"Failed".*?"Exited".*?"Active"' \
     'terminal tabs do not expose truthful lifecycle state'
@@ -398,8 +404,20 @@ reject_pattern crates/terminal_view/src/terminal_view.rs \
     'terminal\.pid_getter\(\)\?' \
     'durable terminal tab tooltips still disappear when no local PID exists'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?"New Terminal Panel"' \
-    'the terminal context menu does not distinguish center terminals from the legacy panel'
+    'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?else \{.*?"New Terminal".*?NewCenterTerminal::default' \
+    'the terminal context menu can regress from the single center-terminal model'
+reject_pattern crates/terminal_view/src/terminal_view.rs \
+    '"New Terminal Panel"' \
+    'the terminal context menu advertises a second terminal model'
+require_multiline_pattern crates/zed/src/zed/app_menus.rs \
+    'fn terminal_panel_surface_visible.*?app_name == "Zed".*?if terminal_panel_surface_visible\(APP_NAME\).*?terminal_panel::Toggle' \
+    'the compatibility Terminal Panel can leak back into the Dez View menu'
+require_pattern crates/zed/src/zed.rs \
+    '"terminal_panel::",' \
+    'inherited Terminal Panel keybindings can reintroduce the removed Dez surface'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'fn dez_terminal_panel_setting_visible.*?"terminal\.button" \| "terminal\.default_width" \| "terminal\.default_height"' \
+    'Dez Settings exposes controls for the removed compatibility Terminal Panel'
 require_pattern crates/workspace/src/panel_pane.rs \
     '"ProjectPanel" => "Files"' \
     'the Dez file-tree Surface is not labeled Files'

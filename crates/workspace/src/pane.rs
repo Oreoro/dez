@@ -5353,7 +5353,6 @@ fn default_render_tab_bar_buttons(
                                 )
                         } else {
                             menu.action("New Terminal", NewCenterTerminal::default().boxed_clone())
-                                .action("New Terminal Panel", NewTerminal::default().boxed_clone())
                         }
                     }))
                 }),

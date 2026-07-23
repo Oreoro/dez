@@ -2334,7 +2334,12 @@ const AI_ACTION_NAMESPACES: &[&str] = &[
     "zeta::",
 ];
 
-const DEZ_HIDDEN_ACTION_NAMESPACES: &[&str] = &["channel_modal::", "collab::", "collab_panel::"];
+const DEZ_HIDDEN_ACTION_NAMESPACES: &[&str] = &[
+    "channel_modal::",
+    "collab::",
+    "collab_panel::",
+    "terminal_panel::",
+];
 const DEZ_HIDDEN_ACTIONS: &[&str] = &["workspace::FollowNextCollaborator"];
 
 fn is_ai_keybinding(binding: &KeyBinding) -> bool {
@@ -6120,17 +6125,15 @@ mod tests {
             "collab_panel::ToggleFocus",
             "collab::ShareProject",
             "channel_modal::ToggleMode",
+            "terminal_panel::Toggle",
+            "terminal_panel::ToggleFocus",
             "workspace::FollowNextCollaborator",
         ] {
             assert!(is_dez_hidden_keybinding_name(action_name, "Dez"));
             assert!(!is_dez_hidden_keybinding_name(action_name, "Zed"));
         }
 
-        for action_name in [
-            "terminal_panel::ToggleFocus",
-            "workspace::NewTerminal",
-            "editor::ToggleCodeActions",
-        ] {
+        for action_name in ["workspace::NewTerminal", "editor::ToggleCodeActions"] {
             assert!(!is_dez_hidden_keybinding_name(action_name, "Dez"));
         }
     }

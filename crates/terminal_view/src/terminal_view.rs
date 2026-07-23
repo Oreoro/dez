@@ -1055,7 +1055,6 @@ impl TerminalView {
                             .separator()
                     } else {
                         menu.action("New Terminal", Box::new(NewCenterTerminal::default()))
-                            .action("New Terminal Panel", Box::new(NewTerminal::default()))
                             .separator()
                     }
                 })
