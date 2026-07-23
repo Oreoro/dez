@@ -1080,7 +1080,13 @@ the later running-app reports, the source advanced through:
 - `be2a8d6ec6`, which gives compact and minimum-detailed Session rows a strict
   primary hierarchy and restores actor, Host, and worktree context only at
   440 px, while retaining hidden actor and Host identity in accessibility and
-  tooltip output.
+  tooltip output; and
+- `39c8379f05`, which makes pane-tab panel close/toggle actions hide their
+  Workspace Tools or Agent pane, preserve a visible editor or terminal
+  fallback, restore focus when needed, and persist the resulting layout; and
+- `9615b513d4`, which routes pointer and keyboard deletion of archived Agent
+  Sessions through a critical, named, explicitly irreversible confirmation
+  while preserving archive and restore as reversible actions.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

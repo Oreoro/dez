@@ -1466,6 +1466,22 @@ code, all launch gates pass, and known limitations are documented.
       **Terminal Session** actor label below that threshold. Focused source
       assertions, formatting, locked offline metadata, and static identity
       guards pass; compilation and rendered width/theme proof remain deferred.
+- [x] 2026-07-23: Make pane-tab tool toggles close the surface they opened.
+      Commit `39c8379f05` extends generic panel closure beyond legacy docks:
+      Files, Outline, Git, Debug, and Agent now hide their Workspace Tools or
+      Agent pane when closed or re-toggled under the default policy. The
+      transition retains a visible editor or terminal pane, restores focus when
+      the tool pane owned it, and persists the layout. A focused source
+      regression and static identity guard cover the contract. Formatting and
+      locked offline metadata pass; compilation and rendered toggle/focus proof
+      remain deferred.
+- [x] 2026-07-23: Confirm permanent Agent Session deletion. Commit
+      `9615b513d4` routes both the archived-row trash control and keyboard
+      remove action through one critical prompt. The prompt names the selected
+      Agent Session, identifies Agent History as the deletion scope, and states
+      that the action cannot be undone. Archive and restore remain immediate
+      reversible operations. Focused prompt-copy assertions and static identity
+      guards pass; compilation and rendered modal/focus proof remain deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

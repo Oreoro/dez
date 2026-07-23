@@ -1734,3 +1734,19 @@ Notes decision:
   also omit the redundant **Terminal Session** actor label below that threshold.
   Focused source assertions, formatting, locked offline metadata, identity, and
   diff checks pass; rendered width/theme proof remains deferred.
+- 2026-07-23: Made panel toggles honor the pane-tab model in `39c8379f05`.
+  Files, Outline, Git, Debug, and Agent already open as tabs in dedicated
+  Workspace Tools or Agent panes when legacy docks are disabled, but their
+  generic close path still targeted docks only. Closing or re-toggling a focused
+  tool now hides its center tool pane, preserves a visible editor or terminal
+  pane, restores focus there when needed, and serializes the resulting layout.
+  A focused source regression and the static identity guard cover the contract.
+  Formatting, locked offline metadata, identity, and diff checks pass; rendered
+  toggle/focus proof remains deferred.
+- 2026-07-23: Added a permanent-deletion boundary to Agent History in
+  `9615b513d4`. The archived-row trash control and the keyboard remove action
+  now share one critical confirmation that names the Agent Session, states that
+  deletion removes it from Agent History, and says it cannot be undone.
+  Archive and restore remain immediate reversible actions. Product-specific
+  prompt assertions, formatting, locked offline metadata, identity, and diff
+  checks pass; rendered modal and focus-return proof remain deferred.
