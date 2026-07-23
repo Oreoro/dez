@@ -15,7 +15,6 @@ pub const PROJECT_TOOL_PANEL_KEYS: &[&str] = &[
     "GitPanel",
     "OutlinePanel",
     "DebugPanel",
-    "TerminalPanel",
     "CollaborationPanel",
 ];
 
@@ -29,7 +28,13 @@ pub enum PanelPaneKind {
 
 impl PanelPaneKind {
     pub fn for_panel_key(panel_key: &str) -> Option<Self> {
-        if PROJECT_TOOL_PANEL_KEYS.contains(&panel_key) {
+        Self::for_panel_key_and_app(panel_key, paths::APP_NAME)
+    }
+
+    fn for_panel_key_and_app(panel_key: &str, app_name: &str) -> Option<Self> {
+        if panel_key == "TerminalPanel" {
+            (app_name == "Zed").then_some(Self::Project)
+        } else if PROJECT_TOOL_PANEL_KEYS.contains(&panel_key) {
             Some(Self::Project)
         } else if panel_key == AGENT_PANEL_KEY {
             Some(Self::Agent)
@@ -162,13 +167,7 @@ mod tests {
 
     #[test]
     fn developer_tool_panels_are_routed_to_the_project_surface() {
-        for panel_key in [
-            "ProjectPanel",
-            "GitPanel",
-            "OutlinePanel",
-            "DebugPanel",
-            "TerminalPanel",
-        ] {
+        for panel_key in ["ProjectPanel", "GitPanel", "OutlinePanel", "DebugPanel"] {
             assert_eq!(
                 PanelPaneKind::for_panel_key(panel_key),
                 Some(PanelPaneKind::Project),
@@ -176,6 +175,16 @@ mod tests {
             );
         }
 
+        assert_eq!(
+            PanelPaneKind::for_panel_key_and_app("TerminalPanel", "Dez"),
+            None,
+            "Dez terminals belong in the main work area, not a second tool surface"
+        );
+        assert_eq!(
+            PanelPaneKind::for_panel_key_and_app("TerminalPanel", "Zed"),
+            Some(PanelPaneKind::Project),
+            "official Zed keeps its inherited Terminal Panel behavior"
+        );
         assert_eq!(
             PanelPaneKind::for_panel_key("agent_panel"),
             Some(PanelPaneKind::Agent)

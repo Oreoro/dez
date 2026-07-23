@@ -529,6 +529,9 @@ require_multiline_pattern crates/settings_ui/src/page_data.rs \
 require_pattern crates/workspace/src/panel_pane.rs \
     '"ProjectPanel" => "Files"' \
     'the Dez file-tree Surface is not labeled Files'
+require_multiline_pattern crates/workspace/src/panel_pane.rs \
+    'if panel_key == "TerminalPanel".*?\(app_name == "Zed"\)\.then_some\(Self::Project\)' \
+    'Dez can regress to exposing the inherited Terminal Panel as a duplicate Workspace Tool surface'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'pub fn close_panel<T: Panel>\(&mut self.*?panel_item_for::<T>.*?ensure_tabbed_pane.*?mark_canvas_layout_custom.*?pane\.set_visible\(false.*?set_active_pane.*?serialize_workspace' \
     'panel close actions can regress to affecting legacy docks only and leave Workspace Tools visibly open'
