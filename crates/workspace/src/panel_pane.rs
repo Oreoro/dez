@@ -14,6 +14,7 @@ pub const PROJECT_PANEL_KEYS: &[&str] = &[
     "ProjectPanel",
     "GitPanel",
     "OutlinePanel",
+    "DebugPanel",
     "CollaborationPanel",
 ];
 
@@ -74,6 +75,7 @@ impl PanelItem {
             "ProjectPanel" => "Project",
             "GitPanel" => "Git",
             "OutlinePanel" => "Outline",
+            "DebugPanel" => "Debug",
             "CollaborationPanel" => "Collab",
             AGENT_PANEL_KEY => "Agent",
             _ => self.panel.persistent_name(),
@@ -149,4 +151,20 @@ pub fn configure_agent_pane(pane: &mut Pane, cx: &mut Context<Pane>) {
     pane.set_pane_kind(PaneKind::Agent, cx);
     pane.set_close_pane_if_empty(true, cx);
     pane.set_should_display_tab_bar(|_, _| true);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn developer_tool_panels_are_routed_to_the_project_surface() {
+        for panel_key in ["ProjectPanel", "GitPanel", "OutlinePanel", "DebugPanel"] {
+            assert_eq!(
+                PanelPaneKind::for_panel_key(panel_key),
+                Some(PanelPaneKind::Project),
+                "{panel_key} must remain reachable when legacy docks are hidden"
+            );
+        }
+    }
 }
