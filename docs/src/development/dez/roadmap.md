@@ -122,6 +122,11 @@ uses its dedicated pane. New Terminal remains a center Surface. Commits
 add a focused routing regression; compiled and rendered toggle proof remains in
 the consolidated gate.
 
+Follow-up `e4f1e341c9` normalizes the loaded-worktree launch and empty tool-pane
+recovery surfaces on Workspace vocabulary while leaving compatible internal
+Project types unchanged. The identity gate rejects the old mixed copy;
+rendered proof remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -742,7 +747,7 @@ code, all launch gates pass, and known limitations are documented.
       viewport/entity composition and restart proof remain open.
 - [x] 2026-07-23: Preserve a terminal-first empty Workspace instead of opening
       an unsolicited draft. Commit `e4fbc22a3a` makes New Terminal the primary
-      Project ready action and gates New Window and startup blank-file seeding
+      Workspace ready action and gates New Window and startup blank-file seeding
       to official Zed. The same slice removes stale Zed wording from public CLI
       help, hides the legacy compatibility alias, and names `--dez` input
       `<PATH>`. The rebuilt CLI hash is

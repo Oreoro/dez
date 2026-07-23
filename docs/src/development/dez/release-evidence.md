@@ -49,6 +49,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Settings viewport-switch refresh source: `498f94a525`
 - Debug pane-Surface routing source: `5efa0398ad`
 - Terminal compatibility-Surface routing source: `1f186f9b8c`
+- Workspace launch-surface vocabulary source: `e4f1e341c9`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -230,7 +231,7 @@ The screenshot also showed a loaded project with a completely blank center.
 The render decision checked `should_display_welcome_page` before checking for a
 visible worktree, so a legacy/restored tabbed pane with the flag unset returned
 an empty placeholder. Commit `4829f6b052` gives a loaded project priority and
-renders the existing Project ready surface with Find File, New File, and New
+renders the existing Workspace ready surface with Find File, New File, and New
 Terminal actions; no-worktree welcome suppression retains its old meaning. A
 focused model assertion covers both cases, but it shares the unfinished
 storage-bound test target and is not recorded as passing.
@@ -467,6 +468,12 @@ placement. A focused routing regression covers all surviving developer-tool
 panel keys and unknown-key rejection. Formatting, diff, and identity checks
 pass; compilation and rendered toggle proof remain deferred.
 
+Commit `e4f1e341c9` makes the center launch and empty tool-pane recovery copy
+use the same Workspace vocabulary as the Session Rail and Settings. Internal
+upstream Project/Panes types remain untouched. A static identity rejection
+prevents the old mixed copy from returning. Formatting, Bash syntax, diff, and
+identity checks pass; rendered proof remains deferred.
+
 The corrected `Dez Dev.app` is now registered and launched as launchd child PID
 `85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 `lsof` resolves its text executable to
@@ -652,7 +659,7 @@ that scenario still requires the unlocked UI and a graceful application quit.
       source. Its 12 owning state tests pass; the Sidebar library check hit the
       storage floor before returning a result, and rendered proof remains open.
 - [ ] Restored empty-project launch regression: commit `4829f6b052` makes a
-      loaded project render Project ready actions even when an old pane lacks
+      loaded project render Workspace ready actions even when an old pane lacks
       the welcome flag. The assertion is authored and formatting passes; the
       complete app and bundle build pass, while the shared focused test and
       rendered interaction remain incomplete.
@@ -700,7 +707,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `1f186f9b8c` or
+visual evidence: the exact bundle must first be rebuilt from `e4f1e341c9` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -718,6 +725,6 @@ predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `f89f55868c`, `f40877d4ab`, `526218a972`, `bb0cf408b4`, `a8ce563373`,
 `e101b63e43`, `f535c5e6ae`, `0e6507756e`, `ea2bb18453`, `0f8740b1a1`,
 `af232402f5`, `a4047d95c0`, `6f2061d2c7`, `27279ca542`, `a2d733eea3`, and
-`498f94a525`, `5efa0398ad`, and `1f186f9b8c`. A rebuild/re-audit and an unlocked
+`498f94a525`, `5efa0398ad`, `1f186f9b8c`, and `e4f1e341c9`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.

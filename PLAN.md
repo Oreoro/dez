@@ -100,7 +100,7 @@ px width, so 60 px of header, rows, and footer were clipped. Commit
 painting, with compact, detailed, and icon regression assertions. The exact
 same screenshot also showed a blank center despite a loaded worktree. Commit
 `4829f6b052` makes any empty tabbed pane with a loaded project render the
-Project ready launch surface even if a legacy/restored pane predates the welcome
+Workspace ready launch surface even if a legacy/restored pane predates the welcome
 flag; the flag still controls the no-project welcome surface. Commit
 `0d8496969f` bounds project, worktree, and branch controls inside the
 fixed-height footer so their existing truncation can work, while `abc4f8bedb`
@@ -492,7 +492,7 @@ with new labels.
       groups now start a terminal in that exact Workspace (restoring a closed
       group when needed), and an active search reports matching-session counts
       rather than the misleading caught-up state. An empty tabbed pane with a
-      loaded worktree now always renders Project ready actions, including for a
+      loaded worktree now always renders Workspace ready actions, including for a
       legacy/restored pane whose welcome flag is absent, instead of leaving the
       center blank. Its primary action is now New Terminal, followed by Find
       File and New File. New Window and startup fallbacks preserve this surface
@@ -869,7 +869,7 @@ Notes decision:
 - 2026-07-22: Removed the screenshot's blank-center failure in source. Commit
   `4829f6b052` gives a loaded project priority over the legacy welcome-page flag
   when selecting empty-pane content, so an empty restored tabbed pane renders
-  Project ready with Find File, New File, and New Terminal actions. A focused
+  Workspace ready with Find File, New File, and New Terminal actions. A focused
   model assertion covers loaded versus no-worktree selection. Formatting and
   diff checks pass. The corrected app and bundle build now contain the fix; the
   storage-bound focused test and rendered interaction remain open.
@@ -910,7 +910,7 @@ Notes decision:
   membership, one-copy removal, legacy migration, and serialization round
   trips.
 - 2026-07-23: Made the empty Dez workspace deliberately terminal-first in
-  `e4fbc22a3a`. Project ready now leads with New Terminal; New Window and both
+  `e4fbc22a3a`. Workspace ready now leads with New Terminal; New Window and both
   startup fallback paths no longer cover the launch surface with an
   unsolicited blank editor. Official Zed keeps its upstream blank-editor
   behavior. The same slice removes stale public CLI help and hides the legacy
@@ -1203,3 +1203,9 @@ Notes decision:
   Terminal behavior is unchanged. The mapping test covers every surviving
   developer-tool panel plus unknown-key rejection. Formatting, diff, and
   identity checks pass; compilation and rendered toggle proof remain deferred.
+- 2026-07-23: Unified the center launch and tool-recovery copy on Workspace
+  vocabulary in `e4f1e341c9`. The loaded-worktree launch surface now says
+  **Workspace ready**, and an unattached tool pane reports **Workspace tools
+  unavailable**. Internal upstream Project and PaneKind names remain unchanged.
+  The identity guard rejects the former mixed vocabulary; formatting, Bash
+  syntax, diff, and identity checks pass. Rendered proof remains deferred.
