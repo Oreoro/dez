@@ -2222,3 +2222,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   invisible Agent panel. Product-branch assertions and identity guards cover
   all three paths. Formatting, Bash syntax, identity, locked offline metadata,
   and diff checks pass; no build, test binary, or visual launch was performed.
+- 2026-07-23: Rebuilt the Dez Outline empty/search state in `03daa99d53`.
+  Instead of one centered **No outlines available** placeholder, it now
+  distinguishes no filter matches, no Workspace search results, no symbols in
+  the active file, and no file to outline. The compact state follows the
+  top-aligned Workspace Tool hierarchy, exposes an explicit accessibility
+  status, labels the current filter, and provides **Clear Filter** as a direct
+  recovery action. Official Zed retains its upstream presentation. Pure copy
+  assertions and an identity guard protect the complete state matrix.
+  Formatting, Bash syntax, identity, locked offline metadata, and diff checks
+  pass; no build, test binary, or visual launch was performed.

@@ -2378,6 +2378,22 @@ Completed for the Workspace Tool action-language slice:
   locked offline Cargo metadata, and `git diff --check`;
 - no build, test binary, alternate binary, or visual launch was performed.
 
+Completed for the Outline empty/search-state slice:
+
+- replaced the generic centered placeholder with a compact top-aligned Dez
+  state consistent with Files, Git, and Agent;
+- distinguished no Outline filter match, no Workspace search result, no symbols
+  in the active file, and no active file;
+- labeled the active filter instead of rendering an unexplained query chip;
+- added a full-width **Clear Filter** recovery action that returns focus to the
+  filter;
+- exposed the full state as an accessibility status while preserving official
+  Zed's upstream UI;
+- added pure state-matrix assertions and a static identity guard;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
 Completed for the first helper-process source slice:
 
 - new crate instructions and a rollbackable `dez_terminal_host` workspace

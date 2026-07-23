@@ -531,3 +531,10 @@ defer it.
   `*_panel` action namespaces, keys, persistence records, and upstream APIs may
   remain, but they do not define Dez's public shell. Official Zed retains its
   inherited Panel vocabulary.
+- **2026-07-23: Workspace Tool empty states explain state and recovery.** A
+  retained tool does not collapse every empty result into one generic message.
+  It distinguishes missing input, valid empty content, filtered-out content,
+  and search with no results. Recovery stays inside the state when it is
+  immediate—for example **Clear Filter**—and the state is a named accessibility
+  status near the top of the region rather than decoration floating in dead
+  space.

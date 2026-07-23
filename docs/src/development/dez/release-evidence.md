@@ -1282,7 +1282,11 @@ the later running-app reports, the source advanced through:
   Terminal Session / Agent Session entry; and
 - `738df46829`, which removes compatibility-Panel vocabulary from Dez's
   Outline, Git, Debug, and Agent command namespaces, Outline empty-state
-  guidance, and the Git-review-to-Agent handoff while preserving official Zed.
+  guidance, and the Git-review-to-Agent handoff while preserving official Zed;
+  and
+- `03daa99d53`, which replaces the centered generic Outline placeholder with a
+  top-aligned, accessible four-state explanation, a labeled filter, and a
+  direct **Clear Filter** recovery action while preserving official Zed.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
