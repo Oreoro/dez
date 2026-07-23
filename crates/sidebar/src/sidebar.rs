@@ -21,9 +21,9 @@ use agent_ui::{
     AcpThreadImportOnboarding, Agent, AgentPanel, AgentPanelEvent, AgentThreadItem,
     AgentThreadSource, ArchiveSelectedThread, CanvasAgentUiSettings, ConversationView,
     CrossChannelImportOnboarding, DEFAULT_THREAD_TITLE, ManageProfiles, NewTerminalThread,
-    NewThread, ObservedRepositoryEvidence, ObservedRunActivity, ObservedRunCheck,
-    ObservedRunCheckStatus, ObservedRunCommand, ObservedWorkspaceEvidence, OpenAgentDiff,
-    RenameSelectedThread, RunReviewBrief, RunReviewState, TerminalId, ThreadId, ThreadImportModal,
+    ObservedRepositoryEvidence, ObservedRunActivity, ObservedRunCheck, ObservedRunCheckStatus,
+    ObservedRunCommand, ObservedWorkspaceEvidence, OpenAgentDiff, RenameSelectedThread,
+    RunReviewBrief, RunReviewState, TerminalId, ThreadId, ThreadImportModal,
     ThreadTitleRegenerationResult, ToggleOptionsMenu, WorkspaceEvidenceKind, channels_with_threads,
     connection_store_for_project, create_agent_thread_in_workspace,
     import_threads_from_other_channels, open_agent_thread_in_workspace,
@@ -11274,6 +11274,7 @@ impl Sidebar {
                             .child(Label::new("Session Rail").size(LabelSize::Small))
                             .child(
                                 h_flex()
+                                    .id("session-rail-status")
                                     .min_w_0()
                                     .gap_1()
                                     .role(gpui::Role::Status)
@@ -11322,6 +11323,7 @@ impl Sidebar {
                 |this| {
                     this.child(
                         h_flex()
+                            .id("session-scope")
                             .w_full()
                             .gap_1()
                             .role(gpui::Role::Group)
@@ -11395,6 +11397,7 @@ impl Sidebar {
         let has_query = self.has_filter_query(cx);
 
         h_flex()
+            .id("session-search")
             .role(gpui::Role::Search)
             .aria_label("Search sessions")
             .flex_none()
@@ -12598,6 +12601,7 @@ impl Render for Sidebar {
                                     })
                                     .child(
                                         v_flex()
+                                            .id("workspace-session-list")
                                             .role(gpui::Role::List)
                                             .aria_label("Workspace Sessions")
                                             .relative()
