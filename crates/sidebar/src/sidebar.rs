@@ -639,7 +639,7 @@ fn split_leading_icon_char(
 fn terminal_agent_icon(kind: TerminalAgentKind) -> IconName {
     match kind {
         TerminalAgentKind::Claude => IconName::AiClaude,
-        TerminalAgentKind::Codex => IconName::ZedAssistant,
+        TerminalAgentKind::Codex => IconName::Robot,
         TerminalAgentKind::Copilot => IconName::Copilot,
         TerminalAgentKind::Cursor => IconName::EditorCursor,
         TerminalAgentKind::Gemini

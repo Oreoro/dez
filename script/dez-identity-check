@@ -115,6 +115,9 @@ require_pattern crates/workspace/src/welcome.rs \
 reject_pattern crates/workspace/src/welcome.rs \
     'IconName::ZedAssistant' \
     'the Dez getting-started surface still renders the Zed Assistant glyph'
+reject_pattern crates/sidebar/src \
+    'IconName::ZedAssistant' \
+    'a Dez Session Rail surface still renders the Zed Assistant glyph'
 require_pattern crates/zed/src/zed.rs \
     'should_seed_empty_workspace_with_blank_file\(app_name: &str\) -> bool' \
     'empty Dez viewports can bypass the actionable launch surface'
