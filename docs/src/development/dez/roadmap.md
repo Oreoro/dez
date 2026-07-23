@@ -169,6 +169,12 @@ summary reports the number of ready Workspaces, and each empty Workspace owns
 one scoped New Terminal action with a Workspace-specific accessible name.
 Focused assertions and static gates pass; rendered proof remains deferred.
 
+Commit `57290c27c3` makes creation terminal-first after activation as well. The
+Workspace plus control, worktree picker, and default desktop/Vim rail bindings
+create terminal sessions; **New Agent Thread** remains an explicit secondary
+Workspace option. A focused target assertion and static identity gates pass;
+compiled interaction proof remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -957,6 +963,11 @@ code, all launch gates pass, and known limitations are documented.
       named Session Rail, ready-Workspace count, and one accessible scoped
       creation action per empty Workspace. Focused assertions and static gates
       pass; rendered proof remains consolidated.
+- [x] 2026-07-23: Make Session Rail creation terminal-first. Commit
+      `57290c27c3` routes the Workspace plus control, worktree chooser, and
+      desktop/Vim defaults through New Session while preserving an explicit New
+      Agent Thread option. Focused and identity assertions pass; compiled and
+      rendered proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

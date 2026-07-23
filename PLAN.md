@@ -463,7 +463,10 @@ with new labels.
       actors, Hosts, attention items, and recent targets. While Session Rail is
       focused, Shift-A now toggles its Attention projection and Shift-V opens
       the selected Review Brief on every supported desktop keymap; tooltips
-      expose both bindings. Broader Host/actor switching remains open.
+      expose both bindings. Commit `57290c27c3` makes the rail's platform and
+      Vim creation bindings terminal-first through a dedicated New Session
+      action; the separate New Agent Thread command remains available. Broader
+      Host/actor switching remains open.
 - [ ] Preserve selection and focus intentionally when filtering, switching
       scope, opening review, moving a Surface, or returning from an overlay.
       Session Rail rebuilds now preserve keyboard selection by stable session
@@ -529,7 +532,10 @@ with new labels.
       the last **No sessions** repetition from an open Workspace group: the
       overview reports ready Workspace scope, the group says **Ready for a
       session**, and the scoped button has the Workspace name in its accessible
-      label.
+      label. Commit `57290c27c3` then keeps creation behavior stable after the
+      first session: the Workspace plus control, worktree picker, and default
+      keyboard path all create a terminal, while **New Agent Thread** is an
+      explicit secondary Workspace option.
 - [ ] Remove dead buttons, unsupported provider actions, duplicate navigation,
       noisy badges, ambiguous icon-only controls, and success copy unsupported
       by observed evidence. The compiled Zed Pro trial-end overlay/reset action
@@ -1295,3 +1301,10 @@ Notes decision:
   concise **Ready for a session** state with one scoped New Terminal action.
   The action's accessible name includes the Workspace. Focused assertions and
   the identity guard pass; compilation and rendered proof remain deferred.
+- 2026-07-23: Made Session Rail creation terminal-first in `57290c27c3`.
+  Workspace plus controls and multi-worktree pickers now create terminals;
+  macOS, Linux, Windows, and Vim default rail bindings dispatch a dedicated New
+  Session action. Pane-native agent creation remains an explicit **New Agent
+  Thread** Workspace option instead of the silent default. A focused target
+  assertion and identity guards pass; compilation and rendered proof remain in
+  the consolidated gate.
