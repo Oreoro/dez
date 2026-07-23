@@ -136,9 +136,13 @@ fn render_no_project_state(cx: &App) -> AnyElement {
         .border_color(cx.theme().colors().border.opacity(0.6))
         .rounded_sm()
         .child(
-            Label::new("No active project found. Open a workspace to manage external agents.")
-                .color(Color::Muted)
-                .size(LabelSize::Small),
+            Label::new(if paths::APP_NAME == "Zed" {
+                "No active project found. Open a workspace to manage external agents."
+            } else {
+                "No active workspace found. Open one to manage external agents."
+            })
+            .color(Color::Muted)
+            .size(LabelSize::Small),
         )
         .into_any_element()
 }

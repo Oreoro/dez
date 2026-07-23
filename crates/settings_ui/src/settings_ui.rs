@@ -1937,7 +1937,8 @@ impl SettingsUiFile {
     fn setting_type(&self) -> &'static str {
         match self {
             SettingsUiFile::User => "User",
-            SettingsUiFile::Project(_) => "Project",
+            SettingsUiFile::Project(_) if paths::APP_NAME == "Zed" => "Project",
+            SettingsUiFile::Project(_) => "Workspace",
             SettingsUiFile::Server(_) => "Server",
         }
     }
@@ -3134,7 +3135,11 @@ impl SettingsWindow {
                                         }),
                                     )
                                     .style(DropdownStyle::Subtle)
-                                    .trigger_tooltip(Tooltip::text("View Other Projects"))
+                                    .trigger_tooltip(Tooltip::text(if paths::APP_NAME == "Zed" {
+                                        "View Other Projects"
+                                    } else {
+                                        "View Other Workspaces"
+                                    }))
                                     .trigger_icon(IconName::ChevronDown)
                                     .attach(gpui::Anchor::BottomLeft)
                                     .offset(gpui::Point {
@@ -4162,7 +4167,11 @@ impl SettingsWindow {
                             .child(Label::new("Restricted Mode"))
                             .child(
                                 Label::new(
-                                    "This project is in restricted mode. Some project settings may not apply.",
+                                    if paths::APP_NAME == "Zed" {
+                                        "This project is in restricted mode. Some project settings may not apply."
+                                    } else {
+                                        "This workspace is in Restricted Mode. Some workspace settings may not apply."
+                                    },
                                 )
                                 .size(LabelSize::Small)
                                 .color(Color::Muted),

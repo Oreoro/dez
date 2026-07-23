@@ -11290,7 +11290,7 @@ impl Workspace {
             self.show_toast(
                 Toast::new(
                     NotificationId::unique::<ActiveFileEvidenceToast>(),
-                    "Open a project file before adding review evidence",
+                    "Open a workspace file before adding review evidence",
                 )
                 .autohide(),
                 cx,
@@ -11334,7 +11334,7 @@ impl Workspace {
             self.show_toast(
                 Toast::new(
                     NotificationId::unique::<ActiveFileEvidenceToast>(),
-                    "Open a project file before removing review evidence",
+                    "Open a workspace file before removing review evidence",
                 )
                 .autohide(),
                 cx,

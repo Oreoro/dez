@@ -1092,11 +1092,23 @@ impl PickerDelegate for RemoteServerPickerDelegate {
     }
 
     fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
-        "Search remote projects…".into()
+        if paths::APP_NAME == "Zed" {
+            "Search remote projects…"
+        } else {
+            "Search remote workspaces…"
+        }
+        .into()
     }
 
     fn no_matches_text(&self, _window: &mut Window, _cx: &mut App) -> Option<SharedString> {
-        Some("No matching remote projects.".into())
+        Some(
+            if paths::APP_NAME == "Zed" {
+                "No matching remote projects."
+            } else {
+                "No matching remote workspaces."
+            }
+            .into(),
+        )
     }
 
     fn update_matches(

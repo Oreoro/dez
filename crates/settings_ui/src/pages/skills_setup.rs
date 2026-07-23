@@ -59,7 +59,10 @@ pub(crate) fn render_skills_setup_page(
             if skills.is_empty() {
                 let message = match &settings_window.current_file {
                     SettingsUiFile::User => "No global skills installed.",
-                    SettingsUiFile::Project(_) => "No project skills found.",
+                    SettingsUiFile::Project(_) if paths::APP_NAME == "Zed" => {
+                        "No project skills found."
+                    }
+                    SettingsUiFile::Project(_) => "No workspace skills found.",
                     _ => "No skills available for this context.",
                 };
 
@@ -119,7 +122,10 @@ fn render_skill_row(
     let skill_name = skill.name.clone();
 
     let (skill_scope, shared_scope) = match &skill.source {
-        SkillSource::ProjectLocal { .. } => ("project", "used in this project"),
+        SkillSource::ProjectLocal { .. } if paths::APP_NAME == "Zed" => {
+            ("project", "used in this project")
+        }
+        SkillSource::ProjectLocal { .. } => ("workspace", "used in this workspace"),
         _ => ("global", "on this machine"),
     };
 

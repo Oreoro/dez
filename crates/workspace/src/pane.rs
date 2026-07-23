@@ -5037,7 +5037,14 @@ impl Pane {
             .workspace
             .update(cx, |workspace, cx| {
                 if workspace.project().read(cx).is_via_collab() {
-                    workspace.show_error("Cannot drop files on a remote project", cx);
+                    workspace.show_error(
+                        if paths::APP_NAME == "Zed" {
+                            "Cannot drop files on a remote project"
+                        } else {
+                            "Cannot drop files on a remote workspace"
+                        },
+                        cx,
+                    );
                     true
                 } else {
                     false
@@ -5323,7 +5330,14 @@ fn default_render_tab_bar_buttons(
                         menu.action("New File", NewFile.boxed_clone())
                             .action("Open File", ToggleFileFinder::default().boxed_clone())
                             .separator()
-                            .action("Search Project", DeploySearch::default().boxed_clone())
+                            .action(
+                                if paths::APP_NAME == "Zed" {
+                                    "Search Project"
+                                } else {
+                                    "Search Workspace"
+                                },
+                                DeploySearch::default().boxed_clone(),
+                            )
                             .action("Search Symbols", ToggleProjectSymbols.boxed_clone())
                             .separator()
                             .action("New Terminal", NewTerminal::default().boxed_clone())

@@ -184,6 +184,9 @@ require_pattern crates/recent_projects/src/recent_projects.rs \
 require_pattern crates/recent_projects/src/remote_servers.rs \
     '"Delete Remote Workspace"' \
     'the Dez remote-work deletion action still uses Project vocabulary'
+require_pattern crates/recent_projects/src/remote_servers.rs \
+    '"Search remote workspaces…"' \
+    'the Dez remote-work picker still searches Projects'
 require_pattern crates/agent_ui/src/threads_archive_view.rs \
     '"Recent Workspaces"' \
     'the Dez agent-history picker still uses Project vocabulary'
@@ -196,6 +199,18 @@ require_pattern crates/workspace/src/security_modal.rs \
 require_pattern crates/project_panel/src/project_panel.rs \
     '"Add Folders to Workspace…"' \
     'the Dez Files menu still adds folders to a Project'
+require_pattern crates/workspace/src/pane.rs \
+    '"Search Workspace"' \
+    'the Dez pane creation menu still exposes Project Search'
+require_pattern crates/settings_ui/src/page_data.rs \
+    '"Trust All Workspaces By Default"' \
+    'the Dez trust setting still presents a Project boundary'
+require_pattern crates/settings_ui/src/page_data.rs \
+    '"Show file icons in Files\."' \
+    'the Dez Files settings still describe the Project Panel'
+require_pattern crates/settings_ui/src/pages/mcp_servers_page.rs \
+    '"No active workspace found\. Open one to manage MCP servers\."' \
+    'the Dez MCP settings empty state mixes Project and Workspace scope'
 require_pattern crates/release_channel/src/lib.rs \
     'ReleaseChannel::Stable => "Dez"' \
     'stable release display name is not Dez'

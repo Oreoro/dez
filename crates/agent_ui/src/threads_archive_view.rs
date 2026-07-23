@@ -1580,7 +1580,11 @@ impl PickerDelegate for ProjectPickerDelegate {
 
     fn no_matches_text(&self, _window: &mut Window, _cx: &mut App) -> Option<SharedString> {
         let text = if self.workspaces.is_empty() {
-            "No recent projects found"
+            if paths::APP_NAME == "Zed" {
+                "No recent projects found"
+            } else {
+                "No recent workspaces found"
+            }
         } else {
             "No matches"
         };

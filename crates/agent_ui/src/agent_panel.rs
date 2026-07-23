@@ -4108,7 +4108,15 @@ impl AgentPanel {
 
     fn load_thread_from_clipboard(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if !self.has_open_project(cx) {
-            Self::show_deferred_toast(&self.workspace, "Open a project to load a thread", cx);
+            Self::show_deferred_toast(
+                &self.workspace,
+                if paths::APP_NAME == "Zed" {
+                    "Open a project to load a thread"
+                } else {
+                    "Open a workspace to load a thread"
+                },
+                cx,
+            );
             return;
         }
 
@@ -6039,7 +6047,11 @@ impl AgentPanel {
                                             h_flex()
                                                 .w_full()
                                                 .gap_1()
-                                                .child(Label::new("Open Project Rules"))
+                                                .child(Label::new(if paths::APP_NAME == "Zed" {
+                                                    "Open Project Rules"
+                                                } else {
+                                                    "Open Workspace Rules"
+                                                }))
                                                 .child(
                                                     Label::new("(AGENTS.md)")
                                                         .color(Color::Muted)

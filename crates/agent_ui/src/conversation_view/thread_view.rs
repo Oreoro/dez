@@ -6363,7 +6363,11 @@ impl ThreadView {
                                         .start_icon(Icon::new(IconName::Undo).size(IconSize::XSmall).color(Color::Muted))
                                         .label_size(LabelSize::XSmall)
                                         .color(Color::Muted)
-                                        .tooltip(Tooltip::text("Restores all files in the project to the content they had at this point in the conversation."))
+                                        .tooltip(Tooltip::text(if paths::APP_NAME == "Zed" {
+                                            "Restores all files in the project to the content they had at this point in the conversation."
+                                        } else {
+                                            "Restores all files in the workspace to the content they had at this point in the conversation."
+                                        }))
                                         .on_click(cx.listener(move |this, _, _window, cx| {
                                             this.restore_checkpoint(&client_id, cx);
                                         }))

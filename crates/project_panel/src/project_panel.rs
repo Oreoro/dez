@@ -1009,7 +1009,11 @@ impl ProjectPanel {
                                         ErrorCode::Disconnected => if is_via_ssh {
                                             Some("Disconnected from SSH host".to_string())
                                         } else {
-                                            Some("Disconnected from remote project".to_string())
+                                            Some(if paths::APP_NAME == "Zed" {
+                                                "Disconnected from remote project"
+                                            } else {
+                                                "Disconnected from remote workspace"
+                                            }.to_string())
                                         },
                                         ErrorCode::UnsharedItem => Some(format!(
                                             "{} is not shared by the host. This could be because it has been marked as `private`",

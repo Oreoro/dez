@@ -291,7 +291,11 @@ fn general_page(cx: &App) -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Default Open Behavior",
-                description: "How projects open from the UI by default.",
+                description: if paths::APP_NAME == "Zed" {
+                    "How projects open from the UI by default."
+                } else {
+                    "How workspaces open from the UI by default."
+                },
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("default_open_behavior"),
@@ -314,8 +318,16 @@ fn general_page(cx: &App) -> SettingsPage {
         [
             SettingsPageItem::SectionHeader("Security"),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Trust All Projects By Default",
-                description: "When opening Dez, avoid Restricted Mode by auto-trusting all projects. This enables every project feature without a per-project trust decision.",
+                title: if paths::APP_NAME == "Zed" {
+                    "Trust All Projects By Default"
+                } else {
+                    "Trust All Workspaces By Default"
+                },
+                description: if paths::APP_NAME == "Zed" {
+                    "When opening Zed, avoid Restricted Mode by auto-trusting all projects. This enables every project feature without a per-project trust decision."
+                } else {
+                    "Avoid Restricted Mode by auto-trusting every workspace. This enables configured tools without a per-workspace trust decision."
+                },
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("session.trust_all_projects"),
@@ -3771,7 +3783,11 @@ fn search_and_files_page() -> SettingsPage {
             SettingsPageItem::SectionHeader("File Scan"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "File Scan Exclusions",
-                description: "Files or globs Dez excludes entirely. They are skipped during file scans and searches and hidden from the project tree. Takes precedence over \"File Scan Inclusions\".",
+                description: if paths::APP_NAME == "Zed" {
+                    "Files or globs Zed excludes entirely. They are skipped during file scans and searches and hidden from the project tree. Takes precedence over \"File Scan Inclusions\"."
+                } else {
+                    "Files or globs Dez excludes entirely. They are skipped during scans and search and hidden from Files. Takes precedence over \"File Scan Inclusions\"."
+                },
                 field: Box::new(
                     SettingField {
                         organization_override: None,
@@ -4004,7 +4020,11 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Diagnostics Button",
-                description: "Show the project diagnostics button in the status bar.",
+                description: if paths::APP_NAME == "Zed" {
+                    "Show the project diagnostics button in the status bar."
+                } else {
+                    "Show workspace diagnostics in the status bar."
+                },
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("diagnostics.button"),
@@ -4017,8 +4037,16 @@ fn window_and_layout_page() -> SettingsPage {
                 files: USER,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Project Search Button",
-                description: "Show the project search button in the status bar.",
+                title: if paths::APP_NAME == "Zed" {
+                    "Project Search Button"
+                } else {
+                    "Workspace Search Button"
+                },
+                description: if paths::APP_NAME == "Zed" {
+                    "Show the project search button in the status bar."
+                } else {
+                    "Show workspace search in the status bar."
+                },
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("search.button"),
@@ -4182,8 +4210,16 @@ fn window_and_layout_page() -> SettingsPage {
                 files: USER,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Show Project Items",
-                description: "Show the Workspace host and project name in the Session Rail.",
+                title: if paths::APP_NAME == "Zed" {
+                    "Show Project Items"
+                } else {
+                    "Show Workspace Identity"
+                },
+                description: if paths::APP_NAME == "Zed" {
+                    "Show the Workspace host and project name in the Session Rail."
+                } else {
+                    "Show Workspace identity in the Session Rail."
+                },
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_project_items"),
@@ -5054,6 +5090,14 @@ fn window_and_layout_page() -> SettingsPage {
 
 fn panels_page() -> SettingsPage {
     fn project_panel_section() -> [SettingsPageItem; 29] {
+        fn files_copy(project_panel_copy: &'static str, files_copy: &'static str) -> &'static str {
+            if paths::APP_NAME == "Zed" {
+                project_panel_copy
+            } else {
+                files_copy
+            }
+        }
+
         [
             SettingsPageItem::SectionHeader(if paths::APP_NAME == "Zed" {
                 "Project Panel"
@@ -5115,7 +5159,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Hide .gitignore",
-                description: "Whether to hide the gitignore entries in the project panel.",
+                description: files_copy(
+                    "Whether to hide the gitignore entries in the project panel.",
+                    "Whether to hide .gitignore entries in Files.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.hide_gitignore"),
@@ -5138,7 +5185,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Entry Spacing",
-                description: "Spacing between worktree entries in the project panel.",
+                description: files_copy(
+                    "Spacing between worktree entries in the project panel.",
+                    "Spacing between Workspace roots in Files.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.entry_spacing"),
@@ -5161,7 +5211,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "File Icons",
-                description: "Show file icons in the project panel.",
+                description: files_copy(
+                    "Show file icons in the project panel.",
+                    "Show file icons in Files.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.file_icons"),
@@ -5180,7 +5233,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Folder Icons",
-                description: "Whether to show folder icons or chevrons for directories in the project panel.",
+                description: files_copy(
+                    "Whether to show folder icons or chevrons for directories in the project panel.",
+                    "Whether Files shows folder icons or chevrons for directories.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.folder_icons"),
@@ -5203,7 +5259,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Git Status",
-                description: "Show the Git status in the project panel.",
+                description: files_copy(
+                    "Show the Git status in the project panel.",
+                    "Show Git status in Files.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.git_status"),
@@ -5245,7 +5304,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Auto Reveal Entries",
-                description: "Whether to reveal entries in the project panel automatically when a corresponding project entry becomes active.",
+                description: files_copy(
+                    "Whether to reveal entries in the project panel automatically when a corresponding project entry becomes active.",
+                    "Whether Files automatically reveals the active file.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.auto_reveal_entries"),
@@ -5268,7 +5330,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Starts Open",
-                description: "Whether the project panel should open on startup.",
+                description: files_copy(
+                    "Whether the project panel should open on startup.",
+                    "Whether Files opens on startup when legacy docks are enabled.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.starts_open"),
@@ -5314,7 +5379,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Bold Folder Labels",
-                description: "Whether to show folder names with bold text in the project panel.",
+                description: files_copy(
+                    "Whether to show folder names with bold text in the project panel.",
+                    "Whether Files shows folder names in bold.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.bold_folder_labels"),
@@ -5337,7 +5405,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Scrollbar",
-                description: "Show the scrollbar in the project panel.",
+                description: files_copy(
+                    "Show the scrollbar in the project panel.",
+                    "Show the scrollbar in Files.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.scrollbar.show"),
@@ -5366,7 +5437,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Horizontal Scroll",
-                description: "Whether to allow horizontal scrolling in the project panel. When disabled, the view is always locked to the leftmost position and long file names are clipped.",
+                description: files_copy(
+                    "Whether to allow horizontal scrolling in the project panel. When disabled, the view is always locked to the leftmost position and long file names are clipped.",
+                    "Whether Files scrolls horizontally. When disabled, it stays left-aligned and clips long names.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.scrollbar.horizontal_scroll"),
@@ -5393,7 +5467,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Diagnostics",
-                description: "Which files containing diagnostic errors/warnings to mark in the project panel.",
+                description: files_copy(
+                    "Which files containing diagnostic errors/warnings to mark in the project panel.",
+                    "Which files with diagnostic errors or warnings to mark in Files.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.show_diagnostics"),
@@ -5416,7 +5493,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Diagnostic Badges",
-                description: "Show error and warning count badges next to file names in the project panel.",
+                description: files_copy(
+                    "Show error and warning count badges next to file names in the project panel.",
+                    "Show error and warning count badges beside file names in Files.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.diagnostic_badges"),
@@ -5439,7 +5519,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Git Status Indicator",
-                description: "Show a git status indicator next to file names in the project panel.",
+                description: files_copy(
+                    "Show a git status indicator next to file names in the project panel.",
+                    "Show a Git status indicator beside file names in Files.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.git_status_indicator"),
@@ -5462,7 +5545,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Sticky Scroll",
-                description: "Whether to stick parent directories at top of the project panel.",
+                description: files_copy(
+                    "Whether to stick parent directories at top of the project panel.",
+                    "Whether Files keeps parent directories pinned while scrolling.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.sticky_scroll"),
@@ -5486,7 +5572,10 @@ fn panels_page() -> SettingsPage {
             SettingsPageItem::SettingItem(SettingItem {
                 files: USER,
                 title: "Show Indent Guides",
-                description: "Show indent guides in the project panel.",
+                description: files_copy(
+                    "Show indent guides in the project panel.",
+                    "Show indent guides in Files.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.indent_guides.show"),
@@ -5512,7 +5601,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Drag and Drop",
-                description: "Whether to enable drag-and-drop operations in the project panel.",
+                description: files_copy(
+                    "Whether to enable drag-and-drop operations in the project panel.",
+                    "Whether Files allows drag-and-drop operations.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.drag_and_drop"),
@@ -5554,7 +5646,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Hide Hidden",
-                description: "Whether to hide the hidden entries in the project panel.",
+                description: files_copy(
+                    "Whether to hide the hidden entries in the project panel.",
+                    "Whether Files hides hidden entries.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.hide_hidden"),
@@ -5577,7 +5672,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Sort Mode",
-                description: "Sort order for entries in the project panel.",
+                description: files_copy(
+                    "Sort order for entries in the project panel.",
+                    "Sort order for entries in Files.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.sort_mode"),
@@ -5596,7 +5694,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Sort Order",
-                description: "Whether to sort file and folder names case-sensitively in the project panel.",
+                description: files_copy(
+                    "Whether to sort file and folder names case-sensitively in the project panel.",
+                    "Whether Files sorts file and folder names case-sensitively.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     pick: |settings_content| {
@@ -5696,7 +5797,10 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Hidden Files",
-                description: "Globs to match files that will be considered \"hidden\" and can be hidden from the project panel.",
+                description: files_copy(
+                    "Globs to match files that will be considered \"hidden\" and can be hidden from the project panel.",
+                    "Globs for files that can be hidden from Files.",
+                ),
                 field: Box::new(
                     SettingField {
                         organization_override: None,
@@ -8214,7 +8318,14 @@ fn ai_page(cx: &App) -> SettingsPage {
                 title: "Skills".into(),
                 r#type: Default::default(),
                 json_path: Some(zed_actions::AGENT_SKILLS_SETTINGS_PATH),
-                description: Some("View and manage agent skills installed globally or in project worktrees.".into()),
+            description: Some(
+                if paths::APP_NAME == "Zed" {
+                    "View and manage agent skills installed globally or in project worktrees."
+                } else {
+                    "View and manage agent skills installed globally or in Workspace roots."
+                }
+                .into(),
+            ),
                 search_aliases: &["agent skill", "agent skills", "custom instructions", "skill", "skills"],
                 in_json: false,
                 files: USER | PROJECT,
