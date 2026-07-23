@@ -133,11 +133,17 @@ impl PaneKind {
     }
 
     fn accessibility_label(self) -> &'static str {
-        match self {
-            Self::Tabs => "Editor pane",
-            Self::Project if paths::APP_NAME == "Zed" => "Project pane",
-            Self::Project => "Workspace tools pane",
-            Self::Agent => "Agent pane",
+        self.accessibility_label_for_app(paths::APP_NAME)
+    }
+
+    fn accessibility_label_for_app(self, app_name: &str) -> &'static str {
+        match (app_name == "Zed", self) {
+            (true, Self::Tabs) => "Editor pane",
+            (true, Self::Project) => "Project pane",
+            (true, Self::Agent) => "Agent pane",
+            (false, Self::Tabs) => "Main work area",
+            (false, Self::Project) => "Workspace Tools",
+            (false, Self::Agent) => "Agent",
         }
     }
 
@@ -5331,16 +5337,39 @@ fn default_render_tab_bar_buttons(
     window: &mut Window,
     cx: &mut Context<Pane>,
 ) -> (Option<AnyElement>, Option<AnyElement>) {
-    if !pane.has_focus(window, cx) && !pane.context_menu_focused(window, cx) {
-        return (None, None);
+    if paths::APP_NAME != "Zed" {
+        match pane.pane_kind {
+            PaneKind::Project => {
+                return (
+                    None,
+                    Some(render_auxiliary_pane_hide_control(PaneKind::Project)),
+                );
+            }
+            PaneKind::Agent => {
+                return (
+                    None,
+                    Some(render_auxiliary_pane_hide_control(PaneKind::Agent)),
+                );
+            }
+            PaneKind::Tabs => {}
+        }
     }
+
+    let has_focus = pane.has_focus(window, cx) || pane.context_menu_focused(window, cx);
+    let add_control = render_new_surface_control(pane);
+    if !has_focus {
+        return if paths::APP_NAME == "Zed" {
+            (None, None)
+        } else {
+            (None, Some(add_control))
+        };
+    }
+
     let (can_clone, can_split_move) = match pane.active_item() {
         Some(active_item) if active_item.can_split(cx) => (true, false),
         Some(_) => (false, pane.items_len() > 1),
         None => (false, false),
     };
-    let (new_surface_aria_label, new_surface_tooltip) =
-        pane_new_surface_control_copy(paths::APP_NAME);
     let split_enabled = can_clone || can_split_move;
     let (split_aria_label, split_tooltip) = pane_split_control_copy(paths::APP_NAME, split_enabled);
     // Ideally we would return a vec of elements here to pass directly to the [TabBar]'s
@@ -5348,45 +5377,7 @@ fn default_render_tab_bar_buttons(
     let right_children = h_flex()
         // Instead we need to replicate the spacing from the [TabBar]'s `end_slot` here.
         .gap(DynamicSpacing::Base04.rems(cx))
-        .child(
-            PopoverMenu::new("pane-tab-bar-popover-menu")
-                .trigger_with_tooltip(
-                    IconButton::new("plus", IconName::Plus)
-                        .size(ButtonSize::Medium)
-                        .icon_size(IconSize::Small)
-                        .aria_label(new_surface_aria_label),
-                    Tooltip::text(new_surface_tooltip),
-                )
-                .anchor(Anchor::TopRight)
-                .with_handle(pane.new_item_context_menu_handle.clone())
-                .menu(move |window, cx| {
-                    Some(ContextMenu::build(window, cx, |menu, _, _| {
-                        let menu = menu
-                            .action("New File", NewFile.boxed_clone())
-                            .action("Open File", ToggleFileFinder::default().boxed_clone())
-                            .separator()
-                            .action(
-                                if paths::APP_NAME == "Zed" {
-                                    "Search Project"
-                                } else {
-                                    "Search Workspace"
-                                },
-                                DeploySearch::default().boxed_clone(),
-                            )
-                            .action("Search Symbols", ToggleProjectSymbols.boxed_clone())
-                            .separator();
-                        if paths::APP_NAME == "Zed" {
-                            menu.action("New Terminal", NewTerminal::default().boxed_clone())
-                                .action(
-                                    "New Center Terminal",
-                                    NewCenterTerminal::default().boxed_clone(),
-                                )
-                        } else {
-                            menu.action("New Terminal", NewCenterTerminal::default().boxed_clone())
-                        }
-                    }))
-                }),
-        )
+        .child(add_control)
         .child(
             PopoverMenu::new("pane-tab-bar-split")
                 .trigger_with_tooltip(
@@ -5423,11 +5414,99 @@ fn default_render_tab_bar_buttons(
     (None, right_children)
 }
 
+fn render_new_surface_control(pane: &Pane) -> AnyElement {
+    let (aria_label, tooltip) = pane_new_surface_control_copy(paths::APP_NAME);
+    let (new_file, open_file, search_workspace, search_symbols) =
+        pane_new_surface_menu_copy(paths::APP_NAME);
+
+    PopoverMenu::new("pane-tab-bar-popover-menu")
+        .trigger_with_tooltip(
+            IconButton::new("plus", IconName::Plus)
+                .size(ButtonSize::Medium)
+                .icon_size(IconSize::Small)
+                .aria_label(aria_label),
+            Tooltip::text(tooltip),
+        )
+        .anchor(Anchor::TopRight)
+        .with_handle(pane.new_item_context_menu_handle.clone())
+        .menu(move |window, cx| {
+            Some(ContextMenu::build(window, cx, |menu, _, _| {
+                let menu = menu
+                    .action(new_file, NewFile.boxed_clone())
+                    .action(open_file, ToggleFileFinder::default().boxed_clone())
+                    .separator()
+                    .action(search_workspace, DeploySearch::default().boxed_clone())
+                    .action(search_symbols, ToggleProjectSymbols.boxed_clone())
+                    .separator();
+                if paths::APP_NAME == "Zed" {
+                    menu.action("New Terminal", NewTerminal::default().boxed_clone())
+                        .action(
+                            "New Center Terminal",
+                            NewCenterTerminal::default().boxed_clone(),
+                        )
+                } else {
+                    menu.action("New Terminal", NewCenterTerminal::default().boxed_clone())
+                }
+            }))
+        })
+        .into_any_element()
+}
+
+fn render_auxiliary_pane_hide_control(pane_kind: PaneKind) -> AnyElement {
+    let label = pane_auxiliary_hide_control_copy(pane_kind)
+        .expect("only auxiliary panes have dedicated hide controls");
+
+    match pane_kind {
+        PaneKind::Project => IconButton::new("hide-workspace-tools", IconName::Close)
+            .size(ButtonSize::Medium)
+            .icon_size(IconSize::Small)
+            .aria_label(label)
+            .tooltip(|_, cx| Tooltip::for_action(label, &ToggleProjectPane, cx))
+            .on_click(|_, window, cx| {
+                window.dispatch_action(Box::new(ToggleProjectPane), cx);
+            })
+            .into_any_element(),
+        PaneKind::Agent => IconButton::new("hide-agent", IconName::Close)
+            .size(ButtonSize::Medium)
+            .icon_size(IconSize::Small)
+            .aria_label(label)
+            .tooltip(|_, cx| Tooltip::for_action(label, &ToggleAgentPane, cx))
+            .on_click(|_, window, cx| {
+                window.dispatch_action(Box::new(ToggleAgentPane), cx);
+            })
+            .into_any_element(),
+        PaneKind::Tabs => gpui::Empty.into_any_element(),
+    }
+}
+
 fn pane_new_surface_control_copy(app_name: &str) -> (&'static str, &'static str) {
     if app_name == "Zed" {
         ("New Item", "New…")
     } else {
         ("Add to Main Work Area", "Add a file, search, or terminal")
+    }
+}
+
+fn pane_new_surface_menu_copy(
+    app_name: &str,
+) -> (&'static str, &'static str, &'static str, &'static str) {
+    if app_name == "Zed" {
+        ("New File", "Open File", "Search Project", "Search Symbols")
+    } else {
+        (
+            "New File",
+            "Open File…",
+            "Search Workspace…",
+            "Go to Symbol…",
+        )
+    }
+}
+
+fn pane_auxiliary_hide_control_copy(pane_kind: PaneKind) -> Option<&'static str> {
+    match pane_kind {
+        PaneKind::Project => Some("Hide Workspace Tools"),
+        PaneKind::Agent => Some("Hide Agent"),
+        PaneKind::Tabs => None,
     }
 }
 
@@ -6220,10 +6299,45 @@ mod tests {
     #[test]
     fn dez_pane_add_control_names_its_destination_and_choices() {
         assert_eq!(
+            PaneKind::Tabs.accessibility_label_for_app("Dez"),
+            "Main work area"
+        );
+        assert_eq!(
+            PaneKind::Project.accessibility_label_for_app("Dez"),
+            "Workspace Tools"
+        );
+        assert_eq!(PaneKind::Agent.accessibility_label_for_app("Dez"), "Agent");
+        assert_eq!(
+            PaneKind::Tabs.accessibility_label_for_app("Zed"),
+            "Editor pane"
+        );
+        assert_eq!(
             pane_new_surface_control_copy("Dez"),
             ("Add to Main Work Area", "Add a file, search, or terminal")
         );
         assert_eq!(pane_new_surface_control_copy("Zed"), ("New Item", "New…"));
+        assert_eq!(
+            pane_new_surface_menu_copy("Dez"),
+            (
+                "New File",
+                "Open File…",
+                "Search Workspace…",
+                "Go to Symbol…"
+            )
+        );
+        assert_eq!(
+            pane_new_surface_menu_copy("Zed"),
+            ("New File", "Open File", "Search Project", "Search Symbols")
+        );
+        assert_eq!(
+            pane_auxiliary_hide_control_copy(PaneKind::Project),
+            Some("Hide Workspace Tools")
+        );
+        assert_eq!(
+            pane_auxiliary_hide_control_copy(PaneKind::Agent),
+            Some("Hide Agent")
+        );
+        assert_eq!(pane_auxiliary_hide_control_copy(PaneKind::Tabs), None);
         assert_eq!(
             pane_split_control_copy("Dez", false),
             (

@@ -704,8 +704,14 @@ require_multiline_pattern crates/workspace/src/pane.rs \
     'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?else \{.*?"New Terminal".*?NewCenterTerminal::default' \
     'the Dez New Item menu can regress from the single center-terminal model'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'pane_new_surface_control_copy\(paths::APP_NAME\).*?aria_label\(new_surface_aria_label\).*?Tooltip::text\(new_surface_tooltip\).*?fn pane_new_surface_control_copy.*?"New Item".*?"New…".*?"Add to Main Work Area".*?"Add a file, search, or terminal"' \
+    'fn render_new_surface_control.*?pane_new_surface_control_copy\(paths::APP_NAME\).*?aria_label\(aria_label\).*?Tooltip::text\(tooltip\).*?fn pane_new_surface_control_copy.*?"New Item".*?"New…".*?"Add to Main Work Area".*?"Add a file, search, or terminal"' \
     'the main-work-area add control can regress to an unexplained generic plus button'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    'fn accessibility_label_for_app.*?"Editor pane".*?"Project pane".*?"Agent pane".*?"Main work area".*?"Workspace Tools".*?"Agent".*?if paths::APP_NAME != "Zed".*?PaneKind::Project.*?render_auxiliary_pane_hide_control\(PaneKind::Project\).*?PaneKind::Agent.*?render_auxiliary_pane_hide_control\(PaneKind::Agent\).*?if !has_focus.*?Some\(add_control\).*?fn render_auxiliary_pane_hide_control.*?"Hide Workspace Tools".*?"Hide Agent"' \
+    'main-area creation controls can regress into auxiliary panes or pane landmarks can lose their product-region identity'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    'fn pane_new_surface_menu_copy.*?"Open File…".*?"Search Workspace…".*?"Go to Symbol…"' \
+    'the Main Work Area creation menu can regress to ambiguous commands that conceal a follow-up'
 require_multiline_pattern crates/workspace/src/pane.rs \
     'let split_enabled = can_clone \|\| can_split_move.*?pane_split_control_copy\(paths::APP_NAME, split_enabled\).*?aria_label\(split_aria_label\).*?disabled\(!split_enabled\).*?Tooltip::text\(split_tooltip\).*?fn pane_split_control_copy.*?app_name == "Zed" \|\| enabled.*?"Split Pane Unavailable".*?"This Surface cannot be split or moved into a new pane"' \
     'the pane split control can regress to a disabled icon with no explanation'
@@ -851,7 +857,7 @@ require_pattern crates/project_panel/src/project_panel.rs \
     '"Add Folders to Workspace…"' \
     'the Dez Files menu still adds folders to a Project'
 require_pattern crates/workspace/src/pane.rs \
-    '"Search Workspace"' \
+    '"Search Workspace…"' \
     'the Dez pane creation menu still exposes Project Search'
 require_multiline_pattern crates/workspace/src/pane.rs \
     'Button::new\("empty-project-terminal", "New Terminal"\).*?\.aria_label\("New Terminal"\).*?Tooltip::for_action.*?"New Terminal".*?Button::new\("empty-project-open-file", "Find File"\).*?\.aria_label\("Find File in Workspace"\).*?Tooltip::for_action.*?"Find File in Workspace".*?Button::new\("empty-project-new-file", "New File"\).*?\.aria_label\("New File"\).*?Tooltip::for_action\("New File"' \
