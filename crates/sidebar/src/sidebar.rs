@@ -1004,34 +1004,36 @@ fn terminal_row_close_presentation(
     runtime_state: Option<TerminalRuntimeState>,
 ) -> (&'static str, bool) {
     match (is_host_session, runtime_state) {
-        (true, Some(TerminalRuntimeState::Live)) => ("Terminate Running Session", true),
-        (true, Some(TerminalRuntimeState::Detached)) => ("Terminate Detached Session", true),
+        (true, Some(TerminalRuntimeState::Live)) => ("Terminate Running Terminal", true),
+        (true, Some(TerminalRuntimeState::Detached)) => ("Terminate Detached Terminal", true),
         (true, Some(TerminalRuntimeState::Reconnecting)) => {
-            ("Terminate Reconnecting Session", true)
+            ("Terminate Reconnecting Terminal", true)
         }
-        (true, Some(TerminalRuntimeState::Exited)) => ("Remove Exited Session", false),
-        (true, Some(TerminalRuntimeState::Missing)) => ("Remove Missing Session", false),
-        (true, Some(TerminalRuntimeState::Incompatible)) => ("Remove Incompatible Session", false),
-        (true, None) => ("Remove Saved Session", false),
+        (true, Some(TerminalRuntimeState::Exited)) => ("Remove Exited Terminal", false),
+        (true, Some(TerminalRuntimeState::Missing)) => ("Remove Missing Terminal", false),
+        (true, Some(TerminalRuntimeState::Incompatible)) => ("Remove Incompatible Terminal", false),
+        (true, None) => ("Remove Saved Terminal", false),
         (false, Some(TerminalRuntimeState::Live)) => ("Detach Live Terminal", false),
-        (false, Some(TerminalRuntimeState::Detached)) => ("Terminate Detached Session", true),
+        (false, Some(TerminalRuntimeState::Detached)) => ("Terminate Detached Terminal", true),
         (false, Some(TerminalRuntimeState::Reconnecting)) => {
-            ("Terminate Reconnecting Session", true)
+            ("Terminate Reconnecting Terminal", true)
         }
         (false, Some(TerminalRuntimeState::Exited)) => ("Close Exited Terminal", false),
-        (false, Some(TerminalRuntimeState::Missing)) => ("Remove Missing Session", false),
-        (false, Some(TerminalRuntimeState::Incompatible)) => ("Remove Incompatible Session", false),
+        (false, Some(TerminalRuntimeState::Missing)) => ("Remove Missing Terminal", false),
+        (false, Some(TerminalRuntimeState::Incompatible)) => {
+            ("Remove Incompatible Terminal", false)
+        }
         (false, None) => ("Remove Saved Terminal", false),
     }
 }
 
 fn terminal_row_owner_label(has_session_ref: bool, is_remote: bool) -> &'static str {
     if has_session_ref {
-        "Durable Host"
+        "Persistent"
     } else if is_remote {
-        "Remote Workspace"
+        "Remote"
     } else {
-        "Workspace process"
+        "Local"
     }
 }
 
@@ -1043,15 +1045,15 @@ mod terminal_runtime_label_tests {
     fn host_owned_session_actions_never_present_termination_as_detach() {
         assert_eq!(
             terminal_row_close_presentation(true, Some(TerminalRuntimeState::Live)),
-            ("Terminate Running Session", true)
+            ("Terminate Running Terminal", true)
         );
         assert_eq!(
             terminal_row_close_presentation(true, Some(TerminalRuntimeState::Detached)),
-            ("Terminate Detached Session", true)
+            ("Terminate Detached Terminal", true)
         );
         assert_eq!(
             terminal_row_close_presentation(true, Some(TerminalRuntimeState::Exited)),
-            ("Remove Exited Session", false)
+            ("Remove Exited Terminal", false)
         );
         assert_eq!(
             terminal_row_close_presentation(false, Some(TerminalRuntimeState::Live)),
@@ -1061,9 +1063,9 @@ mod terminal_runtime_label_tests {
 
     #[test]
     fn terminal_row_ownership_is_explicit() {
-        assert_eq!(terminal_row_owner_label(true, false), "Durable Host");
-        assert_eq!(terminal_row_owner_label(false, true), "Remote Workspace");
-        assert_eq!(terminal_row_owner_label(false, false), "Workspace process");
+        assert_eq!(terminal_row_owner_label(true, false), "Persistent");
+        assert_eq!(terminal_row_owner_label(false, true), "Remote");
+        assert_eq!(terminal_row_owner_label(false, false), "Local");
     }
 
     #[test]
@@ -10362,10 +10364,7 @@ impl Sidebar {
                     )
                 })
                 .when(terminal_agent_kind.is_none(), |this| {
-                    this.when(supplemental_metadata_visible, |this| {
-                        this.actor_label("Terminal Session")
-                    })
-                    .state_label(terminal_agent_state_label(
+                    this.state_label(terminal_agent_state_label(
                         terminal.agent.as_ref(),
                         terminal.runtime.as_ref(),
                         needs_attention,
@@ -11605,10 +11604,10 @@ impl Sidebar {
                                     .size(ButtonSize::Medium)
                                     .style(ButtonStyle::Filled)
                                     .start_icon(Icon::new(IconName::Plus).size(IconSize::XSmall))
-                                    .aria_label("New Terminal Session")
+                                    .aria_label("New Terminal")
                                     .tooltip(|_, cx| {
                                         Tooltip::for_action(
-                                            "New Terminal Session",
+                                            "New Terminal",
                                             &NewCenterTerminal::default(),
                                             cx,
                                         )

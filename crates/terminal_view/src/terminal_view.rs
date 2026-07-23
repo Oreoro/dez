@@ -113,12 +113,8 @@ fn terminal_close_label(is_hosted: bool) -> &'static str {
     }
 }
 
-fn terminal_terminate_label(is_hosted: bool) -> &'static str {
-    if is_hosted {
-        "Terminate Session"
-    } else {
-        "Terminate Terminal Process"
-    }
+fn terminal_terminate_label(_is_hosted: bool) -> &'static str {
+    "Terminate Terminal Process"
 }
 
 /// Event to transmit the scroll from the element to the view
@@ -2161,9 +2157,9 @@ impl Item for TerminalView {
             terminal.task().map(|task| &task.status),
         );
         let ownership = if is_hosted {
-            "Durable Host session"
+            "Persistent terminal"
         } else if session_unavailable {
-            "Saved Host session"
+            "Saved terminal"
         } else {
             "Workspace terminal"
         };
@@ -3177,7 +3173,7 @@ mod tests {
         assert_eq!(terminal_tab_status(false, false, None), "Active");
         assert_eq!(terminal_close_label(true), "Detach Terminal");
         assert_eq!(terminal_close_label(false), "Close Terminal Tab");
-        assert_eq!(terminal_terminate_label(true), "Terminate Session");
+        assert_eq!(terminal_terminate_label(true), "Terminate Terminal Process");
         assert_eq!(
             terminal_terminate_label(false),
             "Terminate Terminal Process"

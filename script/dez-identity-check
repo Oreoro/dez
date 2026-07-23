@@ -221,14 +221,14 @@ reject_pattern crates/sidebar/src/sidebar.rs \
     'when\(!is_focused, \|this\| this\.visible_on_hover\(&group_name\)\)' \
     'Workspace group disclosure can regress to an invisible hover-only affordance'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn terminal_row_close_presentation.*?"Terminate Running Session", true.*?"Detach Live Terminal", false' \
-    'a Host-owned running Session can regress to a non-destructive detach label'
+    'fn terminal_row_close_presentation.*?"Terminate Running Terminal", true.*?"Terminate Detached Terminal", true.*?"Detach Live Terminal", false' \
+    'terminal lifecycle actions can regress to generic Session wording or a non-destructive label'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn terminal_row_owner_label.*?"Durable Host".*?"Remote Workspace".*?"Workspace process"' \
-    'Session Rail terminal ownership can regress to ambiguous Host/process labels'
-require_pattern crates/sidebar/src/sidebar.rs \
+    'fn terminal_row_owner_label.*?"Persistent".*?"Remote".*?"Local"' \
+    'Session Rail terminal ownership can regress to implementation-heavy Host/process labels'
+reject_pattern crates/sidebar/src/sidebar.rs \
     '\.actor_label\("Terminal Session"\)' \
-    'plain terminal rows can regress to an ambiguous Terminal actor label'
+    'plain terminal rows can regress to repeating their type as a fake actor label'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_sidebar_bottom_bar.*?let labels_visible = !session_rail_row_is_compact.*?Button::new\("history", if labels_visible \{ "History" \} else \{ "" \}\)' \
     'the Session Rail footer can regress to unexplained icon-only utilities at normal widths'
@@ -665,8 +665,8 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_close_label.*?"Detach Terminal".*?"Close Terminal Tab"' \
     'durable terminal closure is still labeled like local tab disposal'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'fn terminal_terminate_label.*?"Terminate Session".*?"Terminate Terminal Process"' \
-    'terminal lifecycle actions do not distinguish hosted Sessions from local processes'
+    'fn terminal_terminate_label.*?"Terminate Terminal Process"' \
+    'terminal lifecycle actions can regress to generic Session wording'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'is_hosted = self\.terminal\.read\(cx\)\.is_hosted\(\).*?terminal_close_label\(is_hosted\)' \
     'durable terminal closure can regress during Host reconnection'
