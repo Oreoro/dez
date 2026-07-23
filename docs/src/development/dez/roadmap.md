@@ -1490,6 +1490,27 @@ code, all launch gates pass, and known limitations are documented.
       Terminal Panel routing. Focused source assertions, formatting, locked
       offline metadata, and static identity checks pass; compilation and
       rendered migration proof remain deferred.
+- [x] 2026-07-23: Make Workspace-scoped terminal creation discoverable. Commit
+      `f863b3e45c` keeps the active Workspace's terminal-shaped creation action
+      visible and gives it a Workspace-specific accessible name. Inactive
+      Workspace actions remain hover-revealed to preserve row hierarchy.
+      Focused source assertions, formatting, locked offline metadata, and
+      static identity checks pass; compilation and rendered multi-Workspace
+      proof remain deferred.
+- [x] 2026-07-23: Remove remaining terminal-thread language from Dez UI.
+      Commit `d1ea4a914f` gives the external-session import flow consistent
+      Agent Session, Agent History, count, empty, and completion copy. Commit
+      `037eebaf02` renames the terminal startup setting to **Terminal Session
+      Startup Command** while retaining official Zed's Terminal Thread copy.
+      Focused source assertions, formatting, locked offline metadata, and
+      static identity checks pass; compilation and rendered modal/settings
+      proof remain deferred.
+- [x] 2026-07-23: Enforce the Dez Workspace Tools boundary. Commit
+      `d490735631` restricts Dez's left tool region to Files, Outline, Git, and
+      Debug; the inherited Terminal and Collaboration panels are official-Zed
+      compatibility surfaces only. Focused source assertions, formatting,
+      locked offline metadata, and static identity checks pass; compilation and
+      rendered tool-registration proof remain deferred.
 - [x] 2026-07-23: Confirm permanent Agent Session deletion. Commit
       `9615b513d4` routes both the archived-row trash control and keyboard
       remove action through one critical prompt. The prompt names the selected

@@ -1767,3 +1767,13 @@ Notes decision:
   offline metadata, identity, diff, and documentation-format checks pass;
   compilation and rendered remove/re-register and terminal-migration proof
   remain deferred.
+- 2026-07-23: Clarified where terminal-backed work starts and lives. Commit
+  `f863b3e45c` keeps the active Workspace's terminal creation action visible,
+  terminal-shaped, and Workspace-named. Commit `d1ea4a914f` makes external
+  Agent Session import copy consistent, while `037eebaf02` renames Dez's
+  terminal startup setting to **Terminal Session Startup Command**. Commit
+  `d490735631` restricts Workspace Tools to Files, Outline, Git, and Debug in
+  Dez; Terminal and Collaboration remain official-Zed-only compatibility
+  panels. Formatting, locked offline metadata, identity, and diff checks pass;
+  compilation and rendered multi-Workspace, modal, settings, and panel-routing
+  proof remain deferred.

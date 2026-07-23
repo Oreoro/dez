@@ -1094,7 +1094,14 @@ the later running-app reports, the source advanced through:
   Tool or Agent panel is unregistered and verifies focused-tool toggle closure;
   and
 - `a95e0a4bb4`, which prevents Dez from routing the inherited Terminal Panel
-  into Workspace Tools while preserving official Zed behavior.
+  into Workspace Tools while preserving official Zed behavior; and
+- `f863b3e45c`, which keeps the active Workspace's terminal creation action
+  visible, terminal-shaped, and explicitly scoped; and
+- `d1ea4a914f`, which gives external Agent Session import consistent Dez
+  vocabulary, plus `037eebaf02`, which replaces the last visible terminal
+  thread setting label with Terminal Session language; and
+- `d490735631`, which prevents the removed Collaboration Panel from entering
+  Dez Workspace Tools while preserving official Zed compatibility.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
