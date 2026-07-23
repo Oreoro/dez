@@ -115,12 +115,13 @@ the same truthful state.
 independent evidence and tool scope. Moving a terminal moves its context without
 global leakage or eager home-folder scanning.
 
-Source progress: Project, Git, Outline, Debug, and the compatibility Terminal
-Panel now route to the Project-tool pane when legacy docks are hidden; Agent
-uses its dedicated pane. New Terminal remains a center Surface. Commits
-`5efa0398ad` and `1f186f9b8c` complete the registered-panel reachability map and
-add a focused routing regression; compiled and rendered toggle proof remains in
-the consolidated gate.
+Source progress: Files, Git, Outline, and Debug route to Workspace tools when
+legacy docks are hidden; Agent uses its dedicated pane. Terminals use one public
+placement model: New Terminal opens a center Surface in the ordinary tab and
+split grid. Commit `ad2fdcf766` removes the inherited compatibility Terminal
+Panel from Dez menus, the Command Palette, keybindings, and Settings while
+preserving official Zed. The registered-panel compatibility map remains covered
+for upstream synchronization, but it is no longer part of Dez's product model.
 
 Follow-up `e4f1e341c9` normalizes the loaded-worktree launch and empty tool-pane
 recovery surfaces on Workspace vocabulary while leaving compatible internal
@@ -1357,6 +1358,14 @@ code, all launch gates pass, and known limitations are documented.
       evidence is present, while a wrapping tooltip preserves the complete
       title and state metadata. Focused pure assertions and the static identity
       guard cover the responsive contract; rendered proof remains deferred.
+- [x] 2026-07-23: Collapse terminal placement to one public model. Commit
+      `ad2fdcf766` removes the false **New Terminal Panel** choice, inherited
+      Terminal Panel View command and keybindings, duplicate palette action,
+      status-bar toggle, and dock-size Settings from Dez. Every visible
+      **New Terminal** entry point now means a center tab that can join the
+      ordinary split grid. Official Zed keeps its panel behavior. Focused pure
+      visibility assertions and static identity guards pass; compilation and
+      rendered proof remain deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

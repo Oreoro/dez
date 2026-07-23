@@ -250,12 +250,14 @@ restoration; opening or closing a viewport does not change durable ownership.
       Workspaces in that MultiWorkspace; another OS window cannot silently
       enter its project-settings scope.
 - [x] Move eligible panel-only tools into ordinary pane Surfaces while keeping
-      familiar toggles and dock layouts. With Dez's default legacy docks hidden,
-      Project, Git, Outline, Debug, and the compatibility Terminal Panel route
-      into the Project-tool pane, while Agent routes into its dedicated pane.
-      New Terminal still creates the opinionated center Surface. Enabling legacy
-      docks preserves upstream placement and toggles. A focused routing test
-      freezes reachability for every surviving developer-tool panel.
+      familiar toggles and dock layouts where they support the product model.
+      With Dez's default legacy docks hidden, Files, Git, Outline, and Debug
+      route into Workspace tools while Agent uses its dedicated pane. Terminals
+      have one public placement model: New Terminal creates a center Surface
+      that can participate in the normal tab and split grid. The inherited
+      Terminal Panel remains official-Zed compatibility code but is absent from
+      Dez menus, commands, keybindings, and Settings. Focused routing and
+      product-visibility assertions freeze the surviving developer-tool map.
 - [ ] Prove Surfaces can move across panes and Workspaces without global root,
       repository, Host, or tool-state leakage.
 - [ ] Keep discovery lazy; opening a path must not imply recursive indexing,
@@ -1351,12 +1353,12 @@ Notes decision:
   proves scope replacement in both directions. Formatting, diff, and identity
   checks pass; compilation remains deferred.
 - 2026-07-23: Completed the registered-panel reachability map in
-  `5efa0398ad` and `1f186f9b8c`. Debug and the compatibility Terminal Panel now
-  join Project, Git, and Outline as ordinary Project-tool pane tabs whenever
-  Dez hides legacy docks; Agent retains its dedicated pane and center New
-  Terminal behavior is unchanged. The mapping test covers every surviving
-  developer-tool panel plus unknown-key rejection. Formatting, diff, and
-  identity checks pass; compilation and rendered toggle proof remain deferred.
+  `5efa0398ad` and `1f186f9b8c`. Debug joined Project, Git, and Outline as an
+  ordinary Project-tool pane tab whenever Dez hides legacy docks; Agent retained
+  its dedicated pane. The same map covered the inherited compatibility Terminal
+  Panel, which `ad2fdcf766` later removed from Dez's public interaction model in
+  favor of center-only terminals. The mapping test still covers every registered
+  developer-tool key plus unknown-key rejection.
 - 2026-07-23: Unified the center launch and tool-recovery copy on Workspace
   vocabulary in `e4f1e341c9`. The loaded-worktree launch surface now says
   **Workspace ready**, and an unattached tool pane reports **Workspace tools
@@ -1603,3 +1605,12 @@ Notes decision:
   the full title plus state metadata remains available in a wrapping tooltip.
   Formatting, static identity checks, and diff checks pass; rendered proof
   remains deferred by the active no-build gate.
+- 2026-07-23: Removed the false second terminal model in `ad2fdcf766`. Dez no
+  longer advertises the unloaded compatibility Terminal Panel in the View menu,
+  New Item menus, terminal context menu, Command Palette, inherited keybindings,
+  status-bar Settings, or dock-size Settings. The duplicate internal
+  **New Center Terminal** action is hidden from the palette while remaining
+  available to source-level UI dispatch. **New Terminal** now names the one
+  public center-tab/split behavior everywhere; official Zed keeps its existing
+  panel presentation. Focused pure assertions, formatting, identity, and diff
+  checks pass; rendered proof remains deferred by the no-build gate.

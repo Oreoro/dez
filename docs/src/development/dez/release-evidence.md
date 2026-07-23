@@ -510,6 +510,10 @@ opens an ordinary center Surface, and enabling legacy docks retains upstream
 placement. A focused routing regression covers all surviving developer-tool
 panel keys and unknown-key rejection. Formatting, diff, and identity checks
 pass; compilation and rendered toggle proof remain deferred.
+Commit `ad2fdcf766` later supersedes the Terminal Panel portion of this product
+decision: the compatibility implementation remains upstream-syncable, but Dez
+no longer presents it as a menu, command, keybinding, or setting. Files, Git,
+Outline, and Debug remain Workspace tools; terminals remain center Surfaces.
 
 Commit `e4f1e341c9` makes the center launch and empty tool-pane recovery copy
 use the same Workspace vocabulary as the Session Rail and Settings. Internal
@@ -1016,10 +1020,9 @@ the later running-app reports, the source advanced through:
 - `7f0da8c04a`, which makes the full-size virtual session list and its empty
   replacement mutually exclusive and top-aligns the scrollable welcome
   content; and
-- `dcd38968d3`, which makes unqualified terminal creation center-first, names
-  the legacy terminal panel explicitly, suppresses inherited Zed
-  release-channel migration in Dez, and centralizes official-Zed-compatible
-  native-agent icon identity; and
+- `dcd38968d3`, which makes unqualified terminal creation center-first,
+  suppresses inherited Zed release-channel migration in Dez, and centralizes
+  official-Zed-compatible native-agent icon identity;
 - `56f7c46db6`, which makes terminal identity available without a local PID,
   projects truthful lifecycle text into the tab tooltip and accessibility
   label, calls hosted closure Detach, and keeps termination separate; and
@@ -1029,7 +1032,10 @@ the later running-app reports, the source advanced through:
 - `059656999e`, which reduces compact Session Rail rows to identity, priority
   evidence, Review Brief, and the contextual lifecycle action, while preserving
   full row identity in a wrapping tooltip and moving secondary controls to the
-  context menu.
+  context menu; and
+- `ad2fdcf766`, which removes the inherited Terminal Panel from Dez's public
+  interaction model and makes every visible New Terminal entry point mean a
+  center tab or split.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
