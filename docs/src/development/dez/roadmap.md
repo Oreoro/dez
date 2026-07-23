@@ -1424,6 +1424,16 @@ code, all launch gates pass, and known limitations are documented.
       gives empty PTY titles a **Terminal** fallback so a valid Session cannot
       render as a blank row. Focused pure assertions and static identity guards
       pass; compilation and rendered proof remain deferred.
+- [x] 2026-07-23: Preserve useful terminal names until visual layout.
+      Commit `e28314a893` removes the 25-character display truncation from
+      Session Rail, Session Switcher, local Host, durable transport, and
+      retained-Agent metadata. Tabs and rows still truncate to their available
+      width while tooltips and restored projections retain the useful title.
+      Custom names trim surrounding whitespace, edit the full live title, and
+      use the explicit **Rename Terminal…** action without breaking tab
+      double-click. Pure assertions, formatting, identity, locked offline
+      metadata, and diff checks pass; rendered long-title and rename-focus proof
+      remain deferred.
 - [x] 2026-07-23: Clarify the persistent bottom utility chrome. Commit
       `91f738f83b` labels the normal-width Session Rail footer **Agent Tools**,
       **History**, and **Workspaces**, while retaining accessible icon-only
@@ -1949,6 +1959,11 @@ code, all launch gates pass, and known limitations are documented.
   empty-state title and decorative icon card, and keeps the start block compact
   and top-anchored. **New Terminal** names the Main Work Area destination;
   **Open Workspace…** is the outlined alternative.
+- **2026-07-23:** Persist semantic identity; truncate only at the visual edge.
+  Commit `e28314a893` carries full terminal titles through every supervision and
+  Host metadata path, while tabs and rows remain responsible for fitting their
+  width. Custom names are trimmed and compared against the full live title.
+  **Rename Terminal…** and tab double-click open the same inline editor.
 
 ## Verification {#verification}
 
@@ -2030,6 +2045,20 @@ Completed for the compact Session Rail start-state slice:
 - `git diff --check`;
 - pure assertions authored for the single zero-session creation action and
   destination-specific copy;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the terminal title-fidelity slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the public terminal guide and canonical Dez
+  documentation;
+- Bash syntax and Dez identity checks, including pre-truncation rejection
+  guards across every metadata path;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- pure assertions authored for custom-title normalization and explicit rename
+  double-click compatibility;
 - no application build, Rust test binary, bundle, alternate binary, or visual
   launch.
 

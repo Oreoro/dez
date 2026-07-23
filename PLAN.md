@@ -2062,3 +2062,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   destination-specific accessibility names. Pure copy assertions, formatting,
   Bash syntax, identity, locked offline metadata, and diff checks pass; no
   build, test binary, or visual launch was performed.
+- 2026-07-23: Preserved terminal title fidelity through the entire supervision
+  path in `e28314a893`. Session Rail, Session Switcher, local Host, durable
+  transport, and retained-Agent metadata now receive the full terminal title
+  instead of a value already truncated to 25 characters. Tabs and rows still
+  fit titles to their own width, leaving tooltips and restored projections
+  useful. Custom names trim surrounding whitespace, compare against the full
+  live title, and use **Rename Terminal…** while tab double-click continues to
+  open the same editor. Pure assertions, formatting, Bash syntax, identity,
+  locked offline metadata, and diff checks pass; no build, test binary, or
+  visual launch was performed.

@@ -41,6 +41,17 @@ independent main-area tab and keeps the active Workspace's directory context.
 
 Split terminals horizontally with `Cmd+D` (macOS) or `Ctrl+Shift+5` (Linux/Windows).
 
+### Naming Terminals
+
+An ordinary shell terminal follows the title supplied by its shell. Dez retains
+that full title for the Session Rail, Session Switcher, durable Host metadata,
+and tooltips; tabs and rows shorten it only when space requires.
+
+Double-click a terminal tab or choose **Rename Terminal…** from its context menu
+to set a stable custom name. Leading and trailing whitespace is removed.
+Clearing the custom name returns to the live shell title. Task terminals retain
+their task label.
+
 ## Close, Detach, and Terminate
 
 These actions have deliberately different meanings:

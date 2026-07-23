@@ -95,6 +95,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Workspace header control-identity source: `e0e8f119e0`
 - Region-owned pane-chrome source: `1c87220109`
 - Quiet Session Switcher source: `79e87f2351`
+- Terminal title-fidelity source: `e28314a893`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -1220,7 +1221,10 @@ the later running-app reports, the source advanced through:
   non-activating, and exposes the selected row through a named list; and
 - `d53cd5d656`, which removes the Session Rail's repeated empty-state heading
   and icon card, retains one Main Work Area terminal action, and presents
-  **Open Workspace…** as the secondary first-use path.
+  **Open Workspace…** as the secondary first-use path; and
+- `e28314a893`, which carries full terminal titles through every supervision
+  and Host metadata path, normalizes custom names, and makes terminal rename
+  explicit without breaking double-click.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

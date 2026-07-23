@@ -79,6 +79,14 @@ Agent Session row focuses its existing conversation Surface. A row may compose
 actor, lifecycle, attention, evidence, changes, and recency, but it never
 becomes a second owner of those facts.
 
+Terminal title data remains full through local, durable Host, retained-Agent,
+Session Rail, and Session Switcher metadata paths. Visual tabs and rows own
+space-based truncation so tooltips and restored projections retain useful
+identity. Explicit custom names are trimmed, persist across restoration, and
+override the live shell title without discarding decorative agent-state
+prefixes. The action is named **Rename Terminal…** and double-clicking the tab
+invokes the same editor.
+
 At zero sessions, the overview owns the rail title and **No sessions yet**
 status. The compact start block does not repeat an empty-state headline or
 decorative card: it explains that terminals open in the Main Work Area, then
