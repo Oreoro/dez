@@ -142,6 +142,12 @@ require_pattern crates/command_palette/src/command_palette.rs \
 require_pattern crates/workspace/src/workspace.rs \
     'recent Workspace and Session state may be unavailable' \
     'the Dez database failure state does not explain safety or impact'
+require_pattern crates/workspace/src/workspace.rs \
+    '"Failed to join workspace"' \
+    'a retained collaboration recovery path still reports Project scope in Dez'
+require_pattern crates/agent_ui/src/conversation_view.rs \
+    '"External agents are not yet supported in shared workspaces\."' \
+    'the retained shared-agent error still reports Project scope in Dez'
 require_pattern crates/workspace/src/multi_workspace.rs \
     'workspace\.mark_durable_session_present\(viewport_id, cx\);' \
     'background Workspace registration is absent from durable viewport composition'

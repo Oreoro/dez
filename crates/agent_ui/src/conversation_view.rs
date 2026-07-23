@@ -1340,7 +1340,12 @@ impl ConversationView {
         {
             return ServerState::LoadError {
                 error: LoadError::Other(
-                    "External agents are not yet supported in shared projects.".into(),
+                    if paths::APP_NAME == "Zed" {
+                        "External agents are not yet supported in shared projects."
+                    } else {
+                        "External agents are not yet supported in shared workspaces."
+                    }
+                    .into(),
                 ),
             };
         }

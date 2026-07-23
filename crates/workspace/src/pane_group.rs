@@ -632,14 +632,24 @@ impl PaneLeaderDecorator for PaneRenderContext<'_> {
                         } else {
                             leader_join_data = Some((leader_project_id, leader.user.legacy_id));
                             Some(Label::new(format!(
-                                "Follow {} to their active project",
+                                "Follow {} to their active {}",
                                 leader.user.username,
+                                if paths::APP_NAME == "Zed" {
+                                    "project"
+                                } else {
+                                    "workspace"
+                                },
                             )))
                         }
                     }
                     ParticipantLocation::UnsharedProject => Some(Label::new(format!(
-                        "{} is viewing an unshared Dez project",
-                        leader.user.username
+                        "{} is viewing an unshared {}",
+                        leader.user.username,
+                        if paths::APP_NAME == "Zed" {
+                            "Zed project"
+                        } else {
+                            "Dez workspace"
+                        },
                     ))),
                     ParticipantLocation::External => Some(Label::new(format!(
                         "{} is viewing a window outside of Dez",
@@ -669,7 +679,11 @@ impl PaneLeaderDecorator for PaneRenderContext<'_> {
                                             cx,
                                         )
                                         .detach_and_prompt_err(
-                                            "Failed to join project",
+                                            if paths::APP_NAME == "Zed" {
+                                                "Failed to join project"
+                                            } else {
+                                                "Failed to join workspace"
+                                            },
                                             window,
                                             cx,
                                             |error, _, _| Some(format!("{error:#}")),

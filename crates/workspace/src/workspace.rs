@@ -6095,7 +6095,14 @@ impl Workspace {
     ) {
         let project = self.project.read(cx);
         if project.is_via_collab() {
-            self.show_error("You cannot add folders to someone else's project", cx);
+            self.show_error(
+                if paths::APP_NAME == "Zed" {
+                    "You cannot add folders to someone else's project"
+                } else {
+                    "You cannot add folders to someone else's workspace"
+                },
+                cx,
+            );
             return;
         }
         let paths = self.prompt_for_open_path(
@@ -10349,7 +10356,11 @@ impl Workspace {
                     cx,
                 )
                 .detach_and_prompt_err(
-                    "Failed to join project",
+                    if paths::APP_NAME == "Zed" {
+                        "Failed to join project"
+                    } else {
+                        "Failed to join workspace"
+                    },
                     window,
                     cx,
                     |error, _, _| Some(format!("{error:#}")),
