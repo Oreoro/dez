@@ -5339,6 +5339,8 @@ fn default_render_tab_bar_buttons(
     };
     let (new_surface_aria_label, new_surface_tooltip) =
         pane_new_surface_control_copy(paths::APP_NAME);
+    let split_enabled = can_clone || can_split_move;
+    let (split_aria_label, split_tooltip) = pane_split_control_copy(paths::APP_NAME, split_enabled);
     // Ideally we would return a vec of elements here to pass directly to the [TabBar]'s
     // `end_slot`, but due to needing a view here that isn't possible.
     let right_children = h_flex()
@@ -5389,9 +5391,9 @@ fn default_render_tab_bar_buttons(
                     IconButton::new("split", IconName::Split)
                         .size(ButtonSize::Medium)
                         .icon_size(IconSize::Small)
-                        .aria_label("Split Pane")
-                        .disabled(!can_clone && !can_split_move),
-                    Tooltip::text("Split Pane"),
+                        .aria_label(split_aria_label)
+                        .disabled(!split_enabled),
+                    Tooltip::text(split_tooltip),
                 )
                 .anchor(Anchor::TopRight)
                 .with_handle(pane.split_item_context_menu_handle.clone())
@@ -5424,6 +5426,17 @@ fn pane_new_surface_control_copy(app_name: &str) -> (&'static str, &'static str)
         ("New Item", "New…")
     } else {
         ("Add to Main Work Area", "Add a file, search, or terminal")
+    }
+}
+
+fn pane_split_control_copy(app_name: &str, enabled: bool) -> (&'static str, &'static str) {
+    if app_name == "Zed" || enabled {
+        ("Split Pane", "Split Pane")
+    } else {
+        (
+            "Split Pane Unavailable",
+            "This Surface cannot be split or moved into a new pane",
+        )
     }
 }
 
@@ -6201,6 +6214,17 @@ mod tests {
             ("Add to Main Work Area", "Add a file, search, or terminal")
         );
         assert_eq!(pane_new_surface_control_copy("Zed"), ("New Item", "New…"));
+        assert_eq!(
+            pane_split_control_copy("Dez", false),
+            (
+                "Split Pane Unavailable",
+                "This Surface cannot be split or moved into a new pane"
+            )
+        );
+        assert_eq!(
+            pane_split_control_copy("Dez", true),
+            ("Split Pane", "Split Pane")
+        );
     }
 
     // drop_call_count is a Cell here because `handle_drop` takes &self, not &mut self.
