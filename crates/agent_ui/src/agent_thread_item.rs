@@ -150,7 +150,7 @@ impl AgentThreadItem {
             .map(|thread_view| thread_view.read(cx).agent_icon)
             .unwrap_or_else(|| {
                 if self.conversation_view.read(cx).agent_key().is_native() {
-                    IconName::ZedAgent
+                    agent::native_agent_icon()
                 } else {
                     IconName::Sparkle
                 }

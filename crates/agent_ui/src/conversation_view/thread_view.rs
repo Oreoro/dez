@@ -4562,7 +4562,7 @@ impl ThreadView {
                 Some(ContextMenu::build(window, cx, |mut menu, _window, _cx| {
                     menu = menu.item(
                         ContextMenuEntry::new("Dez Agent")
-                            .icon(IconName::ZedAgent)
+                            .icon(agent::native_agent_icon())
                             .icon_color(Color::Muted)
                             .handler({
                                 let server_view = server_view.clone();

@@ -6162,7 +6162,7 @@ impl AgentPanel {
                                     !showing_terminal && is_agent_selected(Agent::NativeAgent),
                                     |this| this.action(Box::new(NewThread)),
                                 )
-                                .icon(IconName::ZedAgent)
+                                .icon(agent::native_agent_icon())
                                 .icon_color(Color::Muted)
                                 .handler({
                                     let workspace = workspace.clone();

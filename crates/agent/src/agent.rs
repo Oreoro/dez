@@ -15,7 +15,7 @@ mod tools;
 use context_server::ContextServerId;
 pub use db::*;
 use itertools::Itertools;
-pub use native_agent_server::NativeAgentServer;
+pub use native_agent_server::{NativeAgentServer, native_agent_icon};
 pub use pattern_extraction::*;
 pub use sandboxing::{
     ThreadSandbox, sandbox_worktree_writable_paths, settings_sandbox_policy,

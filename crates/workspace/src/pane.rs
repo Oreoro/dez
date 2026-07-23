@@ -987,12 +987,16 @@ impl Pane {
                             .style(ButtonStyle::Filled)
                             .start_icon(Icon::new(IconName::Terminal))
                             .key_binding(KeyBinding::for_action_in(
-                                &NewTerminal::default(),
+                                &NewCenterTerminal::default(),
                                 &self.focus_handle,
                                 cx,
                             ))
                             .on_click(move |_, window, cx| {
-                                terminal_focus.dispatch_action(&NewTerminal::default(), window, cx);
+                                terminal_focus.dispatch_action(
+                                    &NewCenterTerminal::default(),
+                                    window,
+                                    cx,
+                                );
                             }),
                     )
                     .child(
@@ -5327,7 +5331,8 @@ fn default_render_tab_bar_buttons(
                 .with_handle(pane.new_item_context_menu_handle.clone())
                 .menu(move |window, cx| {
                     Some(ContextMenu::build(window, cx, |menu, _, _| {
-                        menu.action("New File", NewFile.boxed_clone())
+                        let menu = menu
+                            .action("New File", NewFile.boxed_clone())
                             .action("Open File", ToggleFileFinder::default().boxed_clone())
                             .separator()
                             .action(
@@ -5339,12 +5344,17 @@ fn default_render_tab_bar_buttons(
                                 DeploySearch::default().boxed_clone(),
                             )
                             .action("Search Symbols", ToggleProjectSymbols.boxed_clone())
-                            .separator()
-                            .action("New Terminal", NewTerminal::default().boxed_clone())
-                            .action(
-                                "New Center Terminal",
-                                NewCenterTerminal::default().boxed_clone(),
-                            )
+                            .separator();
+                        if paths::APP_NAME == "Zed" {
+                            menu.action("New Terminal", NewTerminal::default().boxed_clone())
+                                .action(
+                                    "New Center Terminal",
+                                    NewCenterTerminal::default().boxed_clone(),
+                                )
+                        } else {
+                            menu.action("New Terminal", NewCenterTerminal::default().boxed_clone())
+                                .action("New Terminal Panel", NewTerminal::default().boxed_clone())
+                        }
                     }))
                 }),
         )

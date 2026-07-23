@@ -536,7 +536,7 @@ impl Agent {
 
     pub fn icon(&self) -> Option<IconName> {
         match self {
-            Self::NativeAgent => Some(IconName::ZedAgent),
+            Self::NativeAgent => Some(agent::native_agent_icon()),
             Self::Custom { .. } => Some(IconName::Sparkle),
             #[cfg(any(test, feature = "test-support"))]
             Self::Stub => None,

@@ -47,6 +47,7 @@ use menu::{
     Cancel, Confirm, SelectChild, SelectFirst, SelectLast, SelectNext, SelectParent, SelectPrevious,
 };
 use notifications::status_toast::StatusToast;
+use paths::APP_NAME;
 use project::{AgentId, AgentRegistryStore, Event as ProjectEvent, WorktreeId};
 use recent_projects::sidebar_recent_projects::SidebarRecentProjects;
 use remote::{RemoteConnectionOptions, same_remote_connection_identity};
@@ -2566,16 +2567,18 @@ impl Sidebar {
         )
         .detach();
 
-        let channels_with_threads = channels_with_threads(cx);
-        cx.spawn(async move |this, cx| {
-            let channels = channels_with_threads.await;
-            this.update(cx, |this, cx| {
-                this.cross_channel_import_channels = channels;
-                cx.notify();
+        if APP_NAME == "Zed" {
+            let channels_with_threads = channels_with_threads(cx);
+            cx.spawn(async move |this, cx| {
+                let channels = channels_with_threads.await;
+                this.update(cx, |this, cx| {
+                    this.cross_channel_import_channels = channels;
+                    cx.notify();
+                })
+                .ok();
             })
-            .ok();
-        })
-        .detach();
+            .detach();
+        }
 
         let deferred_multi_workspace = multi_workspace.downgrade();
         cx.defer_in(window, move |this, window, cx| {
@@ -3165,10 +3168,10 @@ impl Sidebar {
         let resolve_agent_icon = |agent_id: &AgentId| -> (IconName, Option<SharedString>) {
             let agent = Agent::from(agent_id.clone());
             let icon = match agent {
-                Agent::NativeAgent => IconName::ZedAgent,
+                Agent::NativeAgent => agent::native_agent_icon(),
                 Agent::Custom { .. } => IconName::Terminal,
 
-                _ => IconName::ZedAgent,
+                _ => agent::native_agent_icon(),
             };
             let icon_from_external_svg = agent_server_store
                 .as_ref()
@@ -12169,7 +12172,8 @@ impl Sidebar {
     }
 
     fn should_render_cross_channel_import_onboarding(&self, cx: &App) -> bool {
-        !CrossChannelImportOnboarding::dismissed(cx)
+        APP_NAME == "Zed"
+            && !CrossChannelImportOnboarding::dismissed(cx)
             && !self.cross_channel_import_channels.is_empty()
     }
 
@@ -12666,7 +12670,9 @@ impl Render for Sidebar {
                                                     })
                                                     .custom_scrollbars(
                                                         Scrollbars::new(ScrollAxes::Vertical)
-                                                            .tracked_scroll_handle(&self.list_state),
+                                                            .tracked_scroll_handle(
+                                                                &self.list_state,
+                                                            ),
                                                         window,
                                                         cx,
                                                     )

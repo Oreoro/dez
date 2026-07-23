@@ -20,13 +20,25 @@ impl NativeAgentServer {
     }
 }
 
+fn native_agent_icon_for_app(app_name: &str) -> ui::IconName {
+    if app_name == "Zed" {
+        ui::IconName::ZedAgent
+    } else {
+        ui::IconName::Robot
+    }
+}
+
+pub fn native_agent_icon() -> ui::IconName {
+    native_agent_icon_for_app(paths::APP_NAME)
+}
+
 impl AgentServer for NativeAgentServer {
     fn agent_id(&self) -> AgentId {
         crate::ZED_AGENT_ID.clone()
     }
 
     fn logo(&self) -> ui::IconName {
-        ui::IconName::ZedAgent
+        native_agent_icon()
     }
 
     fn connect(
@@ -63,6 +75,12 @@ mod tests {
     use super::*;
 
     use gpui::AppContext;
+
+    #[test]
+    fn native_agent_icon_preserves_upstream_identity_without_leaking_into_dez() {
+        assert_eq!(native_agent_icon_for_app("Zed"), ui::IconName::ZedAgent);
+        assert_eq!(native_agent_icon_for_app("Dez"), ui::IconName::Robot);
+    }
 
     agent_servers::e2e_tests::common_e2e_tests!(
         async |fs, cx| {

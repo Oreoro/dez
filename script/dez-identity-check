@@ -311,7 +311,7 @@ require_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\("new-session", "New Terminal"\)' \
     'the primary Session Rail creation action is ambiguous'
 require_pattern crates/sidebar/src/sidebar.rs \
-    'Label::new\("Start a session"\)' \
+    'Label::new\("Start your first terminal"\)' \
     'the empty Session Rail funnels terminal-native work into a project-first frame'
 require_multiline_pattern crates/onboarding/src/basics_page.rs \
     '\.role\(gpui::Role::Region\).*?\.aria_label\("Terminal-first workflow"\)' \
@@ -343,6 +343,21 @@ require_pattern crates/sidebar/src/sidebar.rs \
 require_pattern crates/sidebar/src/sidebar.rs \
     'session_overview_create_action_visible\(self\.contents\.session_count\)' \
     'the zero-session Workspace state can regress to duplicating its creation action'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'if APP_NAME == "Zed" \{.*?channels_with_threads\(cx\)' \
+    'Dez still scans inherited Zed release channels for thread migration'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn should_render_cross_channel_import_onboarding.*?APP_NAME == "Zed"' \
+    'Dez still exposes the inherited Zed release-channel import banner'
+require_multiline_pattern crates/agent/src/native_agent_server.rs \
+    'fn native_agent_icon_for_app.*?app_name == "Zed".*?IconName::Robot.*?pub fn native_agent_icon.*?paths::APP_NAME' \
+    'the native Dez agent still inherits the upstream Zed glyph'
+reject_pattern crates/agent_ui/src/agent_ui.rs \
+    'Self::NativeAgent => Some\(IconName::ZedAgent\)' \
+    'the Dez agent selector still hard-codes the upstream Zed glyph'
+reject_pattern crates/sidebar/src/sidebar.rs \
+    'Agent::NativeAgent => IconName::ZedAgent' \
+    'the Session Rail still hard-codes the upstream Zed agent glyph'
 reject_pattern crates/sidebar/src/sidebar.rs \
     '"(Remote Project|Project Options|Open Project in New Window|Focus Last Project|Focus Project|Add Project|Open Project Rules)"' \
     'the Session Rail mixes upstream Project terminology into the Workspace hierarchy'
@@ -352,6 +367,12 @@ reject_pattern crates/sidebar/src/sidebar.rs \
 reject_pattern crates/workspace/src/pane.rs \
     '"(Project ready|Project tools unavailable|Project navigation did not attach to this pane\.)"' \
     'the Dez center surface mixes Project terminology into the Workspace hierarchy'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    'Button::new\("empty-project-terminal", "New Terminal"\).*?NewCenterTerminal::default\(\).*?dispatch_action.*?NewCenterTerminal::default\(\)' \
+    'the empty Workspace primary terminal action can regress to the legacy panel'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?"New Terminal Panel"' \
+    'the Dez New Item menu does not distinguish center terminals from the legacy panel'
 require_pattern crates/workspace/src/panel_pane.rs \
     '"ProjectPanel" => "Files"' \
     'the Dez file-tree Surface is not labeled Files'

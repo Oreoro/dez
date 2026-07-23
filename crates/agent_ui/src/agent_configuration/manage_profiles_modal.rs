@@ -1117,7 +1117,7 @@ impl Render for ManageProfilesModal {
                         .pb(manage_profiles_header_padding_bottom(cx))
                         .child(ProfileModalHeader::new(
                             format!("{profile_name} — Configure Default Model"),
-                            Some(IconName::ZedAgent),
+                            Some(agent::native_agent_icon()),
                         ))
                         .child(ListSeparator)
                         .child(v_flex().w(rems(34.)).child(model_picker.clone()))
