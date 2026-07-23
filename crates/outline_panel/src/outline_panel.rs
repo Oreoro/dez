@@ -5102,7 +5102,11 @@ impl Panel for OutlinePanel {
     }
 
     fn icon_tooltip(&self, _window: &Window, _: &App) -> Option<&'static str> {
-        Some("Outline Panel")
+        Some(if paths::APP_NAME == "Zed" {
+            "Outline Panel"
+        } else {
+            "Outline"
+        })
     }
 
     fn toggle_action(&self) -> Box<dyn Action> {

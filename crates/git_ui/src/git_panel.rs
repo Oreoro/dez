@@ -8359,7 +8359,11 @@ impl Panel for GitPanel {
     }
 
     fn icon_tooltip(&self, _window: &Window, _cx: &App) -> Option<&'static str> {
-        Some("Git Panel")
+        Some(if paths::APP_NAME == "Zed" {
+            "Git Panel"
+        } else {
+            "Git"
+        })
     }
 
     fn icon_label(&self, _: &Window, cx: &App) -> Option<String> {

@@ -1572,7 +1572,11 @@ impl Panel for DebugPanel {
 
     fn icon_tooltip(&self, _window: &Window, cx: &App) -> Option<&'static str> {
         if DebuggerSettings::get_global(cx).button {
-            Some("Debug Panel")
+            Some(if paths::APP_NAME == "Zed" {
+                "Debug Panel"
+            } else {
+                "Debug"
+            })
         } else {
             None
         }

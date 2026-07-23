@@ -595,6 +595,15 @@ require_multiline_pattern crates/project_panel/src/project_panel.rs \
 require_multiline_pattern crates/git_ui/src/git_panel.rs \
     'paths::APP_NAME == "Zed".*?with_copy\(.*?"Open a Workspace".*?"Open Workspace…".*?top_aligned\(\)' \
     'the empty Dez Git region regressed to centered project-centric recovery copy'
+require_multiline_pattern crates/git_ui/src/git_panel.rs \
+    'fn icon_tooltip.*?paths::APP_NAME == "Zed".*?"Git Panel".*?"Git"' \
+    'the Dez Git tool can regress to exposing Panel implementation terminology'
+require_multiline_pattern crates/outline_panel/src/outline_panel.rs \
+    'fn icon_tooltip.*?paths::APP_NAME == "Zed".*?"Outline Panel".*?"Outline"' \
+    'the Dez Outline tool can regress to exposing Panel implementation terminology'
+require_multiline_pattern crates/debugger_ui/src/debugger_panel.rs \
+    'fn icon_tooltip.*?paths::APP_NAME == "Zed".*?"Debug Panel".*?"Debug"' \
+    'the Dez Debug tool can regress to exposing Panel implementation terminology'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'paths::APP_NAME == "Zed".*?with_copy\(.*?"Agent needs a Workspace".*?"Open Workspace…".*?top_aligned\(\)' \
     'the empty Dez Agent region regressed to centered project-centric recovery copy'
