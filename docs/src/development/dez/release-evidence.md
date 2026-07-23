@@ -1132,7 +1132,15 @@ the later running-app reports, the source advanced through:
   official-Zed wording; and
 - `bf76ab9b63`, which presents thread-backed context references as **Agent
   Sessions** in Dez while preserving the compatible `@thread` keyword and
-  official-Zed label.
+  official-Zed label; and
+- `e064c91b53`, which presents sandbox policy, grant, fallback, and unsandboxed
+  warning scope as the current Agent Session in Dez; and
+- `70dd7e12c6`, which names the Agent menu's real **Agent Settings** and
+  **Toggle Session Rail** destinations; and
+- `4229be7201`, which gives Session switching a named responsive dialog,
+  recent-session count, and interaction guidance, and gives Agent Session
+  search product-specific copy and a Search landmark; plus `ff1d03b8d3`, which
+  aligns the deferred completion-menu expectation.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

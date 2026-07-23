@@ -112,6 +112,12 @@ main-area tab requires confirmation because unsent prompt text is permanently
 removed. Archiving a saved Agent Session remains immediate and reversible from
 Agent History.
 
+Visible conversation scope is **Agent Session** throughout the Agent pane,
+context picker, search, sandbox status, and Session Switcher. Internal action,
+protocol, database, and mention identifiers may retain `thread`; the compatible
+mention keyword remains `@thread`. The Agent menu names its destinations as
+**Agent Settings** and **Toggle Session Rail**.
+
 There is no Dez **Terminal Thread** destination. The inherited action remains
 only as an official-Zed compatibility implementation. Dez hides it from Agent
 menus and the command palette, redirects compatibility dispatches to **New

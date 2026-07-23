@@ -1848,3 +1848,22 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   preserving the compatible internal `@thread` keyword and official Zed's
   existing label. Pure vocabulary assertions, formatting, identity, and diff
   checks pass; rendered completion-menu proof remains deferred.
+- 2026-07-23: Made Agent Session sandbox scope explicit in `e064c91b53`.
+  Per-session policy, disabled-sandbox status, failed-sandbox fallback, and
+  unsandboxed execution warnings now say **Agent Session** in Dez while
+  internal protocol identifiers and official Zed wording remain stable. Pure
+  copy assertions, formatting, locked offline metadata, identity, and diff
+  checks pass; rendered tooltip/warning proof remains deferred.
+- 2026-07-23: Named the Agent menu's real destinations in `70dd7e12c6`.
+  **Agent Settings** opens Agent configuration and **Toggle Session Rail**
+  controls the global Session Rail; official Zed retains Settings/Sidebar
+  wording. Pure copy assertions and static identity guards pass; rendered menu
+  proof remains deferred.
+- 2026-07-23: Polished Agent Session switching and search in `4229be7201`.
+  The switcher is now a named responsive dialog with recent-session count,
+  explicit open/cancel guidance, and preserved modifier-release behavior.
+  In-session search says **Search this Agent Session** and exposes a Search
+  landmark. Commit `ff1d03b8d3` aligns the deferred completion expectation with
+  the **Agent Sessions** context label. Formatting, locked offline metadata,
+  identity, and diff checks pass; rendered keyboard/search proof remains
+  deferred.

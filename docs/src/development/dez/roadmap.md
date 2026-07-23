@@ -1523,6 +1523,25 @@ code, all launch gates pass, and known limitations are documented.
       official Zed behavior. Pure behavior assertions, formatting, locked
       offline metadata, static identity, and diff checks pass; rendered modal
       and focus-return proof remain deferred.
+- [x] 2026-07-23: Make Agent Session sandbox scope explicit. Commit
+      `e064c91b53` replaces visible per-thread sandbox status, granted-scope,
+      fallback, and unsandboxed-warning copy with **Agent Session** in Dez while
+      retaining official Zed terminology and protocol identifiers. Pure copy
+      assertions and static identity guards pass; rendered tooltip/warning
+      proof remains deferred.
+- [x] 2026-07-23: Name Agent menu destinations. Commit `70dd7e12c6` replaces
+      ambiguous **Settings** and **Toggle Sidebar** entries with **Agent
+      Settings** and **Toggle Session Rail** in Dez while preserving official
+      Zed labels and action identity. Pure copy assertions and static identity
+      guards pass; rendered menu proof remains deferred.
+- [x] 2026-07-23: Polish Agent Session switching and in-session search. Commit
+      `4229be7201` turns the floating switcher into a named, responsive dialog
+      with recent-session count and open/cancel guidance, and gives Agent
+      Session search product-specific placeholder copy plus an accessible
+      Search landmark. Commit `ff1d03b8d3` aligns the deferred message-editor
+      completion expectation with the visible **Agent Sessions** label. Static
+      identity, formatting, locked offline metadata, and diff checks pass;
+      rendered keyboard/modifier-release/search proof remains deferred.
 - [x] 2026-07-23: Remove remaining terminal-thread language from Dez UI.
       Commit `d1ea4a914f` gives the external-session import flow consistent
       Agent Session, Agent History, count, empty, and completion copy. Commit
