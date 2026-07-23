@@ -18,8 +18,8 @@ use fs::Fs;
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
     AnyElement, App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, Hsla,
-    ListState, Pixels, Render, SharedString, Subscription, Task, TaskExt, WeakEntity, Window, list,
-    prelude::*, px,
+    ListState, Pixels, PromptLevel, Render, SharedString, Subscription, Task, TaskExt, WeakEntity,
+    Window, list, prelude::*, px,
 };
 use itertools::Itertools as _;
 use menu::{Confirm, SelectFirst, SelectLast, SelectNext, SelectPrevious};
@@ -53,6 +53,24 @@ fn agent_history_label(
         upstream_thread_label
     } else {
         dez_session_label
+    }
+}
+
+fn permanent_delete_prompt(app_name: &str, title: &str) -> (&'static str, String) {
+    if app_name == "Zed" {
+        (
+            "Delete thread?",
+            format!(
+                "This permanently deletes “{title}” from thread history. This cannot be undone."
+            ),
+        )
+    } else {
+        (
+            "Delete Agent Session?",
+            format!(
+                "This permanently deletes “{title}” from Agent History. This cannot be undone."
+            ),
+        )
     }
 }
 
@@ -901,17 +919,9 @@ impl ThreadsArchiveView {
                                 }
                             })
                             .on_click({
-                                let agent = thread.agent_id.clone();
-                                let thread_id = thread.thread_id;
-                                let session_id = thread.session_id.clone();
-                                cx.listener(move |this, _, _, cx| {
-                                    this.preserve_selection_on_next_update = true;
-                                    this.delete_thread(
-                                        thread_id,
-                                        session_id.clone(),
-                                        agent.clone(),
-                                        cx,
-                                    );
+                                let thread = thread.clone();
+                                cx.listener(move |this, _, window, cx| {
+                                    this.confirm_delete_thread(thread.clone(), window, cx);
                                     cx.stop_propagation();
                                 })
                             }),
@@ -975,7 +985,7 @@ impl ThreadsArchiveView {
     fn remove_selected_thread(
         &mut self,
         _: &RemoveSelectedThread,
-        _window: &mut Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         let Some(ix) = self.selection else { return };
@@ -983,13 +993,42 @@ impl ThreadsArchiveView {
             return;
         };
 
-        self.preserve_selection_on_next_update = true;
-        self.delete_thread(
-            thread.thread_id,
-            thread.session_id.clone(),
-            thread.agent_id.clone(),
+        self.confirm_delete_thread(thread.clone(), window, cx);
+    }
+
+    fn confirm_delete_thread(
+        &mut self,
+        thread: ThreadMetadata,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let title = thread.display_title();
+        let (message, detail) = permanent_delete_prompt(paths::APP_NAME, title.as_ref());
+        let prompt = window.prompt(
+            PromptLevel::Critical,
+            message,
+            Some(&detail),
+            &["Delete", "Cancel"],
             cx,
         );
+
+        cx.spawn_in(window, async move |this, cx| -> anyhow::Result<()> {
+            if prompt.await.log_err() != Some(0) {
+                return Ok(());
+            }
+
+            this.update_in(cx, |this, _window, cx| {
+                this.preserve_selection_on_next_update = true;
+                this.delete_thread(
+                    thread.thread_id,
+                    thread.session_id.clone(),
+                    thread.agent_id.clone(),
+                    cx,
+                );
+            })?;
+            Ok(())
+        })
+        .detach_and_log_err(cx);
     }
 
     fn delete_thread(
@@ -1817,6 +1856,26 @@ mod tests {
         assert_eq!(
             agent_history_label("Zed", "Archive Thread", "Archive Agent Session"),
             "Archive Thread"
+        );
+    }
+
+    #[test]
+    fn permanent_delete_prompt_names_scope_and_irreversibility() {
+        assert_eq!(
+            permanent_delete_prompt("Dez", "Fix terminal crash"),
+            (
+                "Delete Agent Session?",
+                "This permanently deletes “Fix terminal crash” from Agent History. This cannot be undone."
+                    .to_owned(),
+            )
+        );
+        assert_eq!(
+            permanent_delete_prompt("Zed", "Fix terminal crash"),
+            (
+                "Delete thread?",
+                "This permanently deletes “Fix terminal crash” from thread history. This cannot be undone."
+                    .to_owned(),
+            )
         );
     }
 

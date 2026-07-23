@@ -275,6 +275,12 @@ require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
     'IconButton::new\("delete-thread".*?aria_label\(agent_history_label.*?"Delete Agent Session".*?IconButton::new\("archive-thread".*?aria_label\(agent_history_label.*?"Archive Agent Session"' \
     'Agent History row actions can regress to unnamed icon controls'
 require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
+    'fn permanent_delete_prompt.*?"Delete Agent Session\?".*?permanently deletes.*?This cannot be undone.*?PromptLevel::Critical.*?&\["Delete", "Cancel"\]' \
+    'permanent Agent Session deletion can regress to an unconfirmed or ambiguous action'
+require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
+    'IconButton::new\("delete-thread".*?confirm_delete_thread\(thread\.clone\(\), window, cx\).*?fn remove_selected_thread.*?self\.confirm_delete_thread\(thread\.clone\(\), window, cx\)' \
+    'pointer and keyboard Agent History deletion can regress to bypassing confirmation'
+require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
     'IconButton::new\("new-thread".*?aria_label\(agent_history_label.*?"Start New Agent Session".*?IconButton::new\("thread-import".*?aria_label\(agent_history_label.*?"Import Agent Sessions".*?IconButton::new\("filter-archived-only".*?aria_label\(filter_label\)' \
     'Agent History toolbar actions can regress to unnamed icon controls'
 require_pattern crates/sidebar/src/sidebar.rs \
