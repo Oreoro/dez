@@ -33,6 +33,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Upstream prediction-data control removal source: `2435348289`
 - Dez command namespace and settings-link source: `f89f55868c`
 - Inherited collaboration command filter source: `f40877d4ab`
+- Neutral Codex session glyph source: `526218a972`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -333,6 +334,12 @@ Zed; Dez filters only its presentation. A focused product-boundary assertion
 and identity guard cover the gate. Formatting, diff, and identity checks pass;
 compiled palette proof remains deferred.
 
+Commit `526218a972` removes the Zed Assistant glyph from Codex sessions in both
+the Session Rail and keyboard switcher. Codex remains identifiable by its
+label, actor metadata, and neutral Robot glyph. A directory-wide identity
+rejection prevents the upstream logo from returning to either rail surface.
+Formatting, diff, and identity checks pass; rendered proof remains deferred.
+
 The corrected `Dez Dev.app` is now registered and launched as launchd child PID
 `85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 `lsof` resolves its text executable to
@@ -347,7 +354,7 @@ Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, `c101fe6a43`,
 `699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`,
 `4fc53b860f`, `8bcd11f4b6`, `ad59a60926`, `a20074de26`, `2435348289`, and
-`f89f55868c` and `f40877d4ab` are newer than that running bundle. The first passes all nine focused Session tests, including duplicate viewport
+`f89f55868c`, `f40877d4ab`, and `526218a972` are newer than that running bundle. The first passes all nine focused Session tests, including duplicate viewport
 replacement without reordering or membership loss. The second makes Project
 ready terminal-first, prevents New Window and startup fallback paths from
 covering Dez's actionable launch surface with an unsolicited blank editor, and
@@ -563,7 +570,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `f40877d4ab` or
+visual evidence: the exact bundle must first be rebuilt from `526218a972` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -573,6 +580,6 @@ credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
 running and contains the corrected shell source through `679cdc28445c`, but
-predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`, `47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, `c101fe6a43`, `699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`, `4fc53b860f`, `8bcd11f4b6`, `ad59a60926`, `a20074de26`, `2435348289`, `f89f55868c`, and `f40877d4ab`. A rebuild/re-audit and an unlocked
+predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`, `47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, `c101fe6a43`, `699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`, `4fc53b860f`, `8bcd11f4b6`, `ad59a60926`, `a20074de26`, `2435348289`, `f89f55868c`, `f40877d4ab`, and `526218a972`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.

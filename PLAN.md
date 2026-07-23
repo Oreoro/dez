@@ -497,7 +497,8 @@ with new labels.
       the identity guard checks the public boundary. Commit `f89f55868c`
       renders internal `zed::…` actions as `dez: …` in command-facing UI and
       makes copied Settings links use the active Dez release-channel scheme
-      while preserving legacy input compatibility.
+      while preserving legacy input compatibility. Commit `526218a972` removes
+      the upstream Zed Assistant glyph from Codex rows and the session switcher.
 
 #### Onboarding, settings, and accessibility
 
@@ -1075,3 +1076,7 @@ Notes decision:
   compatibility and official Zed remains unchanged; only dead Dez presentation
   is filtered. A model assertion and identity guard pass; no bundle was built
   or launched.
+- 2026-07-23: Removed Zed Assistant glyphs from Codex session surfaces in
+  `526218a972`. The Session Rail and keyboard switcher now use a neutral Robot
+  glyph while preserving explicit Codex labels and metadata. A directory-wide
+  identity rejection covers both paths; no bundle was built or launched.

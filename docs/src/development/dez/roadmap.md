@@ -859,6 +859,11 @@ code, all launch gates pass, and known limitations are documented.
       presentation while preserving action/keymap compatibility and official
       Zed behavior. A product-boundary assertion and identity guard pass;
       compiled palette proof remains in the consolidated gate.
+- [x] 2026-07-23: Remove Zed Assistant glyphs from Codex session surfaces.
+      Commit `526218a972` uses the neutral Robot glyph in the Session Rail and
+      keyboard switcher while retaining explicit Codex labels and metadata. A
+      directory-wide identity rejection covers both paths. Formatting, diff,
+      and identity checks pass; rendered proof remains consolidated-gate work.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
