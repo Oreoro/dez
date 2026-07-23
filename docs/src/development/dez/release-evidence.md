@@ -1043,7 +1043,9 @@ the later running-app reports, the source advanced through:
   Start/attention/review summary and restores start actions to the primary
   hierarchy; and
 - `594296efa8`, which constrains welcome, empty Workspace, and unavailable-tool
-  recovery content to deliberate compact measures and spacing.
+  recovery content to deliberate compact measures and spacing; and
+- `9e14ca2db7`, which gives the Session Rail configuration and recent-Workspace
+  utilities truthful icons, accessible names, tooltips, and command labels.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

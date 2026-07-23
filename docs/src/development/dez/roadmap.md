@@ -1380,6 +1380,12 @@ code, all launch gates pass, and known limitations are documented.
       640 px reading measure and empty/recovery states to 384 px with tighter
       spacing. Focused pure assertions and static identity guards pass;
       compilation and rendered narrow-window proof remain deferred.
+- [x] 2026-07-23: Make the Session Rail footer utilities match their outcomes.
+      Commit `9e14ca2db7` replaces the misleading Robot options glyph with a
+      Settings glyph and **Agent Tools and Settings** identity, gives every
+      configuration command a specific noun and verb, and renames the folder
+      utility **Open Recent Workspaces**. Static identity, formatting, and diff
+      checks pass; rendered tooltip and popover proof remain deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

@@ -1635,3 +1635,11 @@ Notes decision:
   rhythm; empty Workspace and unavailable-tool recovery states use a 384 px
   measure rather than broad card-like canvases. Static identity, formatting,
   and diff checks pass; rendered narrow-window proof remains deferred.
+- 2026-07-23: Made the Session Rail utility strip describe its real actions in
+  `9e14ca2db7`. The configuration popover now uses a Settings glyph and
+  **Agent Tools and Settings** identity instead of a Robot glyph that implied it
+  opened Agent; its entries name MCP servers, Agent Context, Agent Profiles,
+  Open Settings, and Hide Session Rail explicitly. The folder utility now says
+  **Open Recent Workspaces** instead of the broader Open Workspace. Formatting,
+  static identity, and diff checks pass; rendered tooltip/menu proof remains
+  deferred.
