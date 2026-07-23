@@ -31,13 +31,14 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Dead Session Rail settings removal source: `ad59a60926`
 - Inherited cloud settings removal source: `a20074de26`
 - Upstream prediction-data control removal source: `2435348289`
+- Dez command namespace and settings-link source: `f89f55868c`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
 - Integration merge: `2be63cfea347006e407934754086bbef62d482c2`
 - Incorporated upstream: `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
 - `Cargo.lock` SHA-256:
-  `e2d477160b09d24220d13113a04ab067a4eb9c8685173b4e30b20923b5f01901`
+  `64104e448242ff05034e6990c7ae7e7120edad21066ead5fb766e8dbb44b264e`
 - Toolchain: `rustc 1.95.0 (59807616e 2026-04-14)`,
   `cargo 1.95.0 (f2d3ce0bd 2026-03-21)`, host
   `aarch64-apple-darwin`
@@ -314,6 +315,16 @@ key remains parseable and official Zed retains the control. The same focused
 product-boundary test and an identity guard cover the filter. Formatting, diff,
 and identity checks pass; compiled Settings UI proof remains deferred.
 
+Commit `f89f55868c` productizes command and settings-link presentation without
+breaking upstream action/keymap compatibility. Internal `zed::…` actions now
+display as `dez: …` in the Command Palette, keymap editor, and which-key UI.
+Settings copy links use the active release channel's canonical `dez-dev`,
+`dez-nightly`, `dez-preview`, or `dez` scheme, and URL registration consumes
+that same release-channel method. Legacy `zed://` remains input-only
+compatibility. Focused model assertions cover productization and every channel;
+formatting, diff, lockfile, and identity checks pass. Compiled interaction proof
+remains deferred.
+
 The corrected `Dez Dev.app` is now registered and launched as launchd child PID
 `85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 `lsof` resolves its text executable to
@@ -326,8 +337,9 @@ complete.
 Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`,
 `47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, `c101fe6a43`,
-`699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`, and
-`4fc53b860f`, `8bcd11f4b6`, `ad59a60926`, `a20074de26`, and `2435348289` are newer than that running bundle. The first passes all nine focused Session tests, including duplicate viewport
+`699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`,
+`4fc53b860f`, `8bcd11f4b6`, `ad59a60926`, `a20074de26`, `2435348289`, and
+`f89f55868c` are newer than that running bundle. The first passes all nine focused Session tests, including duplicate viewport
 replacement without reordering or membership loss. The second makes Project
 ready terminal-first, prevents New Window and startup fallback paths from
 covering Dez's actionable launch surface with an unsolicited blank editor, and
@@ -543,7 +555,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `2435348289` or
+visual evidence: the exact bundle must first be rebuilt from `f89f55868c` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -553,6 +565,6 @@ credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
 separate from local engineering verification. The exact packaged artifact is
 running and contains the corrected shell source through `679cdc28445c`, but
-predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`, `47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, `c101fe6a43`, `699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`, `4fc53b860f`, `8bcd11f4b6`, `ad59a60926`, `a20074de26`, and `2435348289`. A rebuild/re-audit and an unlocked
+predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`, `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`, `47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, `c101fe6a43`, `699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`, `4fc53b860f`, `8bcd11f4b6`, `ad59a60926`, `a20074de26`, `2435348289`, and `f89f55868c`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.

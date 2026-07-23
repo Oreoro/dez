@@ -846,6 +846,14 @@ code, all launch gates pass, and known limitations are documented.
       explicit providers. Compatibility parsing and official Zed behavior are
       retained. A product-boundary model test and identity guard pass; compiled
       Settings UI proof remains in the consolidated gate.
+- [x] 2026-07-23: Productize command names and copied Settings links. Commit
+      `f89f55868c` displays the internal `zed::…` action namespace as `dez: …`
+      across the Command Palette, keymap editor, and which-key UI while leaving
+      action identities compatible. Release channels now own their canonical
+      Dez URL scheme, which both registration and Settings copy links consume;
+      legacy `zed://` remains input-only compatibility. Focused assertions plus
+      formatting, diff, lockfile, and identity gates pass; compiled interaction
+      proof remains in the consolidated gate.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

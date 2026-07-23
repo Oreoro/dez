@@ -494,7 +494,10 @@ with new labels.
       explicitly, and invalid recovery no longer offers to install Zed over a
       Dez incompatibility. Retained Zed strings identify actual upstream
       services/providers/links, tests, formats, or compatibility identifiers;
-      the identity guard checks the public boundary.
+      the identity guard checks the public boundary. Commit `f89f55868c`
+      renders internal `zed::…` actions as `dez: …` in command-facing UI and
+      makes copied Settings links use the active Dez release-channel scheme
+      while preserving legacy input compatibility.
 
 #### Onboarding, settings, and accessibility
 
@@ -1059,3 +1062,9 @@ Notes decision:
   providers honestly. Compatibility parsing and official Zed behavior remain.
   A model test and identity guard cover the boundary; no bundle was built or
   launched.
+- 2026-07-23: Productized command and settings-link identity in `f89f55868c`.
+  Internal `zed::…` actions display as `dez: …` without changing keymap/action
+  identities. Settings copy links and URL registration now share the active
+  channel's canonical Dez scheme; legacy `zed://` remains input-only
+  compatibility. Focused assertions, formatting, diff, lockfile, and identity
+  checks pass; no bundle was built or launched.
