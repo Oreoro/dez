@@ -1964,8 +1964,26 @@ code, all launch gates pass, and known limitations are documented.
   Host metadata path, while tabs and rows remain responsible for fitting their
   width. Custom names are trimmed and compared against the full live title.
   **Rename Terminal…** and tab double-click open the same inline editor.
+- **2026-07-23:** Bottom chrome must preserve ownership when the active Surface
+  changes. Commit `05df05d282` keeps Agent Tools, Agent History, and recent
+  Workspaces in the Session Rail, while the global toolbar owns Workspace
+  search and health. A terminal or other non-editor Surface now shows **Search
+  files** beside **No diagnostics** rather than an unexplained search/check
+  pair. Editor Surfaces retain compact status, and the toolbar's accessibility
+  name is **Workspace status and navigation**.
 
 ## Verification {#verification}
+
+Completed for the terminal-focused Workspace status slice:
+
+- `cargo fmt --all -- --check`;
+- Bash syntax and Dez identity checks;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- focused pure assertions authored for terminal/non-editor visible search,
+  compact editor search, official-Zed compatibility, and toolbar scope;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
 
 Completed for the preceding source slice:
 

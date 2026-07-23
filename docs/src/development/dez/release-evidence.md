@@ -25,6 +25,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Neutral getting-started agent icon source: `869cddcce0`
 - Single-action empty Session Rail source: `4e6292ff0a`
 - Compact Session Rail start-state source: `d53cd5d656`
+- Terminal-focused Workspace status source: `05df05d282`
 - Deduplicated Session Rail footer source: `a9b1a961c0`
 - Unified Session Rail Workspace vocabulary source: `ff91b34a81`
 - Workspace-scoped zero-session creation source: `4fc53b860f`
@@ -1224,7 +1225,11 @@ the later running-app reports, the source advanced through:
   **Open Workspace…** as the secondary first-use path; and
 - `e28314a893`, which carries full terminal titles through every supervision
   and Host metadata path, normalizes custom names, and makes terminal rename
-  explicit without breaking double-click.
+  explicit without breaking double-click; and
+- `05df05d282`, which visually names Workspace search when a terminal or other
+  non-editor Surface is active, retains compact editor status, and exposes the
+  global strip as **Workspace status and navigation** rather than conflating it
+  with Session Rail utilities.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

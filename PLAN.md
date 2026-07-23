@@ -2072,3 +2072,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   open the same editor. Pure assertions, formatting, Bash syntax, identity,
   locked offline metadata, and diff checks pass; no build, test binary, or
   visual launch was performed.
+- 2026-07-23: Separated compact Session Rail utilities from terminal-focused
+  Workspace status in `05df05d282`. When a terminal or other non-editor Surface
+  is active, Dez now shows **Search files** beside the existing **No
+  diagnostics** state instead of leaving two unexplained glyphs. Editor
+  Surfaces retain the compact search icon. The global strip exposes itself as
+  **Workspace status and navigation**, while Agent Tools, History, and recent
+  Workspaces remain owned by the Session Rail. Official Zed retains its
+  upstream icon-only status-bar behavior. Pure copy assertions, formatting,
+  Bash syntax, identity, locked offline metadata, and diff checks pass; no
+  build, test binary, or visual launch was performed.

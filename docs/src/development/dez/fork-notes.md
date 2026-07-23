@@ -442,3 +442,11 @@ defer it.
   progress reset, per-slice build mandate, and flattened Run/Session state are
   rejected. The treatment is recorded in
   [Consolidated Plan Reconciliation](./consolidated-plan-reconciliation.md).
+- **2026-07-23: Keep Session Rail utilities and Workspace status semantically
+  separate.** Agent Tools, Agent History, and recent Workspace navigation
+  belong to the Session Rail. Search, diagnostics, language services, file
+  state, and editor state belong to the bottom Workspace status/navigation
+  toolbar. Terminal-focused status must name useful Workspace-wide actions and
+  health states instead of presenting editor-shaped glyphs without context.
+  This boundary prevents the terminal-first shell from becoming an
+  undifferentiated bottom icon row.
