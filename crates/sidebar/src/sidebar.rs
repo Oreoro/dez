@@ -5367,6 +5367,41 @@ impl Sidebar {
                             )
                             .separator();
 
+                        let menu = menu.when(is_active, |menu| {
+                            menu.submenu("Canvas Layout", |menu, _window, _cx| {
+                                menu.action("Full", Box::new(title_bar::ApplyCanvasFullLayout))
+                                    .action(
+                                        "Agent Control",
+                                        Box::new(title_bar::ApplyCanvasAgentControlLayout),
+                                    )
+                                    .action(
+                                        "Focus Editor",
+                                        Box::new(title_bar::ApplyCanvasEditorFocusLayout),
+                                    )
+                                    .action(
+                                        "Code, Run, Observe",
+                                        Box::new(title_bar::ApplyCanvasCodeRunObserveLayout),
+                                    )
+                                    .action("Review", Box::new(title_bar::ApplyCanvasReviewLayout))
+                                    .action("Debug", Box::new(title_bar::ApplyCanvasDebugLayout))
+                                    .separator()
+                                    .action("Cycle Layout", Box::new(title_bar::CycleCanvasLayout))
+                                    .action(
+                                        "Save Layout As…",
+                                        Box::new(workspace::SaveCurrentCanvasLayoutAs),
+                                    )
+                                    .action(
+                                        "Manage Saved Layouts…",
+                                        Box::new(workspace::ManageSavedCanvasLayouts),
+                                    )
+                                    .action(
+                                        "Restore Previous Layout",
+                                        Box::new(title_bar::RestorePreviousCanvasLayout),
+                                    )
+                            })
+                            .separator()
+                        });
+
                         let menu = menu.when(show_multi_project_entries, |this| {
                             this.entry(
                                 "Open Workspace in New Window",
