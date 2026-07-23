@@ -393,7 +393,11 @@ with new labels.
       Session Rail, command center, status, and transient overlays. Commit
       `ff91b34a81` removes the rail's remaining user-facing Project/Workspace
       split across remote, options, focus, new-window, recent, and rules
-      controls while preserving internal upstream types.
+      controls while preserving internal upstream types. Commit `6f1562847e`
+      extends the grammar into the center shell: the multi-tool region is
+      **Workspace tools**, its file tree is **Files**, and official Zed retains
+      its Project Panel copy through explicit compatibility branches. Broader
+      Recent/remote/security vocabulary remains to audit.
 - [ ] Give every primary region a visible purpose, stable placement, clear
       focus treatment, and predictable resize/collapse behavior. The app View
       menu, title-bar/sidebar chrome, and collapsed status control now call the
@@ -1209,3 +1213,10 @@ Notes decision:
   unavailable**. Internal upstream Project and PaneKind names remain unchanged.
   The identity guard rejects the former mixed vocabulary; formatting, Bash
   syntax, diff, and identity checks pass. Rendered proof remains deferred.
+- 2026-07-23: Named the outward tool hierarchy deliberately in `6f1562847e`.
+  Dez now exposes **Workspace tools** for the multi-tool pane and **Files** for
+  the file tree in tabs, empty state, tooltip, reveal action, and Settings;
+  legacy dock settings state their compatibility-only effect. Internal panel
+  keys and the official-Zed copy remain stable behind product branches. Cargo
+  metadata, formatting, Bash syntax, diff, and identity checks pass; no compile,
+  bundle build, or rendered interaction claim is made.

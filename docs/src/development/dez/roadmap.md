@@ -127,6 +127,12 @@ recovery surfaces on Workspace vocabulary while leaving compatible internal
 Project types unchanged. The identity gate rejects the old mixed copy;
 rendered proof remains deferred.
 
+Commit `6f1562847e` names the region **Workspace tools** and its file-tree tab
+**Files** across toggle, accessibility, empty, reveal, tooltip, preview, and
+Settings surfaces. Official Zed retains Project Panel wording through explicit
+product branches, and persistence/action identifiers remain compatible. Cargo
+metadata and static gates pass; compilation and rendered proof remain deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
