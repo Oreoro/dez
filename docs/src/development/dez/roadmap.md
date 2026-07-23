@@ -158,6 +158,11 @@ database failure explains local safety and opens logs instead of an upstream
 issue form. Explicit upstream Help links remain. Static gates pass; compilation
 and interaction proof are deferred.
 
+Commit `0607771783` completes the source-level shell grammar in retained
+disconnected, follow/join, shared-agent, and multi-root collaboration recovery
+states. Dez says Workspace, official Zed retains Project, and compatibility
+types remain unchanged. Static gates pass; rendered proof remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -937,6 +942,10 @@ code, all launch gates pass, and known limitations are documented.
       palette actions, and replaces upstream issue filing in database recovery
       with truthful local diagnostics. Authored assertions and identity guards
       cover the product boundary; compiled interaction proof remains deferred.
+- [x] 2026-07-23: Finish Workspace grammar in retained recovery states. Commit
+      `0607771783` normalizes disconnected, follow/join, shared-agent, and
+      multi-root error copy while preserving official Zed branches. Identity
+      and formatting gates pass; rendered proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

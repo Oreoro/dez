@@ -389,7 +389,7 @@ with new labels.
 
 #### Shell and hierarchy
 
-- [ ] Establish one stable shell grammar for App Session, Workspace, Surface,
+- [x] Establish one stable shell grammar for App Session, Workspace, Surface,
       Session Rail, command center, status, and transient overlays. Commit
       `ff91b34a81` removes the rail's remaining user-facing Project/Workspace
       split across remote, options, focus, new-window, recent, and rules
@@ -402,10 +402,14 @@ with new labels.
       History picker while preserving official Zed copy. Commit `b749a25619`
       finishes the same pass through recent-work search/actions/errors, Files
       multi-root controls, and Restricted Mode trust copy. Command-center and
-      transient-overlay vocabulary remain to audit. Commit `0e2c0dcae3`
+      transient-overlay vocabulary continue through `0e2c0dcae3`, which
       carries the contract into developer-tool empty/error states, pane search,
       review evidence, agent rules/checkpoints, skills, scoped Settings, status
-      controls, and the complete Files settings section.
+      controls, and the complete Files settings section. Commits `e969abda4a`
+      and `0607771783` remove misleading inherited command-center actions and
+      finish Workspace terminology in retained remote/shared recovery overlays.
+      Internal compatibility identifiers and explicit upstream Help references
+      remain deliberate; rendered verification is tracked separately.
 - [ ] Give every primary region a visible purpose, stable placement, clear
       focus treatment, and predictable resize/collapse behavior. The app View
       menu, title-bar/sidebar chrome, and collapsed status control now call the
@@ -1272,3 +1276,9 @@ Notes decision:
   explicit upstream references. Database failure now states file safety and
   Session/Workspace risk and opens local logs. Static gates pass; compile and
   interaction proof remain deferred.
+- 2026-07-23: Completed the source-level shell grammar in `0607771783`.
+  Retained disconnected, follow/join, shared-agent, and multi-root collaboration
+  recovery states now say Workspace in Dez while official Zed keeps Project.
+  Together with the command-center cleanup in `e969abda4a`, no reachable Dez
+  shell state relies on Project as the outward container term. Identity,
+  formatting, Bash syntax, and diff gates pass; rendered proof remains deferred.
