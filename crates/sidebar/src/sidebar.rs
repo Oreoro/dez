@@ -1506,6 +1506,28 @@ enum TerminalEntrySource {
     HostSession(TerminalSessionId),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum StoredTerminalSource {
+    AgentPanel,
+    HostSession(TerminalSessionId),
+}
+
+fn stored_terminal_source(
+    app_name: &str,
+    has_live_agent_terminal: bool,
+    host_session_id: Option<TerminalSessionId>,
+) -> Option<StoredTerminalSource> {
+    if app_name == "Zed" {
+        Some(StoredTerminalSource::AgentPanel)
+    } else if let Some(session_id) = host_session_id {
+        Some(StoredTerminalSource::HostSession(session_id))
+    } else if has_live_agent_terminal {
+        Some(StoredTerminalSource::AgentPanel)
+    } else {
+        None
+    }
+}
+
 #[derive(Clone, Copy)]
 enum TerminalAttentionAction {
     Acknowledge,
@@ -3424,6 +3446,16 @@ impl Sidebar {
                     let host_snapshot = metadata.session_ref.and_then(|session_ref| {
                         helper_snapshot_by_session.get(&session_ref.session_id)
                     });
+                    let source = match stored_terminal_source(
+                        APP_NAME,
+                        live_terminal_runtime.contains_key(&metadata.terminal_id),
+                        host_snapshot.map(|snapshot| snapshot.session_id),
+                    )? {
+                        StoredTerminalSource::AgentPanel => TerminalEntrySource::AgentPanel,
+                        StoredTerminalSource::HostSession(session_id) => {
+                            TerminalEntrySource::HostSession(session_id)
+                        }
+                    };
                     let agent = host_snapshot.and_then(|snapshot| snapshot.agent.clone());
                     let now = Utc::now();
                     let adapter_attention =
@@ -3443,7 +3475,7 @@ impl Sidebar {
                                 .or_else(|| metadata.detected_agent_kind())
                         })
                         .flatten();
-                    TerminalEntry {
+                    Some(TerminalEntry {
                         runtime: live_terminal_runtime
                             .get(&metadata.terminal_id)
                             .cloned()
@@ -3452,13 +3484,13 @@ impl Sidebar {
                         metadata,
                         detected_agent_kind,
                         workspace,
-                        source: TerminalEntrySource::AgentPanel,
+                        source,
                         worktrees,
                         needs_attention,
                         attention_priority,
                         has_notification,
                         highlight_positions: Vec::new(),
-                    }
+                    })
                 };
 
             let mut terminals = Vec::new();
@@ -3467,10 +3499,14 @@ impl Sidebar {
                 let group_host = group_key.host();
                 let mut push_terminal_metadata =
                     |metadata: TerminalThreadMetadata, workspace: ThreadEntryWorkspace| {
-                        if !seen_terminal_ids.insert(metadata.terminal_id) {
+                        if seen_terminal_ids.contains(&metadata.terminal_id) {
                             return;
                         }
-                        terminals.push(make_terminal_entry(metadata, workspace));
+                        let Some(entry) = make_terminal_entry(metadata, workspace) else {
+                            return;
+                        };
+                        seen_terminal_ids.insert(entry.metadata.terminal_id);
+                        terminals.push(entry);
                     };
                 for row in terminal_store
                     .read(cx)

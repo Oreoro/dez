@@ -131,6 +131,30 @@ fn active_workspace_keeps_its_new_terminal_action_discoverable() {
 }
 
 #[test]
+fn dez_only_projects_truthfully_backed_stored_terminals() {
+    let host_session_id = TerminalSessionId::new();
+
+    assert_eq!(
+        stored_terminal_source("Dez", false, None),
+        None,
+        "stale metadata must not appear as a resumable Dez Session"
+    );
+    assert_eq!(
+        stored_terminal_source("Dez", true, None),
+        Some(StoredTerminalSource::AgentPanel)
+    );
+    assert_eq!(
+        stored_terminal_source("Dez", false, Some(host_session_id)),
+        Some(StoredTerminalSource::HostSession(host_session_id))
+    );
+    assert_eq!(
+        stored_terminal_source("Zed", false, None),
+        Some(StoredTerminalSource::AgentPanel),
+        "official Zed retains legacy Terminal Thread restoration"
+    );
+}
+
+#[test]
 fn historical_branch_fallback_never_guesses_across_workspaces() {
     let path = PathBuf::from("/shared/worktree");
     let mut branches = HashMap::new();
