@@ -1886,3 +1886,17 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   rather than Agent Panel, and Session Rail's Agent Tools menu says **Agent
   Settings**. Product-copy assertions, formatting, identity, and diff checks
   pass; rendered density and accessibility-tree proof remain deferred.
+- 2026-07-23: Removed the visible upstream default title and finished Agent
+  toolbar labeling in `a3cf18ce8e`. The database-compatible `New thread`
+  sentinel remains unchanged, while tabs, Session Rail, Agent History,
+  mentions, Markdown, completion, and title editing show **New Agent Session**
+  in Dez. Title retry now uses a retry-shaped icon; retry, Agent Options,
+  full-screen, and new-session controls have explicit accessible names. Pure
+  assertions, formatting, locked offline metadata, identity, and diff checks
+  pass; rendered title/toolbar proof remains deferred.
+- 2026-07-23: Explained unavailable pane splitting in `c0a325da9d`. Supported
+  Surfaces retain the standard Split Pane control; an unsupported Dez Surface
+  now exposes **Split Pane Unavailable** and explains that it cannot be split
+  or moved into a new pane. Pure copy assertions, formatting, locked offline
+  metadata, identity, and diff checks pass; rendered disabled-control proof
+  remains deferred.

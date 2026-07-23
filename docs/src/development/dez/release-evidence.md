@@ -1149,7 +1149,12 @@ the later running-app reports, the source advanced through:
   which adds focused center-terminal source coverage; and
 - `745792e28e`, which visibly distinguishes Agent Session from Terminal Session
   rows and removes inherited Panel and ambiguous Settings terminology from
-  Agent controls.
+  Agent controls; and
+- `a3cf18ce8e`, which keeps the compatible `New thread` storage sentinel
+  internal, presents **New Agent Session** everywhere visible, labels Agent
+  toolbar icons, and gives title retry a retry-shaped control; and
+- `c0a325da9d`, which explains why pane splitting is unavailable instead of
+  leaving a disabled icon with its enabled tooltip.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

@@ -1542,6 +1542,20 @@ code, all launch gates pass, and known limitations are documented.
       completion expectation with the visible **Agent Sessions** label. Static
       identity, formatting, locked offline metadata, and diff checks pass;
       rendered keyboard/modifier-release/search proof remains deferred.
+- [x] 2026-07-23: Remove the visible default-Thread fallback and finish Agent
+      toolbar accessibility. Commit `a3cf18ce8e` keeps `New thread` only as the
+      compatible storage sentinel while tabs, Session Rail, Agent History,
+      mentions, Markdown, completion, and title editing show **New Agent
+      Session** in Dez. The retry, Agent Options, full-screen, and new-session
+      icon buttons now have accurate accessible names; title retry uses a
+      retry-shaped icon. Pure vocabulary assertions and static identity guards
+      pass; rendered title/toolbar/accessibility-tree proof remains deferred.
+- [x] 2026-07-23: Explain unavailable pane splitting. Commit `c0a325da9d`
+      preserves the ordinary **Split Pane** control when supported, but gives a
+      disabled Dez control the accessible name **Split Pane Unavailable** and
+      explains that the current Surface cannot be split or moved into a new
+      pane. Pure copy assertions and static identity guards pass; rendered
+      disabled-state proof remains deferred.
 - [x] 2026-07-23: Restore cancelled Session Switcher previews through their
       original source. Commit `67a8152db7` preserves center Workspace items,
       durable Host Sessions, retained compatibility terminals, and Agent

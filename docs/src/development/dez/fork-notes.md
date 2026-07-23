@@ -118,6 +118,12 @@ protocol, database, and mention identifiers may retain `thread`; the compatible
 mention keyword remains `@thread`. The Agent menu names its destinations as
 **Agent Settings** and **Toggle Session Rail**.
 
+Untitled conversation storage retains the upstream `New thread` sentinel for
+database compatibility, but every visible Dez fallback is **New Agent
+Session**. Icon-only toolbar controls require accessible names, and a disabled
+control must explain why it is unavailable rather than repeating its enabled
+label.
+
 Session Switcher previews are reversible. Confirming records and focuses the
 selected Session; cancelling restores the original Agent Session, center
 terminal Surface, or Host Session through its actual source without changing
