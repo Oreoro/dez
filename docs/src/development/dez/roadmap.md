@@ -211,6 +211,12 @@ Evidence page also discloses that bounded file targets remain verbatim for
 review navigation. Focused utility/Host assertions and identity checks pass;
 compiled hook-flow proof remains deferred.
 
+Commit `c47637c2ac` exposes the Session Rail hierarchy as a named accessible
+list. Non-sticky Workspace headers report selected/expanded state plus
+ready/running work and attention counts without relying on color; sticky visual
+duplicates are excluded from accessibility output. Focused copy and identity
+checks pass; platform-tree inspection remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -1031,6 +1037,11 @@ code, all launch gates pass, and known limitations are documented.
       `80ff1df75f` covers userinfo and secret query parameters, preserves useful
       URL structure, and discloses verbatim file-target retention. Focused and
       identity assertions pass; compiled proof remains consolidated.
+- [x] 2026-07-23: Expose the Session Rail Workspace hierarchy. Commit
+      `c47637c2ac` adds named list semantics and complete selected, expanded,
+      ready/running, and attention labels while suppressing sticky duplicates.
+      Focused and identity assertions pass; platform inspection remains
+      consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

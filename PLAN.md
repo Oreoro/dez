@@ -635,7 +635,11 @@ with new labels.
       duplicating a richer state label. Newly active authenticated Host
       attention now triggers the configured OS window-attention request once
       per condition transition, including when no terminal surface is attached;
-      the rendered matrix remains open.
+      commit `c47637c2ac` adds a named list container and exposes each non-sticky
+      Workspace group as a selected/expanded list item whose accessible label
+      includes ready, running, and attention state. Sticky visual duplicates are
+      deliberately excluded from the accessibility hierarchy. The rendered
+      matrix remains open.
 - [ ] Capture a visual state matrix at compact, balanced, and spacious density
       in representative light and dark themes and at narrow/normal/wide rail
       widths.
@@ -1373,3 +1377,9 @@ Notes decision:
   explicitly disclose that bounded file targets remain verbatim for navigation.
   Focused utility/Host assertions and identity guards pass; compiled hook-flow
   proof remains consolidated.
+- 2026-07-23: Exposed the Session Rail group hierarchy to assistive technology
+  in `c47637c2ac`. The virtual rows now live in a named accessible list;
+  Workspace headers report selection, expansion, ready/running work, and
+  attention counts without relying on color. Sticky visual copies are excluded
+  to avoid duplicate announcements. Focused copy assertions and identity guards
+  pass; platform accessibility-tree inspection remains deferred.
