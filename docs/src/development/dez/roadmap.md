@@ -2422,6 +2422,21 @@ Completed for the Git setup-state slice:
   locked offline Cargo metadata, and `git diff --check`;
 - no build, test binary, alternate binary, or visual launch was performed.
 
+Completed for the unsafe Git-repository slice:
+
+- replaced the dense centered paragraph with a top-aligned warning hierarchy;
+- named the ownership problem and explained that Git blocked the repository;
+- exposed the exact repository path in a labeled, tooltip-backed chip;
+- disclosed that trust changes global Git configuration before approval;
+- renamed the action to **Trust This Directory**, applied warning treatment,
+  and attached the exact `git config --global --add safe.directory …` command;
+- made **Learn About Safe Directories** a full-width secondary action;
+- preserved official Zed's upstream state and added copy assertions plus a
+  static identity guard;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
 Completed for the first helper-process source slice:
 
 - new crate instructions and a rollbackable `dez_terminal_host` workspace

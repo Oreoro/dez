@@ -2252,3 +2252,14 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   identity guard protect the fork boundary. Formatting, Bash syntax, identity,
   locked offline metadata, and diff checks pass; no build, test binary, or
   visual launch was performed.
+- 2026-07-23: Reworked Git's dubious-ownership recovery into an explicit
+  security decision in `9c71b58d64`. Dez now presents a top-aligned
+  **Repository ownership needs review** alert, explains why Git blocked the
+  repository, shows the exact path in a labeled inspectable chip, and states
+  that approval changes global Git configuration. **Trust This Directory** uses
+  warning styling, an accessible effect description, and an exact command
+  tooltip; **Learn About Safe Directories** remains a separate secondary path.
+  Official Zed retains its upstream state. Pure copy assertions and an identity
+  guard protect the boundary. Formatting, Bash syntax, identity, locked offline
+  metadata, and diff checks pass; no build, test binary, or visual launch was
+  performed.

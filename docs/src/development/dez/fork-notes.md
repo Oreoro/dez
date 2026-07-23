@@ -550,3 +550,9 @@ defer it.
   The setup path is visually distinct from clean, unsafe, and unopened
   Workspace states; those conditions must not collapse into one generic Git
   placeholder.
+- **2026-07-23: Git safe-directory approval is a security decision.** The
+  warning names the affected repository path and the global configuration
+  effect before approval. The trust action uses warning treatment and exposes
+  the exact `git config --global --add safe.directory …` command in its
+  tooltip. Documentation remains a separate action. Familiarity with a folder,
+  not convenience, is the decision criterion.

@@ -1292,7 +1292,10 @@ the later running-app reports, the source advanced through:
   Changes** action only where a base-branch comparison is relevant; and
 - `579e7448f7`, which turns Git's opened-Workspace/no-repository placeholder
   into a named top-aligned setup region with one explained primary
-  **Initialize Repository** action while preserving official Zed.
+  **Initialize Repository** action while preserving official Zed; and
+- `9c71b58d64`, which turns dubious Git ownership into an explicit warning that
+  names the repository path, global configuration effect, exact trust command,
+  and separate safe-directory documentation path.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
