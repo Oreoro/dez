@@ -1170,7 +1170,13 @@ the later running-app reports, the source advanced through:
   Git, and Agent with compact, top-anchored Workspace recovery and names Agent
   zoom **Expand Agent** / **Restore Agent**, plus `b1a20d9b17`, which preserves
   official Zed's original recovery layout, and `22893a6491`, which declares the
-  Git UI's product-identity dependency.
+  Git UI's product-identity dependency; and
+- `cdedb6a23a`, `75fb4bc5c9`, and `ed5750c0ce`, which remove Canvas Layout
+  diagnostics and prefix documentation, curate six v0.0.1 workflow presets,
+  and consolidate saved-layout storage behind **Manage Saved Layouts…**; and
+- `1364249bc5`, which makes the curated control reachable as Dez's
+  **Workspace Menu** while keeping official Zed account and organization
+  sections gated to official Zed.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

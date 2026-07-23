@@ -1588,6 +1588,18 @@ code, all launch gates pass, and known limitations are documented.
       the Git UI's product-identity dependency explicitly. Static identity,
       formatting, locked offline metadata, and diff checks pass; rendered
       narrow-pane/zoom/focus proof remains deferred.
+- [x] 2026-07-23: Curate the public Canvas Layout menu. Commit `cdedb6a23a`
+      removes disabled implementation diagnostics, prefix-key documentation,
+      and repeated `Canvas:` labels. Commit `75fb4bc5c9` keeps only Full, Agent
+      Control, Focus Editor, Code/Run/Observe, Review, and Debug in the routine
+      workflow set. Commit `ed5750c0ce` moves slot/JSON/named-layout storage
+      detail behind **Manage Saved Layouts…**, leaving Cycle, **Save Layout
+      As…**, and Restore Previous as concise immediate actions. Commit
+      `1364249bc5` exposes those controls through Dez's always-reachable
+      **Workspace Menu** without reviving inherited account or organization
+      chrome. Advanced actions remain registered for deliberate workflows.
+      Static identity, formatting, locked offline metadata, and diff checks
+      pass; rendered menu height/selection/manager proof remains deferred.
 - [x] 2026-07-23: Restore cancelled Session Switcher previews through their
       original source. Commit `67a8152db7` preserves center Workspace items,
       durable Host Sessions, retained compatibility terminals, and Agent

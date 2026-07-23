@@ -112,6 +112,13 @@ floating a small prompt in the middle of an empty pane. The heading names the
 missing prerequisite, the explanation is specific to Files, Git, or Agent, and
 the primary action says **Open Workspace**.
 
+The everyday Canvas Layout menu is a workflow picker, not a diagnostics or
+storage dashboard. It exposes Full, Agent Control, Focus Editor,
+Code/Run/Observe, Review, and Debug; saved-layout detail belongs in **Manage
+Saved Layouts…**. The menu is reachable from the workspace bar's **Workspace
+Menu**. Official Zed's account and organization chrome remains compatibility
+code and is not exposed by that Dez control.
+
 The main-area tab-bar plus control is named **Add to Main Work Area** in Dez.
 Its menu opens files, Workspace search and symbols, or a terminal in that same
 pane grid; it does not add a sidebar panel or create a second terminal model.

@@ -1935,3 +1935,18 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   `22893a6491` declares the Git UI's product-identity dependency explicitly.
   Formatting, locked offline metadata, identity, and diff checks pass; rendered
   narrow-pane, zoom, and focus proof remain deferred.
+- 2026-07-23: Reduced the Canvas Layout menu from an implementation dashboard
+  to an everyday workflow picker. Commit `cdedb6a23a` removes disabled design,
+  hosting, history, and prefix-key diagnostics and strips repeated `Canvas:`
+  prefixes. Commit `75fb4bc5c9` keeps the six v0.0.1 workflows—Full, Agent
+  Control, Focus Editor, Code/Run/Observe, Review, and Debug—while removing the
+  uncurated matrix, operations, specialty, and generic geometry catalogue from
+  the public menu. Commit `ed5750c0ce` consolidates saved-layout storage behind
+  **Save Layout As…** and **Manage Saved Layouts…**, retaining only Cycle and
+  Restore Previous as immediate actions. Commit `1364249bc5` mounts that
+  curated control as Dez's always-reachable **Workspace Menu** without exposing
+  official Zed account, organization, sign-in, or sign-out chrome. The
+  underlying advanced actions remain available to deliberate workflows without
+  dominating routine UI.
+  Formatting, locked offline metadata, identity, and diff checks pass; rendered
+  menu height, selection, and saved-layout-manager proof remain deferred.
