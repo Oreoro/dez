@@ -1714,6 +1714,14 @@ code, all launch gates pass, and known limitations are documented.
       official Zed's **Threads** label. Source assertions, formatting,
       identity, and diff checks pass; rendered completion-menu proof remains
       deferred.
+- [x] 2026-07-23: Clarify first-use Workspace readiness and terminal ownership.
+      Commit `38524c9c01` makes the empty Session Rail state explicitly say
+      that terminals open in the main work area while live status and attention
+      appear in the rail. Workspace scan progress is now an accessible status,
+      and automatic trust names its folder scope plus the services it enables.
+      Official Zed retains its Project terminology. Formatting, locked offline
+      metadata, identity, and diff checks pass; compilation and rendered
+      first-use proof remain deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

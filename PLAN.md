@@ -1970,3 +1970,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Outline crate declares its product-identity dependency explicitly. Static
   identity, formatting, locked offline metadata, and diff checks pass; rendered
   tool-tooltip proof remains deferred.
+- 2026-07-23: Made first-use Workspace state explain the real interface model in
+  `38524c9c01`. The empty Session Rail now says terminals open in the main work
+  area and that only live status and attention appear in the rail. Workspace
+  scan progress is an accessible status with product-appropriate vocabulary,
+  and automatic trust names the newly opened folder scope, Workspace settings,
+  language servers, and configured tools it enables. Official Zed retains its
+  Project copy. Formatting, locked offline metadata, identity, and diff checks
+  pass; compilation and rendered first-use proof remain deferred.

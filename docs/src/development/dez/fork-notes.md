@@ -177,6 +177,12 @@ context all resolve through that same Workspace and Project:
 - The Session Rail observes these surfaces and durable sessions. It adds
   navigation, attention, evidence, and recency, but never becomes the editor,
   terminal, Agent, or process owner.
+- Empty and recovery states must state this ownership boundary in their visible
+  copy. A Session Rail action may open a terminal in the main work area, but it
+  must never imply that the terminal runs inside the rail.
+- Workspace readiness uses Workspace vocabulary and accessible status
+  semantics. Automatic trust names the newly opened folder scope and the
+  language servers, Workspace settings, and configured tools that it enables.
 
 This is the IDE integration: Dez retains Zed's editor and project engine, then
 organizes its existing capabilities around terminal-native supervision. The

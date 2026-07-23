@@ -1181,7 +1181,13 @@ the later running-app reports, the source advanced through:
   into a compact, accessible **Agent Review** workflow with change-oriented
   decisions, explicit generation status, and a clear return to Agent; and
 - `6223c05368`, which removes inherited Panel terminology from Dez's Outline,
-  Git, and Debug tool controls while preserving official Zed labels.
+  Git, and Debug tool controls while preserving official Zed labels; and
+- `deab6cbe8d`, which removes fake Terminal Session actor metadata from ordinary
+  terminal rows and uses concise terminal-specific ownership and lifecycle
+  labels; and
+- `38524c9c01`, which makes the Session Rail/main-work-area boundary explicit
+  in the first-use state, exposes Workspace scanning as an accessible status,
+  and makes automatic trust name its folder and developer-service scope.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
