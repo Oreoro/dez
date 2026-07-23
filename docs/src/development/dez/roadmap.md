@@ -145,6 +145,12 @@ trust-validation copy all use Workspace language in Dez. Official Zed and
 internal action/type identifiers remain compatible. Formatting and static
 identity gates pass; compilation and rendered proof remain deferred.
 
+Commit `0e2c0dcae3` carries the same contract through remote search/errors,
+Agent History, pane search, review evidence, agent rules/checkpoints, skills,
+MCP/external-agent empty states, scoped Settings, status controls, and the full
+Files settings section. Official Zed branches and internal schema/action names
+remain compatible. Static gates pass; compilation and render proof are deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -914,6 +920,11 @@ code, all launch gates pass, and known limitations are documented.
       official Zed branches and internal identifiers. Focused trust-label
       assertions and identity guards are authored; static gates pass, and
       compilation/rendered proof remain in the consolidated gate.
+- [x] 2026-07-23: Normalize developer-tool and Settings surfaces. Commit
+      `0e2c0dcae3` applies Workspace/Files language to remote, agent, pane,
+      evidence, skills, scoped Settings, status, and Files configuration UI.
+      Official Zed and internal compatibility names remain intact. Identity and
+      formatting gates pass; compile/render proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

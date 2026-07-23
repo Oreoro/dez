@@ -402,7 +402,10 @@ with new labels.
       History picker while preserving official Zed copy. Commit `b749a25619`
       finishes the same pass through recent-work search/actions/errors, Files
       multi-root controls, and Restricted Mode trust copy. Command-center and
-      transient-overlay vocabulary remain to audit.
+      transient-overlay vocabulary remain to audit. Commit `0e2c0dcae3`
+      carries the contract into developer-tool empty/error states, pane search,
+      review evidence, agent rules/checkpoints, skills, scoped Settings, status
+      controls, and the complete Files settings section.
 - [ ] Give every primary region a visible purpose, stable placement, clear
       focus treatment, and predictable resize/collapse behavior. The app View
       menu, title-bar/sidebar chrome, and collapsed status control now call the
@@ -1246,3 +1249,10 @@ Notes decision:
   scope validation reports a Workspace boundary. Official Zed retains Project
   labels through explicit branches. Formatting, Bash syntax, diff, and identity
   checks pass; compile and rendered verification remain deferred.
+- 2026-07-23: Extended the Workspace/Files contract across developer tools in
+  `0e2c0dcae3`. Remote search and disconnection, Agent History, pane search,
+  review-evidence prompts, agent rules/checkpoints, skill scope, MCP/external
+  agent empty states, trust/status settings, and every visible Files setting now
+  use the product's outward language. Official Zed retains Project copy through
+  explicit branches; internal actions and schema remain compatible. Formatting,
+  Bash syntax, diff, and identity checks pass; compile/render proof is deferred.
