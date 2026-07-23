@@ -181,6 +181,12 @@ Window** submenu with multi-root scope preserved, while whole-group removal is
 explicitly **Remove Workspace from Window**. Focused label and identity checks
 pass; compiled interaction proof remains deferred.
 
+Commit `7893762cd5` makes restored attention a textual secondary signal. Active
+persisted attention composes with Saved, Detached, Reconnecting, Missing,
+Incompatible, and Exited transport labels even without a live adapter snapshot.
+Focused state assertions and identity checks pass; durable activity/review
+recovery and rendered accessibility proof remain open.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -979,6 +985,10 @@ code, all launch gates pass, and known limitations are documented.
       preserves multi-root names, and distinguishes per-worktree closure from
       whole-Workspace removal. Focused and identity assertions pass; compiled
       and rendered proof remains consolidated.
+- [x] 2026-07-23: Expose restored attention without relying on color. Commit
+      `7893762cd5` composes persisted active attention into every non-live
+      transport label while preserving Saved/Detached/Missing truth. Focused
+      and identity assertions pass; rendered proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

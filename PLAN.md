@@ -373,7 +373,12 @@ terminates explicitly, and reports observed exit truthfully.
       mutations. Existing owner-backed archive, remove, detach, and confirmed
       terminate actions remain separate; unsupported discard is not implied.
 - [ ] Restore agent state, attention, bounded activity, and review projection
-      after GUI restart with no false running or completed state.
+      after GUI restart with no false running or completed state. Persisted
+      attention already retains condition/presentation/expiry separately from
+      live adapter state; commit `7893762cd5` now renders that condition in the
+      textual Saved, Detached, Reconnecting, Missing, Incompatible, and Exited
+      state instead of relying on a warning color/icon. Durable activity and
+      review projection recovery remain open.
 - [ ] Complete the Codex hero flow live before adding a second terminal-agent
       adapter; then prove the common contract with one additional adapter.
 
@@ -453,6 +458,9 @@ with new labels.
       and native check projection remain.
 - [ ] Use color as a secondary signal only; icons, labels, shape, and copy must
       preserve meaning in low contrast and for color-vision deficiencies.
+      Commit `7893762cd5` closes the restored-attention gap: active attention is
+      included in the state label even when no live structured adapter snapshot
+      exists. The app-wide audit remains open.
 - [ ] Align density, spacing, radii, borders, typography, hover, focus,
       selection, and animation across panes, Canvas, rails, cards, callouts,
       menus, settings, and recovery surfaces.
@@ -1320,3 +1328,9 @@ Notes decision:
   Workspace from Window** so its broader scope cannot be confused with closing
   one worktree. Focused label assertions and identity guards pass; compiled and
   rendered interaction proof remains deferred.
+- 2026-07-23: Made restored attention textual in `7893762cd5`. A persisted
+  active condition now composes **Needs attention** with Saved, Detached,
+  Reconnecting, Missing, Incompatible, and Exited transport truth even when no
+  live adapter snapshot exists. Focused state assertions and the identity guard
+  pass; durable activity/review recovery and rendered accessibility proof remain
+  open.
