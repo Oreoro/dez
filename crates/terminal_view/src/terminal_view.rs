@@ -41,8 +41,10 @@ use terminal::{
     ScrollLineDown, ScrollLineUp, ScrollPageDown, ScrollPageUp, ScrollToBottom, ScrollToTop,
     Search, ShowCharacterPalette, TaskState, TaskStatus, Terminal, TerminalBounds, ToggleViMode,
     session_host::{
-        LocalTerminalHost, TerminalHostSnapshotRevision, TerminalHostSnapshotStore,
-        TerminalSessionState, transport::TerminalHostConnection,
+        LocalTerminalHost, TerminalSessionState,
+        transport::{
+            TerminalHostConnection, TerminalHostSnapshotRevision, TerminalHostSnapshotStore,
+        },
     },
     terminal_settings::{CursorShape, TerminalSettings},
 };
