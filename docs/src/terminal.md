@@ -60,11 +60,12 @@ These actions have deliberately different meanings:
   shell is still running, Dez uses the normal dirty-item protection before
   discarding it.
 - **Detach Terminal** closes a Host-owned terminal Surface without stopping
-  its durable process. Its Session remains available from the Session Rail.
-- **Terminate Terminal Process…** is destructive. It is separated from
+  its persistent computation. Its Session remains available from the Session
+  Rail.
+- **Terminate Terminal Session…** is destructive. It is separated from
   close/detach in the terminal context menu and opens a critical confirmation
-  explaining which process will stop. It is not offered for an exited or
-  unavailable terminal.
+  explaining that the shell and any foreground process will stop. It is not
+  offered for an exited or unavailable terminal.
 
 Termination always goes through the selected terminal's own controller. The
 presence of another local Host does not change which process the action owns.

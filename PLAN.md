@@ -532,7 +532,7 @@ with new labels.
       **Remove Workspace from Window**, separated from per-worktree closure.
       Commit `56f7c46db6` applies the same distinction inside the terminal:
       closing a hosted surface is labeled **Detach Terminal**, while
-      **Terminate Terminal Process** remains a separate destructive action.
+      **Terminate Terminal Session…** remains a separate destructive action.
       Commit `dd2459eef9` derives that label from the terminal's backing type
       rather than transient Host registration, preserving detach semantics
       during reconnection. Commit `7664c6e59b` closes the remaining destructive
@@ -1661,7 +1661,7 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   in `72cec1f285`. Copy appears only when a selection exists; Paste Clipboard,
   Paste Text Only, Select All, and Clear Screen state their scope. A hosted
   terminal offers Detach Terminal versus Terminate Session, while a local tab
-  offers Close Terminal Tab versus Terminate Terminal Process. Failed restore
+  offers Close Terminal Tab versus Terminate Terminal Session. Failed restore
   now says **This terminal cannot reconnect** and **Start New Terminal** without
   implying a replacement shell exists. The permanently disabled terminal
   Inline Assist branch is removed. Source inspection also confirms the
@@ -2114,3 +2114,14 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   after the Sidebar supplies the controls. Pure visibility assertions, static
   guards, formatting, Bash syntax, identity, locked offline metadata, and diff
   checks pass; no build, test binary, or visual launch was performed.
+- 2026-07-23: Unified the terminal Surface with Session Rail lifecycle language
+  in `7f8fd167c2`. The context menu and critical prompt now say **Terminate
+  Terminal Session…** / **Terminate Terminal Session?**, name the shell and
+  foreground-process effect, and avoid internal “durable process” vocabulary.
+  The confirmation button says **Terminate Session**. The Surface landmark now
+  reads **Terminal Session: _title_. Status: _state_**; the tab tooltip correctly
+  labels **Working directory**; the task rerun icon has an explicit name; and
+  unavailable-session recovery names its **Main Work Area** destination in the
+  tab order and tooltip. Pure lifecycle/accessibility assertions, static guards,
+  formatting, Bash syntax, identity, locked offline metadata, and diff checks
+  pass; no build, test binary, or visual launch was performed.

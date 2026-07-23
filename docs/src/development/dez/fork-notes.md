@@ -465,3 +465,9 @@ defer it.
   controls. Controls that are visually present participate in the tab order,
   retain explicit accessible names, and keep the destructive action last.
   Editing modes may suppress competing actions until editing ends.
+- **2026-07-23: Terminal lifecycle language is shared across projections.**
+  Main Work Area Surface controls, Session Rail controls, context menus,
+  tooltips, and critical prompts use Terminal Session for the user-facing
+  computation. Process detail appears only when explaining the concrete shell
+  and foreground-process effect. Internal durability terminology never appears
+  as product copy.

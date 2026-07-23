@@ -29,6 +29,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Unified terminal lifecycle interaction source: `c83b56b5aa`
 - Dead terminal startup setting removal source: `222c658123`
 - Keyboard-visible Session row actions source: `f0e817669a`
+- Unified terminal Surface lifecycle language source: `7f8fd167c2`
 - Deduplicated Session Rail footer source: `a9b1a961c0`
 - Unified Session Rail Workspace vocabulary source: `ff91b34a81`
 - Workspace-scoped zero-session creation source: `4fc53b860f`
@@ -1242,7 +1243,11 @@ the later running-app reports, the source advanced through:
   compatible storage and official-Zed behavior; and
 - `f0e817669a`, which reveals contextual Session Rail controls for keyboard
   selection as well as pointer hover and makes every visible row control
-  keyboard-focusable.
+  keyboard-focusable; and
+- `7f8fd167c2`, which aligns the terminal Surface with Terminal Session
+  lifecycle language, removes internal durability jargon, and clarifies the
+  Surface landmark, working-directory tooltip, task rerun identity, and
+  unavailable-session recovery destination.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

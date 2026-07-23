@@ -1990,8 +1990,29 @@ code, all launch gates pass, and known limitations are documented.
   pointer hover. Visible rename, review, stop, discard, archive, setup, and
   terminal lifecycle controls enter the tab order; rename mode suppresses
   conflicting controls, and destructive actions remain last.
+- **2026-07-23:** Terminal lifecycle nouns do not change with projection.
+  Commit `7f8fd167c2` makes the Main Work Area Surface, Session Rail, context
+  menu, and critical prompt use **Terminal Session** consistently. The prompt
+  names the shell and foreground-process effect without internal durability
+  jargon. The same slice improves the Surface accessibility landmark, labels
+  the tab's working directory accurately, names task rerun, and makes failed
+  reconnect recovery identify the Main Work Area destination.
 
 ## Verification {#verification}
+
+Completed for the terminal Surface lifecycle-language slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the public terminal guide and canonical Dez
+  documentation;
+- Bash syntax and Dez identity checks, including internal-jargon rejection,
+  recovery destination, tooltip scope, and control-name guards;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- pure assertions authored for lifecycle wording and Surface accessibility
+  identity;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
 
 Completed for the Session row keyboard-parity slice:
 
