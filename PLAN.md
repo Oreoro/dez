@@ -221,7 +221,10 @@ restoration; opening or closing a viewport does not change durable ownership.
       the explicit selected-path label over a duplicate passive open-file row.
       The normal Workspace database now serializes only those explicit paths
       and rehydrates them with current Host classification on restore.
-      Consolidated compiled restart/runtime proof remains.
+      Saved hosted terminals now restore last-known cwd evidence under the
+      original Session as Unresolved when attach fails; a later successful
+      attach replaces it with Current truth. Transient in-place transport-loss
+      lifecycle and consolidated compiled restart/runtime proof remain.
 - [ ] Ensure generic tool, settings, search, Git, and conversation surfaces do
       not attach roots merely by existing.
 - [ ] Scope file tree, search, Git, diagnostics, tasks, debugger, terminals,
@@ -1108,3 +1111,14 @@ Notes decision:
   and restore rehydrates selections with the current Host classification. A
   focused database round-trip test is authored; formatting, diff, and identity
   checks pass. No bundle was built or launched.
+- 2026-07-23: Made the file-tab evidence menu state-aware in `f535c5e6ae`.
+  Tabs now expose Add or Remove according to the active Workspace EvidenceSet,
+  never both simultaneously; keyboard users retain separate add/remove/clear
+  commands with truthful no-op feedback. Formatting, diff, and identity checks
+  pass. No bundle was built or launched.
+- 2026-07-23: Reconciled saved terminal cwd evidence on restore in
+  `0e6507756e`. Failed hosted-session attach retains the last-known cwd under
+  its original Session ID as Unresolved, Review Briefs disclose that risk, and
+  successful reattach replaces the same record with Current Host truth. A
+  focused model test is authored; formatting, diff, and identity checks pass.
+  No bundle was built or launched.

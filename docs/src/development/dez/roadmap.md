@@ -291,8 +291,9 @@ code, all launch gates pass, and known limitations are documented.
       formatting, diff, and identity checks pass. Commit `e101b63e43` adds an
       additive Workspace database column, saves only explicit selections, and
       rehydrates them with current Host classification. A focused database
-      round-trip test is authored; compiled interaction and restart proof
-      remain in the consolidated gate.
+      round-trip test is authored. Commit `f535c5e6ae` then makes the tab menu
+      expose only the state-appropriate Add or Remove action. Compiled
+      interaction and restart proof remain in the consolidated gate.
 - [x] 2026-07-22: Make Session Rail review actions preserve owner context.
       Pointer and context-menu actions first activate the existing terminal or
       agent owner, then open the generated Markdown brief in an ordinary
@@ -550,7 +551,10 @@ code, all launch gates pass, and known limitations are documented.
       confidence, Host, lifecycle, and truncation truth; worktree and remote
       context events recompute it. Open Run Briefs consume that authority and
       closed rows fall back explicitly to saved metadata. File and explicit
-      choice evidence are now implemented; reconnect evidence remains open.
+      choice evidence are now implemented. Commit `0e6507756e` retains a saved
+      hosted terminal's last-known cwd as Unresolved when attach fails and
+      replaces it with Current truth on successful reattach; transient in-place
+      transport-loss lifecycle remains open.
 - [x] 2026-07-22: Feed live terminal cwd changes into Workspace evidence. Each
       record carries stable terminal-Session provenance, root refreshes preserve
       it, and Run Briefs include only cwd evidence owned by their terminal so
@@ -560,7 +564,8 @@ code, all launch gates pass, and known limitations are documented.
       owning Session's cwd evidence Current; observed process exit marks it
       Stale without deleting review history; and Run Briefs disclose the stale
       observation as a risk. Explicit removal and reconnect reconciliation
-      remain open.
+      remain open. Commit `0e6507756e` adds restore/reattach reconciliation;
+      transient in-place transport-loss lifecycle remains open.
 - [x] 2026-07-22: Complete the upstream-integration compatibility repair and
       focused runtime-facing test slice. Fifteen terminal tests, eight helper
       tests, and three Session Rail terminal lifecycle tests pass. Stale
@@ -890,6 +895,13 @@ code, all launch gates pass, and known limitations are documented.
       persists only those selections through the normal Workspace database and
       restores them without persisting passive evidence. Formatting, diff, and
       identity checks pass; compiled restart proof remains deferred.
+- [x] 2026-07-23: Reconcile saved terminal evidence across failed restore and
+      successful reattach. Commit `0e6507756e` retains last-known cwd evidence
+      under the original Session as Unresolved, surfaces the uncertainty in
+      Review Brief risk copy, and lets a successful attach replace the record
+      with Current Host truth. A focused model test is authored; formatting,
+      diff, and identity checks pass. Transient transport-loss and compiled
+      restart proof remain open.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
