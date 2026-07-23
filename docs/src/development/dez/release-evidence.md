@@ -36,6 +36,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Neutral Codex session glyph source: `526218a972`
 - Deliberate Codex onboarding setup source: `bb0cf408b4`
 - Explicit Workspace review evidence source: `a8ce563373`
+- Persistent selected Workspace evidence source: `e101b63e43`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -358,6 +359,14 @@ as Selected path in Review Briefs while suppressing a duplicate Open file row.
 Focused model tests are authored. Formatting, diff, and identity checks pass;
 no compile, bundle, launch, or rendered interaction claim is made here.
 
+Commit `e101b63e43` makes those explicit selections restart-durable through an
+additive Workspace database column. Add/remove/clear schedules the normal
+Workspace serialization path; restore rehydrates only selected paths and gives
+them the current Workspace Host classification. Passive roots, open tabs, and
+terminal observations are not serialized as user choices. A focused database
+round-trip test is authored. Formatting, diff, and identity checks pass; no
+compiled restart claim is made here.
+
 The corrected `Dez Dev.app` is now registered and launched as launchd child PID
 `85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 `lsof` resolves its text executable to
@@ -372,9 +381,9 @@ Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, `c101fe6a43`,
 `699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`,
 `4fc53b860f`, `8bcd11f4b6`, `ad59a60926`, `a20074de26`, `2435348289`, and
-`f89f55868c`, `f40877d4ab`, `526218a972`, `bb0cf408b4`, and `a8ce563373` are
-newer than that running bundle. The first passes all nine focused Session tests,
-including duplicate viewport
+`f89f55868c`, `f40877d4ab`, `526218a972`, `bb0cf408b4`, `a8ce563373`, and
+`e101b63e43` are newer than that running bundle. The first passes all nine
+focused Session tests, including duplicate viewport
 replacement without reordering or membership loss. The second makes Project
 ready terminal-first, prevents New Window and startup fallback paths from
 covering Dez's actionable launch surface with an unsolicited blank editor, and
@@ -590,7 +599,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `a8ce563373` or
+visual evidence: the exact bundle must first be rebuilt from `e101b63e43` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -605,7 +614,7 @@ predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, `c101fe6a43`,
 `699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`,
 `4fc53b860f`, `8bcd11f4b6`, `ad59a60926`, `a20074de26`, `2435348289`,
-`f89f55868c`, `f40877d4ab`, `526218a972`, `bb0cf408b4`, and `a8ce563373`. A
-rebuild/re-audit and an unlocked
+`f89f55868c`, `f40877d4ab`, `526218a972`, `bb0cf408b4`, `a8ce563373`, and
+`e101b63e43`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.

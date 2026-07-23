@@ -288,8 +288,11 @@ code, all launch gates pass, and known limitations are documented.
       recomputation and tab closure, and stop at 128 paths with visible
       feedback. Review Briefs label them Selected path and suppress the
       duplicate Open file projection. Focused model tests are authored;
-      formatting, diff, and identity checks pass. Compiled interaction and
-      restart proof remain in the consolidated gate.
+      formatting, diff, and identity checks pass. Commit `e101b63e43` adds an
+      additive Workspace database column, saves only explicit selections, and
+      rehydrates them with current Host classification. A focused database
+      round-trip test is authored; compiled interaction and restart proof
+      remain in the consolidated gate.
 - [x] 2026-07-22: Make Session Rail review actions preserve owner context.
       Pointer and context-menu actions first activate the existing terminal or
       agent owner, then open the generated Markdown brief in an ordinary
@@ -883,8 +886,10 @@ code, all launch gates pass, and known limitations are documented.
       `a8ce563373` keeps the selected path in the Workspace-owned EvidenceSet
       after its tab closes, distinguishes user selection from passive open
       surfaces, exposes add/remove/clear commands plus file-tab actions, and
-      projects one Selected path row into Review Briefs. Formatting, diff, and
-      identity checks pass; compiled and restart proof remain deferred.
+      projects one Selected path row into Review Briefs. Commit `e101b63e43`
+      persists only those selections through the normal Workspace database and
+      restores them without persisting passive evidence. Formatting, diff, and
+      identity checks pass; compiled restart proof remains deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

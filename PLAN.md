@@ -219,7 +219,9 @@ restoration; opening or closing a viewport does not change durable ownership.
       256-record cap, and truncation. Explicit add/remove/clear actions now
       preserve selected paths after their tabs close, and Review Briefs prefer
       the explicit selected-path label over a duplicate passive open-file row.
-      Consolidated restore/runtime proof remains.
+      The normal Workspace database now serializes only those explicit paths
+      and rehydrates them with current Host classification on restore.
+      Consolidated compiled restart/runtime proof remains.
 - [ ] Ensure generic tool, settings, search, Git, and conversation surfaces do
       not attach roots merely by existing.
 - [ ] Scope file tree, search, Git, diagnostics, tasks, debugger, terminals,
@@ -1099,3 +1101,10 @@ Notes decision:
   path in Review Briefs without a duplicate Open file row. Focused model tests
   are authored; formatting, diff, and identity checks pass. No bundle was
   built or launched.
+- 2026-07-23: Made explicit Workspace review evidence restart-durable in
+  `e101b63e43`. A new additive Workspace database column stores only selected
+  paths; passive roots, open tabs, and terminal observations still recompute
+  from their owners. Add/remove/clear schedules the established Workspace save,
+  and restore rehydrates selections with the current Host classification. A
+  focused database round-trip test is authored; formatting, diff, and identity
+  checks pass. No bundle was built or launched.
