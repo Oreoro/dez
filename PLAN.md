@@ -1809,3 +1809,11 @@ Notes decision:
   Command Palette. Official Zed retains its compatibility behavior. Focused
   assertions, formatting, locked offline metadata, identity, and diff checks
   pass; compilation and rendered upgrade proof remain deferred.
+- 2026-07-23: Recorded the complete Workspace surface model and kept critical
+  Workspace controls discoverable in `86775eb7bc`. Fork Notes now specifies
+  where each everyday action lands and how Zed's editor, language, search,
+  diagnostics, Git, debug, terminal, and Agent capabilities share one
+  Workspace Project. The active Workspace's options control remains visible
+  with an explicit tooltip; inactive rows retain the quieter hover treatment.
+  Formatting and static checks pass; compilation and rendered narrow-width
+  proof remain deferred.

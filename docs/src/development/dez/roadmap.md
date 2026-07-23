@@ -1546,6 +1546,13 @@ code, all launch gates pass, and known limitations are documented.
       source assertions, static guards, formatting, locked offline metadata,
       and diff checks pass; compilation and rendered upgrade proof remain
       deferred.
+- [x] 2026-07-23: Specify the everyday Workspace routing contract. Commit
+      `86775eb7bc` documents how editor and IDE capabilities share one
+      Workspace Project, preserves the active Workspace's options control
+      without requiring hover discovery, and gives that control an explicit
+      tooltip. Inactive Workspace rows remain visually quiet. Focused source
+      assertions and the static identity guard cover the affordance;
+      compilation and rendered rail-width proof remain deferred.
 - [x] 2026-07-23: Confirm permanent Agent Session deletion. Commit
       `9615b513d4` routes both the archived-row trash control and keyboard
       remove action through one critical prompt. The prompt names the selected

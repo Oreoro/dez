@@ -1115,7 +1115,9 @@ the later running-app reports, the source advanced through:
   Host-backed records to main-area attachment, and prevents stale metadata from
   shadowing live center or Host Sessions; plus `d1f5b2a15a`, which disables
   retired Agent-terminal auto-restoration and its command-palette action in Dez
-  while preserving official Zed compatibility.
+  while preserving official Zed compatibility; and
+- `86775eb7bc`, which records the everyday Workspace/IDE routing model and
+  keeps the active Workspace options action visible and explicitly labeled.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
