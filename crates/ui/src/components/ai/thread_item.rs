@@ -82,6 +82,8 @@ pub struct ThreadItem {
     status: AgentThreadStatus,
     selected: bool,
     focused: bool,
+    position_in_set: Option<usize>,
+    set_size: Option<usize>,
     hovered: bool,
     labels_visible: bool,
     rounded: bool,
@@ -128,6 +130,8 @@ impl ThreadItem {
             status: AgentThreadStatus::default(),
             selected: false,
             focused: false,
+            position_in_set: None,
+            set_size: None,
             hovered: false,
             labels_visible: true,
             rounded: false,
@@ -180,6 +184,21 @@ impl ThreadItem {
 
     pub fn icon_visible(mut self, visible: bool) -> Self {
         self.icon_visible = visible;
+        self
+    }
+
+    /// Reports this item's one-based position within its containing collection.
+    ///
+    /// Pair this with [`Self::set_size`] when a virtualized or composite list
+    /// cannot rely on accessibility-tree order alone.
+    pub fn position_in_set(mut self, position: usize) -> Self {
+        self.position_in_set = Some(position);
+        self
+    }
+
+    /// Reports the total number of items in this item's containing collection.
+    pub fn set_size(mut self, size: usize) -> Self {
+        self.set_size = Some(size);
         self
     }
 
@@ -682,6 +701,10 @@ impl RenderOnce for ThreadItem {
             .role(gpui::Role::ListItem)
             .aria_label(accessibility_label)
             .aria_selected(self.selected)
+            .when_some(self.position_in_set, |this, position| {
+                this.aria_position_in_set(position)
+            })
+            .when_some(self.set_size, |this, size| this.aria_size_of_set(size))
             .cursor_pointer()
             .group("thread-item")
             .relative()

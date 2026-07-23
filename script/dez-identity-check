@@ -629,11 +629,14 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'menu\.when\(is_active.*?submenu\("Canvas Layout".*?"Full".*?"Agent Control".*?"Focus Editor".*?"Code, Run, Observe".*?"Review".*?"Debug".*?"Cycle Layout".*?"Save Layout As…".*?"Manage Saved Layouts…".*?"Restore Previous Layout"' \
     'the active Workspace Options menu can lose its curated Canvas workflow controls'
 require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
-    'fn session_switcher_title.*?"Thread Switcher".*?"Switch Sessions".*?fn session_switcher_count.*?"1 recent session".*?"\{count\} recent sessions".*?id\("session-switcher"\).*?Role::Dialog.*?aria_label\(title\).*?Release shortcut to open.*?Choose a session' \
+    'fn session_switcher_title.*?"Thread Switcher".*?"Switch Sessions".*?fn session_switcher_count.*?"1 recent session".*?"\{count\} recent sessions".*?fn session_switcher_description.*?Continue the shortcut to move through recent sessions.*?Repeat the switch-session command to move through recent sessions.*?id\("session-switcher"\).*?Role::Dialog.*?aria_label\(title\).*?aria_description\(accessibility_description\)' \
     'the Dez Session Switcher can regress to an anonymous fixed-width Thread list without interaction guidance'
 require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
-    'fn session_switcher_entry_type_visible.*?app_name == "Zed".*?id\("thread-switcher-list"\).*?Role::List.*?aria_label\("Recent sessions"\).*?actor_label\(entry\.session_type_label\(paths::APP_NAME\)\).*?actor_label_visible\(session_switcher_entry_type_visible\(paths::APP_NAME\)\).*?selected\(ix == selected_index\).*?focused\(ix == selected_index\)' \
+    'fn session_switcher_entry_type_visible.*?app_name == "Zed".*?id\("thread-switcher-list"\).*?Role::List.*?aria_label\("Recent sessions"\).*?actor_label\(entry\.session_type_label\(paths::APP_NAME\)\).*?actor_label_visible\(session_switcher_entry_type_visible\(paths::APP_NAME\)\).*?selected\(ix == selected_index\).*?focused\(ix == selected_index\).*?position_in_set\(ix \+ 1\).*?set_size\(set_size\)' \
     'the Session Switcher can regress to repeated visible type labels or lose its accessible list selection'
+require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
+    'position_in_set: Option<usize>.*?set_size: Option<usize>.*?pub fn position_in_set.*?pub fn set_size.*?aria_position_in_set\(position\).*?aria_size_of_set\(size\)' \
+    'mixed Session collections can regress to omitting accessible row position and total count'
 reject_pattern crates/sidebar/src/thread_switcher.rs \
     '\.on_hover' \
     'merely hovering a Session Switcher row can preview and activate unrelated work'
@@ -740,7 +743,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\([[:space:]]*"agent-sidebar-options-menu".*?if labels_visible \{ "Agent Tools" \} else \{ "" \}.*?IconName::Settings.*?aria_label\("Agent Tools and Settings"\).*?header\("Agent Context"\).*?"Hide Session Rail"' \
     'the Session Rail footer can regress to a Robot icon that does not open Agent'
 require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
-    'fn session_switcher_title.*?app_name == "Zed".*?"Thread Switcher".*?"Switch Sessions".*?fn session_switcher_count.*?"1 recent session".*?"\{count\} recent sessions".*?fn session_switcher_entry_type_label.*?"Thread".*?"Terminal".*?"Agent Session".*?"Terminal Session".*?viewport_size\(\)\.width \* 0\.9.*?Role::Dialog.*?aria_label\(title\).*?"session-switcher-header".*?actor_label\(entry\.session_type_label\(paths::APP_NAME\)\).*?"Release shortcut to open".*?"Choose a session".*?KeyBinding::for_action_in.*?menu::Confirm.*?KeyBinding::for_action_in.*?menu::Cancel' \
+    'fn session_switcher_title.*?app_name == "Zed".*?"Thread Switcher".*?"Switch Sessions".*?fn session_switcher_count.*?"1 recent session".*?"\{count\} recent sessions".*?fn session_switcher_entry_type_label.*?"Thread".*?"Terminal".*?"Agent Session".*?"Terminal Session".*?fn session_switcher_help.*?"Continue to cycle · release to open".*?"Repeat to cycle · Enter to open".*?viewport_size\(\)\.width \* 0\.9.*?Role::Dialog.*?aria_label\(title\).*?aria_description\(accessibility_description\).*?"session-switcher-header".*?actor_label\(entry\.session_type_label\(paths::APP_NAME\)\).*?role\(gpui::Role::Status\).*?aria_label\(help\).*?KeyBinding::for_action_in.*?menu::Confirm.*?KeyBinding::for_action_in.*?menu::Cancel' \
     'the keyboard session switcher can regress to an unbounded, unnamed row stack without interaction guidance'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn switcher_selection_for_active_entry.*?ActiveEntry::Thread.*?session_id.*?ThreadSwitcherEntry::Thread.*?switcher_entry\.selection\(\).*?ActiveEntry::Terminal.*?ThreadSwitcherEntry::Terminal.*?terminal_id.*?switcher_entry\.selection\(\).*?let original_selection = self\.switcher_selection_for_active_entry.*?ThreadSwitcherEvent::Dismissed.*?preview_switcher_selection\(selection' \

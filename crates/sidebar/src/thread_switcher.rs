@@ -245,6 +245,22 @@ fn session_switcher_entry_type_visible(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn session_switcher_description(release_to_open: bool) -> &'static str {
+    if release_to_open {
+        "Continue the shortcut to move through recent sessions. Release it to open the selected session, or press Escape to return."
+    } else {
+        "Repeat the switch-session command to move through recent sessions. Press Enter to open the selected session, or Escape to return."
+    }
+}
+
+fn session_switcher_help(release_to_open: bool) -> &'static str {
+    if release_to_open {
+        "Continue to cycle · release to open"
+    } else {
+        "Repeat to cycle · Enter to open"
+    }
+}
+
 pub(super) enum ThreadSwitcherEvent {
     Preview(ThreadSwitcherSelection),
     Confirmed(ThreadSwitcherSelection),
@@ -413,6 +429,9 @@ impl Render for ThreadSwitcher {
         let title = session_switcher_title(paths::APP_NAME);
         let entry_count = session_switcher_count(self.entries.len());
         let release_to_open = self.init_modifiers.is_some();
+        let accessibility_description = session_switcher_description(release_to_open);
+        let help = session_switcher_help(release_to_open);
+        let set_size = self.entries.len();
         let switcher_width = (window.viewport_size().width * 0.9).min(px(440.));
         let focus_handle = self.focus_handle.clone();
         let (surface_padding, row_gap) = match design_system.density {
@@ -427,6 +446,7 @@ impl Render for ThreadSwitcher {
             .track_focus(&self.focus_handle)
             .role(gpui::Role::Dialog)
             .aria_label(title)
+            .aria_description(accessibility_description)
             .p(surface_padding)
             .w(switcher_width)
             .elevation_3(cx)
@@ -499,6 +519,8 @@ impl Render for ThreadSwitcher {
                         })
                         .selected(ix == selected_index)
                         .focused(ix == selected_index)
+                        .position_in_set(ix + 1)
+                        .set_size(set_size)
                         .base_bg(cx.theme().colors().elevated_surface_background)
                         .on_click(cx.listener(
                             move |this, _event: &gpui::ClickEvent, _window, cx| {
@@ -512,19 +534,13 @@ impl Render for ThreadSwitcher {
             .child(
                 h_flex()
                     .id("session-switcher-help")
+                    .role(gpui::Role::Status)
+                    .aria_label(help)
                     .w_full()
                     .justify_between()
                     .px_1p5()
                     .pt_1p5()
-                    .child(
-                        Label::new(if release_to_open {
-                            "Release shortcut to open"
-                        } else {
-                            "Choose a session"
-                        })
-                        .size(LabelSize::Small)
-                        .color(Color::Muted),
-                    )
+                    .child(Label::new(help).size(LabelSize::Small).color(Color::Muted))
                     .child(
                         h_flex()
                             .gap_1()
@@ -571,5 +587,21 @@ mod product_copy_tests {
         assert_eq!(session_switcher_entry_type_label("Zed", false), "Thread");
         assert!(!session_switcher_entry_type_visible("Dez"));
         assert!(session_switcher_entry_type_visible("Zed"));
+        assert_eq!(
+            session_switcher_description(true),
+            "Continue the shortcut to move through recent sessions. Release it to open the selected session, or press Escape to return."
+        );
+        assert_eq!(
+            session_switcher_description(false),
+            "Repeat the switch-session command to move through recent sessions. Press Enter to open the selected session, or Escape to return."
+        );
+        assert_eq!(
+            session_switcher_help(true),
+            "Continue to cycle · release to open"
+        );
+        assert_eq!(
+            session_switcher_help(false),
+            "Repeat to cycle · Enter to open"
+        );
     }
 }
