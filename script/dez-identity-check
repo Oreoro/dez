@@ -476,6 +476,9 @@ require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
     'fn session_switcher_title.*?"Thread Switcher".*?"Switch Sessions".*?fn session_switcher_count.*?"1 recent session".*?"\{count\} recent sessions".*?id\("session-switcher"\).*?Role::Dialog.*?aria_label\(title\).*?Release shortcut to open.*?Choose a session' \
     'the Dez Session Switcher can regress to an anonymous fixed-width Thread list without interaction guidance'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn switcher_selection_for_active_entry.*?ThreadSwitcherEntry::Thread.*?entry.metadata.thread_id.*?ThreadSwitcherEntry::Terminal.*?entry.metadata.terminal_id.*?let original_selection = self.switcher_selection_for_active_entry.*?ThreadSwitcherEvent::Dismissed.*?preview_switcher_selection\(selection' \
+    'cancelling Session Switcher preview can regress to restoring terminals through the retired Agent-terminal path'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn stored_terminal_source.*?app_name == "Zed".*?StoredTerminalSource::HostSession\(session_id\).*?has_live_agent_terminal.*?None.*?stored_terminal_source\(.*?APP_NAME.*?live_terminal_runtime\.contains_key.*?host_snapshot\.map.*?seen_terminal_ids\.contains.*?let Some\(entry\) = make_terminal_entry.*?seen_terminal_ids\.insert' \
     'stale Agent-terminal metadata can regress to appearing as a resumable Dez Session or shadowing a real center/Host terminal'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
@@ -541,6 +544,9 @@ require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn switcher_selection_for_active_entry.*?ActiveEntry::Thread.*?session_id.*?ThreadSwitcherEntry::Thread.*?switcher_entry\.selection\(\).*?ActiveEntry::Terminal.*?ThreadSwitcherEntry::Terminal.*?terminal_id.*?switcher_entry\.selection\(\).*?let original_selection = self\.switcher_selection_for_active_entry.*?ThreadSwitcherEvent::Dismissed.*?preview_switcher_selection\(selection' \
     'cancelling a session-switcher preview can regress to restoring terminals through the wrong ownership surface'
+require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
+    'test_switcher_cancel_restore_keeps_workspace_terminal_source.*?add_workspace_shell.*?switcher_selection_for_active_entry.*?TerminalEntrySource::WorkspaceItem\(item\).*?item\.entity_id\(\), original_terminal\.entity_id\(\)' \
+    'the session-switcher cancel contract lacks focused center-terminal source coverage'
 reject_pattern crates/workspace/src/pane.rs \
     '"(Project ready|Project tools unavailable|Project navigation did not attach to this pane\.)"' \
     'the Dez center surface mixes Project terminology into the Workspace hierarchy'

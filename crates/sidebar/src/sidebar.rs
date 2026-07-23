@@ -9336,6 +9336,37 @@ impl Sidebar {
         entries
     }
 
+    fn switcher_selection_for_active_entry(
+        &self,
+        entries: &[ThreadSwitcherEntry],
+    ) -> Option<ThreadSwitcherSelection> {
+        let active_entry = self.active_entry.as_ref()?;
+        entries
+            .iter()
+            .find_map(|switcher_entry| match (active_entry, switcher_entry) {
+                (
+                    ActiveEntry::Thread {
+                        thread_id,
+                        session_id,
+                        ..
+                    },
+                    ThreadSwitcherEntry::Thread(entry),
+                ) if entry.metadata.thread_id == *thread_id
+                    || session_id
+                        .as_ref()
+                        .zip(entry.metadata.session_id.as_ref())
+                        .is_some_and(|(active, candidate)| active == candidate) =>
+                {
+                    Some(switcher_entry.selection())
+                }
+                (
+                    ActiveEntry::Terminal { terminal_id, .. },
+                    ThreadSwitcherEntry::Terminal(entry),
+                ) if entry.metadata.terminal_id == *terminal_id => Some(switcher_entry.selection()),
+                _ => None,
+            })
+    }
+
     fn dismiss_thread_switcher(&mut self, cx: &mut Context<Self>) {
         self.thread_switcher = None;
         self._thread_switcher_subscriptions.clear();
@@ -9498,26 +9529,20 @@ impl Sidebar {
 
         let weak_multi_workspace = self.multi_workspace.clone();
 
-        // Snapshot the active entry (thread or terminal) so dismissal can
-        // restore it.
-        let original_active_entry = self.active_entry.clone();
-        let original_metadata = match &original_active_entry {
-            Some(ActiveEntry::Thread { thread_id, .. }) => {
-                entries.iter().find_map(|entry| match entry {
-                    ThreadSwitcherEntry::Thread(entry)
-                        if *thread_id == entry.metadata.thread_id =>
-                    {
-                        Some(entry.metadata.clone())
-                    }
-                    _ => None,
-                })
-            }
-            _ => None,
-        };
+        // Preserve the exact source as well as identity. A center terminal,
+        // Host Session, and retained compatibility terminal can share the same
+        // row shape but require different restoration paths when a preview is
+        // cancelled.
+        let original_selection = self.switcher_selection_for_active_entry(&entries);
         let original_workspace = self
-            .multi_workspace
-            .upgrade()
-            .map(|mw| mw.read(cx).workspace().clone());
+            .active_entry
+            .as_ref()
+            .map(|entry| entry.workspace().clone())
+            .or_else(|| {
+                self.multi_workspace
+                    .upgrade()
+                    .map(|mw| mw.read(cx).workspace().clone())
+            });
 
         let thread_switcher = cx.new(|cx| ThreadSwitcher::new(entries, select_last, window, cx));
 
@@ -9535,53 +9560,14 @@ impl Sidebar {
                     this.confirm_switcher_selection(selection, window, cx);
                 }
                 ThreadSwitcherEvent::Dismissed => {
-                    if let Some(mw) = weak_multi_workspace.upgrade() {
+                    if let Some(selection) = &original_selection {
+                        this.preview_switcher_selection(selection, window, cx);
+                    } else if let Some(mw) = weak_multi_workspace.upgrade() {
                         if let Some(original_ws) = &original_workspace {
                             mw.update(cx, |mw, cx| {
                                 mw.activate(original_ws.clone(), None, window, cx);
                             });
                         }
-                    }
-                    match &original_active_entry {
-                        Some(ActiveEntry::Thread { .. }) => {
-                            if let (Some(metadata), Some(original_ws)) =
-                                (&original_metadata, &original_workspace)
-                            {
-                                this.active_entry = Some(ActiveEntry::Thread {
-                                    thread_id: metadata.thread_id,
-                                    session_id: metadata.session_id.clone(),
-                                    workspace: original_ws.clone(),
-                                });
-                                this.update_entries(cx);
-                                Self::load_agent_thread_in_workspace(
-                                    original_ws,
-                                    metadata,
-                                    false,
-                                    window,
-                                    cx,
-                                );
-                            }
-                        }
-                        Some(ActiveEntry::Terminal {
-                            terminal_id,
-                            workspace,
-                        }) => {
-                            let terminal_id = *terminal_id;
-                            let workspace = workspace.clone();
-                            this.active_entry = Some(ActiveEntry::Terminal {
-                                terminal_id,
-                                workspace: workspace.clone(),
-                            });
-                            this.update_entries(cx);
-                            workspace.update(cx, |workspace, cx| {
-                                if let Some(panel) = workspace.panel::<AgentPanel>(cx) {
-                                    panel.update(cx, |panel, cx| {
-                                        panel.activate_terminal(terminal_id, false, window, cx);
-                                    });
-                                }
-                            });
-                        }
-                        None => {}
                     }
                     this.dismiss_thread_switcher(cx);
                 }
