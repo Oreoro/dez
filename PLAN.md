@@ -1785,3 +1785,19 @@ Notes decision:
   provides a full-width **Start New Agent Session** action. Product-copy,
   search-binding, and empty-state assertions plus static guards pass;
   compilation and rendered search/focus proof remain deferred.
+- 2026-07-23: Removed the last scoped terminal-creation route into the inherited
+  Agent panel in `d1b2b640de`. A Workspace's visible Session Rail terminal
+  action now activates that Workspace and dispatches `NewCenterTerminal`,
+  matching the welcome, empty Workspace, menu, and shortcut behavior. The
+  action therefore creates a normal main-work-area terminal Surface instead of
+  an Agent terminal thread. Formatting, locked offline metadata, identity, and
+  diff checks pass; compilation and rendered multi-Workspace placement proof
+  remain deferred.
+- 2026-07-23: Closed the corresponding Agent-side routes in `263553d036`.
+  Terminal is no longer offered as an Agent type in Dez, a remembered
+  terminal-thread selection cannot replace **New Agent Session**, and
+  Agent-focused compatibility actions dispatch `NewCenterTerminal` instead.
+  Existing restoration code and official Zed behavior remain intact. Focused
+  source assertions, formatting, locked offline metadata, identity, and diff
+  checks pass; compilation and rendered selector/shortcut proof remain
+  deferred.

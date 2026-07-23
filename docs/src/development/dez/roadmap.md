@@ -1519,6 +1519,23 @@ code, all launch gates pass, and known limitations are documented.
       empty history offers **Start New Agent Session** instead. Focused
       product-copy assertions, formatting, locked offline metadata, and static
       guards pass; compilation and rendered search/focus proof remain deferred.
+- [x] 2026-07-23: Route scoped Session Rail terminals to the main work area.
+      Commit `d1b2b640de` activates the selected Workspace and dispatches
+      `NewCenterTerminal` instead of calling the inherited Agent-panel
+      terminal-thread constructor. The visible Workspace action now creates the
+      same ordinary terminal Surface as every other unqualified New Terminal
+      path. Static routing guards, formatting, locked offline metadata, and
+      diff checks pass; compilation and rendered multi-Workspace placement
+      proof remain deferred.
+- [x] 2026-07-23: Remove terminal creation from the Dez Agent surface. Commit
+      `263553d036` hides Terminal from the Agent selector, prevents a remembered
+      terminal-thread kind from replacing **New Agent Session**, and routes
+      both Workspace- and Agent-focused `NewTerminalThread` compatibility
+      actions to `NewCenterTerminal`. Existing restoration code remains
+      available for compatibility data, and official Zed behavior is
+      unchanged. Focused source assertions, static guards, formatting, locked
+      offline metadata, and diff checks pass; compilation and rendered
+      selector/shortcut proof remain deferred.
 - [x] 2026-07-23: Confirm permanent Agent Session deletion. Commit
       `9615b513d4` routes both the archived-row trash control and keyboard
       remove action through one critical prompt. The prompt names the selected

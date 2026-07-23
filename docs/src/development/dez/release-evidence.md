@@ -1103,7 +1103,14 @@ the later running-app reports, the source advanced through:
 - `d490735631`, which prevents the removed Collaboration Panel from entering
   Dez Workspace Tools while preserving official Zed compatibility; and
 - `5cf88897ba`, which connects Agent History's visible search to the real query,
-  adds an explicit clear path, and distinguishes no results from empty history.
+  adds an explicit clear path, and distinguishes no results from empty history;
+  and
+- `d1b2b640de`, which routes Workspace-scoped Session Rail terminal creation to
+  `NewCenterTerminal` in the selected Workspace instead of the inherited Agent
+  terminal-thread path; and
+- `263553d036`, which removes terminal creation from the Dez Agent selector and
+  routes Agent-focused terminal compatibility actions to the same main-area
+  terminal command while preserving official Zed behavior.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
