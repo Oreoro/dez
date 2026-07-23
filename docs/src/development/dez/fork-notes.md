@@ -456,3 +456,7 @@ defer it.
   from the same terminal source/runtime policy. A compatibility action name may
   remain internal, but Dez must present its mixed Session Rail scope truthfully.
   No shortcut may bypass a confirmation required by the visible control.
+- **2026-07-23: Capability gates precede product copy.** Renaming an inherited
+  setting or action does not make it a Dez feature. A control is visible only
+  when the public Dez path consumes it and the claimed effect is implemented.
+  Compatibility storage may remain hidden for migrations and upstream sync.

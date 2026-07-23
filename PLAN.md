@@ -2096,3 +2096,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   instead of the removed Terminal-Thread-in-Agent-Panel flow. Pure assertions,
   static guards, formatting, Bash syntax, identity, locked offline metadata,
   and diff checks pass; no build, test binary, or visual launch was performed.
+- 2026-07-23: Removed a polished-looking but dead terminal control in
+  `222c658123`. Dez no longer exposes the inherited
+  `agent.terminal_init_command` setting because Main Work Area terminals do not
+  consume the Agent Panel's Terminal Thread startup path. The stored key and
+  official-Zed setting remain intact for migration and upstream synchronization.
+  A pure visibility assertion and identity guard prevent the unavailable
+  control from returning. Formatting, Bash syntax, identity, locked offline
+  metadata, and diff checks pass; no build, test binary, or visual launch was
+  performed.

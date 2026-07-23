@@ -1980,8 +1980,23 @@ code, all launch gates pass, and known limitations are documented.
   compatibility command is presented as **Session Rail: Remove Selected
   Session**. The public terminal guide now teaches the same first-class Surface
   and supervisory-projection model implemented by Dez.
+- **2026-07-23:** Do not disguise dead compatibility UI with better nouns.
+  Commit `222c658123` hides the inherited Agent-Panel terminal startup setting
+  in Dez because the public Main Work Area terminal path does not consume it.
+  The stored key and official-Zed control remain for migration and upstream
+  compatibility. The release rule is capability first, copy second.
 
 ## Verification {#verification}
+
+Completed for the dead terminal-setting removal slice:
+
+- `cargo fmt --all -- --check`;
+- Bash syntax and Dez identity checks, including the Zed-only visibility gate;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- a pure visibility assertion authored for Dez and official Zed;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
 
 Completed for the lifecycle-path and terminal-guide slice:
 
