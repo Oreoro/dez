@@ -2300,6 +2300,7 @@ impl Item for TerminalView {
     fn tab_content(&self, params: TabContentParams, window: &Window, cx: &App) -> AnyElement {
         let title = self.tab_content_text(params.detail.unwrap_or_default(), cx);
         let overlay = self.tab_content_overlay(window, cx);
+        let terminal_entity_id = self.terminal().entity_id();
         let terminal = self.terminal().read(cx);
         let status = terminal_tab_status(
             self.session_unavailable,
@@ -2322,6 +2323,7 @@ impl Item for TerminalView {
                 |this| {
                     this.child(
                         h_flex()
+                            .id(("terminal-tab-status", terminal_entity_id))
                             .flex_none()
                             .gap_1()
                             .role(gpui::Role::Label)
