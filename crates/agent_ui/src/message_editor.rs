@@ -3324,7 +3324,7 @@ mod tests {
                     format!("five.txt b{slash}"),
                     "Files & Directories".into(),
                     "Symbols".into(),
-                    "Threads".into(),
+                    "Agent Sessions".into(),
                     "Fetch".into()
                 ]
             );
