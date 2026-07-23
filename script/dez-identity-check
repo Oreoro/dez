@@ -112,6 +112,9 @@ require_pattern crates/settings_ui/src/settings_ui.rs \
 require_pattern crates/workspace/src/welcome.rs \
     'APP_NAME == "Zed" && !self.fallback_to_recent_projects' \
     'the Dez welcome surface can route back into upstream onboarding'
+require_pattern crates/onboarding/src/basics_page.rs \
+    'Button::new\("onboarding-copy-codex-hook", "Copy Codex Hook"\)' \
+    'Dez onboarding can regress to explaining structured evidence without a deliberate setup path'
 reject_pattern crates/workspace/src/welcome.rs \
     'IconName::ZedAssistant' \
     'the Dez getting-started surface still renders the Zed Assistant glyph'

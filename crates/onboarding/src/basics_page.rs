@@ -3,7 +3,7 @@ use std::sync::Arc;
 use client::TelemetrySettings;
 use collections::HashMap;
 use fs::Fs;
-use gpui::{Action, App, IntoElement};
+use gpui::{Action, App, ClipboardItem, IntoElement};
 use paths::APP_NAME;
 use project::agent_server_store::AllAgentServersSettings;
 use project::project_settings::ProjectSettings;
@@ -33,6 +33,7 @@ const FAMILY_NAMES: [SharedString; 3] = [
     SharedString::new_static("Ayu"),
     SharedString::new_static("Gruvbox"),
 ];
+const CODEX_HOOK_SETUP: &str = include_str!("../../../assets/dez/codex-hooks.json");
 
 fn get_theme_family_themes(theme_name: &str) -> Option<(&'static str, &'static str)> {
     for i in 0..LIGHT_THEMES.len() {
@@ -262,6 +263,9 @@ fn render_dez_workflow_section(tab_index: &mut isize, cx: &mut App) -> impl Into
     ];
 
     *tab_index += 1;
+    let copy_hook_tab_index = *tab_index;
+    *tab_index += 1;
+    let new_terminal_tab_index = *tab_index;
     v_flex()
         .w_full()
         .gap_3()
@@ -320,24 +324,43 @@ fn render_dez_workflow_section(tab_index: &mut isize, cx: &mut App) -> impl Into
                 .justify_between()
                 .child(
                     Label::new(
-                        "Close hides a view. Detach keeps a Host-owned session. Terminate ends the process. Persistence depends on the connected Host.",
+                        "Close hides a view. Detach keeps a Host-owned session. Terminate ends the process. Persistence depends on the connected Host. Hooks are never installed automatically.",
                     )
                     .size(LabelSize::XSmall)
                     .color(Color::Muted),
                 )
                 .child(
-                    div().flex_shrink_0().child(
-                        Button::new("onboarding-new-terminal", "New Terminal")
-                            .tab_index(*tab_index)
-                            .style(ButtonStyle::Filled)
-                            .start_icon(Icon::new(IconName::Terminal).size(IconSize::Small))
-                            .on_click(|_, window, cx| {
-                                window.dispatch_action(
-                                    Box::new(NewCenterTerminal { local: false }),
-                                    cx,
-                                );
-                            }),
-                    ),
+                    h_flex()
+                        .flex_shrink_0()
+                        .flex_wrap()
+                        .gap_1()
+                        .child(
+                            Button::new("onboarding-copy-codex-hook", "Copy Codex Hook")
+                                .tab_index(copy_hook_tab_index)
+                                .style(ButtonStyle::Outlined)
+                                .start_icon(Icon::new(IconName::Copy).size(IconSize::Small))
+                                .aria_label("Copy Deliberate Codex Hook Setup")
+                                .tooltip(Tooltip::text(
+                                    "Copy the bundled setup; Dez does not install or modify Codex hooks",
+                                ))
+                                .on_click(|_, _window, cx| {
+                                    cx.write_to_clipboard(ClipboardItem::new_string(
+                                        CODEX_HOOK_SETUP.to_owned(),
+                                    ));
+                                }),
+                        )
+                        .child(
+                            Button::new("onboarding-new-terminal", "New Terminal")
+                                .tab_index(new_terminal_tab_index)
+                                .style(ButtonStyle::Filled)
+                                .start_icon(Icon::new(IconName::Terminal).size(IconSize::Small))
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(
+                                        Box::new(NewCenterTerminal { local: false }),
+                                        cx,
+                                    );
+                                }),
+                        ),
                 ),
         )
 }
