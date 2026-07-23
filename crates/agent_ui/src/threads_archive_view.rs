@@ -74,6 +74,39 @@ fn permanent_delete_prompt(app_name: &str, title: &str) -> (&'static str, String
     }
 }
 
+fn agent_history_empty_copy(
+    app_name: &str,
+    has_query: bool,
+) -> (&'static str, &'static str, &'static str) {
+    if has_query {
+        if app_name == "Zed" {
+            (
+                "No matching threads.",
+                "Try another search.",
+                "Clear Search",
+            )
+        } else {
+            (
+                "No matching Agent Sessions.",
+                "Try another search.",
+                "Clear Search",
+            )
+        }
+    } else if app_name == "Zed" {
+        (
+            "No threads yet.",
+            "Start an agent thread to see it here.",
+            "Start New Agent Thread",
+        )
+    } else {
+        (
+            "No Agent Sessions yet.",
+            "Start an Agent Session to see it here.",
+            "Start New Agent Session",
+        )
+    }
+}
+
 fn thread_archive_background(cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match DesignSystemSettings::get_global(cx).contrast {
@@ -475,7 +508,7 @@ impl ThreadsArchiveView {
             .cloned()
             .collect::<Vec<_>>();
 
-        let query = "";
+        let query = self.filter_editor.read(cx).text(cx).trim().to_owned();
         let today = Local::now().naive_local().date();
 
         let mut items = Vec::with_capacity(sessions.len() + 5);
@@ -1192,6 +1225,43 @@ impl ThreadsArchiveView {
                     ),
             )
     }
+
+    fn render_search(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let has_query = !self.filter_editor.read(cx).text(cx).trim().is_empty();
+
+        h_flex()
+            .id("agent-history-search")
+            .role(gpui::Role::Search)
+            .aria_label(agent_history_label(
+                paths::APP_NAME,
+                "Search threads",
+                "Search Agent Sessions",
+            ))
+            .flex_none()
+            .h(Tab::content_height(cx))
+            .px_1p5()
+            .gap_1()
+            .border_b_1()
+            .border_color(thread_archive_border(cx))
+            .child(
+                Icon::new(IconName::MagnifyingGlass)
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
+            )
+            .child(div().min_w_0().flex_1().child(self.filter_editor.clone()))
+            .when(has_query, |this| {
+                this.child(
+                    IconButton::new("clear-agent-history-search", IconName::Close)
+                        .size(ButtonSize::Medium)
+                        .icon_size(IconSize::Small)
+                        .aria_label("Clear Agent History Search")
+                        .tooltip(Tooltip::text("Clear Agent History Search"))
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.reset_filter_editor_text(window, cx);
+                        })),
+                )
+            })
+    }
 }
 
 pub fn format_history_entry_timestamp(entry_time: DateTime<Utc>) -> String {
@@ -1226,20 +1296,47 @@ impl Focusable for ThreadsArchiveView {
 impl Render for ThreadsArchiveView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let is_empty = self.items.is_empty();
+        let has_query = !self.filter_editor.read(cx).text(cx).trim().is_empty();
+        let has_history_entries = ThreadMetadataStore::global(cx)
+            .read(cx)
+            .entries()
+            .any(|thread| !thread.is_draft());
+        let (empty_title, empty_detail, empty_action) =
+            agent_history_empty_copy(paths::APP_NAME, has_query);
 
         let content = if is_empty {
             v_flex()
                 .flex_1()
-                .justify_center()
                 .items_center()
+                .pt_8()
+                .px_4()
                 .child(
-                    Label::new(agent_history_label(
-                        paths::APP_NAME,
-                        "No threads yet.",
-                        "No Agent Sessions yet.",
-                    ))
-                    .size(LabelSize::Small)
-                    .color(Color::Muted),
+                    v_flex()
+                        .w_full()
+                        .max_w(rems(24.))
+                        .gap_2()
+                        .child(Label::new(empty_title).size(LabelSize::Small))
+                        .child(
+                            Label::new(empty_detail)
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
+                        )
+                        .child(
+                            Button::new("agent-history-empty-action", empty_action)
+                                .full_width()
+                                .style(if has_query {
+                                    ButtonStyle::Subtle
+                                } else {
+                                    ButtonStyle::Filled
+                                })
+                                .on_click(cx.listener(move |this, _, window, cx| {
+                                    if has_query {
+                                        this.reset_filter_editor_text(window, cx);
+                                    } else {
+                                        cx.emit(ThreadsArchiveViewEvent::NewThread);
+                                    }
+                                })),
+                        ),
                 )
                 .into_any_element()
         } else {
@@ -1277,6 +1374,9 @@ impl Render for ThreadsArchiveView {
             .size_full()
             .bg(thread_archive_background(cx))
             .child(self.render_toolbar(cx))
+            .when(has_history_entries || has_query, |this| {
+                this.child(self.render_search(cx))
+            })
             .child(content)
     }
 }
@@ -1875,6 +1975,34 @@ mod tests {
                 "Delete thread?",
                 "This permanently deletes “Fix terminal crash” from thread history. This cannot be undone."
                     .to_owned(),
+            )
+        );
+    }
+
+    #[test]
+    fn agent_history_empty_copy_distinguishes_history_from_no_results() {
+        assert_eq!(
+            agent_history_empty_copy("Dez", false),
+            (
+                "No Agent Sessions yet.",
+                "Start an Agent Session to see it here.",
+                "Start New Agent Session",
+            )
+        );
+        assert_eq!(
+            agent_history_empty_copy("Dez", true),
+            (
+                "No matching Agent Sessions.",
+                "Try another search.",
+                "Clear Search",
+            )
+        );
+        assert_eq!(
+            agent_history_empty_copy("Zed", true),
+            (
+                "No matching threads.",
+                "Try another search.",
+                "Clear Search"
             )
         );
     }

@@ -286,6 +286,15 @@ require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
 require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
     'IconButton::new\("new-thread".*?aria_label\(agent_history_label.*?"Start New Agent Session".*?IconButton::new\("thread-import".*?aria_label\(agent_history_label.*?"Import Agent Sessions".*?IconButton::new\("filter-archived-only".*?aria_label\(filter_label\)' \
     'Agent History toolbar actions can regress to unnamed icon controls'
+reject_pattern crates/agent_ui/src/threads_archive_view.rs \
+    'let query = "";' \
+    'Agent History search is subscribed but its production query is hard-coded empty'
+require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
+    'filter_editor\.read\(cx\)\.text\(cx\)\.trim\(\)\.to_owned\(\).*?fn render_search.*?Role::Search.*?"Search Agent Sessions".*?clear-agent-history-search' \
+    'Agent History search can regress to an invisible or inert editor'
+require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
+    'fn agent_history_empty_copy.*?"No matching Agent Sessions\.".*?"Start New Agent Session".*?agent-history-empty-action.*?reset_filter_editor_text.*?ThreadsArchiveViewEvent::NewThread' \
+    'Agent History can regress to presenting search misses as an empty account history'
 require_multiline_pattern crates/agent_ui/src/thread_import.rs \
     'fn agent_import_copy.*?app_name == "Zed".*?"Import External Agent Threads".*?"Import External Agent Sessions".*?Agent History.*?fn importable_agent_record_count' \
     'the Agent History import flow can regress to exposing imported records as Threads in Dez'
@@ -421,6 +430,9 @@ require_multiline_pattern crates/settings_ui/src/page_data.rs \
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn collaboration_panel_section\(\) -> Vec<SettingsPageItem> \{.*?!dez_settings_page_visible\(paths::APP_NAME, "Collaboration"\).*?return Vec::new\(\);' \
     'the Panels page still exposes controls for the removed Dez Collaboration Panel'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'fn terminal_session_init_setting_copy.*?app_name == "Zed".*?"Terminal Thread Init Command".*?"Terminal Session Startup Command".*?terminal_session_init_setting_copy\(paths::APP_NAME\)' \
+    'Dez Settings can regress to presenting terminal-backed work as a Terminal Thread'
 require_pattern crates/sidebar/src/sidebar.rs \
     'session_overview_visible\(show_start_state\)' \
     'the empty Session Rail can regress to duplicating its creation action'
@@ -539,8 +551,8 @@ require_pattern crates/workspace/src/panel_pane.rs \
     '"ProjectPanel" => "Files"' \
     'the Dez file-tree Surface is not labeled Files'
 require_multiline_pattern crates/workspace/src/panel_pane.rs \
-    'if panel_key == "TerminalPanel".*?\(app_name == "Zed"\)\.then_some\(Self::Project\)' \
-    'Dez can regress to exposing the inherited Terminal Panel as a duplicate Workspace Tool surface'
+    'matches!\(panel_key, "TerminalPanel" \| "CollaborationPanel"\).*?\(app_name == "Zed"\)\.then_some\(Self::Project\)' \
+    'Dez can regress to exposing inherited Terminal or Collaboration panels as duplicate Workspace Tool surfaces'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'pub fn close_panel<T: Panel>\(&mut self.*?panel_item_for::<T>.*?ensure_tabbed_pane.*?mark_canvas_layout_custom.*?pane\.set_visible\(false.*?set_active_pane.*?serialize_workspace' \
     'panel close actions can regress to affecting legacy docks only and leave Workspace Tools visibly open'
