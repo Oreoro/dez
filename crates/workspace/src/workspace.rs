@@ -10475,7 +10475,7 @@ impl Workspace {
         }
 
         if title.is_empty() {
-            title = "empty project".to_string();
+            title = empty_workspace_window_title(paths::APP_NAME).to_string();
         }
 
         let active_project_path = self.active_item(cx).and_then(|item| item.project_path(cx));
@@ -13137,6 +13137,14 @@ impl Workspace {
                 });
             }
         }
+    }
+}
+
+fn empty_workspace_window_title(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "empty project"
+    } else {
+        "Empty Workspace"
     }
 }
 
@@ -16033,6 +16041,12 @@ mod tests {
     use settings::SettingsStore;
     use util::path;
     use util::rel_path::rel_path;
+
+    #[test]
+    fn empty_window_title_uses_outward_product_vocabulary() {
+        assert_eq!(empty_workspace_window_title("Zed"), "empty project");
+        assert_eq!(empty_workspace_window_title("Dez"), "Empty Workspace");
+    }
 
     #[test]
     fn test_worktree_matrix_uses_ultrawide_column_variant() {

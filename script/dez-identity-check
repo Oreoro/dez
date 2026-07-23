@@ -376,6 +376,12 @@ require_pattern crates/recent_projects/src/recent_projects.rs \
 require_pattern crates/recent_projects/src/recent_projects.rs \
     '"Search workspaces…"' \
     'the Dez recent-work search still asks for Projects'
+require_pattern crates/workspace/src/welcome.rs \
+    '\.aria_label\(self\.label\.clone\(\)\)' \
+    'the Dez welcome actions are not named for assistive technology'
+require_pattern crates/workspace/src/workspace.rs \
+    '"Empty Workspace"' \
+    'the empty Dez window title still uses Project vocabulary'
 require_pattern crates/recent_projects/src/recent_projects.rs \
     '"Open Workspace in This Window"' \
     'the Dez recent-work activation action still opens a Project'

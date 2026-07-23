@@ -1627,35 +1627,43 @@ fn subscribe_for_terminal_events(
             terminal.is_hosted(),
         )
     };
-    // Seed scope before the first PTY event so a newly opened terminal can
-    // produce an honest review brief even while it is idle.
-    workspace
-        .update(cx, |workspace, cx| {
-            workspace.set_terminal_working_directory_evidence(
-                initial_session_id,
-                previous_cwd.clone(),
-                cx,
-            );
-        })
-        .ok();
-    let workspace_id = workspace
-        .upgrade()
-        .and_then(|workspace| workspace.read(cx).database_id())
-        .map(i64::from);
-    if let Some(workspace_id) = workspace_id {
-        let session_id = terminal.read(cx).session_id();
-        if let Some(host) = LocalTerminalHost::try_global(cx) {
-            host.update(cx, |host, cx| {
-                host.associate_workspace(session_id, workspace_id, cx)
-            });
+    // TerminalView is constructed from inside a Workspace update. Seed scope
+    // and associate the Host on the next GPUI turn so we never try to lease
+    // that Workspace recursively while still preserving idle-terminal
+    // evidence before user interaction.
+    let initial_workspace = workspace.clone();
+    let initial_terminal = terminal.clone();
+    let initial_cwd = previous_cwd.clone();
+    cx.defer(move |cx| {
+        initial_workspace
+            .update(cx, |workspace, cx| {
+                workspace.set_terminal_working_directory_evidence(
+                    initial_session_id,
+                    initial_cwd,
+                    cx,
+                );
+            })
+            .ok();
+
+        let workspace_id = initial_workspace
+            .upgrade()
+            .and_then(|workspace| workspace.read(cx).database_id())
+            .map(i64::from);
+        if let Some(workspace_id) = workspace_id {
+            let session_id = initial_terminal.read(cx).session_id();
+            if let Some(host) = LocalTerminalHost::try_global(cx) {
+                host.update(cx, |host, cx| {
+                    host.associate_workspace(session_id, workspace_id, cx)
+                });
+            }
+            if is_hosted && let Some(connection) = TerminalHostConnection::try_global(cx) {
+                connection.associate_workspace(&initial_terminal, workspace_id, cx);
+            }
         }
-        if is_hosted && let Some(connection) = TerminalHostConnection::try_global(cx) {
-            connection.associate_workspace(terminal, workspace_id, cx);
+        if is_hosted {
+            reconcile_host_terminal_evidence(&initial_terminal, &initial_workspace, cx);
         }
-    }
-    if is_hosted {
-        reconcile_host_terminal_evidence(terminal, &workspace, cx);
-    }
+    });
     let event_workspace = workspace.clone();
     let terminal_events_subscription = cx.subscribe_in(
         terminal,

@@ -105,6 +105,7 @@ impl RenderOnce for SectionButton {
 
         ButtonLike::new(id)
             .tab_index(self.tab_index as isize)
+            .aria_label(self.label.clone())
             .full_width()
             .size(ButtonSize::Medium)
             .child(
