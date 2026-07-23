@@ -5,6 +5,7 @@ use gpui::{
     Anchor, AnyView, App, Context, Decorations, Entity, FocusHandle, Focusable, IntoElement,
     ParentElement, Render, Role, SharedString, Styled, Subscription, WeakEntity, Window,
 };
+use paths::APP_NAME;
 use settings::{SettingsContent, update_settings_file};
 use std::{any::TypeId, sync::Arc};
 use theme::CLIENT_SIDE_DECORATION_ROUNDING;
@@ -105,6 +106,14 @@ pub struct StatusBar {
     _observe_active_pane: Subscription,
 }
 
+fn status_bar_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Status bar"
+    } else {
+        "Workspace status and navigation"
+    }
+}
+
 impl Focusable for StatusBar {
     fn focus_handle(&self, _cx: &App) -> FocusHandle {
         self.focus_handle.clone()
@@ -126,7 +135,7 @@ impl Render for StatusBar {
             // steps through them, and arrow keys move between them once focus is
             // inside.
             .role(Role::Toolbar)
-            .aria_label("Status bar")
+            .aria_label(status_bar_label(APP_NAME))
             .tab_group()
             .on_key_down(
                 cx.listener(|status_bar, event: &gpui::KeyDownEvent, window, cx| {
@@ -182,6 +191,17 @@ impl Render for StatusBar {
             })
             .child(self.render_left_tools(&sidebar, cx))
             .child(self.render_right_tools(&sidebar, cx))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dez_status_bar_names_its_workspace_scope() {
+        assert_eq!(status_bar_label("Dez"), "Workspace status and navigation");
+        assert_eq!(status_bar_label("Zed"), "Status bar");
     }
 }
 
