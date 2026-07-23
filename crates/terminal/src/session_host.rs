@@ -410,6 +410,11 @@ pub struct TerminalSessionSnapshot {
     pub state: TerminalSessionState,
     pub title: Option<String>,
     pub working_directory: Option<PathBuf>,
+    /// Durable Workspace ownership when a hosted terminal has been attached to
+    /// a persisted Workspace. Older hosts omit this and clients fall back to
+    /// conservative path matching.
+    #[serde(default)]
+    pub workspace_id: Option<i64>,
     #[serde(default)]
     pub process_id: Option<u32>,
     #[serde(default)]
@@ -469,6 +474,8 @@ pub enum TerminalSessionCommand {
         session_id: TerminalSessionId,
         title: Option<String>,
         working_directory: Option<PathBuf>,
+        #[serde(default)]
+        workspace_id: Option<i64>,
     },
     UpdateAgent {
         session_id: TerminalSessionId,
@@ -541,6 +548,29 @@ mod tests {
             TerminalHostId::from_stable_key("local-installation-43"),
             host
         );
+    }
+
+    #[test]
+    fn older_session_snapshots_default_to_unknown_workspace_ownership() {
+        let snapshot = TerminalSessionSnapshot {
+            protocol_version: TERMINAL_SESSION_PROTOCOL_VERSION,
+            host_id: TerminalHostId::from_stable_key("compatibility-test"),
+            session_id: TerminalSessionId::new(),
+            state: TerminalSessionState::Detached,
+            title: None,
+            working_directory: Some(PathBuf::from("/repo")),
+            workspace_id: Some(42),
+            process_id: None,
+            agent: None,
+            dimensions: TerminalDimensions::DEFAULT,
+            earliest_replay_sequence: 0,
+            latest_replay_sequence: 0,
+        };
+        let mut serialized = serde_json::to_value(snapshot).unwrap();
+        serialized.as_object_mut().unwrap().remove("workspace_id");
+
+        let restored: TerminalSessionSnapshot = serde_json::from_value(serialized).unwrap();
+        assert_eq!(restored.workspace_id, None);
     }
 
     #[test]

@@ -93,6 +93,7 @@ impl InProcessTerminalHost {
             state: TerminalSessionState::Starting,
             title: None,
             working_directory,
+            workspace_id: None,
             process_id: None,
             agent: None,
             dimensions,
@@ -259,6 +260,18 @@ impl InProcessTerminalHost {
         session.snapshot.clone()
     }
 
+    pub fn set_workspace_id(
+        &mut self,
+        session_id: TerminalSessionId,
+        workspace_id: i64,
+    ) -> TerminalSessionSnapshot {
+        let Some(session) = self.sessions.get_mut(&session_id) else {
+            return self.missing_snapshot(session_id);
+        };
+        session.snapshot.workspace_id = Some(workspace_id);
+        session.snapshot.clone()
+    }
+
     pub fn set_process_id(
         &mut self,
         session_id: TerminalSessionId,
@@ -392,6 +405,7 @@ impl InProcessTerminalHost {
             state: TerminalSessionState::Missing,
             title: None,
             working_directory: None,
+            workspace_id: None,
             process_id: None,
             agent: None,
             dimensions: TerminalDimensions::DEFAULT,
@@ -494,6 +508,7 @@ mod tests {
         host.create(session_id, Some(std::path::PathBuf::from("/tmp/old")))?;
         host.set_title(session_id, Some("Codex review".to_owned()));
         host.set_working_directory(session_id, Some(std::path::PathBuf::from("/tmp/new")));
+        host.set_workspace_id(session_id, 42);
         host.set_process_id(session_id, Some(4242));
 
         let detached = host.detach(session_id);
@@ -503,6 +518,7 @@ mod tests {
             Some(std::path::Path::new("/tmp/new"))
         );
         assert_eq!(detached.process_id, Some(4242));
+        assert_eq!(detached.workspace_id, Some(42));
         assert_eq!(detached.state, TerminalSessionState::Detached);
         Ok(())
     }

@@ -804,7 +804,8 @@ fn handle_command(
             session_id,
             title,
             working_directory,
-        } => host.update_metadata(session_id, title, working_directory),
+            workspace_id,
+        } => host.update_metadata(session_id, title, working_directory, workspace_id),
         TerminalSessionCommand::UpdateAgent { session_id, update } => {
             host.update_agent(session_id, update)
         }
@@ -1031,10 +1032,14 @@ impl TerminalHostService {
         session_id: TerminalSessionId,
         title: Option<String>,
         working_directory: Option<PathBuf>,
+        workspace_id: Option<i64>,
     ) -> TerminalHostResponse {
         let mut model = self.lock_model();
         model.set_title(session_id, title);
         model.set_working_directory(session_id, working_directory);
+        if let Some(workspace_id) = workspace_id {
+            model.set_workspace_id(session_id, workspace_id);
+        }
         TerminalHostResponse::Snapshot {
             snapshot: model.snapshot(session_id),
         }

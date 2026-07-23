@@ -6,7 +6,7 @@ use crate::{Event, Terminal};
 
 use super::{
     InProcessTerminalHost, TERMINAL_SESSION_PROTOCOL_VERSION, TerminalAttachment, TerminalHostId,
-    TerminalSessionId, TerminalSessionRef, TerminalSessionSnapshot,
+    TerminalSessionId, TerminalSessionRef, TerminalSessionSnapshot, TerminalSessionState,
 };
 
 struct GlobalLocalTerminalHost(Entity<LocalTerminalHost>);
@@ -132,6 +132,18 @@ impl LocalTerminalHost {
 
     pub fn detach(&mut self, session_id: TerminalSessionId) -> TerminalSessionSnapshot {
         self.model.detach(session_id)
+    }
+
+    pub fn associate_workspace(
+        &mut self,
+        session_id: TerminalSessionId,
+        workspace_id: i64,
+        cx: &mut Context<Self>,
+    ) {
+        let snapshot = self.model.set_workspace_id(session_id, workspace_id);
+        if snapshot.state != TerminalSessionState::Missing {
+            cx.notify();
+        }
     }
 
     pub fn attach(

@@ -1143,6 +1143,12 @@ fn workspace_for_local_terminal_session(
     active_workspace: Option<&Entity<Workspace>>,
     cx: &App,
 ) -> Option<Entity<Workspace>> {
+    let durable_workspace_match = snapshot.workspace_id.and_then(|workspace_id| {
+        workspaces
+            .iter()
+            .find(|workspace| workspace.read(cx).database_id().map(i64::from) == Some(workspace_id))
+            .cloned()
+    });
     let best_path_match = snapshot.working_directory.as_ref().and_then(|cwd| {
         workspaces
             .iter()
@@ -1160,7 +1166,8 @@ fn workspace_for_local_terminal_session(
             .map(|(_, workspace)| workspace)
     });
 
-    best_path_match
+    durable_workspace_match
+        .or(best_path_match)
         .or_else(|| active_workspace.cloned())
         .or_else(|| workspaces.first().cloned())
 }

@@ -94,6 +94,62 @@ fn zero_session_rail_hides_inert_scope_and_search_controls() {
     );
 }
 
+#[gpui::test]
+async fn detached_host_session_prefers_durable_workspace_identity_over_shared_cwd(
+    cx: &mut TestAppContext,
+) {
+    init_test(cx);
+    let fs = FakeFs::new(cx.executor());
+    fs.insert_tree("/shared", serde_json::json!({ ".git": {}, "src": {} }))
+        .await;
+
+    let project_a = project::Project::test(fs.clone(), ["/shared".as_ref()], cx).await;
+    let project_b = project::Project::test(fs, ["/shared".as_ref()], cx).await;
+    let (multi_workspace, cx) =
+        cx.add_window_view(|window, cx| MultiWorkspace::test_new(project_a, window, cx));
+    let workspace_b = multi_workspace.update_in(cx, |multi_workspace, window, cx| {
+        multi_workspace.test_add_workspace(project_b, window, cx)
+    });
+    let workspace_a = multi_workspace.read_with(cx, |multi_workspace, _| {
+        multi_workspace
+            .workspaces()
+            .find(|workspace| *workspace != &workspace_b)
+            .cloned()
+            .unwrap()
+    });
+    for workspace in [&workspace_a, &workspace_b] {
+        workspace.update(cx, |workspace, _| workspace.set_random_database_id());
+    }
+    let workspace_b_id = workspace_b
+        .read_with(cx, |workspace, _| workspace.database_id())
+        .map(i64::from)
+        .unwrap();
+    let snapshot = TerminalSessionSnapshot {
+        protocol_version: terminal::session_host::TERMINAL_SESSION_PROTOCOL_VERSION,
+        host_id: terminal::session_host::TerminalHostId::from_stable_key("isolation-test"),
+        session_id: TerminalSessionId::new(),
+        state: TerminalSessionState::Detached,
+        title: Some("Owned by B".to_owned()),
+        working_directory: Some(PathBuf::from("/shared")),
+        workspace_id: Some(workspace_b_id),
+        process_id: Some(42),
+        agent: None,
+        dimensions: terminal::session_host::TerminalDimensions::DEFAULT,
+        earliest_replay_sequence: 0,
+        latest_replay_sequence: 0,
+    };
+
+    let resolved = multi_workspace.read_with(cx, |_, cx| {
+        workspace_for_local_terminal_session(
+            &snapshot,
+            &[workspace_a.clone(), workspace_b.clone()],
+            Some(&workspace_a),
+            cx,
+        )
+    });
+    assert_eq!(resolved, Some(workspace_b));
+}
+
 #[test]
 fn session_overview_copy_distinguishes_empty_search_attention_and_caught_up_states() {
     assert_eq!(

@@ -729,6 +729,7 @@ impl TerminalHostConnection {
                 session_id,
                 title: Some(terminal.title(true)),
                 working_directory: terminal.working_directory(),
+                workspace_id: None,
             };
             if let Err(error) = connection.command_tx.try_send(QueuedTerminalHostCommand {
                 command,
@@ -738,6 +739,24 @@ impl TerminalHostConnection {
             }
         })
         .detach();
+    }
+
+    /// Associates a hosted Session with its durable Workspace without adding
+    /// Workspace ownership to the terminal emulator or Project stores.
+    pub fn associate_workspace(&self, terminal: &Entity<Terminal>, workspace_id: i64, cx: &App) {
+        let terminal = terminal.read(cx);
+        let command = TerminalSessionCommand::UpdateMetadata {
+            session_id: terminal.session_id(),
+            title: Some(terminal.title(true)),
+            working_directory: terminal.working_directory(),
+            workspace_id: Some(workspace_id),
+        };
+        if let Err(error) = self.command_tx.try_send(QueuedTerminalHostCommand {
+            command,
+            response_tx: None,
+        }) {
+            log::debug!("failed to queue hosted terminal Workspace association: {error}");
+        }
     }
 
     pub fn follow_session(

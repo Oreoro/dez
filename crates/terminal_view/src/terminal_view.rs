@@ -40,7 +40,10 @@ use terminal::{
     Clear, Copy, Event, HoveredWord, MaybeNavigationTarget, Modes, Paste, PasteText, Point, Range,
     ScrollLineDown, ScrollLineUp, ScrollPageDown, ScrollPageUp, ScrollToBottom, ScrollToTop,
     Search, ShowCharacterPalette, TaskState, TaskStatus, Terminal, TerminalBounds, ToggleViMode,
-    session_host::{TerminalHostSnapshotRevision, TerminalHostSnapshotStore, TerminalSessionState},
+    session_host::{
+        LocalTerminalHost, TerminalHostSnapshotRevision, TerminalHostSnapshotStore,
+        TerminalSessionState, transport::TerminalHostConnection,
+    },
     terminal_settings::{CursorShape, TerminalSettings},
 };
 use terminal_element::TerminalElement;
@@ -1633,6 +1636,21 @@ fn subscribe_for_terminal_events(
             );
         })
         .ok();
+    let workspace_id = workspace
+        .upgrade()
+        .and_then(|workspace| workspace.read(cx).database_id())
+        .map(i64::from);
+    if let Some(workspace_id) = workspace_id {
+        let session_id = terminal.read(cx).session_id();
+        if let Some(host) = LocalTerminalHost::try_global(cx) {
+            host.update(cx, |host, cx| {
+                host.associate_workspace(session_id, workspace_id, cx)
+            });
+        }
+        if is_hosted && let Some(connection) = TerminalHostConnection::try_global(cx) {
+            connection.associate_workspace(terminal, workspace_id, cx);
+        }
+    }
     if is_hosted {
         reconcile_host_terminal_evidence(terminal, &workspace, cx);
     }
