@@ -56,6 +56,18 @@ actions!(
     [ToggleActionsMenu, RemoveSelected, AddToWorkspace,]
 );
 
+fn project_or_workspace_label(
+    app_name: &str,
+    project_label: &'static str,
+    workspace_label: &'static str,
+) -> &'static str {
+    if app_name == "Zed" {
+        project_label
+    } else {
+        workspace_label
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct RecentProjectEntry {
     pub name: SharedString,
@@ -1089,7 +1101,10 @@ impl PickerDelegate for RecentProjectsDelegate {
         };
 
         if has_recent_to_show {
-            entries.push(ProjectPickerEntry::Header("Recent Projects".into()));
+            entries.push(ProjectPickerEntry::Header(
+                project_or_workspace_label(paths::APP_NAME, "Recent Projects", "Recent Workspaces")
+                    .into(),
+            ));
 
             if is_empty_query {
                 for (id, workspace) in self.workspaces.iter().enumerate() {
@@ -1605,7 +1620,11 @@ impl PickerDelegate for RecentProjectsDelegate {
                                 let focus_handle = self.focus_handle.clone();
                                 move |_, cx| {
                                     Tooltip::for_action_in(
-                                        "Remove from Recent Projects",
+                                        project_or_workspace_label(
+                                            paths::APP_NAME,
+                                            "Remove from Recent Projects",
+                                            "Remove from Recent Workspaces",
+                                        ),
                                         &RemoveSelected,
                                         &focus_handle,
                                         cx,
@@ -2508,12 +2527,24 @@ mod tests {
     //   [3] Header("This Window")
     //   [4] ProjectGroup(0)
     //   [5] ProjectGroup(1)
-    //   [6] Header("Recent Projects")
+    //   [6] Header("Recent Workspaces" in Dez, "Recent Projects" in Zed)
     //   [7..=26] RecentProject(0..=19)
     //
     const RECENT_PROJECT_COUNT: usize = 20;
     const FIRST_RECENT_PROJECT: usize = 7;
     const LAST_RECENT_PROJECT: usize = FIRST_RECENT_PROJECT + RECENT_PROJECT_COUNT - 1;
+
+    #[test]
+    fn recent_picker_uses_workspace_vocabulary_without_renaming_official_zed() {
+        assert_eq!(
+            project_or_workspace_label("Dez", "Recent Projects", "Recent Workspaces"),
+            "Recent Workspaces"
+        );
+        assert_eq!(
+            project_or_workspace_label("Zed", "Recent Projects", "Recent Workspaces"),
+            "Recent Projects"
+        );
+    }
 
     fn open_folder(index: usize) -> OpenFolderEntry {
         OpenFolderEntry {

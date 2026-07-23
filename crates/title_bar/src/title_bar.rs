@@ -74,6 +74,18 @@ const MAX_BRANCH_NAME_LENGTH: usize = 40;
 const MAX_SHORT_SHA_LENGTH: usize = 8;
 const CANVAS_MULTIPLEXER_CONTEXT: &str = "Workspace && canvas_prefix_mode";
 
+fn project_or_workspace_label(
+    app_name: &str,
+    project_label: &'static str,
+    workspace_label: &'static str,
+) -> &'static str {
+    if app_name == "Zed" {
+        project_label
+    } else {
+        workspace_label
+    }
+}
+
 fn canvas_density_label(density: settings::CanvasDensity) -> &'static str {
     match density {
         settings::CanvasDensity::Compact => "compact",
@@ -1080,15 +1092,27 @@ impl SidebarChrome {
         let (nickname, tooltip_title, icon) = match options {
             RemoteConnectionOptions::Ssh(options) => (
                 options.nickname.map(|nick| nick.into()),
-                "Remote Project",
+                project_or_workspace_label(paths::APP_NAME, "Remote Project", "Remote Workspace"),
                 IconName::Server,
             ),
-            RemoteConnectionOptions::Wsl(_) => (None, "Remote Project", IconName::Linux),
+            RemoteConnectionOptions::Wsl(_) => (
+                None,
+                project_or_workspace_label(paths::APP_NAME, "Remote Project", "Remote Workspace"),
+                IconName::Linux,
+            ),
             RemoteConnectionOptions::Docker(_dev_container_connection) => {
                 (None, "Dev Container", IconName::Box)
             }
             #[cfg(any(test, feature = "test-support"))]
-            RemoteConnectionOptions::Mock(_) => (None, "Mock Remote Project", IconName::Server),
+            RemoteConnectionOptions::Mock(_) => (
+                None,
+                project_or_workspace_label(
+                    paths::APP_NAME,
+                    "Mock Remote Project",
+                    "Mock Remote Workspace",
+                ),
+                IconName::Server,
+            ),
         };
 
         let nickname = nickname.unwrap_or_else(|| host.clone());
@@ -1270,7 +1294,12 @@ impl SidebarChrome {
         let display_name = if let Some(ref name) = name {
             util::truncate_and_trailoff(name, MAX_PROJECT_NAME_LENGTH)
         } else {
-            "Open Recent Project".to_string()
+            project_or_workspace_label(
+                paths::APP_NAME,
+                "Open Recent Project",
+                "Open Recent Workspace",
+            )
+            .to_string()
         };
 
         let is_sidebar_open = self
@@ -1332,7 +1361,15 @@ impl SidebarChrome {
                     .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                     .when(!is_project_selected, |s| s.color(Color::Muted)),
                 move |_window, cx| {
-                    Tooltip::for_action("Recent Projects", &zed_actions::OpenRecent::default(), cx)
+                    Tooltip::for_action(
+                        project_or_workspace_label(
+                            paths::APP_NAME,
+                            "Recent Projects",
+                            "Recent Workspaces",
+                        ),
+                        &zed_actions::OpenRecent::default(),
+                        cx,
+                    )
                 },
             )
             .anchor(gpui::Anchor::TopLeft)
@@ -1385,7 +1422,15 @@ impl SidebarChrome {
                     .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                     .when(!is_project_selected, |s| s.color(Color::Muted)),
                 move |_window, cx| {
-                    Tooltip::for_action("Recent Projects", &zed_actions::OpenRecent::default(), cx)
+                    Tooltip::for_action(
+                        project_or_workspace_label(
+                            paths::APP_NAME,
+                            "Recent Projects",
+                            "Recent Workspaces",
+                        ),
+                        &zed_actions::OpenRecent::default(),
+                        cx,
+                    )
                 },
             )
             .anchor(gpui::Anchor::TopLeft)
@@ -2624,7 +2669,21 @@ impl SidebarChrome {
 
 #[cfg(test)]
 mod dez_sidebar_chrome_tests {
-    use super::{sidebar_identity_row_visible, sidebar_project_identity_visible};
+    use super::{
+        project_or_workspace_label, sidebar_identity_row_visible, sidebar_project_identity_visible,
+    };
+
+    #[test]
+    fn dez_uses_workspace_vocabulary_without_renaming_official_zed() {
+        assert_eq!(
+            project_or_workspace_label("Dez", "Recent Projects", "Recent Workspaces"),
+            "Recent Workspaces"
+        );
+        assert_eq!(
+            project_or_workspace_label("Zed", "Recent Projects", "Recent Workspaces"),
+            "Recent Projects"
+        );
+    }
 
     #[test]
     fn dez_footer_does_not_duplicate_project_identity() {
