@@ -484,3 +484,10 @@ defer it.
   made visible at a compact breakpoint use compact padding and typography. A
   breakpoint is incomplete if its newly revealed labels can only fit by
   clipping, wrapping, or stealing the primary content measure.
+- **2026-07-23: Global and row-scoped actions name different destinations.**
+  A global Session Rail action names the active Workspace and the Main Work
+  Area it will change. An action attached to a Workspace row names that visible
+  Workspace. Concise visible labels may omit repeated context only when the
+  accessible name, tooltip, and nearby explanatory copy retain the full
+  destination. Agent-owned terminal language must not return to Workspace
+  terminal creation.

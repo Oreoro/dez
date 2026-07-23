@@ -2265,6 +2265,19 @@ Completed for the ordered viewport and first-party source-polish slices:
   viewport reconciliation, viewport-aware removal, and compact-state roundtrip;
 - no Rust compile, test, alternate binary launch, or live interaction claim.
 
+Completed for the global Session Rail terminal-destination slice:
+
+- the zero-session explanation names the active Workspace, Main Work Area, and
+  live Session Rail projection;
+- both global **New Terminal** entry points retain concise visible copy but
+  expose a destination-specific accessible name and tooltip;
+- a focused source assertion and Dez identity guard prevent regression to
+  ambiguous Workspace or Agent ownership;
+- `cargo fmt --all -- --check`;
+- Bash syntax and `./script/dez-identity-check`;
+- locked offline Cargo metadata and `git diff --check`;
+- no Rust compile, test, alternate binary launch, or live interaction claim.
+
 Completed for the first helper-process source slice:
 
 - new crate instructions and a rollbackable `dez_terminal_host` workspace

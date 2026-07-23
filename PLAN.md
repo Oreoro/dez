@@ -2148,3 +2148,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   actions remain intact. Static guards cover all three controls. Formatting,
   Bash syntax, identity, locked offline metadata, and diff checks pass; no
   build, test binary, or visual launch was performed.
+- 2026-07-23: Made global Session Rail terminal creation destination-explicit
+  in `04fd20133b`. The visible action stays the concise **New Terminal**, while
+  its accessible name and tooltip say **New Terminal in Main Work Area of
+  Active Workspace**. The zero-session explanation names the same active
+  Workspace handoff and live Session Rail projection, distinguishing this
+  global action from a row-scoped Workspace action and the removed Agent
+  terminal path. A source assertion and identity guard preserve that contract.
+  Formatting, Bash syntax, identity, locked offline metadata, and diff checks
+  pass; no build, test binary, or visual launch was performed.

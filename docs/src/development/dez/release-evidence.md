@@ -1258,6 +1258,9 @@ the later running-app reports, the source advanced through:
   below it; and
 - `ef35bf40a7`, which gives those three labeled utilities compact padding so
   they fit the 280 px strip without losing names, icons, or actions.
+- `04fd20133b`, which keeps global **New Terminal** labels concise while naming
+  their active Workspace and Main Work Area destination in explanatory,
+  accessible, and tooltip copy.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
