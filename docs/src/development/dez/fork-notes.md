@@ -471,3 +471,7 @@ defer it.
   computation. Process detail appears only when explaining the concrete shell
   and foreground-process effect. Internal durability terminology never appears
   as product copy.
+- **2026-07-23: Terminal tooltip metadata names type and identity.** Ownership
+  uses Terminal Session vocabulary. Paths, process identifiers, and Session
+  identifiers are labeled precisely; generic Folder, Process, and Session
+  prefixes are not sufficient for an inspectable terminal Surface.

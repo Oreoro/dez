@@ -30,6 +30,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Dead terminal startup setting removal source: `222c658123`
 - Keyboard-visible Session row actions source: `f0e817669a`
 - Unified terminal Surface lifecycle language source: `7f8fd167c2`
+- Precise terminal tab identity metadata source: `88948b869a`
 - Deduplicated Session Rail footer source: `a9b1a961c0`
 - Unified Session Rail Workspace vocabulary source: `ff91b34a81`
 - Workspace-scoped zero-session creation source: `4fc53b860f`
@@ -1247,7 +1248,9 @@ the later running-app reports, the source advanced through:
 - `7f8fd167c2`, which aligns the terminal Surface with Terminal Session
   lifecycle language, removes internal durability jargon, and clarifies the
   Surface landmark, working-directory tooltip, task rerun identity, and
-  unavailable-session recovery destination.
+  unavailable-session recovery destination; and
+- `88948b869a`, which gives terminal tab tooltips explicit Terminal Session
+  ownership plus Working directory, Process ID, and Session ID labels.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

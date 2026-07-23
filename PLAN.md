@@ -2125,3 +2125,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   tab order and tooltip. Pure lifecycle/accessibility assertions, static guards,
   formatting, Bash syntax, identity, locked offline metadata, and diff checks
   pass; no build, test binary, or visual launch was performed.
+- 2026-07-23: Made terminal tab metadata read like an inspectable Session in
+  `88948b869a`. Ownership now distinguishes **Persistent Terminal Session**,
+  **Saved Terminal Session**, and **Workspace Terminal Session**. Tooltip values
+  are labeled **Working directory**, **Process ID**, and **Session ID**; the
+  rerun icon's accessible name matches its tooltip exactly. Static guards,
+  formatting, Bash syntax, identity, locked offline metadata, and diff checks
+  pass; no build, test binary, or visual launch was performed.

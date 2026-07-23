@@ -52,6 +52,10 @@ to set a stable custom name. Leading and trailing whitespace is removed.
 Clearing the custom name returns to the live shell title. Task terminals retain
 their task label.
 
+Hover a terminal tab for its current status and ownership. When available, the
+tooltip distinguishes the **Working directory**, **Process ID**, and persistent
+**Session ID** instead of presenting those values as generic metadata.
+
 ## Close, Detach, and Terminate
 
 These actions have deliberately different meanings:

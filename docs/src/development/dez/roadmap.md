@@ -1997,8 +1997,25 @@ code, all launch gates pass, and known limitations are documented.
   jargon. The same slice improves the Surface accessibility landmark, labels
   the tab's working directory accurately, names task rerun, and makes failed
   reconnect recovery identify the Main Work Area destination.
+- **2026-07-23:** Inspectable metadata names both type and value. Commit
+  `88948b869a` makes terminal tab tooltips distinguish Persistent, Saved, and
+  Workspace Terminal Sessions, then labels Working directory, Process ID, and
+  Session ID explicitly. The rerun control uses one matching accessible and
+  tooltip name.
 
 ## Verification {#verification}
+
+Completed for the terminal tab identity-metadata slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the public terminal guide and canonical Dez
+  documentation;
+- Bash syntax and Dez identity checks, including ownership and identifier-label
+  guards;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
 
 Completed for the terminal Surface lifecycle-language slice:
 
