@@ -1703,5 +1703,7 @@ Notes decision:
   title-generation toasts, and Command Palette actions follow the same model.
   **Terminal Session** remains reserved for terminal-backed computation.
   Official Zed retains Thread terminology and underlying action IDs remain
-  unchanged. Focused pure assertions, formatting, locked offline metadata,
-  identity, and diff checks pass; rendered rail/history proof remains deferred.
+  unchanged. Agent History's icon-only row and toolbar actions have explicit
+  accessible names, with their regression guards completed in `1f3432a211`.
+  Focused pure assertions, formatting, locked offline metadata, identity, and
+  diff checks pass; rendered rail/history proof remains deferred.

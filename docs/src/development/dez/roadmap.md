@@ -1439,7 +1439,9 @@ code, all launch gates pass, and known limitations are documented.
       and empty-state labels now follow the same model. Official Zed
       terminology and underlying action identities remain unchanged. Focused
       pure assertions, formatting, locked offline metadata, and static identity
-      guards pass; compilation and rendered rail/history proof remain deferred.
+      guards pass. Commit `1f3432a211` additionally guards the explicit
+      accessible names on Agent History's icon-only row and toolbar actions;
+      compilation and rendered rail/history proof remain deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

@@ -1068,7 +1068,9 @@ the later running-app reports, the source advanced through:
 - `92e0591811`, which makes Agent Session the consistent Dez name for
   conversation-backed records and actions across Session Rail, Agent History,
   feedback, review limitations, and Command Palette while preserving Terminal
-  Session as the terminal-backed computation identity.
+  Session as the terminal-backed computation identity; and
+- `1f3432a211`, which guards explicit accessible names for Agent History's
+  icon-only row and toolbar actions.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
