@@ -557,6 +557,12 @@ code, all launch gates pass, and known limitations are documented.
       `ea2bb18453` observes live Host snapshot revisions so transport
       reconnection, missing/incompatible truth, exit, and snapshot cwd changes
       reconcile the same Session-owned record. Compiled runtime proof remains.
+- [x] 2026-07-23: Make authoritative evidence mutation an internal Workspace
+      boundary. Commit `0f8740b1a1` makes all EvidenceSet mutation methods and
+      selection outcomes crate-private; downstream search, Git, settings,
+      conversation, and review code can read records but cannot attach roots or
+      invent explicit choices merely by existing. Formatting, diff, and
+      identity checks pass.
 - [x] 2026-07-22: Feed live terminal cwd changes into Workspace evidence. Each
       record carries stable terminal-Session provenance, root refreshes preserve
       it, and Run Briefs include only cwd evidence owned by their terminal so
@@ -907,6 +913,10 @@ code, all launch gates pass, and known limitations are documented.
       Attached/Starting/Detached to Current, Reconnecting/Missing/Incompatible
       to Unresolved, and Exited to Stale while consuming snapshot cwd changes.
       Compiled restart proof remains open.
+- [x] 2026-07-23: Restrict EvidenceSet mutation to Workspace ownership. Commit
+      `0f8740b1a1` keeps immutable evidence projection public while root,
+      open-file, terminal, and selection mutation stays inside the Workspace
+      crate. Formatting, diff, and identity checks pass.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

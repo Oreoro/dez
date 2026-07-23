@@ -228,8 +228,11 @@ restoration; opening or closing a viewport does not change durable ownership.
       Current, Reconnecting/Missing/Incompatible to Unresolved, and Exited to
       Stale while snapshot cwd changes update the same Session record.
       Consolidated compiled restart/runtime proof remains.
-- [ ] Ensure generic tool, settings, search, Git, and conversation surfaces do
-      not attach roots merely by existing.
+- [x] Ensure generic tool, settings, search, Git, and conversation surfaces do
+      not attach roots merely by existing. EvidenceSet mutation is now
+      crate-private; downstream tools consume immutable records while only
+      Workspace-owned worktree, pane, terminal, and explicit-choice routes can
+      mutate authoritative evidence.
 - [ ] Scope file tree, search, Git, diagnostics, tasks, debugger, terminals,
       environment, and settings to Workspace evidence and explicit tool-local
       selection.
@@ -1131,3 +1134,8 @@ Notes decision:
   Stale states without treating transport loss as process exit. A focused
   state-mapping test is authored; formatting, diff, and identity checks pass.
   No bundle was built or launched.
+- 2026-07-23: Restricted authoritative EvidenceSet mutation to the Workspace
+  crate in `0f8740b1a1`. Downstream search, Git, settings, conversation, and
+  review consumers retain immutable record access but cannot attach roots or
+  invent selections through the evidence model. Formatting, diff, and identity
+  checks pass. No bundle was built or launched.
