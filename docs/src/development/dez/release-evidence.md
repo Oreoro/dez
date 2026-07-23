@@ -44,6 +44,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Pending Workspace evidence isolation source: `af232402f5`
 - Durable terminal Workspace ownership source: `a4047d95c0`
 - Live and persisted Workspace evidence isolation source: `6f2061d2c7`
+- Workspace-scoped Session Rail branch source: `27279ca542`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -214,6 +215,12 @@ was attempted but not completed: reconstructing the deleted Cargo source cache
 twice exhausted the remaining volume before the large test link, so no test
 pass is claimed. The corrected source now compiles in the complete app and is
 present in the signed bundle; rendered proof remains open.
+
+The supplied screenshot file is timestamped 2026-07-22 20:10:35. The exact
+currently running bundle executable was written at 2026-07-23 01:10:19 and its
+PID `85053` started at 01:10:50. The screenshot therefore predates the current
+process by about five hours: it is valid defect evidence but cannot establish
+the current bundle's rendered state.
 
 The screenshot also showed a loaded project with a completely blank center.
 The render decision checked `should_display_welcome_page` before checking for a
@@ -422,6 +429,14 @@ records and record IDs. Two durable Workspaces retain independent selected
 evidence, and clearing one database row leaves the other unchanged. Formatting,
 diff, and identity checks pass; the focused tests are authored but not claimed
 as compiled in this deferred-build slice.
+
+Commit `27279ca542` removes Session Rail's global last-writer-wins branch map.
+Open terminal and agent rows now derive branch metadata from their owning
+Workspace repository snapshot. Closed historical rows use only an
+unambiguous cross-Workspace fallback; if open Workspaces report different
+branches for the same worktree path, the historical row omits the branch. A
+focused conflict regression is authored. Formatting, diff, and identity checks
+pass; no Rust test or application binary was executed.
 
 The corrected `Dez Dev.app` is now registered and launched as launchd child PID
 `85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
@@ -656,7 +671,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `6f2061d2c7` or
+visual evidence: the exact bundle must first be rebuilt from `27279ca542` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -673,6 +688,6 @@ predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `4fc53b860f`, `8bcd11f4b6`, `ad59a60926`, `a20074de26`, `2435348289`,
 `f89f55868c`, `f40877d4ab`, `526218a972`, `bb0cf408b4`, `a8ce563373`,
 `e101b63e43`, `f535c5e6ae`, `0e6507756e`, `ea2bb18453`, `0f8740b1a1`,
-`af232402f5`, `a4047d95c0`, and `6f2061d2c7`. A rebuild/re-audit and an unlocked
+`af232402f5`, `a4047d95c0`, `6f2061d2c7`, and `27279ca542`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.

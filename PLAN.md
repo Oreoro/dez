@@ -76,7 +76,7 @@ rendered or end-to-end interaction proof.
 | Upstream               | Integrated `upstream/main` `9d0ef37a2571` through two-parent merge `2be63cfea347`; eleven conflicts are resolved and classified; consolidated build provenance is recorded                                                                                                                                   | Complete runtime regression, installed coexistence, and design-partner proof                                                     |
 | Identity               | Dez source guards pass; the corrected arm64 app, helper, and `dev.dez.Dez-Dev`/`dez-dev` ad-hoc bundle are audited; the rebuilt raw CLI exposes `--dez <PATH>` and no visible legacy alias; the launched app held no TCP connection or listener during the recorded soak                                     | Official-Zed install coexistence, consolidated rebuild, public signing/notarization, updater, remote, and visual proof           |
 | App Session            | Restore barrier, lifecycle state, ordered Workspace registry, explicit ordered viewport records, active selection, unresolved identity retention, live background-viewport attachment, durable final-project fallback, and distinct restore-failure truth exist in source; all 12 focused Session tests pass | Shared live entity composition and consolidated runtime proof                                                                    |
-| Workspace and Surfaces | Pane/Canvas repair, panel-to-pane work, startup request ordering, and typed path projection exist                                                                                                                                                                                                            | Authoritative EvidenceSet, scoped tools, movement proof, and shared-store isolation                                              |
+| Workspace and Surfaces | Pane/Canvas repair, panel-to-pane work, startup request ordering, authoritative bounded EvidenceSet, explicit selection persistence, terminal lifecycle reconciliation, durable terminal ownership, same-path isolation tests, and Workspace-owned Session Rail branch projection exist                    | Complete tool-by-tool scope audit, movement proof, and shared-store isolation                                                    |
 | Local Host             | Protocol 4 app/helper builds and focused tests pass; an authenticated packaged-runtime Session retained one shell PID, 88 replay chunks, both pre/post-resize dimensions, and explicit Detached state                                                                                                        | GUI-exit/same-Session reattach proof and default-backend decision                                                                |
 | Terminal recovery      | Host/Session references, attach/detach/terminate, recovery surfaces, honest transport states, and dimension-aware replay exist in source and packaged runtime                                                                                                                                                | Full GUI restart scenario, stale-host cleanup, and rendered UX verification                                                      |
 | Agent adapter          | Structured Codex hook path, observation-only capabilities, bounded file targets, objective/context projection, and onboarding exist                                                                                                                                                                          | Live hook proof and a second adapter after the PMF gate                                                                          |
@@ -242,7 +242,10 @@ restoration; opening or closing a viewport does not change durable ownership.
       before conservative cwd fallback. The broader tool-by-tool scope audit
       remains. Focused live same-path terminal evidence and two-Workspace
       selected-evidence persistence tests now prove one Workspace's mutation or
-      clear cannot change the other.
+      clear cannot change the other. Session Rail branch metadata now reads the
+      owning open Workspace's repository snapshot; closed historical rows use
+      only branch values that agree across every open Workspace and omit an
+      ambiguous branch instead of guessing.
 - [ ] Move eligible panel-only tools into ordinary pane Surfaces while keeping
       familiar toggles and dock layouts.
 - [ ] Prove Surfaces can move across panes and Workspaces without global root,
@@ -1164,3 +1167,10 @@ Notes decision:
   selected paths, and clearing one does not mutate the other. Tests are
   authored; formatting, diff, and identity checks pass. No bundle was built or
   launched.
+- 2026-07-23: Scoped Session Rail Git branch projection to Workspace ownership
+  in `27279ca542`. Open terminal and agent rows read branch metadata only from
+  their owning Workspace repository snapshot. Closed historical rows use an
+  unambiguous cross-Workspace fallback; disagreement for the same worktree path
+  suppresses the branch rather than allowing iteration order to lie. A focused
+  fallback regression is authored; formatting, diff, and identity checks pass.
+  No Rust test, bundle build, or application launch was performed.

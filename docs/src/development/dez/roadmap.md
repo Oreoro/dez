@@ -582,6 +582,13 @@ code, all launch gates pass, and known limitations are documented.
       Records remain distinct, and clearing one Workspace leaves the other
       unchanged. Formatting, diff, and identity checks pass; focused tests are
       authored and await the consolidated compile gate.
+- [x] 2026-07-23: Scope Session Rail branch metadata to the owning Workspace.
+      Commit `27279ca542` replaces the global last-writer-wins path map with
+      per-Workspace repository snapshots for open terminal and agent rows.
+      Closed historical rows show a branch only when every open Workspace that
+      knows the path agrees; conflicting values are omitted rather than
+      guessed. A focused fallback regression is authored; formatting, diff,
+      and identity checks pass, while compilation remains deferred.
 - [x] 2026-07-22: Feed live terminal cwd changes into Workspace evidence. Each
       record carries stable terminal-Session provenance, root refreshes preserve
       it, and Run Briefs include only cwd evidence owned by their terminal so
