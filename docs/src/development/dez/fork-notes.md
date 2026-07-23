@@ -84,6 +84,52 @@ and normal focus behavior. Hiding one keeps its items available, returns focus
 to a visible editor or terminal pane, and persists the layout. Opening a named
 tool reveals the correct region and activates its existing tab.
 
+### Everyday routing {#interface-everyday-routing}
+
+Action names describe their destination. They do not expose inherited panel
+terminology:
+
+| Intent                                        | Result                                                                 |
+| --------------------------------------------- | ---------------------------------------------------------------------- |
+| **New Terminal**                              | Opens a terminal tab in the active Workspace's main work area          |
+| **New Agent Session**                         | Opens or focuses a conversation in the right Agent pane                |
+| **Files**, **Outline**, **Git**, or **Debug** | Opens the named tab in left-side Workspace Tools                       |
+| Select a Session Rail row                     | Activates its Workspace and focuses or reattaches the existing Surface |
+| Hide Workspace Tools or Agent                 | Hides that region and returns focus to an editor or terminal           |
+| Split or move a Surface                       | Rearranges the same Workspace; it does not create a second project     |
+
+There is no Dez **Terminal Thread** destination. The inherited action remains
+only as an official-Zed compatibility implementation. Dez hides it from Agent
+menus and the command palette, redirects compatibility dispatches to **New
+Terminal**, and does not restore the inherited Agent-terminal surface after a
+restart.
+
+### How IDE features integrate {#interface-ide-integration}
+
+Each Workspace owns one upstream-compatible `Project`. Editors, terminals,
+language servers, search, diagnostics, Git, debugger state, tasks, and Agent
+context all resolve through that same Workspace and Project:
+
+- A file opens as a main-area Surface. Language intelligence and diagnostics
+  come from the Workspace's Project.
+- A terminal opens beside files in the same pane grid and starts with that
+  Workspace's working-directory context.
+- Files, Outline, Git, and Debug are alternate views of the same Project. They
+  do not create a second root or copy state into the Session Rail.
+- The Agent pane uses the active Workspace's Project context. Agent edits land
+  in ordinary buffers and Git changes, so they remain reviewable with the same
+  editor, diff, diagnostics, and Git tools.
+- Search, settings, diagnostics, and review briefs open as normal main-area
+  Surfaces. They can be tabbed or split without becoming permanent sidebars.
+- The Session Rail observes these surfaces and durable sessions. It adds
+  navigation, attention, evidence, and recency, but never becomes the editor,
+  terminal, Agent, or process owner.
+
+This is the IDE integration: Dez retains Zed's editor and project engine, then
+organizes its existing capabilities around terminal-native supervision. The
+terminal is not embedded inside chat, and the editor is not a separate mode.
+Both are first-class Surfaces in one Workspace.
+
 ## Locked identity {#locked-identity}
 
 - Product and stable application name: `Dez`

@@ -354,6 +354,10 @@ fn workspace_new_terminal_action_persistent(is_active: bool, is_menu_open: bool)
     is_active || is_menu_open
 }
 
+fn workspace_options_action_persistent(is_active: bool, is_menu_open: bool) -> bool {
+    is_active || is_menu_open
+}
+
 fn workspace_header_accessibility_label(
     workspace_name: &str,
     has_sessions: bool,
@@ -5251,7 +5255,11 @@ impl Sidebar {
                     .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                     .icon_size(IconSize::Small)
                     .aria_label("Workspace Options")
-                    .when(!is_menu_open, |el| el.visible_on_hover(group_name)),
+                    .tooltip(Tooltip::text("Workspace Options"))
+                    .when(
+                        !workspace_options_action_persistent(is_active, is_menu_open),
+                        |el| el.visible_on_hover(group_name),
+                    ),
             )
             .on_open(Rc::new({
                 let this = this.clone();

@@ -440,6 +440,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn create_new_terminal.*?multi_workspace\.activate\(workspace\.clone\(\).*?workspace_focus\.dispatch_action\(&NewCenterTerminal::default\(\)' \
     'Workspace-scoped Session Rail actions can regress to opening inherited Agent terminal threads instead of main-area terminals'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn workspace_options_action_persistent.*?is_active \|\| is_menu_open.*?aria_label\("Workspace Options"\).*?Tooltip::text\("Workspace Options"\).*?!workspace_options_action_persistent\(is_active, is_menu_open\)' \
+    'the active Workspace options menu can regress to an unlabeled hover-only control'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn stored_terminal_source.*?app_name == "Zed".*?StoredTerminalSource::HostSession\(session_id\).*?has_live_agent_terminal.*?None.*?stored_terminal_source\(.*?APP_NAME.*?live_terminal_runtime\.contains_key.*?host_snapshot\.map.*?seen_terminal_ids\.contains.*?let Some\(entry\) = make_terminal_entry.*?seen_terminal_ids\.insert' \
     'stale Agent-terminal metadata can regress to appearing as a resumable Dez Session or shadowing a real center/Host terminal'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \

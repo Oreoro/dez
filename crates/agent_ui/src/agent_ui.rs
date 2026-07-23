@@ -961,11 +961,7 @@ fn update_command_palette_filter(cx: &mut App) {
     });
 }
 
-fn terminal_thread_command_visible(
-    app_name: &str,
-    disable_ai: bool,
-    agent_enabled: bool,
-) -> bool {
+fn terminal_thread_command_visible(app_name: &str, disable_ai: bool, agent_enabled: bool) -> bool {
     app_name == "Zed" && !disable_ai && agent_enabled
 }
 

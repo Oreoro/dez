@@ -131,6 +131,16 @@ fn active_workspace_keeps_its_new_terminal_action_discoverable() {
 }
 
 #[test]
+fn active_workspace_keeps_its_options_action_discoverable() {
+    assert!(workspace_options_action_persistent(true, false));
+    assert!(workspace_options_action_persistent(false, true));
+    assert!(
+        !workspace_options_action_persistent(false, false),
+        "inactive Workspace options may stay hover-revealed to protect row hierarchy"
+    );
+}
+
+#[test]
 fn dez_only_projects_truthfully_backed_stored_terminals() {
     let host_session_id = TerminalSessionId::new();
 
