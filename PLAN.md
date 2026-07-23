@@ -207,16 +207,19 @@ restoration; opening or closing a viewport does not change durable ownership.
 - [x] Introduce the minimal authoritative Workspace `EvidenceSet` with stable
       identity, provenance, confidence, Host, lifecycle, and truncation for
       visible worktree roots, open pane files, and terminal working
-      directories. User-selected evidence remains to be added to the same
-      owner.
+      directories. Explicit user-selected file evidence now lives in the same
+      owner with distinct provenance and a bounded 128-path cap.
 - [ ] Recompute evidence on file open/move/close, terminal cwd change,
       Session attach/reconnect, Workspace restore, and explicit user choice.
       Visible root and remote-Host evidence recomputes on worktree/remote
       changes; live terminal cwd changes update stable session-provenanced
       records, and a newly opened idle terminal seeds its initial cwd before
-      the first PTY event. Open pane files recompute on add/remove/title-path changes with
-      stable IDs, deduplication, a 256-record cap, and truncation. Explicit
-      selection and consolidated restore/runtime proof remain.
+      the first PTY event. Open pane files recompute on
+      add/remove/title-path changes with stable IDs, deduplication, a
+      256-record cap, and truncation. Explicit add/remove/clear actions now
+      preserve selected paths after their tabs close, and Review Briefs prefer
+      the explicit selected-path label over a duplicate passive open-file row.
+      Consolidated restore/runtime proof remains.
 - [ ] Ensure generic tool, settings, search, Git, and conversation surfaces do
       not attach roots merely by existing.
 - [ ] Scope file tree, search, Git, diagnostics, tasks, debugger, terminals,
@@ -1088,3 +1091,11 @@ Notes decision:
   or modifying anything, precedes New Terminal in keyboard order, and sits with
   lifecycle and Host-persistence limitations. An identity guard covers the
   action; no bundle was built or launched.
+- 2026-07-23: Added explicit user-selected Workspace review evidence in
+  `a8ce563373`. Command Palette actions add, remove, or clear selected paths;
+  file-tab context actions reach the same Workspace owner. Selections survive
+  passive open-file recomputation and tab closure, use stable user-selection
+  provenance, stop at 128 paths with visible feedback, and project as Selected
+  path in Review Briefs without a duplicate Open file row. Focused model tests
+  are authored; formatting, diff, and identity checks pass. No bundle was
+  built or launched.

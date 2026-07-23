@@ -281,6 +281,15 @@ code, all launch gates pass, and known limitations are documented.
       Evidence settings pages with actual notification, accessibility,
       confidence, adapter, and bounded-restore controls; rename the surrounding
       settings groups around Dez's Workspace/Session/Agent mental model.
+- [x] 2026-07-23: Add explicit user-selected Workspace review evidence.
+      Commit `a8ce563373` adds Command Palette actions to add, remove, or clear
+      selected paths and matching file-tab context actions. User selections
+      have stable, authoritative provenance, survive passive open-file
+      recomputation and tab closure, and stop at 128 paths with visible
+      feedback. Review Briefs label them Selected path and suppress the
+      duplicate Open file projection. Focused model tests are authored;
+      formatting, diff, and identity checks pass. Compiled interaction and
+      restart proof remain in the consolidated gate.
 - [x] 2026-07-22: Make Session Rail review actions preserve owner context.
       Pointer and context-menu actions first activate the existing terminal or
       agent owner, then open the generated Markdown brief in an ordinary
@@ -537,8 +546,8 @@ code, all launch gates pass, and known limitations are documented.
       worktree roots now have deterministic identity plus provenance,
       confidence, Host, lifecycle, and truncation truth; worktree and remote
       context events recompute it. Open Run Briefs consume that authority and
-      closed rows fall back explicitly to saved metadata. File,
-      explicit-choice, and reconnect evidence remain open.
+      closed rows fall back explicitly to saved metadata. File and explicit
+      choice evidence are now implemented; reconnect evidence remains open.
 - [x] 2026-07-22: Feed live terminal cwd changes into Workspace evidence. Each
       record carries stable terminal-Session provenance, root refreshes preserve
       it, and Run Briefs include only cwd evidence owned by their terminal so
@@ -870,6 +879,12 @@ code, all launch gates pass, and known limitations are documented.
       lifecycle/Host persistence limitations. An identity guard covers the
       action. Formatting, diff, and identity checks pass; rendered onboarding
       proof remains in the consolidated gate.
+- [x] 2026-07-23: Add explicit user-selected review evidence. Commit
+      `a8ce563373` keeps the selected path in the Workspace-owned EvidenceSet
+      after its tab closes, distinguishes user selection from passive open
+      surfaces, exposes add/remove/clear commands plus file-tab actions, and
+      projects one Selected path row into Review Briefs. Formatting, diff, and
+      identity checks pass; compiled and restart proof remain deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
