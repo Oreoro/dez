@@ -452,6 +452,9 @@ require_multiline_pattern crates/workspace/src/pane.rs \
     'Button::new\("empty-project-terminal", "New Terminal"\).*?NewCenterTerminal::default\(\).*?dispatch_action.*?NewCenterTerminal::default\(\)' \
     'the empty Workspace primary terminal action can regress to the legacy panel'
 require_multiline_pattern crates/workspace/src/pane.rs \
+    'Button::new\("empty-project-terminal", "New Terminal"\).*?aria_label\("New Terminal"\).*?Tooltip::for_action.*?"New Terminal".*?Button::new\("empty-project-open-file", "Find File"\).*?aria_label\("Find File in Workspace"\).*?Tooltip::for_action.*?"Find File in Workspace".*?Button::new\("empty-project-new-file", "New File"\).*?aria_label\("New File"\).*?Tooltip::for_action\("New File"' \
+    'empty Workspace launch actions can regress to clipped inline shortcut badges or unnamed controls'
+require_multiline_pattern crates/workspace/src/pane.rs \
     'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?else \{.*?"New Terminal".*?NewCenterTerminal::default' \
     'the Dez New Item menu can regress from the single center-terminal model'
 reject_pattern crates/workspace/src/pane.rs \

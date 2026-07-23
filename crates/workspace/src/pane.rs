@@ -986,11 +986,14 @@ impl Pane {
                             .tab_index(0isize)
                             .style(ButtonStyle::Filled)
                             .start_icon(Icon::new(IconName::Terminal))
-                            .key_binding(KeyBinding::for_action_in(
-                                &NewCenterTerminal::default(),
-                                &self.focus_handle,
-                                cx,
-                            ))
+                            .aria_label("New Terminal")
+                            .tooltip(|_, cx| {
+                                Tooltip::for_action(
+                                    "New Terminal",
+                                    &NewCenterTerminal::default(),
+                                    cx,
+                                )
+                            })
                             .on_click(move |_, window, cx| {
                                 terminal_focus.dispatch_action(
                                     &NewCenterTerminal::default(),
@@ -1005,11 +1008,14 @@ impl Pane {
                             .tab_index(1isize)
                             .style(ButtonStyle::Subtle)
                             .start_icon(Icon::new(IconName::FolderSearch))
-                            .key_binding(KeyBinding::for_action_in(
-                                &ToggleFileFinder::default(),
-                                &self.focus_handle,
-                                cx,
-                            ))
+                            .aria_label("Find File in Workspace")
+                            .tooltip(|_, cx| {
+                                Tooltip::for_action(
+                                    "Find File in Workspace",
+                                    &ToggleFileFinder::default(),
+                                    cx,
+                                )
+                            })
                             .on_click(move |_, window, cx| {
                                 open_file_focus.dispatch_action(
                                     &ToggleFileFinder::default(),
@@ -1024,11 +1030,8 @@ impl Pane {
                             .tab_index(2isize)
                             .style(ButtonStyle::Subtle)
                             .start_icon(Icon::new(IconName::Plus))
-                            .key_binding(KeyBinding::for_action_in(
-                                &NewFile,
-                                &self.focus_handle,
-                                cx,
-                            ))
+                            .aria_label("New File")
+                            .tooltip(|_, cx| Tooltip::for_action("New File", &NewFile, cx))
                             .on_click(move |_, window, cx| {
                                 new_file_focus.dispatch_action(&NewFile, window, cx);
                             }),
