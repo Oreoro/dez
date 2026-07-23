@@ -1572,6 +1572,22 @@ code, all launch gates pass, and known limitations are documented.
       Agent icon instead of a hard-coded upstream Assistant glyph. Static
       identity guards cover all four paths; rendered icon proof remains
       deferred.
+- [x] 2026-07-23: Productize exceptional Agent Session recovery. Commit
+      `8da9d0d694` gives context-too-large and token-limit callouts consistent
+      Agent Session copy and actions, and gives cross-channel import feedback
+      product-correct singular, plural, and empty messages. Official Zed keeps
+      Thread terminology. Pure copy assertions and static identity guards pass;
+      rendered callout/toast proof remains deferred.
+- [x] 2026-07-23: Polish empty Workspace recovery across primary regions.
+      Commit `f622dad03d` gives empty Dez Files, Git, and Agent regions compact,
+      top-anchored, region-specific guidance with a heading, explicit
+      **Open Workspace** primary action, secondary clone action, icons, and an
+      accessible region name. Agent zoom now says **Expand Agent** and
+      **Restore Agent**. Commit `b1a20d9b17` preserves official Zed's original
+      centered layout while retaining the Dez hierarchy; `22893a6491` declares
+      the Git UI's product-identity dependency explicitly. Static identity,
+      formatting, locked offline metadata, and diff checks pass; rendered
+      narrow-pane/zoom/focus proof remains deferred.
 - [x] 2026-07-23: Restore cancelled Session Switcher previews through their
       original source. Commit `67a8152db7` preserves center Workspace items,
       durable Host Sessions, retained compatibility terminals, and Agent

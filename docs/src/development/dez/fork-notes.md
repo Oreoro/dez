@@ -107,6 +107,11 @@ Visible controls must also perform their advertised action: the Agent title
 pencil starts editing, worktree closure names its window scope, and the
 main-area overflow control is **Switch Surface**, not Open Tab.
 
+Empty primary regions use compact, top-anchored recovery guidance rather than
+floating a small prompt in the middle of an empty pane. The heading names the
+missing prerequisite, the explanation is specific to Files, Git, or Agent, and
+the primary action says **Open Workspace**.
+
 The main-area tab-bar plus control is named **Add to Main Work Area** in Dez.
 Its menu opens files, Workspace search and symbols, or a terminal in that same
 pane grid; it does not add a sidebar panel or create a second terminal model.

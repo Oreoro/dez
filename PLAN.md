@@ -1919,3 +1919,19 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   resolve through the app-aware native Agent icon, preserving Zed identity
   upstream and using Dez's Robot identity in the fork. Static identity guards
   cover all four call sites; rendered icon proof remains deferred.
+- 2026-07-23: Productized the Agent Session's exceptional recovery states in
+  `8da9d0d694`. Context-too-large and token-limit callouts now describe Agent
+  Sessions consistently, their recovery buttons create a new Agent Session,
+  and cross-channel import feedback reports Agent Sessions instead of Threads.
+  Official Zed retains its upstream vocabulary. Pure copy assertions and
+  static identity guards pass; rendered callout/toast proof remains deferred.
+- 2026-07-23: Replaced the inherited sparse project-recovery composition in
+  `f622dad03d`, with upstream-layout isolation tightened in `b1a20d9b17`.
+  Empty Dez Files, Git, and Agent regions now use compact, top-anchored,
+  region-specific Workspace guidance, a visible heading, primary/secondary
+  action hierarchy, icons, and an accessible region name. Agent zoom now says
+  **Expand Agent** and **Restore Agent** rather than implying application
+  full-screen mode. Official Zed retains its original copy and centered layout;
+  `22893a6491` declares the Git UI's product-identity dependency explicitly.
+  Formatting, locked offline metadata, identity, and diff checks pass; rendered
+  narrow-pane, zoom, and focus proof remain deferred.

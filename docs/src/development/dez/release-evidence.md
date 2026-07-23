@@ -1163,7 +1163,14 @@ the later running-app reports, the source advanced through:
   and
 - `ab3f8e0408`, which removes hard-coded upstream Assistant glyphs from the
   Agent toggle, Agent Session notifications, Agent diff Surface, and profile
-  controls while preserving official Zed identity.
+  controls while preserving official Zed identity; and
+- `8da9d0d694`, which gives context-too-large, token-limit, and cross-channel
+  import recovery consistent Agent Session vocabulary and actions; and
+- `f622dad03d`, which replaces sparse project-centric empty states in Dez Files,
+  Git, and Agent with compact, top-anchored Workspace recovery and names Agent
+  zoom **Expand Agent** / **Restore Agent**, plus `b1a20d9b17`, which preserves
+  official Zed's original recovery layout, and `22893a6491`, which declares the
+  Git UI's product-identity dependency.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
