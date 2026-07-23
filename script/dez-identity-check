@@ -292,6 +292,9 @@ require_multiline_pattern crates/agent_ui/src/ui/sandbox_status_tooltip.rs \
 require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
     '"Allowed for this thread:".*?"Allowed for this Agent Session:".*?"Allowed for this thread after the sandbox failed".*?"Allowed for this Agent Session after the sandbox failed".*?"Unsandboxed execution is allowed for the rest of this thread.".*?"Unsandboxed execution is allowed for the rest of this Agent Session."' \
     'Dez sandbox policy and failure warnings can regress to visible Thread scope'
+require_multiline_pattern crates/agent_ui/src/conversation_view/thread_search_bar.rs \
+    'fn agent_session_search_copy.*?app_name == "Zed".*?"Search this thread…".*?"Search Thread".*?"Search this Agent Session…".*?"Search Agent Session".*?set_placeholder_text\(placeholder.*?Role::Search.*?aria_label\(accessibility_label\)' \
+    'Agent Session search can regress to ambiguous Thread copy or lose its accessible Search landmark'
 require_multiline_pattern crates/agent_ui/src/mention_set.rs \
     'fn unsupported_session_mention_message.*?app_name == "Zed".*?"Thread mentions are only supported for the native agent".*?"Agent Session mentions are only supported by the built-in Dez Agent".*?unsupported_session_mention_message\([[:space:]]*paths::APP_NAME' \
     'unsupported Agent Session mentions can regress to upstream Thread/native-agent language'
@@ -466,6 +469,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_options_action_persistent.*?is_active \|\| is_menu_open.*?aria_label\("Workspace Options"\).*?Tooltip::text\("Workspace Options"\).*?!workspace_options_action_persistent\(is_active, is_menu_open\)' \
     'the active Workspace options menu can regress to an unlabeled hover-only control'
+require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
+    'fn session_switcher_title.*?"Thread Switcher".*?"Switch Sessions".*?fn session_switcher_count.*?"1 recent session".*?"\{count\} recent sessions".*?id\("session-switcher"\).*?Role::Dialog.*?aria_label\(title\).*?Release shortcut to open.*?Choose a session' \
+    'the Dez Session Switcher can regress to an anonymous fixed-width Thread list without interaction guidance'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn stored_terminal_source.*?app_name == "Zed".*?StoredTerminalSource::HostSession\(session_id\).*?has_live_agent_terminal.*?None.*?stored_terminal_source\(.*?APP_NAME.*?live_terminal_runtime\.contains_key.*?host_snapshot\.map.*?seen_terminal_ids\.contains.*?let Some\(entry\) = make_terminal_entry.*?seen_terminal_ids\.insert' \
     'stale Agent-terminal metadata can regress to appearing as a resumable Dez Session or shadowing a real center/Host terminal'

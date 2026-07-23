@@ -213,6 +213,21 @@ fn terminal_agent_icon(kind: TerminalAgentKind) -> IconName {
     }
 }
 
+fn session_switcher_title(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Thread Switcher"
+    } else {
+        "Switch Sessions"
+    }
+}
+
+fn session_switcher_count(entry_count: usize) -> String {
+    match entry_count {
+        1 => "1 recent session".to_owned(),
+        count => format!("{count} recent sessions"),
+    }
+}
+
 pub(super) enum ThreadSwitcherEvent {
     Preview(ThreadSwitcherSelection),
     Confirmed(ThreadSwitcherSelection),
@@ -388,6 +403,11 @@ impl Render for ThreadSwitcher {
     fn render(&mut self, window: &mut gpui::Window, cx: &mut Context<Self>) -> impl IntoElement {
         let selected_index = self.selected_index;
         let design_system = DesignSystemSettings::get_global(cx);
+        let title = session_switcher_title(paths::APP_NAME);
+        let entry_count = session_switcher_count(self.entries.len());
+        let release_to_open = self.init_modifiers.is_some();
+        let switcher_width = (window.viewport_size().width * 0.9).min(px(440.));
+        let focus_handle = self.focus_handle.clone();
         let (surface_padding, row_gap) = match design_system.density {
             settings::CanvasDensity::Compact => (px(4.0), px(2.0)),
             settings::CanvasDensity::Balanced => (px(6.0), px(4.0)),
@@ -395,10 +415,13 @@ impl Render for ThreadSwitcher {
         };
 
         v_flex()
+            .id("session-switcher")
             .key_context("ThreadSwitcher")
             .track_focus(&self.focus_handle)
+            .role(gpui::Role::Dialog)
+            .aria_label(title)
             .p(surface_padding)
-            .w(rems_from_px(440.))
+            .w(switcher_width)
             .elevation_3(cx)
             .when(
                 design_system.radius == settings::CanvasRadius::Subtle,
@@ -413,9 +436,25 @@ impl Render for ThreadSwitcher {
             .on_action(cx.listener(Self::cancel))
             .on_action(cx.listener(Self::toggle))
             .child(
+                h_flex()
+                    .id("session-switcher-header")
+                    .w_full()
+                    .justify_between()
+                    .px_1p5()
+                    .pb_1p5()
+                    .child(Label::new(title))
+                    .child(
+                        Label::new(entry_count)
+                            .size(LabelSize::Small)
+                            .color(Color::Muted),
+                    ),
+            )
+            .child(Divider::horizontal())
+            .child(
                 v_flex()
                     .id("thread-switcher-list")
                     .gap(row_gap)
+                    .py_1()
                     .max_h_128()
                     .overflow_y_scroll()
                     .track_scroll(&self.scroll_handle)
@@ -463,6 +502,57 @@ impl Render for ThreadSwitcher {
                         .into_any_element()
                     })),
             )
+            .child(Divider::horizontal())
+            .child(
+                h_flex()
+                    .id("session-switcher-help")
+                    .w_full()
+                    .justify_between()
+                    .px_1p5()
+                    .pt_1p5()
+                    .child(
+                        Label::new(if release_to_open {
+                            "Release shortcut to open"
+                        } else {
+                            "Choose a session"
+                        })
+                        .size(LabelSize::Small)
+                        .color(Color::Muted),
+                    )
+                    .child(
+                        h_flex()
+                            .gap_1()
+                            .when(!release_to_open, |this| {
+                                this.when_some(
+                                    KeyBinding::for_action_in(&menu::Confirm, &focus_handle, cx),
+                                    |this, key_binding| {
+                                        this.child(key_binding)
+                                            .child(Label::new("Open").size(LabelSize::Small))
+                                    },
+                                )
+                            })
+                            .when_some(
+                                KeyBinding::for_action_in(&menu::Cancel, &focus_handle, cx),
+                                |this, key_binding| {
+                                    this.child(key_binding)
+                                        .child(Label::new("Cancel").size(LabelSize::Small))
+                                },
+                            ),
+                    ),
+            )
             .vertical_scrollbar_for(&self.scroll_handle, window, cx)
+    }
+}
+
+#[cfg(test)]
+mod product_copy_tests {
+    use super::*;
+
+    #[test]
+    fn dez_session_switcher_names_scope_and_count() {
+        assert_eq!(session_switcher_title("Dez"), "Switch Sessions");
+        assert_eq!(session_switcher_title("Zed"), "Thread Switcher");
+        assert_eq!(session_switcher_count(1), "1 recent session");
+        assert_eq!(session_switcher_count(4), "4 recent sessions");
     }
 }

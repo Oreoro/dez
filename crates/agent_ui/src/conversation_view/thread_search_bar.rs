@@ -27,6 +27,14 @@ use workspace::DesignSystemSettings;
 
 use crate::entry_view_state::EntryViewState;
 
+fn agent_session_search_copy(app_name: &str) -> (&'static str, &'static str) {
+    if app_name == "Zed" {
+        ("Search this thread…", "Search Thread")
+    } else {
+        ("Search this Agent Session…", "Search Agent Session")
+    }
+}
+
 fn thread_search_bar_background(cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match DesignSystemSettings::get_global(cx).contrast {
@@ -238,9 +246,10 @@ impl ThreadSearchBar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
+        let (placeholder, _) = agent_session_search_copy(paths::APP_NAME);
         let query_editor = cx.new(|cx| {
             let mut editor = Editor::single_line(window, cx);
-            editor.set_placeholder_text("Search this thread…", window, cx);
+            editor.set_placeholder_text(placeholder, window, cx);
             editor
         });
         let editor_subscription = cx.subscribe_in(
@@ -782,6 +791,7 @@ impl ThreadSearchBar {
 impl Render for ThreadSearchBar {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let focus_handle = self.query_editor.focus_handle(cx);
+        let (_, accessibility_label) = agent_session_search_copy(paths::APP_NAME);
 
         let has_matches = !self.matches.is_empty();
         let query_empty = self.query_editor.read(cx).text(cx).is_empty();
@@ -888,6 +898,9 @@ impl Render for ThreadSearchBar {
             .map(|msg| Label::new(msg).size(LabelSize::Small).color(Color::Error));
 
         v_flex()
+            .id("agent-session-search")
+            .role(gpui::Role::Search)
+            .aria_label(accessibility_label)
             .w_full()
             .p(thread_search_padding(cx))
             .gap(thread_search_compact_gap(cx))
@@ -1026,4 +1039,21 @@ fn collect_markdowns(
         AgentThreadEntry::ContextCompaction(_) => {}
     }
     out
+}
+
+#[cfg(test)]
+mod product_copy_tests {
+    use super::*;
+
+    #[test]
+    fn dez_search_names_the_agent_session_scope() {
+        assert_eq!(
+            agent_session_search_copy("Dez"),
+            ("Search this Agent Session…", "Search Agent Session")
+        );
+        assert_eq!(
+            agent_session_search_copy("Zed"),
+            ("Search this thread…", "Search Thread")
+        );
+    }
 }
