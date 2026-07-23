@@ -2214,3 +2214,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Reusable `ThreadItem` semantics and identity guards protect the contract.
   Formatting, Bash syntax, identity, locked offline metadata, and diff checks
   pass; no build, test binary, or visual launch was performed.
+- 2026-07-23: Removed the remaining reachable compatibility-Panel vocabulary
+  from Workspace Tool actions in `738df46829`. Dez's Command Palette now
+  presents Outline, Git, Debug, and Agent namespaces directly; official Zed
+  keeps its inherited `*_panel` names. Outline's no-content guidance says
+  **Toggle Outline With**, and Git review hands comments to **Agent**, not an
+  invisible Agent panel. Product-branch assertions and identity guards cover
+  all three paths. Formatting, Bash syntax, identity, locked offline metadata,
+  and diff checks pass; no build, test binary, or visual launch was performed.

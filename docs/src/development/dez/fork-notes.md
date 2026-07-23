@@ -525,3 +525,9 @@ defer it.
   to return. Mixed Terminal Session and Agent Session rows retain quiet visual
   metadata but expose type, selection, position, and collection size to
   assistive technology. The switcher previews work; hovering never does.
+- **2026-07-23: Public tool names describe regions, not compatibility types.**
+  Command Palette namespaces, empty-state guidance, and cross-tool handoffs use
+  Files, Outline, Git, Debug, Agent, Workspace Tools, and Session Rail. Internal
+  `*_panel` action namespaces, keys, persistence records, and upstream APIs may
+  remain, but they do not define Dez's public shell. Official Zed retains its
+  inherited Panel vocabulary.

@@ -2363,6 +2363,21 @@ Completed for the Session Switcher guidance and collection-semantics slice:
   locked offline Cargo metadata, and `git diff --check`;
 - no build, test binary, alternate binary, or visual launch was performed.
 
+Completed for the Workspace Tool action-language slice:
+
+- mapped Outline, Git, Debug, and Agent compatibility action namespaces to
+  their direct Dez region names in the Command Palette;
+- preserved every inherited `*_panel` namespace and humanized label in
+  official Zed;
+- replaced Outline's **Toggle Panel With** empty-state hint with **Toggle
+  Outline With** in Dez;
+- changed Git review's handoff tooltip from the invisible Agent panel to
+  **Agent**;
+- added focused product-copy assertions and static identity guards;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
 Completed for the first helper-process source slice:
 
 - new crate instructions and a rollbackable `dez_terminal_host` workspace

@@ -1279,7 +1279,10 @@ the later running-app reports, the source advanced through:
 - `d08a9697a9`, which gives held-shortcut and direct-command Session Switcher
   modes accurate visible and accessible guidance, preserves active-descendant
   selection, and reports row position and collection size for every mixed
-  Terminal Session / Agent Session entry.
+  Terminal Session / Agent Session entry; and
+- `738df46829`, which removes compatibility-Panel vocabulary from Dez's
+  Outline, Git, Debug, and Agent command namespaces, Outline empty-state
+  guidance, and the Git-review-to-Agent handoff while preserving official Zed.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
