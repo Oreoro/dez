@@ -86,6 +86,14 @@ fn project_or_workspace_label(
     }
 }
 
+fn layout_menu_label(app_name: &str, panels_as_pane_tabs: bool) -> &'static str {
+    if app_name == "Zed" && !panels_as_pane_tabs {
+        "Panel Layout"
+    } else {
+        "Canvas Layout"
+    }
+}
+
 fn canvas_density_label(density: settings::CanvasDensity) -> &'static str {
     match density {
         settings::CanvasDensity::Compact => "compact",
@@ -1910,11 +1918,8 @@ impl SidebarChrome {
                 let is_agent = matches!(current_layout, WindowLayout::Agent(_));
                 let is_custom = matches!(current_layout, WindowLayout::Custom(_));
                 let pane_grid_settings = PaneGridSettings::get_global(cx);
-                let layout_menu_label = if pane_grid_settings.panels_as_pane_tabs() {
-                    "Canvas Layout"
-                } else {
-                    "Panel Layout"
-                };
+                let layout_menu_label =
+                    layout_menu_label(paths::APP_NAME, pane_grid_settings.panels_as_pane_tabs());
                 let (active_canvas_layout_recipe, canvas_layout_history_len) =
                     workspace.upgrade().map_or((None, 0), |workspace| {
                         let workspace = workspace.read(cx);
@@ -2178,7 +2183,8 @@ impl SidebarChrome {
 #[cfg(test)]
 mod dez_sidebar_chrome_tests {
     use super::{
-        project_or_workspace_label, sidebar_identity_row_visible, sidebar_project_identity_visible,
+        layout_menu_label, project_or_workspace_label, sidebar_identity_row_visible,
+        sidebar_project_identity_visible,
     };
 
     #[test]
@@ -2191,6 +2197,9 @@ mod dez_sidebar_chrome_tests {
             project_or_workspace_label("Zed", "Recent Projects", "Recent Workspaces"),
             "Recent Projects"
         );
+        assert_eq!(layout_menu_label("Dez", false), "Canvas Layout");
+        assert_eq!(layout_menu_label("Zed", false), "Panel Layout");
+        assert_eq!(layout_menu_label("Zed", true), "Canvas Layout");
     }
 
     #[test]

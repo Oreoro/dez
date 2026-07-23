@@ -478,9 +478,6 @@ require_pattern assets/keymaps/default-windows.json \
 require_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\("new-session", "New Terminal"\)' \
     'the primary Session Rail creation action is ambiguous'
-require_pattern crates/sidebar/src/sidebar.rs \
-    'Label::new\("Start your first terminal"\)' \
-    'the empty Session Rail funnels terminal-native work into a project-first frame'
 require_multiline_pattern crates/onboarding/src/basics_page.rs \
     '\.role\(gpui::Role::Region\).*?\.aria_label\("Terminal-first workflow"\)' \
     'the Dez first-run workflow is not exposed as a named accessibility region'
@@ -664,6 +661,12 @@ require_multiline_pattern crates/workspace/src/pane.rs \
 require_multiline_pattern crates/workspace/src/pane.rs \
     'pane_tab_overflow_copy\(paths::APP_NAME\).*?aria_label\(overflow_control_label\).*?Tooltip::text\(overflow_control_label\).*?menu\.header\(overflow_menu_header\).*?fn pane_tab_overflow_copy.*?"Open Tab".*?"Tabs".*?"Switch Surface".*?"Surfaces"' \
     'the Dez Surface switcher can regress to a misleading Open Tab control'
+require_multiline_pattern crates/editor/src/element/header.rs \
+    'fn reveal_in_files_label.*?app_name == "Zed".*?"Reveal In Project Panel".*?"Reveal in Files".*?reveal_in_files_label\(paths::APP_NAME\)' \
+    'the editor file menu can regress to exposing the inherited Project Panel destination'
+require_multiline_pattern crates/title_bar/src/title_bar.rs \
+    'fn layout_menu_label.*?app_name == "Zed".*?!panels_as_pane_tabs.*?"Panel Layout".*?"Canvas Layout".*?layout_menu_label\([[:space:]]*paths::APP_NAME' \
+    'the Dez layout menu can regress to exposing inherited Panel terminology'
 reject_pattern crates/workspace/src/pane.rs \
     '"New Terminal Panel"' \
     'the Dez New Item menu advertises a second terminal model'

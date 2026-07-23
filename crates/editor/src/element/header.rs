@@ -38,6 +38,14 @@ use crate::{
     scroll::{Autoscroll, ScrollOffset, ScrollPixelOffset},
 };
 
+fn reveal_in_files_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Reveal In Project Panel"
+    } else {
+        "Reveal in Files"
+    }
+}
+
 pub(crate) struct StickyHeader {
     sticky_row: DisplayRow,
     pub(crate) start_point: Point,
@@ -1040,7 +1048,7 @@ pub(crate) fn render_buffer_header(
                         )
                         .when_some(reveal_in_project_panel, |menu, entry_id| {
                             menu.entry(
-                                "Reveal In Project Panel",
+                                reveal_in_files_label(paths::APP_NAME),
                                 Some(Box::new(RevealInProjectPanel::default())),
                                 window.handler_for(&editor, move |editor, _, cx| {
                                     if let Some(project) = &mut editor.project {
@@ -1101,4 +1109,15 @@ pub fn file_status_label_color(file_status: Option<FileStatus>) -> Color {
             Color::Default
         }
     })
+}
+
+#[cfg(test)]
+mod product_copy_tests {
+    use super::reveal_in_files_label;
+
+    #[test]
+    fn reveal_action_names_the_visible_destination() {
+        assert_eq!(reveal_in_files_label("Dez"), "Reveal in Files");
+        assert_eq!(reveal_in_files_label("Zed"), "Reveal In Project Panel");
+    }
 }
