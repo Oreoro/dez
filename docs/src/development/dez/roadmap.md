@@ -240,6 +240,12 @@ same audit confirmed that GPUI collapses repeating activity animations to a
 single static frame when Dez resolves reduced motion. Identity checks pass;
 platform focus and motion inspection remains deferred.
 
+Commit `9930e86677` retires the unfinished 56 px icon presentation for Dez
+v0.0.1. Legacy `icon` values remain readable but resolve to compact, the
+smallest layout that presents the full supervision, search, evidence, action,
+and recovery hierarchy without clipping. Width and identity checks pass;
+rendered compact proof remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -1085,6 +1091,10 @@ code, all launch gates pass, and known limitations are documented.
       active descendant while the Session Rail keeps real keyboard focus. The
       audit also confirms the existing static-frame reduced-motion fallback.
       Identity checks pass; platform focus/motion proof remains consolidated.
+- [x] 2026-07-23: Retire the clipped 56 px Session Rail icon presentation.
+      Commit `9930e86677` keeps legacy configuration readable but resolves it to
+      the smallest complete compact layout. Width and identity checks pass;
+      rendered compact proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

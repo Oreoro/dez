@@ -650,8 +650,11 @@ with new labels.
       header/control mismatch. Commit `f6318ea907` makes the keyboard-selected
       Workspace or Session row the active accessibility descendant; the shared
       animation layer already collapses repeated activity rotation to one
-      static frame when Dez resolves reduced motion. The rendered matrix remains
-      open.
+      static frame when Dez resolves reduced motion. Commit `9930e86677`
+      retires the unfinished 56 px icon presentation: legacy `icon`
+      configuration remains readable but safely resolves to the smallest
+      complete compact rail instead of clipping supervision, search, evidence,
+      and recovery controls. The rendered matrix remains open.
 - [ ] Capture a visual state matrix at compact, balanced, and spacious density
       in representative light and dark themes and at narrow/normal/wide rail
       widths.
@@ -1419,3 +1422,9 @@ Notes decision:
   GPUI renders one static frame for repeating activity animations when Dez's
   reduced-motion setting resolves true. Identity guards pass; platform focus
   and motion inspection remains deferred.
+- 2026-07-23: Retired the incomplete 56 px Session Rail icon presentation in
+  `9930e86677`. The compatibility value is still parsed, but now resolves to
+  compact—the smallest v0.0.1 layout that can present Workspace hierarchy,
+  search, evidence, inline actions, and recovery without clipping. The width
+  regression assertion and identity guard cover the fallback; rendered compact
+  proof remains deferred.
