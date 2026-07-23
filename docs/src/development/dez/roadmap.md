@@ -1475,6 +1475,21 @@ code, all launch gates pass, and known limitations are documented.
       regression and static identity guard cover the contract. Formatting and
       locked offline metadata pass; compilation and rendered toggle/focus proof
       remain deferred.
+- [x] 2026-07-23: Complete the Workspace Tool registration lifecycle. Commit
+      `6cbdda5405` removes a panel's retained pane-tab item when the panel is
+      unregistered, preventing stale Files, Outline, Git, Debug, or Agent tabs
+      from surviving after their backing panel disappears. It also adds focused
+      toggle-close and unregister regressions. Formatting, locked offline
+      metadata, and static identity checks pass; compilation and rendered
+      remove/re-register proof remain deferred.
+- [x] 2026-07-23: Keep Dez terminals in one interaction model. Commit
+      `a95e0a4bb4` stops routing the inherited `TerminalPanel` into Workspace
+      Tools for Dez. New terminals and attached terminal Sessions therefore
+      remain ordinary main-work-area tabs or splits instead of producing a
+      second **Terminals** tool surface. Official Zed retains its inherited
+      Terminal Panel routing. Focused source assertions, formatting, locked
+      offline metadata, and static identity checks pass; compilation and
+      rendered migration proof remain deferred.
 - [x] 2026-07-23: Confirm permanent Agent Session deletion. Commit
       `9615b513d4` routes both the archived-row trash control and keyboard
       remove action through one critical prompt. The prompt names the selected

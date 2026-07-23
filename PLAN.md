@@ -1758,3 +1758,12 @@ Notes decision:
   terminals remain ordinary main-area Surfaces. Formatting, locked offline
   metadata, identity, diff, and documentation-format checks pass; rendered
   hierarchy proof remains deferred.
+- 2026-07-23: Closed two pane-tab lifecycle seams. Commit `6cbdda5405`
+  removes a retained Workspace Tool item when its backing panel is
+  unregistered and verifies focused-tool re-toggle behavior. Commit
+  `a95e0a4bb4` excludes the inherited `TerminalPanel` from Dez's Workspace
+  Tools routing so terminals have one visible home: main-work-area tabs and
+  splits. Official Zed retains Terminal Panel behavior. Formatting, locked
+  offline metadata, identity, diff, and documentation-format checks pass;
+  compilation and rendered remove/re-register and terminal-migration proof
+  remain deferred.

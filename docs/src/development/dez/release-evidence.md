@@ -1089,7 +1089,12 @@ the later running-app reports, the source advanced through:
   while preserving archive and restore as reversible actions; and
 - `799147c525`, which keeps Workspace expansion state discoverable without
   hover, plus `5a64bc9af1`, which records the region ownership and terminal
-  placement contract in permanent Fork Notes.
+  placement contract in permanent Fork Notes; and
+- `6cbdda5405`, which removes stale pane-tab items when their backing Workspace
+  Tool or Agent panel is unregistered and verifies focused-tool toggle closure;
+  and
+- `a95e0a4bb4`, which prevents Dez from routing the inherited Terminal Panel
+  into Workspace Tools while preserving official Zed behavior.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
