@@ -1430,6 +1430,16 @@ code, all launch gates pass, and known limitations are documented.
       compact zero-state presentation. Focused pure assertions, locked
       no-dependency metadata, formatting, and static identity guards pass;
       compilation and rendered responsive proof remain deferred.
+- [x] 2026-07-23: Distinguish Agent Sessions from Terminal Sessions. Commit
+      `92e0591811` replaces visible Thread terminology in Dez's Session Rail,
+      empty drafts, Agent History, title-generation feedback, review-risk copy,
+      and Command Palette with **Agent Session** while reserving
+      **Terminal Session** for terminal-backed computation. Creation, rename,
+      archive, regeneration, Markdown export, search, count, filter, import,
+      and empty-state labels now follow the same model. Official Zed
+      terminology and underlying action identities remain unchanged. Focused
+      pure assertions, formatting, locked offline metadata, and static identity
+      guards pass; compilation and rendered rail/history proof remain deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

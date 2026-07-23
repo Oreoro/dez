@@ -1695,3 +1695,13 @@ Notes decision:
   new direct `paths` dependencies and an existing omitted `terminal_view`
   edge. Formatting, locked no-dependency metadata, identity, and diff checks
   pass; rendered responsive proof remains deferred.
+- 2026-07-23: Separated Agent Session vocabulary from terminal identity in
+  `92e0591811`. Dez now says **New Agent Session**, **Rename Agent Session**,
+  **Archive Agent Session**, **Regenerate Agent Session Title**, and
+  **Open Agent Session as Markdown** throughout the Session Rail. Empty drafts,
+  Agent History search/count/filter/import/empty states, review-risk copy,
+  title-generation toasts, and Command Palette actions follow the same model.
+  **Terminal Session** remains reserved for terminal-backed computation.
+  Official Zed retains Thread terminology and underlying action IDs remain
+  unchanged. Focused pure assertions, formatting, locked offline metadata,
+  identity, and diff checks pass; rendered rail/history proof remains deferred.

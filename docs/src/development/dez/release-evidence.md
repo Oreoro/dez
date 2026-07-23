@@ -1064,7 +1064,11 @@ the later running-app reports, the source advanced through:
 - `91f738f83b`, which makes the normal-width Session Rail footer self-labeling,
   keeps its compact icon mode accessible, productizes Workspace search and
   diagnostics labels, and explains the zero-diagnostic checkmark when a
-  terminal or other non-editor surface is active.
+  terminal or other non-editor surface is active; and
+- `92e0591811`, which makes Agent Session the consistent Dez name for
+  conversation-backed records and actions across Session Rail, Agent History,
+  feedback, review limitations, and Command Palette while preserving Terminal
+  Session as the terminal-backed computation identity.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
