@@ -44,6 +44,18 @@ use workspace::{
 
 use zed_actions::editor::{MoveDown, MoveUp};
 
+fn agent_history_label(
+    app_name: &str,
+    upstream_thread_label: &'static str,
+    dez_session_label: &'static str,
+) -> &'static str {
+    if app_name == "Zed" {
+        upstream_thread_label
+    } else {
+        dez_session_label
+    }
+}
+
 fn thread_archive_background(cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match DesignSystemSettings::get_global(cx).contrast {
@@ -319,7 +331,15 @@ impl ThreadsArchiveView {
 
         let filter_editor = cx.new(|cx| {
             let mut editor = Editor::single_line(window, cx);
-            editor.set_placeholder_text("Search all threads…", window, cx);
+            editor.set_placeholder_text(
+                agent_history_label(
+                    paths::APP_NAME,
+                    "Search all threads…",
+                    "Search Agent Sessions…",
+                ),
+                window,
+                cx,
+            );
             editor
         });
 
@@ -861,10 +881,19 @@ impl ThreadsArchiveView {
                         IconButton::new("delete-thread", IconName::Trash)
                             .icon_size(IconSize::Small)
                             .icon_color(Color::Muted)
+                            .aria_label(agent_history_label(
+                                paths::APP_NAME,
+                                "Delete Thread",
+                                "Delete Agent Session",
+                            ))
                             .tooltip({
                                 move |_window, cx| {
                                     Tooltip::for_action_in(
-                                        "Delete Thread",
+                                        agent_history_label(
+                                            paths::APP_NAME,
+                                            "Delete Thread",
+                                            "Delete Agent Session",
+                                        ),
                                         &RemoveSelectedThread,
                                         &focus_handle,
                                         cx,
@@ -899,10 +928,19 @@ impl ThreadsArchiveView {
                         IconButton::new("archive-thread", IconName::Archive)
                             .icon_size(IconSize::Small)
                             .icon_color(Color::Muted)
+                            .aria_label(agent_history_label(
+                                paths::APP_NAME,
+                                "Archive Thread",
+                                "Archive Agent Session",
+                            ))
                             .tooltip({
                                 move |_window, cx| {
                                     Tooltip::for_action_in(
-                                        "Archive Thread",
+                                        agent_history_label(
+                                            paths::APP_NAME,
+                                            "Archive Thread",
+                                            "Archive Agent Session",
+                                        ),
                                         &ArchiveSelectedThread,
                                         &focus_handle,
                                         cx,
@@ -1012,10 +1050,29 @@ impl ThreadsArchiveView {
             store.archived_entries().any(|thread| !thread.is_draft())
         };
 
-        let count_label = if entry_count == 1 {
-            "1 thread".to_string()
+        let count_label = if paths::APP_NAME == "Zed" {
+            if entry_count == 1 {
+                "1 thread".to_string()
+            } else {
+                format!("{entry_count} threads")
+            }
+        } else if entry_count == 1 {
+            "1 agent session".to_string()
         } else {
-            format!("{} threads", entry_count)
+            format!("{entry_count} agent sessions")
+        };
+        let filter_label = if self.thread_filter == ThreadFilter::ArchivedOnly {
+            agent_history_label(
+                paths::APP_NAME,
+                "Show All Threads",
+                "Show All Agent Sessions",
+            )
+        } else {
+            agent_history_label(
+                paths::APP_NAME,
+                "Show Only Archived Threads",
+                "Show Only Archived Agent Sessions",
+            )
         };
 
         h_flex()
@@ -1046,7 +1103,16 @@ impl ThreadsArchiveView {
                     .child(
                         IconButton::new("new-thread", IconName::Plus)
                             .icon_size(IconSize::Small)
-                            .tooltip(Tooltip::text("Start New Agent Thread"))
+                            .aria_label(agent_history_label(
+                                paths::APP_NAME,
+                                "Start New Agent Thread",
+                                "Start New Agent Session",
+                            ))
+                            .tooltip(Tooltip::text(agent_history_label(
+                                paths::APP_NAME,
+                                "Start New Agent Thread",
+                                "Start New Agent Session",
+                            )))
                             .on_click(cx.listener(|_this, _, _, cx| {
                                 cx.emit(ThreadsArchiveViewEvent::NewThread);
                             })),
@@ -1054,7 +1120,16 @@ impl ThreadsArchiveView {
                     .child(
                         IconButton::new("thread-import", IconName::Download)
                             .icon_size(IconSize::Small)
-                            .tooltip(Tooltip::text("Import Threads"))
+                            .aria_label(agent_history_label(
+                                paths::APP_NAME,
+                                "Import Threads",
+                                "Import Agent Sessions",
+                            ))
+                            .tooltip(Tooltip::text(agent_history_label(
+                                paths::APP_NAME,
+                                "Import Threads",
+                                "Import Agent Sessions",
+                            )))
                             .on_click(cx.listener(|_this, _, _, cx| {
                                 cx.emit(ThreadsArchiveViewEvent::Import);
                             })),
@@ -1064,13 +1139,8 @@ impl ThreadsArchiveView {
                             .icon_size(IconSize::Small)
                             .disabled(!has_archived_threads)
                             .toggle_state(self.thread_filter == ThreadFilter::ArchivedOnly)
-                            .tooltip(Tooltip::text(
-                                if self.thread_filter == ThreadFilter::ArchivedOnly {
-                                    "Show All Threads"
-                                } else {
-                                    "Show Only Archived Threads"
-                                },
-                            ))
+                            .aria_label(filter_label)
+                            .tooltip(Tooltip::text(filter_label))
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.thread_filter =
                                     if this.thread_filter == ThreadFilter::ArchivedOnly {
@@ -1124,9 +1194,13 @@ impl Render for ThreadsArchiveView {
                 .justify_center()
                 .items_center()
                 .child(
-                    Label::new("No threads yet.")
-                        .size(LabelSize::Small)
-                        .color(Color::Muted),
+                    Label::new(agent_history_label(
+                        paths::APP_NAME,
+                        "No threads yet.",
+                        "No Agent Sessions yet.",
+                    ))
+                    .size(LabelSize::Small)
+                    .color(Color::Muted),
                 )
                 .into_any_element()
         } else {
@@ -1373,8 +1447,9 @@ impl PickerDelegate for ProjectPickerDelegate {
     }
 
     fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
+        let item_noun = agent_history_label(paths::APP_NAME, "thread", "agent session");
         format!(
-            "Associate the \"{}\" thread with...",
+            "Associate the \"{}\" {item_noun} with...",
             self.thread
                 .title
                 .as_ref()
@@ -1732,6 +1807,18 @@ impl PickerDelegate for ProjectPickerDelegate {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn agent_history_uses_sessions_in_dez_and_threads_in_official_zed() {
+        assert_eq!(
+            agent_history_label("Dez", "Archive Thread", "Archive Agent Session"),
+            "Archive Agent Session"
+        );
+        assert_eq!(
+            agent_history_label("Zed", "Archive Thread", "Archive Agent Session"),
+            "Archive Thread"
+        );
+    }
 
     #[test]
     fn test_fuzzy_match_positions_returns_byte_indices() {

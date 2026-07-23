@@ -244,6 +244,35 @@ fn session_rail_labels_visible(design_system: &DesignSystemSettings) -> bool {
     design_system.show_contextual_labels()
 }
 
+fn agent_session_label(
+    app_name: &str,
+    upstream_thread_label: &'static str,
+    dez_session_label: &'static str,
+) -> &'static str {
+    if app_name == "Zed" {
+        upstream_thread_label
+    } else {
+        dez_session_label
+    }
+}
+
+#[cfg(test)]
+mod agent_session_label_tests {
+    use super::*;
+
+    #[test]
+    fn preserves_official_zed_thread_language_and_uses_sessions_in_dez() {
+        assert_eq!(
+            agent_session_label("Zed", "Archive Thread", "Archive Agent Session"),
+            "Archive Thread"
+        );
+        assert_eq!(
+            agent_session_label("Dez", "Archive Thread", "Archive Agent Session"),
+            "Archive Agent Session"
+        );
+    }
+}
+
 fn session_rail_row_is_compact(width: Pixels) -> bool {
     width < DETAILED_MIN_WIDTH
 }
@@ -1552,8 +1581,12 @@ impl ThreadEntry {
         let mut observed_risks = Vec::new();
         if !self.is_live && self.draft.is_none() {
             observed_risks.push(
-                "The owning thread is not currently loaded; live runtime evidence may be stale."
-                    .to_owned(),
+                agent_session_label(
+                    APP_NAME,
+                    "The owning thread is not currently loaded; live runtime evidence may be stale.",
+                    "The owning Agent Session is not currently loaded; live runtime evidence may be stale.",
+                )
+                .to_owned(),
             );
         }
         let (workspace_evidence, evidence_truncated, evidence_stale, evidence_unresolved) = self
@@ -5233,7 +5266,11 @@ impl Sidebar {
                         let new_agent_menu = weak_menu.clone();
                         let menu = menu
                             .entry(
-                                "New Agent Thread",
+                                agent_session_label(
+                                    APP_NAME,
+                                    "New Agent Thread",
+                                    "New Agent Session",
+                                ),
                                 Some(Box::new(NewThreadInGroup)),
                                 move |window, cx| {
                                     new_agent_sidebar
@@ -6276,7 +6313,11 @@ impl Sidebar {
     fn show_no_thread_summary_model_toast(workspace: Entity<Workspace>, cx: &mut App) {
         Self::show_thread_title_toast(
             workspace,
-            "No model is configured for summarizing thread titles.",
+            agent_session_label(
+                APP_NAME,
+                "No model is configured for summarizing thread titles.",
+                "No model is configured for summarizing Agent Session titles.",
+            ),
             cx,
         );
     }
@@ -6369,7 +6410,11 @@ impl Sidebar {
                         if let Some(workspace) = this.active_workspace(cx) {
                             Self::show_thread_title_toast(
                                 workspace,
-                                "Failed to regenerate thread title.",
+                                agent_session_label(
+                                    APP_NAME,
+                                    "Failed to regenerate thread title.",
+                                    "Failed to regenerate the Agent Session title.",
+                                ),
                                 cx,
                             );
                         }
@@ -9542,6 +9587,21 @@ impl Sidebar {
         let session_id_for_delete = thread.metadata.session_id.clone();
         let focus_handle = self.focus_handle.clone();
         let title_editor = self.thread_rename_editor.clone();
+        let rename_label = agent_session_label(APP_NAME, "Rename Thread", "Rename Agent Session");
+        let rename_title_label =
+            agent_session_label(APP_NAME, "Rename Title", "Rename Agent Session");
+        let archive_label =
+            agent_session_label(APP_NAME, "Archive Thread", "Archive Agent Session");
+        let regenerate_title_label = agent_session_label(
+            APP_NAME,
+            "Regenerate Thread Title",
+            "Regenerate Agent Session Title",
+        );
+        let open_as_markdown_label = agent_session_label(
+            APP_NAME,
+            "Open Thread as Markdown",
+            "Open Agent Session as Markdown",
+        );
 
         let id = SharedString::from(format!("thread-entry-{}", ix));
 
@@ -9675,12 +9735,12 @@ impl Sidebar {
                     let rename_button = IconButton::new(("rename-thread", ix), IconName::Pencil)
                         .size(ButtonSize::Medium)
                         .icon_size(IconSize::Small)
-                        .aria_label("Rename Thread")
+                        .aria_label(rename_label)
                         .tooltip({
                             let focus_handle = focus_handle.clone();
                             move |_window, cx| {
                                 Tooltip::for_action_in(
-                                    "Rename Thread",
+                                    rename_label,
                                     &RenameSelectedThread,
                                     &focus_handle,
                                     cx,
@@ -9740,12 +9800,12 @@ impl Sidebar {
                                 IconButton::new("archive-thread", IconName::Archive)
                                     .size(ButtonSize::Medium)
                                     .icon_size(IconSize::Small)
-                                    .aria_label("Archive Thread")
+                                    .aria_label(archive_label)
                                     .tooltip({
                                         let focus_handle = focus_handle.clone();
                                         move |_window, cx| {
                                             Tooltip::for_action_in(
-                                                "Archive Thread",
+                                                archive_label,
                                                 &ArchiveSelectedThread,
                                                 &focus_handle,
                                                 cx,
@@ -9923,7 +9983,7 @@ impl Sidebar {
                     let review_owner_workspace = review_owner_workspace.clone();
                     let review_metadata = review_metadata.clone();
                     ContextMenu::build(_window, cx, move |mut menu, _window, _cx| {
-                        menu = menu.entry("Rename Title", None, {
+                        menu = menu.entry(rename_title_label, None, {
                             let sidebar = sidebar.clone();
                             let rename_title = rename_title.clone();
                             move |window, cx| {
@@ -9942,7 +10002,7 @@ impl Sidebar {
                         });
 
                         if is_zed_thread {
-                            menu = menu.entry("Regenerate Thread Title", None, {
+                            menu = menu.entry(regenerate_title_label, None, {
                                 let session_id = session_id.clone();
                                 let sidebar = sidebar.clone();
                                 let thread_workspace = thread_workspace.clone();
@@ -10005,7 +10065,7 @@ impl Sidebar {
                         }
 
                         if can_open_as_markdown {
-                            menu = menu.entry("Open Thread as Markdown", None, {
+                            menu = menu.entry(open_as_markdown_label, None, {
                                 let session_id = session_id.clone();
                                 let markdown_title = markdown_title.clone();
                                 let thread_workspace = thread_workspace.clone();
@@ -10042,7 +10102,7 @@ impl Sidebar {
                             });
                         }
 
-                        menu.separator().entry("Archive Thread", None, {
+                        menu.separator().entry(archive_label, None, {
                             let session_id = session_id.clone();
                             move |window, cx| {
                                 sidebar
@@ -11969,36 +12029,49 @@ impl Sidebar {
                         menu = menu.context(focus_handle.clone());
 
                         if can_regenerate_thread_title {
-                            menu = menu.header("Current Thread");
+                            menu = menu.header(agent_session_label(
+                                APP_NAME,
+                                "Current Thread",
+                                "Current Agent Session",
+                            ));
                             if let Some(conversation_view) = active_conversation_view.clone() {
                                 menu = menu
-                                    .entry("Regenerate Thread Title", None, {
-                                        let sidebar = sidebar.clone();
-                                        move |_window, cx| {
-                                            let result = conversation_view.update(
-                                                cx,
-                                                |conversation_view, cx| {
-                                                    conversation_view.regenerate_thread_title(cx)
-                                                },
-                                            );
-                                            if matches!(
-                                                result,
-                                                ThreadTitleRegenerationResult::NoModel
-                                            ) {
-                                                sidebar
-                                                .update(cx, |sidebar, cx| {
-                                                    if let Some(workspace) =
-                                                        sidebar.active_workspace(cx)
-                                                    {
-                                                        Self::show_no_thread_summary_model_toast(
-                                                            workspace, cx,
-                                                        );
-                                                    }
-                                                })
-                                                .ok();
+                                    .entry(
+                                        agent_session_label(
+                                            APP_NAME,
+                                            "Regenerate Thread Title",
+                                            "Regenerate Agent Session Title",
+                                        ),
+                                        None,
+                                        {
+                                            let sidebar = sidebar.clone();
+                                            move |_window, cx| {
+                                                let result = conversation_view.update(
+                                                    cx,
+                                                    |conversation_view, cx| {
+                                                        conversation_view
+                                                            .regenerate_thread_title(cx)
+                                                    },
+                                                );
+                                                if matches!(
+                                                    result,
+                                                    ThreadTitleRegenerationResult::NoModel
+                                                ) {
+                                                    sidebar
+                                                        .update(cx, |sidebar, cx| {
+                                                            if let Some(workspace) =
+                                                                sidebar.active_workspace(cx)
+                                                            {
+                                                                Self::show_no_thread_summary_model_toast(
+                                                                    workspace, cx,
+                                                                );
+                                                            }
+                                                        })
+                                                        .ok();
+                                                }
                                             }
-                                        }
-                                    })
+                                        },
+                                    )
                                     .separator();
                             }
                         }

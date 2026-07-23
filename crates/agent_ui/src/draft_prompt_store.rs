@@ -27,6 +27,14 @@ const NAMESPACE: &str = "agent_draft_prompts";
 /// Maximum length (in characters) of a draft label rendered in the sidebar.
 const MAX_LABEL_CHARS: usize = 250;
 
+fn empty_draft_placeholder_for_product(agent_name: &str, app_name: &str) -> String {
+    if app_name == "Zed" {
+        format!("New {agent_name} Thread")
+    } else {
+        format!("New {agent_name} Session")
+    }
+}
+
 pub fn read(thread_id: ThreadId, cx: &App) -> Option<Vec<acp::ContentBlock>> {
     let kvp = KeyValueStore::global(cx);
     let raw = kvp
@@ -180,12 +188,24 @@ pub fn empty_draft_placeholder_label(
             .unwrap_or_else(|| SharedString::from(agent_id.to_string()))
     };
 
-    format!("New {} Thread", agent_name).into()
+    empty_draft_placeholder_for_product(agent_name.as_ref(), paths::APP_NAME).into()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn empty_draft_placeholder_uses_session_language_in_dez() {
+        assert_eq!(
+            empty_draft_placeholder_for_product("Codex", "Dez"),
+            "New Codex Session"
+        );
+        assert_eq!(
+            empty_draft_placeholder_for_product("Codex", "Zed"),
+            "New Codex Thread"
+        );
+    }
 
     #[test]
     fn test_clean_mention_links() {

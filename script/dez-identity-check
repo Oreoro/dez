@@ -250,6 +250,21 @@ require_pattern crates/sidebar/src/sidebar.rs \
 require_pattern crates/sidebar/src/sidebar.rs \
     '"New Agent Thread",' \
     'the secondary pane-native agent creation path is missing from Workspace options'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn agent_session_label.*?app_name == "Zed".*?upstream_thread_label.*?dez_session_label' \
+    'Dez can regress to exposing Agent records as ambiguous Threads'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    '"Rename Thread", "Rename Agent Session".*?"Archive Thread", "Archive Agent Session".*?"Regenerate Thread Title".*?"Regenerate Agent Session Title".*?"Open Thread as Markdown".*?"Open Agent Session as Markdown"' \
+    'Session Rail Agent Session actions can regress to mixed Thread terminology'
+require_multiline_pattern crates/command_palette/src/command_palette.rs \
+    '"agent::RenameSelectedThread".*?"agent::RenameSelectedAgentSession".*?"sidebar::NewThreadInGroup".*?"session_rail::NewAgentSessionInWorkspace".*?"sidebar::ToggleThreadHistory".*?"session_rail::ToggleAgentHistory"' \
+    'the Dez Command Palette can regress to Thread terminology for Agent Sessions'
+require_multiline_pattern crates/agent_ui/src/draft_prompt_store.rs \
+    'fn empty_draft_placeholder_for_product.*?app_name == "Zed".*?New \{agent_name\} Thread.*?New \{agent_name\} Session' \
+    'empty Dez Agent Session drafts can regress to Thread terminology'
+require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
+    'fn agent_history_label.*?app_name == "Zed".*?upstream_thread_label.*?dez_session_label.*?"Search Agent Sessions…".*?"Delete Agent Session".*?"Archive Agent Session".*?"Import Agent Sessions".*?"No Agent Sessions yet\."' \
+    'Agent History can regress to mixed Thread and Agent Session terminology'
 require_pattern crates/sidebar/src/sidebar.rs \
     '"Close Worktree from Window…"' \
     'the hover-only worktree close control has no keyboard-accessible menu path'

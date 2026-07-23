@@ -938,6 +938,19 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
         "agent::OpenProjectAGENTS.mdRules" => {
             return "agent::OpenWorkspaceAGENTS.mdRules".to_owned();
         }
+        "agent::ToggleNewThreadMenu" => return "agent::ToggleNewAgentSessionMenu".to_owned(),
+        "agent::NewThread" => return "agent::NewAgentSession".to_owned(),
+        "agent::NewExternalAgentThread" => return "agent::NewExternalAgentSession".to_owned(),
+        "agent::ArchiveSelectedThread" => {
+            return "agent::ArchiveSelectedAgentSession".to_owned();
+        }
+        "agent::RemoveSelectedThread" => return "agent::RemoveSelectedAgentSession".to_owned(),
+        "agent::RenameSelectedThread" => return "agent::RenameSelectedAgentSession".to_owned(),
+        "agent::NewTerminalThread" => return "agent::NewTerminalSession".to_owned(),
+        "sidebar::NewThreadInGroup" => {
+            return "session_rail::NewAgentSessionInWorkspace".to_owned();
+        }
+        "sidebar::ToggleThreadHistory" => return "session_rail::ToggleAgentHistory".to_owned(),
         "zed_actions::OpenProjectSettings" => return "workspace::OpenSettings".to_owned(),
         "zed::OpenProjectSettingsFile" => return "workspace::OpenSettingsFile".to_owned(),
         _ => {}
@@ -1113,6 +1126,22 @@ mod tests {
         assert_eq!(
             humanize_action_name_for_product("agent::OpenProjectAGENTS.mdRules", "Dez"),
             "agent: open workspace AGENTS.md rules"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("agent::RenameSelectedThread", "Dez"),
+            "agent: rename selected agent session"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::NewThreadInGroup", "Dez"),
+            "session rail: new agent session in workspace"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::ToggleThreadHistory", "Dez"),
+            "session rail: toggle agent history"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("agent::RenameSelectedThread", "Zed"),
+            "agent: rename selected thread"
         );
         assert_eq!(
             humanize_action_name_for_product("project_panel::ToggleFocus", "Zed"),
