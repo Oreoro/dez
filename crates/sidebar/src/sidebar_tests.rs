@@ -185,24 +185,32 @@ async fn detached_host_session_prefers_durable_workspace_identity_over_shared_cw
 #[test]
 fn session_overview_copy_distinguishes_empty_search_attention_and_caught_up_states() {
     assert_eq!(
-        session_overview_status_label(0, 0, false),
-        "No sessions yet"
+        session_overview_status_label(0, 0, 1, false),
+        "1 workspace ready"
     );
     assert_eq!(
-        session_overview_status_label(0, 0, true),
+        session_overview_status_label(0, 0, 2, true),
         "0 matching sessions"
     );
     assert_eq!(
-        session_overview_status_label(3, 1, false),
+        session_overview_status_label(3, 1, 2, false),
         "1 needs attention · 3 total"
     );
     assert_eq!(
-        session_overview_status_label(3, 2, false),
+        session_overview_status_label(3, 2, 2, false),
         "2 need attention · 3 total"
     );
     assert_eq!(
-        session_overview_status_label(3, 0, false),
+        session_overview_status_label(3, 0, 2, false),
         "3 sessions · caught up"
+    );
+    assert_eq!(
+        session_overview_status_label(0, 0, 2, false),
+        "2 workspaces ready"
+    );
+    assert_eq!(
+        session_overview_status_label(0, 0, 0, false),
+        "No sessions yet"
     );
 }
 

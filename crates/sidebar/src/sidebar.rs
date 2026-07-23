@@ -245,6 +245,7 @@ fn session_rail_labels_visible(
 fn session_overview_status_label(
     session_count: usize,
     attention_count: usize,
+    workspace_count: usize,
     is_searching: bool,
 ) -> String {
     let session_noun = if session_count == 1 {
@@ -255,7 +256,15 @@ fn session_overview_status_label(
     if is_searching {
         format!("{session_count} matching {session_noun}")
     } else if session_count == 0 {
-        "No sessions yet".to_owned()
+        if workspace_count == 0 {
+            return "No sessions yet".to_owned();
+        }
+        let workspace_noun = if workspace_count == 1 {
+            "workspace"
+        } else {
+            "workspaces"
+        };
+        format!("{workspace_count} {workspace_noun} ready")
     } else if attention_count > 0 {
         let attention_verb = if attention_count == 1 {
             "needs"
@@ -4325,6 +4334,7 @@ impl Sidebar {
         let id_prefix = if is_sticky { "sticky-" } else { "" };
         let id = SharedString::from(format!("{id_prefix}project-header-{ix}"));
         let group_name = SharedString::from(format!("{id_prefix}header-group-{ix}"));
+        let workspace_name = label.clone();
 
         let is_collapsed = self.is_group_collapsed(key, cx);
         let disclosure_icon = if is_collapsed {
@@ -4573,7 +4583,7 @@ impl Sidebar {
                                     ),
                                 ))
                                 .child(
-                                    Label::new("No sessions in this workspace")
+                                    Label::new("Ready for a session")
                                         .size(LabelSize::XSmall)
                                         .color(Color::Placeholder)
                                         .truncate(),
@@ -4590,7 +4600,17 @@ impl Sidebar {
                             .size(ButtonSize::Compact)
                             .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
                             .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
-                            .aria_label("Start Terminal in This Workspace")
+                            .aria_label(SharedString::from(format!(
+                                "New Terminal in {}",
+                                workspace_name.as_ref()
+                            )))
+                            .tooltip(|_, cx| {
+                                Tooltip::for_action(
+                                    "New Terminal in This Workspace",
+                                    &NewCenterTerminal::default(),
+                                    cx,
+                                )
+                            })
                             .on_click(cx.listener(
                                 move |this, _, window, cx| {
                                     this.set_group_expanded(&key_for_empty_terminal, true, cx);
@@ -11020,6 +11040,7 @@ impl Sidebar {
         let status_label = session_overview_status_label(
             self.contents.session_count,
             self.contents.attention_count,
+            self.contents.project_header_indices.len(),
             is_searching,
         );
         let all_scope_label = format!("All {}", self.contents.session_count);
@@ -11063,7 +11084,7 @@ impl Sidebar {
                         v_flex()
                             .min_w_0()
                             .gap_0p5()
-                            .child(Label::new("Sessions").size(LabelSize::Small))
+                            .child(Label::new("Session Rail").size(LabelSize::Small))
                             .child(
                                 h_flex()
                                     .min_w_0()

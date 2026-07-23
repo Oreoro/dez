@@ -152,8 +152,14 @@ require_pattern crates/workspace/src/multi_workspace.rs \
     'workspace\.mark_durable_session_present\(viewport_id, cx\);' \
     'background Workspace registration is absent from durable viewport composition'
 require_pattern crates/sidebar/src/sidebar.rs \
-    '"No sessions yet"\.to_owned\(\)' \
-    'the zero-session overview still presents completed-work copy'
+    'format!\("\{workspace_count\} \{workspace_noun\} ready"\)' \
+    'the zero-session overview does not describe the ready Workspace scope'
+require_pattern crates/sidebar/src/sidebar.rs \
+    'Label::new\("Session Rail"\)' \
+    'the supervision region has regressed to an ambiguous Sessions heading'
+require_pattern crates/sidebar/src/sidebar.rs \
+    'Label::new\("Ready for a session"\)' \
+    'empty Workspace groups regress to repeated absence copy'
 require_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\("new-session", "New Terminal"\)' \
     'the primary Session Rail creation action is ambiguous'
