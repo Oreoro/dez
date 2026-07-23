@@ -267,6 +267,7 @@ fn render_dez_workflow_section(tab_index: &mut isize, cx: &mut App) -> impl Into
     *tab_index += 1;
     let new_terminal_tab_index = *tab_index;
     v_flex()
+        .id("dez-terminal-workflow")
         .role(gpui::Role::Region)
         .aria_label("Terminal-first workflow")
         .w_full()
@@ -290,14 +291,17 @@ fn render_dez_workflow_section(tab_index: &mut isize, cx: &mut App) -> impl Into
         )
         .child(
             div()
+                .id("dez-terminal-workflow-steps")
                 .role(gpui::Role::List)
                 .aria_label("Terminal workflow steps")
                 .w_full()
                 .grid()
                 .grid_cols(3)
                 .gap_2()
-                .children(steps.into_iter().map(|(icon, title, description)| {
+                .children(steps.into_iter().enumerate().map(
+                    |(index, (icon, title, description))| {
                     v_flex()
+                        .id(("dez-terminal-workflow-step", index))
                         .role(gpui::Role::ListItem)
                         .aria_label(format!("{title}. {description}"))
                         .min_w_0()
@@ -321,7 +325,8 @@ fn render_dez_workflow_section(tab_index: &mut isize, cx: &mut App) -> impl Into
                                 .size(LabelSize::Small)
                                 .color(Color::Muted),
                         )
-                })),
+                    },
+                )),
         )
         .child(
             v_flex()
