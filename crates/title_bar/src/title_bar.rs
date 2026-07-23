@@ -1915,70 +1915,17 @@ impl SidebarChrome {
                 } else {
                     "Panel Layout"
                 };
-                let (
-                    active_canvas_layout_recipe,
-                    canvas_layout_history_len,
-                    has_saved_canvas_layout_slot_1,
-                    has_saved_canvas_layout_slot_2,
-                    has_saved_canvas_layout_slot_3,
-                    saved_canvas_layout_count,
-                    saved_canvas_layout_slot_1_label,
-                    saved_canvas_layout_slot_2_label,
-                    saved_canvas_layout_slot_3_label,
-                    saved_canvas_named_layouts,
-                ) = workspace.upgrade().map_or(
-                    (
-                        None,
-                        0,
-                        false,
-                        false,
-                        false,
-                        0,
-                        None,
-                        None,
-                        None,
-                        Vec::new(),
-                    ),
-                    |workspace| {
+                let (active_canvas_layout_recipe, canvas_layout_history_len) =
+                    workspace.upgrade().map_or((None, 0), |workspace| {
                         let workspace = workspace.read(cx);
                         (
                             workspace.active_canvas_layout_recipe_id(),
                             workspace.canvas_layout_history_len(),
-                            workspace.has_saved_canvas_layout_slot(1),
-                            workspace.has_saved_canvas_layout_slot(2),
-                            workspace.has_saved_canvas_layout_slot(3),
-                            workspace.saved_canvas_layout_count(),
-                            workspace
-                                .saved_canvas_layout_slot_label(1)
-                                .map(str::to_string),
-                            workspace
-                                .saved_canvas_layout_slot_label(2)
-                                .map(str::to_string),
-                            workspace
-                                .saved_canvas_layout_slot_label(3)
-                                .map(str::to_string),
-                            workspace.saved_canvas_named_layouts(),
                         )
-                    },
-                );
+                    });
                 let active_canvas_layout_recipe =
                     is_agent.then_some(active_canvas_layout_recipe).flatten();
                 let has_previous_canvas_layout = canvas_layout_history_len > 0;
-                let restore_saved_canvas_layout_slot_1_label = saved_canvas_layout_slot_1_label
-                    .map_or_else(
-                        || "Restore Canvas Layout: Slot 1".to_string(),
-                        |label| format!("Restore Canvas Layout: Slot 1 — {label}"),
-                    );
-                let restore_saved_canvas_layout_slot_2_label = saved_canvas_layout_slot_2_label
-                    .map_or_else(
-                        || "Restore Canvas Layout: Slot 2".to_string(),
-                        |label| format!("Restore Canvas Layout: Slot 2 — {label}"),
-                    );
-                let restore_saved_canvas_layout_slot_3_label = saved_canvas_layout_slot_3_label
-                    .map_or_else(
-                        || "Restore Canvas Layout: Slot 3".to_string(),
-                        |label| format!("Restore Canvas Layout: Slot 3 — {label}"),
-                    );
 
                 ContextMenu::build(window, cx, |menu, _, _cx| {
                     menu.when(is_signed_in, |this| {
@@ -2147,66 +2094,6 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Even Columns",
-                                    active_canvas_layout_recipe == Some("even_columns"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasEvenColumnsLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasEvenColumnsLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Even Rows",
-                                    active_canvas_layout_recipe == Some("even_rows"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasEvenRowsLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasEvenRowsLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Main + Stack",
-                                    active_canvas_layout_recipe == Some("main_stack"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasMainStackLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasMainStackLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Main Top",
-                                    active_canvas_layout_recipe == Some("main_top"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasMainTopLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasMainTopLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Golden Split",
-                                    active_canvas_layout_recipe == Some("golden_split"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasGoldenSplitLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasGoldenSplitLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
                                     "Code, Run, Observe",
                                     active_canvas_layout_recipe == Some("code_run_observe"),
                                     IconPosition::Start,
@@ -2238,126 +2125,6 @@ impl SidebarChrome {
                                     move |window, cx| {
                                         window.dispatch_action(
                                             ApplyCanvasDebugLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Documentation Studio",
-                                    active_canvas_layout_recipe == Some("documentation_studio"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasDocumentationStudioLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasDocumentationStudioLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Browser Development",
-                                    active_canvas_layout_recipe == Some("browser_development"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasBrowserDevelopmentLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasBrowserDevelopmentLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Agent Operations Center",
-                                    active_canvas_layout_recipe == Some("agent_operations"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasAgentOperationsLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasAgentOperationsLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Four-Agent Matrix",
-                                    active_canvas_layout_recipe == Some("four_agent_matrix"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasFourAgentMatrixLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasFourAgentMatrixLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Six-Agent Supervisor",
-                                    active_canvas_layout_recipe == Some("six_agent_supervisor"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasSixAgentSupervisorLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasSixAgentSupervisorLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Worktree Matrix",
-                                    active_canvas_layout_recipe == Some("worktree_matrix"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasWorktreeMatrixLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasWorktreeMatrixLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Remote Operations",
-                                    active_canvas_layout_recipe == Some("remote_operations"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasRemoteOperationsLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasRemoteOperationsLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Pair Programming",
-                                    active_canvas_layout_recipe == Some("pair_programming"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasPairProgrammingLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasPairProgrammingLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Incident Response",
-                                    active_canvas_layout_recipe == Some("incident_response"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasIncidentResponseLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasIncidentResponseLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Portrait Display",
-                                    active_canvas_layout_recipe == Some("portrait_display"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasPortraitDisplayLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasPortraitDisplayLayout.boxed_clone(),
                                             cx,
                                         );
                                     },
