@@ -57,6 +57,33 @@ capabilities.
 - **Projection:** Navigation or status UI derived from real surfaces and
   sessions. A projection never owns duplicate lifecycle state.
 
+## Interface composition {#interface-composition}
+
+Dez uses one pane grid and one supervision projection. User-facing names
+describe purpose, not the inherited dock or panel implementation:
+
+| Region              | Owns                                                               | Does not own                                                        |
+| ------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| **Session Rail**    | Search, attention scope, Workspace grouping, and navigation        | Terminal processes, Agent Sessions, editor state, or duplicate tabs |
+| **Workspace Tools** | Files, Outline, Git, and Debug tabs in a hideable left tool pane   | A second Workspace, root selection, or terminal placement           |
+| **Main work area**  | File, terminal, search, diagnostics, settings, and review Surfaces | Global project scope or sidebar-only copies of active work          |
+| **Agent**           | Native and ACP conversation Surfaces in a hideable right tool pane | Terminal-agent process ownership                                    |
+
+Every visible **New Terminal** action creates a normal main-area Surface. It can
+be tabbed, split, moved, detached from a durable Host Session, or reattached
+without introducing a separate Terminal Panel model.
+
+Session Rail rows are projections. Selecting a terminal row focuses its
+attached terminal Surface or reattaches the Host-owned Session. Selecting an
+Agent Session row focuses its existing conversation Surface. A row may compose
+actor, lifecycle, attention, evidence, changes, and recency, but it never
+becomes a second owner of those facts.
+
+Workspace Tools and Agent are ordinary pane-grid regions with stable placement
+and normal focus behavior. Hiding one keeps its items available, returns focus
+to a visible editor or terminal pane, and persists the layout. Opening a named
+tool reveals the correct region and activates its existing tab.
+
 ## Locked identity {#locked-identity}
 
 - Product and stable application name: `Dez`
