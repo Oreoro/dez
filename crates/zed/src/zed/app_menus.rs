@@ -9,38 +9,65 @@ fn terminal_panel_surface_visible(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
-pub fn app_menus(cx: &mut App) -> Vec<Menu> {
-    let panels_as_pane_tabs = workspace::PaneGridSettings::get_global(cx).panels_as_pane_tabs();
-    let project_pane_label = if panels_as_pane_tabs {
+fn workspace_tools_menu_label(app_name: &str, panels_as_pane_tabs: bool) -> &'static str {
+    if app_name != "Zed" {
+        "Workspace Tools"
+    } else if panels_as_pane_tabs {
         "Toggle Project Tab"
     } else {
         "Toggle Project Pane"
-    };
-    let project_surface_label = if panels_as_pane_tabs {
-        "Project Tab"
+    }
+}
+
+fn developer_surface_menu_label(
+    app_name: &str,
+    panels_as_pane_tabs: bool,
+    dez_label: &'static str,
+    zed_tab_label: &'static str,
+    zed_panel_label: &'static str,
+) -> &'static str {
+    if app_name != "Zed" {
+        dez_label
+    } else if panels_as_pane_tabs {
+        zed_tab_label
     } else {
-        "Project Panel"
-    };
-    let outline_surface_label = if panels_as_pane_tabs {
-        "Outline Tab"
-    } else {
-        "Outline Panel"
-    };
-    let debugger_surface_label = if panels_as_pane_tabs {
-        "Debugger Tab"
-    } else {
-        "Debugger Panel"
-    };
-    let agent_surface_label = if panels_as_pane_tabs {
-        "Agent Tab"
-    } else {
-        "Agent Panel"
-    };
-    let git_surface_label = if panels_as_pane_tabs {
-        "Git Tab"
-    } else {
-        "Git Panel"
-    };
+        zed_panel_label
+    }
+}
+
+pub fn app_menus(cx: &mut App) -> Vec<Menu> {
+    let panels_as_pane_tabs = workspace::PaneGridSettings::get_global(cx).panels_as_pane_tabs();
+    let project_pane_label = workspace_tools_menu_label(APP_NAME, panels_as_pane_tabs);
+    let project_surface_label = developer_surface_menu_label(
+        APP_NAME,
+        panels_as_pane_tabs,
+        "Files",
+        "Project Tab",
+        "Project Panel",
+    );
+    let outline_surface_label = developer_surface_menu_label(
+        APP_NAME,
+        panels_as_pane_tabs,
+        "Outline",
+        "Outline Tab",
+        "Outline Panel",
+    );
+    let debugger_surface_label = developer_surface_menu_label(
+        APP_NAME,
+        panels_as_pane_tabs,
+        "Debug",
+        "Debugger Tab",
+        "Debugger Panel",
+    );
+    let agent_surface_label = developer_surface_menu_label(
+        APP_NAME,
+        panels_as_pane_tabs,
+        "Agent",
+        "Agent Tab",
+        "Agent Panel",
+    );
+    let git_surface_label =
+        developer_surface_menu_label(APP_NAME, panels_as_pane_tabs, "Git", "Git Tab", "Git Panel");
 
     let mut view_items = vec![
         MenuItem::action(
@@ -377,11 +404,31 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
 
 #[cfg(test)]
 mod tests {
-    use super::terminal_panel_surface_visible;
+    use super::{
+        developer_surface_menu_label, terminal_panel_surface_visible, workspace_tools_menu_label,
+    };
 
     #[test]
     fn terminal_panel_is_an_official_zed_compatibility_surface() {
         assert!(!terminal_panel_surface_visible("Dez"));
         assert!(terminal_panel_surface_visible("Zed"));
+    }
+
+    #[test]
+    fn dez_view_menu_names_product_surfaces_not_implementation_placement() {
+        assert_eq!(workspace_tools_menu_label("Dez", true), "Workspace Tools");
+        assert_eq!(workspace_tools_menu_label("Dez", false), "Workspace Tools");
+        assert_eq!(
+            developer_surface_menu_label("Dez", true, "Files", "Project Tab", "Project Panel"),
+            "Files"
+        );
+        assert_eq!(
+            developer_surface_menu_label("Zed", true, "Files", "Project Tab", "Project Panel"),
+            "Project Tab"
+        );
+        assert_eq!(
+            developer_surface_menu_label("Zed", false, "Files", "Project Tab", "Project Panel"),
+            "Project Panel"
+        );
     }
 }
