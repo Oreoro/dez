@@ -113,6 +113,20 @@ fn cli_default_open_behavior_description(app_name: &str) -> &'static str {
     }
 }
 
+fn terminal_session_init_setting_copy(app_name: &str) -> (&'static str, &'static str) {
+    if app_name == "Zed" {
+        (
+            "Terminal Thread Init Command",
+            "Command to run when Zed creates a Terminal Thread shell. Runs in your configured shell.",
+        )
+    } else {
+        (
+            "Terminal Session Startup Command",
+            "Command to run when Dez starts a new Terminal Session. Runs in your configured shell.",
+        )
+    }
+}
+
 fn developer_page(cx: &App) -> SettingsPage {
     use feature_flags::FeatureFlagAppExt as _;
 
@@ -8559,8 +8573,8 @@ fn ai_page(cx: &App) -> SettingsPage {
                 files: USER,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Terminal Thread Init Command",
-                description: "Command to run when Dez creates a terminal-agent shell. Runs in your configured shell.",
+                title: terminal_session_init_setting_copy(paths::APP_NAME).0,
+                description: terminal_session_init_setting_copy(paths::APP_NAME).1,
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("agent.terminal_init_command"),
@@ -11190,6 +11204,21 @@ mod tests {
         assert_eq!(
             cli_default_open_behavior_description("Zed"),
             "How `zed <path>` opens directories when no flag is specified."
+        );
+    }
+
+    #[test]
+    fn terminal_startup_setting_uses_session_language_in_dez() {
+        assert_eq!(
+            terminal_session_init_setting_copy("Dez"),
+            (
+                "Terminal Session Startup Command",
+                "Command to run when Dez starts a new Terminal Session. Runs in your configured shell.",
+            )
+        );
+        assert_eq!(
+            terminal_session_init_setting_copy("Zed").0,
+            "Terminal Thread Init Command"
         );
     }
 
