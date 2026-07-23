@@ -1185,3 +1185,9 @@ Notes decision:
   viewport-scoped project resolver. Two cross-window regressions are updated;
   formatting, diff, and identity checks pass. No Rust test, bundle build, or
   application launch was performed.
+- 2026-07-23: Closed the Settings-window reuse gap in `498f94a525`. Reopening
+  the single Settings window from a different MultiWorkspace now refreshes its
+  project-file inventory before applying a requested target, so stale files
+  from the prior viewport cannot receive the action. The cross-window test now
+  proves scope replacement in both directions. Formatting, diff, and identity
+  checks pass; compilation remains deferred.

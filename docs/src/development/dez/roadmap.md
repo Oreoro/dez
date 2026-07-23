@@ -595,7 +595,10 @@ code, all launch gates pass, and known limitations are documented.
       window becomes unavailable. Project-file discovery, restricted-mode
       lookup, opening, and mutation now share the scoped resolver; user settings
       retain application-global semantics. Two cross-window regressions are
-      updated and await the consolidated compile gate.
+      updated and await the consolidated compile gate. Follow-up `498f94a525`
+      refreshes that scoped inventory before a reused Settings window applies
+      its new target, preventing stale project files from the prior viewport
+      from receiving the action.
 - [x] 2026-07-22: Feed live terminal cwd changes into Workspace evidence. Each
       record carries stable terminal-Session provenance, root refreshes preserve
       it, and Run Briefs include only cwd evidence owned by their terminal so
