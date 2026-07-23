@@ -439,12 +439,21 @@ require_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn create_new_terminal.*?multi_workspace\.activate\(workspace\.clone\(\).*?workspace_focus\.dispatch_action\(&NewCenterTerminal::default\(\)' \
     'Workspace-scoped Session Rail actions can regress to opening inherited Agent terminal threads instead of main-area terminals'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn stored_terminal_source.*?app_name == "Zed".*?StoredTerminalSource::HostSession\(session_id\).*?has_live_agent_terminal.*?None.*?stored_terminal_source\(.*?APP_NAME.*?live_terminal_runtime\.contains_key.*?host_snapshot\.map.*?seen_terminal_ids\.contains.*?let Some\(entry\) = make_terminal_entry.*?seen_terminal_ids\.insert' \
+    'stale Agent-terminal metadata can regress to appearing as a resumable Dez Session or shadowing a real center/Host terminal'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'fn agent_panel_terminal_creation_visible.*?app_name == "Zed".*?register_action\(\|workspace, _: &NewTerminalThread.*?paths::APP_NAME == "Zed".*?NewCenterTerminal::default.*?pub fn should_create_terminal_for_new_entry.*?paths::APP_NAME == "Zed"' \
     'the Dez Agent surface can regress to offering or repeating inherited terminal-thread creation'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'on_action\(cx\.listener\(\|this, _: &NewTerminalThread.*?paths::APP_NAME == "Zed".*?workspace_focus\.dispatch_action\(&NewCenterTerminal::default' \
     'Agent-focused terminal creation can regress to opening the inherited terminal-thread canvas in Dez'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'fn agent_panel_terminal_restoration_enabled.*?app_name == "Zed".*?should_restore_sessions.*?agent_panel_terminal_restoration_enabled\(paths::APP_NAME\)' \
+    'Dez can regress to automatically restoring the inherited Agent terminal-thread surface'
+require_multiline_pattern crates/agent_ui/src/agent_ui.rs \
+    'fn terminal_thread_command_visible.*?app_name == "Zed".*?!disable_ai.*?agent_enabled' \
+    'the inherited Agent terminal-thread action can regress into the Dez command palette'
 require_pattern crates/sidebar/src/sidebar.rs \
     'session_overview_create_action_visible\(self\.contents\.session_count\)' \
     'the zero-session Workspace state can regress to duplicating its creation action'

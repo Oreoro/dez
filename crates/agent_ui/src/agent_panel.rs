@@ -141,6 +141,10 @@ fn agent_panel_terminal_creation_visible(app_name: &str, supports_terminal: bool
     app_name == "Zed" && supports_terminal
 }
 
+fn agent_panel_terminal_restoration_enabled(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 fn canvas_agent_panel_toolbar_background(cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match DesignSystemSettings::get_global(cx).contrast {
@@ -1410,7 +1414,9 @@ impl AgentPanel {
                 })
                 .unwrap_or(true);
             let should_restore_sessions = has_open_project && resume_sessions_on_restart;
-            let terminal_id_to_restore = if should_restore_sessions {
+            let terminal_id_to_restore = if should_restore_sessions
+                && agent_panel_terminal_restoration_enabled(paths::APP_NAME)
+            {
                 serialized_panel
                     .as_ref()
                     .and_then(|panel| panel.last_active_terminal_id.as_deref())
@@ -7152,6 +7158,8 @@ mod tests {
         assert!(!agent_panel_terminal_creation_visible("Dez", true));
         assert!(agent_panel_terminal_creation_visible("Zed", true));
         assert!(!agent_panel_terminal_creation_visible("Zed", false));
+        assert!(!agent_panel_terminal_restoration_enabled("Dez"));
+        assert!(agent_panel_terminal_restoration_enabled("Zed"));
     }
 
     #[test]

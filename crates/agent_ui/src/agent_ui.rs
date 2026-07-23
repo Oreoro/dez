@@ -854,6 +854,8 @@ fn maybe_backfill_editor_layout(fs: Arc<dyn Fs>, is_new_install: bool, cx: &mut 
 fn update_command_palette_filter(cx: &mut App) {
     let disable_ai = DisableAiSettings::get_global(cx).disable_ai;
     let agent_enabled = AgentSettings::get_global(cx).enabled;
+    let terminal_thread_command_visible =
+        terminal_thread_command_visible(paths::APP_NAME, disable_ai, agent_enabled);
 
     let edit_prediction_provider = effective_edit_prediction_provider(
         paths::APP_NAME,
@@ -883,6 +885,7 @@ fn update_command_palette_filter(cx: &mut App) {
             TypeId::of::<zed_actions::assistant::OpenSkillCreator>(),
             TypeId::of::<zed_actions::assistant::CreateSkillFromUrl>(),
         ];
+        let terminal_thread_action = [TypeId::of::<NewTerminalThread>()];
 
         if disable_ai {
             filter.hide_namespace("agent");
@@ -949,7 +952,21 @@ fn update_command_palette_filter(cx: &mut App) {
             filter.show_action_types(manage_skills_action.iter());
             filter.hide_action_types(&skill_creator_actions);
         }
+
+        if terminal_thread_command_visible {
+            filter.show_action_types(terminal_thread_action.iter());
+        } else {
+            filter.hide_action_types(&terminal_thread_action);
+        }
     });
+}
+
+fn terminal_thread_command_visible(
+    app_name: &str,
+    disable_ai: bool,
+    agent_enabled: bool,
+) -> bool {
+    app_name == "Zed" && !disable_ai && agent_enabled
 }
 
 fn effective_edit_prediction_provider(
@@ -1063,6 +1080,14 @@ mod tests {
         );
     }
 
+    #[test]
+    fn dez_hides_the_inherited_terminal_thread_command() {
+        assert!(!terminal_thread_command_visible("Dez", false, true));
+        assert!(terminal_thread_command_visible("Zed", false, true));
+        assert!(!terminal_thread_command_visible("Zed", true, true));
+        assert!(!terminal_thread_command_visible("Zed", false, false));
+    }
+
     #[gpui::test]
     fn test_agent_command_palette_visibility(cx: &mut TestAppContext) {
         // Init settings
@@ -1133,8 +1158,8 @@ mod tests {
                 "NewThread should be visible by default"
             );
             assert!(
-                !filter.is_hidden(&NewTerminalThread),
-                "NewTerminalThread should be visible by default"
+                filter.is_hidden(&NewTerminalThread) == (paths::APP_NAME != "Zed"),
+                "only official Zed should expose NewTerminalThread"
             );
             assert!(
                 !filter.is_hidden(&zed_actions::assistant::OpenSkillCreator),
