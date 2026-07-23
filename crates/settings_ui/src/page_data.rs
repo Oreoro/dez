@@ -8915,8 +8915,8 @@ fn evidence_page() -> SettingsPage {
             files: USER,
         }),
         SettingsPageItem::SettingItem(SettingItem {
-            title: "Connect Structured Hooks",
-            description: "Accept authenticated lifecycle evidence from terminal-agent adapters you configured. Dez does not install hooks or edit provider configuration automatically.",
+            title: "Observe Terminal Evidence",
+            description: "Observe local terminal lifecycle signals and accept authenticated structured adapter events. Dez stores bounded Host metadata, not transcripts; obvious secret-bearing environment assignments are redacted from retained commands. Dez never installs hooks or edits provider configuration automatically.",
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("agent_ui.connect_hooks"),
@@ -8937,8 +8937,8 @@ fn evidence_page() -> SettingsPage {
             files: USER,
         }),
         SettingsPageItem::SettingItem(SettingItem {
-            title: "Restore Session Metadata",
-            description: "Restore bounded session identity, attention, and evidence metadata after restart without restoring transcripts.",
+            title: "Reopen Last Terminal",
+            description: "Reopen the last active terminal surface when its locally stored identity still resolves. Session Rail identity and attention metadata load independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database.",
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("agent_ui.resume_sessions_on_restart"),

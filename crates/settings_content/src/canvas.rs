@@ -687,11 +687,13 @@ pub struct AgentUiSettingsContent {
     ///
     /// Default: true
     pub show_terminal_agents_in_session_rail: Option<bool>,
-    /// Whether agent session metadata should be restored on restart.
+    /// Whether the last active terminal surface should reopen on restart when
+    /// its stored identity still resolves.
     ///
     /// Default: true
     pub resume_sessions_on_restart: Option<bool>,
-    /// Whether provider and terminal lifecycle hooks are connected when available.
+    /// Whether local terminal lifecycle signals and authenticated structured
+    /// adapter events are observed when available.
     ///
     /// Default: true
     pub connect_hooks: Option<bool>,

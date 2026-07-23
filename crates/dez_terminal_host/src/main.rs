@@ -269,7 +269,8 @@ fn extract_command(value: &serde_json::Value) -> Option<String> {
     value
         .get("command")
         .and_then(serde_json::Value::as_str)
-        .map(bounded_text)
+        .map(util::redact::redact_command)
+        .map(|command| bounded_text(&command))
 }
 
 fn extract_exit_code(value: &serde_json::Value) -> Option<i32> {
@@ -1162,6 +1163,23 @@ mod tests {
             Some(std::path::Path::new("/workspace"))
         );
         assert!(!update.attention_required);
+        Ok(())
+    }
+
+    #[test]
+    fn codex_command_evidence_redacts_secret_environment_assignments() -> Result<()> {
+        let mut event = codex_event("PostToolUse");
+        event.tool_name = Some("Bash".to_owned());
+        event.tool_input = Some(serde_json::json!({
+            "command": "API_TOKEN=super-secret MODE=check cargo test"
+        }));
+
+        let update = codex_hook_update(&event)?;
+
+        assert_eq!(
+            update.command.as_deref(),
+            Some("API_TOKEN=\"[REDACTED]\" MODE=check cargo test")
+        );
         Ok(())
     }
 
