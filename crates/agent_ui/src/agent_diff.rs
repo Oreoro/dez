@@ -725,7 +725,7 @@ impl Render for AgentDiffPane {
             .flex()
             .items_center()
             .justify_center()
-            .when(is_empty, |el| el.items_start().pt_8())
+            .when(is_empty, |el| el.items_start().px_4().pt_8())
             .size_full()
             .when(is_empty, |el| {
                 el.child(

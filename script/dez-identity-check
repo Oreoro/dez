@@ -578,8 +578,11 @@ reject_pattern crates/agent_ui/src/agent_diff.rs \
     'IconName::ZedAssistant' \
     'the Dez Agent diff Surface still hard-codes the upstream Assistant glyph'
 require_multiline_pattern crates/agent_ui/src/agent_diff.rs \
-    'fn agent_review_label.*?app_name == "Zed".*?upstream_label.*?dez_label.*?"Agent Diff".*?"Agent Review".*?Role::Region.*?items_start\(\)\.pt_8\(\).*?"No changes to review".*?"Return to Agent".*?"Reject Change".*?"Keep Change".*?"Next Change".*?"Previous Change"' \
+    'fn agent_review_label.*?app_name == "Zed".*?upstream_label.*?dez_label.*?"Agent Diff".*?"Agent Review".*?Role::Region.*?items_start\(\)\.px_4\(\)\.pt_8\(\).*?"No changes to review".*?"Return to Agent".*?"Reject Change".*?"Keep Change".*?"Next Change".*?"Previous Change"' \
     'Agent Review can regress to upstream Diff/Hunk vocabulary, centered dead space, or unnamed navigation'
+require_multiline_pattern crates/agent_ui/src/agent_diff.rs \
+    'let generating_label = agent_review_label.*?"Generating changes…".*?let previous_change_label.*?"Previous Change".*?let next_change_label.*?"Next Change".*?let reject_all_label.*?"Reject All Changes".*?let keep_all_label.*?"Keep All Changes".*?let review_all_label.*?"Review All Changes".*?Role::Status.*?aria_label\(generating_label\).*?aria_label\(previous_change_label\).*?aria_label\(next_change_label\).*?Button::new\("reject-all", reject_all_label\).*?Button::new\("keep-all", keep_all_label\).*?aria_label\(review_all_label\)' \
+    'Agent Review toolbar controls can regress to icon-only or ambiguous Hunk/All labels'
 reject_pattern crates/agent_ui/src/agent_configuration/manage_profiles_modal.rs \
     'IconName::ZedAssistant' \
     'Dez Agent profile controls still hard-code the upstream Assistant glyph'
