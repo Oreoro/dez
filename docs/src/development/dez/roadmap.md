@@ -257,6 +257,11 @@ and Settings no longer offer those misleading opt-ins; Anthropic retention
 remains visible as a separate model-request policy. Source and identity checks
 pass; compiled network proof remains deferred.
 
+Commit `2680937952` hides the Auto Update section in Dez because the fork
+updater is deliberately disabled and defaults off. The compatibility key stays
+readable and official Zed keeps the control. Source and identity checks pass;
+rendered Settings proof remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -1116,6 +1121,10 @@ code, all launch gates pass, and known limitations are documented.
       their fork UI while preserving separate Anthropic retention consent.
       Source and identity checks pass; compiled network proof remains
       consolidated.
+- [x] 2026-07-23: Hide the disabled fork updater setting. Commit `2680937952`
+      removes the inert Dez Auto Update section while retaining compatibility
+      parsing and official Zed UI. Source and identity checks pass; rendered
+      Settings proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

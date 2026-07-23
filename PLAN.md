@@ -564,7 +564,10 @@ with new labels.
       remains open. Commit `933e3f515f` removes inherited diagnostics/metrics
       opt-ins from Dez onboarding and Settings because the fork has no
       Dez-owned upload endpoint; Anthropic retention remains visible because it
-      controls model-request policy instead. Commit `e969abda4a` also removes inherited collaboration,
+      controls model-request policy instead. Commit `2680937952` also hides the
+      inert Auto Update section in Dez because the fork updater is deliberately
+      disabled, while preserving the compatibility key and official Zed UI.
+      Commit `e969abda4a` also removes inherited collaboration,
       feedback, account, docs, status, and merchandise commands from Dez's
       palette while retaining explicit upstream documentation/repository links
       in Help.
@@ -1449,3 +1452,8 @@ Notes decision:
   separately configurable because it governs model-request eligibility.
   Focused source assertions and identity guards pass; compiled network proof
   remains consolidated.
+- 2026-07-23: Removed the inert Dez Auto Update section in `2680937952`. The
+  fork updater already returns false and defaults off, so presenting a switch
+  implied behavior that cannot occur. The compatibility key remains readable
+  and official Zed retains its setting. Focused source assertions and identity
+  guards pass; Settings rendering remains consolidated.
