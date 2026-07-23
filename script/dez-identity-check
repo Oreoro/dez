@@ -380,6 +380,9 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_close_label.*?"Detach Terminal".*?"Close Terminal Tab"' \
     'durable terminal closure is still labeled like local tab disposal'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'is_hosted = self\.terminal\.read\(cx\)\.is_hosted\(\).*?terminal_close_label\(is_hosted\)' \
+    'durable terminal closure can regress during Host reconnection'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'accessibility_title = self\.tab_content_text.*?accessibility_status.*?\.aria_label\(format!' \
     'terminal panes do not expose their identity and lifecycle to assistive technology'
 reject_pattern crates/terminal_view/src/terminal_view.rs \

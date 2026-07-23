@@ -1041,13 +1041,7 @@ impl TerminalView {
         cx: &mut Context<Self>,
     ) {
         let assistant_enabled = false;
-        let terminal_session_id = self.terminal.read(cx).session_id();
-        let is_hosted =
-            terminal::session_host::LocalTerminalHost::try_global(cx).is_some_and(|host| {
-                host.read(cx)
-                    .session_ref_if_registered(terminal_session_id)
-                    .is_some()
-            });
+        let is_hosted = self.terminal.read(cx).is_hosted();
         let close_label = terminal_close_label(is_hosted);
         let context_menu = ContextMenu::build(window, cx, |menu, _, _| {
             menu.context(self.focus_handle.clone())
@@ -2159,14 +2153,13 @@ impl Item for TerminalView {
         let session_unavailable = self.session_unavailable;
         let terminal = self.terminal().read(cx);
         let session_id = terminal.session_id();
-        let session_ref = terminal::session_host::LocalTerminalHost::try_global(cx)
-            .and_then(|host| host.read(cx).session_ref_if_registered(session_id));
+        let is_hosted = terminal.is_hosted();
         let status = terminal_tab_status(
             session_unavailable,
             terminal.process_exited(),
             terminal.task().map(|task| &task.status),
         );
-        let ownership = if session_ref.is_some() {
+        let ownership = if is_hosted {
             "Durable Host session"
         } else if session_unavailable {
             "Saved Host session"
@@ -2180,7 +2173,7 @@ impl Item for TerminalView {
         let pid = terminal
             .pid_getter()
             .map(|pid_getter| pid_getter.fallback_pid().to_string());
-        let session_identity = (session_ref.is_some() || session_unavailable).then(|| {
+        let session_identity = (is_hosted || session_unavailable).then(|| {
             let session_id = session_id.to_string();
             let short_id = session_id.chars().take(8).collect::<String>();
             if short_id.len() < session_id.len() {
