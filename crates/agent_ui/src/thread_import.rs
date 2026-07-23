@@ -102,6 +102,24 @@ fn agent_import_result_message(app_name: &str, imported_count: usize) -> String 
     }
 }
 
+fn cross_channel_import_result_message(app_name: &str, imported_count: usize) -> String {
+    if app_name == "Zed" {
+        if imported_count == 0 {
+            "No new threads found to import.".to_owned()
+        } else if imported_count == 1 {
+            "Imported 1 thread from other channels.".to_owned()
+        } else {
+            format!("Imported {imported_count} threads from other channels.")
+        }
+    } else if imported_count == 0 {
+        "No new Agent Sessions found to import.".to_owned()
+    } else if imported_count == 1 {
+        "Imported 1 Agent Session from another channel.".to_owned()
+    } else {
+        format!("Imported {imported_count} Agent Sessions from other channels.")
+    }
+}
+
 impl AcpThreadImportOnboarding {
     pub fn dismissed(cx: &App) -> bool {
         <Self as Dismissable>::dismissed(cx)
@@ -1022,17 +1040,13 @@ fn show_cross_channel_import_toast(
     imported_count: usize,
     cx: &mut App,
 ) {
+    let message = cross_channel_import_result_message(paths::APP_NAME, imported_count);
     let status_toast = if imported_count == 0 {
-        StatusToast::new("No new threads found to import.", cx, |this, _cx| {
+        StatusToast::new(message, cx, |this, _cx| {
             this.icon(Icon::new(IconName::Info).color(Color::Muted))
                 .dismiss_button(true)
         })
     } else {
-        let message = if imported_count == 1 {
-            "Imported 1 thread from other channels.".to_string()
-        } else {
-            format!("Imported {imported_count} threads from other channels.")
-        };
         StatusToast::new(message, cx, |this, _cx| {
             this.icon(Icon::new(IconName::Check).color(Color::Success))
                 .dismiss_button(true)
@@ -1068,12 +1082,24 @@ mod tests {
             agent_import_result_message("Dez", 2),
             "Imported 2 Agent Sessions."
         );
+        assert_eq!(
+            cross_channel_import_result_message("Dez", 0),
+            "No new Agent Sessions found to import."
+        );
+        assert_eq!(
+            cross_channel_import_result_message("Dez", 1),
+            "Imported 1 Agent Session from another channel."
+        );
 
         let zed = agent_import_copy("Zed");
         assert_eq!(zed.headline, "Import External Agent Threads");
         assert_eq!(zed.import_action, "Import Threads");
         assert_eq!(importable_agent_record_count("Zed", 1), "1 thread");
         assert_eq!(agent_import_result_message("Zed", 2), "Imported 2 threads.");
+        assert_eq!(
+            cross_channel_import_result_message("Zed", 2),
+            "Imported 2 threads from other channels."
+        );
     }
 
     fn make_session(

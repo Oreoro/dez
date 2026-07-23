@@ -258,6 +258,18 @@ pub fn default_agent_session_title(app_name: &str) -> &'static str {
     }
 }
 
+pub(crate) fn agent_session_label(
+    app_name: &str,
+    upstream_thread_label: &'static str,
+    dez_session_label: &'static str,
+) -> &'static str {
+    if app_name == "Zed" {
+        upstream_thread_label
+    } else {
+        dez_session_label
+    }
+}
+
 const PARALLEL_AGENT_LAYOUT_BACKFILL_KEY: &str = "parallel_agent_layout_backfilled";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1069,6 +1081,18 @@ mod tests {
     fn default_session_title_preserves_product_vocabulary() {
         assert_eq!(default_agent_session_title("Dez"), "New Agent Session");
         assert_eq!(default_agent_session_title("Zed"), DEFAULT_THREAD_TITLE);
+    }
+
+    #[test]
+    fn agent_session_copy_preserves_product_vocabulary() {
+        assert_eq!(
+            agent_session_label("Dez", "Start New Thread", "Start New Agent Session"),
+            "Start New Agent Session"
+        );
+        assert_eq!(
+            agent_session_label("Zed", "Start New Thread", "Start New Agent Session"),
+            "Start New Thread"
+        );
     }
 
     #[test]

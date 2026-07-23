@@ -1,6 +1,7 @@
 use crate::{
     CanvasAgentUiSettings, SelectPermissionGranularity,
     agent_configuration::configure_context_server_modal::default_markdown_style,
+    agent_session_label,
     conversation_view::thread_search_bar::{ThreadSearchBar, ThreadSearchBarEvent},
     default_agent_session_title, open_abs_path_at_point,
     thread_metadata_store::{ThreadId, ThreadMetadataStore},
@@ -11578,19 +11579,22 @@ impl ThreadView {
     }
 
     fn render_prompt_too_large_error(&self, cx: &mut Context<Self>) -> Callout {
-        const MESSAGE: &str = "This conversation is too long for the model's context window. \
-            Start a new thread or remove some attached files to continue.";
+        let message = agent_session_label(
+            paths::APP_NAME,
+            "This conversation is too long for the model's context window. Start a new thread or remove some attached files to continue.",
+            "This Agent Session is too long for the model's context window. Start a new Agent Session or remove some attached files to continue.",
+        );
 
         Callout::new()
             .severity(Severity::Error)
             .icon(IconName::XCircle)
             .title("Context Too Large")
-            .description(MESSAGE)
+            .description(message)
             .actions_slot(
                 h_flex()
                     .gap_0p5()
                     .child(self.new_thread_button(cx))
-                    .child(self.create_copy_button(MESSAGE)),
+                    .child(self.create_copy_button(message)),
             )
             .dismiss_action(self.dismiss_error_button(cx))
     }
@@ -11605,13 +11609,16 @@ impl ThreadView {
     }
 
     fn new_thread_button(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        Button::new("new_thread", "New Thread")
-            .label_size(LabelSize::Small)
-            .style(ButtonStyle::Filled)
-            .on_click(cx.listener(|this, _, window, cx| {
-                this.clear_thread_error(cx);
-                window.dispatch_action(NewThread.boxed_clone(), cx);
-            }))
+        Button::new(
+            "new_thread",
+            agent_session_label(paths::APP_NAME, "New Thread", "New Agent Session"),
+        )
+        .label_size(LabelSize::Small)
+        .style(ButtonStyle::Filled)
+        .on_click(cx.listener(|this, _, window, cx| {
+            this.clear_thread_error(cx);
+            window.dispatch_action(NewThread.boxed_clone(), cx);
+        }))
     }
 
     fn authenticate_button(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -12098,16 +12105,28 @@ impl ThreadView {
             acp_thread::TokenUsageRatio::Warning => (
                 Severity::Warning,
                 IconName::Warning,
-                "Thread reaching the token limit soon",
+                agent_session_label(
+                    paths::APP_NAME,
+                    "Thread reaching the token limit soon",
+                    "Agent Session reaching the token limit soon",
+                ),
             ),
             acp_thread::TokenUsageRatio::Exceeded => (
                 Severity::Error,
                 IconName::XCircle,
-                "Thread reached the token limit",
+                agent_session_label(
+                    paths::APP_NAME,
+                    "Thread reached the token limit",
+                    "Agent Session reached the token limit",
+                ),
             ),
         };
 
-        let description = "To continue, run /compact or start a new thread and @-mention this one";
+        let description = agent_session_label(
+            paths::APP_NAME,
+            "To continue, run /compact or start a new thread and @-mention this one",
+            "To continue, run /compact or start a new Agent Session and @-mention this one",
+        );
 
         Some(
             Callout::new()
@@ -12118,18 +12137,25 @@ impl ThreadView {
                 .description(description)
                 .actions_slot(
                     h_flex().gap_0p5().child(
-                        Button::new("start-new-thread", "Start New Thread")
-                            .label_size(LabelSize::Small)
-                            .on_click(cx.listener(|this, _, window, cx| {
-                                let session_id = this.thread.read(cx).session_id().clone();
-                                window.dispatch_action(
-                                    crate::NewNativeAgentThreadFromSummary {
-                                        from_session_id: session_id,
-                                    }
-                                    .boxed_clone(),
-                                    cx,
-                                );
-                            })),
+                        Button::new(
+                            "start-new-thread",
+                            agent_session_label(
+                                paths::APP_NAME,
+                                "Start New Thread",
+                                "Start New Agent Session",
+                            ),
+                        )
+                        .label_size(LabelSize::Small)
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            let session_id = this.thread.read(cx).session_id().clone();
+                            window.dispatch_action(
+                                crate::NewNativeAgentThreadFromSummary {
+                                    from_session_id: session_id,
+                                }
+                                .boxed_clone(),
+                                cx,
+                            );
+                        })),
                     ),
                 )
                 .dismiss_action(self.dismiss_error_button(cx)),

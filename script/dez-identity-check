@@ -319,6 +319,12 @@ require_multiline_pattern crates/agent_ui/src/ui/sandbox_status_tooltip.rs \
 require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
     '"Allowed for this thread:".*?"Allowed for this Agent Session:".*?"Allowed for this thread after the sandbox failed".*?"Allowed for this Agent Session after the sandbox failed".*?"Unsandboxed execution is allowed for the rest of this thread.".*?"Unsandboxed execution is allowed for the rest of this Agent Session."' \
     'Dez sandbox policy and failure warnings can regress to visible Thread scope'
+require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
+    'agent_session_label\([[:space:]]*paths::APP_NAME,[[:space:]]*"This conversation is too long.*?"This Agent Session is too long.*?"New Thread",[[:space:]]*"New Agent Session".*?"Thread reaching the token limit soon",[[:space:]]*"Agent Session reaching the token limit soon".*?"Start New Thread",[[:space:]]*"Start New Agent Session"' \
+    'Dez Agent Session limit recovery can regress to upstream Thread terminology'
+require_multiline_pattern crates/agent_ui/src/thread_import.rs \
+    'fn cross_channel_import_result_message.*?app_name == "Zed".*?"No new threads found to import\.".*?"No new Agent Sessions found to import\.".*?cross_channel_import_result_message\(paths::APP_NAME, imported_count\)' \
+    'cross-channel Agent Session import feedback can regress to upstream Thread terminology'
 require_multiline_pattern crates/agent_ui/src/conversation_view/thread_search_bar.rs \
     'fn agent_session_search_copy.*?app_name == "Zed".*?"Search this thread…".*?"Search Thread".*?"Search this Agent Session…".*?"Search Agent Session".*?set_placeholder_text\(placeholder.*?Role::Search.*?aria_label\(accessibility_label\)' \
     'Agent Session search can regress to ambiguous Thread copy or lose its accessible Search landmark'
