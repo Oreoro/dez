@@ -6913,20 +6913,38 @@ impl GitPanel {
                 .into_any_element()
         } else if worktree_count == 0 {
             let focus_handle = self.focus_handle.clone();
-            ProjectEmptyState::new(
-                "Git Panel",
+            let empty_state = ProjectEmptyState::new(
+                if paths::APP_NAME == "Zed" {
+                    "Git Panel"
+                } else {
+                    "Git"
+                },
                 focus_handle.clone(),
                 KeyBinding::for_action_in(&workspace::Open::default(), &focus_handle, cx),
-            )
-            .on_open_project(|_, window, cx| {
-                telemetry::event!("Git Panel Add Project Clicked");
-                window.dispatch_action(workspace::Open::default().boxed_clone(), cx);
-            })
-            .on_clone_repo(|_, window, cx| {
-                telemetry::event!("Git Panel Clone Repo Clicked");
-                window.dispatch_action(git::Clone.boxed_clone(), cx);
-            })
-            .into_any_element()
+            );
+            let empty_state = if paths::APP_NAME == "Zed" {
+                empty_state
+            } else {
+                empty_state
+                    .with_copy(
+                        "Open a Workspace",
+                        "Open a folder or clone a repository to inspect source control.",
+                        "Open Workspace…",
+                        "Clone Repository…",
+                    )
+                    .top_aligned()
+            };
+
+            empty_state
+                .on_open_project(|_, window, cx| {
+                    telemetry::event!("Git Panel Add Project Clicked");
+                    window.dispatch_action(workspace::Open::default().boxed_clone(), cx);
+                })
+                .on_clone_repo(|_, window, cx| {
+                    telemetry::event!("Git Panel Clone Repo Clicked");
+                    window.dispatch_action(git::Clone.boxed_clone(), cx);
+                })
+                .into_any_element()
         } else {
             Empty.into_any_element()
         }

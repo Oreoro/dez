@@ -7615,38 +7615,53 @@ impl Render for ProjectPanel {
             let focus_handle = self.focus_handle(cx);
             let workspace = self.workspace.clone();
             let workspace_clone = self.workspace.clone();
+            let empty_state = ProjectEmptyState::new(
+                if paths::APP_NAME == "Zed" {
+                    "Project Panel"
+                } else {
+                    "Files"
+                },
+                focus_handle.clone(),
+                KeyBinding::for_action_in(&workspace::Open::default(), &focus_handle, cx),
+            );
+            let empty_state = if paths::APP_NAME == "Zed" {
+                empty_state
+            } else {
+                empty_state
+                    .with_copy(
+                        "Open a Workspace",
+                        "Open a folder or clone a repository to browse and edit files.",
+                        "Open Workspace…",
+                        "Clone Repository…",
+                    )
+                    .top_aligned()
+            };
 
             v_flex()
                 .id("empty-project_panel-wrapper")
                 .size_full()
                 .bg(cx.theme().colors().editor_background)
                 .child(
-                    ProjectEmptyState::new(
-                        if paths::APP_NAME == "Zed" {
-                            "Project Panel"
-                        } else {
-                            "Files"
-                        },
-                        focus_handle.clone(),
-                        KeyBinding::for_action_in(&workspace::Open::default(), &focus_handle, cx),
-                    )
-                    .on_open_project(move |_, window, cx| {
-                        telemetry::event!("Project Panel Add Project Clicked");
-                        workspace
-                            .update(cx, |_, cx| {
-                                window
-                                    .dispatch_action(workspace::Open::default().boxed_clone(), cx);
-                            })
-                            .log_err();
-                    })
-                    .on_clone_repo(move |_, window, cx| {
-                        telemetry::event!("Project Panel Clone Repo Clicked");
-                        workspace_clone
-                            .update(cx, |_, cx| {
-                                window.dispatch_action(git::Clone.boxed_clone(), cx);
-                            })
-                            .log_err();
-                    }),
+                    empty_state
+                        .on_open_project(move |_, window, cx| {
+                            telemetry::event!("Project Panel Add Project Clicked");
+                            workspace
+                                .update(cx, |_, cx| {
+                                    window.dispatch_action(
+                                        workspace::Open::default().boxed_clone(),
+                                        cx,
+                                    );
+                                })
+                                .log_err();
+                        })
+                        .on_clone_repo(move |_, window, cx| {
+                            telemetry::event!("Project Panel Clone Repo Clicked");
+                            workspace_clone
+                                .update(cx, |_, cx| {
+                                    window.dispatch_action(git::Clone.boxed_clone(), cx);
+                                })
+                                .log_err();
+                        }),
                 )
                 .when(is_local, |div| {
                     div.when(panel_settings.drag_and_drop, |div| {

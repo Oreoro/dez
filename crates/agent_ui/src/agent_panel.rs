@@ -155,6 +155,20 @@ fn agent_panel_title_edit_label(app_name: &str, is_terminal: bool) -> &'static s
     }
 }
 
+fn agent_panel_zoom_label(app_name: &str, is_zoomed: bool) -> &'static str {
+    if app_name == "Zed" {
+        if is_zoomed {
+            "Disable Full Screen"
+        } else {
+            "Enable Full Screen"
+        }
+    } else if is_zoomed {
+        "Restore Agent"
+    } else {
+        "Expand Agent"
+    }
+}
+
 fn agent_panel_session_label(
     app_name: &str,
     upstream_thread_label: &'static str,
@@ -6278,19 +6292,33 @@ impl AgentPanel {
     fn render_no_project_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let focus_handle = self.focus_handle(cx);
 
-        ProjectEmptyState::new(
+        let empty_state = ProjectEmptyState::new(
             agent_panel_session_label(paths::APP_NAME, "Agent Panel", "Agent"),
             focus_handle.clone(),
             KeyBinding::for_action_in(&workspace::Open::default(), &focus_handle, cx),
-        )
-        .on_open_project(|_, window, cx| {
-            telemetry::event!("Agent Panel Add Project Clicked");
-            window.dispatch_action(workspace::Open::default().boxed_clone(), cx);
-        })
-        .on_clone_repo(|_, window, cx| {
-            telemetry::event!("Agent Panel Clone Repo Clicked");
-            window.dispatch_action(git::Clone.boxed_clone(), cx);
-        })
+        );
+        let empty_state = if paths::APP_NAME == "Zed" {
+            empty_state
+        } else {
+            empty_state
+                .with_copy(
+                    "Agent needs a Workspace",
+                    "Open a folder or clone a repository, then start an Agent Session.",
+                    "Open Workspace…",
+                    "Clone Repository…",
+                )
+                .top_aligned()
+        };
+
+        empty_state
+            .on_open_project(|_, window, cx| {
+                telemetry::event!("Agent Panel Add Project Clicked");
+                window.dispatch_action(workspace::Open::default().boxed_clone(), cx);
+            })
+            .on_clone_repo(|_, window, cx| {
+                telemetry::event!("Agent Panel Clone Repo Clicked");
+                window.dispatch_action(git::Clone.boxed_clone(), cx);
+            })
     }
 
     fn render_toolbar(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
@@ -6570,23 +6598,16 @@ impl AgentPanel {
         };
 
         let is_full_screen = self.is_zoomed(window, cx);
-        let (icon_id, icon_name, tooltip_text) = if is_full_screen {
-            (
-                "disable-full-screen",
-                IconName::Minimize,
-                "Disable Full Screen",
-            )
+        let (icon_id, icon_name) = if is_full_screen {
+            ("disable-full-screen", IconName::Minimize)
         } else {
-            (
-                "enable-full-screen",
-                IconName::Maximize,
-                "Enable Full Screen",
-            )
+            ("enable-full-screen", IconName::Maximize)
         };
+        let zoom_label = agent_panel_zoom_label(paths::APP_NAME, is_full_screen);
         let full_screen_button = IconButton::new(icon_id, icon_name)
             .icon_size(IconSize::Small)
-            .aria_label(tooltip_text)
-            .tooltip(move |_, cx| Tooltip::for_action(tooltip_text, &ToggleZoom, cx))
+            .aria_label(zoom_label)
+            .tooltip(move |_, cx| Tooltip::for_action(zoom_label, &ToggleZoom, cx))
             .on_click(cx.listener(move |this, _, window, cx| {
                 this.toggle_zoom(&ToggleZoom, window, cx);
             }));
@@ -7378,6 +7399,14 @@ mod tests {
             agent_panel_session_label("Dez", "Settings", "Agent Settings"),
             "Agent Settings"
         );
+    }
+
+    #[test]
+    fn agent_zoom_labels_describe_the_region_in_dez() {
+        assert_eq!(agent_panel_zoom_label("Dez", false), "Expand Agent");
+        assert_eq!(agent_panel_zoom_label("Dez", true), "Restore Agent");
+        assert_eq!(agent_panel_zoom_label("Zed", false), "Enable Full Screen");
+        assert_eq!(agent_panel_zoom_label("Zed", true), "Disable Full Screen");
     }
 
     #[test]
