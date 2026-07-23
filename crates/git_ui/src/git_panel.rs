@@ -109,6 +109,18 @@ const MAX_HISTORY_TAG_CHIPS: usize = 3;
 // Horizontal offset that aligns the tree indent guides with the row icon column.
 const INDENT_GUIDE_LEFT_OFFSET: gpui::Pixels = gpui::px(19.);
 
+fn dez_git_clean_state_description(branch_name: Option<&str>) -> String {
+    match branch_name {
+        Some(branch_name) if matches!(branch_name, "main" | "master") => {
+            format!("There are no uncommitted changes on {branch_name}.")
+        }
+        Some(branch_name) => format!(
+            "There are no uncommitted changes on {branch_name}. Review committed work against its base branch."
+        ),
+        None => "There are no uncommitted changes in this repository.".to_owned(),
+    }
+}
+
 fn canvas_git_panel_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match contrast {
@@ -6820,23 +6832,85 @@ impl GitPanel {
     fn render_no_changes_ui(&self, cx: &Context<Self>) -> AnyElement {
         let show_branch_diff = self.changes_count == 0 && !self.is_on_main_branch(cx);
 
-        v_flex()
-            .gap_1()
-            .items_center()
-            .child(Label::new("No changes to commit").color(Color::Muted))
-            .when(show_branch_diff, |this| {
-                this.child(
-                    Button::new("view_branch_diff", "View Branch Diff")
-                        .label_size(LabelSize::Small)
-                        .style(ButtonStyle::Outlined)
-                        .on_click(move |_, _, cx| {
-                            cx.defer(move |cx| {
-                                cx.dispatch_action(&DeployBranchDiff);
-                            })
+        if paths::APP_NAME == "Zed" {
+            v_flex()
+                .gap_1()
+                .items_center()
+                .child(Label::new("No changes to commit").color(Color::Muted))
+                .when(show_branch_diff, |this| {
+                    this.child(
+                        Button::new("view_branch_diff", "View Branch Diff")
+                            .label_size(LabelSize::Small)
+                            .style(ButtonStyle::Outlined)
+                            .on_click(move |_, _, cx| {
+                                cx.defer(move |cx| {
+                                    cx.dispatch_action(&DeployBranchDiff);
+                                })
+                            }),
+                    )
+                })
+                .into_any_element()
+        } else {
+            let branch_name = self.active_repository.as_ref().and_then(|repository| {
+                repository
+                    .read(cx)
+                    .branch
+                    .as_ref()
+                    .map(|branch| branch.name().to_owned())
+            });
+            let description = dez_git_clean_state_description(branch_name.as_deref());
+            let accessibility_label = format!("Working tree clean. {description}");
+
+            v_flex()
+                .size_full()
+                .items_center()
+                .justify_start()
+                .px_4()
+                .pt_8()
+                .role(gpui::Role::Status)
+                .aria_label(accessibility_label)
+                .child(
+                    v_flex()
+                        .w_64()
+                        .max_w_full()
+                        .gap_2()
+                        .child(
+                            h_flex()
+                                .gap_1p5()
+                                .child(
+                                    Icon::new(IconName::Check)
+                                        .size(IconSize::Small)
+                                        .color(Color::Success),
+                                )
+                                .child(Label::new("Working tree clean").size(LabelSize::Large)),
+                        )
+                        .child(
+                            Label::new(description)
+                                .size(LabelSize::Small)
+                                .color(Color::Muted),
+                        )
+                        .when(show_branch_diff, |this| {
+                            this.child(
+                                Button::new("view_branch_diff", "Review Branch Changes")
+                                    .full_width()
+                                    .start_icon(
+                                        Icon::new(IconName::GitBranch).size(IconSize::Small),
+                                    )
+                                    .label_size(LabelSize::Small)
+                                    .style(ButtonStyle::Outlined)
+                                    .tooltip(Tooltip::text(
+                                        "Compare committed work on this branch with its base",
+                                    ))
+                                    .on_click(move |_, _, cx| {
+                                        cx.defer(move |cx| {
+                                            cx.dispatch_action(&DeployBranchDiff);
+                                        })
+                                    }),
+                            )
                         }),
                 )
-            })
-            .into_any_element()
+                .into_any_element()
+        }
     }
 
     fn render_unsafe_repo_ui(
@@ -9027,6 +9101,22 @@ mod tests {
     use workspace::{MultiWorkspace, ToolbarItemEvent, ToolbarItemLocation};
 
     use super::*;
+
+    #[test]
+    fn dez_clean_repository_copy_names_branch_and_review_scope() {
+        assert_eq!(
+            dez_git_clean_state_description(Some("main")),
+            "There are no uncommitted changes on main."
+        );
+        assert_eq!(
+            dez_git_clean_state_description(Some("feature/session-rail")),
+            "There are no uncommitted changes on feature/session-rail. Review committed work against its base branch."
+        );
+        assert_eq!(
+            dez_git_clean_state_description(None),
+            "There are no uncommitted changes in this repository."
+        );
+    }
 
     fn init_test(cx: &mut gpui::TestAppContext) {
         zlog::init_test();
