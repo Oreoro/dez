@@ -494,7 +494,7 @@ require_multiline_pattern crates/onboarding/src/basics_page.rs \
     '\.when\(APP_NAME == "Zed".*?render_telemetry_section' \
     'Dez onboarding still offers a misleading upstream telemetry opt-in'
 require_multiline_pattern crates/onboarding/src/basics_page.rs \
-    'let \(label, description, tooltip_description\) = if APP_NAME == "Zed".*?"Trust All Projects By Default".*?"Trust Workspace Folders Automatically".*?"Workspace settings".*?"newly opened folder".*?SwitchField::new.*?Some\(label\).*?Some\(description\.into\(\)\)' \
+    'let \(label, description, tooltip_description\) = if APP_NAME == "Zed".*?"Trust All Projects By Default".*?"Trust Workspace Folders Automatically".*?Workspace settings.*?newly opened folder.*?SwitchField::new.*?Some\(label\).*?Some\(description\.into\(\)\)' \
     'Dez onboarding trust can regress to project scope or vague developer-service copy'
 require_multiline_pattern crates/picker/src/parts.rs \
     'fn project_scan_status_label.*?app_name == "Zed".*?"Project scan in progress…".*?"Workspace scan in progress…".*?Role::Status.*?aria_label\(status_label\).*?Tooltip::text\(status_label\)' \
