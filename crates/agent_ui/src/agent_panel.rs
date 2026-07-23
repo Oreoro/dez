@@ -155,6 +155,18 @@ fn agent_panel_title_edit_label(app_name: &str, is_terminal: bool) -> &'static s
     }
 }
 
+fn agent_panel_session_label(
+    app_name: &str,
+    upstream_thread_label: &'static str,
+    dez_session_label: &'static str,
+) -> &'static str {
+    if app_name == "Zed" {
+        upstream_thread_label
+    } else {
+        dez_session_label
+    }
+}
+
 fn canvas_agent_panel_toolbar_background(cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match DesignSystemSettings::get_global(cx).contrast {
@@ -5874,7 +5886,11 @@ impl AgentPanel {
     fn show_no_thread_summary_model_toast(workspace: Entity<Workspace>, cx: &mut App) {
         workspace.update(cx, |workspace, cx| {
             let toast = StatusToast::new(
-                "No model is configured for summarizing thread titles.",
+                agent_panel_session_label(
+                    paths::APP_NAME,
+                    "No model is configured for summarizing thread titles.",
+                    "No model is configured for generating Agent Session titles.",
+                ),
                 cx,
                 |this, _cx| {
                     this.icon(
@@ -5981,40 +5997,60 @@ impl AgentPanel {
                         menu = menu.context(menu_action_context.clone());
 
                         if has_thread_messages {
-                            menu = menu.header("Current Thread");
+                            menu = menu.header(agent_panel_session_label(
+                                paths::APP_NAME,
+                                "Current Thread",
+                                "Current Agent Session",
+                            ));
 
                             if let Some(conversation_view) = conversation_view.as_ref() {
                                 if can_regenerate_thread_title {
-                                    menu = menu.entry("Regenerate Thread Title", None, {
-                                        let conversation_view = conversation_view.clone();
-                                        let workspace = workspace.clone();
-                                        move |_, cx| {
-                                            Self::handle_regenerate_thread_title(
-                                                conversation_view.clone(),
-                                                workspace.clone(),
-                                                cx,
-                                            );
-                                        }
-                                    });
+                                    menu = menu.entry(
+                                        agent_panel_session_label(
+                                            paths::APP_NAME,
+                                            "Regenerate Thread Title",
+                                            "Regenerate Agent Session Title",
+                                        ),
+                                        None,
+                                        {
+                                            let conversation_view = conversation_view.clone();
+                                            let workspace = workspace.clone();
+                                            move |_, cx| {
+                                                Self::handle_regenerate_thread_title(
+                                                    conversation_view.clone(),
+                                                    workspace.clone(),
+                                                    cx,
+                                                );
+                                            }
+                                        },
+                                    );
                                 }
 
                                 let root_thread_view =
                                     conversation_view.read(cx).root_thread_view();
                                 if let Some(thread_view) = root_thread_view {
                                     let workspace = workspace.clone();
-                                    menu = menu.entry("Open Thread as Markdown", None, {
-                                        move |window, cx| {
-                                            if let Some(workspace) = workspace.upgrade() {
-                                                thread_view.update(cx, |thread_view, cx| {
-                                                    thread_view
-                                                        .open_thread_as_markdown(
-                                                            workspace, window, cx,
-                                                        )
-                                                        .detach_and_log_err(cx);
-                                                });
+                                    menu = menu.entry(
+                                        agent_panel_session_label(
+                                            paths::APP_NAME,
+                                            "Open Thread as Markdown",
+                                            "Open Agent Session as Markdown",
+                                        ),
+                                        None,
+                                        {
+                                            move |window, cx| {
+                                                if let Some(workspace) = workspace.upgrade() {
+                                                    thread_view.update(cx, |thread_view, cx| {
+                                                        thread_view
+                                                            .open_thread_as_markdown(
+                                                                workspace, window, cx,
+                                                            )
+                                                            .detach_and_log_err(cx);
+                                                    });
+                                                }
                                             }
-                                        }
-                                    });
+                                        },
+                                    );
                                 }
 
                                 menu = menu.separator();
@@ -6131,7 +6167,7 @@ impl AgentPanel {
         let focus_handle = self.focus_handle(cx);
 
         ProjectEmptyState::new(
-            "Agent Panel",
+            agent_panel_session_label(paths::APP_NAME, "Agent Panel", "Agent"),
             focus_handle.clone(),
             KeyBinding::for_action_in(&workspace::Open::default(), &focus_handle, cx),
         )
@@ -6454,10 +6490,14 @@ impl AgentPanel {
             .justify_between();
 
         let empty_thread_title = matches!(mode, ToolbarMode::EmptyThread).then(|| {
-            Label::new(format!("New {} Thread", selected_agent_label))
-                .color(Color::Muted)
-                .truncate()
-                .into_any_element()
+            Label::new(format!(
+                "New {} {}",
+                selected_agent_label,
+                agent_panel_session_label(paths::APP_NAME, "Thread", "Session")
+            ))
+            .color(Color::Muted)
+            .truncate()
+            .into_any_element()
         });
 
         let toolbar_content = {
@@ -6468,7 +6508,11 @@ impl AgentPanel {
                     {
                         move |_window, cx| {
                             Tooltip::for_action_in(
-                                "New Thread\u{2026}",
+                                agent_panel_session_label(
+                                    paths::APP_NAME,
+                                    "New Thread\u{2026}",
+                                    "New Agent Session\u{2026}",
+                                ),
                                 &ToggleNewThreadMenu,
                                 &focus_handle,
                                 cx,
@@ -7194,6 +7238,22 @@ mod tests {
         assert_eq!(
             agent_panel_title_edit_label("Zed", true),
             "Edit Terminal Title"
+        );
+    }
+
+    #[test]
+    fn agent_panel_session_labels_preserve_product_vocabulary() {
+        assert_eq!(
+            agent_panel_session_label("Dez", "Current Thread", "Current Agent Session"),
+            "Current Agent Session"
+        );
+        assert_eq!(
+            agent_panel_session_label("Zed", "Current Thread", "Current Agent Session"),
+            "Current Thread"
+        );
+        assert_eq!(
+            agent_panel_session_label("Dez", "New Thread…", "New Agent Session…"),
+            "New Agent Session…"
         );
     }
 

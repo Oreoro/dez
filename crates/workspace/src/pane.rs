@@ -5337,6 +5337,8 @@ fn default_render_tab_bar_buttons(
         Some(_) => (false, pane.items_len() > 1),
         None => (false, false),
     };
+    let (new_surface_aria_label, new_surface_tooltip) =
+        pane_new_surface_control_copy(paths::APP_NAME);
     // Ideally we would return a vec of elements here to pass directly to the [TabBar]'s
     // `end_slot`, but due to needing a view here that isn't possible.
     let right_children = h_flex()
@@ -5348,8 +5350,8 @@ fn default_render_tab_bar_buttons(
                     IconButton::new("plus", IconName::Plus)
                         .size(ButtonSize::Medium)
                         .icon_size(IconSize::Small)
-                        .aria_label("New Item"),
-                    Tooltip::text("New…"),
+                        .aria_label(new_surface_aria_label),
+                    Tooltip::text(new_surface_tooltip),
                 )
                 .anchor(Anchor::TopRight)
                 .with_handle(pane.new_item_context_menu_handle.clone())
@@ -5415,6 +5417,14 @@ fn default_render_tab_bar_buttons(
         .into_any_element()
         .into();
     (None, right_children)
+}
+
+fn pane_new_surface_control_copy(app_name: &str) -> (&'static str, &'static str) {
+    if app_name == "Zed" {
+        ("New Item", "New…")
+    } else {
+        ("Add to Main Work Area", "Add a file, search, or terminal")
+    }
 }
 
 pub(crate) fn render_toggle_zoom_button(pane: &Pane, cx: &mut Context<Pane>) -> IconButton {
@@ -6183,6 +6193,15 @@ mod tests {
     use settings::SettingsStore;
     use theme::LoadThemes;
     use util::TryFutureExt;
+
+    #[test]
+    fn dez_pane_add_control_names_its_destination_and_choices() {
+        assert_eq!(
+            pane_new_surface_control_copy("Dez"),
+            ("Add to Main Work Area", "Add a file, search, or terminal")
+        );
+        assert_eq!(pane_new_surface_control_copy("Zed"), ("New Item", "New…"));
+    }
 
     // drop_call_count is a Cell here because `handle_drop` takes &self, not &mut self.
     struct CustomDropHandlingItem {
