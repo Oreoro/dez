@@ -4218,14 +4218,16 @@ impl Pane {
             })
             .collect::<Vec<_>>();
         let pane = cx.entity();
+        let (overflow_control_label, overflow_menu_header) =
+            pane_tab_overflow_copy(paths::APP_NAME);
 
         PopoverMenu::new("pane-tab-overflow-menu")
             .trigger_with_tooltip(
                 IconButton::new("pane-tab-overflow-menu-button", IconName::ListTree)
                     .size(ButtonSize::Medium)
                     .icon_size(IconSize::Small)
-                    .aria_label("Open Tab"),
-                Tooltip::text("Open Tab"),
+                    .aria_label(overflow_control_label),
+                Tooltip::text(overflow_control_label),
             )
             .anchor(Anchor::TopRight)
             .with_handle(self.tab_overflow_context_menu_handle.clone())
@@ -4236,7 +4238,7 @@ impl Pane {
                     window,
                     cx,
                     move |mut menu, window, _cx| {
-                        menu = menu.header("Tabs");
+                        menu = menu.header(overflow_menu_header);
 
                         for (ix, label, is_active) in tab_entries.clone() {
                             let pane = pane.clone();
@@ -5440,6 +5442,14 @@ fn pane_split_control_copy(app_name: &str, enabled: bool) -> (&'static str, &'st
     }
 }
 
+fn pane_tab_overflow_copy(app_name: &str) -> (&'static str, &'static str) {
+    if app_name == "Zed" {
+        ("Open Tab", "Tabs")
+    } else {
+        ("Switch Surface", "Surfaces")
+    }
+}
+
 pub(crate) fn render_toggle_zoom_button(pane: &Pane, cx: &mut Context<Pane>) -> IconButton {
     let zoomed = pane.is_zoomed();
     let label = if zoomed { "Zoom Out" } else { "Zoom In" };
@@ -6225,6 +6235,11 @@ mod tests {
             pane_split_control_copy("Dez", true),
             ("Split Pane", "Split Pane")
         );
+        assert_eq!(
+            pane_tab_overflow_copy("Dez"),
+            ("Switch Surface", "Surfaces")
+        );
+        assert_eq!(pane_tab_overflow_copy("Zed"), ("Open Tab", "Tabs"));
     }
 
     // drop_call_count is a Cell here because `handle_drop` takes &self, not &mut self.
