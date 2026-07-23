@@ -118,6 +118,11 @@ protocol, database, and mention identifiers may retain `thread`; the compatible
 mention keyword remains `@thread`. The Agent menu names its destinations as
 **Agent Settings** and **Toggle Session Rail**.
 
+Session Switcher previews are reversible. Confirming records and focuses the
+selected Session; cancelling restores the original Agent Session, center
+terminal Surface, or Host Session through its actual source without changing
+ownership or routing a terminal through Agent.
+
 There is no Dez **Terminal Thread** destination. The inherited action remains
 only as an official-Zed compatibility implementation. Dez hides it from Agent
 menus and the command palette, redirects compatibility dispatches to **New

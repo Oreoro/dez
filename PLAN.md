@@ -1867,3 +1867,16 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   the **Agent Sessions** context label. Formatting, locked offline metadata,
   identity, and diff checks pass; rendered keyboard/search proof remains
   deferred.
+- 2026-07-23: Clarified Agent diagnostic and clipboard notices in
+  `07024bf5c0`. Copy/load results, missing-session errors, metadata buffers, and
+  Workspace prerequisites now use Agent Session, Workspace, and Session Rail
+  vocabulary in Dez while official Zed retains its existing diagnostics.
+  Static identity, formatting, and diff checks pass; rendered toast proof
+  remains deferred.
+- 2026-07-23: Made Session Switcher cancellation source-preserving in
+  `67a8152db7`. The original switcher selection now retains whether a terminal
+  came from a center Workspace item, durable Host Session, or retained
+  compatibility surface; cancelling a preview restores through that same
+  route instead of forcing every terminal through Agent. Commit `23ae297ef0`
+  adds focused center-terminal source coverage. Formatting, identity, and diff
+  checks pass; compilation and live Escape/focus proof remain deferred.

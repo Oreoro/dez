@@ -1140,7 +1140,13 @@ the later running-app reports, the source advanced through:
 - `4229be7201`, which gives Session switching a named responsive dialog,
   recent-session count, and interaction guidance, and gives Agent Session
   search product-specific copy and a Search landmark; plus `ff1d03b8d3`, which
-  aligns the deferred completion-menu expectation.
+  aligns the deferred completion-menu expectation; and
+- `07024bf5c0`, which productizes Agent Session clipboard, prerequisite,
+  metadata, and failure notices; and
+- `67a8152db7`, which restores cancelled Session Switcher previews through the
+  original Agent Session, center terminal, Host Session, or compatibility
+  source rather than routing every terminal through Agent; plus `23ae297ef0`,
+  which adds focused center-terminal source coverage.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

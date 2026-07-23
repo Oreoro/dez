@@ -1542,6 +1542,19 @@ code, all launch gates pass, and known limitations are documented.
       completion expectation with the visible **Agent Sessions** label. Static
       identity, formatting, locked offline metadata, and diff checks pass;
       rendered keyboard/modifier-release/search proof remains deferred.
+- [x] 2026-07-23: Restore cancelled Session Switcher previews through their
+      original source. Commit `67a8152db7` preserves center Workspace items,
+      durable Host Sessions, retained compatibility terminals, and Agent
+      Sessions as distinct restoration targets instead of forcing terminals
+      through Agent. Commit `23ae297ef0` adds focused center-terminal source
+      coverage. Formatting, identity, and diff checks pass; compilation and
+      live Escape/focus proof remain deferred.
+- [x] 2026-07-23: Productize Agent clipboard and metadata diagnostics. Commit
+      `07024bf5c0` gives copy/load outcomes, missing-session notices, Workspace
+      prerequisites, and diagnostic-buffer titles consistent Agent Session and
+      Session Rail wording in Dez while preserving official Zed copy. Static
+      identity, formatting, and diff checks pass; rendered toast proof remains
+      deferred.
 - [x] 2026-07-23: Remove remaining terminal-thread language from Dez UI.
       Commit `d1ea4a914f` gives the external-session import flow consistent
       Agent Session, Agent History, count, empty, and completion copy. Commit
