@@ -1038,7 +1038,12 @@ the later running-app reports, the source advanced through:
   center tab or split; and
 - `622acd1a61`, which names the Dez View-menu destinations Workspace Tools,
   Files, Outline, Debug, Agent, and Git without exposing pane/dock
-  implementation details.
+  implementation details;
+- `d2e2a3992a`, which replaces stacked welcome promotion cards with one concise
+  Start/attention/review summary and restores start actions to the primary
+  hierarchy; and
+- `594296efa8`, which constrains welcome, empty Workspace, and unavailable-tool
+  recovery content to deliberate compact measures and spacing.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

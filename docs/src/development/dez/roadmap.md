@@ -1372,6 +1372,14 @@ code, all launch gates pass, and known limitations are documented.
       whether compatibility internals use a pane tab or dock. Official Zed
       retains its existing labels. Focused pure assertions and the static
       identity guard pass; rendered proof remains deferred.
+- [x] 2026-07-23: Make welcome and recovery states work-first rather than
+      promotional. Commit `d2e2a3992a` removes the stacked supervision and agent
+      cards, preserves the primary start and recent-Workspace actions, and
+      condenses orientation to **Start in a terminal. Track attention. Review
+      evidence.** Commit `594296efa8` then constrains welcome content to a
+      640 px reading measure and empty/recovery states to 384 px with tighter
+      spacing. Focused pure assertions and static identity guards pass;
+      compilation and rendered narrow-window proof remain deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

@@ -1198,9 +1198,11 @@ Notes decision:
   Onboarding action are now official-Zed-only. Dez Help says **Getting
   Started**; its optional welcome surface says Open Workspace, Recent
   Workspaces, and Supervise agent work, with evidence-first explanatory copy.
-  Identity guards freeze both onboarding gates. Formatting, diff, and identity
-  checks pass; compiled and rendered proof remains in the consolidated build
-  gate, and no application bundle was built or launched.
+  Commit `d2e2a3992a` later replaces the promotional supervision and agent cards
+  with one concise workflow summary so start actions and recent Workspaces own
+  the hierarchy. Identity guards freeze both onboarding gates. Formatting,
+  diff, and identity checks pass; compiled and rendered proof remains in the
+  consolidated build gate, and no application bundle was built or launched.
 - 2026-07-23: Removed the last Zed-branded glyph from Dez getting started in
   `869cddcce0`. The supervision card now uses the neutral Robot icon, and the
   identity suite rejects reintroducing Zed Assistant there. Formatting, diff,
@@ -1621,3 +1623,15 @@ Notes decision:
   dock implementation details. Official Zed retains its existing labels.
   Focused pure assertions and the static identity guard pass; rendered proof
   remains deferred.
+- 2026-07-23: Removed promotional card stacking from the welcome surface in
+  `d2e2a3992a`. The three-row supervision explainer and separate agent card no
+  longer compete with start actions and recent Workspaces; the header now says
+  **Start in a terminal. Track attention. Review evidence.** The change also
+  removes an Open Agent shortcut that could accidentally close an already-open
+  Session Rail before focusing Agent. Formatting, focused pure assertions,
+  identity, and diff checks pass; rendered proof remains deferred.
+- 2026-07-23: Tightened center absence-state density in `594296efa8`. Welcome
+  content now uses a restrained 640 px measure, 24 px inset, and one spacing
+  rhythm; empty Workspace and unavailable-tool recovery states use a 384 px
+  measure rather than broad card-like canvases. Static identity, formatting,
+  and diff checks pass; rendered narrow-window proof remains deferred.
