@@ -848,7 +848,7 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'impl Item for TerminalView.*?fn force_show_tab_bar\(&self\) -> bool \{[[:space:]]*true' \
     'a single terminal can regress to an unanchored shell canvas without visible Surface identity'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    '"Start New Terminal".*?\.aria_label\("Start New Terminal in Main Work Area"\).*?Tooltip::for_action\([[:space:]]*"Start New Terminal in Main Work Area".*?NewCenterTerminal::default' \
+    '"Start Fresh Terminal".*?\.aria_label\("Start Fresh Terminal in Main Work Area"\).*?Tooltip::for_action\([[:space:]]*"Start Fresh Terminal in Main Work Area".*?NewCenterTerminal::default' \
     'the unavailable-terminal recovery action can regress to an ambiguous or unnamed destination'
 require_pattern crates/terminal_view/src/terminal_view.rs \
     'Working directory: \{working_directory\}' \
@@ -914,8 +914,11 @@ reject_pattern crates/terminal_view/src/terminal_view.rs \
     'assistant_enabled = false|AddSelectionToThread|InlineAssist::default' \
     'the terminal context menu retains permanently disabled Agent actions'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    '\.title\("This terminal cannot reconnect"\).*?without pretending the process is live.*?"Start New Terminal"' \
+    'fn terminal_unavailable_description.*?Dez did not start a replacement shell.*?Start fresh only when you want a separate computation.*?if self\.session_unavailable \{[[:space:]]*return false;.*?\.title\("Terminal Session unavailable"\).*?\.description\(unavailable_description\).*?"Start Fresh Terminal"' \
     'unavailable terminal recovery can regress to internal Host jargon'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'session_unavailable_reason: Option<String>.*?let \(terminal, session_unavailable_reason\) = match stored_session_ref.*?The terminal host no longer owns this saved session.*?The saved terminal process is no longer available on this Dez host.*?The saved terminal session reference is incomplete or invalid.*?if custom_title\.is_some\(\) \{[[:space:]]*view\.custom_title = custom_title;.*?view\.session_unavailable_reason = session_unavailable_reason.*?fn session_unavailable_terminal.*?\.with_display_text\("Session unavailable", &\[\]\)' \
+    'unavailable Terminal Sessions can regress to losing their title, reason, or rendering duplicate fake terminal output'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'fn terminal_panel_surface_visible.*?app_name == "Zed".*?if terminal_panel_surface_visible\(APP_NAME\).*?terminal_panel::Toggle' \
     'the compatibility Terminal Panel can leak back into the Dez View menu'

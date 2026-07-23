@@ -110,6 +110,14 @@ fn terminal_surface_accessibility_label(title: &str, status: &str) -> String {
     format!("Terminal Session: {title}. Status: {status}")
 }
 
+fn terminal_unavailable_description(reason: Option<&str>) -> String {
+    let reason =
+        reason.unwrap_or("The saved terminal process is no longer available on this Dez host.");
+    format!(
+        "{reason} Dez did not start a replacement shell. Start fresh only when you want a separate computation."
+    )
+}
+
 fn terminal_close_label(is_hosted: bool) -> &'static str {
     if is_hosted {
         "Detach Terminal"
@@ -677,6 +685,7 @@ pub struct TerminalView {
     needs_serialize: bool,
     session_ref_needs_serialize: bool,
     session_unavailable: bool,
+    session_unavailable_reason: Option<String>,
     custom_title: Option<String>,
     hover: Option<HoverTarget>,
     hover_tooltip_update: Task<()>,
@@ -841,6 +850,7 @@ impl TerminalView {
             needs_serialize: false,
             session_ref_needs_serialize: true,
             session_unavailable: false,
+            session_unavailable_reason: None,
             custom_title: None,
             ime_state: None,
             self_handle: cx.entity().downgrade(),
@@ -876,6 +886,9 @@ impl TerminalView {
 
     pub fn set_session_unavailable(&mut self, unavailable: bool, cx: &mut Context<Self>) {
         self.session_unavailable = unavailable;
+        if !unavailable {
+            self.session_unavailable_reason = None;
+        }
         cx.notify();
     }
 
@@ -1427,6 +1440,10 @@ impl TerminalView {
     }
 
     pub fn should_show_cursor(&self, focused: bool, cx: &mut Context<Self>) -> bool {
+        if self.session_unavailable {
+            return false;
+        }
+
         // Hide cursor when in embedded mode and not focused (read-only output like Agent panel)
         if let TerminalMode::Embedded { .. } = &self.mode {
             if !focused {
@@ -2083,6 +2100,8 @@ impl Render for TerminalView {
                 terminal.task().map(|task| &task.status),
             )
         };
+        let unavailable_description =
+            terminal_unavailable_description(self.session_unavailable_reason.as_deref());
 
         div()
             .id("terminal-view")
@@ -2167,42 +2186,35 @@ impl Render for TerminalView {
             )
             .when(self.session_unavailable, |this| {
                 this.child(
-                    div()
-                        .absolute()
-                        .top_0()
-                        .left_0()
-                        .right_0()
-                        .child(
-                            Callout::new()
-                                .severity(Severity::Warning)
-                                .icon(IconName::Warning)
-                                .title("This terminal cannot reconnect")
-                                .description(
-                                    "Its saved session is unavailable. Dez did not start a replacement shell, so this surface remains visible without pretending the process is live.",
+                    div().absolute().top_0().left_0().right_0().child(
+                        Callout::new()
+                            .severity(Severity::Warning)
+                            .icon(IconName::Warning)
+                            .title("Terminal Session unavailable")
+                            .description(unavailable_description)
+                            .actions_slot(
+                                Button::new(
+                                    "new-terminal-from-unavailable",
+                                    "Start Fresh Terminal",
                                 )
-                                .actions_slot(
-                                    Button::new(
-                                        "new-terminal-from-unavailable",
-                                        "Start New Terminal",
+                                .style(ButtonStyle::Filled)
+                                .tab_index(0isize)
+                                .aria_label("Start Fresh Terminal in Main Work Area")
+                                .tooltip(|_, cx| {
+                                    Tooltip::for_action(
+                                        "Start Fresh Terminal in Main Work Area",
+                                        &NewCenterTerminal::default(),
+                                        cx,
                                     )
-                                    .style(ButtonStyle::Filled)
-                                    .tab_index(0isize)
-                                    .aria_label("Start New Terminal in Main Work Area")
-                                    .tooltip(|_, cx| {
-                                        Tooltip::for_action(
-                                            "Start New Terminal in Main Work Area",
-                                            &NewCenterTerminal::default(),
-                                            cx,
-                                        )
-                                    })
-                                    .on_click(|_, window, cx| {
-                                        window.dispatch_action(
-                                            NewCenterTerminal::default().boxed_clone(),
-                                            cx,
-                                        );
-                                    }),
-                                ),
-                        ),
+                                })
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(
+                                        NewCenterTerminal::default().boxed_clone(),
+                                        cx,
+                                    );
+                                }),
+                            ),
+                    ),
                 )
             })
             .children(self.context_menu.as_ref().map(|(menu, position, _)| {
@@ -2716,15 +2728,13 @@ impl SerializableItem for TerminalView {
                 StoredTerminalSessionRef::Legacy | StoredTerminalSessionRef::Invalid => None,
             };
             let fallback_evidence_cwd = cwd.clone();
-            let (terminal, session_unavailable) = match stored_session_ref {
-                StoredTerminalSessionRef::Legacy => {
-                    (
-                        project
-                            .update(cx, |project, cx| project.create_terminal_shell(cwd, cx))
-                            .await?,
-                        false,
-                    )
-                }
+            let (terminal, session_unavailable_reason) = match stored_session_ref {
+                StoredTerminalSessionRef::Legacy => (
+                    project
+                        .update(cx, |project, cx| project.create_terminal_shell(cwd, cx))
+                        .await?,
+                    None,
+                ),
                 StoredTerminalSessionRef::Valid(session_ref) => {
                     let attached = cx
                         .update(|_window, cx| {
@@ -2739,62 +2749,46 @@ impl SerializableItem for TerminalView {
                         .ok()
                         .flatten();
                     if let Some(terminal) = attached {
-                        (terminal, false)
+                        (terminal, None)
                     } else if let Some(connection) =
                         wait_for_hosted_terminal_connection(session_ref.host_id, cx).await
                     {
-                        match restore_hosted_terminal(
-                            &project,
-                            connection,
-                            session_ref,
-                            cwd,
-                            cx,
-                        )
-                        .await?
+                        match restore_hosted_terminal(&project, connection, session_ref, cwd, cx)
+                            .await?
                         {
-                            Some(terminal) => (terminal, false),
-                            None => (
-                                cx.update(|window, cx| {
-                                    session_unavailable_terminal(
-                                        &project,
-                                        "The terminal host no longer owns this saved session.",
-                                        window,
-                                        cx,
-                                    )
-                                })?,
-                                true,
-                            ),
+                            Some(terminal) => (terminal, None),
+                            None => {
+                                let reason = "The terminal host no longer owns this saved session.";
+                                (
+                                    cx.update(|window, cx| {
+                                        session_unavailable_terminal(&project, window, cx)
+                                    })?,
+                                    Some(reason.to_owned()),
+                                )
+                            }
                         }
                     } else {
+                        let reason =
+                            "The saved terminal process is no longer available on this Dez host.";
                         (
                             cx.update(|window, cx| {
-                                session_unavailable_terminal(
-                                    &project,
-                                    "The saved terminal process is no longer available on this Dez host.",
-                                    window,
-                                    cx,
-                                )
+                                session_unavailable_terminal(&project, window, cx)
                             })?,
-                            true,
+                            Some(reason.to_owned()),
                         )
                     }
                 }
-                StoredTerminalSessionRef::Invalid => (
-                    cx.update(|window, cx| {
-                        session_unavailable_terminal(
-                            &project,
-                            "The saved terminal session reference is incomplete or invalid.",
-                            window,
-                            cx,
-                        )
-                    })?,
-                    true,
-                ),
+                StoredTerminalSessionRef::Invalid => {
+                    let reason = "The saved terminal session reference is incomplete or invalid.";
+                    (
+                        cx.update(|window, cx| session_unavailable_terminal(&project, window, cx))?,
+                        Some(reason.to_owned()),
+                    )
+                }
             };
+            let session_unavailable = session_unavailable_reason.is_some();
             cx.update(|window, cx| {
-                if session_unavailable
-                    && let Some(session_ref) = restored_session_ref
-                {
+                if session_unavailable && let Some(session_ref) = restored_session_ref {
                     workspace
                         .update(cx, |workspace, cx| {
                             workspace.set_terminal_working_directory_evidence(
@@ -2819,10 +2813,11 @@ impl SerializableItem for TerminalView {
                         window,
                         cx,
                     );
-                    if custom_title.is_some() && !session_unavailable {
+                    if custom_title.is_some() {
                         view.custom_title = custom_title;
                     }
                     view.session_unavailable = session_unavailable;
+                    view.session_unavailable_reason = session_unavailable_reason;
                     view
                 })
             })
@@ -2948,7 +2943,6 @@ pub async fn wait_for_hosted_terminal_connection(
 /// Callers use this when a persisted session identity cannot be reconciled.
 pub fn session_unavailable_terminal(
     project: &Entity<Project>,
-    reason: &str,
     window: &mut Window,
     cx: &mut App,
 ) -> Entity<Terminal> {
@@ -2968,14 +2962,7 @@ pub fn session_unavailable_terminal(
     );
     cx.new(|cx| {
         builder
-            .with_display_text(
-                "Session unavailable",
-                &[
-                    "Dez did not start a replacement process.",
-                    reason,
-                    "Use New Terminal when you are ready to start fresh computation.",
-                ],
-            )
+            .with_display_text("Session unavailable", &[])
             .subscribe(cx)
     })
 }
@@ -3249,6 +3236,16 @@ mod tests {
         assert_eq!(
             terminal_surface_accessibility_label("tests", "Active"),
             "Terminal Session: tests. Status: Active"
+        );
+        assert_eq!(
+            terminal_unavailable_description(Some(
+                "The terminal host no longer owns this saved session."
+            )),
+            "The terminal host no longer owns this saved session. Dez did not start a replacement shell. Start fresh only when you want a separate computation."
+        );
+        assert_eq!(
+            terminal_unavailable_description(None),
+            "The saved terminal process is no longer available on this Dez host. Dez did not start a replacement shell. Start fresh only when you want a separate computation."
         );
         assert_eq!(terminal_close_label(true), "Detach Terminal");
         assert_eq!(terminal_close_label(false), "Close Terminal Tab");
