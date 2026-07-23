@@ -208,6 +208,9 @@ require_pattern crates/sidebar/src/sidebar.rs \
 require_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\("Session Rail"\)' \
     'the supervision region has regressed to an ambiguous Sessions heading'
+reject_pattern crates/sidebar/src/sidebar.rs \
+    'when\(!is_focused, \|this\| this\.visible_on_hover\(&group_name\)\)' \
+    'Workspace group disclosure can regress to an invisible hover-only affordance'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn terminal_row_close_presentation.*?"Terminate Running Session", true.*?"Detach Live Terminal", false' \
     'a Host-owned running Session can regress to a non-destructive detach label'
