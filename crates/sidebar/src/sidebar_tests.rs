@@ -214,6 +214,19 @@ fn session_overview_copy_distinguishes_empty_search_attention_and_caught_up_stat
     );
 }
 
+#[test]
+fn session_scope_accessibility_copy_keeps_control_names_stable() {
+    assert_eq!(all_sessions_accessibility_label(3), "All sessions, 3 total");
+    assert_eq!(
+        attention_sessions_accessibility_label(1),
+        "Attention sessions, 1 needs attention"
+    );
+    assert_eq!(
+        attention_sessions_accessibility_label(2),
+        "Attention sessions, 2 need attention"
+    );
+}
+
 #[track_caller]
 fn assert_active_thread(sidebar: &Sidebar, session_id: &acp::SessionId, msg: &str) {
     let active = sidebar.active_entry.as_ref();

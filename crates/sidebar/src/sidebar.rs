@@ -283,6 +283,19 @@ fn session_scope_controls_visible(session_count: usize) -> bool {
     session_count > 0
 }
 
+fn all_sessions_accessibility_label(session_count: usize) -> String {
+    format!("All sessions, {session_count} total")
+}
+
+fn attention_sessions_accessibility_label(attention_count: usize) -> String {
+    let attention_verb = if attention_count == 1 {
+        "needs"
+    } else {
+        "need"
+    };
+    format!("Attention sessions, {attention_count} {attention_verb} attention")
+}
+
 fn session_search_visible(session_count: usize, has_query: bool) -> bool {
     session_count > 0 || has_query
 }
@@ -11123,6 +11136,8 @@ impl Sidebar {
 
         v_flex()
             .id("sidebar-no-results")
+            .role(gpui::Role::Status)
+            .aria_label(format!("{title}. {description}"))
             .p_4()
             .size_full()
             .items_center()
@@ -11179,6 +11194,8 @@ impl Sidebar {
     fn render_attention_empty_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
         v_flex()
             .id("sidebar-attention-empty")
+            .role(gpui::Role::Status)
+            .aria_label("You're caught up. No sessions need your attention.")
             .p_4()
             .size_full()
             .items_center()
@@ -11208,11 +11225,6 @@ impl Sidebar {
     fn render_session_overview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let has_attention = self.contents.has_attention;
         let is_searching = self.has_filter_query(cx);
-        let session_noun = if self.contents.session_count == 1 {
-            "session"
-        } else {
-            "sessions"
-        };
         let status_label = session_overview_status_label(
             self.contents.session_count,
             self.contents.attention_count,
@@ -11221,12 +11233,9 @@ impl Sidebar {
         );
         let all_scope_label = format!("All {}", self.contents.session_count);
         let attention_scope_label = format!("Attention {}", self.contents.attention_count);
-        let all_scope_aria_label =
-            format!("Show all {} {session_noun}", self.contents.session_count);
-        let attention_scope_aria_label = format!(
-            "Show {} sessions needing attention",
-            self.contents.attention_count
-        );
+        let all_scope_aria_label = all_sessions_accessibility_label(self.contents.session_count);
+        let attention_scope_aria_label =
+            attention_sessions_accessibility_label(self.contents.attention_count);
         let all_scope_focus = self.focus_handle.clone();
         let attention_scope_focus = self.focus_handle.clone();
         let status_color = if has_attention && !is_searching {
@@ -11265,6 +11274,8 @@ impl Sidebar {
                                 h_flex()
                                     .min_w_0()
                                     .gap_1()
+                                    .role(gpui::Role::Status)
+                                    .aria_label(status_label.clone())
                                     .child(
                                         Icon::new(status_icon)
                                             .size(IconSize::XSmall)
@@ -11311,6 +11322,8 @@ impl Sidebar {
                         h_flex()
                             .w_full()
                             .gap_1()
+                            .role(gpui::Role::Group)
+                            .aria_label("Session scope")
                             .child(
                                 div().min_w_0().flex_1().child(
                                     Button::new("all-session-scope", all_scope_label)
@@ -11320,9 +11333,10 @@ impl Sidebar {
                                         .toggle_state(!self.attention_only)
                                         .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                                         .aria_label(all_scope_aria_label)
+                                        .aria_description("Show every session in the rail")
                                         .tooltip(move |_window, cx| {
                                             Tooltip::for_action_in(
-                                                "Toggle Attention Scope",
+                                                "Show All Sessions",
                                                 &ToggleAttentionFilter,
                                                 &all_scope_focus,
                                                 cx,
@@ -11342,9 +11356,10 @@ impl Sidebar {
                                         .toggle_state(self.attention_only)
                                         .selected_style(ButtonStyle::Tinted(TintColor::Warning))
                                         .aria_label(attention_scope_aria_label)
+                                        .aria_description("Show only sessions that need attention")
                                         .tooltip(move |_window, cx| {
                                             Tooltip::for_action_in(
-                                                "Toggle Attention Scope",
+                                                "Show Attention Sessions",
                                                 &ToggleAttentionFilter,
                                                 &attention_scope_focus,
                                                 cx,
@@ -11376,6 +11391,8 @@ impl Sidebar {
         let has_query = self.has_filter_query(cx);
 
         h_flex()
+            .role(gpui::Role::Search)
+            .aria_label("Search sessions")
             .flex_none()
             .h(Tab::content_height(cx))
             .px_1p5()
