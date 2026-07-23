@@ -139,6 +139,12 @@ History picker. Official Zed retains its Project vocabulary through explicit
 product branches. Formatting and static identity gates pass; compilation and
 rendered proof remain deferred.
 
+Commit `b749a25619` completes the adjacent recent-work and Restricted Mode pass:
+search, empty, open/move/remove, multi-root, Dev Container, failure, trust, and
+trust-validation copy all use Workspace language in Dez. Official Zed and
+internal action/type identifiers remain compatible. Formatting and static
+identity gates pass; compilation and rendered proof remain deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -902,6 +908,12 @@ code, all launch gates pass, and known limitations are documented.
       types or official Zed copy. Focused label assertions and identity guards
       cover the product branch. Formatting and static checks pass; compiled and
       rendered proof remain in the consolidated gate.
+- [x] 2026-07-23: Normalize recent-work actions and Restricted Mode trust copy.
+      Commit `b749a25619` carries Workspace language through search, empty,
+      open/move/remove, multi-root, failure, and trust states while preserving
+      official Zed branches and internal identifiers. Focused trust-label
+      assertions and identity guards are authored; static gates pass, and
+      compilation/rendered proof remain in the consolidated gate.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

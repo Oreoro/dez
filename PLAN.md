@@ -399,8 +399,10 @@ with new labels.
       its Project Panel copy through explicit compatibility branches. Commit
       `f6aea3e013` extends that contract through the title bar, Recent
       Workspaces pickers, remote Workspace indicators/deletion, and the Agent
-      History picker while preserving official Zed copy. Security vocabulary
-      remains to audit.
+      History picker while preserving official Zed copy. Commit `b749a25619`
+      finishes the same pass through recent-work search/actions/errors, Files
+      multi-root controls, and Restricted Mode trust copy. Command-center and
+      transient-overlay vocabulary remain to audit.
 - [ ] Give every primary region a visible purpose, stable placement, clear
       focus treatment, and predictable resize/collapse behavior. The app View
       menu, title-bar/sidebar chrome, and collapsed status control now call the
@@ -1237,3 +1239,10 @@ Notes decision:
   title bar, recent-work picker, remote controls, and Agent History. Explicit
   product branches retain official Zed copy. Formatting, Bash syntax, diff,
   and identity checks pass; compilation and rendered proof remain deferred.
+- 2026-07-23: Closed the recent-work and trust-language follow-up in
+  `b749a25619`. Dez's search, empty states, open/move/remove, multi-root,
+  Dev Container, and failure copy now consistently names Workspaces. Restricted
+  Mode says what Workspace settings and configured tools it blocks, and trust
+  scope validation reports a Workspace boundary. Official Zed retains Project
+  labels through explicit branches. Formatting, Bash syntax, diff, and identity
+  checks pass; compile and rendered verification remain deferred.
