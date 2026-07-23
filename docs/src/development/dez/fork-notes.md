@@ -556,3 +556,9 @@ defer it.
   the exact `git config --global --add safe.directory …` command in its
   tooltip. Documentation remains a separate action. Familiarity with a folder,
   not convenience, is the decision criterion.
+- **2026-07-23: Debug is a Workspace Tool and Debug Session launcher.** The
+  region, tab, and command language use **Debug**. Its idle state explains the
+  debugging workspace, then prioritizes **Start Debug Session** over
+  configuration, documentation, and adapter discovery. Breakpoints remain
+  visible before a session and their empty state teaches the editor-gutter
+  entry point. Internal Debugger and DebugPanel types remain compatible.

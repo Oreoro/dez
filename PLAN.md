@@ -2263,3 +2263,14 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   guard protect the boundary. Formatting, Bash syntax, identity, locked offline
   metadata, and diff checks pass; no build, test binary, or visual launch was
   performed.
+- 2026-07-23: Rebuilt the idle Debug experience in `e2b237025d`. Dez now names
+  the region and pane tab **Debug**, presents a top-aligned **Start debugging**
+  hierarchy, explains that controls, variables, call stack, console, and
+  breakpoints stay together in the Workspace, and makes **Start Debug Session**
+  the primary action. **Configure debug.json**, **Documentation**, and **Debug
+  Adapters** have explicit supporting roles. The empty breakpoint area now says
+  **No breakpoints yet** and points to the editor gutter. Both states have named
+  accessibility regions/statuses; official Zed retains its upstream Debugger
+  presentation. Pure copy assertions and identity guards protect the product
+  branch. Formatting, Bash syntax, identity, locked offline metadata, and diff
+  checks pass; no build, test binary, or visual launch was performed.

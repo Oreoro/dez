@@ -1295,7 +1295,10 @@ the later running-app reports, the source advanced through:
   **Initialize Repository** action while preserving official Zed; and
 - `9c71b58d64`, which turns dubious Git ownership into an explicit warning that
   names the repository path, global configuration effect, exact trust command,
-  and separate safe-directory documentation path.
+  and separate safe-directory documentation path; and
+- `e2b237025d`, which aligns the idle Dez **Debug** region and tab, prioritizes
+  **Start Debug Session**, separates configuration/documentation/adapters, and
+  teaches the editor-gutter breakpoint path through named accessible states.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

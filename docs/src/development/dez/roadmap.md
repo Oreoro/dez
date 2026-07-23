@@ -2437,6 +2437,22 @@ Completed for the unsafe Git-repository slice:
   locked offline Cargo metadata, and `git diff --check`;
 - no build, test binary, alternate binary, or visual launch was performed.
 
+Completed for the idle Debug-experience slice:
+
+- aligned Dez's Debug header and pane-tab name while preserving official Zed's
+  **Debugger** label;
+- replaced the centered button pile with a top-aligned **Start debugging**
+  hierarchy and an explanation of the unified debugging Workspace;
+- made **Start Debug Session** the full-width primary action;
+- separated **Configure debug.json**, **Documentation**, and **Debug Adapters**
+  into clear supporting actions;
+- replaced **No Breakpoints Set** with a named **No breakpoints yet** status
+  that teaches the editor-gutter entry point;
+- added pure product-copy assertions and static identity guards;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
 Completed for the first helper-process source slice:
 
 - new crate instructions and a rollbackable `dez_terminal_host` workspace
