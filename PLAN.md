@@ -377,8 +377,11 @@ terminates explicitly, and reports observed exit truthfully.
       attention already retains condition/presentation/expiry separately from
       live adapter state; commit `7893762cd5` now renders that condition in the
       textual Saved, Detached, Reconnecting, Missing, Incompatible, and Exited
-      state instead of relying on a warning color/icon. Durable activity and
-      review projection recovery remain open.
+      state instead of relying on a warning color/icon. Commit `bd36afd3f4`
+      carries the Host's bounded-activity truncation flag through
+      detach/list/reattach, marks retained rail evidence **partial**, and adds
+      the eviction risk to Review Briefs. Full helper-process/GUI restart proof
+      remains in the consolidated gate.
 - [ ] Complete the Codex hero flow live before adding a second terminal-agent
       adapter; then prove the common contract with one additional adapter.
 
@@ -504,7 +507,9 @@ with new labels.
       The app-wide audit remains open.
 - [ ] Use progressive disclosure: the default view communicates current work;
       details reveal provenance, capabilities, protocol, and diagnostics only
-      when requested.
+      when requested. Commit `bd36afd3f4` keeps the default evidence summary
+      concise with a **partial** qualifier while the Review Brief explains that
+      older structured activity was evicted from bounded Host history.
 
 #### States and copy
 
@@ -1334,3 +1339,9 @@ Notes decision:
   live adapter snapshot exists. Focused state assertions and the identity guard
   pass; durable activity/review recovery and rendered accessibility proof remain
   open.
+- 2026-07-23: Made bounded Host evidence gaps durable and visible in
+  `bd36afd3f4`. Structured activity now records when older events were evicted,
+  preserves that fact across detach/list/reattach, qualifies rail summaries as
+  **partial**, and explains the limitation in Review Brief risks. A focused
+  40-event Host lifecycle assertion and identity guards pass; actual helper
+  process/GUI restart and rendered review proof remain deferred.

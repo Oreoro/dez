@@ -60,6 +60,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Terminal-first Session Rail creation source: `57290c27c3`
 - Workspace closure parity and scope source: `633dcc4bec`
 - Restored textual attention source: `7893762cd5`
+- Bounded Host evidence-gap source: `bd36afd3f4`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -567,6 +568,12 @@ snapshot exists. This preserves transport truth and removes reliance on a
 warning color/icon. Authored state assertions and the identity guard pass;
 rendered accessibility proof and durable activity/review recovery remain open.
 
+Commit `bd36afd3f4` adds a serialized Host `events_truncated` boundary, retains
+it across detach/list/reattach, qualifies the Session Rail's evidence summary as
+**partial**, and records the bounded-history eviction in Review Brief risks. An
+authored 40-event lifecycle assertion and identity guards pass; actual helper
+process/GUI restart and rendered review proof remain deferred.
+
 The corrected `Dez Dev.app` is now registered and launched as launchd child PID
 `85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 `lsof` resolves its text executable to
@@ -800,7 +807,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `7893762cd5` or
+visual evidence: the exact bundle must first be rebuilt from `bd36afd3f4` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -820,7 +827,7 @@ predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `af232402f5`, `a4047d95c0`, `6f2061d2c7`, `27279ca542`, `a2d733eea3`,
 `498f94a525`, `5efa0398ad`, `1f186f9b8c`, `e4f1e341c9`, `6f1562847e`,
 `f6aea3e013`, `b749a25619`, `0e2c0dcae3`, `e969abda4a`, `0607771783`, and
-`2092acd453`, `57290c27c3`, `633dcc4bec`, and `7893762cd5`. A rebuild/re-audit
+`2092acd453`, `57290c27c3`, `633dcc4bec`, `7893762cd5`, and `bd36afd3f4`. A rebuild/re-audit
 and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.

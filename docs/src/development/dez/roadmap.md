@@ -187,6 +187,12 @@ Incompatible, and Exited transport labels even without a live adapter snapshot.
 Focused state assertions and identity checks pass; durable activity/review
 recovery and rendered accessibility proof remain open.
 
+Commit `bd36afd3f4` makes bounded Host evidence truncation durable and visible.
+The Host preserves an eviction flag through detach/list/reattach, the Session
+Rail labels retained evidence **partial**, and Review Briefs explain that older
+structured activity was evicted. A focused 40-event lifecycle assertion and
+identity checks pass; helper-process/GUI restart proof remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -989,6 +995,11 @@ code, all launch gates pass, and known limitations are documented.
       `7893762cd5` composes persisted active attention into every non-live
       transport label while preserving Saved/Detached/Missing truth. Focused
       and identity assertions pass; rendered proof remains consolidated.
+- [x] 2026-07-23: Disclose bounded Host evidence gaps. Commit `bd36afd3f4`
+      persists structured-event eviction through detach/list/reattach, marks
+      rail evidence partial, and adds the precise Review Brief risk. Focused
+      lifecycle and identity assertions pass; process-restart/rendered proof
+      remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the
