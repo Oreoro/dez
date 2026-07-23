@@ -40,6 +40,7 @@ use terminal::{
     Clear, Copy, Event, HoveredWord, MaybeNavigationTarget, Modes, Paste, PasteText, Point, Range,
     ScrollLineDown, ScrollLineUp, ScrollPageDown, ScrollPageUp, ScrollToBottom, ScrollToTop,
     Search, ShowCharacterPalette, TaskState, TaskStatus, Terminal, TerminalBounds, ToggleViMode,
+    session_host::{TerminalHostSnapshotRevision, TerminalHostSnapshotStore, TerminalSessionState},
     terminal_settings::{CursorShape, TerminalSettings},
 };
 use terminal_element::TerminalElement;
@@ -1613,11 +1614,12 @@ fn subscribe_for_terminal_events(
     cx: &mut Context<TerminalView>,
 ) -> Vec<Subscription> {
     let terminal_subscription = cx.observe(terminal, |_, _, cx| cx.notify());
-    let (mut previous_cwd, initial_session_id) = {
+    let (mut previous_cwd, initial_session_id, is_hosted) = {
         let terminal = terminal.read(cx);
         (
             terminal.working_directory(),
             terminal.session_id().to_string(),
+            terminal.is_hosted(),
         )
     };
     // Seed scope before the first PTY event so a newly opened terminal can
@@ -1631,6 +1633,9 @@ fn subscribe_for_terminal_events(
             );
         })
         .ok();
+    if is_hosted {
+        reconcile_host_terminal_evidence(terminal, &workspace, cx);
+    }
     let terminal_events_subscription = cx.subscribe_in(
         terminal,
         window,
@@ -1776,7 +1781,69 @@ fn subscribe_for_terminal_events(
             }
         },
     );
+    let host_snapshot_subscription = is_hosted.then(|| {
+        TerminalHostSnapshotRevision::init(cx);
+        let terminal = terminal.clone();
+        let workspace = workspace.clone();
+        cx.observe_global_in::<TerminalHostSnapshotRevision>(window, move |_, _, cx| {
+            reconcile_host_terminal_evidence(&terminal, &workspace, cx);
+        })
+    });
     vec![terminal_subscription, terminal_events_subscription]
+        .into_iter()
+        .chain(host_snapshot_subscription)
+        .collect()
+}
+
+fn reconcile_host_terminal_evidence(
+    terminal: &Entity<Terminal>,
+    workspace: &WeakEntity<Workspace>,
+    cx: &mut App,
+) {
+    let session_id = terminal.read(cx).session_id();
+    let Some(snapshot) = TerminalHostSnapshotStore::try_global(cx).and_then(|store| {
+        store
+            .read(cx)
+            .snapshots()
+            .iter()
+            .find(|snapshot| snapshot.session_id == session_id)
+            .cloned()
+    }) else {
+        return;
+    };
+    let lifecycle = workspace_evidence_lifecycle_for_host_state(&snapshot.state);
+    workspace
+        .update(cx, |workspace, cx| {
+            if snapshot.working_directory.is_some() {
+                workspace.set_terminal_working_directory_evidence(
+                    session_id.to_string(),
+                    snapshot.working_directory,
+                    cx,
+                );
+            }
+            workspace.set_terminal_evidence_lifecycle(&session_id.to_string(), lifecycle, cx);
+        })
+        .ok();
+}
+
+fn workspace_evidence_lifecycle_for_host_state(
+    state: &TerminalSessionState,
+) -> workspace::evidence::WorkspaceEvidenceLifecycle {
+    match state {
+        TerminalSessionState::Starting
+        | TerminalSessionState::Attached
+        | TerminalSessionState::Detached => {
+            workspace::evidence::WorkspaceEvidenceLifecycle::Current
+        }
+        TerminalSessionState::Reconnecting
+        | TerminalSessionState::Missing
+        | TerminalSessionState::Incompatible { .. } => {
+            workspace::evidence::WorkspaceEvidenceLifecycle::Unresolved
+        }
+        TerminalSessionState::Exited { .. } => {
+            workspace::evidence::WorkspaceEvidenceLifecycle::Stale
+        }
+    }
 }
 
 fn regex_search_for_query(query: &SearchQuery) -> Option<Search> {
@@ -2928,6 +2995,30 @@ mod tests {
     use util::rel_path::RelPath;
     use workspace::item::test::{TestItem, TestProjectItem};
     use workspace::{AppState, MultiWorkspace, SelectedEntry};
+
+    #[test]
+    fn hosted_session_state_maps_to_truthful_workspace_evidence_lifecycle() {
+        use workspace::evidence::WorkspaceEvidenceLifecycle;
+
+        assert_eq!(
+            workspace_evidence_lifecycle_for_host_state(&TerminalSessionState::Attached),
+            WorkspaceEvidenceLifecycle::Current
+        );
+        assert_eq!(
+            workspace_evidence_lifecycle_for_host_state(&TerminalSessionState::Reconnecting),
+            WorkspaceEvidenceLifecycle::Unresolved
+        );
+        assert_eq!(
+            workspace_evidence_lifecycle_for_host_state(&TerminalSessionState::Missing),
+            WorkspaceEvidenceLifecycle::Unresolved
+        );
+        assert_eq!(
+            workspace_evidence_lifecycle_for_host_state(&TerminalSessionState::Exited {
+                exit_code: Some(0),
+            }),
+            WorkspaceEvidenceLifecycle::Stale
+        );
+    }
 
     fn expected_drop_text(paths: &[PathBuf]) -> String {
         let mut text = String::new();
