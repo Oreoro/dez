@@ -1843,3 +1843,8 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   title actions, Markdown export, and empty state, while official Zed retains
   Thread vocabulary. Pure copy assertions, formatting, identity, and diff
   checks pass; rendered tooltip/menu proof remains deferred.
+- 2026-07-23: Completed the visible Agent context-picker rename in
+  `bf76ab9b63`. Dez now shows **Agent Sessions** instead of **Threads** while
+  preserving the compatible internal `@thread` keyword and official Zed's
+  existing label. Pure vocabulary assertions, formatting, identity, and diff
+  checks pass; rendered completion-menu proof remains deferred.

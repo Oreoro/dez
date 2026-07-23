@@ -1129,7 +1129,10 @@ the later running-app reports, the source advanced through:
 - `9ef23f920a`, which names the center-tab plus control **Add to Main Work
   Area**, describes its file/search/terminal destinations, and removes the
   remaining mixed Thread vocabulary from Dez's Agent pane while preserving
-  official-Zed wording.
+  official-Zed wording; and
+- `bf76ab9b63`, which presents thread-backed context references as **Agent
+  Sessions** in Dez while preserving the compatible `@thread` keyword and
+  official-Zed label.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

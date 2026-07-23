@@ -1595,6 +1595,12 @@ code, all launch gates pass, and known limitations are documented.
       session actions. Official Zed behavior and copy remain compatible.
       Source assertions, formatting, identity, and diff checks pass; rendered
       tooltip/menu proof remains deferred.
+- [x] 2026-07-23: Rename visible Agent context completion without breaking
+      compatibility. Commit `bf76ab9b63` presents **Agent Sessions** in Dez's
+      context picker while retaining the internal `@thread` keyword and
+      official Zed's **Threads** label. Source assertions, formatting,
+      identity, and diff checks pass; rendered completion-menu proof remains
+      deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
