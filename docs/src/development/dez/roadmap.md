@@ -1189,6 +1189,10 @@ code, all launch gates pass, and known limitations are documented.
       `dez_terminal_host` and `project_panel`; no version or source changes.
       Full locked metadata resolves and the candidate hash is updated in
       Release Evidence.
+- [x] 2026-07-23: Repair the Callout accessibility compile boundary. The
+      consolidated build exposed a missing GPUI `Role` import; commit
+      `5a25a72f92` adds it without changing semantics. Formatting and identity
+      checks pass; the locked candidate build resumes from its completed graph.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

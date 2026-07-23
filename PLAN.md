@@ -1535,3 +1535,7 @@ Notes decision:
   `util` for `dez_terminal_host` and `paths` for `project_panel`. No package
   version or source changed. Full locked metadata now resolves; the recorded
   lockfile hash is updated in Release Evidence.
+- 2026-07-23: The consolidated compile exposed and `5a25a72f92` repaired a
+  missing GPUI `Role` import in the shared Callout accessibility slice. The
+  build stopped before replacing an executable; formatting and identity checks
+  pass, and the same locked candidate build resumes from its completed graph.
