@@ -272,6 +272,12 @@ buttons. Session scope controls now announce Shift+A and Review Brief controls
 announce Shift+V, matching their visible action-aware tooltips. Identity checks
 pass; platform announcement proof remains deferred.
 
+Commit `2fc5226a51` requires official Zed identity as well as explicit
+auto-connect before the language-model registry eagerly authenticates all
+providers. A legacy `auto_connect: true` can no longer make Dez contact cloud
+providers during ordinary startup. Source and identity checks pass; compiled
+network proof remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -1143,6 +1149,10 @@ code, all launch gates pass, and known limitations are documented.
       `33f7ff5893` reports Shift+A on scope controls and Shift+V on Review Brief
       buttons without adding cramped visual labels. Identity checks pass;
       platform announcement proof remains consolidated.
+- [x] 2026-07-23: Keep provider authentication opt-in in Dez. Commit
+      `2fc5226a51` gates eager provider authentication on official Zed identity
+      plus auto-connect, covering stale fork settings. Source and identity
+      checks pass; compiled network proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

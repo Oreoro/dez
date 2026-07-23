@@ -642,6 +642,9 @@ with new labels.
       links. Commit `933e3f515f` also forces upstream diagnostics and metrics
       false for every non-Zed build even if legacy user settings enable them, so
       Dez cannot post fork usage or crash data to the inherited Zed endpoint.
+      Commit `2fc5226a51` applies the same non-Zed gate to eager language-model
+      provider authentication, so an inherited `auto_connect: true` cannot turn
+      ordinary Dez startup into a cloud-provider discovery pass.
 - [ ] Audit focus order, accessible roles/names/descriptions, key shortcuts,
       minimum hit targets, screen-reader announcements, zoom, reduced motion,
       contrast, truncation, and localization-resistant layouts. Shared Session
@@ -1473,3 +1476,9 @@ Notes decision:
   drawing a key label; All/Attention announces Shift+A and Review Brief buttons
   announce Shift+V, matching the visible action-aware tooltips. Identity guards
   pass; platform announcement proof remains consolidated.
+- 2026-07-23: Closed the legacy `auto_connect` provider-authentication bypass in
+  `2fc5226a51`. Eager authentication now requires both official Zed identity and
+  explicit auto-connect; a stale true value cannot make Dez contact every model
+  provider at startup. The existing source test now derives its expectation
+  from the product gate, and identity guards pass; compiled network proof
+  remains consolidated.
