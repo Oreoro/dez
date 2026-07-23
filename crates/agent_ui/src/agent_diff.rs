@@ -38,6 +38,18 @@ use workspace::{
 };
 use zed_actions::assistant::ToggleFocus;
 
+fn agent_review_label(
+    app_name: &str,
+    upstream_label: &'static str,
+    dez_label: &'static str,
+) -> &'static str {
+    if app_name == "Zed" {
+        upstream_label
+    } else {
+        dez_label
+    }
+}
+
 pub struct AgentDiffPane {
     multibuffer: Entity<MultiBuffer>,
     editor: Entity<SplittableEditor>,
@@ -548,9 +560,13 @@ impl Item for AgentDiffPane {
                         title.clone().unwrap_or_else(|| "Review".to_string()),
                     ))
                     .child(
-                        Label::new("Agent Diff")
-                            .color(Color::Muted)
-                            .size(LabelSize::Small),
+                        Label::new(agent_review_label(
+                            paths::APP_NAME,
+                            "Agent Diff",
+                            "Agent Review",
+                        ))
+                        .color(Color::Muted)
+                        .size(LabelSize::Small),
                     )
                     .into_any_element()
             }
@@ -692,6 +708,12 @@ impl Render for AgentDiffPane {
         div()
             .track_focus(focus_handle)
             .key_context(if is_empty { "EmptyPane" } else { "AgentDiff" })
+            .role(gpui::Role::Region)
+            .aria_label(agent_review_label(
+                paths::APP_NAME,
+                "Agent Diff",
+                "Agent Review",
+            ))
             .on_action(cx.listener(Self::keep))
             .on_action(cx.listener(Self::reject))
             .on_action(cx.listener(Self::reject_all))
@@ -703,18 +725,49 @@ impl Render for AgentDiffPane {
             .flex()
             .items_center()
             .justify_center()
+            .when(is_empty, |el| el.items_start().pt_8())
             .size_full()
             .when(is_empty, |el| {
                 el.child(
                     v_flex()
-                        .items_center()
+                        .w_64()
+                        .max_w_full()
                         .gap_2()
-                        .child("No changes to review")
                         .child(
-                            Button::new("continue-iterating", "Continue Iterating")
+                            h_flex()
+                                .gap_1p5()
+                                .child(
+                                    Icon::new(IconName::ListTodo)
+                                        .size(IconSize::Small)
+                                        .color(Color::Accent),
+                                )
+                                .child(Label::new("No changes to review").size(LabelSize::Large)),
+                        )
+                        .child(
+                            Label::new(agent_review_label(
+                                paths::APP_NAME,
+                                "Continue iterating with the agent or request another change.",
+                                "Return to Agent to continue this Agent Session or request another change.",
+                            ))
+                            .size(LabelSize::Small)
+                            .color(Color::Muted),
+                        )
+                        .child(
+                            Button::new(
+                                "continue-iterating",
+                                agent_review_label(
+                                    paths::APP_NAME,
+                                    "Continue Iterating",
+                                    "Return to Agent",
+                                ),
+                            )
                                 .style(ButtonStyle::Filled)
                                 .start_icon(
-                                    Icon::new(IconName::ForwardArrow)
+                                    Icon::new(if paths::APP_NAME == "Zed" {
+                                        IconName::ForwardArrow
+                                    } else {
+                                        IconName::ArrowLeft
+                                    })
                                         .size(IconSize::Small)
                                         .color(Color::Muted),
                                 )
@@ -829,52 +882,67 @@ fn render_diff_hunk_controls(
         .block_mouse_except_scroll()
         .when(opaque_window, |this| this.shadow_md())
         .children(vec![
-            Button::new(("reject", row as u64), "Reject")
-                .disabled(is_created_file)
-                .key_binding(
-                    KeyBinding::for_action_in(&Reject, &editor.read(cx).focus_handle(cx), cx)
-                        .map(|kb| kb.size(rems_from_px(12.))),
-                )
-                .on_click({
-                    let editor = editor.clone();
-                    let thread = thread.clone();
-                    move |_event, window, cx| {
-                        editor.update(cx, |editor, cx| {
-                            let snapshot = editor.buffer().read(cx).snapshot(cx);
-                            reject_edits_in_ranges(
-                                editor,
-                                &snapshot,
-                                &thread,
-                                vec![hunk_range.start..hunk_range.start],
-                                workspace.clone(),
-                                window,
-                                cx,
-                            );
-                        })
-                    }
-                }),
-            Button::new(("keep", row as u64), "Keep")
-                .key_binding(
-                    KeyBinding::for_action_in(&Keep, &editor.read(cx).focus_handle(cx), cx)
-                        .map(|kb| kb.size(rems_from_px(12.))),
-                )
-                .on_click({
-                    let editor = editor.clone();
-                    let thread = thread.clone();
-                    move |_event, window, cx| {
-                        editor.update(cx, |editor, cx| {
-                            let snapshot = editor.buffer().read(cx).snapshot(cx);
-                            keep_edits_in_ranges(
-                                editor,
-                                &snapshot,
-                                &thread,
-                                vec![hunk_range.start..hunk_range.start],
-                                window,
-                                cx,
-                            );
-                        });
-                    }
-                }),
+            Button::new(
+                ("reject", row as u64),
+                agent_review_label(paths::APP_NAME, "Reject", "Reject Change"),
+            )
+            .disabled(is_created_file)
+            .when(is_created_file, |button| {
+                button
+                    .aria_description(
+                        "A newly created file cannot be rejected one change at a time.",
+                    )
+                    .tooltip(Tooltip::text(
+                        "A newly created file cannot be rejected one change at a time",
+                    ))
+            })
+            .key_binding(
+                KeyBinding::for_action_in(&Reject, &editor.read(cx).focus_handle(cx), cx)
+                    .map(|kb| kb.size(rems_from_px(12.))),
+            )
+            .on_click({
+                let editor = editor.clone();
+                let thread = thread.clone();
+                move |_event, window, cx| {
+                    editor.update(cx, |editor, cx| {
+                        let snapshot = editor.buffer().read(cx).snapshot(cx);
+                        reject_edits_in_ranges(
+                            editor,
+                            &snapshot,
+                            &thread,
+                            vec![hunk_range.start..hunk_range.start],
+                            workspace.clone(),
+                            window,
+                            cx,
+                        );
+                    })
+                }
+            }),
+            Button::new(
+                ("keep", row as u64),
+                agent_review_label(paths::APP_NAME, "Keep", "Keep Change"),
+            )
+            .key_binding(
+                KeyBinding::for_action_in(&Keep, &editor.read(cx).focus_handle(cx), cx)
+                    .map(|kb| kb.size(rems_from_px(12.))),
+            )
+            .on_click({
+                let editor = editor.clone();
+                let thread = thread.clone();
+                move |_event, window, cx| {
+                    editor.update(cx, |editor, cx| {
+                        let snapshot = editor.buffer().read(cx).snapshot(cx);
+                        keep_edits_in_ranges(
+                            editor,
+                            &snapshot,
+                            &thread,
+                            vec![hunk_range.start..hunk_range.start],
+                            window,
+                            cx,
+                        );
+                    });
+                }
+            }),
         ])
         .when(
             !editor.read(cx).buffer().read(cx).all_diff_hunks_expanded(),
@@ -883,11 +951,21 @@ fn render_diff_hunk_controls(
                     IconButton::new(("next-hunk", row as u64), IconName::ArrowDown)
                         .shape(IconButtonShape::Square)
                         .icon_size(IconSize::Small)
+                        .aria_label(agent_review_label(
+                            paths::APP_NAME,
+                            "Next Hunk",
+                            "Next Change",
+                        ))
                         // .disabled(!has_multiple_hunks)
                         .tooltip({
                             let focus_handle = editor.focus_handle(cx);
                             move |_window, cx| {
-                                Tooltip::for_action_in("Next Hunk", &GoToHunk, &focus_handle, cx)
+                                Tooltip::for_action_in(
+                                    agent_review_label(paths::APP_NAME, "Next Hunk", "Next Change"),
+                                    &GoToHunk,
+                                    &focus_handle,
+                                    cx,
+                                )
                             }
                         })
                         .on_click({
@@ -914,12 +992,21 @@ fn render_diff_hunk_controls(
                     IconButton::new(("prev-hunk", row as u64), IconName::ArrowUp)
                         .shape(IconButtonShape::Square)
                         .icon_size(IconSize::Small)
+                        .aria_label(agent_review_label(
+                            paths::APP_NAME,
+                            "Previous Hunk",
+                            "Previous Change",
+                        ))
                         // .disabled(!has_multiple_hunks)
                         .tooltip({
                             let focus_handle = editor.focus_handle(cx);
                             move |_window, cx| {
                                 Tooltip::for_action_in(
-                                    "Previous Hunk",
+                                    agent_review_label(
+                                        paths::APP_NAME,
+                                        "Previous Hunk",
+                                        "Previous Change",
+                                    ),
                                     &GoToPreviousHunk,
                                     &focus_handle,
                                     cx,
@@ -1086,15 +1173,37 @@ impl ToolbarItemView for AgentDiffToolbar {
 
 impl Render for AgentDiffToolbar {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let spinner_icon = div()
+        let generating_label = agent_review_label(
+            paths::APP_NAME,
+            "Generating Changes…",
+            "Generating changes…",
+        );
+        let previous_change_label =
+            agent_review_label(paths::APP_NAME, "Previous Hunk", "Previous Change");
+        let next_change_label = agent_review_label(paths::APP_NAME, "Next Hunk", "Next Change");
+        let reject_all_label =
+            agent_review_label(paths::APP_NAME, "Reject All", "Reject All Changes");
+        let keep_all_label = agent_review_label(paths::APP_NAME, "Keep All", "Keep All Changes");
+        let review_all_label =
+            agent_review_label(paths::APP_NAME, "Review All Files", "Review All Changes");
+
+        let spinner_icon = h_flex()
             .px_0p5()
             .id("generating")
-            .tooltip(Tooltip::text("Generating Changes…"))
+            .gap_1()
+            .role(gpui::Role::Status)
+            .aria_label(generating_label)
+            .tooltip(Tooltip::text(generating_label))
             .child(
                 Icon::new(IconName::LoadCircle)
                     .size(IconSize::Small)
                     .color(Color::Accent)
                     .with_rotate_animation(3),
+            )
+            .child(
+                Label::new(generating_label)
+                    .size(LabelSize::Small)
+                    .color(Color::Muted),
             )
             .into_any();
 
@@ -1117,8 +1226,9 @@ impl Render for AgentDiffToolbar {
                             .child(
                                 IconButton::new("hunk-up", IconName::ArrowUp)
                                     .icon_size(IconSize::Small)
+                                    .aria_label(previous_change_label)
                                     .tooltip(Tooltip::for_action_title_in(
-                                        "Previous Hunk",
+                                        previous_change_label,
                                         &GoToPreviousHunk,
                                         &editor_focus_handle,
                                     ))
@@ -1136,8 +1246,9 @@ impl Render for AgentDiffToolbar {
                             .child(
                                 IconButton::new("hunk-down", IconName::ArrowDown)
                                     .icon_size(IconSize::Small)
+                                    .aria_label(next_change_label)
                                     .tooltip(Tooltip::for_action_title_in(
-                                        "Next Hunk",
+                                        next_change_label,
                                         &GoToHunk,
                                         &editor_focus_handle,
                                     ))
@@ -1154,7 +1265,7 @@ impl Render for AgentDiffToolbar {
                         h_flex()
                             .gap_0p5()
                             .child(
-                                Button::new("reject-all", "Reject All")
+                                Button::new("reject-all", reject_all_label)
                                     .key_binding({
                                         KeyBinding::for_action_in(
                                             &RejectAll,
@@ -1168,7 +1279,7 @@ impl Render for AgentDiffToolbar {
                                     })),
                             )
                             .child(
-                                Button::new("keep-all", "Keep All")
+                                Button::new("keep-all", keep_all_label)
                                     .key_binding({
                                         KeyBinding::for_action_in(
                                             &KeepAll,
@@ -1197,8 +1308,9 @@ impl Render for AgentDiffToolbar {
                         this.child(
                             IconButton::new("review", IconName::ListTodo)
                                 .icon_size(IconSize::Small)
+                                .aria_label(review_all_label)
                                 .tooltip(Tooltip::for_action_title_in(
-                                    "Review All Files",
+                                    review_all_label,
                                     &OpenAgentDiff,
                                     &editor_focus_handle,
                                 ))
@@ -1250,7 +1362,7 @@ impl Render for AgentDiffToolbar {
                     .child(
                         h_group_sm()
                             .child(
-                                Button::new("reject-all", "Reject All")
+                                Button::new("reject-all", reject_all_label)
                                     .key_binding({
                                         KeyBinding::for_action_in(&RejectAll, &focus_handle, cx)
                                             .map(|kb| kb.size(rems_from_px(12.)))
@@ -1260,7 +1372,7 @@ impl Render for AgentDiffToolbar {
                                     })),
                             )
                             .child(
-                                Button::new("keep-all", "Keep All")
+                                Button::new("keep-all", keep_all_label)
                                     .key_binding({
                                         KeyBinding::for_action_in(&KeepAll, &focus_handle, cx)
                                             .map(|kb| kb.size(rems_from_px(12.)))
@@ -1880,6 +1992,22 @@ mod tests {
     use std::{path::Path, rc::Rc};
     use util::path;
     use workspace::{MultiWorkspace, PathList};
+
+    #[test]
+    fn review_controls_use_change_language_in_dez() {
+        assert_eq!(
+            agent_review_label("Dez", "Previous Hunk", "Previous Change"),
+            "Previous Change"
+        );
+        assert_eq!(
+            agent_review_label("Dez", "Reject All", "Reject All Changes"),
+            "Reject All Changes"
+        );
+        assert_eq!(
+            agent_review_label("Zed", "Previous Hunk", "Previous Change"),
+            "Previous Hunk"
+        );
+    }
 
     #[gpui::test]
     async fn test_multibuffer_agent_diff(cx: &mut TestAppContext) {

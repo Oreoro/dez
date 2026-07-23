@@ -577,6 +577,9 @@ reject_pattern crates/agent_ui/src/conversation_view.rs \
 reject_pattern crates/agent_ui/src/agent_diff.rs \
     'IconName::ZedAssistant' \
     'the Dez Agent diff Surface still hard-codes the upstream Assistant glyph'
+require_multiline_pattern crates/agent_ui/src/agent_diff.rs \
+    'fn agent_review_label.*?app_name == "Zed".*?upstream_label.*?dez_label.*?"Agent Diff".*?"Agent Review".*?Role::Region.*?items_start\(\)\.pt_8\(\).*?"No changes to review".*?"Return to Agent".*?"Reject Change".*?"Keep Change".*?"Next Change".*?"Previous Change"' \
+    'Agent Review can regress to upstream Diff/Hunk vocabulary, centered dead space, or unnamed navigation'
 reject_pattern crates/agent_ui/src/agent_configuration/manage_profiles_modal.rs \
     'IconName::ZedAssistant' \
     'Dez Agent profile controls still hard-code the upstream Assistant glyph'
