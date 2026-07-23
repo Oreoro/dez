@@ -1099,6 +1099,9 @@ impl Domain for WorkspaceDb {
         sql!(
             ALTER TABLE workspaces ADD COLUMN saved_canvas_layouts TEXT;
         ),
+        sql!(
+            ALTER TABLE workspaces ADD COLUMN user_selected_review_evidence TEXT;
+        ),
     ];
 
     // Allow recovering from bad migration that was initially shipped to nightly
@@ -2562,6 +2565,32 @@ impl WorkspaceDb {
         pub(crate) async fn set_saved_canvas_layouts(workspace_id: WorkspaceId, saved_canvas_layouts: Option<String>) -> Result<()> {
             UPDATE workspaces
             SET saved_canvas_layouts = ?2
+            WHERE workspace_id = ?1
+        }
+    }
+
+    pub(crate) fn user_selected_review_evidence(&self, workspace_id: WorkspaceId) -> PathList {
+        let paths = self
+            .select_row_bound::<_, Option<String>>(sql!(
+                SELECT user_selected_review_evidence
+                FROM workspaces
+                WHERE workspace_id = ?
+            ))
+            .ok()
+            .and_then(|mut prepared_statement| prepared_statement(workspace_id).ok())
+            .flatten()
+            .flatten()
+            .unwrap_or_default();
+        PathList::deserialize(&SerializedPathList {
+            paths,
+            order: String::new(),
+        })
+    }
+
+    query! {
+        pub(crate) async fn set_user_selected_review_evidence(workspace_id: WorkspaceId, paths: String) -> Result<()> {
+            UPDATE workspaces
+            SET user_selected_review_evidence = ?2
             WHERE workspace_id = ?1
         }
     }
@@ -4441,6 +4470,27 @@ mod tests {
         let new_workspace = db.workspace_for_roots(&["/tmp"]).unwrap();
 
         assert_eq!(workspace.center_group, new_workspace.center_group);
+    }
+
+    #[gpui::test]
+    async fn test_user_selected_review_evidence_round_trip() {
+        zlog::init_test();
+
+        let db = WorkspaceDb::open_test_db("user_selected_review_evidence_round_trip").await;
+        let workspace = default_workspace(&["/tmp/review-workspace"], &Default::default());
+        let workspace_id = workspace.id;
+        db.save_workspace(workspace).await;
+
+        let selected = PathList::new(&["/tmp/review-workspace/a.rs", "/tmp/review-workspace/b.rs"]);
+        db.set_user_selected_review_evidence(workspace_id, selected.serialize().paths)
+            .await
+            .unwrap();
+        assert_eq!(db.user_selected_review_evidence(workspace_id), selected);
+
+        db.set_user_selected_review_evidence(workspace_id, String::new())
+            .await
+            .unwrap();
+        assert!(db.user_selected_review_evidence(workspace_id).is_empty());
     }
 
     #[gpui::test]

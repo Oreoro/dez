@@ -84,6 +84,12 @@ impl WorkspaceEvidenceSet {
         })
     }
 
+    pub fn user_selected_paths(&self) -> impl Iterator<Item = &Path> {
+        self.records.iter().filter_map(|record| {
+            (record.kind == WorkspaceEvidenceKind::UserSelectedPath).then_some(record.path.as_ref())
+        })
+    }
+
     pub fn add_user_selected_path(
         &mut self,
         workspace_id: Option<i64>,

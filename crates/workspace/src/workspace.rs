@@ -2989,7 +2989,19 @@ fn workspace_evidence_from_project(
 ) -> WorkspaceEvidenceSet {
     let (roots, host) = workspace_evidence_inputs(project, cx);
     let mut evidence = WorkspaceEvidenceSet::default();
-    evidence.replace_visible_worktree_roots(workspace_id.map(i64::from), roots, host);
+    evidence.replace_visible_worktree_roots(workspace_id.map(i64::from), roots, host.clone());
+    if let Some(workspace_id) = workspace_id {
+        for path in WorkspaceDb::global(cx)
+            .user_selected_review_evidence(workspace_id)
+            .paths()
+        {
+            evidence.add_user_selected_path(
+                Some(i64::from(workspace_id)),
+                Arc::<Path>::from(path.clone().into_boxed_path()),
+                host.clone(),
+            );
+        }
+    }
     evidence
 }
 
@@ -11270,7 +11282,7 @@ impl Workspace {
     fn add_active_file_to_evidence(
         &mut self,
         _: &AddActiveFileToEvidence,
-        _: &mut Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         struct ActiveFileEvidenceToast;
@@ -11294,6 +11306,7 @@ impl Workspace {
         let message = match outcome {
             WorkspaceEvidenceSelectionOutcome::Added => {
                 cx.notify();
+                self.serialize_workspace(window, cx);
                 format!("Added {} to review evidence", path.display())
             }
             WorkspaceEvidenceSelectionOutcome::Unchanged => {
@@ -11313,7 +11326,7 @@ impl Workspace {
     fn remove_active_file_from_evidence(
         &mut self,
         _: &RemoveActiveFileFromEvidence,
-        _: &mut Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         struct ActiveFileEvidenceToast;
@@ -11332,6 +11345,7 @@ impl Workspace {
         let message = match outcome {
             WorkspaceEvidenceSelectionOutcome::Removed => {
                 cx.notify();
+                self.serialize_workspace(window, cx);
                 format!("Removed {} from review evidence", path.display())
             }
             WorkspaceEvidenceSelectionOutcome::Unchanged => {
@@ -11349,13 +11363,14 @@ impl Workspace {
     fn clear_review_evidence(
         &mut self,
         _: &ClearReviewEvidence,
-        _: &mut Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         struct ReviewEvidenceClearedToast;
         let removed = self.evidence_set.clear_user_selected_paths();
         if removed > 0 {
             cx.notify();
+            self.serialize_workspace(window, cx);
         }
         let message = if removed == 0 {
             "No selected review evidence to clear".to_owned()
@@ -11653,6 +11668,10 @@ impl Workspace {
                     .map(|layout_recipe| layout_recipe.id().to_string());
                 let saved_canvas_layouts =
                     canvas_saved_layouts_to_persisted(&self.saved_canvas_layouts);
+                let user_selected_review_evidence =
+                    PathList::new(&self.evidence_set.user_selected_paths().collect::<Vec<_>>())
+                        .serialize()
+                        .paths;
 
                 let serialized_workspace = SerializedWorkspace {
                     id: database_id,
@@ -11680,6 +11699,12 @@ impl Workspace {
                     db.set_saved_canvas_layouts(database_id, saved_canvas_layouts)
                         .await
                         .log_err();
+                    db.set_user_selected_review_evidence(
+                        database_id,
+                        user_selected_review_evidence,
+                    )
+                    .await
+                    .log_err();
                 })
             }
             WorkspaceLocation::DetachFromSession => {
