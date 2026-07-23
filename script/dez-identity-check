@@ -785,7 +785,10 @@ require_pattern crates/terminal_view/src/terminal_view.rs \
     'Working directory: \{working_directory\}' \
     'the terminal tab tooltip can regress to mislabeling the working directory as a folder'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'IconButton::new\("rerun-icon".*?\.aria_label\("Rerun Task"\).*?Tooltip::for_action\("Rerun task"' \
+    'Persistent Terminal Session.*?Saved Terminal Session.*?Workspace Terminal Session.*?Working directory: \{working_directory\}.*?Process ID: \{pid\}.*?Session ID: \{session_identity\}' \
+    'the terminal tab tooltip can regress to ambiguous ownership or identifier labels'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'IconButton::new\("rerun-icon".*?\.aria_label\("Rerun task"\).*?Tooltip::for_action\("Rerun task"' \
     'the task-terminal rerun affordance can regress to an unnamed icon'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'pub fn set_custom_title.*?label\.trim\(\)\.to_string\(\).*?let terminal_title = self\.terminal\.read\(cx\)\.title\(false\).*?unwrap_or_else\(\|\| self\.terminal\.read\(cx\)\.title\(false\)\).*?"Rename Terminal…"' \

@@ -1686,7 +1686,7 @@ impl TerminalView {
             IconButton::new("rerun-icon", IconName::Rerun)
                 .icon_size(IconSize::Small)
                 .size(ButtonSize::Compact)
-                .aria_label("Rerun Task")
+                .aria_label("Rerun task")
                 .icon_color(Color::Default)
                 .shape(ui::IconButtonShape::Square)
                 .tooltip(move |_window, cx| Tooltip::for_action("Rerun task", &RerunTask, cx))
@@ -2232,11 +2232,11 @@ impl Item for TerminalView {
             terminal.task().map(|task| &task.status),
         );
         let ownership = if is_hosted {
-            "Persistent terminal"
+            "Persistent Terminal Session"
         } else if session_unavailable {
-            "Saved terminal"
+            "Saved Terminal Session"
         } else {
-            "Workspace terminal"
+            "Workspace Terminal Session"
         };
         let working_directory = terminal
             .working_directory()
@@ -2277,14 +2277,14 @@ impl Item for TerminalView {
                     })
                     .when_some(pid.clone(), |this, pid| {
                         this.child(
-                            Label::new(format!("Process: {pid}"))
+                            Label::new(format!("Process ID: {pid}"))
                                 .color(Color::Muted)
                                 .size(LabelSize::Small),
                         )
                     })
                     .when_some(session_identity.clone(), |this, session_identity| {
                         this.child(
-                            Label::new(format!("Session: {session_identity}"))
+                            Label::new(format!("Session ID: {session_identity}"))
                                 .color(Color::Muted)
                                 .size(LabelSize::Small),
                         )
