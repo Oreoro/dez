@@ -2267,7 +2267,7 @@ fn reload_keymaps(cx: &mut App, mut user_key_bindings: Vec<KeyBinding>) {
     for key_binding in &mut user_key_bindings {
         key_binding.set_meta(KeybindSource::User.meta());
     }
-    cx.bind_keys(filter_disabled_ai_bindings(user_key_bindings, cx));
+    cx.bind_keys(filter_product_key_bindings(user_key_bindings, cx));
 
     let menus = app_menus(cx);
     cx.set_menus(menus);
@@ -2287,44 +2287,44 @@ pub fn load_default_keymap(cx: &mut App) {
         return;
     }
 
-    cx.bind_keys(filter_disabled_ai_bindings(
+    cx.bind_keys(filter_product_key_bindings(
         KeymapFile::load_asset(DEFAULT_KEYMAP_PATH, Some(KeybindSource::Default), cx).unwrap(),
         cx,
     ));
-    cx.bind_keys(filter_disabled_ai_bindings(
+    cx.bind_keys(filter_product_key_bindings(
         title_bar::canvas_multiplexer_key_bindings(cx),
         cx,
     ));
 
     if let Some(asset_path) = base_keymap.asset_path() {
-        cx.bind_keys(filter_disabled_ai_bindings(
+        cx.bind_keys(filter_product_key_bindings(
             KeymapFile::load_asset(asset_path, Some(KeybindSource::Base), cx).unwrap(),
             cx,
         ));
     }
 
     if VimModeSetting::get_global(cx).0 || vim_mode_setting::HelixModeSetting::get_global(cx).0 {
-        cx.bind_keys(filter_disabled_ai_bindings(
+        cx.bind_keys(filter_product_key_bindings(
             KeymapFile::load_asset(VIM_KEYMAP_PATH, Some(KeybindSource::Vim), cx).unwrap(),
             cx,
         ));
     }
 
-    cx.bind_keys(
+    cx.bind_keys(filter_product_key_bindings(
         KeymapFile::load_asset(
             SPECIFIC_OVERRIDES_KEYMAP_PATH,
             Some(KeybindSource::Default),
             cx,
         )
         .unwrap(),
-    );
+        cx,
+    ));
 }
 
-/// Namespaces of actions that are part of an AI feature. When the user opts out
-/// of AI via the `disable_ai` setting, bindings to these actions are dropped so
-/// that lower-precedence editor defaults (e.g. `editor::NewlineBelow` for
-/// `ctrl-enter`) can fire instead of being shadowed by an action whose handler
-/// silently no-ops.
+/// Namespaces of actions that are part of an AI feature. Product-inapplicable
+/// bindings and, when requested, AI bindings are dropped so lower-precedence
+/// editor defaults can fire instead of being shadowed by actions whose handlers
+/// are unavailable.
 const AI_ACTION_NAMESPACES: &[&str] = &[
     "acp::",
     "agent::",
@@ -2334,6 +2334,9 @@ const AI_ACTION_NAMESPACES: &[&str] = &[
     "zeta::",
 ];
 
+const DEZ_HIDDEN_ACTION_NAMESPACES: &[&str] = &["channel_modal::", "collab::", "collab_panel::"];
+const DEZ_HIDDEN_ACTIONS: &[&str] = &["workspace::FollowNextCollaborator"];
+
 fn is_ai_keybinding(binding: &KeyBinding) -> bool {
     let name = binding.action().name();
     AI_ACTION_NAMESPACES
@@ -2341,13 +2344,23 @@ fn is_ai_keybinding(binding: &KeyBinding) -> bool {
         .any(|namespace| name.starts_with(namespace))
 }
 
-fn filter_disabled_ai_bindings(bindings: Vec<KeyBinding>, cx: &App) -> Vec<KeyBinding> {
-    if !DisableAiSettings::get_global(cx).disable_ai {
-        return bindings;
-    }
+fn is_dez_hidden_keybinding_name(action_name: &str, app_name: &str) -> bool {
+    app_name != "Zed"
+        && (DEZ_HIDDEN_ACTION_NAMESPACES
+            .iter()
+            .any(|namespace| action_name.starts_with(namespace))
+            || DEZ_HIDDEN_ACTIONS.contains(&action_name))
+}
+
+fn filter_product_key_bindings(bindings: Vec<KeyBinding>, cx: &App) -> Vec<KeyBinding> {
+    let disable_ai = DisableAiSettings::get_global(cx).disable_ai;
+
     bindings
         .into_iter()
-        .filter(|binding| !is_ai_keybinding(binding))
+        .filter(|binding| {
+            !is_dez_hidden_keybinding_name(binding.action().name(), APP_NAME)
+                && (!disable_ai || !is_ai_keybinding(binding))
+        })
         .collect()
 }
 
@@ -6099,6 +6112,27 @@ mod tests {
                 );
             }
         });
+    }
+
+    #[test]
+    fn dez_drops_inherited_collaboration_keybindings() {
+        for action_name in [
+            "collab_panel::ToggleFocus",
+            "collab::ShareProject",
+            "channel_modal::ToggleMode",
+            "workspace::FollowNextCollaborator",
+        ] {
+            assert!(is_dez_hidden_keybinding_name(action_name, "Dez"));
+            assert!(!is_dez_hidden_keybinding_name(action_name, "Zed"));
+        }
+
+        for action_name in [
+            "terminal_panel::ToggleFocus",
+            "workspace::NewTerminal",
+            "editor::ToggleCodeActions",
+        ] {
+            assert!(!is_dez_hidden_keybinding_name(action_name, "Dez"));
+        }
     }
 
     #[gpui::test]

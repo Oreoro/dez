@@ -722,7 +722,7 @@ impl Render for SidebarChrome {
             }
         }
 
-        let has_call = ActiveCall::global(cx).read(cx).room().is_some();
+        let has_call = paths::APP_NAME == "Zed" && ActiveCall::global(cx).read(cx).room().is_some();
 
         let status = self.client.status();
         let status = &*status.borrow();
