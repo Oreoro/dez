@@ -20,7 +20,8 @@ use language_model::LanguageModelRegistry;
 use project::{AgentId, Project, ProjectItem as _};
 use ui::{Color, Icon, IconName, IconSize, IntoElement, Label, LabelCommon, prelude::*};
 use workspace::{
-    ItemId, PathList, SaveIntent, SerializableItem, Workspace, WorkspaceId, delete_unloaded_items,
+    ItemCloseConfirmation, ItemId, PathList, SaveIntent, SerializableItem, Workspace, WorkspaceId,
+    delete_unloaded_items,
     item::{Item, ItemEvent, TabContentParams},
 };
 
@@ -36,6 +37,26 @@ use crate::{
 #[derive(Default)]
 struct AgentThreadItemState {
     connection_stores: HashMap<EntityId, WeakEntity<AgentConnectionStore>>,
+}
+
+fn agent_session_tab_close_label(app_name: &str, is_draft: bool) -> &'static str {
+    match (app_name == "Zed", is_draft) {
+        (true, true) => "Close Thread",
+        (true, false) => "Archive Thread",
+        (false, true) => "Discard Agent Session Draft",
+        (false, false) => "Archive Agent Session",
+    }
+}
+
+fn agent_session_close_confirmation(
+    app_name: &str,
+    is_draft: bool,
+) -> Option<ItemCloseConfirmation> {
+    (app_name != "Zed" && is_draft).then_some(ItemCloseConfirmation {
+        message: "Discard this Agent Session draft?",
+        detail: Some("Any unsent prompt text in this draft will be permanently removed."),
+        confirm_label: "Discard Draft",
+    })
 }
 
 impl Global for AgentThreadItemState {}
@@ -319,11 +340,11 @@ impl Item for AgentThreadItem {
     }
 
     fn tab_close_tooltip_text(&self) -> &'static str {
-        if self.tab_is_draft {
-            "Close Thread"
-        } else {
-            "Archive Thread"
-        }
+        agent_session_tab_close_label(paths::APP_NAME, self.tab_is_draft)
+    }
+
+    fn close_confirmation(&self, _cx: &App) -> Option<ItemCloseConfirmation> {
+        agent_session_close_confirmation(paths::APP_NAME, self.tab_is_draft)
     }
 
     fn tab_tooltip_text(&self, cx: &App) -> Option<SharedString> {
@@ -924,5 +945,42 @@ impl AgentThreadItemDb {
         fn get_thread_id(item_id: ItemId, workspace_id: WorkspaceId) -> Result<Option<ThreadId>> {
             SELECT thread_id FROM agent_thread_items WHERE item_id = ? AND workspace_id = ?
         }
+    }
+}
+
+#[cfg(test)]
+mod close_behavior_tests {
+    use super::*;
+
+    #[test]
+    fn dez_agent_session_tabs_describe_archive_and_draft_discard() {
+        assert_eq!(
+            agent_session_tab_close_label("Dez", false),
+            "Archive Agent Session"
+        );
+        assert_eq!(
+            agent_session_tab_close_label("Dez", true),
+            "Discard Agent Session Draft"
+        );
+        assert_eq!(
+            agent_session_tab_close_label("Zed", false),
+            "Archive Thread"
+        );
+        assert_eq!(agent_session_tab_close_label("Zed", true), "Close Thread");
+    }
+
+    #[test]
+    fn only_dez_drafts_require_a_destructive_close_confirmation() {
+        let confirmation = agent_session_close_confirmation("Dez", true)
+            .expect("a Dez Agent Session draft must protect unsent prompt text");
+        assert_eq!(confirmation.message, "Discard this Agent Session draft?");
+        assert_eq!(
+            confirmation.detail,
+            Some("Any unsent prompt text in this draft will be permanently removed.")
+        );
+        assert_eq!(confirmation.confirm_label, "Discard Draft");
+
+        assert_eq!(agent_session_close_confirmation("Dez", false), None);
+        assert_eq!(agent_session_close_confirmation("Zed", true), None);
     }
 }

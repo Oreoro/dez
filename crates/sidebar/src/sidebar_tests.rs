@@ -141,6 +141,12 @@ fn active_workspace_keeps_its_options_action_discoverable() {
 }
 
 #[test]
+fn dez_confirms_destructive_draft_discard() {
+    assert!(draft_discard_requires_confirmation("Dez"));
+    assert!(!draft_discard_requires_confirmation("Zed"));
+}
+
+#[test]
 fn dez_only_projects_truthfully_backed_stored_terminals() {
     let host_session_id = TerminalSessionId::new();
 

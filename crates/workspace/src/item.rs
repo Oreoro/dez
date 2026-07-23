@@ -175,6 +175,13 @@ pub enum ItemBufferKind {
     None,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ItemCloseConfirmation {
+    pub message: &'static str,
+    pub detail: Option<&'static str>,
+    pub confirm_label: &'static str,
+}
+
 pub trait Item: Focusable + EventEmitter<Self::Event> + Render + Sized {
     type Event;
 
@@ -228,6 +235,10 @@ pub trait Item: Focusable + EventEmitter<Self::Event> + Render + Sized {
 
     fn tab_close_tooltip_text(&self) -> &'static str {
         "Close Tab"
+    }
+
+    fn close_confirmation(&self, _cx: &App) -> Option<ItemCloseConfirmation> {
+        None
     }
 
     /// Keep the pane tab bar visible even when the user's general preference
@@ -539,6 +550,7 @@ pub trait ItemHandle: 'static + Send {
     fn tab_icon_element(&self, window: &Window, cx: &App) -> Option<AnyElement>;
     fn tab_close_icon(&self, cx: &App) -> IconName;
     fn tab_close_tooltip_text(&self, cx: &App) -> &'static str;
+    fn close_confirmation(&self, cx: &App) -> Option<ItemCloseConfirmation>;
     fn force_show_tab_bar(&self, cx: &App) -> bool;
     fn tab_tooltip_text(&self, cx: &App) -> Option<SharedString>;
     fn tab_tooltip_content(&self, cx: &App) -> Option<TabTooltipContent>;
@@ -708,6 +720,10 @@ impl<T: Item> ItemHandle for Entity<T> {
 
     fn tab_close_tooltip_text(&self, cx: &App) -> &'static str {
         self.read(cx).tab_close_tooltip_text()
+    }
+
+    fn close_confirmation(&self, cx: &App) -> Option<ItemCloseConfirmation> {
+        self.read(cx).close_confirmation(cx)
     }
 
     fn force_show_tab_bar(&self, cx: &App) -> bool {

@@ -283,6 +283,12 @@ require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
 require_multiline_pattern crates/agent_ui/src/mention_set.rs \
     'fn unsupported_session_mention_message.*?app_name == "Zed".*?"Thread mentions are only supported for the native agent".*?"Agent Session mentions are only supported by the built-in Dez Agent".*?unsupported_session_mention_message\([[:space:]]*paths::APP_NAME' \
     'unsupported Agent Session mentions can regress to upstream Thread/native-agent language'
+require_multiline_pattern crates/agent_ui/src/agent_thread_item.rs \
+    'fn agent_session_tab_close_label.*?"Discard Agent Session Draft".*?"Archive Agent Session".*?fn agent_session_close_confirmation.*?app_name != "Zed" && is_draft.*?"Discard this Agent Session draft\?".*?"Any unsent prompt text in this draft will be permanently removed\.".*?"Discard Draft".*?fn close_confirmation.*?agent_session_close_confirmation\(paths::APP_NAME, self.tab_is_draft\)' \
+    'closing a Dez Agent Session draft can regress to ambiguous copy or silent prompt loss'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn draft_discard_requires_confirmation.*?app_name != "Zed".*?fn remove_draft_with_confirmation.*?Discard draft Agent Session.*?Any unsent prompt text in this draft will be permanently removed.*?&\["Discard Draft", "Cancel"\]' \
+    'discarding a Dez Agent Session draft from the Session Rail can regress to silent prompt loss'
 require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
     'fn permanent_delete_prompt.*?"Delete Agent Session\?".*?permanently deletes.*?This cannot be undone.*?PromptLevel::Critical.*?&\["Delete", "Cancel"\]' \
     'permanent Agent Session deletion can regress to an unconfirmed or ambiguous action'

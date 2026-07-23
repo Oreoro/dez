@@ -2380,6 +2380,27 @@ impl Pane {
                 let mut should_close = true;
                 let mut should_save = true;
                 if save_intent == SaveIntent::Close {
+                    let confirmation =
+                        pane.update_in(cx, |_, _window, cx| item_to_close.close_confirmation(cx))?;
+                    if let Some(confirmation) = confirmation {
+                        let answer = pane.update_in(cx, |_, window, cx| {
+                            window.prompt(
+                                PromptLevel::Warning,
+                                confirmation.message,
+                                confirmation.detail,
+                                &[confirmation.confirm_label, "Cancel"],
+                                cx,
+                            )
+                        })?;
+                        if !matches!(answer.await, Ok(0)) {
+                            should_close = false;
+                        }
+                    }
+                }
+                if !should_close {
+                    continue;
+                }
+                if save_intent == SaveIntent::Close {
                     workspace.update(cx, |workspace, cx| {
                         if Self::skip_save_on_close(item_to_close.as_ref(), workspace, cx) {
                             should_save = false;

@@ -257,6 +257,10 @@ fn agent_session_label(
     }
 }
 
+fn draft_discard_requires_confirmation(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
 #[cfg(test)]
 mod agent_session_label_tests {
     use super::*;
@@ -8933,7 +8937,7 @@ impl Sidebar {
                 if thread.draft.is_some() {
                     let workspace = thread.workspace.clone();
                     let draft_id = thread.metadata.thread_id;
-                    self.remove_draft(draft_id, &workspace, window, cx);
+                    self.remove_draft_with_confirmation(draft_id, workspace, window, cx);
                 } else if let Some(session_id) = thread.metadata.session_id.clone() {
                     self.archive_thread(&session_id, window, cx);
                 }
@@ -9854,9 +9858,9 @@ impl Sidebar {
                                     .on_click({
                                         let thread_workspace = thread_workspace.clone();
                                         cx.listener(move |this, _, window, cx| {
-                                            this.remove_draft(
+                                            this.remove_draft_with_confirmation(
                                                 thread_id_for_actions,
-                                                &thread_workspace,
+                                                thread_workspace.clone(),
                                                 window,
                                                 cx,
                                             );
@@ -11002,6 +11006,44 @@ impl Sidebar {
                 cx,
             );
         }
+    }
+
+    fn remove_draft_with_confirmation(
+        &mut self,
+        draft_id: ThreadId,
+        workspace: ThreadEntryWorkspace,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !draft_discard_requires_confirmation(APP_NAME) {
+            self.remove_draft(draft_id, &workspace, window, cx);
+            return;
+        }
+
+        let title = ThreadMetadataStore::global(cx)
+            .read(cx)
+            .entry(draft_id)
+            .map(ThreadMetadata::display_title)
+            .unwrap_or_else(|| "Untitled Agent Session".into());
+        let message = format!("Discard draft Agent Session “{title}”?");
+        let confirmation = window.prompt(
+            PromptLevel::Warning,
+            &message,
+            Some("Any unsent prompt text in this draft will be permanently removed."),
+            &["Discard Draft", "Cancel"],
+            cx,
+        );
+
+        cx.spawn_in(window, async move |this, cx| {
+            if !matches!(confirmation.await, Ok(0)) {
+                return anyhow::Ok(());
+            }
+            this.update_in(cx, |this, window, cx| {
+                this.remove_draft(draft_id, &workspace, window, cx);
+            })?;
+            anyhow::Ok(())
+        })
+        .detach_and_log_err(cx);
     }
 
     fn remove_draft_entry(
