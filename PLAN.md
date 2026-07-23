@@ -476,7 +476,10 @@ with new labels.
       reasons, confirmation semantics, and recovery paths. Commit `8bcd11f4b6`
       gives the empty rail's New File and Open alternatives explicit accessible
       labels plus action-aware shortcut tooltips, and aligns Agent History and
-      Command Palette utility names with their actual behavior.
+      Command Palette utility names with their actual behavior. Commit
+      `633dcc4bec` adds a keyboard-addressable **Close Worktree from Window**
+      submenu for the pointer-only hover control and preserves multi-root scope
+      in its labels.
 - [ ] Ensure hover-only actions also exist in context menus or command palette
       and expose accurate accessibility names. Session Rail review, terminal
       lifecycle, attention, hook setup, and evidence-copy actions now have
@@ -487,8 +490,10 @@ with new labels.
       with an explicit critical confirmation across hover, context-menu, and
       keyboard paths; live detach and exited/saved cleanup remain non-destructive
       one-step actions. A rejected Host termination remains visible and raises an
-      operational toast instead of failing only in logs. The app-wide audit remains
-      open.
+      operational toast instead of failing only in logs. Commit `633dcc4bec`
+      also renames the broader group action from ambiguous **Remove** to
+      **Remove Workspace from Window**, separated from per-worktree closure.
+      The app-wide audit remains open.
 - [ ] Use progressive disclosure: the default view communicates current work;
       details reveal provenance, capabilities, protocol, and diagnostics only
       when requested.
@@ -1308,3 +1313,10 @@ Notes decision:
   Thread** Workspace option instead of the silent default. A focused target
   assertion and identity guards pass; compilation and rendered proof remain in
   the consolidated gate.
+- 2026-07-23: Closed a Workspace-options pointer/keyboard parity gap in
+  `633dcc4bec`. Every non-active worktree exposed through hover can now also be
+  closed from a keyboard-addressable **Close Worktree from Window** submenu,
+  with multi-root names preserved. Whole-group removal now says **Remove
+  Workspace from Window** so its broader scope cannot be confused with closing
+  one worktree. Focused label assertions and identity guards pass; compiled and
+  rendered interaction proof remains deferred.

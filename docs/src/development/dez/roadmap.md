@@ -175,6 +175,12 @@ create terminal sessions; **New Agent Thread** remains an explicit secondary
 Workspace option. A focused target assertion and static identity gates pass;
 compiled interaction proof remains deferred.
 
+Commit `633dcc4bec` closes the Workspace-options hover parity gap. Non-active
+worktrees can be closed through a keyboard-addressable **Close Worktree from
+Window** submenu with multi-root scope preserved, while whole-group removal is
+explicitly **Remove Workspace from Window**. Focused label and identity checks
+pass; compiled interaction proof remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -968,6 +974,11 @@ code, all launch gates pass, and known limitations are documented.
       desktop/Vim defaults through New Session while preserving an explicit New
       Agent Thread option. Focused and identity assertions pass; compiled and
       rendered proof remains consolidated.
+- [x] 2026-07-23: Make Workspace closure scope and input parity explicit.
+      Commit `633dcc4bec` adds a keyboard-addressable worktree-close submenu,
+      preserves multi-root names, and distinguishes per-worktree closure from
+      whole-Workspace removal. Focused and identity assertions pass; compiled
+      and rendered proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the
