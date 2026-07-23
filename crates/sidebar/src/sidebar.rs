@@ -778,7 +778,15 @@ fn terminal_agent_state_label(
 fn observed_run_evidence_label(
     checks: &[ObservedRunCheck],
     command_count: usize,
+    evidence_truncated: bool,
 ) -> Option<(SharedString, ThreadItemEvidenceStatus)> {
+    let qualify = |label: String| {
+        if evidence_truncated {
+            format!("{label} · partial")
+        } else {
+            label
+        }
+    };
     let check_count = checks.len();
     if check_count > 0 {
         let failed_count = checks
@@ -791,7 +799,7 @@ fn observed_run_evidence_label(
             } else {
                 format!("{failed_count}/{check_count} checks failed")
             };
-            return Some((label.into(), ThreadItemEvidenceStatus::Failed));
+            return Some((qualify(label).into(), ThreadItemEvidenceStatus::Failed));
         }
 
         let running_count = checks
@@ -805,14 +813,14 @@ fn observed_run_evidence_label(
                 "checks"
             };
             return Some((
-                format!("{running_count} {noun} running").into(),
+                qualify(format!("{running_count} {noun} running")).into(),
                 ThreadItemEvidenceStatus::Neutral,
             ));
         }
 
         let noun = if check_count == 1 { "check" } else { "checks" };
         return Some((
-            format!("{check_count} {noun} passed").into(),
+            qualify(format!("{check_count} {noun} passed")).into(),
             ThreadItemEvidenceStatus::Passed,
         ));
     }
@@ -824,7 +832,7 @@ fn observed_run_evidence_label(
             "commands"
         };
         Some((
-            format!("{command_count} {noun}").into(),
+            qualify(format!("{command_count} {noun}")).into(),
             ThreadItemEvidenceStatus::Neutral,
         ))
     } else {
@@ -967,6 +975,7 @@ mod terminal_runtime_label_tests {
             state: TerminalAgentState::WaitingForPermission,
             attention_required: true,
             resumable: true,
+            events_truncated: false,
             events: Vec::new(),
         };
         assert_eq!(
@@ -1044,16 +1053,23 @@ mod terminal_runtime_label_tests {
         };
 
         assert_eq!(
-            observed_run_evidence_label(&[], 2),
+            observed_run_evidence_label(&[], 2, false),
             Some(("2 commands".into(), ThreadItemEvidenceStatus::Neutral))
         );
         assert_eq!(
-            observed_run_evidence_label(std::slice::from_ref(&passed), 1),
+            observed_run_evidence_label(std::slice::from_ref(&passed), 1, false),
             Some(("1 check passed".into(), ThreadItemEvidenceStatus::Passed))
         );
         assert_eq!(
-            observed_run_evidence_label(&[passed, failed], 2),
+            observed_run_evidence_label(&[passed, failed], 2, false),
             Some(("1/2 checks failed".into(), ThreadItemEvidenceStatus::Failed))
+        );
+        assert_eq!(
+            observed_run_evidence_label(&[], 32, true),
+            Some((
+                "32 commands · partial".into(),
+                ThreadItemEvidenceStatus::Neutral
+            ))
         );
     }
 
@@ -1067,6 +1083,7 @@ mod terminal_runtime_label_tests {
             state: TerminalAgentState::Running,
             attention_required: false,
             resumable: true,
+            events_truncated: false,
             events: Vec::new(),
         };
         let detached = TerminalRuntimeInfo {
@@ -1566,6 +1583,12 @@ impl TerminalEntry {
                     .to_owned(),
             );
         } else if let Some(agent) = &self.agent {
+            if agent.events_truncated {
+                observed_risks.push(
+                    "Earlier structured activity was evicted from the Host's bounded history; retained commands, checks, and file targets are partial."
+                        .to_owned(),
+                );
+            }
             if !agent.capabilities.command_evidence {
                 observed_risks
                     .push("The adapter does not advertise structured command evidence.".to_owned());
@@ -9946,8 +9969,14 @@ impl Sidebar {
         let close_action_workspace = workspace.clone();
         let close_action_source = source.clone();
         let review_brief = terminal.review_brief(cx);
-        let evidence_label =
-            observed_run_evidence_label(&review_brief.checks, review_brief.commands.len());
+        let evidence_label = observed_run_evidence_label(
+            &review_brief.checks,
+            review_brief.commands.len(),
+            terminal
+                .agent
+                .as_ref()
+                .is_some_and(|agent| agent.events_truncated),
+        );
         let review_workspace = match &terminal.workspace {
             ThreadEntryWorkspace::Open(workspace) => Some(workspace.clone()),
             ThreadEntryWorkspace::Closed { .. } => self.active_workspace(cx),

@@ -316,6 +316,11 @@ pub struct TerminalAgentSnapshot {
     pub state: TerminalAgentState,
     pub attention_required: bool,
     pub resumable: bool,
+    /// `true` when older structured events were evicted from the Host's
+    /// bounded history. Retained events remain valid but are not a complete
+    /// account of the Session.
+    #[serde(default)]
+    pub events_truncated: bool,
     #[serde(default)]
     pub events: Vec<TerminalAgentEvent>,
 }

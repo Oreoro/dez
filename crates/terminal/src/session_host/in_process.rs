@@ -300,15 +300,15 @@ impl InProcessTerminalHost {
             agent.adapter == update.adapter
                 && agent.provider_session_id == update.provider_session_id
         });
-        let mut events = if retain_existing_events {
+        let (mut events, mut events_truncated) = if retain_existing_events {
             session
                 .snapshot
                 .agent
                 .take()
-                .map(|agent| agent.events)
+                .map(|agent| (agent.events, agent.events_truncated))
                 .unwrap_or_default()
         } else {
-            Vec::new()
+            (Vec::new(), false)
         };
         let sequence = events
             .last()
@@ -331,6 +331,7 @@ impl InProcessTerminalHost {
         });
         if events.len() > MAX_AGENT_EVENTS {
             events.drain(..events.len() - MAX_AGENT_EVENTS);
+            events_truncated = true;
         }
         session.snapshot.agent = Some(TerminalAgentSnapshot {
             adapter: update.adapter,
@@ -340,6 +341,7 @@ impl InProcessTerminalHost {
             state: update.state,
             attention_required: update.attention_required,
             resumable: update.resumable,
+            events_truncated,
             events,
         });
         Ok(session.snapshot.clone())
@@ -470,6 +472,51 @@ mod tests {
                 .as_ref()
                 .is_some_and(|agent| !agent.attention_required)
         );
+        Ok(())
+    }
+
+    #[test]
+    fn bounded_agent_activity_survives_detach_and_reports_eviction() -> Result<(), TerminalHostError>
+    {
+        let mut host = host(1024);
+        let session_id = TerminalSessionId::new();
+        host.create(session_id, None)?;
+
+        for index in 1..=40 {
+            let mut update = agent_update(TerminalAgentState::Running, false);
+            update.event_kind = super::super::TerminalAgentEventKind::ToolFinished;
+            update.summary = format!("command {index}");
+            update.command = Some(format!("check-{index}"));
+            update.exit_code = Some(0);
+            host.update_agent(session_id, update)?;
+        }
+
+        let detached = host.detach(session_id);
+        let Some(detached_agent) = detached.agent.as_ref() else {
+            return Err(TerminalHostError::NotRunning(session_id));
+        };
+        assert!(detached_agent.events_truncated);
+        assert_eq!(detached_agent.events.len(), MAX_AGENT_EVENTS);
+        assert_eq!(
+            detached_agent.events.first().map(|event| event.sequence),
+            Some(9)
+        );
+        assert_eq!(
+            detached_agent.events.last().map(|event| event.sequence),
+            Some(40)
+        );
+
+        let Some(listed) = host
+            .list()
+            .into_iter()
+            .find(|snapshot| snapshot.session_id == session_id)
+        else {
+            return Err(TerminalHostError::NotRunning(session_id));
+        };
+        assert_eq!(listed.agent, detached.agent);
+
+        let attached = host.attach(session_id, TERMINAL_SESSION_PROTOCOL_VERSION, None);
+        assert_eq!(attached.snapshot.agent, detached.agent);
         Ok(())
     }
 

@@ -178,6 +178,18 @@ require_pattern crates/sidebar/src/sidebar.rs \
 require_pattern crates/sidebar/src/sidebar.rs \
     'format!\("\{transport_state\} · Needs attention"\)' \
     'restored attention can regress to a color-only signal without a live adapter'
+require_pattern crates/terminal/src/session_host.rs \
+    'pub events_truncated: bool,' \
+    'bounded Host activity can be presented without disclosing eviction'
+require_pattern crates/terminal/src/session_host/in_process.rs \
+    'events_truncated = true;' \
+    'the Host does not mark structured activity after bounded eviction'
+require_pattern crates/sidebar/src/sidebar.rs \
+    'format!\("\{label\} · partial"\)' \
+    'the Session Rail can present bounded evidence as complete'
+require_pattern crates/sidebar/src/sidebar.rs \
+    'Earlier structured activity was evicted from the Host.s bounded history' \
+    'the Review Brief omits the retained-evidence truncation risk'
 require_pattern assets/keymaps/default-macos.json \
     '"cmd-n": "sidebar::NewSessionInGroup"' \
     'the macOS Session Rail creation shortcut is not terminal-first'
