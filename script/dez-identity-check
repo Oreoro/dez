@@ -127,6 +127,21 @@ require_pattern crates/zed/src/zed.rs \
 require_pattern crates/zed/src/zed.rs \
     'app_name == "Zed"' \
     'blank-file seeding is not restricted to the official Zed product'
+require_pattern crates/zed/src/zed.rs \
+    '"DEZ_ALLOW_EMULATED_GPU"' \
+    'the Dez unsupported-GPU recovery still advertises the upstream Zed environment variable'
+reject_pattern crates/zed/src/zed.rs \
+    'Zed uses \{\} for rendering|awful performance' \
+    'the unsupported-GPU dialog regressed to stale Zed or placeholder copy'
+require_pattern crates/command_palette/src/command_palette.rs \
+    '&\["collab", "feedback"\]' \
+    'the Dez Command Palette exposes inherited collaboration or upstream feedback actions'
+require_pattern crates/command_palette/src/command_palette.rs \
+    'TypeId::of::<OpenAccountSettings>\(\)' \
+    'the Dez Command Palette exposes the upstream account action'
+require_pattern crates/workspace/src/workspace.rs \
+    'recent Workspace and Session state may be unavailable' \
+    'the Dez database failure state does not explain safety or impact'
 require_pattern crates/workspace/src/multi_workspace.rs \
     'workspace\.mark_durable_session_present\(viewport_id, cx\);' \
     'background Workspace registration is absent from durable viewport composition'

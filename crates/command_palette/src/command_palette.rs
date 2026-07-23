@@ -1,6 +1,7 @@
 mod persistence;
 
 use std::{
+    any::TypeId,
     cmp::{self, Reverse},
     collections::{HashMap, VecDeque},
     sync::Arc,
@@ -28,18 +29,39 @@ use settings::Settings;
 use ui::{HighlightedLabel, KeyBinding, ListItem, ListItemSpacing, prelude::*};
 use util::ResultExt;
 use workspace::{DesignSystemSettings, ModalView, Workspace, WorkspaceSettings};
-use zed_actions::{OpenZedUrl, command_palette::Toggle};
+use zed_actions::{
+    GetMerch, OpenAccountSettings, OpenDocs, OpenStatusPage, OpenZedUrl, command_palette::Toggle,
+};
 
 pub fn init(cx: &mut App) {
     command_palette_hooks::init(cx);
     for &namespace in product_hidden_action_namespaces(paths::APP_NAME) {
         CommandPaletteFilter::global_mut(cx).hide_namespace(namespace);
     }
+    let hidden_action_types = product_hidden_action_types(paths::APP_NAME);
+    CommandPaletteFilter::global_mut(cx).hide_action_types(&hidden_action_types);
     cx.observe_new(CommandPalette::register).detach();
 }
 
 fn product_hidden_action_namespaces(app_name: &str) -> &'static [&'static str] {
-    if app_name == "Zed" { &[] } else { &["collab"] }
+    if app_name == "Zed" {
+        &[]
+    } else {
+        &["collab", "feedback"]
+    }
+}
+
+fn product_hidden_action_types(app_name: &str) -> Vec<TypeId> {
+    if app_name == "Zed" {
+        Vec::new()
+    } else {
+        vec![
+            TypeId::of::<OpenAccountSettings>(),
+            TypeId::of::<OpenDocs>(),
+            TypeId::of::<OpenStatusPage>(),
+            TypeId::of::<GetMerch>(),
+        ]
+    }
 }
 
 impl ModalView for CommandPalette {}
@@ -1036,9 +1058,23 @@ mod tests {
     }
 
     #[test]
-    fn dez_hides_inherited_collaboration_commands() {
-        assert_eq!(product_hidden_action_namespaces("Dez"), &["collab"]);
+    fn dez_hides_inherited_cloud_and_promotion_commands() {
+        assert_eq!(
+            product_hidden_action_namespaces("Dez"),
+            &["collab", "feedback"]
+        );
         assert!(product_hidden_action_namespaces("Zed").is_empty());
+
+        let hidden_types = product_hidden_action_types("Dez");
+        for action_type in [
+            TypeId::of::<OpenAccountSettings>(),
+            TypeId::of::<OpenDocs>(),
+            TypeId::of::<OpenStatusPage>(),
+            TypeId::of::<GetMerch>(),
+        ] {
+            assert!(hidden_types.contains(&action_type));
+        }
+        assert!(product_hidden_action_types("Zed").is_empty());
     }
 
     #[test]

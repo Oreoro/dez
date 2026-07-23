@@ -720,12 +720,41 @@ fn initialize_file_watcher(window: &mut Window, cx: &mut Context<Workspace>) {
     }
 }
 
+fn emulated_gpu_override_env(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "ZED_ALLOW_EMULATED_GPU"
+    } else {
+        "DEZ_ALLOW_EMULATED_GPU"
+    }
+}
+
+fn software_emulation_warning_message(
+    app_name: &str,
+    graphics_api: &str,
+    device_name: &str,
+    docs_url: &str,
+) -> String {
+    let override_env = emulated_gpu_override_env(app_name);
+    let troubleshooting = if app_name == "Zed" {
+        "For troubleshooting, see"
+    } else {
+        "For renderer troubleshooting, see the upstream Zed guide at"
+    };
+    format!(
+        "{app_name} uses {graphics_api} for rendering and requires a compatible GPU.\n\n\
+         The current software-emulated GPU ({device_name}) will severely reduce performance.\n\n\
+         {troubleshooting}: {docs_url}\n\
+         Set {override_env}=1 to acknowledge this warning permanently."
+    )
+}
+
 fn show_software_emulation_warning_if_needed(
     specs: gpui::GpuSpecs,
     window: &mut Window,
     cx: &mut Context<Workspace>,
 ) {
-    if specs.is_software_emulated && std::env::var("ZED_ALLOW_EMULATED_GPU").is_err() {
+    let override_env = emulated_gpu_override_env(APP_NAME);
+    if specs.is_software_emulated && std::env::var(override_env).is_err() {
         let (graphics_api, docs_url, open_url) = if cfg!(target_os = "windows") {
             (
                 "DirectX",
@@ -739,17 +768,11 @@ fn show_software_emulation_warning_if_needed(
                 "https://zed.dev/docs/linux#zed-fails-to-open-windows",
             )
         };
-        let message = format!(
-            db::indoc! {r#"
-            Zed uses {} for rendering and requires a compatible GPU.
-
-            Currently you are using a software emulated GPU ({}) which
-            will result in awful performance.
-
-            For troubleshooting see: {}
-            Set ZED_ALLOW_EMULATED_GPU=1 env var to permanently override.
-            "#},
-            graphics_api, specs.device_name, docs_url
+        let message = software_emulation_warning_message(
+            APP_NAME,
+            graphics_api,
+            &specs.device_name,
+            docs_url,
         );
         let prompt = window.prompt(
             PromptLevel::Critical,
@@ -2794,6 +2817,23 @@ mod tests {
     fn dez_empty_workspace_preserves_the_actionable_launch_surface() {
         assert!(!should_seed_empty_workspace_with_blank_file("Dez"));
         assert!(should_seed_empty_workspace_with_blank_file("Zed"));
+    }
+
+    #[test]
+    fn software_gpu_warning_uses_product_identity_and_explicit_upstream_attribution() {
+        assert_eq!(emulated_gpu_override_env("Dez"), "DEZ_ALLOW_EMULATED_GPU");
+        assert_eq!(emulated_gpu_override_env("Zed"), "ZED_ALLOW_EMULATED_GPU");
+
+        let dez_message = software_emulation_warning_message(
+            "Dez",
+            "Vulkan",
+            "Software Renderer",
+            "https://zed.dev/docs/linux",
+        );
+        assert!(dez_message.starts_with("Dez uses Vulkan"));
+        assert!(dez_message.contains("upstream Zed guide"));
+        assert!(dez_message.contains("DEZ_ALLOW_EMULATED_GPU=1"));
+        assert!(!dez_message.contains(&["awful", "performance"].join(" ")));
     }
 
     async fn flush_workspace_serialization(

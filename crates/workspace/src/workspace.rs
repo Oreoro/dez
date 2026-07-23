@@ -170,7 +170,7 @@ pub use workspace_settings::{
     RestoreOnStartupBehavior, SidebarSettings, StatusBarSettings, TabBarSettings, ToolbarSettings,
     WorkspaceSettings, observe_accessible_mode,
 };
-use zed_actions::{Spawn, feedback::FileBugReport, theme::ToggleMode};
+use zed_actions::{OpenTelemetryLog, Spawn, feedback::FileBugReport, theme::ToggleMode};
 
 pub(crate) fn workspace_card_gap(cx: &App) -> Pixels {
     gpui::px(WorkspaceSettings::get_global(cx).card_gap.max(0.0))
@@ -13457,12 +13457,28 @@ fn notify_if_database_failed(window: WindowHandle<MultiWorkspace>, cx: &mut Asyn
                         cx,
                         |cx| {
                             cx.new(|cx| {
-                                MessageNotification::new("Failed to load the database file.", cx)
-                                    .primary_message("File an Issue")
-                                    .primary_icon(IconName::Plus)
-                                    .primary_on_click(|window, cx| {
-                                        window.dispatch_action(Box::new(FileBugReport), cx)
-                                    })
+                                let notification = MessageNotification::new(
+                                    "Failed to load the database file.",
+                                    cx,
+                                );
+                                if paths::APP_NAME == "Zed" {
+                                    notification
+                                        .primary_message("File an Issue")
+                                        .primary_icon(IconName::Plus)
+                                        .primary_on_click(|window, cx| {
+                                            window.dispatch_action(Box::new(FileBugReport), cx)
+                                        })
+                                } else {
+                                    notification
+                                        .secondary_message(
+                                            "Your files are untouched, but recent Workspace and Session state may be unavailable. Open the logs for the database error, then restart Dez after correcting it.",
+                                        )
+                                        .primary_message("Open Logs")
+                                        .primary_icon(IconName::File)
+                                        .primary_on_click(|window, cx| {
+                                            window.dispatch_action(Box::new(OpenTelemetryLog), cx)
+                                        })
+                                }
                             })
                         },
                     );
