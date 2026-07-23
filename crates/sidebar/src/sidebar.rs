@@ -12641,42 +12641,37 @@ impl Render for Sidebar {
                                             .relative()
                                             .flex_1()
                                             .overflow_hidden()
-                                            .child(
-                                                list(
-                                                    self.list_state.clone(),
-                                                    cx.processor(Self::render_list_entry),
-                                                )
-                                                .flex_1()
-                                                .size_full(),
-                                            )
-                                            .when(no_search_results && has_query, |this| {
-                                                this.child(self.render_no_results(cx))
-                                            })
-                                            .when(
-                                                no_search_results
-                                                    && !has_query
-                                                    && self.attention_only,
-                                                |this| {
+                                            .map(|this| {
+                                                if no_search_results {
+                                                    if has_query {
+                                                        this.child(self.render_no_results(cx))
+                                                    } else if self.attention_only {
+                                                        this.child(
+                                                            self.render_attention_empty_state(cx),
+                                                        )
+                                                    } else {
+                                                        this.child(self.render_no_results(cx))
+                                                    }
+                                                } else {
                                                     this.child(
-                                                        self.render_attention_empty_state(cx),
+                                                        list(
+                                                            self.list_state.clone(),
+                                                            cx.processor(Self::render_list_entry),
+                                                        )
+                                                        .flex_1()
+                                                        .size_full(),
                                                     )
-                                                },
-                                            )
-                                            .when(
-                                                no_search_results
-                                                    && !has_query
-                                                    && !self.attention_only,
-                                                |this| this.child(self.render_no_results(cx)),
-                                            )
-                                            .when_some(sticky_header, |this, header| {
-                                                this.child(header)
-                                            })
-                                            .custom_scrollbars(
-                                                Scrollbars::new(ScrollAxes::Vertical)
-                                                    .tracked_scroll_handle(&self.list_state),
-                                                window,
-                                                cx,
-                                            ),
+                                                    .when_some(sticky_header, |this, header| {
+                                                        this.child(header)
+                                                    })
+                                                    .custom_scrollbars(
+                                                        Scrollbars::new(ScrollAxes::Vertical)
+                                                            .tracked_scroll_handle(&self.list_state),
+                                                        window,
+                                                        cx,
+                                                    )
+                                                }
+                                            }),
                                     ),
                             )
                         }

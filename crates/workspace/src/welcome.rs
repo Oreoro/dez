@@ -572,7 +572,6 @@ impl Render for WelcomePage {
                     .max_w(rems_from_px(680.))
                     .size_full()
                     .gap_6()
-                    .justify_center()
                     .overflow_y_scroll()
                     .child(
                         h_flex()
