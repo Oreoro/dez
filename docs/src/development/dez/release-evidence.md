@@ -1273,6 +1273,9 @@ the later running-app reports, the source advanced through:
 - `83b1c59e07`, which removes Thread, buffer, Panel, and generic status-bar
   terminology from reachable Dez Agent settings and adds the feedback
   data-sharing disclosure while preserving official Zed.
+- `2690f62f75`, which exposes the global Session Switcher command truthfully
+  while preserving conventional Main Work Area `Ctrl-Tab` Surface switching
+  and focused Agent/Session Rail cycling.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

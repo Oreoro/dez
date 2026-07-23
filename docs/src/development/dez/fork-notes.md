@@ -512,3 +512,9 @@ defer it.
   Workspace status vocabulary. A feedback toggle names its upstream
   data-sharing effect instead of relying on a later hover tooltip. Official Zed
   may retain upstream Thread, buffer, Panel, and status-bar copy.
+- **2026-07-23: Session switching complements Surface switching.** `Ctrl-Tab`
+  retains conventional Surface/tab switching in the Main Work Area. While
+  Agent or the Session Rail has focus, the same chord cycles Sessions. The
+  global Command Palette exposes **Session Rail: Switch Sessions** so the
+  supervision action remains keyboard-reachable without overriding editor
+  muscle memory.

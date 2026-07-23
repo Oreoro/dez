@@ -2194,3 +2194,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   upstream wording. A pure product-copy test and identity guards cover the
   boundary. Formatting, Bash syntax, identity, locked offline metadata, and
   diff checks pass; no build, test binary, or visual launch was performed.
+- 2026-07-23: Made the Session Switcher globally discoverable without stealing
+  the editor's conventional `Ctrl-Tab` tab-switching behavior in
+  `2690f62f75`. Agent and Session Rail contexts retain direct `Ctrl-Tab` /
+  `Ctrl-Shift-Tab` session cycling. Everywhere else, the Command Palette now
+  presents the compatibility action as **Session Rail: Switch Sessions**
+  instead of **Toggle Thread Switcher**. Its action documentation names the
+  real open-or-cycle behavior, and a product-copy assertion plus identity guard
+  preserve the mapping. Formatting, Bash syntax, identity, locked offline
+  metadata, and diff checks pass; no build, test binary, or visual launch was
+  performed.

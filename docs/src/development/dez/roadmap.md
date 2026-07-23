@@ -2336,6 +2336,18 @@ Completed for the Agents settings language and disclosure slice:
   locked offline Cargo metadata, and `git diff --check`;
 - no build, test binary, alternate binary, or visual launch was performed.
 
+Completed for the Session Switcher discoverability slice:
+
+- preserved Main Work Area `Ctrl-Tab` for conventional Surface/tab switching;
+- preserved direct Session cycling when Agent or Session Rail has focus;
+- renamed the global Command Palette action to **Session Rail: Switch
+  Sessions**, removing the internal Thread Switcher name;
+- corrected the action documentation to describe its open-or-cycle behavior;
+- added a product-copy assertion and static identity guard;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
 Completed for the first helper-process source slice:
 
 - new crate instructions and a rollbackable `dez_terminal_host` workspace
