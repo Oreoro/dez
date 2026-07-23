@@ -200,6 +200,11 @@ Host-owned activity, state that transcripts are not stored there, and explain
 that structured activity returns only from the same live Host Session. Focused
 redaction and identity checks pass; compiled hook-flow proof remains deferred.
 
+Commit `9323af8008` extends shared retained-command redaction to secret-suffixed
+CLI flags in spaced and equals forms while preserving ordinary arguments.
+Focused utility and Host-ingestion assertions plus identity checks pass;
+compiled hook-flow proof remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -1012,6 +1017,10 @@ code, all launch gates pass, and known limitations are documented.
       before Host retention and distinguishes local metadata from Host-owned
       structured activity and transcripts. Focused and identity assertions
       pass; compiled hook-flow proof remains consolidated.
+- [x] 2026-07-23: Redact explicit secret CLI flags from retained commands.
+      Commit `9323af8008` covers spaced and equals forms without masking
+      ordinary flags. Focused utility, Host-ingestion, and identity assertions
+      pass; compiled proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

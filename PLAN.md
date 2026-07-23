@@ -620,8 +620,10 @@ with new labels.
       before bounded command evidence enters Host retention and corrects the
       settings contract: the metadata database stores identity/attention rather
       than transcripts or structured activity, which returns only from the same
-      live Host Session. Broader command-shape and file-path redaction remain
-      open.
+      live Host Session. Commit `9323af8008` extends the shared redactor to
+      explicit secret-suffixed CLI flags such as `--token` and `--api-key`
+      without masking ordinary arguments. URL-embedded credentials and
+      sensitive file-path policy remain open.
 - [ ] Audit focus order, accessible roles/names/descriptions, key shortcuts,
       minimum hit targets, screen-reader announcements, zoom, reduced motion,
       contrast, truncation, and localization-resistant layouts. Shared Session
@@ -1357,3 +1359,8 @@ Notes decision:
   boundary, independent identity/attention metadata, and Host-owned structured
   activity. Focused redaction and identity assertions pass; compiled hook flow
   and broader redaction audit remain deferred.
+- 2026-07-23: Extended retained-command privacy in `9323af8008`. Shared
+  redaction now covers secret-suffixed CLI flags in both `--token value` and
+  `--api-key=value` forms while preserving ordinary options such as `--mode`
+  and `--license-file`. Focused utility and Host-ingestion assertions plus the
+  identity guard pass; compiled hook-flow proof remains consolidated.
