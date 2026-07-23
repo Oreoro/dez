@@ -8,6 +8,13 @@ pub enum CalloutBorderPosition {
     Bottom,
 }
 
+fn callout_accessibility_role(severity: Severity) -> Role {
+    match severity {
+        Severity::Warning | Severity::Error => Role::Alert,
+        Severity::Info | Severity::Success => Role::Status,
+    }
+}
+
 /// A callout component for displaying important information that requires user attention.
 ///
 /// # Usage Example
@@ -114,6 +121,7 @@ impl Callout {
 impl RenderOnce for Callout {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let line_height = self.line_height.unwrap_or(window.line_height());
+        let accessibility_role = callout_accessibility_role(self.severity);
 
         let has_actions = self.actions_slot.is_some() || self.dismiss_action.is_some();
 
@@ -141,6 +149,7 @@ impl RenderOnce for Callout {
         };
 
         h_flex()
+            .role(accessibility_role)
             .min_w_0()
             .w_full()
             .p_2()
@@ -216,6 +225,19 @@ impl RenderOnce for Callout {
                         }
                     }),
             )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn callout_role_matches_message_urgency() {
+        assert_eq!(callout_accessibility_role(Severity::Info), Role::Status);
+        assert_eq!(callout_accessibility_role(Severity::Success), Role::Status);
+        assert_eq!(callout_accessibility_role(Severity::Warning), Role::Alert);
+        assert_eq!(callout_accessibility_role(Severity::Error), Role::Alert);
     }
 }
 

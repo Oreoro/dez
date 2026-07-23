@@ -193,6 +193,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_pattern crates/sidebar/src/sidebar.rs \
     '\.role\(gpui::Role::Status\)' \
     'Session result and attention changes are not exposed as accessibility status updates'
+require_pattern crates/ui/src/components/callout.rs \
+    '\.role\(accessibility_role\)' \
+    'recovery callouts can regress to visual-only severity without status or alert semantics'
 require_pattern crates/sidebar/src/sidebar.rs \
     'format!\("\{transport_state\} · Needs attention"\)' \
     'restored attention can regress to a color-only signal without a live adapter'
