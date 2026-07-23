@@ -86,6 +86,18 @@ fn project_or_workspace_label(
     }
 }
 
+fn workspace_menu_visible(app_name: &str, show_user_menu: bool) -> bool {
+    app_name != "Zed" || show_user_menu
+}
+
+fn workspace_menu_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "User menu"
+    } else {
+        "Workspace Menu"
+    }
+}
+
 fn canvas_density_label(density: settings::CanvasDensity) -> &'static str {
     match density {
         settings::CanvasDensity::Compact => "compact",
@@ -863,7 +875,10 @@ impl Render for SidebarChrome {
                             )
                         })
                         .when(
-                            paths::APP_NAME == "Zed" && sidebar_settings.show_user_menu,
+                            workspace_menu_visible(
+                                paths::APP_NAME,
+                                sidebar_settings.show_user_menu,
+                            ),
                             |this| this.child(self.render_user_menu_button(cx)),
                         ),
                 )
@@ -1843,7 +1858,7 @@ impl SidebarChrome {
         let user_avatar = user.as_ref().map(|u| u.avatar_uri.clone());
         let username = user.as_ref().map(|u| u.username.clone());
 
-        let is_signed_in = user.is_some();
+        let is_signed_in = paths::APP_NAME == "Zed" && user.is_some();
 
         let current_organization = user_store.read(cx).current_organization();
         let business_organization = current_organization
@@ -1859,8 +1874,10 @@ impl SidebarChrome {
             })
             .collect();
 
-        let show_user_picture = SidebarChromeSettings::get_global(cx).show_user_picture;
+        let show_user_picture =
+            paths::APP_NAME == "Zed" && SidebarChromeSettings::get_global(cx).show_user_picture;
         let show_layout = WorkspaceBarSettings::get_global(cx).show_layout();
+        let menu_label = workspace_menu_label(paths::APP_NAME);
 
         let trigger = if is_signed_in && show_user_picture {
             let avatar = user_avatar.map(|avatar| Avatar::new(avatar)).map(|avatar| {
@@ -1878,8 +1895,9 @@ impl SidebarChrome {
             });
 
             ButtonLike::new("user-menu")
-                .aria_label("User menu")
+                .aria_label(menu_label)
                 .tab_index(0isize)
+                .tooltip(Tooltip::text(menu_label))
                 .child(
                     h_flex()
                         .when_some(business_organization, |this, organization| {
@@ -1890,9 +1908,17 @@ impl SidebarChrome {
                 )
         } else {
             ButtonLike::new("user-menu")
-                .aria_label("User menu")
+                .aria_label(menu_label)
                 .tab_index(0isize)
-                .child(Icon::new(IconName::ChevronDown).size(IconSize::Small))
+                .tooltip(Tooltip::text(menu_label))
+                .child(
+                    Icon::new(if paths::APP_NAME == "Zed" {
+                        IconName::ChevronDown
+                    } else {
+                        IconName::Ellipsis
+                    })
+                    .size(IconSize::Small),
+                )
         };
 
         PopoverMenu::new("user-menu")
@@ -2179,6 +2205,7 @@ impl SidebarChrome {
 mod dez_sidebar_chrome_tests {
     use super::{
         project_or_workspace_label, sidebar_identity_row_visible, sidebar_project_identity_visible,
+        workspace_menu_label, workspace_menu_visible,
     };
 
     #[test]
@@ -2205,5 +2232,14 @@ mod dez_sidebar_chrome_tests {
         assert!(!sidebar_identity_row_visible(false, false, false));
         assert!(sidebar_identity_row_visible(false, true, false));
         assert!(sidebar_identity_row_visible(false, false, true));
+    }
+
+    #[test]
+    fn dez_keeps_the_workspace_menu_reachable_without_account_chrome() {
+        assert!(workspace_menu_visible("Dez", false));
+        assert_eq!(workspace_menu_label("Dez"), "Workspace Menu");
+        assert!(!workspace_menu_visible("Zed", false));
+        assert!(workspace_menu_visible("Zed", true));
+        assert_eq!(workspace_menu_label("Zed"), "User menu");
     }
 }
