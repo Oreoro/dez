@@ -1117,7 +1117,10 @@ the later running-app reports, the source advanced through:
   retired Agent-terminal auto-restoration and its command-palette action in Dez
   while preserving official Zed compatibility; and
 - `86775eb7bc`, which records the everyday Workspace/IDE routing model and
-  keeps the active Workspace options action visible and explicitly labeled.
+  keeps the active Workspace options action visible and explicitly labeled; and
+- `c625c1f3b4`, which gives Agent title editing an accessible, surface-accurate
+  label: Agent Session in Dez, Thread in official Zed, and Terminal for the
+  retained legacy terminal surface.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

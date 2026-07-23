@@ -98,6 +98,11 @@ terminology:
 | Hide Workspace Tools or Agent                 | Hides that region and returns focus to an editor or terminal           |
 | Split or move a Surface                       | Rearranges the same Workspace; it does not create a second project     |
 
+The active Workspace keeps **New Terminal** and **Workspace Options** visible.
+Inactive Workspace actions may reveal on hover because selecting the Workspace
+first makes the same controls persistent. Every icon-only control must retain
+an accessible name and tooltip.
+
 There is no Dez **Terminal Thread** destination. The inherited action remains
 only as an official-Zed compatibility implementation. Dez hides it from Agent
 menus and the command palette, redirects compatibility dispatches to **New

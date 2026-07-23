@@ -1497,6 +1497,19 @@ code, all launch gates pass, and known limitations are documented.
       Focused source assertions, formatting, locked offline metadata, and
       static identity checks pass; compilation and rendered multi-Workspace
       proof remain deferred.
+- [x] 2026-07-23: Keep active Workspace management discoverable. Commit
+      `86775eb7bc` keeps **Workspace Options** visible for the active Workspace,
+      adds a tooltip and source regression, and records the permanent
+      Session-Rail/Workspace-Tools/main-area/Agent ownership model in Fork
+      Notes. Inactive Workspace options remain hover-revealed to protect the
+      hierarchy. Static identity, formatting, locked offline metadata, and diff
+      checks pass; rendered narrow-width proof remains deferred.
+- [x] 2026-07-23: Give Agent title editing accurate product language. Commit
+      `c625c1f3b4` gives the pencil affordance an accessible name and tooltip,
+      says **Edit Agent Session Title** in Dez, preserves **Edit Thread Title**
+      in official Zed, and names a legacy terminal surface **Edit Terminal
+      Title**. A pure label regression and the static identity guard cover the
+      distinction; rendered hover and accessibility-tree proof remain deferred.
 - [x] 2026-07-23: Remove remaining terminal-thread language from Dez UI.
       Commit `d1ea4a914f` gives the external-session import flow consistent
       Agent Session, Agent History, count, empty, and completion copy. Commit

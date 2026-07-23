@@ -1817,3 +1817,9 @@ Notes decision:
   with an explicit tooltip; inactive rows retain the quieter hover treatment.
   Formatting and static checks pass; compilation and rendered narrow-width
   proof remain deferred.
+- 2026-07-23: Clarified the Agent title edit affordance in `c625c1f3b4`. The
+  icon-only pencil now has an accessible name and tooltip, says **Edit Agent
+  Session Title** in Dez, preserves official Zed's **Edit Thread Title**, and
+  calls the retained compatibility terminal surface **Edit Terminal Title**.
+  Pure label assertions and the static identity guard pass; rendered hover and
+  accessibility-tree proof remain deferred.
