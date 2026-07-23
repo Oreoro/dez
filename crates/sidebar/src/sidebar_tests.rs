@@ -66,8 +66,8 @@ fn session_rail_render_width_matches_reserved_width_for_each_mode() {
     );
     assert_eq!(
         settings_for(settings::CanvasVisibility::Icon).width(DEFAULT_WIDTH),
-        ICON_WIDTH,
-        "icon rails must paint at the same fixed width the workspace reserves"
+        COMPACT_MAX_WIDTH,
+        "legacy icon mode must degrade to the smallest complete Dez rail instead of clipping controls"
     );
 }
 

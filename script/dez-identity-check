@@ -206,6 +206,9 @@ require_pattern crates/sidebar/src/sidebar.rs \
     '\(px\(28\.0\), px\(6\.0\), px\(4\.0\), px\(4\.0\), LabelSize::XSmall\)' \
     'compact Workspace headers can regress below their 28px action targets'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'settings::CanvasVisibility::Icon => settings::CanvasVisibility::Compact' \
+    'legacy icon mode can regress to clipping the complete Dez supervision hierarchy'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\("all-session-scope".*?\.size\(ButtonSize::Medium\)' \
     'the All Sessions scope can regress to an undersized pointer target'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \

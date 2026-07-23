@@ -137,7 +137,6 @@ gpui::actions!(
 );
 
 const DEFAULT_WIDTH: Pixels = px(300.0);
-const ICON_WIDTH: Pixels = px(56.0);
 const COMPACT_MAX_WIDTH: Pixels = px(280.0);
 const DETAILED_MIN_WIDTH: Pixels = px(380.0);
 const MIN_WIDTH: Pixels = px(240.0);
@@ -188,7 +187,7 @@ impl SessionRailSettings {
     }
 
     fn display_mode(&self) -> settings::CanvasVisibility {
-        match self.visibility {
+        let requested_mode = match self.visibility {
             settings::CanvasVisibility::Icon
             | settings::CanvasVisibility::Compact
             | settings::CanvasVisibility::Detailed => self.visibility,
@@ -196,19 +195,22 @@ impl SessionRailSettings {
             | settings::CanvasVisibility::Overlay
             | settings::CanvasVisibility::Always
             | settings::CanvasVisibility::Auto => self.mode,
-        }
-    }
+        };
 
-    fn is_icon_mode(&self) -> bool {
-        self.display_mode() == settings::CanvasVisibility::Icon
+        match requested_mode {
+            // The legacy 56px rail cannot present Dez's terminal supervision
+            // hierarchy, search, evidence, and recovery actions without
+            // clipping. Keep reading the compatibility value, but degrade it
+            // to the smallest deliberately supported v0.0.1 layout.
+            settings::CanvasVisibility::Icon => settings::CanvasVisibility::Compact,
+            mode => mode,
+        }
     }
 
     fn width(&self, configured_width: Pixels) -> Pixels {
         let display_mode = self.display_mode();
         if self.is_hidden() {
             Pixels::ZERO
-        } else if self.is_icon_mode() {
-            ICON_WIDTH
         } else if display_mode == settings::CanvasVisibility::Compact {
             configured_width.min(COMPACT_MAX_WIDTH)
         } else if display_mode == settings::CanvasVisibility::Detailed {
@@ -237,11 +239,8 @@ fn session_rail_metadata_contains(metadata: &[String], field: &str) -> bool {
         .any(|candidate| candidate.eq_ignore_ascii_case(field))
 }
 
-fn session_rail_labels_visible(
-    session_rail_settings: &SessionRailSettings,
-    design_system: &DesignSystemSettings,
-) -> bool {
-    !session_rail_settings.is_icon_mode() && design_system.show_contextual_labels()
+fn session_rail_labels_visible(design_system: &DesignSystemSettings) -> bool {
+    design_system.show_contextual_labels()
 }
 
 fn session_overview_status_label(
@@ -4402,7 +4401,7 @@ impl Sidebar {
         let has_filter = self.has_filter_query(cx);
         let session_rail_settings = SessionRailSettings::get_global(cx);
         let design_system = DesignSystemSettings::get_global(cx);
-        let labels_visible = session_rail_labels_visible(&session_rail_settings, &design_system);
+        let labels_visible = session_rail_labels_visible(&design_system);
         let show_agent_attention =
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
         let (header_height, header_padding_left, header_padding_right, header_gap, label_size) =
@@ -9473,7 +9472,7 @@ impl Sidebar {
         let sidebar_bg = color.editor_background;
         let session_rail_settings = SessionRailSettings::get_global(cx);
         let design_system = DesignSystemSettings::get_global(cx);
-        let labels_visible = session_rail_labels_visible(&session_rail_settings, &design_system);
+        let labels_visible = session_rail_labels_visible(&design_system);
         let show_agent_attention =
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
 
@@ -10043,7 +10042,7 @@ impl Sidebar {
         let display_title = terminal.metadata.display_title();
         let agent_ui_settings = CanvasAgentUiSettings::get_global(cx);
         let design_system = DesignSystemSettings::get_global(cx);
-        let labels_visible = session_rail_labels_visible(&session_rail_settings, &design_system);
+        let labels_visible = session_rail_labels_visible(&design_system);
         let show_agent_attention =
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
         let terminal_agent_kind = terminal.detected_agent_kind;
