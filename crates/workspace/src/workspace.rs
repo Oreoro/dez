@@ -4822,6 +4822,22 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        let panel_id = panel.entity_id();
+        let panel_item = self.panes.iter().find_map(|pane| {
+            if !self.pane_is_in_center(pane) {
+                return None;
+            }
+            pane.read(cx).items().find_map(|item| {
+                let panel_item = item.downcast::<PanelItem>()?;
+                (panel_item.read(cx).panel_id() == panel_id).then(|| (pane.clone(), item.item_id()))
+            })
+        });
+        if let Some((pane, item_id)) = panel_item {
+            pane.update(cx, |pane, cx| {
+                pane.remove_item(item_id, false, true, window, cx);
+            });
+        }
+
         for dock in self.all_docks() {
             dock.update(cx, |dock, cx| dock.remove_panel(panel, window, cx));
         }
@@ -6483,6 +6499,8 @@ impl Workspace {
             let did_focus_panel = !panel.panel_focus_handle(cx).contains_focused(window, cx);
             if did_focus_panel {
                 self.activate_panel_item::<T>(true, window, cx);
+            } else if WorkspaceSettings::get_global(cx).close_panel_on_toggle {
+                self.close_panel::<T>(window, cx);
             } else if let Some(pane) = self.last_tabbed_pane(cx) {
                 pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
             }
@@ -16122,7 +16140,7 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn test_close_panel_hides_its_center_tool_pane(cx: &mut TestAppContext) {
+    async fn test_close_and_remove_panel_clean_up_center_tool_pane(cx: &mut TestAppContext) {
         init_test(cx);
 
         let fs = FakeFs::new(cx.executor());
@@ -16130,19 +16148,19 @@ mod tests {
         let (workspace, cx) =
             cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
 
-        let project_pane = workspace.update_in(cx, |workspace, window, cx| {
+        let (project_pane, panel) = workspace.update_in(cx, |workspace, window, cx| {
             let project_pane = workspace.ensure_panel_pane(PanelPaneKind::Project, window, cx);
             let panel = cx.new(|cx| TestPanel::new(DockPosition::Left, 100, cx));
             workspace.add_panel(panel.clone(), window, cx);
 
-            let panel_handle: Arc<dyn PanelHandle> = Arc::new(panel);
+            let panel_handle: Arc<dyn PanelHandle> = Arc::new(panel.clone());
             let panel_item = cx.new(|_| PanelItem::new(panel_handle));
             project_pane.update(cx, |pane, cx| {
                 pane.set_visible(true, cx);
                 pane.add_item(Box::new(panel_item), true, true, None, window, cx);
             });
             workspace.set_active_pane(&project_pane, window, cx);
-            project_pane
+            (project_pane, panel)
         });
 
         workspace.update_in(cx, |workspace, window, cx| {
@@ -16157,6 +16175,68 @@ mod tests {
                 workspace.active_pane().read(cx).is_visible(),
                 "closing Workspace Tools must preserve a visible editor or terminal pane"
             );
+
+            workspace.remove_panel(&panel, window, cx);
+            assert!(
+                workspace.panel_item_for::<TestPanel>(cx).is_none(),
+                "unregistering a panel must remove its retained pane-tab item"
+            );
+        });
+    }
+
+    #[gpui::test]
+    async fn test_pane_tab_panel_toggle_honors_close_setting(cx: &mut TestAppContext) {
+        init_test(cx);
+
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        let (project_pane, panel) = workspace.update_in(cx, |workspace, window, cx| {
+            let project_pane = workspace.ensure_panel_pane(PanelPaneKind::Project, window, cx);
+            let panel = cx.new(|cx| TestPanel::new(DockPosition::Left, 100, cx));
+            workspace.add_panel(panel.clone(), window, cx);
+
+            let panel_handle: Arc<dyn PanelHandle> = Arc::new(panel.clone());
+            let panel_item = cx.new(|_| PanelItem::new(panel_handle));
+            project_pane.update(cx, |pane, cx| {
+                pane.set_visible(true, cx);
+                pane.add_item(Box::new(panel_item), true, true, None, window, cx);
+            });
+            workspace.activate_panel_item::<TestPanel>(true, window, cx);
+            (project_pane, panel)
+        });
+
+        cx.update_global(|store: &mut SettingsStore, cx| {
+            store.update_user_settings(cx, |settings| {
+                settings.workspace.close_panel_on_toggle = Some(true);
+            });
+        });
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            assert!(panel.read(cx).focus_handle(cx).contains_focused(window, cx));
+            assert!(!workspace.toggle_panel_focus::<TestPanel>(window, cx));
+            assert!(
+                !project_pane.read(cx).is_visible(),
+                "re-toggling a focused Workspace Tool must hide its pane"
+            );
+            assert_eq!(workspace.active_pane().read(cx).pane_kind(), PaneKind::Tabs);
+        });
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            assert!(workspace.toggle_panel_focus::<TestPanel>(window, cx));
+            assert!(
+                project_pane.read(cx).is_visible(),
+                "toggling a hidden Workspace Tool must reveal its existing pane"
+            );
+            assert!(panel.read(cx).focus_handle(cx).contains_focused(window, cx));
+        });
+
+        cx.update_global(|store: &mut SettingsStore, cx| {
+            store.update_user_settings(cx, |settings| {
+                settings.workspace.close_panel_on_toggle = Some(false);
+            });
         });
     }
 

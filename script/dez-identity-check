@@ -532,6 +532,9 @@ require_pattern crates/workspace/src/panel_pane.rs \
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'pub fn close_panel<T: Panel>\(&mut self.*?panel_item_for::<T>.*?ensure_tabbed_pane.*?mark_canvas_layout_custom.*?pane\.set_visible\(false.*?set_active_pane.*?serialize_workspace' \
     'panel close actions can regress to affecting legacy docks only and leave Workspace Tools visibly open'
+require_multiline_pattern crates/workspace/src/workspace.rs \
+    'pub fn toggle_panel_focus<T: Panel>.*?panel_item_for::<T>.*?close_panel_on_toggle.*?self\.close_panel::<T>.*?last_tabbed_pane' \
+    'pane-tab tool toggles can regress to focusing an already-focused Workspace Tool instead of hiding it'
 require_pattern crates/workspace/src/multi_workspace.rs \
     '"Hide Workspace Tools"' \
     'the Dez Workspace-tools toggle regressed to upstream Project Pane copy'
