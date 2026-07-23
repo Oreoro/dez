@@ -232,9 +232,15 @@ require_multiline_pattern crates/agent_ui/src/terminal_thread_metadata_store.rs 
 require_multiline_pattern crates/search/src/search_status_button.rs \
     'fn workspace_search_label.*?app_name == "Zed".*?"Project Search".*?"Search Workspace Files"' \
     'the Dez status bar can regress to Project Search vocabulary'
+require_multiline_pattern crates/search/src/project_search.rs \
+    'fn workspace_search_title.*?app_name == "Zed".*?"Project Search".*?"Workspace Search".*?fn workspace_search_loading_label.*?"Loading project…".*?"Loading workspace…".*?fn workspace_search_no_results_label.*?"No results found in this project.*?"No results found in this workspace' \
+    'Workspace Search can regress to Project scope after the status-bar action opens it'
 require_multiline_pattern crates/diagnostics/src/items.rs \
     'fn diagnostics_scope_label.*?app_name == "Zed".*?"Project Diagnostics".*?"Workspace Diagnostics"' \
     'the Dez status bar can regress to Project Diagnostics vocabulary'
+require_multiline_pattern crates/diagnostics/src/diagnostics.rs \
+    'fn diagnostics_title.*?app_name == "Zed".*?"Project Diagnostics".*?"Workspace Diagnostics".*?fn tab_content.*?Label::new\("Diagnostics"\)' \
+    'Workspace Diagnostics can regress to a Project tooltip or an unlabeled status-only tab'
 require_multiline_pattern crates/diagnostics/src/items.rs \
     'APP_NAME != "Zed" && self\.active_editor\.is_none\(\).*?Label::new\("No diagnostics"\)' \
     'terminal-first status chrome can regress to an unexplained checkmark'

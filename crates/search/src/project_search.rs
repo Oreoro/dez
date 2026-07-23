@@ -78,6 +78,46 @@ actions!(
     ]
 );
 
+fn workspace_search_title(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Project Search"
+    } else {
+        "Workspace Search"
+    }
+}
+
+fn workspace_search_loading_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Loading project…"
+    } else {
+        "Loading workspace…"
+    }
+}
+
+fn workspace_search_no_results_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "No results found in this project for the provided query"
+    } else {
+        "No results found in this workspace for the provided query"
+    }
+}
+
+#[cfg(test)]
+mod product_label_tests {
+    use super::*;
+
+    #[test]
+    fn workspace_search_uses_workspace_scope_only_in_dez() {
+        assert_eq!(workspace_search_title("Dez"), "Workspace Search");
+        assert_eq!(workspace_search_loading_label("Dez"), "Loading workspace…");
+        assert_eq!(
+            workspace_search_no_results_label("Dez"),
+            "No results found in this workspace for the provided query"
+        );
+        assert_eq!(workspace_search_title("Zed"), "Project Search");
+    }
+}
+
 fn split_glob_patterns(text: &str) -> Vec<&str> {
     let mut patterns = Vec::new();
     let mut pattern_start = 0;
@@ -631,7 +671,9 @@ impl Render for ProjectSearchView {
             let model = self.entity.read(cx);
 
             let heading_text = match model.search_state {
-                SearchState::Running(SearchActivity::WaitingForScan) => "Loading project…",
+                SearchState::Running(SearchActivity::WaitingForScan) => {
+                    workspace_search_loading_label(paths::APP_NAME)
+                }
                 SearchState::Running(SearchActivity::Searching) => "Searching…",
                 SearchState::Completed(SearchCompletion::NoResults) => "No Results",
                 _ => "Search All Files",
@@ -644,7 +686,7 @@ impl Render for ProjectSearchView {
             let page_content: Option<AnyElement> = match model.search_state {
                 SearchState::Idle => Some(self.landing_text_minor(cx).into_any_element()),
                 SearchState::Completed(SearchCompletion::NoResults) => Some(
-                    Label::new("No results found in this project for the provided query")
+                    Label::new(workspace_search_no_results_label(paths::APP_NAME))
                         .size(LabelSize::Small)
                         .into_any_element(),
                 ),
@@ -689,7 +731,7 @@ impl Item for ProjectSearchView {
             .is_empty()
             .not()
             .then(|| query_text.into())
-            .or_else(|| Some("Project Search".into()))
+            .or_else(|| Some(workspace_search_title(paths::APP_NAME).into()))
     }
 
     fn act_as_type<'a>(
@@ -733,7 +775,7 @@ impl Item for ProjectSearchView {
 
         last_query
             .filter(|query| !query.is_empty())
-            .unwrap_or_else(|| "Project Search".into())
+            .unwrap_or_else(|| workspace_search_title(paths::APP_NAME).into())
     }
 
     fn telemetry_event_text(&self) -> Option<&'static str> {

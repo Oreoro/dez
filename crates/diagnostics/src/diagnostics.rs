@@ -62,6 +62,14 @@ actions!(
     ]
 );
 
+fn diagnostics_title(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Project Diagnostics"
+    } else {
+        "Workspace Diagnostics"
+    }
+}
+
 #[derive(Default)]
 pub(crate) struct IncludeWarnings(bool);
 impl Global for IncludeWarnings {}
@@ -759,7 +767,7 @@ impl Item for ProjectDiagnosticsEditor {
     }
 
     fn tab_tooltip_text(&self, _: &App) -> Option<SharedString> {
-        Some("Project Diagnostics".into())
+        Some(diagnostics_title(paths::APP_NAME).into())
     }
 
     fn tab_content_text(&self, _detail: usize, _: &App) -> SharedString {
@@ -769,6 +777,7 @@ impl Item for ProjectDiagnosticsEditor {
     fn tab_content(&self, params: TabContentParams, _window: &Window, _: &App) -> AnyElement {
         h_flex()
             .gap_1()
+            .child(Label::new("Diagnostics").color(params.text_color()))
             .when(
                 self.summary.error_count == 0 && self.summary.warning_count == 0,
                 |then| {
@@ -929,6 +938,17 @@ impl Item for ProjectDiagnosticsEditor {
         self.editor.update(cx, |editor, cx| {
             editor.added_to_workspace(workspace, window, cx)
         });
+    }
+}
+
+#[cfg(test)]
+mod product_label_tests {
+    use super::*;
+
+    #[test]
+    fn diagnostics_title_uses_workspace_scope_only_in_dez() {
+        assert_eq!(diagnostics_title("Dez"), "Workspace Diagnostics");
+        assert_eq!(diagnostics_title("Zed"), "Project Diagnostics");
     }
 }
 
