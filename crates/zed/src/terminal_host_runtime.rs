@@ -103,7 +103,8 @@ async fn connect_or_launch(
     }
 
     let helper = terminal_host_executable()?;
-    let mut helper_process = Command::new(&helper)
+    let mut helper_command = Command::new(&helper);
+    helper_command
         .arg("serve")
         .arg("--socket")
         .arg(&paths.socket)
@@ -113,7 +114,12 @@ async fn connect_or_launch(
         .arg(host_id.to_string())
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stderr(Stdio::null());
+    // The host owns the terminal processes, so it must not share the GUI's process session.
+    // In particular, quitting a foreground development build must not let its launcher reap the
+    // host and every terminal beneath it.
+    util::set_pre_exec_to_start_new_session(&mut helper_command);
+    let mut helper_process = helper_command
         .spawn()
         .with_context(|| format!("launch terminal host helper {}", helper.display()))?;
     std::thread::Builder::new()
