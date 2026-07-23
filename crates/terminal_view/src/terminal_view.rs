@@ -1656,6 +1656,7 @@ fn subscribe_for_terminal_events(
     if is_hosted {
         reconcile_host_terminal_evidence(terminal, &workspace, cx);
     }
+    let event_workspace = workspace.clone();
     let terminal_events_subscription = cx.subscribe_in(
         terminal,
         window,
@@ -1665,7 +1666,7 @@ fn subscribe_for_terminal_events(
             if current_cwd != previous_cwd {
                 previous_cwd = current_cwd.clone();
                 terminal_view.needs_serialize = true;
-                workspace
+                event_workspace
                     .update(cx, |workspace, cx| {
                         workspace.set_terminal_working_directory_evidence(
                             terminal_session_id.clone(),
@@ -1678,7 +1679,7 @@ fn subscribe_for_terminal_events(
 
             match event {
                 Event::Wakeup => {
-                    workspace
+                    event_workspace
                         .update(cx, |workspace, cx| {
                             workspace.set_terminal_evidence_lifecycle(
                                 &terminal_session_id,
@@ -1754,7 +1755,7 @@ fn subscribe_for_terminal_events(
                             {
                                 terminal_view.hover = None;
                                 terminal_view.hover_tooltip_update = hover_path_like_target(
-                                    &workspace,
+                                    &event_workspace,
                                     hovered_word.clone(),
                                     path_like_target,
                                     cx,
@@ -1773,7 +1774,7 @@ fn subscribe_for_terminal_events(
                 Event::Open(maybe_navigation_target) => match maybe_navigation_target {
                     MaybeNavigationTarget::Url(url) => cx.open_url(url),
                     MaybeNavigationTarget::PathLike(path_like_target) => open_path_like_target(
-                        &workspace,
+                        &event_workspace,
                         terminal_view,
                         path_like_target,
                         window,
@@ -1782,7 +1783,7 @@ fn subscribe_for_terminal_events(
                 },
                 Event::BreadcrumbsChanged => cx.emit(ItemEvent::UpdateBreadcrumbs),
                 Event::ProcessExited { .. } => {
-                    workspace
+                    event_workspace
                         .update(cx, |workspace, cx| {
                             workspace.set_terminal_evidence_lifecycle(
                                 &terminal_session_id,
