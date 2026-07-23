@@ -5769,6 +5769,27 @@ impl AgentPanel {
             && !self.is_title_editor_focused(window, cx)
     }
 
+    fn edit_visible_title(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if let BaseView::AgentThread { conversation_view } = &self.base_view {
+            let title_editor = conversation_view
+                .read(cx)
+                .root_thread_view()
+                .map(|view| view.read(cx).title_editor.clone());
+            if let Some(title_editor) = title_editor {
+                title_editor.focus_handle(cx).focus(window, cx);
+            }
+            return;
+        }
+
+        let terminal_id = match &self.base_view {
+            BaseView::Terminal { terminal_id } => Some(*terminal_id),
+            BaseView::Uninitialized | BaseView::AgentThread { .. } => None,
+        };
+        if let Some(terminal_id) = terminal_id {
+            self.edit_terminal_title(terminal_id, window, cx);
+        }
+    }
+
     fn render_title_view(&self, window: &mut Window, cx: &Context<Self>) -> AnyElement {
         let content = match self.visible_surface() {
             VisibleSurface::AgentThread(conversation_view) => {
@@ -5951,7 +5972,10 @@ impl AgentPanel {
                                 IconButton::new("edit_tile", IconName::Pencil)
                                     .icon_size(IconSize::Small)
                                     .aria_label(title_edit_label)
-                                    .tooltip(Tooltip::text(title_edit_label)),
+                                    .tooltip(Tooltip::text(title_edit_label))
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.edit_visible_title(window, cx);
+                                    })),
                             ),
                     )
             })
@@ -7627,16 +7651,8 @@ mod tests {
             );
         });
 
-        let title_editor_focus_handle = panel.read_with(cx, |panel, cx| {
-            panel
-                .active_thread_view(cx)
-                .expect("active thread view should be present")
-                .read(cx)
-                .title_editor
-                .focus_handle(cx)
-        });
-        cx.update(|window, cx| {
-            title_editor_focus_handle.focus(window, cx);
+        panel.update_in(cx, |panel, window, cx| {
+            panel.edit_visible_title(window, cx);
         });
         cx.run_until_parked();
 
@@ -10339,7 +10355,7 @@ mod tests {
         });
 
         panel.update_in(&mut cx, |panel, window, cx| {
-            panel.edit_terminal_title(terminal_id, window, cx);
+            panel.edit_visible_title(window, cx);
         });
         cx.run_until_parked();
 
