@@ -1361,7 +1361,7 @@ fn standalone_terminal_metadata(
     let terminal_view = terminal_view.read(cx);
     let has_attention = terminal_view.has_bell();
     let terminal = terminal_view.terminal().read(cx);
-    let title = SharedString::from(terminal.title(true));
+    let title = SharedString::from(terminal.title(false));
     let custom_title = terminal_view
         .custom_title()
         .map(|title| SharedString::from(title.to_string()));

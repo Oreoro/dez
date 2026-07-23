@@ -727,7 +727,7 @@ impl TerminalHostConnection {
             let terminal = terminal.read(cx);
             let command = TerminalSessionCommand::UpdateMetadata {
                 session_id,
-                title: Some(terminal.title(true)),
+                title: Some(terminal.title(false)),
                 working_directory: terminal.working_directory(),
                 workspace_id: None,
             };
@@ -747,7 +747,7 @@ impl TerminalHostConnection {
         let terminal = terminal.read(cx);
         let command = TerminalSessionCommand::UpdateMetadata {
             session_id: terminal.session_id(),
-            title: Some(terminal.title(true)),
+            title: Some(terminal.title(false)),
             working_directory: terminal.working_directory(),
             workspace_id: Some(workspace_id),
         };

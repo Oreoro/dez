@@ -754,6 +754,39 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'accessibility_title = self\.tab_content_text.*?accessibility_status.*?\.aria_label\(format!' \
     'terminal panes do not expose their identity and lifecycle to assistive technology'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'pub fn set_custom_title.*?label\.trim\(\)\.to_string\(\).*?let terminal_title = self\.terminal\.read\(cx\)\.title\(false\).*?unwrap_or_else\(\|\| self\.terminal\.read\(cx\)\.title\(false\)\).*?"Rename Terminal…"' \
+    'terminal renaming can regress to whitespace-padded, pre-truncated, or ambiguous labels'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    'find\(\|\(label, _\)\| tab_action_is_rename\(label\)\).*?fn tab_action_is_rename.*?label == "Rename" \|\| label\.starts_with\("Rename "\)' \
+    'explicit terminal rename copy can regress to breaking double-click rename'
+require_pattern crates/sidebar/src/sidebar.rs \
+    'SharedString::from\(terminal\.title\(false\)\)' \
+    'the Session Rail can regress to receiving a terminal title truncated before layout'
+require_pattern crates/agent_ui/src/agent_panel.rs \
+    'let title = terminal\.title\(false\);' \
+    'retained terminal metadata can regress to receiving a pre-truncated title'
+require_pattern crates/terminal/src/session_host/local.rs \
+    'terminal\.title\(false\)' \
+    'the local terminal Host can regress to persisting a pre-truncated title'
+require_pattern crates/terminal/src/session_host/transport.rs \
+    'title: Some\(terminal\.title\(false\)\)' \
+    'the durable terminal transport can regress to publishing a pre-truncated title'
+reject_pattern crates/terminal_view/src/terminal_view.rs \
+    '\.title\(true\)' \
+    'terminal rename can regress to editing a truncated title'
+reject_pattern crates/sidebar/src/sidebar.rs \
+    'SharedString::from\(terminal\.title\(true\)\)' \
+    'the Session Rail stores a display-truncated terminal title'
+reject_pattern crates/agent_ui/src/agent_panel.rs \
+    'terminal\.title\(true\)' \
+    'the retained Agent terminal path stores a display-truncated title'
+reject_pattern crates/terminal/src/session_host/local.rs \
+    'terminal\.title\(true\)' \
+    'the local terminal Host stores a display-truncated title'
+reject_pattern crates/terminal/src/session_host/transport.rs \
+    'terminal\.title\(true\)' \
+    'the durable terminal transport stores a display-truncated title'
 reject_pattern crates/terminal_view/src/terminal_view.rs \
     'terminal\.pid_getter\(\)\?' \
     'durable terminal tab tooltips still disappear when no local PID exists'

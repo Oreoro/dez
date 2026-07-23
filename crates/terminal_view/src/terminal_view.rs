@@ -963,7 +963,9 @@ impl TerminalView {
     }
 
     pub fn set_custom_title(&mut self, label: Option<String>, cx: &mut Context<Self>) {
-        let label = label.filter(|l| !l.trim().is_empty());
+        let label = label
+            .map(|label| label.trim().to_string())
+            .filter(|label| !label.is_empty());
         if self.custom_title != label {
             self.custom_title = label;
             self.needs_serialize = true;
@@ -994,7 +996,7 @@ impl TerminalView {
             } else {
                 // Only set custom_title if the text differs from the terminal's dynamic title.
                 // This prevents subtle layout changes when clicking away without making changes.
-                let terminal_title = self.terminal.read(cx).title(true);
+                let terminal_title = self.terminal.read(cx).title(false);
                 if new_label == terminal_title {
                     None
                 } else {
@@ -1020,7 +1022,7 @@ impl TerminalView {
         let current_label = self
             .custom_title
             .clone()
-            .unwrap_or_else(|| self.terminal.read(cx).title(true));
+            .unwrap_or_else(|| self.terminal.read(cx).title(false));
 
         let rename_editor = cx.new(|cx| Editor::single_line(window, cx));
         let rename_editor_subscription = cx.subscribe_in(&rename_editor, window, {
@@ -2464,7 +2466,7 @@ impl Item for TerminalView {
     ) -> Vec<(SharedString, Box<dyn gpui::Action>)> {
         let terminal = self.terminal.read(cx);
         if terminal.task().is_none() {
-            vec![("Rename".into(), Box::new(RenameTerminal))]
+            vec![("Rename Terminal…".into(), Box::new(RenameTerminal))]
         } else {
             Vec::new()
         }
@@ -4014,7 +4016,7 @@ mod tests {
             .unwrap();
 
         terminal_view.update(cx, |view, cx| {
-            view.set_custom_title(Some("frontend".to_string()), cx);
+            view.set_custom_title(Some("  frontend  ".to_string()), cx);
             assert_eq!(view.custom_title(), Some("frontend"));
         });
     }

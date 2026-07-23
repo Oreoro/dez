@@ -63,7 +63,7 @@ impl LocalTerminalHost {
         if self.model.create(session_id, working_directory).is_err() {
             return session_id;
         }
-        let title = terminal.read(cx).title(true);
+        let title = terminal.read(cx).title(false);
         self.model.set_title(session_id, Some(title));
         self.model.set_process_id(
             session_id,
@@ -79,7 +79,8 @@ impl LocalTerminalHost {
         cx.subscribe(&terminal, move |this, terminal, event, cx| match event {
             Event::TitleChanged | Event::BreadcrumbsChanged | Event::Wakeup => {
                 let terminal = terminal.read(cx);
-                this.model.set_title(session_id, Some(terminal.title(true)));
+                this.model
+                    .set_title(session_id, Some(terminal.title(false)));
                 this.model
                     .set_working_directory(session_id, terminal.working_directory());
             }

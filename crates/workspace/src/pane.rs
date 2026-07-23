@@ -3325,7 +3325,7 @@ impl Pane {
                         let extra_actions = item_handle.tab_extra_context_menu_actions(window, cx);
                         if let Some((_, action)) = extra_actions
                             .into_iter()
-                            .find(|(label, _)| label.as_ref() == "Rename")
+                            .find(|(label, _)| tab_action_is_rename(label))
                         {
                             // Dispatch action directly through the focus handle to avoid
                             // relay_action's intermediate focus step which can interfere
@@ -5332,6 +5332,10 @@ impl Pane {
     }
 }
 
+fn tab_action_is_rename(label: &str) -> bool {
+    label == "Rename" || label.starts_with("Rename ")
+}
+
 fn default_render_tab_bar_buttons(
     pane: &mut Pane,
     window: &mut Window,
@@ -6298,6 +6302,9 @@ mod tests {
 
     #[test]
     fn dez_pane_add_control_names_its_destination_and_choices() {
+        assert!(tab_action_is_rename("Rename"));
+        assert!(tab_action_is_rename("Rename Terminal…"));
+        assert!(!tab_action_is_rename("Open Terminal"));
         assert_eq!(
             PaneKind::Tabs.accessibility_label_for_app("Dez"),
             "Main work area"
