@@ -600,6 +600,10 @@ with new labels.
       remains deliberately manual, but eligible detected Codex rows now show a
       visible Hook setup state and one-click copy action with context-menu
       parity. Rendered flow verification remains open.
+      Commit `4a102fc50e` makes the terminal-first workflow a named region with
+      an ordered Start/Watch/Review list, moves the safety explanation above a
+      wrapping action row, and uses 28 px targets for Copy Codex Hook and New
+      Terminal so zoom and longer copy do not crush the first-run actions.
       Dez also exposes its isolated Install CLI action instead of hiding it
       behind the official Zed product gate; install interaction remains open.
 - [ ] Group Dez settings by Workspace, Sessions, Agents, Attention, Evidence,
@@ -1428,3 +1432,8 @@ Notes decision:
   search, evidence, inline actions, and recovery without clipping. The width
   regression assertion and identity guard cover the fallback; rendered compact
   proof remains deferred.
+- 2026-07-23: Polished the terminal-first onboarding workflow in `4a102fc50e`.
+  Start/Watch/Review now form a named accessible list inside a named region; the
+  detach/terminate/Host/hook safety explanation sits above a wrapping action row
+  instead of competing for horizontal space, and both actions use 28 px targets.
+  Identity guards pass; rendered zoom and narrow-window proof remains deferred.

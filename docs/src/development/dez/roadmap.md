@@ -246,6 +246,11 @@ smallest layout that presents the full supervision, search, evidence, action,
 and recovery hierarchy without clipping. Width and identity checks pass;
 rendered compact proof remains deferred.
 
+Commit `4a102fc50e` makes the terminal-first onboarding workflow a named region
+and Start/Watch/Review a named accessible list. Its safety copy now sits above a
+wrapping action row, and Copy Codex Hook/New Terminal use 28 px targets. Identity
+checks pass; rendered zoom and narrow-window proof remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -1095,6 +1100,11 @@ code, all launch gates pass, and known limitations are documented.
       Commit `9930e86677` keeps legacy configuration readable but resolves it to
       the smallest complete compact layout. Width and identity checks pass;
       rendered compact proof remains consolidated.
+- [x] 2026-07-23: Make terminal-first onboarding responsive and semantic.
+      Commit `4a102fc50e` names the workflow and its ordered steps, separates
+      safety copy from a wrapping action row, and normalizes its primary hit
+      targets. Identity checks pass; rendered zoom/narrow proof remains
+      consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

@@ -70,6 +70,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Session Rail hit-target normalization source: `a90fae5873`
 - Session Rail active-descendant focus source: `f6318ea907`
 - Legacy icon-mode fallback source: `9930e86677`
+- Responsive terminal-first onboarding source: `4a102fc50e`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -636,6 +637,11 @@ without clipping. The earlier icon width assertion remains historical evidence
 for the old contract; the current width and identity guards cover the safe
 fallback. Rendered compact proof remains deferred.
 
+Commit `4a102fc50e` exposes the terminal-first workflow and Start/Watch/Review
+steps as named accessibility structures. The safety explanation now precedes a
+wrapping action row, and Copy Codex Hook/New Terminal use 28 px targets. Identity
+guards pass; rendered zoom and narrow-window proof remains deferred.
+
 The corrected `Dez Dev.app` is now registered and launched as launchd child PID
 `85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 `lsof` resolves its text executable to
@@ -869,7 +875,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `9930e86677` or
+visual evidence: the exact bundle must first be rebuilt from `4a102fc50e` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -891,7 +897,7 @@ predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `f6aea3e013`, `b749a25619`, `0e2c0dcae3`, `e969abda4a`, `0607771783`, and
 `2092acd453`, `57290c27c3`, `633dcc4bec`, `7893762cd5`, `bd36afd3f4`, and
 `b39eedf724`, `9323af8008`, `80ff1df75f`, `c47637c2ac`, `7e91f00b69`, and
-`e28b78ed57`, `a90fae5873`, `f6318ea907`, and `9930e86677`. A rebuild/re-audit
+`e28b78ed57`, `a90fae5873`, `f6318ea907`, `9930e86677`, and `4a102fc50e`. A rebuild/re-audit
 and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.
