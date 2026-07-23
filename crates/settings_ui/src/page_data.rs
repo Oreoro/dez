@@ -131,6 +131,18 @@ fn terminal_session_init_setting_visible(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn agent_session_setting_copy(
+    app_name: &str,
+    upstream_thread_copy: &'static str,
+    dez_session_copy: &'static str,
+) -> &'static str {
+    if app_name == "Zed" {
+        upstream_thread_copy
+    } else {
+        dez_session_copy
+    }
+}
+
 fn workspace_surface_copy(
     app_name: &str,
     upstream_panel_copy: &'static str,
@@ -8532,7 +8544,11 @@ fn ai_page(cx: &App) -> SettingsPage {
             SettingsPageItem::SectionHeader("Agent Configuration"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Default Subagent Model",
-                description: "The model used by subagents. Reset to use the parent thread's model.",
+                description: agent_session_setting_copy(
+                    paths::APP_NAME,
+                    "The model used by subagents. Reset to use the parent thread's model.",
+                    "The model used by subagents. Reset to use the parent Agent Session's model.",
+                ),
                 field: Box::new(SettingField::<Option<LanguageModelSelection>> {
                     organization_override: None,
                     json_path: Some("agent.subagent_model"),
@@ -8608,7 +8624,11 @@ fn ai_page(cx: &App) -> SettingsPage {
         items.extend([
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Single File Review",
-                description: "When enabled, agent edits will also be displayed in single-file buffers for review.",
+                description: agent_session_setting_copy(
+                    paths::APP_NAME,
+                    "When enabled, agent edits will also be displayed in single-file buffers for review.",
+                    "Open Agent edits as single-file Surfaces for focused review.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("agent.single_file_review"),
@@ -8627,7 +8647,11 @@ fn ai_page(cx: &App) -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Enable Feedback",
-                description: "Show voting thumbs up/down icon buttons for feedback on agent edits.",
+                description: agent_session_setting_copy(
+                    paths::APP_NAME,
+                    "Show voting thumbs up/down icon buttons for feedback on agent edits.",
+                    "Show response-rating controls. Rating sends the current Agent Session to the upstream agent service.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: Some(|org_config| if org_config.is_agent_thread_feedback_enabled {
                         None
@@ -8696,7 +8720,11 @@ fn ai_page(cx: &App) -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Expand Edit Card",
-                description: "Whether to have edit cards in the agent panel expanded, showing a Preview of the diff.",
+                description: agent_session_setting_copy(
+                    paths::APP_NAME,
+                    "Whether to have edit cards in the agent panel expanded, showing a Preview of the diff.",
+                    "Whether Agent edit cards start expanded to show their diff preview.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("agent.expand_edit_card"),
@@ -8715,7 +8743,11 @@ fn ai_page(cx: &App) -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Expand Terminal Card",
-                description: "Whether to have terminal cards in the agent panel expanded, showing the whole command output.",
+                description: agent_session_setting_copy(
+                    paths::APP_NAME,
+                    "Whether to have terminal cards in the agent panel expanded, showing the whole command output.",
+                    "Whether Agent terminal cards start expanded to show complete command output.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("agent.expand_terminal_card"),
@@ -8885,7 +8917,11 @@ fn ai_page(cx: &App) -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Merge Conflict Indicator",
-                description: "Whether to show the merge conflict indicator in the status bar that offers to resolve conflicts using the agent.",
+                description: agent_session_setting_copy(
+                    paths::APP_NAME,
+                    "Whether to show the merge conflict indicator in the status bar that offers to resolve conflicts using the agent.",
+                    "Whether Workspace status offers to resolve merge conflicts with Agent.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("agent.show_merge_conflict_indicator"),
@@ -11439,6 +11475,26 @@ mod tests {
                 Some(live_surface_path)
             ));
         }
+    }
+
+    #[test]
+    fn agent_settings_use_session_and_surface_vocabulary_in_dez() {
+        assert_eq!(
+            agent_session_setting_copy(
+                "Dez",
+                "Reset to use the parent thread's model.",
+                "Reset to use the parent Agent Session's model.",
+            ),
+            "Reset to use the parent Agent Session's model."
+        );
+        assert_eq!(
+            agent_session_setting_copy(
+                "Zed",
+                "Reset to use the parent thread's model.",
+                "Reset to use the parent Agent Session's model.",
+            ),
+            "Reset to use the parent thread's model."
+        );
     }
 
     #[test]

@@ -604,6 +604,15 @@ require_multiline_pattern crates/settings_ui/src/page_data.rs \
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     '"Agent Panel Font",[[:space:]]*"Agent Typography".*?"Outline Panel Button",[[:space:]]*"Outline Control".*?"Git Panel Button",[[:space:]]*"Git Control".*?"Agent Panel Button",[[:space:]]*"Agent Control"' \
     'Dez Settings can regress to Panel terminology in retained typography and status controls'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'fn agent_session_setting_copy.*?if app_name == "Zed" \{[[:space:]]*upstream_thread_copy[[:space:]]*\} else \{[[:space:]]*dez_session_copy' \
+    'Dez Agent settings can lose their official-Zed-compatible Session vocabulary branch'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    '"The model used by subagents\. Reset to use the parent thread.s model\.",[[:space:]]*"The model used by subagents\. Reset to use the parent Agent Session.s model\.".*?"When enabled, agent edits will also be displayed in single-file buffers for review\.",[[:space:]]*"Open Agent edits as single-file Surfaces for focused review\.".*?"Show voting thumbs up/down icon buttons for feedback on agent edits\.",[[:space:]]*"Show response-rating controls\. Rating sends the current Agent Session to the upstream agent service\."' \
+    'Dez Agent settings can regress to Thread or buffer terminology and lose feedback disclosure'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    '"Whether to have edit cards in the agent panel expanded, showing a Preview of the diff\.",[[:space:]]*"Whether Agent edit cards start expanded to show their diff preview\.".*?"Whether to have terminal cards in the agent panel expanded, showing the whole command output\.",[[:space:]]*"Whether Agent terminal cards start expanded to show complete command output\.".*?"Whether to show the merge conflict indicator in the status bar that offers to resolve conflicts using the agent\.",[[:space:]]*"Whether Workspace status offers to resolve merge conflicts with Agent\."' \
+    'Dez Agent settings can regress to Panel or generic status-bar terminology'
 require_pattern crates/sidebar/src/sidebar.rs \
     'session_overview_visible\(show_start_state\)' \
     'the empty Session Rail can regress to duplicating its creation action'
