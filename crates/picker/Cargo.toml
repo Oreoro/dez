@@ -21,6 +21,7 @@ db.workspace = true
 language.workspace = true
 gpui.workspace = true
 menu.workspace = true
+paths.workspace = true
 project.workspace = true
 schemars.workspace = true
 serde.workspace = true

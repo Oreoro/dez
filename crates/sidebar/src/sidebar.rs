@@ -11735,7 +11735,7 @@ impl Sidebar {
         v_flex()
             .id("sidebar-start-state")
             .role(gpui::Role::Group)
-            .aria_label("Start a terminal session")
+            .aria_label("Session Rail empty state")
             .flex_1()
             .min_h_0()
             .overflow_y_scroll()
@@ -11768,11 +11768,10 @@ impl Sidebar {
                                     .min_w_0()
                                     .gap_0p5()
                                     .child(
-                                        Label::new("Start your first terminal")
-                                            .size(LabelSize::Small),
+                                        Label::new("No running sessions").size(LabelSize::Small),
                                     )
                                     .child(
-                                        Label::new("No active sessions")
+                                        Label::new("Start a terminal to begin")
                                             .size(LabelSize::XSmall)
                                             .color(Color::Muted),
                                     ),
@@ -11780,7 +11779,7 @@ impl Sidebar {
                     )
                     .child(
                         Label::new(
-                            "Run a shell or coding agent here. Dez keeps its state, attention, and review path together.",
+                            "Terminals open in the main work area. Their live status and attention appear here.",
                         )
                         .size(LabelSize::XSmall)
                         .color(Color::Muted),

@@ -568,14 +568,28 @@ fn render_worktree_auto_trust_switch(tab_index: &mut isize, cx: &mut App) -> imp
         ui::ToggleState::Unselected
     };
 
-    let tooltip_description = format!(
-        "{APP_NAME} only runs language servers, project settings, and MCP servers after you trust a new workspace."
-    );
+    let (label, description, tooltip_description) = if APP_NAME == "Zed" {
+        (
+            "Trust All Projects By Default",
+            "Automatically trust new workspaces and allow their developer services to run",
+            format!(
+                "{APP_NAME} only runs language servers, project settings, and MCP servers after you trust a new workspace."
+            ),
+        )
+    } else {
+        (
+            "Trust Workspace Folders Automatically",
+            "Allow language servers, Workspace settings, and configured tools to run for newly opened folders",
+            format!(
+                "{APP_NAME} only runs language servers, Workspace settings, and configured tools after you trust a newly opened folder."
+            ),
+        )
+    };
 
     SwitchField::new(
         "onboarding-auto-trust-worktrees",
-        Some("Trust All Projects By Default"),
-        Some("Automatically trust new workspaces and allow their developer services to run".into()),
+        Some(label),
+        Some(description.into()),
         toggle_state,
         {
             let fs = <dyn Fs>::global(cx);
