@@ -10818,7 +10818,7 @@ impl Sidebar {
                     "open-recent-workspaces",
                     if labels_visible { "Workspaces" } else { "" },
                 )
-                .size(ButtonSize::Medium)
+                .size(ButtonSize::Compact)
                 .label_size(LabelSize::Small)
                 .start_icon(Icon::new(IconName::FolderOpen).size(IconSize::Small))
                 .aria_label("Open Recent Workspaces")
@@ -12213,7 +12213,7 @@ impl Sidebar {
                     "agent-sidebar-options-menu",
                     if labels_visible { "Agent Tools" } else { "" },
                 )
-                .size(ButtonSize::Medium)
+                .size(ButtonSize::Compact)
                 .label_size(LabelSize::Small)
                 .start_icon(Icon::new(IconName::Settings).size(IconSize::Small))
                 .aria_label("Agent Tools and Settings"),
@@ -12404,7 +12404,7 @@ impl Sidebar {
                     .child(self.render_agent_options_menu(labels_visible, cx))
                     .child(
                         Button::new("history", if labels_visible { "History" } else { "" })
-                            .size(ButtonSize::Medium)
+                            .size(ButtonSize::Compact)
                             .label_size(LabelSize::Small)
                             .start_icon(Icon::new(IconName::Clock).size(IconSize::Small))
                             .toggle_state(is_archive)

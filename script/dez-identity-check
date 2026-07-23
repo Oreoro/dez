@@ -310,6 +310,15 @@ require_pattern crates/sidebar/src/sidebar.rs \
 require_pattern crates/sidebar/src/sidebar.rs \
     'if labels_visible \{ "Workspaces" \} else \{ "" \}' \
     'the Session Rail recent-Workspace utility can regress to an unexplained glyph'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'Button::new\([[:space:]]*"open-recent-workspaces".*?\.size\(ButtonSize::Compact\)' \
+    'the labeled recent-Workspace utility can regress to medium padding that overflows the compact rail'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'Button::new\([[:space:]]*"agent-sidebar-options-menu".*?\.size\(ButtonSize::Compact\)' \
+    'the labeled Agent Tools utility can regress to medium padding that overflows the compact rail'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'Button::new\("history", if labels_visible \{ "History" \} else \{ "" \}\).*?\.size\(ButtonSize::Compact\)' \
+    'the labeled History utility can regress to medium padding that overflows the compact rail'
 require_multiline_pattern crates/agent_ui/src/terminal_thread_metadata_store.rs \
     'fn compose_terminal_thread_title.*?match terminal_title\.trim\(\).*?SharedString::new_static\("Terminal"\)' \
     'a terminal with an empty PTY title can regress to a blank Session Rail row'
