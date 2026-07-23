@@ -1894,6 +1894,16 @@ code, all launch gates pass, and known limitations are documented.
   and socket-directory permissions; redact the token's debug output; cap a
   frame before allocating its payload; and keep the first transport sequential
   until live event multiplexing is required by the GUI adapter.
+- **2026-07-23:** Lock the v0.0.1 visual baseline to the system-aware Lumin
+  Blur/Lumin Light pair and role-based typography. Commit `67001bf0ef` removes
+  stale first-run One theme and oversized font overrides, uses bundled
+  JetBrains Mono at 14 px for editor and terminal work, retains `.ZedSans` for
+  interface readability, and adds subtle structural, focus, active-line, and
+  scrollbar contrast to Lumin without layering additional blur effects inside
+  high-motion work surfaces. Theme attribution, font licensing, assets,
+  defaults, and first-run settings have static guards. Rendered dark/light,
+  density, transparency, contrast, and fallback-font proof remains part of the
+  consolidated visual matrix.
 
 ## Verification {#verification}
 
@@ -1904,6 +1914,16 @@ Completed for the preceding source slice:
 - `bash -n script/bundle-mac`
 - `cargo metadata --no-deps --format-version 1`
 - focused Prettier checks for the earlier documentation changes
+
+Completed for the Lumin and JetBrains typography source slice:
+
+- Prettier parse checks for both settings files and the bundled theme;
+- Prettier formatting check for the user-facing appearance guide;
+- Bash syntax and Dez identity checks, including asset and attribution guards;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- no application build, test binary, bundle, alternate binary, or visual
+  launch.
 
 Completed for the 2026-07-22 documentation reconciliation:
 

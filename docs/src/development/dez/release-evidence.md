@@ -89,6 +89,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Prediction-provider normalization export source: `af8ecad961`
 - Session Rail stateful landmark repair source: `9ed0e1aaaf`
 - Onboarding stateful landmark repair source: `2452d3b4ec`
+- Lumin and JetBrains visual-default source: `67001bf0ef`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -1190,7 +1191,11 @@ the later running-app reports, the source advanced through:
   and makes automatic trust name its folder and developer-service scope; and
 - `ff63d573ba`, which names the editor destination **Files** and preserves
   **Canvas Layout** as the Dez layout concept without exposing compatibility
-  Project Panel or dock-backed Panel terminology.
+  Project Panel or dock-backed Panel terminology; and
+- `67001bf0ef`, which makes the attributed Lumin Blur/Lumin Light pair and
+  bundled JetBrains Mono profile consistent between product defaults and first
+  launch, removes stale oversized upstream overrides, and restores restrained
+  structural contrast to translucent dark and light surfaces.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

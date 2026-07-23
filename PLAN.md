@@ -482,8 +482,14 @@ with new labels.
       recovery action. It also gives the welcome surface a terminal-first
       hierarchy and ordered Start/Watch/Verify orientation. Commit
       `7f0da8c04a` top-aligns the scrollable welcome surface so short windows do
-      not center content into inaccessible overflow. Rendered density and
-      narrow-height proof remain open.
+      not center content into inaccessible overflow. Commit `67001bf0ef`
+      finishes the first-party visual baseline: new installs follow the system
+      with Lumin Blur/Lumin Light, use JetBrains Mono for code and terminals,
+      retain a readable sans-serif UI role, normalize the working typography to
+      14 px, and restore low-contrast borders, focus, active-line, and
+      scrollbar hierarchy inside the translucent theme. Source, license,
+      first-run, and font assets are guarded. Rendered density, material,
+      contrast, and narrow-height proof remain open.
 
 #### Interaction quality
 
@@ -1985,3 +1991,15 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Panel** and **Panel Layout** where appropriate. Pure copy assertions,
   formatting, locked offline metadata, identity, and diff checks pass;
   compilation and rendered menu proof remain deferred.
+- 2026-07-23: Made the intended Dez visual profile survive first launch in
+  `67001bf0ef`. Lumin Blur/Lumin Light now follows system appearance in both
+  product defaults and the generated user settings file; the stale One
+  Dark/One Light and 16/15 px overrides are gone. JetBrains Mono is the bundled
+  editor, terminal, prompt/code, Markdown-code, and commit-input face, while
+  `.ZedSans` remains the legible interface role. Lumin now preserves
+  translucent material without losing pane, focus, selection, active-line, or
+  scrollbar hierarchy, and its light variant uses real alpha instead of an
+  opaque blur declaration. Static guards cover theme selection, first-run
+  settings, every bundled font face, and both upstream licenses. Prettier
+  parsing, documentation formatting, Bash syntax, locked offline metadata,
+  identity, and diff checks pass; no build or visual launch was performed.

@@ -191,6 +191,36 @@ organizes its existing capabilities around terminal-native supervision. The
 terminal is not embedded inside chat, and the editor is not a separate mode.
 Both are first-class Surfaces in one Workspace.
 
+## Visual identity and typography {#visual-identity-and-typography}
+
+Dez follows the operating system appearance and ships with the attributed
+Lumin pair: **Lumin Blur** for dark mode and **Lumin Light** for light mode.
+Lumin remains derived from Daksh Sharma's MIT-licensed source; the theme asset,
+standalone license, and aggregate source attribution travel with every build.
+
+Blur is a window-shell material, not an excuse to erase hierarchy. The root
+surface may be translucent, while low-contrast dividers, selected tabs,
+scrollbars, active lines, and a restrained peach focus accent keep panes and
+controls legible. Elevated menus and overlays remain visually solid enough for
+text. Editor and terminal regions reuse the single shell material instead of
+stacking independent blur effects over continuously updating content.
+
+Typography uses explicit roles:
+
+- **JetBrains Mono** is bundled under the SIL Open Font License and is the
+  default for buffers, terminals, Agent prompt/code content, Markdown code,
+  and Git commit input.
+- **`.ZedSans`**, currently the bundled IBM Plex Sans family, is the default
+  for navigation, labels, prose, menus, settings, and other interface chrome.
+- The balanced v0.0.1 baseline is 14 px for UI, editor, Agent, and terminal
+  text, with a 1.5 editor line height and a slightly smaller 13 px Git commit
+  input.
+
+First-run settings must select the same Lumin and font profile as product
+defaults. They must not pin a stale upstream theme or oversized typography that
+makes a fresh install look different from the intended Dez experience. Users
+remain free to override every role through normal settings.
+
 ## Locked identity {#locked-identity}
 
 - Product and stable application name: `Dez`
