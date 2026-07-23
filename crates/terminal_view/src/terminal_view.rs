@@ -67,7 +67,6 @@ use workspace::{
         Direction, SearchEvent, SearchOptions, SearchToken, SearchableItem, SearchableItemHandle,
     },
 };
-use zed_actions::{agent::AddSelectionToThread, assistant::InlineAssist};
 
 struct ImeState {
     marked_text: String,
@@ -111,6 +110,14 @@ fn terminal_close_label(is_hosted: bool) -> &'static str {
         "Detach Terminal"
     } else {
         "Close Terminal Tab"
+    }
+}
+
+fn terminal_terminate_label(is_hosted: bool) -> &'static str {
+    if is_hosted {
+        "Terminate Session"
+    } else {
+        "Terminate Terminal Process"
     }
 }
 
@@ -1040,9 +1047,9 @@ impl TerminalView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let assistant_enabled = false;
         let is_hosted = self.terminal.read(cx).is_hosted();
         let close_label = terminal_close_label(is_hosted);
+        let terminate_label = terminal_terminate_label(is_hosted);
         let context_menu = ContextMenu::build(window, cx, |menu, _, _| {
             menu.context(self.focus_handle.clone())
                 .when(self.shows_workspace_actions(), |menu| {
@@ -1058,28 +1065,20 @@ impl TerminalView {
                             .separator()
                     }
                 })
-                .action("Copy", Box::new(Copy))
+                .when(has_selection, |menu| {
+                    menu.action("Copy Selection", Box::new(Copy))
+                })
                 .when(
                     !matches!(self.mode, TerminalMode::Embedded { .. }),
                     |menu| {
-                        menu.action("Paste", Box::new(Paste))
-                            .action("Paste Text", Box::new(PasteText))
+                        menu.action("Paste Clipboard", Box::new(Paste))
+                            .action("Paste Text Only", Box::new(PasteText))
                     },
                 )
                 .action("Select All", Box::new(SelectAll))
                 .when(
                     !matches!(self.mode, TerminalMode::Embedded { .. }),
-                    |menu| menu.action("Clear", Box::new(Clear)),
-                )
-                .when(
-                    assistant_enabled && !matches!(self.mode, TerminalMode::Embedded { .. }),
-                    |menu| {
-                        menu.separator()
-                            .action("Inline Assist", Box::new(InlineAssist::default()))
-                            .when(has_selection && self.shows_workspace_actions(), |menu| {
-                                menu.action("Add to Agent Thread", Box::new(AddSelectionToThread))
-                            })
-                    },
+                    |menu| menu.action("Clear Screen", Box::new(Clear)),
                 )
                 .when(self.shows_workspace_actions(), |menu| {
                     menu.separator()
@@ -1090,7 +1089,7 @@ impl TerminalView {
                                 close_pinned: true,
                             }),
                         )
-                        .action("Terminate Terminal Process", Box::new(TerminateSession))
+                        .action(terminate_label, Box::new(TerminateSession))
                 })
         });
 
@@ -2115,19 +2114,22 @@ impl Render for TerminalView {
                             Callout::new()
                                 .severity(Severity::Warning)
                                 .icon(IconName::Warning)
-                                .title("Saved session unavailable")
+                                .title("This terminal cannot reconnect")
                                 .description(
-                                    "Dez started no replacement process. Keep this surface for context or start fresh explicitly.",
+                                    "Its saved session is unavailable. Dez did not start a replacement shell, so this surface remains visible without pretending the process is live.",
                                 )
                                 .actions_slot(
-                                    Button::new("new-terminal-from-unavailable", "New Terminal")
-                                        .style(ButtonStyle::Filled)
-                                        .on_click(|_, window, cx| {
-                                            window.dispatch_action(
-                                                NewCenterTerminal::default().boxed_clone(),
-                                                cx,
-                                            );
-                                        }),
+                                    Button::new(
+                                        "new-terminal-from-unavailable",
+                                        "Start New Terminal",
+                                    )
+                                    .style(ButtonStyle::Filled)
+                                    .on_click(|_, window, cx| {
+                                        window.dispatch_action(
+                                            NewCenterTerminal::default().boxed_clone(),
+                                            cx,
+                                        );
+                                    }),
                                 ),
                         ),
                 )
@@ -3175,6 +3177,11 @@ mod tests {
         assert_eq!(terminal_tab_status(false, false, None), "Active");
         assert_eq!(terminal_close_label(true), "Detach Terminal");
         assert_eq!(terminal_close_label(false), "Close Terminal Tab");
+        assert_eq!(terminal_terminate_label(true), "Terminate Session");
+        assert_eq!(
+            terminal_terminate_label(false),
+            "Terminate Terminal Process"
+        );
     }
 
     fn expected_drop_text(paths: &[PathBuf]) -> String {

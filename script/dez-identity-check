@@ -401,6 +401,9 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_close_label.*?"Detach Terminal".*?"Close Terminal Tab"' \
     'durable terminal closure is still labeled like local tab disposal'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'fn terminal_terminate_label.*?"Terminate Session".*?"Terminate Terminal Process"' \
+    'terminal lifecycle actions do not distinguish hosted Sessions from local processes'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'is_hosted = self\.terminal\.read\(cx\)\.is_hosted\(\).*?terminal_close_label\(is_hosted\)' \
     'durable terminal closure can regress during Host reconnection'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
@@ -415,6 +418,15 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
 reject_pattern crates/terminal_view/src/terminal_view.rs \
     '"New Terminal Panel"' \
     'the terminal context menu advertises a second terminal model'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    '\.when\(has_selection.*?"Copy Selection".*?"Paste Clipboard".*?"Paste Text Only".*?"Clear Screen"' \
+    'the terminal context menu can regress to ambiguous or inert editing actions'
+reject_pattern crates/terminal_view/src/terminal_view.rs \
+    'assistant_enabled = false|AddSelectionToThread|InlineAssist::default' \
+    'the terminal context menu retains permanently disabled Agent actions'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    '\.title\("This terminal cannot reconnect"\).*?without pretending the process is live.*?"Start New Terminal"' \
+    'unavailable terminal recovery can regress to internal Host jargon'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'fn terminal_panel_surface_visible.*?app_name == "Zed".*?if terminal_panel_surface_visible\(APP_NAME\).*?terminal_panel::Toggle' \
     'the compatibility Terminal Panel can leak back into the Dez View menu'
