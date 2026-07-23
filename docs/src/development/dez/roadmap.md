@@ -553,8 +553,10 @@ code, all launch gates pass, and known limitations are documented.
       closed rows fall back explicitly to saved metadata. File and explicit
       choice evidence are now implemented. Commit `0e6507756e` retains a saved
       hosted terminal's last-known cwd as Unresolved when attach fails and
-      replaces it with Current truth on successful reattach; transient in-place
-      transport-loss lifecycle remains open.
+      replaces it with Current truth on successful reattach. Commit
+      `ea2bb18453` observes live Host snapshot revisions so transport
+      reconnection, missing/incompatible truth, exit, and snapshot cwd changes
+      reconcile the same Session-owned record. Compiled runtime proof remains.
 - [x] 2026-07-22: Feed live terminal cwd changes into Workspace evidence. Each
       record carries stable terminal-Session provenance, root refreshes preserve
       it, and Run Briefs include only cwd evidence owned by their terminal so
@@ -565,7 +567,8 @@ code, all launch gates pass, and known limitations are documented.
       Stale without deleting review history; and Run Briefs disclose the stale
       observation as a risk. Explicit removal and reconnect reconciliation
       remain open. Commit `0e6507756e` adds restore/reattach reconciliation;
-      transient in-place transport-loss lifecycle remains open.
+      `ea2bb18453` adds live Host snapshot lifecycle reconciliation. Compiled
+      runtime proof remains open.
 - [x] 2026-07-22: Complete the upstream-integration compatibility repair and
       focused runtime-facing test slice. Fifteen terminal tests, eight helper
       tests, and three Session Rail terminal lifecycle tests pass. Stale
@@ -900,8 +903,10 @@ code, all launch gates pass, and known limitations are documented.
       under the original Session as Unresolved, surfaces the uncertainty in
       Review Brief risk copy, and lets a successful attach replace the record
       with Current Host truth. A focused model test is authored; formatting,
-      diff, and identity checks pass. Transient transport-loss and compiled
-      restart proof remain open.
+      diff, and identity checks pass. Commit `ea2bb18453` then maps live
+      Attached/Starting/Detached to Current, Reconnecting/Missing/Incompatible
+      to Unresolved, and Exited to Stale while consuming snapshot cwd changes.
+      Compiled restart proof remains open.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

@@ -209,7 +209,7 @@ restoration; opening or closing a viewport does not change durable ownership.
       visible worktree roots, open pane files, and terminal working
       directories. Explicit user-selected file evidence now lives in the same
       owner with distinct provenance and a bounded 128-path cap.
-- [ ] Recompute evidence on file open/move/close, terminal cwd change,
+- [x] Recompute evidence on file open/move/close, terminal cwd change,
       Session attach/reconnect, Workspace restore, and explicit user choice.
       Visible root and remote-Host evidence recomputes on worktree/remote
       changes; live terminal cwd changes update stable session-provenanced
@@ -223,8 +223,11 @@ restoration; opening or closing a viewport does not change durable ownership.
       and rehydrates them with current Host classification on restore.
       Saved hosted terminals now restore last-known cwd evidence under the
       original Session as Unresolved when attach fails; a later successful
-      attach replaces it with Current truth. Transient in-place transport-loss
-      lifecycle and consolidated compiled restart/runtime proof remain.
+      attach replaces it with Current truth. Live hosted TerminalViews observe
+      authoritative Host snapshot revisions: Attached/Starting/Detached map to
+      Current, Reconnecting/Missing/Incompatible to Unresolved, and Exited to
+      Stale while snapshot cwd changes update the same Session record.
+      Consolidated compiled restart/runtime proof remains.
 - [ ] Ensure generic tool, settings, search, Git, and conversation surfaces do
       not attach roots merely by existing.
 - [ ] Scope file tree, search, Git, diagnostics, tasks, debugger, terminals,
@@ -1121,4 +1124,10 @@ Notes decision:
   its original Session ID as Unresolved, Review Briefs disclose that risk, and
   successful reattach replaces the same record with Current Host truth. A
   focused model test is authored; formatting, diff, and identity checks pass.
+  No bundle was built or launched.
+- 2026-07-23: Added live hosted-terminal evidence lifecycle reconciliation in
+  `ea2bb18453`. Each hosted TerminalView observes Host snapshot revisions and
+  updates the same Session-owned cwd record across Current, Unresolved, and
+  Stale states without treating transport loss as process exit. A focused
+  state-mapping test is authored; formatting, diff, and identity checks pass.
   No bundle was built or launched.
