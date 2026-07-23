@@ -19,6 +19,10 @@ jobs:
     steps:
       - name: Check out Dez
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+      - name: Install identity-check prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ripgrep
       - name: Verify identity and updater isolation
         run: ./script/dez-identity-check
 
