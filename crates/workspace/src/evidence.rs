@@ -1,4 +1,5 @@
 use std::{path::Path, sync::Arc};
+use uuid::Uuid;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum WorkspaceEvidenceHost {
@@ -55,11 +56,23 @@ pub struct WorkspaceEvidenceRecord {
     pub truncated: bool,
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct WorkspaceEvidenceSet {
+    pending_identity_prefix: Arc<str>,
     revision: u64,
     records: Vec<WorkspaceEvidenceRecord>,
     truncated: bool,
+}
+
+impl Default for WorkspaceEvidenceSet {
+    fn default() -> Self {
+        Self {
+            pending_identity_prefix: format!("workspace:pending:{}", Uuid::new_v4()).into(),
+            revision: 0,
+            records: Vec::new(),
+            truncated: false,
+        }
+    }
 }
 
 impl WorkspaceEvidenceSet {
@@ -76,6 +89,13 @@ impl WorkspaceEvidenceSet {
 
     pub fn is_truncated(&self) -> bool {
         self.truncated
+    }
+
+    fn identity_prefix(&self, workspace_id: Option<i64>) -> String {
+        workspace_id.map_or_else(
+            || self.pending_identity_prefix.to_string(),
+            |workspace_id| format!("workspace:{workspace_id}"),
+        )
     }
 
     pub(crate) fn is_user_selected_path(&self, path: &Path) -> bool {
@@ -109,10 +129,7 @@ impl WorkspaceEvidenceSet {
             return WorkspaceEvidenceSelectionOutcome::CapacityReached;
         }
 
-        let identity_prefix = workspace_id.map_or_else(
-            || "workspace:pending".to_owned(),
-            |workspace_id| format!("workspace:{workspace_id}"),
-        );
+        let identity_prefix = self.identity_prefix(workspace_id);
         self.records.push(WorkspaceEvidenceRecord {
             id: format!("{identity_prefix}:selected:{}", path.to_string_lossy()).into(),
             kind: WorkspaceEvidenceKind::UserSelectedPath,
@@ -159,10 +176,7 @@ impl WorkspaceEvidenceSet {
         roots: impl IntoIterator<Item = Arc<Path>>,
         host: WorkspaceEvidenceHost,
     ) -> bool {
-        let identity_prefix = workspace_id.map_or_else(
-            || "workspace:pending".to_owned(),
-            |workspace_id| format!("workspace:{workspace_id}"),
-        );
+        let identity_prefix = self.identity_prefix(workspace_id);
         let root_records = roots
             .into_iter()
             .map(|path| WorkspaceEvidenceRecord {
@@ -212,10 +226,7 @@ impl WorkspaceEvidenceSet {
             )
         });
         if let Some(path) = path {
-            let identity_prefix = workspace_id.map_or_else(
-                || "workspace:pending".to_owned(),
-                |workspace_id| format!("workspace:{workspace_id}"),
-            );
+            let identity_prefix = self.identity_prefix(workspace_id);
             self.records.push(WorkspaceEvidenceRecord {
                 id: format!("{identity_prefix}:terminal:{session_id}:cwd").into(),
                 kind: WorkspaceEvidenceKind::TerminalWorkingDirectory,
@@ -240,10 +251,7 @@ impl WorkspaceEvidenceSet {
         paths: impl IntoIterator<Item = Arc<Path>>,
         host: WorkspaceEvidenceHost,
     ) -> bool {
-        let identity_prefix = workspace_id.map_or_else(
-            || "workspace:pending".to_owned(),
-            |workspace_id| format!("workspace:{workspace_id}"),
-        );
+        let identity_prefix = self.identity_prefix(workspace_id);
         let mut paths = paths.into_iter().collect::<Vec<_>>();
         paths.sort_by(|left, right| left.as_os_str().cmp(right.as_os_str()));
         paths.dedup();
@@ -332,6 +340,22 @@ mod tests {
         assert_eq!(evidence.revision(), 2);
         assert_ne!(evidence.records()[0].id, id);
         assert_eq!(evidence.records()[0].host, WorkspaceEvidenceHost::Remote);
+    }
+
+    #[test]
+    fn pending_workspaces_with_the_same_path_have_distinct_record_identity() {
+        let mut first = WorkspaceEvidenceSet::default();
+        let mut second = WorkspaceEvidenceSet::default();
+        for evidence in [&mut first, &mut second] {
+            evidence.replace_visible_worktree_roots(
+                None,
+                [Arc::<Path>::from(Path::new("/shared"))],
+                WorkspaceEvidenceHost::Local,
+            );
+        }
+
+        assert_ne!(first.records()[0].id, second.records()[0].id);
+        assert_eq!(first.records()[0].path, second.records()[0].path);
     }
 
     #[test]
