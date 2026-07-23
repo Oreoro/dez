@@ -1551,3 +1551,13 @@ Notes decision:
   the event closure its own weak Workspace clone, preserving navigation,
   lifecycle evidence, and Host reconciliation. The focused `terminal_view`
   build passes in 7m36s.
+- 2026-07-23: Closed the remaining consolidated compile boundaries. Commit
+  `af8ecad961` exports the existing tested Dez prediction-provider
+  normalization for Settings UI. Commits `9ed0e1aaaf` and `2452d3b4ec` give
+  the Session Rail and terminal-first onboarding landmarks stable GPUI IDs
+  before applying accessibility roles. The clean locked arm64 app/helper build,
+  separate CLI build, and `Dez Dev.app` bundle all pass through
+  `2452d3b4ec`. The 1.0G bundle identifies as Dez v0.0.1 with scheme `dez-dev`,
+  contains only the expected arm64 app, CLI, Host, and Git executables, and
+  passes deep strict ad-hoc signature verification. Runtime launch and fresh
+  visual/accessibility evidence remain open.

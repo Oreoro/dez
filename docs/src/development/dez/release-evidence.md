@@ -86,6 +86,9 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Callout stateful-role compile repair source: `42ff77e99c`
 - Host snapshot transport import repair source: `1ed2ff814a`
 - Host snapshot Workspace ownership repair source: `4369bb1f3b`
+- Prediction-provider normalization export source: `af8ecad961`
+- Session Rail stateful landmark repair source: `9ed0e1aaaf`
+- Onboarding stateful landmark repair source: `2452d3b4ec`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -115,8 +118,9 @@ The excluded Superzed artifact has never been opened.
 ## Build evidence {#build-evidence}
 
 The original app and helper completed together, warning-free, in 25 minutes 31
-seconds. After the Session Rail and replay corrections, the protocol 4 app and
-helper completed again with the same locked, storage-constrained profile:
+seconds. On 2026-07-23, the candidate through source commit `2452d3b4ec`
+completed from a clean target with the same locked, storage-constrained
+profile:
 
 ```sh
 cargo build --locked --profile dev \
@@ -130,25 +134,18 @@ cargo build --locked --profile dev \
   -p zed --bin dez -p dez_terminal_host --bin dez-terminal-host -j1
 ```
 
-The CLI completed separately with the same locked, non-incremental,
-single-codegen-unit profile and was rebuilt after the public-help cleanup. The
-captured unsigned build artifacts were arm64 Mach-O files:
+The CLI completed separately in 2m12s with the same locked, non-incremental,
+single-codegen-unit profile. The captured unsigned candidate artifacts are
+arm64 Mach-O files:
 
 | Artifact            | Size | SHA-256                                                            |
 | ------------------- | ---- | ------------------------------------------------------------------ |
-| `target/debug/dez`  | 1.0G | `c244c5501097257cb4bbe4203ffb3ced1ffa416dced857ffb6be515a445c8489` |
-| `target/debug/cli`  | 12M  | `31ea17a6ddf2adf159cb55adca81c5f10d07c77c66608f6ec36242bc0c411e80` |
-| `dez-terminal-host` | 13M  | `935e1e3395a37860e0a2533958e28a1a0c13aeda37c7cc20be489897951deee2` |
+| `target/debug/dez`  | 1.0G | `359c9d7bdb74d364ded8e4f2109d0e96824231d3c3b5c04a061fc39571bf8c75` |
+| `target/debug/cli`  | 12M  | `a3f293b360da74bb06971f6bb09fce3bc7cc91506700fb4a1be5fefbbce13d45` |
+| `dez-terminal-host` | 18M  | `54895fe7d27e74da5f6a429ce4b8b8f296a17be735b11b532b87f8757603b422` |
 
-The final link completed in 38.17 seconds from the already compiled graph. A
-redundant Darwin post-link debug-strip pass was scoped out because it attempted
-to materialize a second 1.0G copy on the storage-constrained volume; the linked
-Mach-O itself completed successfully. The original Rust toolchain executable
-was restored immediately afterward. The raw app and helper remain present and
-match the hashes above; only regenerable WebRTC build intermediates were
-removed to provide bundle-signing headroom. The raw CLI is newer than the
-signed bundle copy. A consolidated app and bundle rebuild is required before
-the newest source can be called a release artifact.
+The raw app, CLI, and helper remain present and match the hashes above. No Dez
+or Superzed process was running during the clean build or artifact capture.
 
 ## Debug bundle and coexistence evidence {#debug-bundle-and-coexistence-evidence}
 
@@ -170,7 +167,7 @@ The resulting 1.0G bundle passed `codesign --verify --deep --strict` and has:
 - arm64 `dez`, `cli`, `dez-terminal-host`, and bundled `git` executables;
 - the required document icon and Dez document labels;
 - an ad-hoc local signature with no team identifier;
-- ad-hoc CDHash `0dc2e1e872b88cbd6288f1bea5455fbc48271cc5`;
+- ad-hoc CDHash `f425b98dce718f551184824bc19d08f5b1cbd259`;
 - privacy prompt copy that identifies a developer tool launched from Dez
   instead of ambiguously claiming that “an application in Dez” requested data.
 
@@ -178,13 +175,15 @@ Signed bundle-executable SHA-256 values are:
 
 | Bundle executable   | SHA-256                                                            |
 | ------------------- | ------------------------------------------------------------------ |
-| `dez`               | `85c0b9e58fe4134b58081463b3de397e058ca77a69e01e5fc881ba2c3e2c82ff` |
-| `cli`               | `3055a8e7b97588b0cae57dedfc10084dbffe93926c8923b768234f4f2e1b2b0a` |
-| `dez-terminal-host` | `2e36a469b57445246a9d47c6c17b6f2e69061644f7567d0613e105c36b66f775` |
-| `git`               | `3785db4c9db29936c32339b92d530c5c519ae1ab493ed41ab9b5f693bbb54281` |
+| `dez`               | `39792d9e32a0f016113d888e12ee4c7e8a3ac3655bb8d68537d7e3cea636ee38` |
+| `cli`               | `c6a37b8aaedc6d222c957ce48f8b6925beaaead926182e8981a26307718e147b` |
+| `dez-terminal-host` | `c8cc53a726a895a4e6604112816d38d4ad479605999ba8463e4794199ed45e81` |
+| `git`               | `912c2a6b9beff14004fcf20c7651e06f557523a6215c006b403875e59e13a292` |
 
 The signed copies differ byte-for-byte from the raw Cargo outputs because the
-ad-hoc signing step rewrites Mach-O signatures. Static identity checks pass.
+ad-hoc signing step rewrites Mach-O signatures. The 1.0G candidate built from
+source through `2452d3b4ec` passes deep strict signature verification. Static
+identity checks pass.
 No official Zed installation or CLI was present in the inspected system app and
 command locations, so installed coexistence cannot be demonstrated and remains
 open; no alternate application was launched during that audit.
@@ -742,14 +741,22 @@ Commit `4369bb1f3b` gives the event closure its own weak Workspace clone,
 preserving path navigation, lifecycle evidence, and Host reconciliation. The
 focused `terminal_view` build passes in 7m36s.
 
-The corrected `Dez Dev.app` is now registered and launched as launchd child PID
+The next consolidated pass exposed three integration-only accessibility and
+provider boundaries. Commit `af8ecad961` re-exports the already-public,
+tested Dez prediction-provider normalization used by Settings UI. Commit
+`9ed0e1aaaf` gives the Session Rail status, scope, search, and list landmarks
+stable element IDs before applying their GPUI roles. Commit `2452d3b4ec` does
+the same for the terminal-first onboarding region, step list, and list items.
+The clean authoritative app/helper build and separate CLI build pass through
+`2452d3b4ec`.
+
+The previous `Dez Dev.app` was registered and launched as launchd child PID
 `85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
-`lsof` resolves its text executable to
+At that time, `lsof` resolved its text executable to
 `/Users/test/Documents/zed 3.0/target/debug/bundle/osx/Dez Dev.app/Contents/MacOS/dez`.
-The desktop is currently locked, and the approved accessibility controller
-cannot unlock it automatically. A fresh rendered screenshot of the corrected
-artifact therefore remains required before the visual matrix can be checked
-complete.
+That process is no longer running. The current candidate has been rebuilt and
+statically audited but has not yet been launched; this historical launch is not
+used as current-source render proof.
 
 Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`,
@@ -758,7 +765,8 @@ Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `4fc53b860f`, `8bcd11f4b6`, `ad59a60926`, `a20074de26`, `2435348289`, and
 `f89f55868c`, `f40877d4ab`, `526218a972`, `bb0cf408b4`, `a8ce563373`,
 `e101b63e43`, `f535c5e6ae`, `0e6507756e`, `ea2bb18453`, `0f8740b1a1`,
-`af232402f5`, `a4047d95c0`, and `6f2061d2c7` are newer than that running bundle.
+`af232402f5`, `a4047d95c0`, and `6f2061d2c7` were newer than that historical
+bundle. They are included in the current candidate through `2452d3b4ec`.
 The first passes all nine focused Session tests, including duplicate viewport
 replacement without reordering or membership loss. The second makes Project
 ready terminal-first, prevents New Window and startup fallback paths from
@@ -949,12 +957,14 @@ that scenario still requires the unlocked UI and a graceful application quit.
 
 ## Runtime and manual gates {#runtime-and-manual-gates}
 
-- [x] Intended raw-binary first launch and exact signed-bundle normal launch
+- [x] Historical intended raw-binary first launch and exact signed-bundle
+      normal launch
+- [ ] Current `2452d3b4ec` candidate exact signed-bundle launch and process-path
+      verification
 - [ ] Restored and empty-workspace interaction audit (the first full-window
-      overlay, compact-width clipping, and blank-center defects are fixed in the
-      running bundle; the newer terminal-first action order and no-blank-editor
-      startup behavior are source-only, so rebuild and fresh capture remain
-      open)
+      overlay, compact-width clipping, blank-center, terminal-first action
+      order, and no-blank-editor startup fixes are compiled into the current
+      candidate; fresh interaction and capture remain open)
 - [ ] Offline, failed-Host, and incompatible-Host rendered states
 - [ ] Quiet local-first launch with no Zed websocket, LiveKit room, or
       Zed-hosted edit-prediction request unless an explicit compatibility action
@@ -971,37 +981,18 @@ that scenario still requires the unlocked UI and a graceful application quit.
       signature audit
 - [ ] Developer ID signing, notarization, install, launch, and uninstall audit
 
-The approved macOS UI-control path was retried after the exact packaged launch.
-The application is targetable, but the desktop is locked and automatic unlock
-fails. No alternate screenshot mechanism, AppleScript, or historical binary
-path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `42ff77e99c` or
-later, including `1ed2ff814a` and `4369bb1f3b`, and re-audited.
+The approved macOS UI-control path was previously blocked by the locked desktop.
+No alternate screenshot mechanism, AppleScript, or historical binary path is
+used as a substitute. The exact bundle is now rebuilt through `2452d3b4ec` and
+statically re-audited; current-candidate launch, desktop availability, and
+fresh rendered inspection remain the next gate.
 
 ## Known external release dependencies {#known-external-release-dependencies}
 
 Public Developer ID signing and Apple notarization require Dez publisher
 credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
-separate from local engineering verification. The exact packaged artifact is
-running and contains the corrected shell source through `679cdc28445c`, but
-predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
-`7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`,
-`47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, `c101fe6a43`,
-`699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`,
-`4fc53b860f`, `8bcd11f4b6`, `ad59a60926`, `a20074de26`, `2435348289`,
-`f89f55868c`, `f40877d4ab`, `526218a972`, `bb0cf408b4`, `a8ce563373`,
-`e101b63e43`, `f535c5e6ae`, `0e6507756e`, `ea2bb18453`, `0f8740b1a1`,
-`af232402f5`, `a4047d95c0`, `6f2061d2c7`, `27279ca542`, `a2d733eea3`,
-`498f94a525`, `5efa0398ad`, `1f186f9b8c`, `e4f1e341c9`, `6f1562847e`,
-`f6aea3e013`, `b749a25619`, `0e2c0dcae3`, `e969abda4a`, `0607771783`, and
-`2092acd453`, `57290c27c3`, `633dcc4bec`, `7893762cd5`, `bd36afd3f4`, and
-`b39eedf724`, `9323af8008`, `80ff1df75f`, `c47637c2ac`, `7e91f00b69`, and
-`e28b78ed57`, `a90fae5873`, `f6318ea907`, `9930e86677`, `4a102fc50e`, and
-`933e3f515f`, `2680937952`, `9239006d4b`, `33f7ff5893`, `2fc5226a51`, and
-`cc2509e8b8`, `b909b31d45`, `aab0e5f2f2`, `0ddf84161e`, `2efbf166b7`, and
-`c3dfb7aa79`, `5a25a72f92`, `42ff77e99c`, `1ed2ff814a`, and `4369bb1f3b`.
-A rebuild/re-audit
-and an unlocked
-desktop are both prerequisites for the visual, interaction, accessibility, and
-GUI-driven hosted-PTY recovery matrix.
+separate from local engineering verification. The exact candidate is built and
+statically audited through `2452d3b4ec`; it is not currently running. A
+current-candidate launch and an available desktop are prerequisites for the
+visual, interaction, accessibility, and GUI-driven hosted-PTY recovery matrix.

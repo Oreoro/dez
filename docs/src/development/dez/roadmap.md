@@ -1207,6 +1207,15 @@ code, all launch gates pass, and known limitations are documented.
       own weak Workspace clone, retaining navigation, lifecycle evidence, and
       hosted reconciliation. The focused `terminal_view` build passes in
       7m36s.
+- [x] 2026-07-23: Close the remaining consolidated compile boundaries. Commit
+      `af8ecad961` exports the tested Dez provider normalization for Settings
+      UI. Commits `9ed0e1aaaf` and `2452d3b4ec` give Session Rail and
+      terminal-first onboarding landmarks stable GPUI IDs before applying
+      accessibility roles. The clean locked arm64 app/helper build, separate
+      CLI build, and `Dez Dev.app` bundle pass through `2452d3b4ec`; bundle
+      identity, four-executable inventory, hashes, and deep strict ad-hoc
+      signature verification are recorded in Release Evidence. Current
+      candidate runtime and rendered proof remain open.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the
