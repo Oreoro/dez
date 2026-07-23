@@ -358,6 +358,9 @@ require_multiline_pattern crates/agent_ui/src/thread_import.rs \
 require_pattern crates/sidebar/src/sidebar.rs \
     '"Close Worktree from Window…"' \
     'the hover-only worktree close control has no keyboard-accessible menu path'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'IconButton::new\([[:space:]]*\("close-workspace", workspace_index\).*?aria_label\("Close Worktree from Window"\).*?visible_on_hover.*?Tooltip::text\([[:space:]]*"Close Worktree from Window"' \
+    'the pointer worktree close control can regress to an ambiguous scope label'
 require_pattern crates/sidebar/src/sidebar.rs \
     '"Remove Workspace from Window"' \
     'the Workspace removal action does not state its scope'

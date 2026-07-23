@@ -5523,9 +5523,11 @@ impl Sidebar {
                                                     )
                                                     .size(ButtonSize::Medium)
                                                     .icon_size(IconSize::Small)
-                                                    .aria_label("Close Worktree")
+                                                    .aria_label("Close Worktree from Window")
                                                     .visible_on_hover(&row_group_name)
-                                                    .tooltip(Tooltip::text("Close Worktree"))
+                                                    .tooltip(Tooltip::text(
+                                                        "Close Worktree from Window",
+                                                    ))
                                                     .on_click(move |_, window, cx| {
                                                         cx.stop_propagation();
                                                         window.prevent_default();
