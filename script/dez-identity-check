@@ -418,6 +418,9 @@ require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
 require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
     'agent_session_label\([[:space:]]*paths::APP_NAME,[[:space:]]*"This conversation is too long.*?"This Agent Session is too long.*?"New Thread",[[:space:]]*"New Agent Session".*?"Thread reaching the token limit soon",[[:space:]]*"Agent Session reaching the token limit soon".*?"Start New Thread",[[:space:]]*"Start New Agent Session"' \
     'Dez Agent Session limit recovery can regress to upstream Thread terminology'
+require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
+    '"Threads",[[:space:]]*"Agent Sessions".*?"Editing will restart the thread from this point\.",[[:space:]]*"Editing will restart the Agent Session from this point\.".*?"Rating the thread sends the current conversation to the upstream agent service\.",[[:space:]]*"Rating this response sends the current Agent Session to the upstream agent service\.".*?"Open Thread as Markdown",[[:space:]]*"Open Agent Session as Markdown"' \
+    'live Dez Agent Session context, edit, feedback, and export controls can regress to visible Thread terminology'
 require_multiline_pattern crates/agent_ui/src/thread_import.rs \
     'fn cross_channel_import_result_message.*?app_name == "Zed".*?"No new threads found to import\.".*?"No new Agent Sessions found to import\.".*?cross_channel_import_result_message\(paths::APP_NAME, imported_count\)' \
     'cross-channel Agent Session import feedback can regress to upstream Thread terminology'

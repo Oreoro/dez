@@ -5757,19 +5757,23 @@ impl ThreadView {
                         }),
                 )
                 .item(
-                    ContextMenuEntry::new("Threads")
-                        .icon(IconName::Thread)
-                        .icon_color(Color::Muted)
-                        .icon_size(IconSize::XSmall)
-                        .handler({
-                            let message_editor = message_editor.clone();
-                            move |window, cx| {
-                                message_editor.focus_handle(cx).focus(window, cx);
-                                message_editor.update(cx, |editor, cx| {
-                                    editor.insert_context_type("thread", window, cx);
-                                });
-                            }
-                        }),
+                    ContextMenuEntry::new(agent_session_label(
+                        paths::APP_NAME,
+                        "Threads",
+                        "Agent Sessions",
+                    ))
+                    .icon(IconName::Thread)
+                    .icon_color(Color::Muted)
+                    .icon_size(IconSize::XSmall)
+                    .handler({
+                        let message_editor = message_editor.clone();
+                        move |window, cx| {
+                            message_editor.focus_handle(cx).focus(window, cx);
+                            message_editor.update(cx, |editor, cx| {
+                                editor.insert_context_type("thread", window, cx);
+                            });
+                        }
+                    }),
                 )
                 .when(!available_skills.is_empty(), |this| {
                     this.submenu_with_colored_icon("Skills", IconName::Sparkle, Color::Muted, {
@@ -6455,9 +6459,11 @@ impl ThreadView {
                                                     IconButton::new("regenerate", IconName::Return)
                                                         .icon_color(Color::Muted)
                                                         .icon_size(IconSize::XSmall)
-                                                        .tooltip(Tooltip::text(
-                                                            "Editing will restart the thread from this point."
-                                                        ))
+                                                        .tooltip(Tooltip::text(agent_session_label(
+                                                            paths::APP_NAME,
+                                                            "Editing will restart the thread from this point.",
+                                                            "Editing will restart the Agent Session from this point.",
+                                                        )))
                                                         .on_click(cx.listener({
                                                             let editor = editor.clone();
                                                             move |this, _, window, cx| {
@@ -7200,7 +7206,11 @@ impl ThreadView {
             .then(|| {
                 (self.is_subagent() && self.is_thread_feedback_enabled(cx)).then(|| {
                     let feedback = self.thread_feedback.feedback;
-                    let tooltip_meta = "Rating the thread sends the current conversation to the upstream agent service.";
+                    let tooltip_meta = agent_session_label(
+                        paths::APP_NAME,
+                        "Rating the thread sends the current conversation to the upstream agent service.",
+                        "Rating this response sends the current Agent Session to the upstream agent service.",
+                    );
 
                     h_flex()
                         .child(
@@ -7976,20 +7986,24 @@ impl ThreadView {
                         })
                     };
 
-                    let open_thread_as_markdown = ContextMenuEntry::new("Open Thread as Markdown")
-                        .handler({
-                            let entity = entity.clone();
-                            let workspace = workspace.clone();
-                            move |window, cx| {
-                                if let Some(workspace) = workspace.upgrade() {
-                                    entity
-                                        .update(cx, |this, cx| {
-                                            this.open_thread_as_markdown(workspace, window, cx)
-                                        })
-                                        .detach_and_log_err(cx);
-                                }
+                    let open_thread_as_markdown = ContextMenuEntry::new(agent_session_label(
+                        paths::APP_NAME,
+                        "Open Thread as Markdown",
+                        "Open Agent Session as Markdown",
+                    ))
+                    .handler({
+                        let entity = entity.clone();
+                        let workspace = workspace.clone();
+                        move |window, cx| {
+                            if let Some(workspace) = workspace.upgrade() {
+                                entity
+                                    .update(cx, |this, cx| {
+                                        this.open_thread_as_markdown(workspace, window, cx)
+                                    })
+                                    .detach_and_log_err(cx);
                             }
-                        });
+                        }
+                    });
 
                     menu.when_some(focus, |menu, focus| menu.context(focus))
                         .when_some(context_menu_link, |menu, url| {
