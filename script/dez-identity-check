@@ -448,6 +448,12 @@ require_pattern crates/recent_projects/src/recent_projects.rs \
 require_pattern crates/workspace/src/welcome.rs \
     '\.aria_label\(self\.label\.clone\(\)\)' \
     'the Dez welcome actions are not named for assistive technology'
+require_multiline_pattern crates/workspace/src/welcome.rs \
+    'fn welcome_summary.*?"Start in a terminal\. Track attention\. Review evidence\.".*?Label::new\(welcome_summary\(APP_NAME\)\)' \
+    'the Dez welcome surface no longer teaches its workflow concisely'
+reject_pattern crates/workspace/src/welcome.rs \
+    'welcome-supervision-loop|render_agent_card|Button::new\("open-agent"' \
+    'the Dez welcome surface regressed to stacking promotional cards above work'
 require_pattern crates/workspace/src/workspace.rs \
     '"Empty Workspace"' \
     'the empty Dez window title still uses Project vocabulary'

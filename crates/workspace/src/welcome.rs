@@ -1,16 +1,15 @@
 use crate::{
     NewCenterTerminal, NewFile, Open, OpenMode, PathList, RecentWorkspace,
-    SerializedWorkspaceLocation, ToggleSidebar, Workspace, WorkspaceSettings,
+    SerializedWorkspaceLocation, Workspace, WorkspaceSettings,
     item::{Item, ItemEvent},
     persistence::WorkspaceDb,
 };
-use agent_settings::AgentSettings;
 use git::Clone as GitClone;
+use gpui::WeakEntity;
 use gpui::{
     Action, App, Context, Entity, EventEmitter, FocusHandle, Focusable, InteractiveElement,
     ParentElement, Render, Styled, Task, TaskExt, Window, actions,
 };
-use gpui::{WeakEntity, linear_color_stop, linear_gradient};
 use menu::{SelectNext, SelectPrevious};
 use paths::APP_NAME;
 
@@ -19,9 +18,7 @@ use serde::{Deserialize, Serialize};
 use settings::{DefaultOpenBehavior, Settings};
 use ui::{ButtonLike, Divider, DividerColor, KeyBinding, prelude::*};
 use util::ResultExt;
-use zed_actions::{
-    Extensions, OpenKeymap, OpenOnboarding, OpenSettings, assistant::ToggleFocus, command_palette,
-};
+use zed_actions::{Extensions, OpenKeymap, OpenOnboarding, OpenSettings, command_palette};
 
 #[derive(PartialEq, Clone, Debug, Deserialize, Serialize, JsonSchema, Action)]
 #[action(namespace = welcome)]
@@ -167,6 +164,14 @@ impl SectionEntry {
 }
 
 const NEW_CENTER_TERMINAL: NewCenterTerminal = NewCenterTerminal { local: false };
+
+fn welcome_summary(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Write. Delegate. Watch. Verify."
+    } else {
+        "Start in a terminal. Track attention. Review evidence."
+    }
+}
 
 const CONTENT: (Section<5>, Section<3>) = (
     Section {
@@ -340,141 +345,6 @@ impl WelcomePage {
         }
     }
 
-    fn render_agent_card(&self, tab_index: usize, cx: &mut Context<Self>) -> impl IntoElement {
-        let focus = self.focus_handle.clone();
-        let color = cx.theme().colors();
-
-        let description = "Supervise terminal and ACP agents side by side, isolate changes with worktrees, and review evidence before you act.";
-
-        v_flex()
-            .w_full()
-            .p_2()
-            .rounded_md()
-            .border_1()
-            .border_color(color.border_variant)
-            .bg(linear_gradient(
-                360.,
-                linear_color_stop(color.panel_background, 1.0),
-                linear_color_stop(color.editor_background, 0.45),
-            ))
-            .child(
-                h_flex()
-                    .gap_1p5()
-                    .child(
-                        Icon::new(IconName::Robot)
-                            .color(Color::Muted)
-                            .size(IconSize::Small),
-                    )
-                    .child(Label::new("Supervise agent work")),
-            )
-            .child(
-                Label::new(description)
-                    .size(LabelSize::Small)
-                    .color(Color::Muted)
-                    .mb_2(),
-            )
-            .child(
-                Button::new("open-agent", "Open Agent")
-                    .full_width()
-                    .tab_index(tab_index as isize)
-                    .style(ButtonStyle::Outlined)
-                    .key_binding(
-                        KeyBinding::for_action_in(&ToggleFocus, &self.focus_handle, cx)
-                            .size(rems_from_px(12.)),
-                    )
-                    .on_click(move |_, window, cx| {
-                        focus.dispatch_action(&ToggleSidebar, window, cx);
-                        focus.dispatch_action(&ToggleFocus, window, cx);
-                    }),
-            )
-    }
-
-    fn render_supervision_loop(&self, cx: &App) -> impl IntoElement {
-        let color = cx.theme().colors();
-        let steps = [
-            (
-                IconName::Terminal,
-                "Start",
-                "Run a shell, task, or coding agent in a terminal.",
-            ),
-            (
-                IconName::ListTree,
-                "Watch",
-                "Scan live state and attention in the Session Rail.",
-            ),
-            (
-                IconName::Diff,
-                "Verify",
-                "Review observed changes and checks beside the session.",
-            ),
-        ];
-
-        v_flex()
-            .id("welcome-supervision-loop")
-            .role(gpui::Role::Region)
-            .aria_label("Dez supervision loop")
-            .w_full()
-            .gap_2()
-            .p_3()
-            .rounded_md()
-            .border_1()
-            .border_color(color.border_variant)
-            .bg(color.panel_background)
-            .child(
-                v_flex()
-                    .gap_0p5()
-                    .child(Label::new("Keep work oriented"))
-                    .child(
-                        Label::new("The terminal, its attention, and its evidence stay connected.")
-                            .size(LabelSize::XSmall)
-                            .color(Color::Muted),
-                    ),
-            )
-            .child(
-                v_flex()
-                    .id("welcome-supervision-steps")
-                    .role(gpui::Role::List)
-                    .aria_label("Start, watch, and verify")
-                    .gap_1()
-                    .children(steps.into_iter().enumerate().map(
-                        |(index, (icon, title, description))| {
-                            h_flex()
-                                .id(("welcome-supervision-step", index))
-                                .role(gpui::Role::ListItem)
-                                .aria_label(format!("{title}. {description}"))
-                                .min_w_0()
-                                .gap_2()
-                                .py_1()
-                                .child(
-                                    div()
-                                        .flex_none()
-                                        .size_6()
-                                        .rounded_sm()
-                                        .border_1()
-                                        .border_color(color.border_variant)
-                                        .items_center()
-                                        .justify_center()
-                                        .child(
-                                            Icon::new(icon)
-                                                .size(IconSize::XSmall)
-                                                .color(Color::Muted),
-                                        ),
-                                )
-                                .child(
-                                    v_flex()
-                                        .min_w_0()
-                                        .child(Label::new(title).size(LabelSize::Small))
-                                        .child(
-                                            Label::new(description)
-                                                .size(LabelSize::XSmall)
-                                                .color(Color::Muted),
-                                        ),
-                                )
-                        },
-                    )),
-            )
-    }
-
     fn render_recent_project_section(
         &self,
         recent_projects: Vec<impl IntoElement>,
@@ -515,9 +385,7 @@ impl Render for WelcomePage {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let (first_section, second_section) = CONTENT;
         let first_section_entries = first_section.entries.len();
-        let mut next_tab_index = first_section_entries + second_section.entries.len();
-
-        let ai_enabled = AgentSettings::get_global(cx).enabled(cx);
+        let next_tab_index = first_section_entries + second_section.entries.len();
 
         let recent_projects = self
             .recent_workspaces
@@ -606,22 +474,14 @@ impl Render for WelcomePage {
                                     )
                                     .child(Headline::new(welcome_label))
                                     .child(
-                                        Label::new("Write. Delegate. Watch. Verify.")
+                                        Label::new(welcome_summary(APP_NAME))
                                             .size(LabelSize::Small)
                                             .color(Color::Muted),
                                     ),
                             ),
                     )
-                    .when(APP_NAME != "Zed", |this| {
-                        this.child(self.render_supervision_loop(cx))
-                    })
                     .child(first_section.render(Default::default(), &self.focus_handle))
                     .child(second_section)
-                    .when(ai_enabled && !showing_recent_projects, |this| {
-                        let agent_tab_index = next_tab_index;
-                        next_tab_index += 1;
-                        this.child(self.render_agent_card(agent_tab_index, cx))
-                    })
                     .when(
                         APP_NAME == "Zed" && !self.fallback_to_recent_projects,
                         |this| {
@@ -827,5 +687,14 @@ mod tests {
         // A bare root "/" has no file_name(), falls back to "Untitled"
         let paths = PathList::new(&["/"]);
         assert_eq!(project_name(&paths), "Untitled");
+    }
+
+    #[test]
+    fn dez_welcome_summary_teaches_the_workflow_without_a_promotion_card() {
+        assert_eq!(
+            welcome_summary("Dez"),
+            "Start in a terminal. Track attention. Review evidence."
+        );
+        assert_eq!(welcome_summary("Zed"), "Write. Delegate. Watch. Verify.");
     }
 }
