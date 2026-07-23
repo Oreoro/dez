@@ -576,7 +576,9 @@ with new labels.
       in Help. Commit `0ddf84161e` closes the keyboard/title-bar equivalents:
       every keymap source filters channel, collaboration-panel, collaboration,
       and follow-collaborator actions in Dez, and inherited call chrome is
-      official-Zed-only.
+      official-Zed-only. Commit `2efbf166b7` corrects the remaining Settings
+      workflow copy to teach `dez <path>` and describes private skill imports
+      without claiming that Zed performs the retry.
 - [x] Replace remaining reachable stale Zed/Superzed product copy while
       preserving
       necessary compatibility, file-format, upstream attribution, and
@@ -1523,3 +1525,8 @@ Notes decision:
   call controls are official-Zed-only. AI opt-out filtering and official Zed
   behavior remain intact. Focused source assertions and identity guards pass;
   compiled key-routing proof remains consolidated.
+- 2026-07-23: Corrected remaining CLI/import guidance in `2efbf166b7`. Dez
+  Settings now teaches `dez <path>` for default-open behavior, while the skill
+  URL importer describes its `GITHUB_TOKEN` retry without attributing the
+  behavior to Zed. Official Zed retains its CLI copy. Focused source assertions
+  and identity guards pass; rendered Settings/skill proof remains consolidated.

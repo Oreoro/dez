@@ -80,6 +80,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Upstream prediction command-filter isolation source: `b909b31d45`
 - Crash recovery identity and opt-in source: `aab0e5f2f2`
 - Collaboration shortcut and call-chrome isolation source: `0ddf84161e`
+- Dez CLI and skill-import guidance source: `2efbf166b7`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -704,6 +705,12 @@ follow-collaborator action, preventing removed handlers from consuming chords.
 Call chrome is official-Zed-only. Focused source assertions and identity guards
 pass; compiled key-routing and rendered title-bar proof remain deferred.
 
+Commit `2efbf166b7` corrects the remaining outward Settings/import guidance.
+Dez now teaches `dez <path>` for default-open behavior and the skill URL
+importer describes its `GITHUB_TOKEN` retry without claiming Zed performs it.
+Official Zed retains its CLI copy. Focused source assertions and identity guards
+pass; rendered Settings and skill-creator proof remain deferred.
+
 The corrected `Dez Dev.app` is now registered and launched as launchd child PID
 `85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 `lsof` resolves its text executable to
@@ -937,7 +944,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `0ddf84161e` or
+visual evidence: the exact bundle must first be rebuilt from `2efbf166b7` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -961,7 +968,7 @@ predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `b39eedf724`, `9323af8008`, `80ff1df75f`, `c47637c2ac`, `7e91f00b69`, and
 `e28b78ed57`, `a90fae5873`, `f6318ea907`, `9930e86677`, `4a102fc50e`, and
 `933e3f515f`, `2680937952`, `9239006d4b`, `33f7ff5893`, `2fc5226a51`, and
-`cc2509e8b8`, `b909b31d45`, `aab0e5f2f2`, and `0ddf84161e`. A rebuild/re-audit
+`cc2509e8b8`, `b909b31d45`, `aab0e5f2f2`, `0ddf84161e`, and `2efbf166b7`. A rebuild/re-audit
 and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.

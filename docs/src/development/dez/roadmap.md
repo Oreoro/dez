@@ -1179,6 +1179,11 @@ code, all launch gates pass, and known limitations are documented.
       are official-Zed-only; AI opt-out filtering and official Zed behavior are
       preserved. Source and identity checks pass; compiled key-routing proof
       remains consolidated.
+- [x] 2026-07-23: Correct remaining CLI and skill-import guidance. Commit
+      `2efbf166b7` teaches `dez <path>` in Dez Settings and removes the false
+      attribution that Zed performs private skill URL retries. Official Zed
+      keeps its CLI copy. Source and identity checks pass; rendered
+      Settings/skill proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the
