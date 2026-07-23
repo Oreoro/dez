@@ -354,6 +354,14 @@ fn session_overview_create_action_visible(session_count: usize) -> bool {
     session_count > 0
 }
 
+fn session_start_state_copy() -> (&'static str, &'static str, &'static str) {
+    (
+        "Terminals open in the Main Work Area. Live state and attention return here.",
+        "New Terminal",
+        "Open Workspace…",
+    )
+}
+
 fn workspace_new_terminal_action_persistent(is_active: bool, is_menu_open: bool) -> bool {
     is_active || is_menu_open
 }
@@ -1061,6 +1069,25 @@ mod workspace_header_label_tests {
         );
         assert!(!workspace_new_terminal_control_label("compiler").contains("header-group"));
         assert!(!workspace_options_control_label("compiler").contains("header-group"));
+    }
+}
+
+#[cfg(test)]
+mod session_start_state_tests {
+    use super::*;
+
+    #[test]
+    fn start_state_has_one_primary_action_and_workspace_copy() {
+        assert!(!session_overview_create_action_visible(0));
+        assert!(session_overview_create_action_visible(1));
+        assert_eq!(
+            session_start_state_copy(),
+            (
+                "Terminals open in the Main Work Area. Live state and attention return here.",
+                "New Terminal",
+                "Open Workspace…"
+            )
+        );
     }
 }
 
@@ -11766,66 +11793,35 @@ impl Sidebar {
     }
 
     fn render_empty_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let (description, new_terminal_label, open_workspace_label) = session_start_state_copy();
+
         v_flex()
             .id("sidebar-start-state")
             .role(gpui::Role::Group)
-            .aria_label("Session Rail empty state")
+            .aria_label("Start working in Dez")
             .flex_1()
             .min_h_0()
             .overflow_y_scroll()
-            .p_3()
+            .px_2()
+            .py_2()
             .child(
                 v_flex()
                     .w_full()
-                    .gap_3()
+                    .gap_2()
                     .child(
-                        h_flex()
-                            .gap_2()
-                            .child(
-                                div()
-                                    .flex_none()
-                                    .size_8()
-                                    .rounded_md()
-                                    .border_1()
-                                    .border_color(cx.theme().colors().border_variant)
-                                    .bg(cx.theme().colors().panel_background)
-                                    .items_center()
-                                    .justify_center()
-                                    .child(
-                                        Icon::new(IconName::Terminal)
-                                            .size(IconSize::Small)
-                                            .color(Color::Accent),
-                                    ),
-                            )
-                            .child(
-                                v_flex()
-                                    .min_w_0()
-                                    .gap_0p5()
-                                    .child(
-                                        Label::new("No running sessions").size(LabelSize::Small),
-                                    )
-                                    .child(
-                                        Label::new("Start a terminal to begin")
-                                            .size(LabelSize::XSmall)
-                                            .color(Color::Muted),
-                                    ),
-                            ),
+                        Label::new(description)
+                            .size(LabelSize::XSmall)
+                            .color(Color::Muted),
                     )
                     .child(
-                        Label::new(
-                            "Terminals open in the main work area. Their live status and attention appear here.",
-                        )
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted),
-                    )
-                    .child(
-                        Button::new("start-terminal", "New Terminal")
+                        Button::new("start-terminal", new_terminal_label)
                             .full_width()
                             .style(ButtonStyle::Filled)
                             .start_icon(Icon::new(IconName::Terminal).size(IconSize::Small))
+                            .aria_label("New Terminal in Main Work Area")
                             .tooltip(|_, cx| {
                                 Tooltip::for_action(
-                                    "New Terminal",
+                                    "New Terminal in Main Work Area",
                                     &NewCenterTerminal::default(),
                                     cx,
                                 )
@@ -11838,14 +11834,14 @@ impl Sidebar {
                             }),
                     )
                     .child(
-                        Button::new("start-open", "Open Folder…")
+                        Button::new("start-open", open_workspace_label)
                             .full_width()
-                            .style(ButtonStyle::Subtle)
+                            .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
                             .start_icon(Icon::new(IconName::FolderOpen).size(IconSize::XSmall))
-                            .aria_label("Open Folder or Workspace")
+                            .aria_label(open_workspace_label)
                             .tooltip(|_, cx| {
                                 Tooltip::for_action(
-                                    "Open Folder or Workspace",
+                                    open_workspace_label,
                                     &Open {
                                         create_new_window: Some(false),
                                     },

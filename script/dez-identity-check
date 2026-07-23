@@ -266,8 +266,11 @@ require_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\("Session Rail"\)' \
     'the supervision region has regressed to an ambiguous Sessions heading'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn render_empty_state.*?aria_label\("Session Rail empty state"\).*?Label::new\("No running sessions"\).*?Label::new\("Start a terminal to begin"\).*?"Terminals open in the main work area\. Their live status and attention appear here\.".*?Button::new\("start-terminal", "New Terminal"\)' \
-    'the empty Session Rail can regress to implying that terminals run inside the rail'
+    'fn session_start_state_copy.*?"Terminals open in the Main Work Area\. Live state and attention return here\.".*?"New Terminal".*?"Open Workspace…".*?fn render_empty_state.*?aria_label\("Start working in Dez"\).*?\.px_2\(\).*?\.py_2\(\).*?Button::new\("start-terminal", new_terminal_label\).*?aria_label\("New Terminal in Main Work Area"\).*?Button::new\("start-open", open_workspace_label\).*?ButtonStyle::OutlinedCustom.*?aria_label\(open_workspace_label\)' \
+    'the empty Session Rail can regress to a duplicated card, ambiguous actions, or the wrong terminal destination'
+reject_pattern crates/sidebar/src/sidebar.rs \
+    '"(No running sessions|Start a terminal to begin|Open Folder…)"' \
+    'the compact Session Rail start state has regained duplicate or folder-scoped copy'
 reject_pattern crates/sidebar/src/sidebar.rs \
     'when\(!is_focused, \|this\| this\.visible_on_hover\(&group_name\)\)' \
     'Workspace group disclosure can regress to an invisible hover-only affordance'
@@ -601,8 +604,8 @@ require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
 require_multiline_pattern crates/agent_ui/src/agent_ui.rs \
     'fn terminal_thread_command_visible.*?app_name == "Zed".*?!disable_ai.*?agent_enabled' \
     'the inherited Agent terminal-thread action can regress into the Dez command palette'
-require_pattern crates/sidebar/src/sidebar.rs \
-    'session_overview_create_action_visible\(self\.contents\.session_count\)' \
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn session_overview_create_action_visible\(session_count: usize\) -> bool \{[[:space:]]*session_count > 0.*?session_overview_create_action_visible\(self\.contents\.session_count\)' \
     'the zero-session Workspace state can regress to duplicating its creation action'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_rail_row_is_compact.*?width < DETAILED_MIN_WIDTH.*?fn session_rail_recency_visible' \
