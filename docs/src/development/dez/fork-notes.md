@@ -546,6 +546,13 @@ defer it.
   immediate—for example **Clear Filter**—and the state is a named accessibility
   status near the top of the region rather than decoration floating in dead
   space.
+- **2026-07-24: Main-area utility states follow the same quiet hierarchy.**
+  Workspace Search distinguishes ready, indexing, searching, and no-match
+  states instead of centering a generic headline and a stack of feature
+  buttons. The query field remains the next action, progress uses one semantic
+  status, and continuous progress rotation stops when Canvas motion is reduced.
+  Search results remain ordinary Main Work Area content rather than a new
+  panel or dashboard.
 - **2026-07-23: A clean Git repository is a positive state.** Git presents
   **Working tree clean** with the active branch, not an error-like “nothing”
   sentence. On a feature branch it offers **Review Branch Changes** and names

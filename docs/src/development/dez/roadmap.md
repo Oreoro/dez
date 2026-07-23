@@ -1765,6 +1765,13 @@ code, all launch gates pass, and known limitations are documented.
       Project Panel and Panel Layout labels. Pure copy assertions, formatting,
       locked offline metadata, identity, and diff checks pass; compilation and
       rendered menu proof remain deferred.
+- [x] 2026-07-24: Replace the Workspace Search splash with truthful compact
+      states. Dez now distinguishes ready, indexing, searching, and no-match
+      states in one top-aligned accessibility status, keeps the query field as
+      the obvious next action, and removes the centered five-button feature
+      pile. Progress rotation respects reduced Canvas motion. Official Zed
+      retains its inherited search landing page; compiled and rendered
+      density/theme proof remains deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
@@ -2021,8 +2028,26 @@ code, all launch gates pass, and known limitations are documented.
   `ef35bf40a7` switches the three labeled Session Rail utilities from medium
   standalone padding to compact utility padding, preserving their full
   semantics inside the 280 px default footer.
+- **2026-07-24:** Empty-state polish must preserve the primary interaction.
+  Workspace Search keeps its query and filters in the existing Context Bar,
+  while the content area reports only ready, indexing, searching, or no-match
+  state. It does not duplicate every search feature as a centered button.
+  Busy-state animation follows the Canvas motion preference, and the state
+  remains understandable when motion is reduced.
 
 ## Verification {#verification}
+
+Completed for the Workspace Search state-hierarchy slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the canonical Dez documentation;
+- Bash syntax and Dez identity checks, including state hierarchy, top alignment,
+  accessibility status, official-Zed compatibility, and reduced-motion guards;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- pure assertions authored for ready, indexing, searching, and no-match copy;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
 
 Completed for the labeled compact-utility sizing slice:
 

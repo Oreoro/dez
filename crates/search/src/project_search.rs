@@ -54,8 +54,8 @@ use ui::{
 };
 use util::{ResultExt as _, paths::PathMatcher, rel_path::RelPath};
 use workspace::{
-    DeploySearch, ItemNavHistory, NewSearch, ToolbarItemEvent, ToolbarItemLocation,
-    ToolbarItemView, Workspace, WorkspaceId,
+    DeploySearch, DesignSystemSettings, ItemNavHistory, NewSearch, ToolbarItemEvent,
+    ToolbarItemLocation, ToolbarItemView, Workspace, WorkspaceId,
     item::{Item, ItemEvent, ItemHandle, SaveOptions},
     searchable::{Direction, SearchEvent, SearchToken, SearchableItem, SearchableItemHandle},
 };
@@ -98,7 +98,49 @@ fn workspace_search_no_results_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "No results found in this project for the provided query"
     } else {
-        "No results found in this workspace for the provided query"
+        "No files in this Workspace match the current query. Broaden the query or remove path filters."
+    }
+}
+
+struct WorkspaceSearchStateCopy {
+    icon: IconName,
+    title: &'static str,
+    description: &'static str,
+    busy: bool,
+}
+
+fn workspace_search_state_copy(search_state: SearchState) -> WorkspaceSearchStateCopy {
+    match search_state {
+        SearchState::Idle => WorkspaceSearchStateCopy {
+            icon: IconName::FolderSearch,
+            title: "Search this Workspace",
+            description: "Type a query above, then press Enter. Add path filters only when you need to narrow the scope.",
+            busy: false,
+        },
+        SearchState::Running(SearchActivity::WaitingForScan) => WorkspaceSearchStateCopy {
+            icon: IconName::LoadCircle,
+            title: "Preparing Workspace Search",
+            description: "Scanning files before the search begins. Results will appear here automatically.",
+            busy: true,
+        },
+        SearchState::Running(SearchActivity::Searching) => WorkspaceSearchStateCopy {
+            icon: IconName::LoadCircle,
+            title: "Searching Workspace",
+            description: "Scanning files for the current query. Results will appear here as they are found.",
+            busy: true,
+        },
+        SearchState::Completed(SearchCompletion::NoResults) => WorkspaceSearchStateCopy {
+            icon: IconName::ListX,
+            title: "No matches",
+            description: workspace_search_no_results_label("Dez"),
+            busy: false,
+        },
+        SearchState::Completed(SearchCompletion::Results { .. }) => WorkspaceSearchStateCopy {
+            icon: IconName::MagnifyingGlass,
+            title: "Search results",
+            description: "Select a result to open it in the Main Work Area.",
+            busy: false,
+        },
     }
 }
 
@@ -112,9 +154,33 @@ mod product_label_tests {
         assert_eq!(workspace_search_loading_label("Dez"), "Loading workspace…");
         assert_eq!(
             workspace_search_no_results_label("Dez"),
-            "No results found in this workspace for the provided query"
+            "No files in this Workspace match the current query. Broaden the query or remove path filters."
         );
         assert_eq!(workspace_search_title("Zed"), "Project Search");
+    }
+
+    #[test]
+    fn dez_workspace_search_states_are_concise_and_actionable() {
+        let idle = workspace_search_state_copy(SearchState::Idle);
+        assert_eq!(idle.title, "Search this Workspace");
+        assert!(idle.description.contains("press Enter"));
+        assert!(!idle.busy);
+
+        let preparing =
+            workspace_search_state_copy(SearchState::Running(SearchActivity::WaitingForScan));
+        assert_eq!(preparing.title, "Preparing Workspace Search");
+        assert!(preparing.busy);
+
+        let searching =
+            workspace_search_state_copy(SearchState::Running(SearchActivity::Searching));
+        assert_eq!(searching.title, "Searching Workspace");
+        assert!(searching.busy);
+
+        let no_matches =
+            workspace_search_state_copy(SearchState::Completed(SearchCompletion::NoResults));
+        assert_eq!(no_matches.title, "No matches");
+        assert!(no_matches.description.contains("remove path filters"));
+        assert!(!no_matches.busy);
     }
 }
 
@@ -660,46 +726,40 @@ impl Render for ProjectSearchView {
         key_context.add("ProjectSearchView");
 
         if self.has_matches() {
-            div()
+            return div()
                 .key_context(key_context)
                 .on_action(cx.listener(Self::open_text_finder))
                 .flex_1()
                 .size_full()
                 .track_focus(&self.focus_handle(cx))
                 .child(self.results_editor.clone())
-        } else {
-            let model = self.entity.read(cx);
+                .into_any_element();
+        }
 
-            let heading_text = match model.search_state {
-                SearchState::Running(SearchActivity::WaitingForScan) => {
-                    workspace_search_loading_label(paths::APP_NAME)
-                }
-                SearchState::Running(SearchActivity::Searching) => "Searching…",
-                SearchState::Completed(SearchCompletion::NoResults) => "No Results",
-                _ => "Search All Files",
+        let search_state = self.entity.read(cx).search_state;
+        if paths::APP_NAME != "Zed" {
+            let state = workspace_search_state_copy(search_state);
+            let animate_state_icon = state.busy
+                && DesignSystemSettings::get_global(cx).motion != settings::CanvasMotion::Reduced;
+            let state_icon = Icon::new(state.icon)
+                .size(IconSize::Small)
+                .color(if state.busy {
+                    Color::Accent
+                } else {
+                    Color::Muted
+                });
+            let state_icon = if animate_state_icon {
+                state_icon.with_rotate_animation(2).into_any_element()
+            } else {
+                state_icon.into_any_element()
             };
+            let accessibility_label = format!("{}. {}", state.title, state.description);
 
-            let heading_text = div()
-                .justify_center()
-                .child(Label::new(heading_text).size(LabelSize::Large));
-
-            let page_content: Option<AnyElement> = match model.search_state {
-                SearchState::Idle => Some(self.landing_text_minor(cx).into_any_element()),
-                SearchState::Completed(SearchCompletion::NoResults) => Some(
-                    Label::new(workspace_search_no_results_label(paths::APP_NAME))
-                        .size(LabelSize::Small)
-                        .into_any_element(),
-                ),
-                _ => None,
-            };
-
-            let page_content = page_content.map(|text| div().child(text));
-
-            h_flex()
+            return h_flex()
                 .key_context(key_context)
                 .on_action(cx.listener(Self::open_text_finder))
                 .size_full()
-                .items_center()
+                .items_start()
                 .justify_center()
                 .overflow_hidden()
                 .bg(canvas::search_background(cx))
@@ -707,12 +767,84 @@ impl Render for ProjectSearchView {
                 .child(
                     v_flex()
                         .id("project-search-landing-page")
+                        .role(gpui::Role::Status)
+                        .aria_label(accessibility_label)
+                        .w_full()
+                        .max_w(rems_from_px(640.))
                         .overflow_y_scroll()
-                        .gap_1()
-                        .child(heading_text)
-                        .children(page_content),
+                        .px_6()
+                        .py_8()
+                        .gap_3()
+                        .child(
+                            h_flex()
+                                .min_w_0()
+                                .gap_2()
+                                .child(
+                                    h_flex()
+                                        .flex_none()
+                                        .size_8()
+                                        .items_center()
+                                        .justify_center()
+                                        .rounded_md()
+                                        .border_1()
+                                        .border_color(cx.theme().colors().border_variant)
+                                        .bg(cx.theme().colors().panel_background)
+                                        .child(state_icon),
+                                )
+                                .child(Label::new(state.title).size(LabelSize::Small)),
+                        )
+                        .child(
+                            Label::new(state.description)
+                                .size(LabelSize::Small)
+                                .color(Color::Muted),
+                        ),
                 )
+                .into_any_element();
         }
+
+        let heading_text = match search_state {
+            SearchState::Running(SearchActivity::WaitingForScan) => {
+                workspace_search_loading_label(paths::APP_NAME)
+            }
+            SearchState::Running(SearchActivity::Searching) => "Searching…",
+            SearchState::Completed(SearchCompletion::NoResults) => "No Results",
+            _ => "Search All Files",
+        };
+
+        let heading_text = div()
+            .justify_center()
+            .child(Label::new(heading_text).size(LabelSize::Large));
+
+        let page_content: Option<AnyElement> = match search_state {
+            SearchState::Idle => Some(self.landing_text_minor(cx).into_any_element()),
+            SearchState::Completed(SearchCompletion::NoResults) => Some(
+                Label::new(workspace_search_no_results_label(paths::APP_NAME))
+                    .size(LabelSize::Small)
+                    .into_any_element(),
+            ),
+            _ => None,
+        };
+
+        let page_content = page_content.map(|text| div().child(text));
+
+        h_flex()
+            .key_context(key_context)
+            .on_action(cx.listener(Self::open_text_finder))
+            .size_full()
+            .items_center()
+            .justify_center()
+            .overflow_hidden()
+            .bg(canvas::search_background(cx))
+            .track_focus(&self.focus_handle(cx))
+            .child(
+                v_flex()
+                    .id("project-search-landing-page")
+                    .overflow_y_scroll()
+                    .gap_1()
+                    .child(heading_text)
+                    .children(page_content),
+            )
+            .into_any_element()
     }
 }
 
