@@ -114,6 +114,34 @@ fn outline_toggle_hint(app_name: &str) -> &'static str {
     }
 }
 
+fn dez_outline_empty_state_copy(
+    has_filter: bool,
+    is_search: bool,
+    has_active_editor: bool,
+) -> (&'static str, &'static str) {
+    if has_filter {
+        (
+            "No outline matches",
+            "Try another term or clear the filter to restore the current Outline.",
+        )
+    } else if is_search {
+        (
+            "No search results",
+            "No files in this Workspace match the current search.",
+        )
+    } else if has_active_editor {
+        (
+            "No symbols in this file",
+            "The active file has no headings or language symbols to show.",
+        )
+    } else {
+        (
+            "Nothing to outline",
+            "Open a source file to browse its headings and symbols here.",
+        )
+    }
+}
+
 const UPDATE_DEBOUNCE: Duration = Duration::from_millis(50);
 
 fn canvas_outline_panel_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
@@ -4736,48 +4764,159 @@ impl OutlinePanel {
     ) -> impl IntoElement {
         let canvas_contrast = DesignSystemSettings::get_global(cx).contrast;
         let contents = if self.cached_entries.is_empty() {
-            let header = if query.is_some() {
-                "No matches for query"
-            } else {
-                "No outlines available"
-            };
+            if paths::APP_NAME == "Zed" {
+                let header = if query.is_some() {
+                    "No matches for query"
+                } else {
+                    "No outlines available"
+                };
 
-            v_flex()
-                .id("empty-outline-state")
-                .gap_0p5()
-                .flex_1()
-                .justify_center()
-                .size_full()
-                .child(h_flex().justify_center().child(Label::new(header)))
-                .when_some(query, |panel, query| {
-                    panel.child(
+                v_flex()
+                    .id("empty-outline-state")
+                    .gap_0p5()
+                    .flex_1()
+                    .justify_center()
+                    .size_full()
+                    .child(h_flex().justify_center().child(Label::new(header)))
+                    .when_some(query, |panel, query| {
+                        panel.child(
+                            h_flex()
+                                .px_0p5()
+                                .justify_center()
+                                .bg(cx.theme().colors().element_selected.opacity(0.2))
+                                .child(Label::new(query)),
+                        )
+                    })
+                    .child(
                         h_flex()
-                            .px_0p5()
+                            .gap_1()
                             .justify_center()
-                            .bg(cx.theme().colors().element_selected.opacity(0.2))
-                            .child(Label::new(query)),
+                            .child(
+                                Label::new(outline_toggle_hint(paths::APP_NAME))
+                                    .color(Color::Muted),
+                            )
+                            .when_some(
+                                match self.position(window, cx) {
+                                    DockPosition::Left => Some(
+                                        KeyBinding::for_action(&workspace::ToggleSidebar, cx)
+                                            .into_any_element(),
+                                    ),
+                                    DockPosition::Bottom => None,
+                                    DockPosition::Right => Some(
+                                        KeyBinding::for_action(&workspace::ToggleProjectPane, cx)
+                                            .into_any_element(),
+                                    ),
+                                },
+                                |this, key_binding| this.child(key_binding),
+                            ),
                     )
-                })
-                .child(
-                    h_flex()
-                        .gap_1()
-                        .justify_center()
-                        .child(Label::new(outline_toggle_hint(paths::APP_NAME)).color(Color::Muted))
-                        .when_some(
-                            match self.position(window, cx) {
-                                DockPosition::Left => Some(
-                                    KeyBinding::for_action(&workspace::ToggleSidebar, cx)
-                                        .into_any_element(),
-                                ),
-                                DockPosition::Bottom => None,
-                                DockPosition::Right => Some(
-                                    KeyBinding::for_action(&workspace::ToggleProjectPane, cx)
-                                        .into_any_element(),
-                                ),
-                            },
-                            |this, key_binding| this.child(key_binding),
-                        ),
-                )
+            } else {
+                let has_filter = query.is_some();
+                let is_search = matches!(self.mode, ItemsDisplayMode::Search(_));
+                let (title, description) = dez_outline_empty_state_copy(
+                    has_filter,
+                    is_search,
+                    self.active_editor().is_some(),
+                );
+                let accessibility_label = if let Some(query) = query.as_deref() {
+                    format!("{title}. Filter: {query}. {description}")
+                } else {
+                    format!("{title}. {description}")
+                };
+
+                v_flex()
+                    .id("empty-outline-state")
+                    .role(gpui::Role::Status)
+                    .aria_label(accessibility_label)
+                    .flex_1()
+                    .size_full()
+                    .items_center()
+                    .justify_start()
+                    .px_4()
+                    .pt_8()
+                    .child(
+                        v_flex()
+                            .w_64()
+                            .max_w_full()
+                            .gap_2()
+                            .child(
+                                h_flex()
+                                    .gap_1p5()
+                                    .child(
+                                        Icon::new(IconName::ToC)
+                                            .size(IconSize::Small)
+                                            .color(Color::Accent),
+                                    )
+                                    .child(Label::new(title).size(LabelSize::Large)),
+                            )
+                            .child(
+                                Label::new(description)
+                                    .size(LabelSize::Small)
+                                    .color(Color::Muted),
+                            )
+                            .when_some(query.clone(), |this, query| {
+                                this.child(
+                                    h_flex()
+                                        .min_w_0()
+                                        .w_full()
+                                        .gap_1()
+                                        .px_2()
+                                        .py_1()
+                                        .rounded_sm()
+                                        .bg(cx.theme().colors().element_selected.opacity(0.2))
+                                        .child(
+                                            Label::new("Filter")
+                                                .size(LabelSize::XSmall)
+                                                .color(Color::Muted),
+                                        )
+                                        .child(Label::new(query).size(LabelSize::Small).truncate()),
+                                )
+                                .child(
+                                    Button::new("clear-outline-filter", "Clear Filter")
+                                        .full_width()
+                                        .label_size(LabelSize::Small)
+                                        .style(ButtonStyle::Outlined)
+                                        .on_click(cx.listener(|this, _, window, cx| {
+                                            this.filter_editor.update(cx, |filter_editor, cx| {
+                                                filter_editor.set_text("", window, cx);
+                                            });
+                                            this.filter_editor.focus_handle(cx).focus(window, cx);
+                                        })),
+                                )
+                            })
+                            .when(!has_filter, |this| {
+                                this.child(
+                                    h_flex()
+                                        .gap_1()
+                                        .child(
+                                            Label::new(outline_toggle_hint(paths::APP_NAME))
+                                                .size(LabelSize::Small)
+                                                .color(Color::Muted),
+                                        )
+                                        .when_some(
+                                            match self.position(window, cx) {
+                                                DockPosition::Left => Some(
+                                                    KeyBinding::for_action(
+                                                        &workspace::ToggleSidebar,
+                                                        cx,
+                                                    )
+                                                    .into_any_element(),
+                                                ),
+                                                DockPosition::Bottom => None,
+                                                DockPosition::Right => Some(
+                                                    KeyBinding::for_action(
+                                                        &workspace::ToggleProjectPane,
+                                                        cx,
+                                                    )
+                                                    .into_any_element(),
+                                                ),
+                                            },
+                                            |this, key_binding| this.child(key_binding),
+                                        ),
+                                )
+                            }),
+                    )
+            }
         } else {
             let list_contents = {
                 let items_len = self.cached_entries.len();
@@ -5480,6 +5619,34 @@ mod tests {
     fn dez_empty_state_names_outline_instead_of_compatibility_panel() {
         assert_eq!(outline_toggle_hint("Dez"), "Toggle Outline With");
         assert_eq!(outline_toggle_hint("Zed"), "Toggle Panel With");
+        assert_eq!(
+            dez_outline_empty_state_copy(true, false, true),
+            (
+                "No outline matches",
+                "Try another term or clear the filter to restore the current Outline."
+            )
+        );
+        assert_eq!(
+            dez_outline_empty_state_copy(false, true, false),
+            (
+                "No search results",
+                "No files in this Workspace match the current search."
+            )
+        );
+        assert_eq!(
+            dez_outline_empty_state_copy(false, false, true),
+            (
+                "No symbols in this file",
+                "The active file has no headings or language symbols to show."
+            )
+        );
+        assert_eq!(
+            dez_outline_empty_state_copy(false, false, false),
+            (
+                "Nothing to outline",
+                "Open a source file to browse its headings and symbols here."
+            )
+        );
     }
 
     #[gpui::test(iterations = 10)]
