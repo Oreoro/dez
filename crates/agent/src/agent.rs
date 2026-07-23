@@ -226,11 +226,17 @@ pub struct LanguageModels {
     _authenticate_all_providers_task: Task<()>,
 }
 
+fn eager_provider_authentication_enabled(app_name: &str, auto_connect: bool) -> bool {
+    app_name == "Zed" && auto_connect
+}
+
 impl LanguageModels {
     fn new(cx: &mut App) -> Self {
         let (refresh_models_tx, refresh_models_rx) = watch::channel(());
-        let authenticate_all_providers_task = if client::ClientSettings::get_global(cx).auto_connect
-        {
+        let authenticate_all_providers_task = if eager_provider_authentication_enabled(
+            paths::APP_NAME,
+            client::ClientSettings::get_global(cx).auto_connect,
+        ) {
             Self::authenticate_all_language_model_providers(cx)
         } else {
             // Dez is local-first: discovering the model selector must not

@@ -66,6 +66,10 @@ pub(crate) fn init_test(cx: &mut TestAppContext) {
 
 #[gpui::test]
 fn test_language_models_only_authenticate_providers_after_cloud_opt_in(cx: &mut TestAppContext) {
+    assert!(!eager_provider_authentication_enabled("Dez", true));
+    assert!(!eager_provider_authentication_enabled("Zed", false));
+    assert!(eager_provider_authentication_enabled("Zed", true));
+
     init_test(cx);
 
     let (provider, _offline_models) = cx.update(|cx| {
@@ -96,7 +100,10 @@ fn test_language_models_only_authenticate_providers_after_cloud_opt_in(cx: &mut 
         LanguageModels::new(cx)
     });
     cx.run_until_parked();
-    assert_eq!(provider.authenticate_count(), 1);
+    assert_eq!(
+        provider.authenticate_count(),
+        usize::from(eager_provider_authentication_enabled(paths::APP_NAME, true))
+    );
 }
 
 pub(crate) struct FakeTerminalHandle {

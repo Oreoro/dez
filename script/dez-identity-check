@@ -280,6 +280,9 @@ require_multiline_pattern crates/onboarding/src/basics_page.rs \
 require_multiline_pattern crates/client/src/client.rs \
     'let uploads_enabled = upstream_telemetry_uploads_enabled\(paths::APP_NAME\);.*?diagnostics: uploads_enabled &&.*?metrics: uploads_enabled &&' \
     'Dez can upload fork diagnostics or metrics to the inherited upstream telemetry endpoint'
+require_multiline_pattern crates/agent/src/agent.rs \
+    'fn eager_provider_authentication_enabled\(app_name: &str, auto_connect: bool\) -> bool \{[[:space:]]*app_name == "Zed" && auto_connect' \
+    'legacy auto_connect settings can make Dez authenticate every cloud provider at startup'
 require_multiline_pattern crates/onboarding/src/basics_page.rs \
     '\.when\(APP_NAME == "Zed".*?render_telemetry_section' \
     'Dez onboarding still offers a misleading upstream telemetry opt-in'
