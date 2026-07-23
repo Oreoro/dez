@@ -2132,3 +2132,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   rerun icon's accessible name matches its tooltip exactly. Static guards,
   formatting, Bash syntax, identity, locked offline metadata, and diff checks
   pass; no build, test binary, or visual launch was performed.
+- 2026-07-23: Decoupled footer legibility from detailed-row density in
+  `b43503e3fe`. Dez's default 280 px compact Session Rail now visibly labels
+  **Agent Tools**, **History**, and **Workspaces** instead of guaranteeing an
+  unexplained three-glyph strip on first launch. Rails narrower than 280 px
+  retain icon mode with their existing accessible names and tooltips. A focused
+  breakpoint assertion and identity guard keep the compact maximum and utility
+  label threshold aligned. Formatting, Bash syntax, identity, locked offline
+  metadata, and diff checks pass; no build, test binary, or visual launch was
+  performed.

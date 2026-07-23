@@ -31,6 +31,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Keyboard-visible Session row actions source: `f0e817669a`
 - Unified terminal Surface lifecycle language source: `7f8fd167c2`
 - Precise terminal tab identity metadata source: `88948b869a`
+- Self-labeling default Session Rail footer source: `b43503e3fe`
 - Deduplicated Session Rail footer source: `a9b1a961c0`
 - Unified Session Rail Workspace vocabulary source: `ff91b34a81`
 - Workspace-scoped zero-session creation source: `4fc53b860f`
@@ -1250,7 +1251,10 @@ the later running-app reports, the source advanced through:
   Surface landmark, working-directory tooltip, task rerun identity, and
   unavailable-session recovery destination; and
 - `88948b869a`, which gives terminal tab tooltips explicit Terminal Session
-  ownership plus Working directory, Process ID, and Session ID labels.
+  ownership plus Working directory, Process ID, and Session ID labels; and
+- `b43503e3fe`, which keeps Agent Tools, History, and Workspaces visible at the
+  default compact Session Rail width while preserving accessible icon mode
+  below it.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

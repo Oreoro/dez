@@ -2002,8 +2002,24 @@ code, all launch gates pass, and known limitations are documented.
   Workspace Terminal Sessions, then labels Working directory, Process ID, and
   Session ID explicitly. The rerun control uses one matching accessible and
   tooltip name.
+- **2026-07-23:** A responsive breakpoint belongs to the content it protects.
+  Commit `b43503e3fe` gives Session Rail utilities their own 280 px label
+  threshold instead of reusing the 380 px detailed-row threshold. The default
+  compact rail therefore names Agent Tools, History, and Workspaces; narrower
+  rails retain named, tooltip-backed icon mode.
 
 ## Verification {#verification}
+
+Completed for the compact Session Rail footer-label slice:
+
+- `cargo fmt --all -- --check`;
+- Bash syntax and Dez identity checks, including aligned compact-width and
+  utility-label guards;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- a pure breakpoint assertion covering 279 px and 280 px;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
 
 Completed for the terminal tab identity-metadata slice:
 

@@ -475,3 +475,8 @@ defer it.
   uses Terminal Session vocabulary. Paths, process identifiers, and Session
   identifiers are labeled precisely; generic Folder, Process, and Session
   prefixes are not sufficient for an inspectable terminal Surface.
+- **2026-07-23: Responsive breakpoints follow the control they govern.** The
+  Session Rail footer does not inherit the wider breakpoint used for
+  supplemental row metadata. The default compact width must keep Agent Tools,
+  History, and Workspaces visible; only genuinely narrower rails collapse those
+  labels into named, tooltip-backed icons.
