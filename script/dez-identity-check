@@ -271,6 +271,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 reject_pattern crates/sidebar/src/sidebar.rs \
     '"(No running sessions|Start a terminal to begin|Open Folder…)"' \
     'the compact Session Rail start state has regained duplicate or folder-scoped copy'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn active_workspace_terminal_destination_label.*?"New Terminal in Main Work Area of Active Workspace".*?"Start a terminal in the active Workspace\. It opens in the Main Work Area and appears here with live state\.".*?Button::new\("no-results-new-terminal", "New Terminal"\).*?aria_label\(active_workspace_terminal_destination_label\(\)\).*?Button::new\("new-session", "New Terminal"\).*?aria_label\(active_workspace_terminal_destination_label\(\)\)' \
+    'global Session Rail terminal actions can regress to an ambiguous Workspace or Agent destination'
 reject_pattern crates/sidebar/src/sidebar.rs \
     'when\(!is_focused, \|this\| this\.visible_on_hover\(&group_name\)\)' \
     'Workspace group disclosure can regress to an invisible hover-only affordance'

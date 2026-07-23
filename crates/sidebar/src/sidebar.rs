@@ -371,6 +371,10 @@ fn session_start_state_copy() -> (&'static str, &'static str, &'static str) {
     )
 }
 
+fn active_workspace_terminal_destination_label() -> &'static str {
+    "New Terminal in Main Work Area of Active Workspace"
+}
+
 fn workspace_new_terminal_action_persistent(is_active: bool, is_menu_open: bool) -> bool {
     is_active || is_menu_open
 }
@@ -1105,6 +1109,10 @@ mod session_start_state_tests {
                 "New Terminal",
                 "Open Workspace…"
             )
+        );
+        assert_eq!(
+            active_workspace_terminal_destination_label(),
+            "New Terminal in Main Work Area of Active Workspace"
         );
     }
 }
@@ -11517,7 +11525,7 @@ impl Sidebar {
             (
                 IconName::Terminal,
                 "No sessions yet",
-                "Start a terminal in this workspace. It will appear here with its real state.",
+                "Start a terminal in the active Workspace. It opens in the Main Work Area and appears here with live state.",
             )
         };
 
@@ -11578,9 +11586,10 @@ impl Sidebar {
                                 .style(ButtonStyle::Filled)
                                 .label_size(LabelSize::Small)
                                 .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                                .aria_label(active_workspace_terminal_destination_label())
                                 .tooltip(|_, cx| {
                                     Tooltip::for_action(
-                                        "New Terminal",
+                                        active_workspace_terminal_destination_label(),
                                         &NewCenterTerminal::default(),
                                         cx,
                                     )
@@ -11720,10 +11729,10 @@ impl Sidebar {
                                     .size(ButtonSize::Medium)
                                     .style(ButtonStyle::Filled)
                                     .start_icon(Icon::new(IconName::Plus).size(IconSize::XSmall))
-                                    .aria_label("New Terminal")
+                                    .aria_label(active_workspace_terminal_destination_label())
                                     .tooltip(|_, cx| {
                                         Tooltip::for_action(
-                                            "New Terminal",
+                                            active_workspace_terminal_destination_label(),
                                             &NewCenterTerminal::default(),
                                             cx,
                                         )
