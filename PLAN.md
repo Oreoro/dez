@@ -504,7 +504,10 @@ with new labels.
 
 - [ ] Add a short first-run path for opening work, starting a durable terminal,
       installing the Codex hook deliberately, understanding attention, opening
-      review, and learning detach versus terminate. Source now teaches the
+      review, and learning detach versus terminate. Commit `bb0cf408b4` adds a
+      deliberate **Copy Codex Hook** action before New Terminal, copies only the
+      bundled setup, and explicitly says Dez does not install or modify hooks.
+      Source now teaches the
       terminal → Session Rail → review loop, provides New Terminal, and explains
       close/detach/terminate plus Host-dependent persistence; hook installation
       remains deliberately manual, but eligible detected Codex rows now show a
@@ -1080,3 +1083,8 @@ Notes decision:
   `526218a972`. The Session Rail and keyboard switcher now use a neutral Robot
   glyph while preserving explicit Codex labels and metadata. A directory-wide
   identity rejection covers both paths; no bundle was built or launched.
+- 2026-07-23: Added deliberate Codex setup to first-run onboarding in
+  `bb0cf408b4`. **Copy Codex Hook** copies the bundled JSON without installing
+  or modifying anything, precedes New Terminal in keyboard order, and sits with
+  lifecycle and Host-persistence limitations. An identity guard covers the
+  action; no bundle was built or launched.

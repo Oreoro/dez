@@ -864,6 +864,12 @@ code, all launch gates pass, and known limitations are documented.
       keyboard switcher while retaining explicit Codex labels and metadata. A
       directory-wide identity rejection covers both paths. Formatting, diff,
       and identity checks pass; rendered proof remains consolidated-gate work.
+- [x] 2026-07-23: Add deliberate Codex setup to first-run onboarding. Commit
+      `bb0cf408b4` exposes **Copy Codex Hook** before New Terminal, copies the
+      bundled setup, states that Dez installs or modifies nothing, and retains
+      lifecycle/Host persistence limitations. An identity guard covers the
+      action. Formatting, diff, and identity checks pass; rendered onboarding
+      proof remains in the consolidated gate.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
