@@ -451,6 +451,9 @@ require_pattern crates/workspace/src/welcome.rs \
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'fn welcome_summary.*?"Start in a terminal\. Track attention\. Review evidence\.".*?Label::new\(welcome_summary\(APP_NAME\)\)' \
     'the Dez welcome surface no longer teaches its workflow concisely'
+require_multiline_pattern crates/workspace/src/welcome.rs \
+    '\.id\("welcome-content"\).*?\.p_6\(\).*?\.max_w\(rems_from_px\(640\.\)\).*?\.gap_5\(\)' \
+    'the Dez welcome content regressed to an oversized presentation canvas'
 reject_pattern crates/workspace/src/welcome.rs \
     'welcome-supervision-loop|render_agent_card|Button::new\("open-agent"' \
     'the Dez welcome surface regressed to stacking promotional cards above work'

@@ -952,10 +952,10 @@ impl Pane {
         v_flex()
             .id("empty-project-state")
             .track_focus(&self.focus_handle(cx))
-            .max_w_112()
+            .max_w_96()
             .w_full()
-            .px_8()
-            .gap_5()
+            .px_6()
+            .gap_4()
             .child(
                 v_flex()
                     .gap_1p5()
@@ -1058,10 +1058,10 @@ impl Pane {
 
         v_flex()
             .id(id)
-            .max_w_112()
+            .max_w_96()
             .w_full()
-            .px_8()
-            .gap_5()
+            .px_6()
+            .gap_4()
             .child(
                 v_flex()
                     .gap_1p5()

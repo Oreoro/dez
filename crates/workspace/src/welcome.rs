@@ -436,16 +436,15 @@ impl Render for WelcomePage {
             .child(
                 v_flex()
                     .id("welcome-content")
-                    .p_8()
-                    .max_w(rems_from_px(680.))
+                    .p_6()
+                    .max_w(rems_from_px(640.))
                     .size_full()
-                    .gap_6()
+                    .gap_5()
                     .overflow_y_scroll()
                     .child(
                         h_flex()
                             .w_full()
                             .items_center()
-                            .mb_4()
                             .gap_3()
                             .child(
                                 h_flex()
