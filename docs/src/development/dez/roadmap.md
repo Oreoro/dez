@@ -262,6 +262,11 @@ updater is deliberately disabled and defaults off. The compatibility key stays
 readable and official Zed keeps the control. Source and identity checks pass;
 rendered Settings proof remains deferred.
 
+Commit `9239006d4b` removes Collaboration Panel button/dock/width controls from
+the Dez Panels page now that the page, panel entry points, and commands are
+removed. Compatibility parsing and official Zed UI remain intact. Identity
+checks pass; rendered Settings proof remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -1124,6 +1129,10 @@ code, all launch gates pass, and known limitations are documented.
 - [x] 2026-07-23: Hide the disabled fork updater setting. Commit `2680937952`
       removes the inert Dez Auto Update section while retaining compatibility
       parsing and official Zed UI. Source and identity checks pass; rendered
+      Settings proof remains consolidated.
+- [x] 2026-07-23: Remove dead Collaboration Panel settings. Commit
+      `9239006d4b` hides its button/dock/width section in Dez while preserving
+      compatibility and official Zed UI. Identity checks pass; rendered
       Settings proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no

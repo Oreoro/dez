@@ -567,6 +567,9 @@ with new labels.
       controls model-request policy instead. Commit `2680937952` also hides the
       inert Auto Update section in Dez because the fork updater is deliberately
       disabled, while preserving the compatibility key and official Zed UI.
+      Commit `9239006d4b` removes Collaboration Panel button/dock/width controls
+      from the Dez Panels page after the panel, commands, and Collaboration page
+      were removed; official Zed and the compatibility schema remain intact.
       Commit `e969abda4a` also removes inherited collaboration,
       feedback, account, docs, status, and merchandise commands from Dez's
       palette while retaining explicit upstream documentation/repository links
@@ -1457,3 +1460,8 @@ Notes decision:
   implied behavior that cannot occur. The compatibility key remains readable
   and official Zed retains its setting. Focused source assertions and identity
   guards pass; Settings rendering remains consolidated.
+- 2026-07-23: Removed the last Collaboration Panel settings leak in
+  `9239006d4b`. Dez no longer shows button, dock, or width controls for a panel
+  whose page and commands are already absent. Compatibility parsing and official
+  Zed UI remain intact. Identity guards pass; Settings rendering remains
+  consolidated.
