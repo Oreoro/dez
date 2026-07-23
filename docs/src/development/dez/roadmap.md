@@ -1195,6 +1195,13 @@ code, all launch gates pass, and known limitations are documented.
       and derive a stable call-site ID before applying it. The focused `ui`
       build passes in 2m33s; both failed attempts stopped before replacing an
       executable.
+- [x] 2026-07-23: Repair the Host snapshot transport import boundary. The
+      resumed consolidated build exposed terminal-view imports from the parent
+      `session_host` module rather than the public `transport` module that
+      defines the snapshot globals. Commit `1ed2ff814a` aligns terminal view
+      with the already-working Session Rail import without changing behavior.
+      Formatting, diff, and identity checks pass; the failed build stopped
+      before replacing an executable.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

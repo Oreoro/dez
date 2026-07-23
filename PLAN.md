@@ -1540,3 +1540,9 @@ Notes decision:
   `5a25a72f92` and `42ff77e99c` import the role and give each Callout a stable
   call-site ID before applying it. The focused `ui` build passes in 2m33s; both
   failed attempts stopped before replacing an executable.
+- 2026-07-23: The resumed consolidated compile exposed the terminal view
+  importing Host snapshot globals from their parent module instead of the
+  public `session_host::transport` module that defines them. Commit
+  `1ed2ff814a` aligns the terminal view with the already-working Session Rail
+  import without changing snapshot behavior. Formatting, diff, and identity
+  checks pass; the failed build stopped before replacing an executable.
