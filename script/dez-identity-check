@@ -724,6 +724,9 @@ require_multiline_pattern crates/git_ui/src/git_panel.rs \
 require_multiline_pattern crates/git_ui/src/git_panel.rs \
     'fn dez_git_setup_copy.*?"No repository in this Workspace".*?"Initialize Git to start tracking changes in the open folder\.".*?fn render_uninitialized_ui.*?paths::APP_NAME == "Zed".*?"No Git Repositories".*?justify_start\(\).*?role\(gpui::Role::Region\).*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?IconName::GitBranch.*?Button::new\("initialize_repository", "Initialize Repository"\).*?IconName::GitBranchPlus.*?ButtonStyle::Filled.*?"Initialize Git Repository"' \
     'the Dez Git setup state can regress to a vague centered plural label or an unscoped initialization action'
+require_multiline_pattern crates/git_ui/src/git_panel.rs \
+    'fn dez_git_unsafe_repository_copy.*?"Repository ownership needs review".*?approval changes your global Git configuration.*?fn render_unsafe_repo_ui.*?paths::APP_NAME == "Zed".*?"Detected dubious ownership".*?justify_start\(\).*?role\(gpui::Role::Alert\).*?aria_label\(accessibility_label\).*?IconName::Warning.*?Label::new\("Path"\).*?Button::new\("trust_directory", "Trust This Directory"\).*?ButtonStyle::Tinted\(TintColor::Warning\).*?safe\.directory in your global Git configuration.*?Button::new\("learn_more", "Learn About Safe Directories"\)' \
+    'the unsafe Dez Git state can regress to an undifferentiated paragraph or hide the folder and global trust effect'
 require_multiline_pattern crates/outline_panel/src/outline_panel.rs \
     'fn icon_tooltip.*?paths::APP_NAME == "Zed".*?"Outline Panel".*?"Outline"' \
     'the Dez Outline tool can regress to exposing Panel implementation terminology'

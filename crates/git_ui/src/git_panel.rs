@@ -128,6 +128,13 @@ fn dez_git_setup_copy() -> (&'static str, &'static str) {
     )
 }
 
+fn dez_git_unsafe_repository_copy() -> (&'static str, &'static str) {
+    (
+        "Repository ownership needs review",
+        "Git blocked this repository because its metadata has a different owner. Trust only folders you recognize; approval changes your global Git configuration.",
+    )
+}
+
 fn canvas_git_panel_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match contrast {
@@ -6929,14 +6936,15 @@ impl GitPanel {
             repository.snapshot().work_directory_abs_path
         });
 
-        let message = format!(
-            "Detected dubious ownership in repository at {}. \
-            This happens when the .git/ directory is not owned by the current user. \
-            If you want to learn more about safe directories, visit git's documentation.",
-            directory.display()
-        );
+        if paths::APP_NAME == "Zed" {
+            let message = format!(
+                "Detected dubious ownership in repository at {}. \
+                This happens when the .git/ directory is not owned by the current user. \
+                If you want to learn more about safe directories, visit git's documentation.",
+                directory.display()
+            );
 
-        v_flex()
+            v_flex()
                 .px_4()
                 .gap_1()
                 .child(Label::new(message).color(Color::Muted))
@@ -6964,9 +6972,92 @@ impl GitPanel {
                             .style(ButtonStyle::Outlined)
                             .end_icon(Icon::new(IconName::ArrowUpRight).size(IconSize::Small).color(Color::Muted))
                             .on_click(move |_, _, cx| cx.open_url("https://git-scm.com/docs/git-config#Documentation/git-config.txt-safedirectory"))
-                    )
+                        )
                 )
                 .into_any_element()
+        } else {
+            let (title, description) = dez_git_unsafe_repository_copy();
+            let directory = directory.display().to_string();
+            let accessibility_label =
+                format!("{title}. Repository path: {directory}. {description}");
+            let path_tooltip = directory.clone();
+            let command = format!("git config --global --add safe.directory {directory}");
+
+            v_flex()
+                .size_full()
+                .items_center()
+                .justify_start()
+                .px_4()
+                .pt_8()
+                .role(gpui::Role::Alert)
+                .aria_label(accessibility_label)
+                .child(
+                    v_flex()
+                        .w_64()
+                        .max_w_full()
+                        .gap_2()
+                        .child(
+                            h_flex()
+                                .gap_1p5()
+                                .child(
+                                    Icon::new(IconName::Warning)
+                                        .size(IconSize::Small)
+                                        .color(Color::Warning),
+                                )
+                                .child(Label::new(title).size(LabelSize::Large)),
+                        )
+                        .child(
+                            Label::new(description)
+                                .size(LabelSize::Small)
+                                .color(Color::Muted),
+                        )
+                        .child(
+                            h_flex()
+                                .min_w_0()
+                                .w_full()
+                                .gap_1()
+                                .px_2()
+                                .py_1()
+                                .rounded_sm()
+                                .bg(cx.theme().status().warning_background.opacity(0.2))
+                                .tooltip(Tooltip::text(path_tooltip))
+                                .child(
+                                    Label::new("Path")
+                                        .size(LabelSize::XSmall)
+                                        .color(Color::Warning),
+                                )
+                                .child(Label::new(directory).size(LabelSize::Small).truncate()),
+                        )
+                        .child(
+                            Button::new("trust_directory", "Trust This Directory")
+                                .full_width()
+                                .start_icon(Icon::new(IconName::Warning).size(IconSize::Small))
+                                .label_size(LabelSize::Small)
+                                .layer(ElevationIndex::ModalSurface)
+                                .style(ButtonStyle::Tinted(TintColor::Warning))
+                                .aria_description(
+                                    "Adds this folder to safe.directory in your global Git configuration",
+                                )
+                                .tooltip(Tooltip::text(command))
+                                .on_click(cx.listener(|this, _, window, cx| {
+                                    this.add_safe_directory(window, cx);
+                                })),
+                        )
+                        .child(
+                            Button::new("learn_more", "Learn About Safe Directories")
+                                .full_width()
+                                .label_size(LabelSize::Small)
+                                .style(ButtonStyle::Outlined)
+                                .end_icon(
+                                    Icon::new(IconName::ArrowUpRight)
+                                        .size(IconSize::Small)
+                                        .color(Color::Muted),
+                                )
+                                .on_click(move |_, _, cx| cx.open_url("https://git-scm.com/docs/git-config#Documentation/git-config.txt-safedirectory")),
+                        ),
+                )
+                .into_any_element()
+        }
     }
 
     fn render_uninitialized_ui(&self, cx: &mut Context<Self>) -> AnyElement {
@@ -9182,6 +9273,13 @@ mod tests {
             (
                 "No repository in this Workspace",
                 "Initialize Git to start tracking changes in the open folder."
+            )
+        );
+        assert_eq!(
+            dez_git_unsafe_repository_copy(),
+            (
+                "Repository ownership needs review",
+                "Git blocked this repository because its metadata has a different owner. Trust only folders you recognize; approval changes your global Git configuration."
             )
         );
     }
