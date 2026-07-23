@@ -10,11 +10,12 @@ use gpui::{
 use std::sync::Arc;
 use ui::{Icon, IconSize, Label, LabelCommon, prelude::*};
 
-pub const PROJECT_PANEL_KEYS: &[&str] = &[
+pub const PROJECT_TOOL_PANEL_KEYS: &[&str] = &[
     "ProjectPanel",
     "GitPanel",
     "OutlinePanel",
     "DebugPanel",
+    "TerminalPanel",
     "CollaborationPanel",
 ];
 
@@ -28,7 +29,7 @@ pub enum PanelPaneKind {
 
 impl PanelPaneKind {
     pub fn for_panel_key(panel_key: &str) -> Option<Self> {
-        if PROJECT_PANEL_KEYS.contains(&panel_key) {
+        if PROJECT_TOOL_PANEL_KEYS.contains(&panel_key) {
             Some(Self::Project)
         } else if panel_key == AGENT_PANEL_KEY {
             Some(Self::Agent)
@@ -76,6 +77,7 @@ impl PanelItem {
             "GitPanel" => "Git",
             "OutlinePanel" => "Outline",
             "DebugPanel" => "Debug",
+            "TerminalPanel" => "Terminals",
             "CollaborationPanel" => "Collab",
             AGENT_PANEL_KEY => "Agent",
             _ => self.panel.persistent_name(),
@@ -159,12 +161,24 @@ mod tests {
 
     #[test]
     fn developer_tool_panels_are_routed_to_the_project_surface() {
-        for panel_key in ["ProjectPanel", "GitPanel", "OutlinePanel", "DebugPanel"] {
+        for panel_key in [
+            "ProjectPanel",
+            "GitPanel",
+            "OutlinePanel",
+            "DebugPanel",
+            "TerminalPanel",
+        ] {
             assert_eq!(
                 PanelPaneKind::for_panel_key(panel_key),
                 Some(PanelPaneKind::Project),
                 "{panel_key} must remain reachable when legacy docks are hidden"
             );
         }
+
+        assert_eq!(
+            PanelPaneKind::for_panel_key("agent_panel"),
+            Some(PanelPaneKind::Agent)
+        );
+        assert_eq!(PanelPaneKind::for_panel_key("UnknownPanel"), None);
     }
 }
