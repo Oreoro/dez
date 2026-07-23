@@ -1,17 +1,23 @@
-// Zed settings
+// Dez settings
 //
-// For information on how to configure Zed, see the Zed
-// documentation: https://zed.dev/docs/configuring-zed
+// Dez starts with Lumin, JetBrains Mono for code, and a readable sans-serif
+// interface. Change any value here to make the experience your own.
 //
-// To see all of Zed's default settings without changing your
-// custom settings, run `zed: open default settings` from the
+// To see every Dez default without changing your custom settings, run
+// `dez: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
-  "ui_font_size": 16,
-  "buffer_font_size": 15,
+  "ui_font_family": ".ZedSans",
+  "ui_font_size": 14,
+  "buffer_font_family": "JetBrains Mono",
+  "buffer_font_size": 14,
   "theme": {
     "mode": "system",
-    "light": "One Light",
-    "dark": "One Dark",
+    "light": "Lumin Light",
+    "dark": "Lumin Blur",
+  },
+  "terminal": {
+    "font_family": "JetBrains Mono",
+    "font_size": 14,
   },
 }

@@ -26,6 +26,16 @@ reject_pattern() {
     fi
 }
 
+require_file() {
+    local file="$1"
+    local description="$2"
+
+    if [[ ! -f "$file" ]]; then
+        echo "Dez identity check failed: $description" >&2
+        exit 1
+    fi
+}
+
 require_multiline_pattern() {
     local file="$1"
     local pattern="$2"
@@ -61,6 +71,44 @@ require_pattern assets/settings/default.json \
 require_pattern assets/settings/default.json \
     '^  "auto_connect": false,$' \
     'upstream cloud auto-connect is enabled by default'
+require_multiline_pattern assets/settings/default.json \
+    '"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur"' \
+    'the Dez default appearance no longer follows the system with the Lumin light/blur pair'
+require_pattern assets/settings/default.json \
+    '^  "buffer_font_family": "JetBrains Mono",$' \
+    'the editor no longer defaults to bundled JetBrains Mono'
+require_pattern assets/settings/default.json \
+    '^  "ui_font_family": "\.ZedSans",$' \
+    'interface chrome no longer uses the readable bundled sans-serif role'
+require_multiline_pattern assets/settings/default.json \
+    '^  "terminal": \{.*?^    "font_size": 14,.*?^    "font_family": "JetBrains Mono",$' \
+    'the terminal no longer shares the polished JetBrains Mono typography profile'
+require_multiline_pattern assets/settings/initial_user_settings.json \
+    '"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"terminal": \{.*?"font_family": "JetBrains Mono".*?"font_size": 14' \
+    'first-run settings can override Dez with stale themes or typography'
+require_file assets/themes/lumin/lumin.json \
+    'the bundled Lumin theme asset is missing'
+require_file assets/themes/lumin/LICENSE \
+    'the bundled Lumin theme license is missing'
+require_file assets/fonts/jetbrains-mono/JetBrainsMono-Regular.ttf \
+    'the bundled JetBrains Mono regular face is missing'
+require_file assets/fonts/jetbrains-mono/JetBrainsMono-Italic.ttf \
+    'the bundled JetBrains Mono italic face is missing'
+require_file assets/fonts/jetbrains-mono/JetBrainsMono-Bold.ttf \
+    'the bundled JetBrains Mono bold face is missing'
+require_file assets/fonts/jetbrains-mono/JetBrainsMono-BoldItalic.ttf \
+    'the bundled JetBrains Mono bold italic face is missing'
+require_file assets/fonts/jetbrains-mono/OFL.txt \
+    'the bundled JetBrains Mono license is missing'
+require_multiline_pattern assets/themes/lumin/lumin.json \
+    '"author": "Daksh Sharma".*?"name": "Lumin Blur".*?"background\.appearance": "blurred".*?"pane\.focused_border": "#FFC79966".*?"name": "Lumin Light".*?"background\.appearance": "blurred"' \
+    'the attributed Lumin variants or their blur-safe focus hierarchy are missing'
+require_pattern assets/themes/lumin/LICENSE \
+    '^Copyright \(c\) 2026 Daksh Sharma$' \
+    'the Lumin source attribution is incomplete'
+require_pattern assets/fonts/jetbrains-mono/OFL.txt \
+    '^Copyright 2020 The JetBrains Mono Project Authors' \
+    'the JetBrains Mono source attribution is incomplete'
 require_pattern crates/zed/src/main.rs \
     'paths::APP_NAME == "Zed" && client::ClientSettings::get_global\(cx\)\.auto_connect' \
     'inherited settings can auto-connect Dez to the upstream Zed cloud'

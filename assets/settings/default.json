@@ -7,7 +7,7 @@
   // - "light": Use the theme indicated by the "light" field
   // - "dark": Use the theme indicated by the "dark" field
   "theme": {
-    "mode": "dark",
+    "mode": "system",
     "light": "Lumin Light",
     "dark": "Lumin Blur",
   },
@@ -36,7 +36,7 @@
     // "calt": false
   },
   // The default font size for text in the editor
-  "buffer_font_size": 13.5,
+  "buffer_font_size": 14,
   // The weight of the editor font in standard CSS units from 100 to 900.
   "buffer_font_weight": 400,
   // Set the buffer's line height.
@@ -50,7 +50,7 @@
   //           "custom": 2
   //         },
   "buffer_line_height": {
-    "custom": 1.55,
+    "custom": 1.5,
   },
   // The name of a font to use for rendering text in the UI
   // You can set this to ".SystemUIFont" to use the system font
@@ -68,13 +68,13 @@
   // The weight of the UI font in standard CSS units from 100 to 900.
   "ui_font_weight": 400,
   // The default font size for text in the UI
-  "ui_font_size": 15.5,
+  "ui_font_size": 14,
   // The default font size for agent responses in the agent panel. Falls back to the UI font size if unset.
-  "agent_ui_font_size": 15.5,
+  "agent_ui_font_size": 14,
   // The default font size for user messages in the agent panel.
-  "agent_buffer_font_size": 13,
+  "agent_buffer_font_size": 14,
   // The default font size for the commit editor in the git panel and commit modal.
-  "git_commit_buffer_font_size": 12,
+  "git_commit_buffer_font_size": 13,
   // The default font size for the markdown preview. Falls back to the UI font size if unset.
   "markdown_preview_font_size": null,
   // The font family for the markdown preview. Falls back to the UI font family if unset.
@@ -2112,7 +2112,7 @@
     },
     // Set the terminal's font size. If this option is not included,
     // the terminal will default to matching the buffer's font size.
-    // "font_size": 15,
+    "font_size": 14,
     // Set the terminal's font family. If this option is not included,
     // the terminal will default to matching the buffer's font family.
     "font_family": "JetBrains Mono",
