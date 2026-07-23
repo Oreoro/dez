@@ -123,6 +123,10 @@ selected Session; cancelling restores the original Agent Session, center
 terminal Surface, or Host Session through its actual source without changing
 ownership or routing a terminal through Agent.
 
+Mixed switcher rows visibly label their type as **Agent Session** or **Terminal
+Session**. The Agent region is named **Agent** in user-facing controls; inherited
+Panel terminology remains an implementation detail.
+
 There is no Dez **Terminal Thread** destination. The inherited action remains
 only as an official-Zed compatibility implementation. Dez hides it from Agent
 menus and the command palette, redirects compatibility dispatches to **New

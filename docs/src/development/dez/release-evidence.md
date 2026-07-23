@@ -1146,7 +1146,10 @@ the later running-app reports, the source advanced through:
 - `67a8152db7`, which restores cancelled Session Switcher previews through the
   original Agent Session, center terminal, Host Session, or compatibility
   source rather than routing every terminal through Agent; plus `23ae297ef0`,
-  which adds focused center-terminal source coverage.
+  which adds focused center-terminal source coverage; and
+- `745792e28e`, which visibly distinguishes Agent Session from Terminal Session
+  rows and removes inherited Panel and ambiguous Settings terminology from
+  Agent controls.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

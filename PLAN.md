@@ -1880,3 +1880,9 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   route instead of forcing every terminal through Agent. Commit `23ae297ef0`
   adds focused center-terminal source coverage. Formatting, identity, and diff
   checks pass; compilation and live Escape/focus proof remain deferred.
+- 2026-07-23: Removed the last ambiguous Agent controls and mixed switcher rows
+  in `745792e28e`. Session Switcher rows now visibly distinguish **Agent
+  Session** from **Terminal Session**; the retained Agent toggle says **Agent**
+  rather than Agent Panel, and Session Rail's Agent Tools menu says **Agent
+  Settings**. Product-copy assertions, formatting, identity, and diff checks
+  pass; rendered density and accessibility-tree proof remain deferred.

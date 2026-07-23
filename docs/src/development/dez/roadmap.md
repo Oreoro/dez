@@ -1555,6 +1555,12 @@ code, all launch gates pass, and known limitations are documented.
       Session Rail wording in Dez while preserving official Zed copy. Static
       identity, formatting, and diff checks pass; rendered toast proof remains
       deferred.
+- [x] 2026-07-23: Disambiguate mixed Session Switcher rows and Agent controls.
+      Commit `745792e28e` adds visible **Agent Session** and **Terminal Session**
+      type labels, replaces the inherited Agent Panel tooltip with **Agent**,
+      and names Session Rail's settings destination **Agent Settings**. Pure
+      copy assertions, formatting, identity, and diff checks pass; rendered
+      density and accessibility-tree proof remain deferred.
 - [x] 2026-07-23: Remove remaining terminal-thread language from Dez UI.
       Commit `d1ea4a914f` gives the external-session import flow consistent
       Agent Session, Agent History, count, empty, and completion copy. Commit
