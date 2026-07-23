@@ -87,6 +87,33 @@ const CURSOR_BLINK_INTERVAL: Duration = Duration::from_millis(500);
 const TERMINAL_HOST_RESTORE_ATTEMPTS: usize = 40;
 const TERMINAL_HOST_RESTORE_INTERVAL: Duration = Duration::from_millis(50);
 
+fn terminal_tab_status(
+    session_unavailable: bool,
+    process_exited: bool,
+    task_status: Option<&TaskStatus>,
+) -> &'static str {
+    if session_unavailable {
+        "Unavailable"
+    } else {
+        match task_status {
+            Some(TaskStatus::Running) => "Running",
+            Some(TaskStatus::Unknown) => "Status unknown",
+            Some(TaskStatus::Completed { success: true }) => "Completed",
+            Some(TaskStatus::Completed { success: false }) => "Failed",
+            None if process_exited => "Exited",
+            None => "Active",
+        }
+    }
+}
+
+fn terminal_close_label(is_hosted: bool) -> &'static str {
+    if is_hosted {
+        "Detach Terminal"
+    } else {
+        "Close Terminal Tab"
+    }
+}
+
 /// Event to transmit the scroll from the element to the view
 #[derive(Clone, Debug, PartialEq)]
 pub struct ScrollTerminal(pub i32);
@@ -1014,15 +1041,29 @@ impl TerminalView {
         cx: &mut Context<Self>,
     ) {
         let assistant_enabled = false;
+        let terminal_session_id = self.terminal.read(cx).session_id();
+        let is_hosted =
+            terminal::session_host::LocalTerminalHost::try_global(cx).is_some_and(|host| {
+                host.read(cx)
+                    .session_ref_if_registered(terminal_session_id)
+                    .is_some()
+            });
+        let close_label = terminal_close_label(is_hosted);
         let context_menu = ContextMenu::build(window, cx, |menu, _, _| {
             menu.context(self.focus_handle.clone())
                 .when(self.shows_workspace_actions(), |menu| {
-                    menu.action("New Terminal", Box::new(NewTerminal::default()))
-                        .action(
-                            "New Center Terminal",
-                            Box::new(NewCenterTerminal::default()),
-                        )
-                        .separator()
+                    if paths::APP_NAME == "Zed" {
+                        menu.action("New Terminal", Box::new(NewTerminal::default()))
+                            .action(
+                                "New Center Terminal",
+                                Box::new(NewCenterTerminal::default()),
+                            )
+                            .separator()
+                    } else {
+                        menu.action("New Terminal", Box::new(NewCenterTerminal::default()))
+                            .action("New Terminal Panel", Box::new(NewTerminal::default()))
+                            .separator()
+                    }
                 })
                 .action("Copy", Box::new(Copy))
                 .when(
@@ -1050,7 +1091,7 @@ impl TerminalView {
                 .when(self.shows_workspace_actions(), |menu| {
                     menu.separator()
                         .action(
-                            "Close Terminal Tab",
+                            close_label,
                             Box::new(CloseActiveItem {
                                 save_intent: None,
                                 close_pinned: true,
@@ -1980,11 +2021,22 @@ impl Render for TerminalView {
         let terminal_view_handle = cx.entity();
 
         let focused = self.focus_handle.is_focused(window);
+        let accessibility_title = self.tab_content_text(1, cx);
+        let accessibility_status = {
+            let terminal = self.terminal.read(cx);
+            terminal_tab_status(
+                self.session_unavailable,
+                terminal.process_exited(),
+                terminal.task().map(|task| &task.status),
+            )
+        };
 
         div()
             .id("terminal-view")
             .role(gpui::Role::Group)
-            .aria_label("Terminal session")
+            .aria_label(format!(
+                "{accessibility_title}. {accessibility_status} terminal session"
+            ))
             .size_full()
             .relative()
             .track_focus(&self.focus_handle(cx))
@@ -2103,21 +2155,75 @@ impl Item for TerminalView {
     type Event = ItemEvent;
 
     fn tab_tooltip_content(&self, cx: &App) -> Option<TabTooltipContent> {
-        Some(TabTooltipContent::Custom(Box::new(Tooltip::element({
-            let terminal = self.terminal().read(cx);
-            let title = terminal.title(false);
-            let pid = terminal.pid_getter()?.fallback_pid();
+        let title = self.tab_content_text(1, cx);
+        let session_unavailable = self.session_unavailable;
+        let terminal = self.terminal().read(cx);
+        let session_id = terminal.session_id();
+        let session_ref = terminal::session_host::LocalTerminalHost::try_global(cx)
+            .and_then(|host| host.read(cx).session_ref_if_registered(session_id));
+        let status = terminal_tab_status(
+            session_unavailable,
+            terminal.process_exited(),
+            terminal.task().map(|task| &task.status),
+        );
+        let ownership = if session_ref.is_some() {
+            "Durable Host session"
+        } else if session_unavailable {
+            "Saved Host session"
+        } else {
+            "Workspace terminal"
+        };
+        let working_directory = terminal
+            .working_directory()
+            .map(|path| path.to_string_lossy().into_owned())
+            .map(|path| util::truncate_and_trailoff(&path, 64));
+        let pid = terminal
+            .pid_getter()
+            .map(|pid_getter| pid_getter.fallback_pid().to_string());
+        let session_identity = (session_ref.is_some() || session_unavailable).then(|| {
+            let session_id = session_id.to_string();
+            let short_id = session_id.chars().take(8).collect::<String>();
+            if short_id.len() < session_id.len() {
+                format!("{short_id}…")
+            } else {
+                short_id
+            }
+        });
 
+        Some(TabTooltipContent::Custom(Box::new(Tooltip::element({
             move |_, _| {
                 v_flex()
-                    .gap_1()
+                    .min_w(px(220.))
+                    .max_w(px(420.))
+                    .gap_1p5()
                     .child(Label::new(title.clone()))
                     .child(h_flex().flex_grow_1().child(Divider::horizontal()))
                     .child(
-                        Label::new(format!("Process ID (PID): {}", pid))
+                        Label::new(format!("{status} · {ownership}"))
                             .color(Color::Muted)
                             .size(LabelSize::Small),
                     )
+                    .when_some(working_directory.clone(), |this, working_directory| {
+                        this.child(
+                            Label::new(format!("Folder: {working_directory}"))
+                                .color(Color::Muted)
+                                .size(LabelSize::Small),
+                        )
+                    })
+                    .when_some(pid.clone(), |this, pid| {
+                        this.child(
+                            Label::new(format!("Process: {pid}"))
+                                .color(Color::Muted)
+                                .size(LabelSize::Small),
+                        )
+                    })
+                    .when_some(session_identity.clone(), |this, session_identity| {
+                        this.child(
+                            Label::new(format!("Session: {session_identity}"))
+                                .color(Color::Muted)
+                                .size(LabelSize::Small),
+                        )
+                    })
                     .into_any_element()
             }
         }))))
@@ -3053,6 +3159,30 @@ mod tests {
             }),
             WorkspaceEvidenceLifecycle::Stale
         );
+    }
+
+    #[test]
+    fn terminal_tab_status_prioritizes_actionable_lifecycle_truth() {
+        assert_eq!(
+            terminal_tab_status(true, false, Some(&TaskStatus::Running)),
+            "Unavailable"
+        );
+        assert_eq!(
+            terminal_tab_status(
+                false,
+                false,
+                Some(&TaskStatus::Completed { success: false })
+            ),
+            "Failed"
+        );
+        assert_eq!(
+            terminal_tab_status(false, true, Some(&TaskStatus::Completed { success: true })),
+            "Completed"
+        );
+        assert_eq!(terminal_tab_status(false, true, None), "Exited");
+        assert_eq!(terminal_tab_status(false, false, None), "Active");
+        assert_eq!(terminal_close_label(true), "Detach Terminal");
+        assert_eq!(terminal_close_label(false), "Close Terminal Tab");
     }
 
     fn expected_drop_text(paths: &[PathBuf]) -> String {

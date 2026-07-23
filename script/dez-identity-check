@@ -373,6 +373,21 @@ require_multiline_pattern crates/workspace/src/pane.rs \
 require_multiline_pattern crates/workspace/src/pane.rs \
     'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?"New Terminal Panel"' \
     'the Dez New Item menu does not distinguish center terminals from the legacy panel'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'fn terminal_tab_status.*?"Unavailable".*?"Failed".*?"Exited".*?"Active"' \
+    'terminal tabs do not expose truthful lifecycle state'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'fn terminal_close_label.*?"Detach Terminal".*?"Close Terminal Tab"' \
+    'durable terminal closure is still labeled like local tab disposal'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'accessibility_title = self\.tab_content_text.*?accessibility_status.*?\.aria_label\(format!' \
+    'terminal panes do not expose their identity and lifecycle to assistive technology'
+reject_pattern crates/terminal_view/src/terminal_view.rs \
+    'terminal\.pid_getter\(\)\?' \
+    'durable terminal tab tooltips still disappear when no local PID exists'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?"New Terminal Panel"' \
+    'the terminal context menu does not distinguish center terminals from the legacy panel'
 require_pattern crates/workspace/src/panel_pane.rs \
     '"ProjectPanel" => "Files"' \
     'the Dez file-tree Surface is not labeled Files'
