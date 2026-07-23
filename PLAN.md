@@ -1797,7 +1797,15 @@ Notes decision:
   Terminal is no longer offered as an Agent type in Dez, a remembered
   terminal-thread selection cannot replace **New Agent Session**, and
   Agent-focused compatibility actions dispatch `NewCenterTerminal` instead.
-  Existing restoration code and official Zed behavior remain intact. Focused
+  Compatibility action IDs and official Zed behavior remain intact. Focused
   source assertions, formatting, locked offline metadata, identity, and diff
   checks pass; compilation and rendered selector/shortcut proof remain
   deferred.
+- 2026-07-23: Made the upgrade boundary truthful in `16d1bd16b8` and
+  `d1f5b2a15a`. Dez now projects stored terminal metadata only when a real live
+  Agent terminal or Host Session backs it; Host-backed records attach in the
+  main work area, stale metadata cannot shadow live center/Host terminals, and
+  the retired Agent-terminal surface no longer auto-restores or appears in the
+  Command Palette. Official Zed retains its compatibility behavior. Focused
+  assertions, formatting, locked offline metadata, identity, and diff checks
+  pass; compilation and rendered upgrade proof remain deferred.

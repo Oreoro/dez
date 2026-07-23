@@ -1531,11 +1531,21 @@ code, all launch gates pass, and known limitations are documented.
       `263553d036` hides Terminal from the Agent selector, prevents a remembered
       terminal-thread kind from replacing **New Agent Session**, and routes
       both Workspace- and Agent-focused `NewTerminalThread` compatibility
-      actions to `NewCenterTerminal`. Existing restoration code remains
-      available for compatibility data, and official Zed behavior is
-      unchanged. Focused source assertions, static guards, formatting, locked
-      offline metadata, and diff checks pass; compilation and rendered
-      selector/shortcut proof remain deferred.
+      actions to `NewCenterTerminal`. Compatibility action IDs remain, and
+      official Zed behavior is unchanged. Focused source assertions, static
+      guards, formatting, locked offline metadata, and diff checks pass;
+      compilation and rendered selector/shortcut proof remain deferred.
+- [x] 2026-07-23: Make legacy terminal reconciliation truthful in Dez. Commit
+      `16d1bd16b8` projects stored terminal metadata only when a live
+      Agent-terminal entity or real Host Session backs it; Host-backed records
+      route to a normal main-area terminal, and stale metadata no longer
+      shadows a real center/Host terminal or appears resumable. Commit
+      `d1f5b2a15a` also prevents Dez from automatically restoring the retired
+      Agent-terminal surface and removes its compatibility command from the
+      Dez palette while preserving both behaviors in official Zed. Focused
+      source assertions, static guards, formatting, locked offline metadata,
+      and diff checks pass; compilation and rendered upgrade proof remain
+      deferred.
 - [x] 2026-07-23: Confirm permanent Agent Session deletion. Commit
       `9615b513d4` routes both the archived-row trash control and keyboard
       remove action through one critical prompt. The prompt names the selected

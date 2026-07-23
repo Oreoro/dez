@@ -1110,7 +1110,12 @@ the later running-app reports, the source advanced through:
   terminal-thread path; and
 - `263553d036`, which removes terminal creation from the Dez Agent selector and
   routes Agent-focused terminal compatibility actions to the same main-area
-  terminal command while preserving official Zed behavior.
+  terminal command while preserving official Zed behavior; and
+- `16d1bd16b8`, which hides stale legacy Agent-terminal metadata, routes
+  Host-backed records to main-area attachment, and prevents stale metadata from
+  shadowing live center or Host Sessions; plus `d1f5b2a15a`, which disables
+  retired Agent-terminal auto-restoration and its command-palette action in Dez
+  while preserving official Zed compatibility.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
