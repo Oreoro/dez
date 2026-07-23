@@ -615,8 +615,13 @@ with new labels.
       redaction, adapter trust, and experimental-host limitations. Evidence
       settings now distinguish local process detection, authenticated
       structured evidence, metadata-only restart restoration, and explicitly
-      state that Dez never installs hooks or edits provider configuration; the
-      complete retention/redaction audit remains open.
+      state that Dez never installs hooks or edits provider configuration.
+      Commit `b39eedf724` redacts obvious secret-bearing environment assignments
+      before bounded command evidence enters Host retention and corrects the
+      settings contract: the metadata database stores identity/attention rather
+      than transcripts or structured activity, which returns only from the same
+      live Host Session. Broader command-shape and file-path redaction remain
+      open.
 - [ ] Audit focus order, accessible roles/names/descriptions, key shortcuts,
       minimum hit targets, screen-reader announcements, zoom, reduced motion,
       contrast, truncation, and localization-resistant layouts. Shared Session
@@ -1345,3 +1350,10 @@ Notes decision:
   **partial**, and explains the limitation in Review Brief risks. A focused
   40-event Host lifecycle assertion and identity guards pass; actual helper
   process/GUI restart and rendered review proof remain deferred.
+- 2026-07-23: Hardened retained terminal evidence and its settings contract in
+  `b39eedf724`. Secret-looking environment assignments are redacted before
+  command evidence is bounded or retained. Evidence settings now describe
+  local lifecycle observation, authenticated adapters, the no-transcript
+  boundary, independent identity/attention metadata, and Host-owned structured
+  activity. Focused redaction and identity assertions pass; compiled hook flow
+  and broader redaction audit remain deferred.
