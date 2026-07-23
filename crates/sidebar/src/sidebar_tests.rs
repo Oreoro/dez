@@ -121,6 +121,16 @@ fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
 }
 
 #[test]
+fn active_workspace_keeps_its_new_terminal_action_discoverable() {
+    assert!(workspace_new_terminal_action_persistent(true, false));
+    assert!(workspace_new_terminal_action_persistent(false, true));
+    assert!(
+        !workspace_new_terminal_action_persistent(false, false),
+        "inactive Workspace actions may stay hover-revealed to protect row hierarchy"
+    );
+}
+
+#[test]
 fn historical_branch_fallback_never_guesses_across_workspaces() {
     let path = PathBuf::from("/shared/worktree");
     let mut branches = HashMap::new();

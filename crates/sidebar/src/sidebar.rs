@@ -350,6 +350,10 @@ fn session_overview_create_action_visible(session_count: usize) -> bool {
     session_count > 0
 }
 
+fn workspace_new_terminal_action_persistent(is_active: bool, is_menu_open: bool) -> bool {
+    is_active || is_menu_open
+}
+
 fn workspace_header_accessibility_label(
     workspace_name: &str,
     has_sessions: bool,
@@ -4747,7 +4751,14 @@ impl Sidebar {
                     .gap(px(1.0))
                     .pr(header_padding_right)
                     .children(opaque_window.then(|| gradient_overlay()))
-                    .child(self.render_new_session_button(ix, id_prefix, key, &group_name, cx))
+                    .child(self.render_new_session_button(
+                        ix,
+                        id_prefix,
+                        key,
+                        &group_name,
+                        is_active,
+                        cx,
+                    ))
                     .child(self.render_project_header_ellipsis_menu(
                         ix,
                         id_prefix,
@@ -4863,6 +4874,7 @@ impl Sidebar {
         id_prefix: &str,
         key: &ProjectGroupKey,
         group_name: &SharedString,
+        is_active: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let focus_handle = self.focus_handle.clone();
@@ -4876,13 +4888,19 @@ impl Sidebar {
 
         let button = IconButton::new(
             SharedString::from(format!("{id_prefix}workspace-new-session-{ix}")),
-            IconName::Plus,
+            IconName::Terminal,
         )
         .size(ButtonSize::Medium)
         .selected_style(ButtonStyle::Tinted(TintColor::Accent))
         .icon_size(IconSize::Small)
-        .aria_label("New Terminal")
-        .when(!is_menu_open, |this| this.visible_on_hover(group_name));
+        .aria_label(SharedString::from(format!(
+            "New Terminal in {}",
+            group_name.as_ref()
+        )))
+        .when(
+            !workspace_new_terminal_action_persistent(is_active, is_menu_open),
+            |this| this.visible_on_hover(group_name),
+        );
 
         let open_workspaces = self
             .multi_workspace
