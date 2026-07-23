@@ -235,7 +235,12 @@ restoration; opening or closing a viewport does not change durable ownership.
       mutate authoritative evidence.
 - [ ] Scope file tree, search, Git, diagnostics, tasks, debugger, terminals,
       environment, and settings to Workspace evidence and explicit tool-local
-      selection.
+      selection. Pending Workspaces now receive distinct stable evidence
+      namespaces even when they show the same path. Detached terminal snapshots
+      carry an additive durable Workspace ID; TerminalView associates both the
+      in-process and helper Host Session, and Session Rail resolves that owner
+      before conservative cwd fallback. The broader tool-by-tool scope audit
+      remains.
 - [ ] Move eligible panel-only tools into ordinary pane Surfaces while keeping
       familiar toggles and dock layouts.
 - [ ] Prove Surfaces can move across panes and Workspaces without global root,
@@ -1139,3 +1144,15 @@ Notes decision:
   review consumers retain immutable record access but cannot attach roots or
   invent selections through the evidence model. Formatting, diff, and identity
   checks pass. No bundle was built or launched.
+- 2026-07-23: Isolated provisional Workspace evidence identity in
+  `af232402f5`. Each not-yet-persisted Workspace now owns a stable UUID-backed
+  evidence namespace, so two Workspace views of the same path cannot emit
+  colliding record IDs. A focused same-path isolation test is authored;
+  formatting, diff, and identity checks pass. No bundle was built or launched.
+- 2026-07-23: Bound retained terminal Sessions to durable Workspace ownership
+  in `a4047d95c0`. Host snapshots carry an additive optional Workspace ID;
+  TerminalView associates in-process and helper Sessions, and Session Rail
+  prefers that exact owner over cwd prefix matching. Older snapshots default
+  to unknown ownership and retain the conservative fallback. Model,
+  compatibility, and integrated same-cwd/two-Workspace tests are authored;
+  formatting, diff, and identity checks pass. No bundle was built or launched.

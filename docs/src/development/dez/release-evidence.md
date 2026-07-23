@@ -41,6 +41,8 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Terminal restore evidence reconciliation source: `0e6507756e`
 - Live hosted-terminal evidence lifecycle source: `ea2bb18453`
 - Workspace evidence mutation boundary source: `0f8740b1a1`
+- Pending Workspace evidence isolation source: `af232402f5`
+- Durable terminal Workspace ownership source: `a4047d95c0`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -399,6 +401,20 @@ terminal scope, or invent user selections directly. Formatting, diff, and
 identity checks pass; this is a source ownership gate rather than a runtime
 claim.
 
+Commit `af232402f5` replaces the shared provisional `workspace:pending`
+evidence prefix with a stable UUID-backed namespace per Workspace EvidenceSet.
+Two not-yet-persisted Workspaces showing the same path therefore cannot emit
+colliding evidence record IDs. A focused same-path model test is authored;
+formatting, diff, and identity checks pass.
+
+Commit `a4047d95c0` adds an optional durable Workspace ID to terminal Host
+snapshots and metadata updates. TerminalView associates both in-process and
+helper-owned Sessions after they enter a durable Workspace; Session Rail
+prefers the exact owner before cwd matching. Older snapshots deserialize with
+no owner and retain the conservative fallback. Host-model, compatibility, and
+integrated two-Workspace/same-cwd resolution tests are authored. Formatting,
+diff, and identity checks pass; compiled detach/reattach proof remains open.
+
 The corrected `Dez Dev.app` is now registered and launched as launchd child PID
 `85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 `lsof` resolves its text executable to
@@ -414,9 +430,9 @@ Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`,
 `4fc53b860f`, `8bcd11f4b6`, `ad59a60926`, `a20074de26`, `2435348289`, and
 `f89f55868c`, `f40877d4ab`, `526218a972`, `bb0cf408b4`, `a8ce563373`,
-`e101b63e43`, `f535c5e6ae`, `0e6507756e`, `ea2bb18453`, and `0f8740b1a1` are
-newer than that running bundle. The first passes all nine focused Session
-tests, including duplicate viewport
+`e101b63e43`, `f535c5e6ae`, `0e6507756e`, `ea2bb18453`, `0f8740b1a1`,
+`af232402f5`, and `a4047d95c0` are newer than that running bundle. The first
+passes all nine focused Session tests, including duplicate viewport
 replacement without reordering or membership loss. The second makes Project
 ready terminal-first, prevents New Window and startup fallback paths from
 covering Dez's actionable launch surface with an unsolicited blank editor, and
@@ -632,7 +648,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `0f8740b1a1` or
+visual evidence: the exact bundle must first be rebuilt from `a4047d95c0` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -648,7 +664,7 @@ predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`,
 `4fc53b860f`, `8bcd11f4b6`, `ad59a60926`, `a20074de26`, `2435348289`,
 `f89f55868c`, `f40877d4ab`, `526218a972`, `bb0cf408b4`, `a8ce563373`,
-`e101b63e43`, `f535c5e6ae`, `0e6507756e`, `ea2bb18453`, and `0f8740b1a1`. A
-rebuild/re-audit and an unlocked
+`e101b63e43`, `f535c5e6ae`, `0e6507756e`, `ea2bb18453`, `0f8740b1a1`,
+`af232402f5`, and `a4047d95c0`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.

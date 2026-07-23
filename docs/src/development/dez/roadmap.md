@@ -563,6 +563,19 @@ code, all launch gates pass, and known limitations are documented.
       conversation, and review code can read records but cannot attach roots or
       invent explicit choices merely by existing. Formatting, diff, and
       identity checks pass.
+- [x] 2026-07-23: Isolate provisional Workspace evidence identity. Commit
+      `af232402f5` replaces the shared `workspace:pending` prefix with one
+      stable UUID-backed namespace per EvidenceSet. Same-path provisional
+      Workspaces therefore cannot collide in downstream identity maps. A
+      focused isolation test is authored; formatting, diff, and identity checks
+      pass.
+- [x] 2026-07-23: Bind retained terminal Sessions to durable Workspace
+      ownership. Commit `a4047d95c0` adds an optional backward-compatible
+      Workspace ID to Host snapshots, associates both in-process and helper
+      Sessions from TerminalView, and makes Session Rail prefer exact ownership
+      over cwd prefix inference. Compatibility, Host-model, and integrated
+      same-cwd/two-Workspace tests are authored; compiled detach/reattach proof
+      remains in the consolidated gate.
 - [x] 2026-07-22: Feed live terminal cwd changes into Workspace evidence. Each
       record carries stable terminal-Session provenance, root refreshes preserve
       it, and Run Briefs include only cwd evidence owned by their terminal so
@@ -917,6 +930,12 @@ code, all launch gates pass, and known limitations are documented.
       `0f8740b1a1` keeps immutable evidence projection public while root,
       open-file, terminal, and selection mutation stays inside the Workspace
       crate. Formatting, diff, and identity checks pass.
+- [x] 2026-07-23: Prevent provisional evidence and detached Session identity
+      leakage across Workspaces. Commits `af232402f5` and `a4047d95c0` give
+      pending evidence sets distinct stable namespaces and retained Host
+      Sessions an optional durable Workspace owner, with legacy cwd fallback
+      only when ownership is absent. Focused tests are authored; compiled
+      runtime proof remains deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
