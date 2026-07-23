@@ -217,6 +217,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_pattern crates/sidebar/src/sidebar.rs \
     '\.actor_label\("Terminal Session"\)' \
     'plain terminal rows can regress to an ambiguous Terminal actor label'
+require_multiline_pattern crates/agent_ui/src/terminal_thread_metadata_store.rs \
+    'fn compose_terminal_thread_title.*?match terminal_title\.trim\(\).*?SharedString::new_static\("Terminal"\)' \
+    'a terminal with an empty PTY title can regress to a blank Session Rail row'
 require_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\("Ready for a session"\)' \
     'empty Workspace groups regress to repeated absence copy'

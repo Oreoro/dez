@@ -247,7 +247,10 @@ pub(crate) fn compose_terminal_thread_title(
     custom_title: Option<&str>,
 ) -> SharedString {
     let Some(custom_title) = custom_title.filter(|title| !title.trim().is_empty()) else {
-        return SharedString::from(terminal_title.to_string());
+        return match terminal_title.trim() {
+            "" => SharedString::new_static("Terminal"),
+            _ => SharedString::from(terminal_title.to_string()),
+        };
     };
 
     if let Some(prefix) = terminal_title_prefix(terminal_title) {
@@ -1082,6 +1085,21 @@ mod tests {
 
         metadata.title = "Thinking".into();
         assert_eq!(metadata.display_title().as_ref(), "Fix bug");
+    }
+
+    #[test]
+    fn test_terminal_thread_display_title_never_renders_a_blank_row() {
+        let worktree_paths = WorktreePaths::from_folder_paths(&PathList::default());
+        assert_eq!(
+            metadata("", worktree_paths.clone())
+                .display_title()
+                .as_ref(),
+            "Terminal"
+        );
+        assert_eq!(
+            metadata("   ", worktree_paths).display_title().as_ref(),
+            "Terminal"
+        );
     }
 
     #[test]
