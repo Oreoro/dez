@@ -362,7 +362,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     '"Agent Profiles".*?agent_session_label\([[:space:]]*APP_NAME,[[:space:]]*"Open Settings",[[:space:]]*"Agent Settings".*?"Toggle Sidebar".*?"Hide Session Rail"' \
     'the Session Rail Agent Tools menu can regress to ambiguous Settings or Sidebar destinations'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
-    '"agent::RenameSelectedThread".*?"agent::RenameSelectedAgentSession".*?"sidebar::NewThreadInGroup".*?"session_rail::NewAgentSessionInWorkspace".*?"sidebar::ToggleThreadHistory".*?"session_rail::ToggleAgentHistory"' \
+    '"agent::RenameSelectedThread".*?"agent::RenameSelectedAgentSession".*?"sidebar::NewThreadInGroup".*?"session_rail::NewAgentSessionInWorkspace".*?"sidebar::ToggleThreadSwitcher".*?"session_rail::SwitchSessions".*?"sidebar::ToggleThreadHistory".*?"session_rail::ToggleAgentHistory"' \
     'the Dez Command Palette can regress to Thread terminology for Agent Sessions'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
     '"agent::ArchiveSelectedThread".*?"session_rail::RemoveSelectedSession"' \

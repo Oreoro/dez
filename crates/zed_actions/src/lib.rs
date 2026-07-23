@@ -894,7 +894,7 @@ pub mod sidebar {
     use schemars::JsonSchema;
     use serde::Deserialize;
 
-    /// Toggles the thread switcher popup when the sidebar is focused.
+    /// Opens the Session Switcher or cycles its current selection.
     #[derive(PartialEq, Clone, Deserialize, JsonSchema, Default, Action)]
     #[action(namespace = sidebar)]
     #[serde(deny_unknown_fields)]

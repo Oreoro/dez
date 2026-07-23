@@ -950,6 +950,7 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
         "sidebar::NewThreadInGroup" => {
             return "session_rail::NewAgentSessionInWorkspace".to_owned();
         }
+        "sidebar::ToggleThreadSwitcher" => return "session_rail::SwitchSessions".to_owned(),
         "sidebar::ToggleThreadHistory" => return "session_rail::ToggleAgentHistory".to_owned(),
         "zed_actions::OpenProjectSettings" => return "workspace::OpenSettings".to_owned(),
         "zed::OpenProjectSettingsFile" => return "workspace::OpenSettingsFile".to_owned(),
@@ -1138,6 +1139,10 @@ mod tests {
         assert_eq!(
             humanize_action_name_for_product("sidebar::ToggleThreadHistory", "Dez"),
             "session rail: toggle agent history"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::ToggleThreadSwitcher", "Dez"),
+            "session rail: switch sessions"
         );
         assert_eq!(
             humanize_action_name_for_product("agent::ArchiveSelectedThread", "Dez"),
