@@ -491,3 +491,9 @@ defer it.
   accessible name, tooltip, and nearby explanatory copy retain the full
   destination. Agent-owned terminal language must not return to Workspace
   terminal creation.
+- **2026-07-23: Settings describe visible regions, not compatibility
+  containers.** Files, Outline, and Git are Workspace Tools; Agent is a
+  dedicated region; terminals are Main Work Area Surfaces. Internal panel keys
+  remain compatible with upstream storage and APIs, but Dez does not expose
+  dock position or dock-only sizing controls while legacy docks are hidden.
+  Settings keep only controls whose effect is reachable in the public shell.

@@ -2157,3 +2157,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   terminal path. A source assertion and identity guard preserve that contract.
   Formatting, Bash syntax, identity, locked offline metadata, and diff checks
   pass; no build, test binary, or visual launch was performed.
+- 2026-07-23: Replaced the remaining inherited Panels hierarchy in Dez Settings
+  with **Workspace Tools & Agent** in `2877de2c3a`. Files, Outline, and Git are
+  presented as Workspace Tool surfaces; Agent is presented as its own region;
+  Agent font controls are **Agent Typography**. Functional content and
+  Workspace-status controls remain available, while dock position,
+  dock-specific sizing, and flexible-dock controls are hidden because Dez does
+  not expose legacy docks. Official Zed retains every upstream label and
+  setting. A pure visibility test and identity guards preserve both product
+  branches. Formatting, Bash syntax, identity, locked offline metadata, and
+  diff checks pass; no build, test binary, or visual launch was performed.

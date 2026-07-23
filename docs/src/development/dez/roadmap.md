@@ -2278,6 +2278,20 @@ Completed for the global Session Rail terminal-destination slice:
 - locked offline Cargo metadata and `git diff --check`;
 - no Rust compile, test, alternate binary launch, or live interaction claim.
 
+Completed for the Workspace Tools and Agent Settings slice:
+
+- renamed Dez's inherited **Panels** page to **Workspace Tools & Agent**;
+- presented Files, Outline, and Git as Workspace Tool surfaces and Agent as its
+  dedicated region without changing compatible internal setting keys;
+- retained live content, status-control, and Agent readability settings;
+- filtered dock position, dock-only dimensions, and flexible-dock sizing from
+  Dez while preserving the complete upstream page in official Zed;
+- added a pure product-branch visibility test and static identity guards;
+- `cargo fmt --all -- --check`;
+- Bash syntax and `./script/dez-identity-check`;
+- locked offline Cargo metadata and `git diff --check`;
+- no Rust compile, test, alternate binary launch, or live interaction claim.
+
 Completed for the first helper-process source slice:
 
 - new crate instructions and a rollbackable `dez_terminal_host` workspace
