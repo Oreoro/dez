@@ -648,7 +648,9 @@ with new labels.
       `cc2509e8b8` closes the matching presentation leak: legacy Zed/Mercury edit
       prediction selections normalize to unavailable in Dez, their status and
       setup controls disappear, and explicit local or user-configured providers
-      remain available.
+      remain available. Commit `b909b31d45` closes a later command-palette
+      override that could re-enable Zed Predict onboarding and prediction
+      actions after the product filter ran.
 - [ ] Audit focus order, accessible roles/names/descriptions, key shortcuts,
       minimum hit targets, screen-reader announcements, zoom, reduced motion,
       contrast, truncation, and localization-resistant layouts. Shared Session
@@ -1493,3 +1495,10 @@ Notes decision:
   Copilot, Codestral, Ollama, and compatible API paths remain intact. Focused
   source assertions and identity guards pass; Settings/status rendering remains
   consolidated.
+- 2026-07-23: Prevented the Agent UI from restoring upstream prediction
+  commands in `b909b31d45`. Dez now keeps the Zed Predict onboarding namespace
+  and action hidden after every Agent/settings filter refresh, and stale
+  Zed/Mercury providers behave like no provider when deciding whether edit
+  prediction commands exist. Explicit supported providers and official Zed are
+  unchanged. Focused source assertions and identity guards pass; rendered
+  command-palette proof remains consolidated.

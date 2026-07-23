@@ -1159,6 +1159,12 @@ code, all launch gates pass, and known limitations are documented.
       preserving official Zed and explicit local/user-configured providers.
       Focused source and identity checks pass; rendered Settings/status proof
       remains consolidated.
+- [x] 2026-07-23: Keep upstream prediction commands hidden after Agent UI
+      refreshes. Commit `b909b31d45` prevents the later Agent filter from
+      restoring Zed Predict onboarding in Dez and treats legacy Zed/Mercury
+      selections as unavailable when filtering prediction actions. Supported
+      explicit providers and official Zed remain unchanged. Source and identity
+      checks pass; rendered command-palette proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the
