@@ -110,33 +110,6 @@ fn canvas_contrast_label(contrast: settings::CanvasContrast) -> &'static str {
     }
 }
 
-fn canvas_label_visibility_label(visibility: settings::CanvasLabelVisibility) -> &'static str {
-    match visibility {
-        settings::CanvasLabelVisibility::Hidden => "labels hidden",
-        settings::CanvasLabelVisibility::Contextual => "contextual labels",
-        settings::CanvasLabelVisibility::Always => "labels always visible",
-    }
-}
-
-fn canvas_panel_surface_label(pane_grid_settings: &PaneGridSettings) -> String {
-    let surface = match pane_grid_settings.panel_surface {
-        settings::CanvasPanelSurface::Dock => "legacy docks",
-        settings::CanvasPanelSurface::PaneTab => "pane tabs",
-    };
-    let legacy_docks = if pane_grid_settings.show_legacy_docks {
-        "legacy docks visible"
-    } else {
-        "legacy docks hidden"
-    };
-    let draggable_tabs = if pane_grid_settings.draggable_panel_tabs {
-        "draggable tabs"
-    } else {
-        "fixed tabs"
-    };
-
-    format!("Panel hosting: {surface} · {legacy_docks} · {draggable_tabs}")
-}
-
 actions!(
     collab,
     [
@@ -1936,23 +1909,12 @@ impl SidebarChrome {
                 let is_editor = matches!(current_layout, WindowLayout::Editor(_));
                 let is_agent = matches!(current_layout, WindowLayout::Agent(_));
                 let is_custom = matches!(current_layout, WindowLayout::Custom(_));
-                let design_system = DesignSystemSettings::get_global(cx);
                 let pane_grid_settings = PaneGridSettings::get_global(cx);
                 let layout_menu_label = if pane_grid_settings.panels_as_pane_tabs() {
                     "Canvas Layout"
                 } else {
                     "Panel Layout"
                 };
-                let canvas_design_system_label = format!(
-                    "Canvas UI: {} · {} · {} · {} · {}",
-                    design_system.family,
-                    canvas_density_label(design_system.density),
-                    canvas_radius_label(design_system.radius),
-                    canvas_contrast_label(design_system.contrast),
-                    canvas_label_visibility_label(design_system.show_labels),
-                );
-                let canvas_panel_surface_status_label =
-                    canvas_panel_surface_label(&pane_grid_settings);
                 let (
                     active_canvas_layout_recipe,
                     canvas_layout_history_len,
@@ -1965,7 +1927,18 @@ impl SidebarChrome {
                     saved_canvas_layout_slot_3_label,
                     saved_canvas_named_layouts,
                 ) = workspace.upgrade().map_or(
-                    (None, 0, false, false, false, 0, None, None, None, Vec::new()),
+                    (
+                        None,
+                        0,
+                        false,
+                        false,
+                        false,
+                        0,
+                        None,
+                        None,
+                        None,
+                        Vec::new(),
+                    ),
                     |workspace| {
                         let workspace = workspace.read(cx);
                         (
@@ -1991,16 +1964,6 @@ impl SidebarChrome {
                 let active_canvas_layout_recipe =
                     is_agent.then_some(active_canvas_layout_recipe).flatten();
                 let has_previous_canvas_layout = canvas_layout_history_len > 0;
-                let canvas_layout_history_label = if canvas_layout_history_len == 1 {
-                    "Layout History: 1 snapshot".to_string()
-                } else {
-                    format!("Layout History: {canvas_layout_history_len} snapshots")
-                };
-                let saved_canvas_layout_label = if saved_canvas_layout_count == 1 {
-                    "Saved Layouts: 1 saved layout".to_string()
-                } else {
-                    format!("Saved Layouts: {saved_canvas_layout_count} saved layouts")
-                };
                 let restore_saved_canvas_layout_slot_1_label = saved_canvas_layout_slot_1_label
                     .map_or_else(
                         || "Restore Canvas Layout: Slot 1".to_string(),
@@ -2016,42 +1979,6 @@ impl SidebarChrome {
                         || "Restore Canvas Layout: Slot 3".to_string(),
                         |label| format!("Restore Canvas Layout: Slot 3 — {label}"),
                     );
-                let multiplexer_hint = {
-                    let multiplexer_settings = MultiplexerSettings::get_global(cx);
-                    multiplexer_settings.prefix_mode.then(|| {
-                        let confirmation = match multiplexer_settings.broadcast_confirmation {
-                            settings::BroadcastConfirmation::Always => "always",
-                            settings::BroadcastConfirmation::Risky => "risky",
-                            settings::BroadcastConfirmation::Never => "never",
-                        };
-                        let prefix = multiplexer_settings.prefix.clone();
-                        let timeout = multiplexer_settings.prefix_timeout.map_or_else(
-                            || "off".to_string(),
-                            |timeout| format!("{}ms", timeout.as_millis()),
-                        );
-                        vec![
-                            format!(
-                                "Prefix mode: {prefix} · timeout: {timeout} · broadcast confirmation: {confirmation}"
-                            ),
-                            format!("Prefix commands: {prefix} space · Cycle Layout"),
-                            format!("Prefix commands: {prefix} a · Agent Control"),
-                            format!("Prefix commands: {prefix} f · Focus Editor"),
-                            format!("Prefix commands: {prefix} m · Four-Agent Matrix"),
-                            format!("Prefix commands: {prefix} s/r/p · Save, Restore, Previous"),
-                            format!("Prefix commands: {prefix} 1/2/3 · Restore saved slots"),
-                            format!("Prefix commands: {prefix} shift-1/2/3 · Save slots"),
-                            format!(
-                                "Prefix commands: {prefix} n m/s/1/2/3 · Manage, Save as, Rename slots"
-                            ),
-                            format!("Prefix commands: {prefix} arrows · Focus adjacent panes"),
-                            format!("Prefix commands: {prefix} shift-arrows · Swap adjacent panes"),
-                            format!("Prefix commands: {prefix} alt-arrows · Move pane to edge"),
-                            format!("Prefix commands: {prefix} v/enter · Split right, Split down"),
-                            format!("Prefix commands: {prefix} h/j/k/l/= · Resize, Equalize"),
-                            format!("Prefix commands: {prefix} {prefix} · Send prefix"),
-                        ]
-                    })
-                };
 
                 ContextMenu::build(window, cx, |menu, _, _cx| {
                     menu.when(is_signed_in, |this| {
@@ -2184,7 +2111,7 @@ impl SidebarChrome {
                                 )
                                 .separator()
                                 .toggleable_entry(
-                                    "Canvas: Full",
+                                    "Full",
                                     active_canvas_layout_recipe == Some("full"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasFullLayout.boxed_clone()),
@@ -2196,7 +2123,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Agent Control",
+                                    "Agent Control",
                                     active_canvas_layout_recipe == Some("agent_control"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasAgentControlLayout.boxed_clone()),
@@ -2208,7 +2135,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Focus Editor",
+                                    "Focus Editor",
                                     active_canvas_layout_recipe == Some("editor_focus"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasEditorFocusLayout.boxed_clone()),
@@ -2220,7 +2147,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Even Columns",
+                                    "Even Columns",
                                     active_canvas_layout_recipe == Some("even_columns"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasEvenColumnsLayout.boxed_clone()),
@@ -2232,7 +2159,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Even Rows",
+                                    "Even Rows",
                                     active_canvas_layout_recipe == Some("even_rows"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasEvenRowsLayout.boxed_clone()),
@@ -2244,7 +2171,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Main + Stack",
+                                    "Main + Stack",
                                     active_canvas_layout_recipe == Some("main_stack"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasMainStackLayout.boxed_clone()),
@@ -2256,7 +2183,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Main Top",
+                                    "Main Top",
                                     active_canvas_layout_recipe == Some("main_top"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasMainTopLayout.boxed_clone()),
@@ -2268,7 +2195,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Golden Split",
+                                    "Golden Split",
                                     active_canvas_layout_recipe == Some("golden_split"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasGoldenSplitLayout.boxed_clone()),
@@ -2280,7 +2207,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Code, Run, Observe",
+                                    "Code, Run, Observe",
                                     active_canvas_layout_recipe == Some("code_run_observe"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasCodeRunObserveLayout.boxed_clone()),
@@ -2292,7 +2219,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Review",
+                                    "Review",
                                     active_canvas_layout_recipe == Some("review"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasReviewLayout.boxed_clone()),
@@ -2304,7 +2231,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Debug",
+                                    "Debug",
                                     active_canvas_layout_recipe == Some("debug"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasDebugLayout.boxed_clone()),
@@ -2316,7 +2243,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Documentation Studio",
+                                    "Documentation Studio",
                                     active_canvas_layout_recipe == Some("documentation_studio"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasDocumentationStudioLayout.boxed_clone()),
@@ -2328,7 +2255,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Browser Development",
+                                    "Browser Development",
                                     active_canvas_layout_recipe == Some("browser_development"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasBrowserDevelopmentLayout.boxed_clone()),
@@ -2340,7 +2267,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Agent Operations Center",
+                                    "Agent Operations Center",
                                     active_canvas_layout_recipe == Some("agent_operations"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasAgentOperationsLayout.boxed_clone()),
@@ -2352,7 +2279,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Four-Agent Matrix",
+                                    "Four-Agent Matrix",
                                     active_canvas_layout_recipe == Some("four_agent_matrix"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasFourAgentMatrixLayout.boxed_clone()),
@@ -2364,7 +2291,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Six-Agent Supervisor",
+                                    "Six-Agent Supervisor",
                                     active_canvas_layout_recipe == Some("six_agent_supervisor"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasSixAgentSupervisorLayout.boxed_clone()),
@@ -2376,7 +2303,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Worktree Matrix",
+                                    "Worktree Matrix",
                                     active_canvas_layout_recipe == Some("worktree_matrix"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasWorktreeMatrixLayout.boxed_clone()),
@@ -2388,7 +2315,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Remote Operations",
+                                    "Remote Operations",
                                     active_canvas_layout_recipe == Some("remote_operations"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasRemoteOperationsLayout.boxed_clone()),
@@ -2400,7 +2327,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Pair Programming",
+                                    "Pair Programming",
                                     active_canvas_layout_recipe == Some("pair_programming"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasPairProgrammingLayout.boxed_clone()),
@@ -2412,7 +2339,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Incident Response",
+                                    "Incident Response",
                                     active_canvas_layout_recipe == Some("incident_response"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasIncidentResponseLayout.boxed_clone()),
@@ -2424,7 +2351,7 @@ impl SidebarChrome {
                                     },
                                 )
                                 .toggleable_entry(
-                                    "Canvas: Portrait Display",
+                                    "Portrait Display",
                                     active_canvas_layout_recipe == Some("portrait_display"),
                                     IconPosition::Start,
                                     Some(ApplyCanvasPortraitDisplayLayout.boxed_clone()),
@@ -2583,10 +2510,8 @@ impl SidebarChrome {
                                             )
                                             .action_checked_with_disabled(
                                                 format!("Rename Saved Canvas Layout — {label}"),
-                                                RenameSavedCanvasLayoutNamed {
-                                                    name: name.clone(),
-                                                }
-                                                .boxed_clone(),
+                                                RenameSavedCanvasLayoutNamed { name: name.clone() }
+                                                    .boxed_clone(),
                                                 false,
                                                 false,
                                             )
@@ -2614,36 +2539,6 @@ impl SidebarChrome {
                                     false,
                                     !has_previous_canvas_layout,
                                 )
-                                .when(is_agent, |menu| {
-                                    menu.item(
-                                        ContextMenuEntry::new(canvas_layout_history_label.clone())
-                                            .disabled(true),
-                                    )
-                                })
-                                .when(is_agent, |menu| {
-                                    menu.item(
-                                        ContextMenuEntry::new(saved_canvas_layout_label.clone())
-                                            .disabled(true),
-                                    )
-                                })
-                                .item(
-                                    ContextMenuEntry::new(canvas_design_system_label.clone())
-                                        .disabled(true),
-                                )
-                                .item(
-                                    ContextMenuEntry::new(
-                                        canvas_panel_surface_status_label.clone(),
-                                    )
-                                    .disabled(true),
-                                )
-                                .when_some(multiplexer_hint.clone(), |menu, hints| {
-                                    let mut menu = menu.separator();
-                                    for hint in hints {
-                                        menu =
-                                            menu.item(ContextMenuEntry::new(hint).disabled(true));
-                                    }
-                                    menu
-                                })
                                 .when(is_agent && active_canvas_layout_recipe.is_none(), |menu| {
                                     menu.item(
                                         ContextMenuEntry::new("Custom Canvas Layout")
