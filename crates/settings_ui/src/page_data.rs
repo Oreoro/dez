@@ -101,6 +101,10 @@ fn dez_privacy_setting_visible(app_name: &str, json_path: Option<&str>) -> bool 
         )
 }
 
+fn auto_update_setting_visible(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 fn developer_page(cx: &App) -> SettingsPage {
     use feature_flags::FeatureFlagAppExt as _;
 
@@ -516,8 +520,12 @@ fn general_page(cx: &App) -> SettingsPage {
         .collect()
     }
 
-    fn auto_update_section() -> [SettingsPageItem; 2] {
-        [
+    fn auto_update_section() -> Vec<SettingsPageItem> {
+        if !auto_update_setting_visible(paths::APP_NAME) {
+            return Vec::new();
+        }
+
+        vec![
             SettingsPageItem::SectionHeader("Auto Update"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Auto Update",
@@ -11115,6 +11123,8 @@ mod tests {
             "Zed",
             Some("telemetry.metrics")
         ));
+        assert!(!auto_update_setting_visible("Dez"));
+        assert!(auto_update_setting_visible("Zed"));
     }
 
     #[test]
