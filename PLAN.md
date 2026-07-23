@@ -2031,3 +2031,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   assertions and the identity gate prevent that implementation detail from
   returning. Formatting, locked offline metadata, Bash syntax, identity, and
   diff checks pass; no build, test binary, or visual launch was performed.
+- 2026-07-23: Made pane chrome follow the product's three-region model in
+  `1c87220109`. Editor and terminal Surfaces now expose **Main work area** as
+  their accessibility landmark instead of the inaccurate **Editor pane**.
+  **Add to Main Work Area** remains available when focus moves elsewhere and
+  its follow-up commands use ellipses. Workspace Tools and Agent no longer
+  inherit main-area creation, split, and zoom controls; each keeps one
+  persistent, specifically named hide control. Official Zed retains its
+  inherited pane labels and focused-only chrome. Pure copy assertions,
+  formatting, Bash syntax, identity, locked offline metadata, and diff checks
+  pass; no build, test binary, or visual launch was performed.

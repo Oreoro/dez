@@ -18,7 +18,10 @@ the Session Rail only projects its live state and attention.
 | Split terminal    | `Cmd+D`       | `Ctrl+Shift+5` |
 
 You can also choose **New Terminal** from the Session Rail, an empty Workspace,
-the main-area Add menu, or the command palette.
+the persistent **Add to Main Work Area** menu, or the command palette. The add
+control stays available when focus moves to Workspace Tools or Agent; those
+auxiliary regions have their own hide controls and never present a second
+terminal destination.
 
 ### One Terminal Model
 

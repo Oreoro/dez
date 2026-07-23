@@ -124,6 +124,14 @@ account and organization chrome remains unchanged compatibility code.
 The main-area tab-bar plus control is named **Add to Main Work Area** in Dez.
 Its menu opens files, Workspace search and symbols, or a terminal in that same
 pane grid; it does not add a sidebar panel or create a second terminal model.
+It remains visible when focus moves to another region. Commands that open a
+picker or overlay use an ellipsis.
+
+Tab-bar chrome follows region ownership. Main Work Area panes own add, split,
+and zoom. Workspace Tools and Agent never inherit those controls: each exposes
+one persistent close control named **Hide Workspace Tools** or **Hide Agent**.
+Accessibility landmarks use the same visible region names: **Main work area**,
+**Workspace Tools**, and **Agent**.
 
 Discarding an Agent Session draft from either its Session Rail row or its
 main-area tab requires confirmation because unsent prompt text is permanently

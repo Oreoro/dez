@@ -1706,6 +1706,11 @@ code, all launch gates pass, and known limitations are documented.
       Main Work Area**, describes its file/search/terminal choices, and removes
       remaining Thread vocabulary from Dez's Agent pane headers, tooltips, and
       session actions. Official Zed behavior and copy remain compatible.
+      Commit `1c87220109` completes the region boundary: main-area add remains
+      available across focus changes, picker commands signal their follow-up,
+      Workspace Tools and Agent replace inherited add/split/zoom chrome with
+      explicit hide controls, and all three accessibility landmarks use their
+      product region names.
       Source assertions, formatting, identity, and diff checks pass; rendered
       tooltip/menu proof remains deferred.
 - [x] 2026-07-23: Rename visible Agent context completion without breaking
@@ -1917,6 +1922,12 @@ code, all launch gates pass, and known limitations are documented.
   Options** in every Workspace header, with the same specific name in
   accessibility output and the visual tooltip. Active Workspace controls stay
   persistent; inactive controls may reveal on hover without changing identity.
+- **2026-07-23:** Pane chrome belongs to a region, not to the reusable pane
+  implementation. Commit `1c87220109` reserves add, split, and zoom for the
+  Main Work Area; keeps its add control available while another region has
+  focus; and gives Workspace Tools and Agent one persistent, accurately named
+  hide control each. The accessibility landmarks are **Main work area**,
+  **Workspace Tools**, and **Agent**. Follow-up creation commands use ellipses.
 
 ## Verification {#verification}
 
@@ -1959,6 +1970,20 @@ Completed for the Workspace header control-identity slice:
 - `git diff --check`;
 - pure assertions authored for visible Workspace names and implementation-ID
   exclusion;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the region-owned pane-chrome slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the user and canonical Dez documentation;
+- Bash syntax and Dez identity checks, including region-ownership guards;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- pure assertions authored for region landmarks, hide controls, follow-up menu
+  copy, and official-Zed compatibility;
+- read-only process inspection confirmed no Dez/Zed/Superzed process was
+  available for visual inspection, so no binary was targeted or launched;
 - no application build, Rust test binary, bundle, alternate binary, or visual
   launch.
 

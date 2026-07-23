@@ -92,6 +92,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Lumin and JetBrains visual-default source: `67001bf0ef`
 - Deliberate terminal-termination source: `7664c6e59b`
 - Workspace header control-identity source: `e0e8f119e0`
+- Region-owned pane-chrome source: `1c87220109`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -1205,7 +1206,11 @@ the later running-app reports, the source advanced through:
 - `e0e8f119e0`, which gives every repeated Workspace **New Terminal** and
   **Workspace Options** control a visible, object-specific accessibility name
   and matching tooltip while keeping internal hover-group IDs out of product
-  copy.
+  copy; and
+- `1c87220109`, which assigns add/split/zoom chrome only to the Main Work Area,
+  keeps its add control reachable across focus changes, gives Workspace Tools
+  and Agent persistent named hide controls, and exposes accurate accessibility
+  landmarks for all three regions.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
