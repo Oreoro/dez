@@ -223,6 +223,12 @@ Session search is a named region, while changing totals and empty/caught-up
 results use status semantics. Focused copy and identity checks pass;
 platform-announcement timing remains deferred.
 
+Commit `e28b78ed57` gives the shared Callout primitive urgency semantics:
+informational/success messages are status updates, while warning/error messages
+are alerts. Durable Host and Workspace-recovery callouts no longer rely on
+visual severity alone. Authored role and identity checks pass; platform
+announcement timing remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -1053,6 +1059,11 @@ code, all launch gates pass, and known limitations are documented.
       empty results status semantics, and separates stable scope names from
       toggle state and action descriptions. Focused and identity assertions
       pass; platform announcement timing remains consolidated.
+- [x] 2026-07-23: Expose callout urgency to assistive technology. Commit
+      `e28b78ed57` maps informational/success callouts to status and
+      warning/error callouts to alert, covering durable Host and Workspace
+      recovery. Authored role and identity assertions pass; platform
+      announcement timing remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

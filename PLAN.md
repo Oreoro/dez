@@ -641,8 +641,11 @@ with new labels.
       deliberately excluded from the accessibility hierarchy. Commit
       `7e91f00b69` names the Session scope and search regions, gives changing
       totals and empty results status semantics, and keeps scope identity stable
-      while the shared toggle state reports selection. The rendered matrix
-      remains open.
+      while the shared toggle state reports selection. Commit `e28b78ed57`
+      gives the shared Callout primitive status semantics for informational and
+      successful state, and alert semantics for warnings and failures, covering
+      durable Host and Workspace-recovery callouts. The rendered matrix remains
+      open.
 - [ ] Capture a visual state matrix at compact, balanced, and spacious density
       in representative light and dark themes and at narrow/normal/wide rail
       widths.
@@ -1392,3 +1395,9 @@ Notes decision:
   is a named region, while totals, no matches, and caught-up results use status
   semantics. Focused copy assertions and identity guards pass; platform
   announcement timing remains deferred.
+- 2026-07-23: Exposed callout urgency to assistive technology in `e28b78ed57`.
+  The shared component now reports informational/success messages as status and
+  warning/error messages as alerts, so durable Host startup failures and failed
+  Workspace restoration are not conveyed only through icon, color, and copy.
+  Authored role assertions and identity guards pass; platform announcement
+  timing remains deferred.
