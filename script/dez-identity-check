@@ -151,6 +151,9 @@ reject_pattern crates/sidebar/src/sidebar.rs \
 reject_pattern crates/sidebar/src/sidebar.rs \
     '"(Show Thread History|Hide Thread History|Command Search)"' \
     'the Session Rail exposes ambiguous or internally inconsistent utility labels'
+reject_pattern crates/workspace/src/pane.rs \
+    '"(Project ready|Project tools unavailable|Project navigation did not attach to this pane\.)"' \
+    'the Dez center surface mixes Project terminology into the Workspace hierarchy'
 require_pattern crates/release_channel/src/lib.rs \
     'ReleaseChannel::Stable => "Dez"' \
     'stable release display name is not Dez'

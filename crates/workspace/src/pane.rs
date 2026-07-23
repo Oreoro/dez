@@ -966,7 +966,7 @@ impl Pane {
                                     .size(IconSize::Small)
                                     .color(Color::Muted),
                             )
-                            .child(Headline::new("Project ready")),
+                            .child(Headline::new("Workspace ready")),
                     )
                     .child(
                         Label::new(
@@ -1037,8 +1037,8 @@ impl Pane {
             PaneKind::Project => (
                 "empty-project-panel-state",
                 IconName::FileTree,
-                "Project tools unavailable",
-                "Project navigation did not attach to this pane.",
+                "Workspace tools unavailable",
+                "Workspace tools did not attach to this pane.",
                 KeyBinding::for_action_in(&ToggleProjectPane, &self.focus_handle, cx),
             ),
             PaneKind::Agent => (
