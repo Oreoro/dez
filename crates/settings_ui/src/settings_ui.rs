@@ -4848,24 +4848,29 @@ pub(crate) fn all_projects(
     cx: &App,
 ) -> impl Iterator<Item = Entity<Project>> {
     let mut seen_project_ids = std::collections::HashSet::new();
-    let app_state = workspace::AppState::global(cx);
-    app_state
-        .workspace_store
-        .read(cx)
-        .workspaces()
-        .filter_map(|weak| weak.upgrade())
-        .map(|workspace: Entity<Workspace>| workspace.read(cx).project().clone())
-        .chain(
-            window
-                .and_then(|handle| handle.read(cx).ok())
-                .into_iter()
-                .flat_map(|multi_workspace| {
-                    multi_workspace
-                        .workspaces()
-                        .map(|workspace| workspace.read(cx).project().clone())
-                        .collect::<Vec<_>>()
-                }),
-        )
+    let projects = if let Some(handle) = window {
+        handle
+            .read(cx)
+            .ok()
+            .map(|multi_workspace| {
+                multi_workspace
+                    .workspaces()
+                    .map(|workspace| workspace.read(cx).project().clone())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default()
+    } else {
+        workspace::AppState::global(cx)
+            .workspace_store
+            .read(cx)
+            .workspaces()
+            .filter_map(|weak| weak.upgrade())
+            .map(|workspace: Entity<Workspace>| workspace.read(cx).project().clone())
+            .collect()
+    };
+
+    projects
+        .into_iter()
         .filter(move |project| seen_project_ids.insert(project.entity_id()))
 }
 
@@ -6185,7 +6190,7 @@ pub mod test {
     }
 
     #[gpui::test]
-    async fn test_settings_window_shows_worktrees_from_multiple_workspaces(
+    async fn test_settings_window_is_scoped_to_its_originating_window(
         cx: &mut gpui::TestAppContext,
     ) {
         use project::Project;
@@ -6316,16 +6321,8 @@ pub mod test {
                 .cloned()
                 .collect();
 
-            assert!(
-                worktree_names.iter().any(|name| name == "worktree_a"),
-                "Should contain worktree_a from workspace1, but found: {:?}",
-                worktree_names
-            );
-            assert!(
-                worktree_names.iter().any(|name| name == "worktree_b"),
-                "Should contain worktree_b from workspace1, but found: {:?}",
-                worktree_names
-            );
+            assert!(!worktree_names.iter().any(|name| name == "worktree_a"));
+            assert!(!worktree_names.iter().any(|name| name == "worktree_b"));
             assert!(
                 worktree_names.iter().any(|name| name == "worktree_c"),
                 "Should contain worktree_c from workspace2, but found: {:?}",
@@ -6334,8 +6331,8 @@ pub mod test {
 
             assert_eq!(
                 worktree_names.len(),
-                3,
-                "Should have exactly 3 worktrees from both workspaces, but found: {:?}",
+                1,
+                "Should include only the originating window's worktree, but found: {:?}",
                 worktree_names
             );
 
@@ -6359,7 +6356,7 @@ pub mod test {
     }
 
     #[gpui::test]
-    async fn test_settings_window_updates_when_new_workspace_created(
+    async fn test_settings_window_ignores_workspaces_created_in_other_windows(
         cx: &mut gpui::TestAppContext,
     ) {
         use project::Project;
@@ -6496,16 +6493,12 @@ pub mod test {
                 "Should contain worktree_a, but found: {:?}",
                 worktree_names
             );
-            assert!(
-                worktree_names.iter().any(|name| name == "worktree_b"),
-                "Should contain worktree_b from newly created workspace, but found: {:?}",
-                worktree_names
-            );
+            assert!(!worktree_names.iter().any(|name| name == "worktree_b"));
 
             assert_eq!(
                 worktree_names.len(),
-                2,
-                "Should have 2 worktrees after new workspace created, but found: {:?}",
+                1,
+                "Should remain scoped after another window creates a Workspace, but found: {:?}",
                 worktree_names
             );
 
