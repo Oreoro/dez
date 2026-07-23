@@ -568,7 +568,9 @@ chrome; every state is truthful, accessible, and visually coherent.
       and collaboration-server configuration while retaining compatibility
       parsing and the live proxy control. Commit `2435348289` also removes the
       dead Zed Edit Predictions data-collection control from Dez and frames
-      setup around explicit providers.
+      setup around explicit providers. Commit `f40877d4ab` filters inherited
+      collaboration actions from the Dez Command Palette without unregistering
+      their compatibility namespace.
 - [ ] Ensure opening a file, folder, repository, URL, remote target, recent
       Workspace, or empty Workspace routes into the existing App Session
       without creating an accidental parallel universe.
@@ -1068,3 +1070,8 @@ Notes decision:
   channel's canonical Dez scheme; legacy `zed://` remains input-only
   compatibility. Focused assertions, formatting, diff, lockfile, and identity
   checks pass; no bundle was built or launched.
+- 2026-07-23: Removed inherited collaboration actions from the Dez Command
+  Palette in `f40877d4ab`. The namespace stays registered for keymap/action
+  compatibility and official Zed remains unchanged; only dead Dez presentation
+  is filtered. A model assertion and identity guard pass; no bundle was built
+  or launched.

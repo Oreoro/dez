@@ -854,6 +854,11 @@ code, all launch gates pass, and known limitations are documented.
       legacy `zed://` remains input-only compatibility. Focused assertions plus
       formatting, diff, lockfile, and identity gates pass; compiled interaction
       proof remains in the consolidated gate.
+- [x] 2026-07-23: Remove inherited collaboration commands from Dez's palette.
+      Commit `f40877d4ab` filters the registered `collab` namespace from Dez
+      presentation while preserving action/keymap compatibility and official
+      Zed behavior. A product-boundary assertion and identity guard pass;
+      compiled palette proof remains in the consolidated gate.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
