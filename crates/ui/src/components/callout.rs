@@ -1,4 +1,4 @@
-use gpui::{AnyElement, Role};
+use gpui::{AnyElement, ElementId, Role};
 
 use crate::prelude::*;
 
@@ -33,6 +33,7 @@ fn callout_accessibility_role(severity: Severity) -> Role {
 ///
 #[derive(IntoElement, RegisterComponent)]
 pub struct Callout {
+    id: ElementId,
     severity: Severity,
     icon: Option<IconName>,
     title: Option<SharedString>,
@@ -46,8 +47,10 @@ pub struct Callout {
 
 impl Callout {
     /// Creates a new `Callout` component with default styling.
+    #[track_caller]
     pub fn new() -> Self {
         Self {
+            id: ElementId::CodeLocation(*std::panic::Location::caller()),
             severity: Severity::Info,
             icon: None,
             title: None,
@@ -149,6 +152,7 @@ impl RenderOnce for Callout {
         };
 
         h_flex()
+            .id(self.id)
             .role(accessibility_role)
             .min_w_0()
             .w_full()
