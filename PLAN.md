@@ -1546,3 +1546,8 @@ Notes decision:
   `1ed2ff814a` aligns the terminal view with the already-working Session Rail
   import without changing snapshot behavior. Formatting, diff, and identity
   checks pass; the failed build stopped before replacing an executable.
+- 2026-07-23: The next compile exposed one ownership conflict between terminal
+  event handling and hosted snapshot observation. Commit `4369bb1f3b` gives
+  the event closure its own weak Workspace clone, preserving navigation,
+  lifecycle evidence, and Host reconciliation. The focused `terminal_view`
+  build passes in 7m36s.

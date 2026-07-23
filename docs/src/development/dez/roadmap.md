@@ -1202,6 +1202,11 @@ code, all launch gates pass, and known limitations are documented.
       with the already-working Session Rail import without changing behavior.
       Formatting, diff, and identity checks pass; the failed build stopped
       before replacing an executable.
+- [x] 2026-07-23: Preserve the Workspace handle across terminal event and Host
+      snapshot subscriptions. Commit `4369bb1f3b` gives the event closure its
+      own weak Workspace clone, retaining navigation, lifecycle evidence, and
+      hosted reconciliation. The focused `terminal_view` build passes in
+      7m36s.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the
