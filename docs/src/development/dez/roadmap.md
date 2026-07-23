@@ -1971,8 +1971,31 @@ code, all launch gates pass, and known limitations are documented.
   files** beside **No diagnostics** rather than an unexplained search/check
   pair. Editor Surfaces retain compact status, and the toolbar's accessibility
   name is **Workspace status and navigation**.
+- **2026-07-23:** Lifecycle safety cannot depend on the input method. Commit
+  `c83b56b5aa` makes terminal row buttons, context menus, and selected-row
+  keyboard removal use one source/runtime presentation policy. A live
+  Host-owned Terminal Session always requires the same critical termination
+  confirmation. Destructive labels use ellipses, the prompt names the shell and
+  foreground process without internal durability jargon, and the mixed
+  compatibility command is presented as **Session Rail: Remove Selected
+  Session**. The public terminal guide now teaches the same first-class Surface
+  and supervisory-projection model implemented by Dez.
 
 ## Verification {#verification}
+
+Completed for the lifecycle-path and terminal-guide slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the public terminal guide and canonical Dez
+  documentation;
+- Bash syntax and Dez identity checks, including lifecycle-path parity and
+  internal-jargon rejection;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- pure assertions authored for lifecycle labels, confirmation copy, Dez Command
+  Palette scope, and official-Zed compatibility;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
 
 Completed for the terminal-focused Workspace status slice:
 

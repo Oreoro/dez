@@ -2082,3 +2082,17 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   upstream icon-only status-bar behavior. Pure copy assertions, formatting,
   Bash syntax, identity, locked offline metadata, and diff checks pass; no
   build, test binary, or visual launch was performed.
+- 2026-07-23: Unified terminal lifecycle safety across pointer, context-menu,
+  and selected-row keyboard paths in `c83b56b5aa`. Every route now derives its
+  label and confirmation requirement from the same terminal source/runtime
+  policy, closing the shortcut path that could terminate a live Host-owned
+  Session without confirmation. Destructive actions use ellipses, the critical
+  prompt says **Terminate Terminal Session?**, names the shell and foreground
+  process, and no longer exposes internal “durable session” terminology. The
+  mixed underlying compatibility action appears in Dez's Command Palette as
+  **Session Rail: Remove Selected Session**, while official Zed retains its
+  upstream Agent archive name. The public terminal guide now explains the real
+  Main Work Area, Session Rail, Workspace Tools, and Agent ownership model
+  instead of the removed Terminal-Thread-in-Agent-Panel flow. Pure assertions,
+  static guards, formatting, Bash syntax, identity, locked offline metadata,
+  and diff checks pass; no build, test binary, or visual launch was performed.

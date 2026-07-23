@@ -49,7 +49,7 @@
 - [Agents](./ai/agents.md)
   - [Zed Agent](./ai/zed-agent.md)
   - [External Agents](./ai/external-agents.md)
-  - [Terminal Threads](./ai/terminal-threads.md)
+  - [Terminal Sessions](./ai/terminal-threads.md)
 - [Agent Panel](./ai/agent-panel.md)
   - [Agent Settings](./ai/agent-settings.md)
   - [Agent Profiles](./ai/agent-profiles.md)

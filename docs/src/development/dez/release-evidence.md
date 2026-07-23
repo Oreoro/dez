@@ -26,6 +26,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Single-action empty Session Rail source: `4e6292ff0a`
 - Compact Session Rail start-state source: `d53cd5d656`
 - Terminal-focused Workspace status source: `05df05d282`
+- Unified terminal lifecycle interaction source: `c83b56b5aa`
 - Deduplicated Session Rail footer source: `a9b1a961c0`
 - Unified Session Rail Workspace vocabulary source: `ff91b34a81`
 - Workspace-scoped zero-session creation source: `4fc53b860f`
@@ -1229,7 +1230,11 @@ the later running-app reports, the source advanced through:
 - `05df05d282`, which visually names Workspace search when a terminal or other
   non-editor Surface is active, retains compact editor status, and exposes the
   global strip as **Workspace status and navigation** rather than conflating it
-  with Session Rail utilities.
+  with Session Rail utilities; and
+- `c83b56b5aa`, which makes pointer, context-menu, and selected-row keyboard
+  terminal removal share one lifecycle/confirmation policy, removes internal
+  durability jargon from the critical prompt, and gives the mixed compatibility
+  action truthful Session Rail scope in Dez's Command Palette.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

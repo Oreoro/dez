@@ -949,6 +949,12 @@ require_pattern crates/terminal/src/terminal.rs \
 require_pattern crates/terminal/src/terminal.rs \
     'env\.insert\("TERM_PROGRAM"\.to_string\(\), "dez"\.to_string\(\)\);' \
     'terminal sessions do not identify TERM_PROGRAM as Dez'
+require_multiline_pattern docs/src/ai/terminal-threads.md \
+    '# Terminal Sessions.*?Main Work Area.*?Session Rail.*?Agent region owns conversations.*?## Closing and Terminating.*?Terminate Running Terminal…' \
+    'the public terminal guide can regress to the removed Terminal Thread inside the Agent Panel model'
+reject_pattern docs/src/ai/terminal-threads.md \
+    'Open the new-thread menu from the \[Agent Panel\]|Terminal Thread opens in the panel body|Terminal Thread Init Command' \
+    'the public terminal guide still routes terminals into the Agent region'
 
 reject_pattern crates/release_channel/src/lib.rs \
     'dev\.zed\.Zed' \

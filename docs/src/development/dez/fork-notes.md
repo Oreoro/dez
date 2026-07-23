@@ -450,3 +450,9 @@ defer it.
   health states instead of presenting editor-shaped glyphs without context.
   This boundary prevents the terminal-first shell from becoming an
   undifferentiated bottom icon row.
+- **2026-07-23: Terminal lifecycle policy is interaction-path invariant.**
+  Pointer controls, context menus, and keyboard removal must derive their
+  detach, close, remove, or terminate presentation and confirmation requirement
+  from the same terminal source/runtime policy. A compatibility action name may
+  remain internal, but Dez must present its mixed Session Rail scope truthfully.
+  No shortcut may bypass a confirmation required by the visible control.
