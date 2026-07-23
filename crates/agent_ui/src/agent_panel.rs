@@ -145,6 +145,16 @@ fn agent_panel_terminal_restoration_enabled(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn agent_panel_title_edit_label(app_name: &str, is_terminal: bool) -> &'static str {
+    if is_terminal {
+        "Edit Terminal Title"
+    } else if app_name == "Zed" {
+        "Edit Thread Title"
+    } else {
+        "Edit Agent Session Title"
+    }
+}
+
 fn canvas_agent_panel_toolbar_background(cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match DesignSystemSettings::get_global(cx).contrast {
@@ -5827,6 +5837,10 @@ impl AgentPanel {
         // (the title already truncates).
         let opaque_window =
             cx.theme().window_background_appearance() == gpui::WindowBackgroundAppearance::Opaque;
+        let title_edit_label = agent_panel_title_edit_label(
+            paths::APP_NAME,
+            matches!(self.visible_surface(), VisibleSurface::Terminal(_)),
+        );
 
         h_flex()
             .key_context("TitleEditor")
@@ -5849,7 +5863,8 @@ impl AgentPanel {
                             .child(
                                 IconButton::new("edit_tile", IconName::Pencil)
                                     .icon_size(IconSize::Small)
-                                    .tooltip(Tooltip::text("Edit Thread Title")),
+                                    .aria_label(title_edit_label)
+                                    .tooltip(Tooltip::text(title_edit_label)),
                             ),
                     )
             })
@@ -7160,6 +7175,26 @@ mod tests {
         assert!(!agent_panel_terminal_creation_visible("Zed", false));
         assert!(!agent_panel_terminal_restoration_enabled("Dez"));
         assert!(agent_panel_terminal_restoration_enabled("Zed"));
+    }
+
+    #[test]
+    fn agent_title_edit_labels_describe_the_actual_surface() {
+        assert_eq!(
+            agent_panel_title_edit_label("Dez", false),
+            "Edit Agent Session Title"
+        );
+        assert_eq!(
+            agent_panel_title_edit_label("Zed", false),
+            "Edit Thread Title"
+        );
+        assert_eq!(
+            agent_panel_title_edit_label("Dez", true),
+            "Edit Terminal Title"
+        );
+        assert_eq!(
+            agent_panel_title_edit_label("Zed", true),
+            "Edit Terminal Title"
+        );
     }
 
     #[test]

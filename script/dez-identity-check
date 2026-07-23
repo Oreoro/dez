@@ -277,6 +277,9 @@ require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
 require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
     'IconButton::new\("delete-thread".*?aria_label\(agent_history_label.*?"Delete Agent Session".*?IconButton::new\("archive-thread".*?aria_label\(agent_history_label.*?"Archive Agent Session"' \
     'Agent History row actions can regress to unnamed icon controls'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'fn agent_panel_title_edit_label.*?is_terminal.*?"Edit Terminal Title".*?app_name == "Zed".*?"Edit Thread Title".*?"Edit Agent Session Title".*?aria_label\(title_edit_label\).*?Tooltip::text\(title_edit_label\)' \
+    'the Agent title edit affordance can regress to unnamed or ambiguous Thread terminology'
 require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
     'fn permanent_delete_prompt.*?"Delete Agent Session\?".*?permanently deletes.*?This cannot be undone.*?PromptLevel::Critical.*?&\["Delete", "Cancel"\]' \
     'permanent Agent Session deletion can regress to an unconfirmed or ambiguous action'
