@@ -133,6 +133,12 @@ Settings surfaces. Official Zed retains Project Panel wording through explicit
 product branches, and persistence/action identifiers remain compatible. Cargo
 metadata and static gates pass; compilation and rendered proof remain deferred.
 
+Commit `f6aea3e013` carries the same outward contract through the title bar,
+recent-work pickers, remote Workspace indicators and deletion, and the Agent
+History picker. Official Zed retains its Project vocabulary through explicit
+product branches. Formatting and static identity gates pass; compilation and
+rendered proof remain deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -890,6 +896,12 @@ code, all launch gates pass, and known limitations are documented.
       Internal upstream types remain intact, and an identity rejection freezes
       the visible language. Formatting, diff, and identity checks pass;
       rendered proof remains in the consolidated gate.
+- [x] 2026-07-23: Normalize recent and remote work on Workspace vocabulary.
+      Commit `f6aea3e013` updates the title bar, recent-work picker, remote
+      controls, and Agent History picker without renaming internal upstream
+      types or official Zed copy. Focused label assertions and identity guards
+      cover the product branch. Formatting and static checks pass; compiled and
+      rendered proof remain in the consolidated gate.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

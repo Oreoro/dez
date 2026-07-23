@@ -396,8 +396,11 @@ with new labels.
       controls while preserving internal upstream types. Commit `6f1562847e`
       extends the grammar into the center shell: the multi-tool region is
       **Workspace tools**, its file tree is **Files**, and official Zed retains
-      its Project Panel copy through explicit compatibility branches. Broader
-      Recent/remote/security vocabulary remains to audit.
+      its Project Panel copy through explicit compatibility branches. Commit
+      `f6aea3e013` extends that contract through the title bar, Recent
+      Workspaces pickers, remote Workspace indicators/deletion, and the Agent
+      History picker while preserving official Zed copy. Security vocabulary
+      remains to audit.
 - [ ] Give every primary region a visible purpose, stable placement, clear
       focus treatment, and predictable resize/collapse behavior. The app View
       menu, title-bar/sidebar chrome, and collapsed status control now call the
@@ -1220,3 +1223,17 @@ Notes decision:
   keys and the official-Zed copy remain stable behind product branches. Cargo
   metadata, formatting, Bash syntax, diff, and identity checks pass; no compile,
   bundle build, or rendered interaction claim is made.
+- 2026-07-23: Distinguished the supplied crushed-shell screenshot, the running
+  bundle, and current source instead of treating them as one artifact. The
+  screenshot is timestamped 20:10 and visibly contains `0 sessions · caught
+  up`; a read-only string fingerprint confirms that copy is absent from PID
+  `85053`'s 01:10 executable. That executable contains the intermediate
+  **Project ready** state but not the later **Start a session** or **Workspace
+  ready** source. The screenshot remains valid defect evidence, but neither it
+  nor the stale bundle is current-source render proof.
+- 2026-07-23: Extended outward Workspace vocabulary in `f6aea3e013`. Dez now
+  says **Open Recent Workspace**, **Recent Workspaces**, **Remote Workspace**,
+  **Remove from Recent Workspaces**, and **Delete Remote Workspace** across the
+  title bar, recent-work picker, remote controls, and Agent History. Explicit
+  product branches retain official Zed copy. Formatting, Bash syntax, diff,
+  and identity checks pass; compilation and rendered proof remain deferred.
