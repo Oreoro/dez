@@ -409,7 +409,10 @@ with new labels.
       and `0607771783` remove misleading inherited command-center actions and
       finish Workspace terminology in retained remote/shared recovery overlays.
       Internal compatibility identifiers and explicit upstream Help references
-      remain deliberate; rendered verification is tracked separately.
+      remain deliberate. Commit `2092acd453` then replaces the stale screenshot's
+      ambiguous **Sessions** heading and repeated absence copy with **Session
+      Rail**, a counted **workspace ready** summary, and a single scoped empty-
+      Workspace action. Rendered verification is tracked separately.
 - [ ] Give every primary region a visible purpose, stable placement, clear
       focus treatment, and predictable resize/collapse behavior. The app View
       menu, title-bar/sidebar chrome, and collapsed status control now call the
@@ -522,7 +525,11 @@ with new labels.
       shortcut when open Workspace groups have zero sessions, leaving each
       group's correctly scoped New Terminal action as the single path. An
       existing query remains visible so it can always be cleared. The full
-      state audit and rendered proof remain open.
+      state audit and rendered proof remain open. Commit `2092acd453` removes
+      the last **No sessions** repetition from an open Workspace group: the
+      overview reports ready Workspace scope, the group says **Ready for a
+      session**, and the scoped button has the Workspace name in its accessible
+      label.
 - [ ] Remove dead buttons, unsupported provider actions, duplicate navigation,
       noisy badges, ambiguous icon-only controls, and success copy unsupported
       by observed evidence. The compiled Zed Pro trial-end overlay/reset action
@@ -1282,3 +1289,9 @@ Notes decision:
   Together with the command-center cleanup in `e969abda4a`, no reachable Dez
   shell state relies on Project as the outward container term. Identity,
   formatting, Bash syntax, and diff gates pass; rendered proof remains deferred.
+- 2026-07-23: Reworked the screenshot's zero-session hierarchy in
+  `2092acd453`. The rail is now named **Session Rail**, reports ready Workspace
+  count instead of repeating session absence, and gives each empty Workspace a
+  concise **Ready for a session** state with one scoped New Terminal action.
+  The action's accessible name includes the Workspace. Focused assertions and
+  the identity guard pass; compilation and rendered proof remain deferred.

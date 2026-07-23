@@ -163,6 +163,12 @@ disconnected, follow/join, shared-agent, and multi-root collaboration recovery
 states. Dez says Workspace, official Zed retains Project, and compatibility
 types remain unchanged. Static gates pass; rendered proof remains deferred.
 
+Commit `2092acd453` removes the supplied screenshot's repeated zero-session
+hierarchy from current source. The region is explicitly **Session Rail**, its
+summary reports the number of ready Workspaces, and each empty Workspace owns
+one scoped New Terminal action with a Workspace-specific accessible name.
+Focused assertions and static gates pass; rendered proof remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -946,6 +952,11 @@ code, all launch gates pass, and known limitations are documented.
       `0607771783` normalizes disconnected, follow/join, shared-agent, and
       multi-root error copy while preserving official Zed branches. Identity
       and formatting gates pass; rendered proof remains consolidated.
+- [x] 2026-07-23: Clarify the zero-session hierarchy. Commit `2092acd453`
+      replaces the ambiguous Sessions heading and repeated absence copy with a
+      named Session Rail, ready-Workspace count, and one accessible scoped
+      creation action per empty Workspace. Focused assertions and static gates
+      pass; rendered proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the
