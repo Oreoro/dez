@@ -32,7 +32,14 @@ use zed_actions::{OpenZedUrl, command_palette::Toggle};
 
 pub fn init(cx: &mut App) {
     command_palette_hooks::init(cx);
+    for &namespace in product_hidden_action_namespaces(paths::APP_NAME) {
+        CommandPaletteFilter::global_mut(cx).hide_namespace(namespace);
+    }
     cx.observe_new(CommandPalette::register).detach();
+}
+
+fn product_hidden_action_namespaces(app_name: &str) -> &'static [&'static str] {
+    if app_name == "Zed" { &[] } else { &["collab"] }
 }
 
 impl ModalView for CommandPalette {}
@@ -1026,6 +1033,12 @@ mod tests {
             humanize_action_name_for_product("zed_actions::OpenSettings", "Dez"),
             "zed actions: open settings"
         );
+    }
+
+    #[test]
+    fn dez_hides_inherited_collaboration_commands() {
+        assert_eq!(product_hidden_action_namespaces("Dez"), &["collab"]);
+        assert!(product_hidden_action_namespaces("Zed").is_empty());
     }
 
     #[test]

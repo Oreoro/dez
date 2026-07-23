@@ -103,6 +103,9 @@ require_multiline_pattern crates/settings_ui/src/page_data.rs \
 require_pattern crates/command_palette/src/command_palette.rs \
     'humanize_action_name_for_product\(name, paths::APP_NAME\)' \
     'Dez command surfaces can regress to displaying the internal Zed namespace'
+require_pattern crates/command_palette/src/command_palette.rs \
+    'product_hidden_action_namespaces\(paths::APP_NAME\)' \
+    'Dez Command Palette can regress to exposing inherited collaboration actions'
 require_pattern crates/settings_ui/src/settings_ui.rs \
     'format!\("\{scheme\}://settings/\{path\}"\)' \
     'Dez Settings can regress to copying upstream Zed URLs'
