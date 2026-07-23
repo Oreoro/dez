@@ -6,6 +6,7 @@ use gpui::{
     Task, WeakEntity, Window,
 };
 use language::Diagnostic;
+use paths::APP_NAME;
 use project::project_settings::{GoToDiagnosticSeverityFilter, ProjectSettings};
 use settings::Settings;
 use ui::{Button, ButtonLike, Color, Icon, IconName, Label, Tooltip, h_flex, prelude::*};
@@ -13,6 +14,41 @@ use util::ResultExt;
 use workspace::{HideStatusItem, StatusItemView, ToolbarItemEvent, Workspace, item::ItemHandle};
 
 use crate::{Deploy, IncludeWarnings, ProjectDiagnosticsEditor};
+
+fn diagnostics_scope_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Project Diagnostics"
+    } else {
+        "Workspace Diagnostics"
+    }
+}
+
+fn diagnostics_status_label(app_name: &str, errors: usize, warnings: usize) -> String {
+    let scope = if app_name == "Zed" {
+        "Project diagnostics"
+    } else {
+        "Workspace diagnostics"
+    };
+    match (errors, warnings) {
+        (0, 0) => format!("{scope}: no problems"),
+        (errors, warnings) => {
+            let mut parts = Vec::new();
+            if errors > 0 {
+                parts.push(format!(
+                    "{errors} error{}",
+                    if errors == 1 { "" } else { "s" }
+                ));
+            }
+            if warnings > 0 {
+                parts.push(format!(
+                    "{warnings} warning{}",
+                    if warnings == 1 { "" } else { "s" }
+                ));
+            }
+            format!("{scope}: {}", parts.join(", "))
+        }
+    }
+}
 
 /// The status bar item that displays diagnostic counts.
 pub struct DiagnosticIndicator {
@@ -34,11 +70,20 @@ impl Render for DiagnosticIndicator {
         }
 
         let diagnostic_indicator = match (self.summary.error_count, self.summary.warning_count) {
-            (0, 0) => h_flex().child(
-                Icon::new(IconName::Check)
-                    .size(IconSize::Small)
-                    .color(Color::Default),
-            ),
+            (0, 0) => h_flex()
+                .gap_1()
+                .child(
+                    Icon::new(IconName::Check)
+                        .size(IconSize::Small)
+                        .color(Color::Muted),
+                )
+                .when(APP_NAME != "Zed" && self.active_editor.is_none(), |this| {
+                    this.child(
+                        Label::new("No diagnostics")
+                            .size(LabelSize::Small)
+                            .color(Color::Muted),
+                    )
+                }),
             (error_count, warning_count) => h_flex()
                 .gap_1()
                 .when(error_count > 0, |this| {
@@ -90,25 +135,12 @@ impl Render for DiagnosticIndicator {
             None
         };
 
-        let diagnostics_label = match (self.summary.error_count, self.summary.warning_count) {
-            (0, 0) => "Project diagnostics: no problems".to_string(),
-            (errors, warnings) => {
-                let mut parts = Vec::new();
-                if errors > 0 {
-                    parts.push(format!(
-                        "{errors} error{}",
-                        if errors == 1 { "" } else { "s" }
-                    ));
-                }
-                if warnings > 0 {
-                    parts.push(format!(
-                        "{warnings} warning{}",
-                        if warnings == 1 { "" } else { "s" }
-                    ));
-                }
-                format!("Project diagnostics: {}", parts.join(", "))
-            }
-        };
+        let diagnostics_label = diagnostics_status_label(
+            APP_NAME,
+            self.summary.error_count,
+            self.summary.warning_count,
+        );
+        let diagnostics_scope_label = diagnostics_scope_label(APP_NAME);
 
         indicator
             .child(
@@ -117,7 +149,7 @@ impl Render for DiagnosticIndicator {
                     .tab_index(0isize)
                     .aria_label(diagnostics_label)
                     .tooltip(move |_window, cx| {
-                        Tooltip::for_action("Project Diagnostics", &Deploy, cx)
+                        Tooltip::for_action(diagnostics_scope_label, &Deploy, cx)
                     })
                     .on_click(cx.listener(|this, _, window, cx| {
                         if let Some(workspace) = this.workspace.upgrade() {
@@ -266,5 +298,24 @@ impl StatusItemView for DiagnosticIndicator {
         Some(HideStatusItem::new(|settings| {
             settings.diagnostics.get_or_insert_default().button = Some(false);
         }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn diagnostics_status_uses_workspace_scope_in_dez() {
+        assert_eq!(diagnostics_scope_label("Dez"), "Workspace Diagnostics");
+        assert_eq!(
+            diagnostics_status_label("Dez", 0, 0),
+            "Workspace diagnostics: no problems"
+        );
+        assert_eq!(
+            diagnostics_status_label("Dez", 1, 2),
+            "Workspace diagnostics: 1 error, 2 warnings"
+        );
+        assert_eq!(diagnostics_scope_label("Zed"), "Project Diagnostics");
     }
 }

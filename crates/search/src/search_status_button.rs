@@ -1,10 +1,19 @@
 use editor::EditorSettings;
 use gpui::{App, FocusHandle};
+use paths::APP_NAME;
 use settings::Settings as _;
 use ui::{ButtonCommon, Clickable, Context, Render, Tooltip, Window, prelude::*};
 use workspace::{HideStatusItem, ItemHandle, StatusItemView};
 
 pub const SEARCH_ICON: IconName = IconName::MagnifyingGlass;
+
+fn workspace_search_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Project Search"
+    } else {
+        "Search Workspace Files"
+    }
+}
 
 pub struct SearchButton {
     pane_item_focus_handle: Option<FocusHandle>,
@@ -27,31 +36,39 @@ impl Render for SearchButton {
         }
 
         let focus_handle = self.pane_item_focus_handle.clone();
+        let search_label = workspace_search_label(APP_NAME);
         button.child(
             IconButton::new("project-search-indicator", SEARCH_ICON)
                 .icon_size(IconSize::Small)
                 .tab_index(0isize)
-                .aria_label("Project Search")
+                .aria_label(search_label)
                 .tooltip(move |_window, cx| {
                     if let Some(focus_handle) = &focus_handle {
                         Tooltip::for_action_in(
-                            "Project Search",
+                            search_label,
                             &workspace::DeploySearch::default(),
                             focus_handle,
                             cx,
                         )
                     } else {
-                        Tooltip::for_action(
-                            "Project Search",
-                            &workspace::DeploySearch::default(),
-                            cx,
-                        )
+                        Tooltip::for_action(search_label, &workspace::DeploySearch::default(), cx)
                     }
                 })
                 .on_click(cx.listener(|_this, _, window, cx| {
                     window.dispatch_action(Box::new(workspace::DeploySearch::default()), cx);
                 })),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn workspace_search_uses_product_language() {
+        assert_eq!(workspace_search_label("Dez"), "Search Workspace Files");
+        assert_eq!(workspace_search_label("Zed"), "Project Search");
     }
 }
 

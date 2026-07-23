@@ -217,9 +217,27 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_pattern crates/sidebar/src/sidebar.rs \
     '\.actor_label\("Terminal Session"\)' \
     'plain terminal rows can regress to an ambiguous Terminal actor label'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn render_sidebar_bottom_bar.*?let labels_visible = !session_rail_row_is_compact.*?Button::new\("history", if labels_visible \{ "History" \} else \{ "" \}\)' \
+    'the Session Rail footer can regress to unexplained icon-only utilities at normal widths'
+require_pattern crates/sidebar/src/sidebar.rs \
+    'if labels_visible \{ "Agent Tools" \} else \{ "" \}' \
+    'the Session Rail settings utility can regress to an unexplained glyph'
+require_pattern crates/sidebar/src/sidebar.rs \
+    'if labels_visible \{ "Workspaces" \} else \{ "" \}' \
+    'the Session Rail recent-Workspace utility can regress to an unexplained glyph'
 require_multiline_pattern crates/agent_ui/src/terminal_thread_metadata_store.rs \
     'fn compose_terminal_thread_title.*?match terminal_title\.trim\(\).*?SharedString::new_static\("Terminal"\)' \
     'a terminal with an empty PTY title can regress to a blank Session Rail row'
+require_multiline_pattern crates/search/src/search_status_button.rs \
+    'fn workspace_search_label.*?app_name == "Zed".*?"Project Search".*?"Search Workspace Files"' \
+    'the Dez status bar can regress to Project Search vocabulary'
+require_multiline_pattern crates/diagnostics/src/items.rs \
+    'fn diagnostics_scope_label.*?app_name == "Zed".*?"Project Diagnostics".*?"Workspace Diagnostics"' \
+    'the Dez status bar can regress to Project Diagnostics vocabulary'
+require_multiline_pattern crates/diagnostics/src/items.rs \
+    'APP_NAME != "Zed" && self\.active_editor\.is_none\(\).*?Label::new\("No diagnostics"\)' \
+    'terminal-first status chrome can regress to an unexplained checkmark'
 require_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\("Ready for a session"\)' \
     'empty Workspace groups regress to repeated absence copy'
@@ -395,10 +413,10 @@ reject_pattern crates/sidebar/src/sidebar.rs \
     '"(Show Thread History|Hide Thread History|Command Search)"' \
     'the Session Rail exposes ambiguous or internally inconsistent utility labels'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'IconButton::new\("open-recent-workspaces", IconName::FolderOpen\).*?aria_label\("Open Recent Workspaces"\).*?Tooltip::for_action\("Open Recent Workspaces"' \
+    'Button::new\([[:space:]]*"open-recent-workspaces".*?if labels_visible \{ "Workspaces" \} else \{ "" \}.*?IconName::FolderOpen.*?aria_label\("Open Recent Workspaces"\).*?Tooltip::for_action\("Open Recent Workspaces"' \
     'the Session Rail footer can regress to an ambiguous Open Workspace utility'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'IconButton::new\("agent-sidebar-options-menu", IconName::Settings\).*?aria_label\("Agent Tools and Settings"\).*?header\("Agent Context"\).*?"Hide Session Rail"' \
+    'Button::new\([[:space:]]*"agent-sidebar-options-menu".*?if labels_visible \{ "Agent Tools" \} else \{ "" \}.*?IconName::Settings.*?aria_label\("Agent Tools and Settings"\).*?header\("Agent Context"\).*?"Hide Session Rail"' \
     'the Session Rail footer can regress to a Robot icon that does not open Agent'
 reject_pattern crates/workspace/src/pane.rs \
     '"(Project ready|Project tools unavailable|Project navigation did not attach to this pane\.)"' \

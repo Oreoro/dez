@@ -10500,7 +10500,11 @@ impl Sidebar {
             .into_any_element()
     }
 
-    fn render_recent_projects_button(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_recent_projects_button(
+        &self,
+        labels_visible: bool,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
         let multi_workspace = self.multi_workspace.upgrade();
 
         let workspace = multi_workspace
@@ -10534,11 +10538,15 @@ impl Sidebar {
                 })
             })
             .trigger_with_tooltip(
-                IconButton::new("open-recent-workspaces", IconName::FolderOpen)
-                    .size(ButtonSize::Medium)
-                    .icon_size(IconSize::Small)
-                    .aria_label("Open Recent Workspaces")
-                    .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
+                Button::new(
+                    "open-recent-workspaces",
+                    if labels_visible { "Workspaces" } else { "" },
+                )
+                .size(ButtonSize::Medium)
+                .label_size(LabelSize::Small)
+                .start_icon(Icon::new(IconName::FolderOpen).size(IconSize::Small))
+                .aria_label("Open Recent Workspaces")
+                .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
                 |_window, cx| {
                     Tooltip::for_action("Open Recent Workspaces", &OpenRecent::default(), cx)
                 },
@@ -11893,7 +11901,11 @@ impl Sidebar {
             .is_some()
     }
 
-    fn render_agent_options_menu(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_agent_options_menu(
+        &self,
+        labels_visible: bool,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
         let on_right = self.side(cx) == SidebarSide::Right;
         let active_conversation_view = self.active_agent_conversation_view(cx);
         let can_regenerate_thread_title =
@@ -11921,10 +11933,14 @@ impl Sidebar {
 
         PopoverMenu::new("agent-sidebar-options-menu")
             .trigger_with_tooltip(
-                IconButton::new("agent-sidebar-options-menu", IconName::Settings)
-                    .size(ButtonSize::Medium)
-                    .icon_size(IconSize::Small)
-                    .aria_label("Agent Tools and Settings"),
+                Button::new(
+                    "agent-sidebar-options-menu",
+                    if labels_visible { "Agent Tools" } else { "" },
+                )
+                .size(ButtonSize::Medium)
+                .label_size(LabelSize::Small)
+                .start_icon(Icon::new(IconName::Settings).size(IconSize::Small))
+                .aria_label("Agent Tools and Settings"),
                 Tooltip::text("Agent Tools and Settings"),
             )
             .anchor(if on_right {
@@ -12072,6 +12088,8 @@ impl Sidebar {
             "Show Agent History"
         };
         let on_right = self.side(cx) == SidebarSide::Right;
+        let rail_width = SessionRailSettings::get_global(cx).width(self.width);
+        let labels_visible = !session_rail_row_is_compact(rail_width);
 
         v_flex()
             .p_1()
@@ -12087,12 +12105,14 @@ impl Sidebar {
                     .w_full()
                     .gap_1()
                     .when(on_right, |this| this.flex_row_reverse())
-                    .child(self.render_agent_options_menu(cx))
+                    .child(self.render_agent_options_menu(labels_visible, cx))
                     .child(
-                        IconButton::new("history", IconName::Clock)
+                        Button::new("history", if labels_visible { "History" } else { "" })
                             .size(ButtonSize::Medium)
-                            .icon_size(IconSize::Small)
+                            .label_size(LabelSize::Small)
+                            .start_icon(Icon::new(IconName::Clock).size(IconSize::Small))
                             .toggle_state(is_archive)
+                            .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                             .aria_label(history_label)
                             .tooltip(move |_, cx| {
                                 Tooltip::for_action(history_label, &ToggleThreadHistory, cx)
@@ -12102,7 +12122,7 @@ impl Sidebar {
                             })),
                     )
                     .child(div().flex_1())
-                    .child(self.render_recent_projects_button(cx)),
+                    .child(self.render_recent_projects_button(labels_visible, cx)),
             )
     }
 
