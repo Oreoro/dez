@@ -5795,6 +5795,7 @@ dependencies = [
  "multi_buffer",
  "ordered-float 2.10.1",
  "parking_lot",
+ "paths",
  "pretty_assertions",
  "project",
  "proptest",
@@ -7448,6 +7449,7 @@ dependencies = [
  "multi_buffer",
  "notifications",
  "panel",
+ "paths",
  "picker",
  "pretty_assertions",
  "project",
@@ -9727,6 +9729,7 @@ dependencies = [
  "fuzzy_nucleo",
  "globset",
  "gpui",
+ "grammars",
  "http_client",
  "imara-diff",
  "indoc",
@@ -12674,6 +12677,7 @@ dependencies = [
  "lsp",
  "menu",
  "outline",
+ "paths",
  "pretty_assertions",
  "project",
  "search",
@@ -13617,6 +13621,7 @@ dependencies = [
  "gpui",
  "language",
  "menu",
+ "paths",
  "project",
  "schemars 1.0.4",
  "serde",
@@ -17058,6 +17063,7 @@ dependencies = [
  "menu",
  "node_runtime",
  "notifications",
+ "paths",
  "platform_title_bar",
  "pretty_assertions",
  "project",
@@ -23200,7 +23206,7 @@ dependencies = [
 
 [[package]]
 name = "zed"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "acp_thread",
  "acp_tools",

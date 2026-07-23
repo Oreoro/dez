@@ -5465,7 +5465,7 @@ fn render_auxiliary_pane_hide_control(pane_kind: PaneKind) -> AnyElement {
             .size(ButtonSize::Medium)
             .icon_size(IconSize::Small)
             .aria_label(label)
-            .tooltip(|_, cx| Tooltip::for_action(label, &ToggleProjectPane, cx))
+            .tooltip(move |_, cx| Tooltip::for_action(label, &ToggleProjectPane, cx))
             .on_click(|_, window, cx| {
                 window.dispatch_action(Box::new(ToggleProjectPane), cx);
             })
@@ -5474,7 +5474,7 @@ fn render_auxiliary_pane_hide_control(pane_kind: PaneKind) -> AnyElement {
             .size(ButtonSize::Medium)
             .icon_size(IconSize::Small)
             .aria_label(label)
-            .tooltip(|_, cx| Tooltip::for_action(label, &ToggleAgentPane, cx))
+            .tooltip(move |_, cx| Tooltip::for_action(label, &ToggleAgentPane, cx))
             .on_click(|_, window, cx| {
                 window.dispatch_action(Box::new(ToggleAgentPane), cx);
             })

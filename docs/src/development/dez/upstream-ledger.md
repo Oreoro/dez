@@ -5,40 +5,69 @@ Dez treatment of user-visible changes. Update it during every merge train.
 
 ## Integration target {#integration-target}
 
-- Source checkpoint: `c2335969f994af4c7de6fa43e91eb1c93b3f1bb5`
-- Integration merge: `2be63cfea347006e407934754086bbef62d482c2`
-- Incorporated `upstream/main`: `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
-- Current merge base: `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
-- Current divergence: 242 Dez commits and 0 upstream commits after the merge base
-- Latest fetched stable tag: `v1.11.3`
-- Integration date: 2026-07-22
+- Source checkpoint: `4cbe99da2263e781f7aa8725e4dc67ea3d05afc3`
+- Integration merge: pending the current two-parent merge commit
+- Incorporated `upstream/main`:
+  `b0f145f4aec671970340a528cb8197181e969e8c`
+- Merge base before integration:
+  `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
+- Divergence before integration: 615 Dez commits and 46 upstream commits
+- Latest stable release reference: `v1.12.0`
+- Integration date: 2026-07-24
 
-The merge was rehearsed in a detached temporary worktree, then integrated on
-`codex/canvas-plan` after the Dez source slice was checkpointed. The merge has
-two explicit parents and was not squashed or rebased.
+The merge is being integrated on `agent/v0.0.2-upstream-parity` after the Dez
+source slice was checkpointed. It will retain two explicit parents and will not
+be squashed or rebased.
 
 ## Integration result {#integration-result}
 
-The real merge produced eleven conflicted paths:
+The real merge produced four conflicted paths:
 
-| Path                                                   | Class                       | Integrated resolution                                                                                                                                              |
-| ------------------------------------------------------ | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `assets/settings/default.json`                         | Settings and defaults       | Preserved Dez offline, Canvas, privacy, updater, terminal-first, and sidebar-native shell defaults.                                                                |
-| `crates/agent_ui/src/conversation_view/thread_view.rs` | Agent presentation          | Combined upstream Markdown-fragment behavior with Dez pane-splitting behavior.                                                                                     |
-| `crates/markdown_preview/src/markdown_preview_view.rs` | Surface presentation        | Retained upstream link hover, source-position, and file-link behavior with Dez preview-first opening and readable Canvas styling.                                  |
-| `crates/settings_content/src/sidebar.rs`               | Settings schema             | Preserved the consolidated Dez `SidebarChrome` owner rather than restoring an overlapping upstream title-bar schema.                                               |
-| `crates/settings_ui/src/page_data.rs`                  | Settings presentation       | Kept the Dez sidebar-chrome section and terminology.                                                                                                               |
-| `crates/tasks_ui/Cargo.toml`                           | Dependency wiring           | Combined Dez settings dependencies with the current upstream tree-sitter dependencies.                                                                             |
-| `crates/title_bar/src/title_bar.rs`                    | Shell and collaboration     | Preserved the Dez sidebar-native hierarchy and account/collaboration demotion; compatible upstream changes outside the conflicting render branch remain inherited. |
-| `crates/title_bar/src/title_bar_settings.rs`           | Modify/delete architecture  | Kept the file deleted because `sidebar_chrome_settings` is the single Dez settings owner.                                                                          |
-| `crates/workspace/src/pane.rs`                         | Pane lifecycle and tests    | Preserved Dez empty-launch behavior and upstream leased-workspace pinned-tab coverage.                                                                             |
-| `crates/workspace/src/pane_group.rs`                   | Pane focus and rendering    | Kept the visible-index active-pane correction with Dez focus and layout behavior.                                                                                  |
-| `crates/workspace/src/workspace.rs`                    | Workspace routing and tests | Preserved Dez saved-Canvas-layout coverage and upstream remote-base-path coverage while inheriting compatible workspace fixes.                                     |
+| Path                              | Class               | Integrated resolution                                                                                                                                                            |
+| --------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Cargo.lock`                      | Dependency graph    | Regenerated the merged locked graph, including the internal `paths` edges required by Dez crates.                                                                                |
+| `crates/editor/src/editor.rs`     | Breadcrumb behavior | Kept Dez's breadcrumb-symbol preference and inherited upstream's singleton-buffer filename fallback.                                                                             |
+| `crates/terminal/src/terminal.rs` | Process lifetime    | Inherited upstream process-group shutdown for ordinary terminals while preserving detach-on-GUI-exit for hosted terminals. Explicit hosted-session termination remains separate. |
+| `crates/zed/Cargo.toml`           | Product identity    | Preserved the `dez` binary and default run target, and advanced the package version to `0.0.2`.                                                                                  |
 
-No conflict occurred in terminal process handling, terminal rendering, ACP,
-remote transport, Git stores, workspace persistence, or agent lifecycle code.
-Those areas still require focused regression tests after the merge because
-clean textual application does not prove correct Dez semantics.
+Compile-time adaptation also added stable IDs to Dez accessibility landmarks,
+preserved reason-specific unavailable-session recovery, updated tooltip
+lifetimes and keybinding usage, and declared the sidebar's `paths` dependency.
+These are compatibility repairs rather than new product claims.
+
+## New capability treatment in this train {#new-capability-treatment}
+
+### Inherit
+
+- Preserve preview tabs for reference multibuffers.
+- Fix exact mid-line `edit_file` matching and Bedrock message/tool-call ID
+  collisions.
+- Load buffer chunks lazily and track dynamic LSP registrations by ID.
+- Fall back to filenames in breadcrumbs when symbols are unavailable.
+- Fix CRLF formatter cursor placement, search autoscroll, nested repository
+  excludes, remote Git commit templates, context-server working-directory
+  restarts, and Git refresh after reset or fetch.
+- Add the deliberate Git commit `--no-verify` option.
+- Close ordinary terminal process groups instead of leaving descendants.
+
+### Adapt
+
+- Upstream terminal process-group cleanup does not change hosted-session
+  ownership: a normal GUI exit detaches from a hosted session, while explicit
+  termination closes its process group.
+- Upstream breadcrumb fallback continues to respect the Dez preference that
+  hides breadcrumb symbols.
+- New GPUI stateful accessibility requirements keep Dez labels and landmarks
+  by adding stable IDs rather than removing roles.
+- Unavailable saved terminal and agent sessions preserve distinct failure
+  reasons without starting a replacement process.
+
+### Deferred
+
+- Upstream temporarily placed agent terminal sandboxing behind a disabled
+  feature flag. Dez inherits that source state for parity but does not claim
+  sandbox protection for v0.0.2 until the upstream withdrawal is understood,
+  the threat model is rechecked, and runtime evidence exists.
 
 ## Capability treatment {#capability-treatment}
 

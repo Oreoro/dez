@@ -1,7 +1,43 @@
-# Dez v0.0.1 Release Evidence
+# Dez Release Evidence
 
 This log records direct evidence for the consolidated release gate. A source
 claim is not a runtime claim, and an unchecked scenario remains unverified.
+
+## v0.0.2 parity build evidence {#v0-0-2-parity-build-evidence}
+
+On 2026-07-24, the parity branch incorporated upstream target
+`b0f145f4aec671970340a528cb8197181e969e8c` from Dez checkpoint
+`4cbe99da2263e781f7aa8725e4dc67ea3d05afc3`. The locked macOS arm64 build
+completed for the application and terminal host:
+
+```sh
+LK_CUSTOM_WEBRTC="$PWD/target/dez-build-deps/webrtc-custom/mac-arm64-release" \
+  cargo build --locked --profile dev \
+  --config 'profile.dev.debug=0' \
+  --config 'profile.dev.incremental=false' \
+  --config 'profile.dev.codegen-units=1' \
+  --config 'profile.dev.split-debuginfo="off"' \
+  --config 'profile.dev.build-override.debug=0' \
+  --config 'profile.dev.build-override.codegen-units=1' \
+  --config 'profile.dev.build-override.split-debuginfo="off"' \
+  -p zed --bin dez -p dez_terminal_host --bin dez-terminal-host -j1
+```
+
+The custom WebRTC path is a local extraction of the workspace-pinned
+`webrtc-0001d84-4` macOS arm64 release archive. `unzip -t` reported no errors
+before it was used. It avoids a build-script response-body timeout and does not
+change the locked Rust dependency graph.
+
+| Artifact                         | Type                           | Size | SHA-256                                                            |
+| -------------------------------- | ------------------------------ | ---- | ------------------------------------------------------------------ |
+| `target/debug/dez`               | Mach-O 64-bit arm64 executable | 1.0G | `5e032fd154165c7fc3fba63a52b27f97e1a34d4a2cde31c2e204a538e7600990` |
+| `target/debug/dez-terminal-host` | Mach-O 64-bit arm64 executable | 18M  | `35acd45896a00bdf3be8a40fd1e6daf626ca584a3e60e6c905fa0cbd67cc6c0d` |
+
+`cargo fmt --all -- --check`, `./script/dez-identity-check`, locked offline
+metadata resolution, shell syntax checks, merge-marker inspection, and
+`git diff --check` pass. Neither built binary was launched, so this is compiled
+evidence only. Runtime, bundle, signing, restart, and release claims remain
+open.
 
 ## Frozen source and historical artifacts {#frozen-source-and-intended-artifacts}
 

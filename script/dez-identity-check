@@ -54,8 +54,8 @@ require_pattern crates/paths/src/paths.rs \
     '^pub const APP_STORAGE_NAME: &str = "Superzed";' \
     'the documented legacy storage boundary changed without a migration'
 require_pattern crates/zed/Cargo.toml \
-    '^version = "0\.0\.1"$' \
-    'application version is not 0.0.1'
+    '^version = "0\.0\.2"$' \
+    'application version is not 0.0.2'
 require_pattern crates/zed/Cargo.toml \
     '^default-run = "dez"$' \
     'default executable is not dez'
@@ -950,7 +950,7 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_unavailable_description.*?Dez did not start a replacement shell.*?Start fresh only when you want a separate computation.*?if self\.session_unavailable \{[[:space:]]*return false;.*?\.title\("Terminal Session unavailable"\).*?\.description\(unavailable_description\).*?"Start Fresh Terminal"' \
     'unavailable terminal recovery can regress to internal Host jargon'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'session_unavailable_reason: Option<String>.*?let \(terminal, session_unavailable_reason\) = match stored_session_ref.*?The terminal host no longer owns this saved session.*?The saved terminal process is no longer available on this Dez host.*?The saved terminal session reference is incomplete or invalid.*?if custom_title\.is_some\(\) \{[[:space:]]*view\.custom_title = custom_title;.*?view\.session_unavailable_reason = session_unavailable_reason.*?fn session_unavailable_terminal.*?\.with_display_text\("Session unavailable", &\[\]\)' \
+    'session_unavailable_reason: Option<String>.*?let \(terminal, session_unavailable_reason\) = match stored_session_ref.*?The terminal host no longer owns this saved session.*?The saved terminal process is no longer available on this Dez host.*?The saved terminal session reference is incomplete or invalid.*?if custom_title\.is_some\(\) \{[[:space:]]*view\.custom_title = custom_title;.*?view\.session_unavailable_reason = session_unavailable_reason.*?fn session_unavailable_terminal.*?session_unavailable_terminal_with_message\(project, "Session unavailable", window, cx\).*?fn session_unavailable_terminal_with_message.*?message: &str.*?\.with_display_text\(message, &\[\]\)' \
     'unavailable Terminal Sessions can regress to losing their title, reason, or rendering duplicate fake terminal output'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'fn terminal_panel_surface_visible.*?app_name == "Zed".*?if terminal_panel_surface_visible\(APP_NAME\).*?terminal_panel::Toggle' \

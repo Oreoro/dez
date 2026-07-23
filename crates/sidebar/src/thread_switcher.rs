@@ -10,7 +10,10 @@ use gpui::{
     ModifiersChangedEvent, Render, ScrollHandle, SharedString, prelude::*,
 };
 use settings::Settings as _;
-use ui::{AgentThreadStatus, ThreadItem, ThreadItemWorktreeInfo, WithScrollbar, prelude::*};
+use ui::{
+    AgentThreadStatus, Divider, KeyBinding, ThreadItem, ThreadItemWorktreeInfo, WithScrollbar,
+    prelude::*,
+};
 use workspace::{DesignSystemSettings, ModalView, Workspace};
 use zed_actions::sidebar::ToggleThreadSwitcher;
 
@@ -545,21 +548,15 @@ impl Render for ThreadSwitcher {
                         h_flex()
                             .gap_1()
                             .when(!release_to_open, |this| {
-                                this.when_some(
-                                    KeyBinding::for_action_in(&menu::Confirm, &focus_handle, cx),
-                                    |this, key_binding| {
-                                        this.child(key_binding)
-                                            .child(Label::new("Open").size(LabelSize::Small))
-                                    },
-                                )
+                                this.child(KeyBinding::for_action_in(
+                                    &menu::Confirm,
+                                    &focus_handle,
+                                    cx,
+                                ))
+                                .child(Label::new("Open").size(LabelSize::Small))
                             })
-                            .when_some(
-                                KeyBinding::for_action_in(&menu::Cancel, &focus_handle, cx),
-                                |this, key_binding| {
-                                    this.child(key_binding)
-                                        .child(Label::new("Cancel").size(LabelSize::Small))
-                                },
-                            ),
+                            .child(KeyBinding::for_action_in(&menu::Cancel, &focus_handle, cx))
+                            .child(Label::new("Cancel").size(LabelSize::Small)),
                     ),
             )
             .vertical_scrollbar_for(&self.scroll_handle, window, cx)

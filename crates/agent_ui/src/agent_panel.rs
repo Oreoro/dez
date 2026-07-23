@@ -2672,7 +2672,7 @@ impl AgentPanel {
                     let terminal = match restored {
                         Some(terminal) => terminal,
                         None => cx.update(|window, cx| {
-                            terminal_view::session_unavailable_terminal(
+                            terminal_view::session_unavailable_terminal_with_message(
                                 &project,
                                 if host_unavailable {
                                     "The terminal host is unavailable for this saved agent session."
@@ -2725,7 +2725,7 @@ impl AgentPanel {
             }
             let session_unavailable = attached.is_none();
             let terminal = attached.unwrap_or_else(|| {
-                terminal_view::session_unavailable_terminal(
+                terminal_view::session_unavailable_terminal_with_message(
                     &self.project,
                     "The saved agent process is no longer available on this Dez host.",
                     window,

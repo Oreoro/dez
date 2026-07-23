@@ -229,6 +229,7 @@
   - [Superzed Canvas Implementation Plan](./development/superzed-canvas-plan.md)
   - [Dez Development](./development/dez/index.md)
     - [Fork Notes](./development/dez/fork-notes.md)
+    - [v0.0.2 Active Plan](./development/dez/v0.0.2-active-plan.md)
     - [Product Strategy](./development/dez/product-strategy.md)
     - [Upstream Synchronization](./development/dez/upstream-sync.md)
     - [Upstream Feature Ledger](./development/dez/upstream-ledger.md)

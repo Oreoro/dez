@@ -706,6 +706,7 @@ impl Render for AgentDiffPane {
         let focus_handle = &self.focus_handle;
 
         div()
+            .id("agent-diff-pane")
             .track_focus(focus_handle)
             .key_context(if is_empty { "EmptyPane" } else { "AgentDiff" })
             .role(gpui::Role::Region)

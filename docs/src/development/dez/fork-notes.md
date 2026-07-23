@@ -413,6 +413,17 @@ defer it.
 
 ## Permanent decisions {#permanent-decisions}
 
+- **2026-07-24: Upstream terminal cleanup must preserve hosted-session
+  ownership.** Ordinary terminal close inherits upstream process-group
+  termination. Closing the Dez GUI detaches from hosted Terminal Sessions and
+  does not terminate their process groups; explicit stop remains the deliberate
+  termination path. Merge conflict resolution and identity checks must preserve
+  this distinction.
+- **2026-07-24: A disabled upstream sandbox is not a Dez security claim.**
+  Upstream temporarily feature-gated agent terminal sandboxing in the v0.0.2
+  parity train. Dez will document the inherited state, retain confirmation and
+  trust-boundary UX, and make no sandbox-protection claim until the withdrawal
+  is understood and runtime enforcement is verified.
 - **2026-07-23: Public source must explain the product and its evidence
   boundary.** The canonical repository front page names Dez, explains how the
   Session Rail, Workspace Tools, Main Work Area, Agent, and one

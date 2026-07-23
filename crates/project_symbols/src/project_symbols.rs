@@ -363,10 +363,11 @@ mod tests {
         language_registry.add(Arc::new(Language::new(
             LanguageConfig {
                 name: "Rust".into(),
-                matcher: LanguageMatcher {
+                matcher: (LanguageMatcher {
                     path_suffixes: vec!["rs".to_string()],
                     ..Default::default()
-                },
+                })
+                .into(),
                 ..Default::default()
             },
             None,
@@ -516,10 +517,11 @@ mod tests {
         language_registry.add(Arc::new(Language::new(
             LanguageConfig {
                 name: "Rust".into(),
-                matcher: LanguageMatcher {
+                matcher: (LanguageMatcher {
                     path_suffixes: vec!["rs".to_string()],
                     ..Default::default()
-                },
+                })
+                .into(),
                 ..Default::default()
             },
             None,

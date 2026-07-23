@@ -21,28 +21,24 @@ stable tag as the release-quality compatibility floor.
 
 ## Current local baseline {#current-local-baseline}
 
-Refreshed on 2026-07-22:
+Refreshed on 2026-07-24:
 
-- Dez source checkpoint: `c2335969f994af4c7de6fa43e91eb1c93b3f1bb5`
-- integration merge: `2be63cfea347006e407934754086bbef62d482c2`
-- incorporated `upstream/main`: `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
-- current merge base: `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
-- divergence: 242 Dez commits and 0 upstream commits after the merge base
-- latest stable tag fetched: `v1.11.3`
-- prior fork source: `maxktz/superzed`
+- Dez source checkpoint: `4cbe99da2263e781f7aa8725e4dc67ea3d05afc3`
+- integration merge: pending the current two-parent merge commit
+- incorporated `upstream/main`: `b0f145f4aec671970340a528cb8197181e969e8c`
+- merge base before integration:
+  `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
+- divergence before integration: 615 Dez commits and 46 upstream commits after
+  the merge base
+- latest stable release reference: `v1.12.0`
 - canonical public repository: `Oreoro/dez`
-- active integration branch at capture: `codex/canvas-plan`
-- Rust toolchain at the post-merge static gate: `rustc 1.95.0` and
-  `cargo 1.95.0`
+- active integration branch: `agent/v0.0.2-upstream-parity`
+- build gate: locked `dez` and `dez-terminal-host` build passed on macOS arm64
 
-The tag fetch again reported existing local-name collisions for `nightly` and
-`collab-staging`; `upstream/main` still refreshed successfully. Versioned
-stable tags were queried independently and continue to top out at `v1.11.3`.
-Resolve or namespace the colliding moving tags before treating a future
-`--tags` fetch as an all-or-nothing integration gate.
-
-The 2026-07-22 train is integrated as a real two-parent merge. Eleven conflicts
-were resolved according to Fork Notes; the exact set and treatment are in the
+The 2026-07-24 train resolved four textual conflicts according to Fork Notes.
+Additional compile-time adaptations were required where upstream tightened GPUI
+accessibility, tooltip lifetime, keybinding, and crate-dependency APIs. The
+exact treatment is in the
 [Upstream Feature Ledger](./upstream-ledger.md).
 
 ## Merge train {#merge-train}

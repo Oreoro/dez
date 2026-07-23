@@ -1853,6 +1853,7 @@ impl Render for DebugPanel {
                 } else {
                     let welcome_experience = if paths::APP_NAME == "Zed" {
                         v_flex()
+                            .id("zed-debugger-idle-state")
                             .flex_1()
                             .w_full()
                             .min_h_0()
@@ -1923,6 +1924,7 @@ impl Render for DebugPanel {
                         let (title, description) = dez_debug_idle_copy();
 
                         v_flex()
+                            .id("dez-debugger-idle-state")
                             .flex_1()
                             .w_full()
                             .min_h_0()
@@ -2084,6 +2086,7 @@ impl Render for DebugPanel {
                                 let (title, description) = dez_breakpoint_empty_copy();
                                 this.child(
                                     v_flex()
+                                        .id("dez-debugger-breakpoints-empty-state")
                                         .size_full()
                                         .items_center()
                                         .justify_center()

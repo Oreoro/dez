@@ -2946,6 +2946,20 @@ pub fn session_unavailable_terminal(
     window: &mut Window,
     cx: &mut App,
 ) -> Entity<Terminal> {
+    session_unavailable_terminal_with_message(project, "Session unavailable", window, cx)
+}
+
+/// Builds a terminal-shaped recovery surface with a caller-specific reason.
+///
+/// Persisted terminal and agent sessions use this to distinguish a missing
+/// host, a stale session identity, and a host-side restore failure without
+/// starting a replacement process.
+pub fn session_unavailable_terminal_with_message(
+    project: &Entity<Project>,
+    message: &str,
+    window: &mut Window,
+    cx: &mut App,
+) -> Entity<Terminal> {
     let settings = TerminalSettings::get_global(cx);
     let cursor_shape = settings.cursor_shape;
     let alternate_scroll = settings.alternate_scroll;
@@ -2960,11 +2974,7 @@ pub fn session_unavailable_terminal(
         cx.background_executor(),
         path_style,
     );
-    cx.new(|cx| {
-        builder
-            .with_display_text("Session unavailable", &[])
-            .subscribe(cx)
-    })
+    cx.new(|cx| builder.with_display_text(message, &[]).subscribe(cx))
 }
 
 impl SearchableItem for TerminalView {

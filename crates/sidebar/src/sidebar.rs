@@ -4993,7 +4993,7 @@ impl Sidebar {
                                 "New Terminal in {}",
                                 workspace_name.as_ref()
                             )))
-                            .tooltip(|_, cx| {
+                            .tooltip(move |_, cx| {
                                 Tooltip::for_action(
                                     "New Terminal in This Workspace",
                                     &NewCenterTerminal::default(),
@@ -7433,7 +7433,7 @@ impl Sidebar {
                     Ok(None) => {
                         log::warn!("terminal host no longer owns session {session_id}");
                         let terminal = cx.update(|window, cx| {
-                            terminal_view::session_unavailable_terminal(
+                            terminal_view::session_unavailable_terminal_with_message(
                                 &project,
                                 "The terminal host no longer owns this saved session.",
                                 window,
@@ -7447,7 +7447,7 @@ impl Sidebar {
                             "failed to restore hosted terminal session {session_id}: {error:#}"
                         );
                         let terminal = cx.update(|window, cx| {
-                            terminal_view::session_unavailable_terminal(
+                            terminal_view::session_unavailable_terminal_with_message(
                                 &project,
                                 "The terminal host could not confirm this saved session.",
                                 window,
@@ -7460,7 +7460,7 @@ impl Sidebar {
                 None => {
                     log::warn!("terminal host is unavailable for session {session_id}");
                     let terminal = cx.update(|window, cx| {
-                        terminal_view::session_unavailable_terminal(
+                        terminal_view::session_unavailable_terminal_with_message(
                             &project,
                             "The terminal host is unavailable for this saved session.",
                             window,
@@ -11903,7 +11903,7 @@ impl Sidebar {
                             .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
                             .start_icon(Icon::new(IconName::FolderOpen).size(IconSize::XSmall))
                             .aria_label(open_workspace_label)
-                            .tooltip(|_, cx| {
+                            .tooltip(move |_, cx| {
                                 Tooltip::for_action(
                                     open_workspace_label,
                                     &Open {
