@@ -1442,6 +1442,14 @@ code, all launch gates pass, and known limitations are documented.
       guards pass. Commit `1f3432a211` additionally guards the explicit
       accessible names on Agent History's icon-only row and toolbar actions;
       compilation and rendered rail/history proof remain deferred.
+- [x] 2026-07-23: Keep Workspace tool naming stable after activation. Commit
+      `ce770c5eee` aligns Workspace Search fallback tab/tooltip, loading, and
+      no-results copy with Workspace scope. Workspace Diagnostics retains its
+      Workspace tooltip and always includes a **Diagnostics** identity before
+      check/error/warning status in custom tab content instead of presenting a
+      status-only tab. Official Zed retains Project labels. Focused pure
+      assertions, formatting, locked offline metadata, and static identity
+      guards pass; compilation and rendered destination proof remain deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

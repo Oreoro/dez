@@ -1707,3 +1707,13 @@ Notes decision:
   accessible names, with their regression guards completed in `1f3432a211`.
   Focused pure assertions, formatting, locked offline metadata, identity, and
   diff checks pass; rendered rail/history proof remains deferred.
+- 2026-07-23: Aligned Workspace tool promises with their center destinations
+  in `ce770c5eee`. Workspace Search now retains **Workspace Search** as its
+  fallback tab/tooltip title, says **Loading workspace…**, and reports
+  no-results scope as the Workspace rather than reverting to Project after the
+  status-bar action opens it. Workspace Diagnostics uses the same
+  **Workspace Diagnostics** tooltip as its launcher, and its custom tab content
+  now always includes **Diagnostics** before the check/error/warning status
+  instead of rendering an unexplained status-only tab. Official Zed retains
+  Project labels. Focused pure assertions, formatting, locked offline metadata,
+  identity, and diff checks pass; rendered destination proof remains deferred.

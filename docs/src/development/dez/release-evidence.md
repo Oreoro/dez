@@ -1070,7 +1070,10 @@ the later running-app reports, the source advanced through:
   feedback, review limitations, and Command Palette while preserving Terminal
   Session as the terminal-backed computation identity; and
 - `1f3432a211`, which guards explicit accessible names for Agent History's
-  icon-only row and toolbar actions.
+  icon-only row and toolbar actions; and
+- `ce770c5eee`, which keeps Workspace Search scoped to the Workspace after it
+  opens and makes the Workspace Diagnostics tab retain its identity alongside
+  check/error/warning status.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
