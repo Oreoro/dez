@@ -217,6 +217,12 @@ ready/running work and attention counts without relying on color; sticky visual
 duplicates are excluded from accessibility output. Focused copy and identity
 checks pass; platform-tree inspection remains deferred.
 
+Commit `7e91f00b69` exposes All/Attention as a named Session scope group with
+stable control names, shared toggle state, and explicit action descriptions.
+Session search is a named region, while changing totals and empty/caught-up
+results use status semantics. Focused copy and identity checks pass;
+platform-announcement timing remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -1042,6 +1048,11 @@ code, all launch gates pass, and known limitations are documented.
       ready/running, and attention labels while suppressing sticky duplicates.
       Focused and identity assertions pass; platform inspection remains
       consolidated.
+- [x] 2026-07-23: Announce Session Rail scope and result changes. Commit
+      `7e91f00b69` names the scope group and search region, gives totals and
+      empty results status semantics, and separates stable scope names from
+      toggle state and action descriptions. Focused and identity assertions
+      pass; platform announcement timing remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the

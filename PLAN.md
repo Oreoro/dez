@@ -638,8 +638,11 @@ with new labels.
       commit `c47637c2ac` adds a named list container and exposes each non-sticky
       Workspace group as a selected/expanded list item whose accessible label
       includes ready, running, and attention state. Sticky visual duplicates are
-      deliberately excluded from the accessibility hierarchy. The rendered
-      matrix remains open.
+      deliberately excluded from the accessibility hierarchy. Commit
+      `7e91f00b69` names the Session scope and search regions, gives changing
+      totals and empty results status semantics, and keeps scope identity stable
+      while the shared toggle state reports selection. The rendered matrix
+      remains open.
 - [ ] Capture a visual state matrix at compact, balanced, and spacious density
       in representative light and dark themes and at narrow/normal/wide rail
       widths.
@@ -1383,3 +1386,9 @@ Notes decision:
   attention counts without relying on color. Sticky visual copies are excluded
   to avoid duplicate announcements. Focused copy assertions and identity guards
   pass; platform accessibility-tree inspection remains deferred.
+- 2026-07-23: Made Session Rail scope and result changes announceable in
+  `7e91f00b69`. All/Attention controls now belong to a named scope group with
+  stable control names, separate toggle state, and action descriptions; search
+  is a named region, while totals, no matches, and caught-up results use status
+  semantics. Focused copy assertions and identity guards pass; platform
+  announcement timing remains deferred.
