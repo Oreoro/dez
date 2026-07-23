@@ -11143,18 +11143,34 @@ impl Sidebar {
             .id("sidebar-no-results")
             .role(gpui::Role::Status)
             .aria_label(format!("{title}. {description}"))
-            .p_4()
-            .size_full()
-            .items_center()
-            .justify_center()
+            .flex_1()
+            .min_h_0()
+            .overflow_y_scroll()
+            .px_3()
+            .py_6()
             .child(
                 v_flex()
                     .w_full()
-                    .max_w(px(260.0))
-                    .items_center()
-                    .gap_2()
-                    .child(Icon::new(icon).size(IconSize::Medium).color(Color::Muted))
-                    .child(Label::new(title).size(LabelSize::Small))
+                    .gap_3()
+                    .child(
+                        h_flex()
+                            .gap_2()
+                            .child(
+                                div()
+                                    .flex_none()
+                                    .size_8()
+                                    .rounded_md()
+                                    .border_1()
+                                    .border_color(cx.theme().colors().border_variant)
+                                    .bg(cx.theme().colors().panel_background)
+                                    .items_center()
+                                    .justify_center()
+                                    .child(
+                                        Icon::new(icon).size(IconSize::Small).color(Color::Muted),
+                                    ),
+                            )
+                            .child(Label::new(title).size(LabelSize::Small)),
+                    )
                     .child(
                         Label::new(description)
                             .size(LabelSize::XSmall)
@@ -11163,6 +11179,7 @@ impl Sidebar {
                     .when(has_query, |this| {
                         this.child(
                             Button::new("no-results-clear-search", "Clear Search")
+                                .full_width()
                                 .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
                                 .label_size(LabelSize::Small)
                                 .on_click(cx.listener(|this, _, window, cx| {
@@ -11175,6 +11192,7 @@ impl Sidebar {
                     .when(!has_query, |this| {
                         this.child(
                             Button::new("no-results-new-terminal", "New Terminal")
+                                .full_width()
                                 .style(ButtonStyle::Filled)
                                 .label_size(LabelSize::Small)
                                 .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
@@ -11201,24 +11219,41 @@ impl Sidebar {
             .id("sidebar-attention-empty")
             .role(gpui::Role::Status)
             .aria_label("You're caught up. No sessions need your attention.")
-            .p_4()
-            .size_full()
-            .items_center()
-            .justify_center()
-            .gap_2()
+            .flex_1()
+            .min_h_0()
+            .overflow_y_scroll()
+            .px_3()
+            .py_6()
+            .gap_3()
             .child(
-                Icon::new(IconName::Check)
-                    .size(IconSize::Medium)
-                    .color(Color::Success),
+                h_flex()
+                    .gap_2()
+                    .child(
+                        div()
+                            .flex_none()
+                            .size_8()
+                            .rounded_md()
+                            .border_1()
+                            .border_color(cx.theme().colors().border_variant)
+                            .bg(cx.theme().colors().panel_background)
+                            .items_center()
+                            .justify_center()
+                            .child(
+                                Icon::new(IconName::Check)
+                                    .size(IconSize::Small)
+                                    .color(Color::Success),
+                            ),
+                    )
+                    .child(Label::new("You're caught up").size(LabelSize::Small)),
             )
-            .child(Label::new("You're caught up").size(LabelSize::Small))
             .child(
-                Label::new("No sessions need your attention.")
+                Label::new("No sessions need your attention. Ongoing work remains under All.")
                     .size(LabelSize::XSmall)
                     .color(Color::Muted),
             )
             .child(
                 Button::new("show-all-sessions", "Show All Sessions")
+                    .full_width()
                     .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
                     .label_size(LabelSize::Small)
                     .on_click(cx.listener(|this, _, window, cx| {
@@ -11430,26 +11465,56 @@ impl Sidebar {
             })
     }
 
-    fn render_empty_state(&self, _cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_empty_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
         v_flex()
             .id("sidebar-start-state")
             .role(gpui::Role::Group)
             .aria_label("Start a terminal session")
-            .size_full()
+            .flex_1()
+            .min_h_0()
+            .overflow_y_scroll()
             .p_3()
             .child(
                 v_flex()
                     .w_full()
                     .gap_3()
                     .child(
-                        Icon::new(IconName::Terminal)
-                            .size(IconSize::Small)
-                            .color(Color::Accent),
+                        h_flex()
+                            .gap_2()
+                            .child(
+                                div()
+                                    .flex_none()
+                                    .size_8()
+                                    .rounded_md()
+                                    .border_1()
+                                    .border_color(cx.theme().colors().border_variant)
+                                    .bg(cx.theme().colors().panel_background)
+                                    .items_center()
+                                    .justify_center()
+                                    .child(
+                                        Icon::new(IconName::Terminal)
+                                            .size(IconSize::Small)
+                                            .color(Color::Accent),
+                                    ),
+                            )
+                            .child(
+                                v_flex()
+                                    .min_w_0()
+                                    .gap_0p5()
+                                    .child(
+                                        Label::new("Start your first terminal")
+                                            .size(LabelSize::Small),
+                                    )
+                                    .child(
+                                        Label::new("No active sessions")
+                                            .size(LabelSize::XSmall)
+                                            .color(Color::Muted),
+                                    ),
+                            ),
                     )
-                    .child(Label::new("Start your first terminal").size(LabelSize::Small))
                     .child(
                         Label::new(
-                            "Dez keeps terminal state, attention, and recovery in this rail.",
+                            "Run a shell or coding agent here. Dez keeps its state, attention, and review path together.",
                         )
                         .size(LabelSize::XSmall)
                         .color(Color::Muted),
@@ -11476,7 +11541,7 @@ impl Sidebar {
                     .child(
                         Button::new("start-open", "Open Folder…")
                             .full_width()
-                            .style(ButtonStyle::Outlined)
+                            .style(ButtonStyle::Subtle)
                             .start_icon(Icon::new(IconName::FolderOpen).size(IconSize::XSmall))
                             .aria_label("Open Folder or Workspace")
                             .tooltip(|_, cx| {
@@ -11793,8 +11858,8 @@ impl Sidebar {
                 IconButton::new("agent-sidebar-options-menu", IconName::Robot)
                     .size(ButtonSize::Medium)
                     .icon_size(IconSize::Small)
-                    .aria_label("Agent Menu"),
-                Tooltip::text("Agent Menu"),
+                    .aria_label("Agent and Context Menu"),
+                Tooltip::text("Agent and Context Menu"),
             )
             .anchor(if on_right {
                 gpui::Anchor::BottomRight
@@ -11943,6 +12008,10 @@ impl Sidebar {
             .child(self.sidebar_chrome.clone())
             .child(
                 h_flex()
+                    .id("session-rail-utilities")
+                    .role(gpui::Role::Group)
+                    .aria_label("Session Rail utilities")
+                    .w_full()
                     .gap_1()
                     .when(on_right, |this| this.flex_row_reverse())
                     .child(self.render_agent_options_menu(cx))
@@ -11958,25 +12027,6 @@ impl Sidebar {
                             .on_click(cx.listener(|this, _, window, cx| {
                                 this.toggle_archive(&ToggleThreadHistory, window, cx);
                             })),
-                    )
-                    .child(
-                        IconButton::new("command-search", IconName::MagnifyingGlass)
-                            .size(ButtonSize::Medium)
-                            .icon_size(IconSize::Small)
-                            .aria_label("Open Command Palette")
-                            .tooltip(|_, cx| {
-                                Tooltip::for_action(
-                                    "Command Palette",
-                                    &zed_actions::command_palette::Toggle,
-                                    cx,
-                                )
-                            })
-                            .on_click(|_, window, cx| {
-                                window.dispatch_action(
-                                    zed_actions::command_palette::Toggle.boxed_clone(),
-                                    cx,
-                                );
-                            }),
                     )
                     .child(div().flex_1())
                     .child(self.render_recent_projects_button(cx)),

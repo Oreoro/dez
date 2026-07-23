@@ -170,18 +170,12 @@ const NEW_CENTER_TERMINAL: NewCenterTerminal = NewCenterTerminal { local: false 
 
 const CONTENT: (Section<5>, Section<3>) = (
     Section {
-        title: "Get Started",
+        title: "Start Working",
         entries: [
             SectionEntry {
                 icon: IconName::Terminal,
                 title: "New Terminal",
                 action: &NEW_CENTER_TERMINAL,
-                visibility_guard: SectionVisibility::Always,
-            },
-            SectionEntry {
-                icon: IconName::Plus,
-                title: "New File",
-                action: &NewFile,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
@@ -197,6 +191,12 @@ const CONTENT: (Section<5>, Section<3>) = (
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
+                icon: IconName::Plus,
+                title: "New File",
+                action: &NewFile,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
                 icon: IconName::ListCollapse,
                 title: "Open Command Palette",
                 action: &command_palette::Toggle,
@@ -205,7 +205,7 @@ const CONTENT: (Section<5>, Section<3>) = (
         ],
     },
     Section {
-        title: "Configure",
+        title: "Personalize",
         entries: [
             SectionEntry {
                 icon: IconName::Settings,
@@ -389,6 +389,92 @@ impl WelcomePage {
             )
     }
 
+    fn render_supervision_loop(&self, cx: &App) -> impl IntoElement {
+        let color = cx.theme().colors();
+        let steps = [
+            (
+                IconName::Terminal,
+                "Start",
+                "Run a shell, task, or coding agent in a terminal.",
+            ),
+            (
+                IconName::ListTree,
+                "Watch",
+                "Scan live state and attention in the Session Rail.",
+            ),
+            (
+                IconName::Diff,
+                "Verify",
+                "Review observed changes and checks beside the session.",
+            ),
+        ];
+
+        v_flex()
+            .id("welcome-supervision-loop")
+            .role(gpui::Role::Region)
+            .aria_label("Dez supervision loop")
+            .w_full()
+            .gap_2()
+            .p_3()
+            .rounded_md()
+            .border_1()
+            .border_color(color.border_variant)
+            .bg(color.panel_background)
+            .child(
+                v_flex()
+                    .gap_0p5()
+                    .child(Label::new("Keep work oriented"))
+                    .child(
+                        Label::new("The terminal, its attention, and its evidence stay connected.")
+                            .size(LabelSize::XSmall)
+                            .color(Color::Muted),
+                    ),
+            )
+            .child(
+                v_flex()
+                    .id("welcome-supervision-steps")
+                    .role(gpui::Role::List)
+                    .aria_label("Start, watch, and verify")
+                    .gap_1()
+                    .children(steps.into_iter().enumerate().map(
+                        |(index, (icon, title, description))| {
+                            h_flex()
+                                .id(("welcome-supervision-step", index))
+                                .role(gpui::Role::ListItem)
+                                .aria_label(format!("{title}. {description}"))
+                                .min_w_0()
+                                .gap_2()
+                                .py_1()
+                                .child(
+                                    div()
+                                        .flex_none()
+                                        .size_6()
+                                        .rounded_sm()
+                                        .border_1()
+                                        .border_color(color.border_variant)
+                                        .items_center()
+                                        .justify_center()
+                                        .child(
+                                            Icon::new(icon)
+                                                .size(IconSize::XSmall)
+                                                .color(Color::Muted),
+                                        ),
+                                )
+                                .child(
+                                    v_flex()
+                                        .min_w_0()
+                                        .child(Label::new(title).size(LabelSize::Small))
+                                        .child(
+                                            Label::new(description)
+                                                .size(LabelSize::XSmall)
+                                                .color(Color::Muted),
+                                        ),
+                                )
+                        },
+                    )),
+            )
+    }
+
     fn render_recent_project_section(
         &self,
         recent_projects: Vec<impl IntoElement>,
@@ -491,31 +577,45 @@ impl Render for WelcomePage {
                     .child(
                         h_flex()
                             .w_full()
-                            .justify_center()
+                            .items_center()
                             .mb_4()
-                            .gap_4()
+                            .gap_3()
                             .child(
                                 h_flex()
                                     .flex_none()
-                                    .w_12()
-                                    .h_12()
+                                    .size_10()
                                     .rounded_md()
                                     .border_1()
                                     .border_color(cx.theme().colors().border_variant)
                                     .bg(cx.theme().colors().panel_background)
                                     .items_center()
                                     .justify_center()
-                                    .child(Label::new("D").buffer_font(cx).size(LabelSize::Large)),
+                                    .child(
+                                        Icon::new(IconName::Terminal)
+                                            .size(IconSize::Medium)
+                                            .color(Color::Accent),
+                                    ),
                             )
                             .child(
-                                v_flex().child(Headline::new(welcome_label)).child(
-                                    Label::new("Write. Delegate. Watch. Verify.")
-                                        .size(LabelSize::Small)
-                                        .color(Color::Muted)
-                                        .italic(),
-                                ),
+                                v_flex()
+                                    .min_w_0()
+                                    .gap_0p5()
+                                    .child(
+                                        Label::new("Terminal-native development")
+                                            .size(LabelSize::XSmall)
+                                            .color(Color::Muted),
+                                    )
+                                    .child(Headline::new(welcome_label))
+                                    .child(
+                                        Label::new("Write. Delegate. Watch. Verify.")
+                                            .size(LabelSize::Small)
+                                            .color(Color::Muted),
+                                    ),
                             ),
                     )
+                    .when(APP_NAME != "Zed", |this| {
+                        this.child(self.render_supervision_loop(cx))
+                    })
                     .child(first_section.render(Default::default(), &self.focus_handle))
                     .child(second_section)
                     .when(ai_enabled && !showing_recent_projects, |this| {
