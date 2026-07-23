@@ -251,6 +251,12 @@ and Start/Watch/Review a named accessible list. Its safety copy now sits above a
 wrapping action row, and Copy Codex Hook/New Terminal use 28 px targets. Identity
 checks pass; rendered zoom and narrow-window proof remains deferred.
 
+Commit `933e3f515f` forces diagnostics and metrics off for every non-Zed build
+before the inherited telemetry client can queue or upload them. Dez onboarding
+and Settings no longer offer those misleading opt-ins; Anthropic retention
+remains visible as a separate model-request policy. Source and identity checks
+pass; compiled network proof remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -1104,6 +1110,11 @@ code, all launch gates pass, and known limitations are documented.
       Commit `4a102fc50e` names the workflow and its ordered steps, separates
       safety copy from a wrapping action row, and normalizes its primary hit
       targets. Identity checks pass; rendered zoom/narrow proof remains
+      consolidated.
+- [x] 2026-07-23: Disable inherited upstream telemetry for Dez. Commit
+      `933e3f515f` forces diagnostics/metrics false in non-Zed builds and removes
+      their fork UI while preserving separate Anthropic retention consent.
+      Source and identity checks pass; compiled network proof remains
       consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no

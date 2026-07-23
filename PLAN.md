@@ -561,7 +561,10 @@ with new labels.
       subscription CTA. Commit `ad59a60926` also hides five Session Rail
       settings whose branch/worktree/project/onboarding surfaces are removed in
       Dez while preserving their compatibility schema; the app-wide audit
-      remains open. Commit `e969abda4a` also removes inherited collaboration,
+      remains open. Commit `933e3f515f` removes inherited diagnostics/metrics
+      opt-ins from Dez onboarding and Settings because the fork has no
+      Dez-owned upload endpoint; Anthropic retention remains visible because it
+      controls model-request policy instead. Commit `e969abda4a` also removes inherited collaboration,
       feedback, account, docs, status, and merchandise commands from Dez's
       palette while retaining explicit upstream documentation/repository links
       in Help.
@@ -630,7 +633,9 @@ with new labels.
       userinfo and secret query parameters, and the Evidence setting now states
       that bounded file targets remain verbatim for review navigation. A future
       sensitive-path policy remains open rather than silently breaking evidence
-      links.
+      links. Commit `933e3f515f` also forces upstream diagnostics and metrics
+      false for every non-Zed build even if legacy user settings enable them, so
+      Dez cannot post fork usage or crash data to the inherited Zed endpoint.
 - [ ] Audit focus order, accessible roles/names/descriptions, key shortcuts,
       minimum hit targets, screen-reader announcements, zoom, reduced motion,
       contrast, truncation, and localization-resistant layouts. Shared Session
@@ -1437,3 +1442,10 @@ Notes decision:
   detach/terminate/Host/hook safety explanation sits above a wrapping action row
   instead of competing for horizontal space, and both actions use 28 px targets.
   Identity guards pass; rendered zoom and narrow-window proof remains deferred.
+- 2026-07-23: Closed the inherited telemetry boundary in `933e3f515f`. Non-Zed
+  builds now force diagnostics and metrics off before the telemetry client can
+  queue or upload them; Dez onboarding and Settings no longer imply that opting
+  in improves Dez through an upstream endpoint. Anthropic retention remains
+  separately configurable because it governs model-request eligibility.
+  Focused source assertions and identity guards pass; compiled network proof
+  remains consolidated.
