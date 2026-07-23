@@ -644,8 +644,10 @@ with new labels.
       while the shared toggle state reports selection. Commit `e28b78ed57`
       gives the shared Callout primitive status semantics for informational and
       successful state, and alert semantics for warnings and failures, covering
-      durable Host and Workspace-recovery callouts. The rendered matrix remains
-      open.
+      durable Host and Workspace-recovery callouts. Commit `a90fae5873` raises
+      compact Workspace headers and their primary creation, scope, and recovery
+      controls to the shared 28 px medium target, eliminating the prior 24/28 px
+      header/control mismatch. The rendered matrix remains open.
 - [ ] Capture a visual state matrix at compact, balanced, and spacious density
       in representative light and dark themes and at narrow/normal/wide rail
       widths.
@@ -1401,3 +1403,8 @@ Notes decision:
   Workspace restoration are not conveyed only through icon, color, and copy.
   Authored role assertions and identity guards pass; platform announcement
   timing remains deferred.
+- 2026-07-23: Normalized high-frequency Session Rail pointer targets in
+  `a90fae5873`. Compact Workspace headers now match their 28 px hover controls;
+  New Terminal, All/Attention scope, Host-detail, and failed-Workspace recovery
+  controls use the same medium target instead of 18 px compact buttons. Static
+  identity guards pass; rendered density and zoom proof remains deferred.

@@ -229,6 +229,11 @@ are alerts. Durable Host and Workspace-recovery callouts no longer rely on
 visual severity alone. Authored role and identity checks pass; platform
 announcement timing remains deferred.
 
+Commit `a90fae5873` aligns compact Workspace headers with their 28 px hover
+controls and moves high-frequency rail creation, scope, Host-detail, and
+Workspace-recovery actions from 18 px compact buttons to the shared medium
+target. Identity checks pass; rendered density and zoom proof remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -1064,6 +1069,11 @@ code, all launch gates pass, and known limitations are documented.
       warning/error callouts to alert, covering durable Host and Workspace
       recovery. Authored role and identity assertions pass; platform
       announcement timing remains consolidated.
+- [x] 2026-07-23: Normalize high-frequency Session Rail hit targets. Commit
+      `a90fae5873` aligns compact headers with their 28 px hover controls and
+      raises primary creation, scope, Host-detail, and Workspace-recovery
+      actions from compact to medium size. Identity checks pass; rendered
+      density and zoom proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the
