@@ -293,6 +293,9 @@ require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'IconButton::new\("retry-thread-title", IconName::ArrowCircle\).*?aria_label\(agent_panel_session_label\([[:space:]]*paths::APP_NAME,[[:space:]]*"Retry Thread Title Generation",[[:space:]]*"Retry Agent Session Title Generation".*?Title generation failed\. Click to retry\.' \
     'failed Agent Session title generation can regress to an unnamed or dismiss-shaped retry control'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'fn edit_visible_title.*?title_editor\.focus_handle\(cx\)\.focus\(window, cx\).*?self\.edit_terminal_title\(terminal_id, window, cx\).*?IconButton::new\("edit_tile".*?aria_label\(title_edit_label\).*?on_click.*?edit_visible_title\(window, cx\)' \
+    'the Agent title pencil can regress to a visual-only affordance that does not start editing'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'let agent_menu_label =.*?"Toggle Agent Menu".*?"Agent Options".*?IconButton::new\("agent-options-menu".*?aria_label\(agent_menu_label\).*?let full_screen_button = IconButton::new.*?aria_label\(tooltip_text\).*?let new_session_label =.*?"New Thread.*?"New Agent Session.*?IconButton::new\("new_thread_menu_btn".*?aria_label\(new_session_label\)' \
     'Agent toolbar icon controls can regress to tooltip-only buttons without accessible names'
 require_multiline_pattern crates/agent_ui/src/agent_ui.rs \
