@@ -81,9 +81,9 @@ use util::ResultExt as _;
 use util::path_list::PathList;
 use workspace::{
     CloseWindow, DesignSystemSettings, MultiWorkspace, MultiWorkspaceEvent, NewCenterTerminal,
-    NewFile, NextProject, NextThread, Open, OpenMode, PreviousProject, PreviousThread,
-    ProjectGroupKey, SaveIntent, Sidebar as WorkspaceSidebar, SidebarRenderState, SidebarSettings,
-    SidebarSide, Toast, ToggleSidebar, Workspace,
+    NextProject, NextThread, Open, OpenMode, PreviousProject, PreviousThread, ProjectGroupKey,
+    SaveIntent, Sidebar as WorkspaceSidebar, SidebarRenderState, SidebarSettings, SidebarSide,
+    Toast, ToggleSidebar, Workspace,
     evidence::{
         WorkspaceEvidenceKind as AuthoritativeWorkspaceEvidenceKind, WorkspaceEvidenceLifecycle,
         WorkspaceEvidenceProvenance,
@@ -299,8 +299,8 @@ fn session_search_visible(session_count: usize, has_query: bool) -> bool {
     session_count > 0 || has_query
 }
 
-fn session_overview_visible(show_start_state: bool) -> bool {
-    !show_start_state
+fn session_overview_visible(_show_start_state: bool) -> bool {
+    true
 }
 
 fn session_overview_create_action_visible(session_count: usize) -> bool {
@@ -11433,26 +11433,25 @@ impl Sidebar {
     fn render_empty_state(&self, _cx: &mut Context<Self>) -> impl IntoElement {
         v_flex()
             .id("sidebar-start-state")
+            .role(gpui::Role::Group)
+            .aria_label("Start a terminal session")
             .size_full()
-            .items_center()
-            .justify_center()
-            .p_4()
+            .p_3()
             .child(
                 v_flex()
                     .w_full()
-                    .max_w(px(280.0))
-                    .gap_2()
+                    .gap_3()
                     .child(
                         Icon::new(IconName::Terminal)
-                            .size(IconSize::Medium)
+                            .size(IconSize::Small)
                             .color(Color::Accent),
                     )
-                    .child(Label::new("Start a session").size(LabelSize::Large))
+                    .child(Label::new("Start your first terminal").size(LabelSize::Small))
                     .child(
                         Label::new(
-                            "Open a terminal or workspace. Sessions appear here with their live state.",
+                            "Dez keeps terminal state, attention, and recovery in this rail.",
                         )
-                        .size(LabelSize::Small)
+                        .size(LabelSize::XSmall)
                         .color(Color::Muted),
                     )
                     .child(
@@ -11475,47 +11474,29 @@ impl Sidebar {
                             }),
                     )
                     .child(
-                        h_flex()
-                            .w_full()
-                            .gap_1()
-                            .child(
-                                Button::new("start-new-file", "New File")
-                                    .full_width()
-                                    .style(ButtonStyle::Outlined)
-                                    .start_icon(Icon::new(IconName::File).size(IconSize::XSmall))
-                                    .aria_label("Create New File")
-                                    .tooltip(|_, cx| Tooltip::for_action("New File", &NewFile, cx))
-                                    .on_click(|_, window, cx| {
-                                        window.dispatch_action(NewFile.boxed_clone(), cx);
-                                    }),
-                            )
-                            .child(
-                                Button::new("start-open", "Open…")
-                                    .full_width()
-                                    .style(ButtonStyle::Outlined)
-                                    .start_icon(
-                                        Icon::new(IconName::FolderOpen).size(IconSize::XSmall),
-                                    )
-                                    .aria_label("Open File or Workspace")
-                                    .tooltip(|_, cx| {
-                                        Tooltip::for_action(
-                                            "Open File or Workspace",
-                                            &Open {
-                                                create_new_window: Some(false),
-                                            },
-                                            cx,
-                                        )
-                                    })
-                                    .on_click(|_, window, cx| {
-                                        window.dispatch_action(
-                                            Open {
-                                                create_new_window: Some(false),
-                                            }
-                                            .boxed_clone(),
-                                            cx,
-                                        );
-                                    }),
-                            ),
+                        Button::new("start-open", "Open Folder…")
+                            .full_width()
+                            .style(ButtonStyle::Outlined)
+                            .start_icon(Icon::new(IconName::FolderOpen).size(IconSize::XSmall))
+                            .aria_label("Open Folder or Workspace")
+                            .tooltip(|_, cx| {
+                                Tooltip::for_action(
+                                    "Open Folder or Workspace",
+                                    &Open {
+                                        create_new_window: Some(false),
+                                    },
+                                    cx,
+                                )
+                            })
+                            .on_click(|_, window, cx| {
+                                window.dispatch_action(
+                                    Open {
+                                        create_new_window: Some(false),
+                                    }
+                                    .boxed_clone(),
+                                    cx,
+                                );
+                            }),
                     ),
             )
     }

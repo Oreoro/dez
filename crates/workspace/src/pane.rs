@@ -5419,8 +5419,11 @@ impl Render for Pane {
 
         let should_display_tab_bar = self.should_display_tab_bar.clone();
         let auto_hide_single_tab_bar = PaneGridSettings::get_global(cx).auto_hide_single_tab_bar;
+        let active_item_forces_tab_bar = self
+            .active_item()
+            .is_some_and(|item| item.force_show_tab_bar(cx));
         let display_tab_bar = should_display_tab_bar(window, cx)
-            && !(auto_hide_single_tab_bar && self.items_len() <= 1);
+            && !(auto_hide_single_tab_bar && self.items_len() <= 1 && !active_item_forces_tab_bar);
         let Some(project) = self.project.upgrade() else {
             return div().track_focus(&self.focus_handle(cx)).into_any_element();
         };

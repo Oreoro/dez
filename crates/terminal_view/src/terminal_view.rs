@@ -2212,6 +2212,10 @@ impl Item for TerminalView {
         }
     }
 
+    fn force_show_tab_bar(&self) -> bool {
+        true
+    }
+
     fn telemetry_event_text(&self) -> Option<&'static str> {
         None
     }

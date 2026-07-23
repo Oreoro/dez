@@ -230,6 +230,13 @@ pub trait Item: Focusable + EventEmitter<Self::Event> + Render + Sized {
         "Close Tab"
     }
 
+    /// Keep the pane tab bar visible even when the user's general preference
+    /// hides single-tab bars. Use this for session-oriented surfaces whose
+    /// title and pane actions are part of the primary workflow.
+    fn force_show_tab_bar(&self) -> bool {
+        false
+    }
+
     /// Returns the tab tooltip text.
     ///
     /// Use this if you don't need to customize the tab tooltip content.
@@ -532,6 +539,7 @@ pub trait ItemHandle: 'static + Send {
     fn tab_icon_element(&self, window: &Window, cx: &App) -> Option<AnyElement>;
     fn tab_close_icon(&self, cx: &App) -> IconName;
     fn tab_close_tooltip_text(&self, cx: &App) -> &'static str;
+    fn force_show_tab_bar(&self, cx: &App) -> bool;
     fn tab_tooltip_text(&self, cx: &App) -> Option<SharedString>;
     fn tab_tooltip_content(&self, cx: &App) -> Option<TabTooltipContent>;
     fn telemetry_event_text(&self, cx: &App) -> Option<&'static str>;
@@ -700,6 +708,10 @@ impl<T: Item> ItemHandle for Entity<T> {
 
     fn tab_close_tooltip_text(&self, cx: &App) -> &'static str {
         self.read(cx).tab_close_tooltip_text()
+    }
+
+    fn force_show_tab_bar(&self, cx: &App) -> bool {
+        self.read(cx).force_show_tab_bar()
     }
 
     fn tab_tooltip_content(&self, cx: &App) -> Option<TabTooltipContent> {

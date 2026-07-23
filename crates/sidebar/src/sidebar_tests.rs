@@ -72,12 +72,12 @@ fn session_rail_render_width_matches_reserved_width_for_each_mode() {
 }
 
 #[test]
-fn zero_session_rail_hides_inert_scope_and_search_controls() {
+fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
     assert!(!session_scope_controls_visible(0));
     assert!(!session_search_visible(0, false));
     assert!(
-        !session_overview_visible(true),
-        "the full start state owns the empty rail's only creation action"
+        session_overview_visible(true),
+        "the rail keeps its identity and zero-session status visible above onboarding"
     );
     assert!(
         !session_overview_create_action_visible(0),
