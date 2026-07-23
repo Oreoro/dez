@@ -155,10 +155,16 @@ selected Session; cancelling restores the original Agent Session, center
 terminal Surface, or Host Session through its actual source without changing
 ownership or routing a terminal through Agent.
 
-Mixed switcher rows visibly label their type as **Agent Session** or **Terminal
-Session**. The Agent region is named **Agent** in user-facing controls; inherited
-Panel terminology remains an implementation detail. File actions name **Files**
-as their destination, and layout actions remain **Canvas Layout** even when
+Mixed switcher rows use distinct Agent and terminal icons. Their explicit
+**Agent Session** or **Terminal Session** type remains in accessibility output
+and the row tooltip instead of repeating as visible metadata under every title.
+Hover only reveals row emphasis; it never previews or activates work. Keyboard
+cycling previews deliberately, click confirms directly, and the selected row is
+the active descendant of the named **Recent sessions** list.
+
+The Agent region is named **Agent** in user-facing controls; inherited Panel
+terminology remains an implementation detail. File actions name **Files** as
+their destination, and layout actions remain **Canvas Layout** even when
 compatibility settings still use a dock-backed implementation.
 
 There is no Dez **Terminal Thread** destination. The inherited action remains

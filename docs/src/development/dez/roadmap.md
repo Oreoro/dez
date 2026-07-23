@@ -1633,9 +1633,13 @@ code, all launch gates pass, and known limitations are documented.
 - [x] 2026-07-23: Disambiguate mixed Session Switcher rows and Agent controls.
       Commit `745792e28e` adds visible **Agent Session** and **Terminal Session**
       type labels, replaces the inherited Agent Panel tooltip with **Agent**,
-      and names Session Rail's settings destination **Agent Settings**. Pure
-      copy assertions, formatting, identity, and diff checks pass; rendered
-      density and accessibility-tree proof remain deferred.
+      and names Session Rail's settings destination **Agent Settings**. Commit
+      `79e87f2351` refines the switcher after the complete row hierarchy became
+      available: type stays explicit in accessibility and tooltips but no
+      longer repeats visibly under every title; hover cannot preview unrelated
+      work; and the selected row is the active descendant of the named list.
+      Pure copy assertions, formatting, identity, and diff checks pass;
+      rendered density and accessibility-tree proof remain deferred.
 - [x] 2026-07-23: Remove remaining terminal-thread language from Dez UI.
       Commit `d1ea4a914f` gives the external-session import flow consistent
       Agent Session, Agent History, count, empty, and completion copy. Commit
@@ -1928,6 +1932,11 @@ code, all launch gates pass, and known limitations are documented.
   focus; and gives Workspace Tools and Agent one persistent, accurately named
   hide control each. The accessibility landmarks are **Main work area**,
   **Workspace Tools**, and **Agent**. Follow-up creation commands use ellipses.
+- **2026-07-23:** A switcher may preview on an explicit keyboard cycle, never
+  on pointer hover. Commit `79e87f2351` makes hover visual-only, retains direct
+  click confirmation, and exposes selection through a named accessibility
+  list. Session type remains semantic and available in tooltips without
+  becoming a repeated second line on every Dez row.
 
 ## Verification {#verification}
 
@@ -1984,6 +1993,19 @@ Completed for the region-owned pane-chrome slice:
   copy, and official-Zed compatibility;
 - read-only process inspection confirmed no Dez/Zed/Superzed process was
   available for visual inspection, so no binary was targeted or launched;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the quiet Session Switcher slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the canonical Dez documentation;
+- Bash syntax and Dez identity checks, including the hover-activation rejection
+  guard;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- pure assertions authored for visible type-label policy and official-Zed
+  compatibility;
 - no application build, Rust test binary, bundle, alternate binary, or visual
   launch.
 

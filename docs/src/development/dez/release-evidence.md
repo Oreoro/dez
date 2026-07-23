@@ -93,6 +93,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Deliberate terminal-termination source: `7664c6e59b`
 - Workspace header control-identity source: `e0e8f119e0`
 - Region-owned pane-chrome source: `1c87220109`
+- Quiet Session Switcher source: `79e87f2351`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -1210,7 +1211,10 @@ the later running-app reports, the source advanced through:
 - `1c87220109`, which assigns add/split/zoom chrome only to the Main Work Area,
   keeps its add control reachable across focus changes, gives Workspace Tools
   and Agent persistent named hide controls, and exposes accurate accessibility
-  landmarks for all three regions.
+  landmarks for all three regions; and
+- `79e87f2351`, which removes repeated visible type metadata from Dez Session
+  Switcher rows while retaining it in accessibility and tooltips, makes hover
+  non-activating, and exposes the selected row through a named list.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

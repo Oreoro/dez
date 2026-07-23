@@ -1895,11 +1895,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   adds focused center-terminal source coverage. Formatting, identity, and diff
   checks pass; compilation and live Escape/focus proof remain deferred.
 - 2026-07-23: Removed the last ambiguous Agent controls and mixed switcher rows
-  in `745792e28e`. Session Switcher rows now visibly distinguish **Agent
-  Session** from **Terminal Session**; the retained Agent toggle says **Agent**
-  rather than Agent Panel, and Session Rail's Agent Tools menu says **Agent
-  Settings**. Product-copy assertions, formatting, identity, and diff checks
-  pass; rendered density and accessibility-tree proof remain deferred.
+  in `745792e28e`. Session Switcher rows gained explicit **Agent Session** and
+  **Terminal Session** identity; `79e87f2351` later retained that distinction
+  in accessibility and tooltips while removing its repetitive visible second
+  line. The retained Agent toggle says **Agent** rather than Agent Panel, and
+  Session Rail's Agent Tools menu says **Agent Settings**. Product-copy
+  assertions, formatting, identity, and diff checks pass; rendered density and
+  accessibility-tree proof remain deferred.
 - 2026-07-23: Removed the visible upstream default title and finished Agent
   toolbar labeling in `a3cf18ce8e`. The database-compatible `New thread`
   sentinel remains unchanged, while tabs, Session Rail, Agent History,
@@ -2041,3 +2043,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   inherited pane labels and focused-only chrome. Pure copy assertions,
   formatting, Bash syntax, identity, locked offline metadata, and diff checks
   pass; no build, test binary, or visual launch was performed.
+- 2026-07-23: Quieted and stabilized the mixed Session Switcher in
+  `79e87f2351`. The earlier visible type labels remain in each row's
+  accessibility name and tooltip but no longer repeat as visual metadata under
+  every Dez title. The list now has a **Recent sessions** landmark and exposes
+  its selected row as the active descendant. Pointer hover is visual-only and
+  cannot preview or activate a different Workspace; deliberate keyboard cycles
+  still preview, and click confirms directly. Official Zed retains visible
+  Thread/Terminal labels. Pure copy assertions, formatting, Bash syntax,
+  identity, locked offline metadata, and diff checks pass; no build, test
+  binary, or visual launch was performed.
