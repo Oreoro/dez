@@ -622,8 +622,11 @@ with new labels.
       than transcripts or structured activity, which returns only from the same
       live Host Session. Commit `9323af8008` extends the shared redactor to
       explicit secret-suffixed CLI flags such as `--token` and `--api-key`
-      without masking ordinary arguments. URL-embedded credentials and
-      sensitive file-path policy remain open.
+      without masking ordinary arguments. Commit `80ff1df75f` covers URL
+      userinfo and secret query parameters, and the Evidence setting now states
+      that bounded file targets remain verbatim for review navigation. A future
+      sensitive-path policy remains open rather than silently breaking evidence
+      links.
 - [ ] Audit focus order, accessible roles/names/descriptions, key shortcuts,
       minimum hit targets, screen-reader announcements, zoom, reduced motion,
       contrast, truncation, and localization-resistant layouts. Shared Session
@@ -1364,3 +1367,9 @@ Notes decision:
   `--api-key=value` forms while preserving ordinary options such as `--mode`
   and `--license-file`. Focused utility and Host-ingestion assertions plus the
   identity guard pass; compiled hook-flow proof remains consolidated.
+- 2026-07-23: Extended retained-command privacy to URLs in `80ff1df75f`.
+  Userinfo passwords and secret-suffixed query parameters are redacted while
+  host, path, and ordinary query structure remain reviewable. Evidence settings
+  explicitly disclose that bounded file targets remain verbatim for navigation.
+  Focused utility/Host assertions and identity guards pass; compiled hook-flow
+  proof remains consolidated.

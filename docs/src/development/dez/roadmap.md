@@ -205,6 +205,12 @@ CLI flags in spaced and equals forms while preserving ordinary arguments.
 Focused utility and Host-ingestion assertions plus identity checks pass;
 compiled hook-flow proof remains deferred.
 
+Commit `80ff1df75f` extends retained-command redaction to URL userinfo passwords
+and secret-suffixed query parameters while preserving host/path structure. The
+Evidence page also discloses that bounded file targets remain verbatim for
+review navigation. Focused utility/Host assertions and identity checks pass;
+compiled hook-flow proof remains deferred.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
@@ -1021,6 +1027,10 @@ code, all launch gates pass, and known limitations are documented.
       Commit `9323af8008` covers spaced and equals forms without masking
       ordinary flags. Focused utility, Host-ingestion, and identity assertions
       pass; compiled proof remains consolidated.
+- [x] 2026-07-23: Redact URL credentials from retained commands. Commit
+      `80ff1df75f` covers userinfo and secret query parameters, preserves useful
+      URL structure, and discloses verbatim file-target retention. Focused and
+      identity assertions pass; compiled proof remains consolidated.
 - [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
       `4fc53b860f` hides the overview's global New Terminal shortcut while no
       sessions exist, leaving each open Workspace group's scoped action as the
