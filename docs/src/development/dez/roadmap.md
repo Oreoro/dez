@@ -1985,8 +1985,24 @@ code, all launch gates pass, and known limitations are documented.
   in Dez because the public Main Work Area terminal path does not consume it.
   The stored key and official-Zed control remain for migration and upstream
   compatibility. The release rule is capability first, copy second.
+- **2026-07-23:** Contextual does not mean pointer-only. Commit `f0e817669a`
+  makes the keyboard-selected Session Rail row reveal the same actions as
+  pointer hover. Visible rename, review, stop, discard, archive, setup, and
+  terminal lifecycle controls enter the tab order; rename mode suppresses
+  conflicting controls, and destructive actions remain last.
 
 ## Verification {#verification}
+
+Completed for the Session row keyboard-parity slice:
+
+- `cargo fmt --all -- --check`;
+- Bash syntax and Dez identity checks, including focused-row rendering and tab
+  order guards;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- a pure pointer/focus/rename visibility assertion;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
 
 Completed for the dead terminal-setting removal slice:
 

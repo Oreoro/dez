@@ -460,3 +460,8 @@ defer it.
   setting or action does not make it a Dez feature. A control is visible only
   when the public Dez path consumes it and the claimed effect is implemented.
   Compatibility storage may remain hidden for migrations and upstream sync.
+- **2026-07-23: Contextual Session actions follow selection as well as hover.**
+  Pointer hover and keyboard active-descendant selection reveal the same row
+  controls. Controls that are visually present participate in the tab order,
+  retain explicit accessible names, and keep the destructive action last.
+  Editing modes may suppress competing actions until editing ends.

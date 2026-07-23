@@ -2105,3 +2105,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   control from returning. Formatting, Bash syntax, identity, locked offline
   metadata, and diff checks pass; no build, test binary, or visual launch was
   performed.
+- 2026-07-23: Closed a Session Rail pointer/keyboard parity gap in
+  `f0e817669a`. The keyboard-selected active-descendant row now reveals the same
+  contextual controls as pointer hover, and Agent/terminal rename, review,
+  stop, discard, archive, setup, and close controls enter the tab order while
+  visible. Rename mode still suppresses competing row actions. The shared row
+  component honors focused action slots, so the behavior cannot be defeated
+  after the Sidebar supplies the controls. Pure visibility assertions, static
+  guards, formatting, Bash syntax, identity, locked offline metadata, and diff
+  checks pass; no build, test binary, or visual launch was performed.

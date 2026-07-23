@@ -28,6 +28,7 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Terminal-focused Workspace status source: `05df05d282`
 - Unified terminal lifecycle interaction source: `c83b56b5aa`
 - Dead terminal startup setting removal source: `222c658123`
+- Keyboard-visible Session row actions source: `f0e817669a`
 - Deduplicated Session Rail footer source: `a9b1a961c0`
 - Unified Session Rail Workspace vocabulary source: `ff91b34a81`
 - Workspace-scoped zero-session creation source: `4fc53b860f`
@@ -1238,7 +1239,10 @@ the later running-app reports, the source advanced through:
   action truthful Session Rail scope in Dez's Command Palette; and
 - `222c658123`, which hides the inherited Agent-Panel terminal startup setting
   from Dez because Main Work Area terminals do not consume it, while retaining
-  compatible storage and official-Zed behavior.
+  compatible storage and official-Zed behavior; and
+- `f0e817669a`, which reveals contextual Session Rail controls for keyboard
+  selection as well as pointer hover and makes every visible row control
+  keyboard-focusable.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
