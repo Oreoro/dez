@@ -184,6 +184,12 @@ require_pattern crates/command_palette/src/command_palette.rs \
 require_pattern crates/command_palette/src/command_palette.rs \
     'TypeId::of::<NewCenterTerminal>\(\)' \
     'the Dez Command Palette exposes a duplicate internal center-terminal command'
+require_multiline_pattern crates/command_palette/src/command_palette.rs \
+    'fn action_name_for_product.*?"workspace::ToggleProjectPane".*?"workspace_tools::Toggle".*?"zed_actions::", "dez::".*?"sidebar::", "session_rail::".*?"project_panel::", "files::".*?"project_search::", "workspace_search::"' \
+    'the Dez Command Palette can regress to internal sidebar, project-panel, or zed-actions namespaces'
+require_multiline_pattern crates/command_palette/src/command_palette.rs \
+    'fn label\(self, app_name: &str\).*?Self::Project if app_name != "Zed" => "workspace"' \
+    'the Dez Command Palette can regress to a Project category badge'
 require_pattern crates/workspace/src/workspace.rs \
     'recent Workspace and Session state may be unavailable' \
     'the Dez database failure state does not explain safety or impact'

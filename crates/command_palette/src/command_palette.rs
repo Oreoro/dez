@@ -198,13 +198,14 @@ impl CommandCategory {
         }
     }
 
-    fn label(self) -> &'static str {
+    fn label(self, app_name: &str) -> &'static str {
         match self {
             Self::Layout => "layout",
             Self::Agent => "agent",
             Self::Terminal => "terminal",
             Self::Pane => "pane",
             Self::Workspace => "workspace",
+            Self::Project if app_name != "Zed" => "workspace",
             Self::Project => "project",
             Self::Git => "git",
             Self::Editor => "editor",
@@ -244,7 +245,7 @@ fn command_category_badge(category: CommandCategory, selected: bool, cx: &App) -
         .border_color(border)
         .bg(background)
         .child(
-            Label::new(category.label())
+            Label::new(category.label(paths::APP_NAME))
                 .size(LabelSize::XSmall)
                 .line_height_style(LineHeightStyle::UiLabel)
                 .color(if selected {
@@ -924,7 +925,44 @@ pub fn humanize_action_name(name: &str) -> String {
     humanize_action_name_for_product(name, paths::APP_NAME)
 }
 
+fn action_name_for_product(name: &str, app_name: &str) -> String {
+    if app_name == "Zed" {
+        return name.to_owned();
+    }
+
+    match name {
+        "workspace::ToggleProjectPane" => return "workspace_tools::Toggle".to_owned(),
+        "workspace::AddFolderToProject" => return "workspace::AddFolder".to_owned(),
+        "workspace::CloseProject" => return "workspace::Close".to_owned(),
+        "workspace::DeploySearch" => return "workspace::Search".to_owned(),
+        "agent::OpenProjectAGENTS.mdRules" => {
+            return "agent::OpenWorkspaceAGENTS.mdRules".to_owned();
+        }
+        "zed_actions::OpenProjectSettings" => return "workspace::OpenSettings".to_owned(),
+        "zed::OpenProjectSettingsFile" => return "workspace::OpenSettingsFile".to_owned(),
+        _ => {}
+    }
+
+    for (source, product) in [
+        ("zed_actions::", "dez::"),
+        ("sidebar::", "session_rail::"),
+        ("project_panel::", "files::"),
+        ("project_search::", "workspace_search::"),
+        ("project_symbols::", "workspace_symbols::"),
+        ("multi_workspace::", "workspace::"),
+        ("project::", "workspace::"),
+    ] {
+        if let Some(action) = name.strip_prefix(source) {
+            return format!("{product}{action}");
+        }
+    }
+
+    name.to_owned()
+}
+
 fn humanize_action_name_for_product(name: &str, app_name: &str) -> String {
+    let product_name = action_name_for_product(name, app_name);
+    let name = product_name.as_str();
     let chars = name.chars().collect::<Vec<_>>();
     let capacity = name.len() + chars.iter().filter(|c| c.is_uppercase()).count();
     let mut result = String::with_capacity(capacity);
@@ -1054,7 +1092,31 @@ mod tests {
         );
         assert_eq!(
             humanize_action_name_for_product("zed_actions::OpenSettings", "Dez"),
-            "zed actions: open settings"
+            "dez: open settings"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("project_panel::ToggleFocus", "Dez"),
+            "files: toggle focus"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("workspace::ToggleProjectPane", "Dez"),
+            "workspace tools: toggle"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::ToggleAttentionFilter", "Dez"),
+            "session rail: toggle attention filter"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("workspace::AddFolderToProject", "Dez"),
+            "workspace: add folder"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("agent::OpenProjectAGENTS.mdRules", "Dez"),
+            "agent: open workspace AGENTS.md rules"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("project_panel::ToggleFocus", "Zed"),
+            "project panel: toggle focus"
         );
     }
 
@@ -1141,6 +1203,8 @@ mod tests {
             CommandCategory::for_action_name("markdown_preview::OpenPreview"),
             Some(CommandCategory::Preview)
         );
+        assert_eq!(CommandCategory::Project.label("Dez"), "workspace");
+        assert_eq!(CommandCategory::Project.label("Zed"), "project");
     }
 
     #[gpui::test]
