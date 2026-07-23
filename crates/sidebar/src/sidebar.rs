@@ -4408,7 +4408,7 @@ impl Sidebar {
         let (header_height, header_padding_left, header_padding_right, header_gap, label_size) =
             match design_system.density {
                 settings::CanvasDensity::Compact => {
-                    (px(24.0), px(6.0), px(4.0), px(4.0), LabelSize::XSmall)
+                    (px(28.0), px(6.0), px(4.0), px(4.0), LabelSize::XSmall)
                 }
                 settings::CanvasDensity::Balanced => (
                     Tab::content_height(cx),
@@ -4704,7 +4704,7 @@ impl Sidebar {
                                 "New Terminal",
                             )
                             .full_width()
-                            .size(ButtonSize::Compact)
+                            .size(ButtonSize::Medium)
                             .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
                             .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
                             .aria_label(SharedString::from(format!(
@@ -11294,7 +11294,7 @@ impl Sidebar {
                         |this| {
                             this.child(
                                 Button::new("new-session", "New Terminal")
-                                    .size(ButtonSize::Compact)
+                                    .size(ButtonSize::Medium)
                                     .style(ButtonStyle::Filled)
                                     .start_icon(Icon::new(IconName::Plus).size(IconSize::XSmall))
                                     .aria_label("New Terminal Session")
@@ -11328,7 +11328,7 @@ impl Sidebar {
                                 div().min_w_0().flex_1().child(
                                     Button::new("all-session-scope", all_scope_label)
                                         .full_width()
-                                        .size(ButtonSize::Compact)
+                                        .size(ButtonSize::Medium)
                                         .style(ButtonStyle::Subtle)
                                         .toggle_state(!self.attention_only)
                                         .selected_style(ButtonStyle::Tinted(TintColor::Accent))
@@ -11351,7 +11351,7 @@ impl Sidebar {
                                 div().min_w_0().flex_1().child(
                                     Button::new("attention-session-scope", attention_scope_label)
                                         .full_width()
-                                        .size(ButtonSize::Compact)
+                                        .size(ButtonSize::Medium)
                                         .style(ButtonStyle::Subtle)
                                         .toggle_state(self.attention_only)
                                         .selected_style(ButtonStyle::Tinted(TintColor::Warning))
@@ -11534,7 +11534,7 @@ impl Sidebar {
                     ))
                     .actions_slot(
                         Button::new("copy-host-reconnect-details", "Copy Details")
-                            .size(ButtonSize::Compact)
+                            .size(ButtonSize::Medium)
                             .style(ButtonStyle::Outlined)
                             .aria_label("Copy Durable Host Reconnection Details")
                             .on_click(move |_, _window, cx| {
@@ -11554,7 +11554,7 @@ impl Sidebar {
                     ))
                     .actions_slot(
                         Button::new("copy-host-failure-details", "Copy Details")
-                            .size(ButtonSize::Compact)
+                            .size(ButtonSize::Medium)
                             .style(ButtonStyle::Outlined)
                             .aria_label("Copy Durable Host Failure Details")
                             .on_click(move |_, _window, cx| {
@@ -11616,7 +11616,7 @@ impl Sidebar {
                         .gap_1()
                         .child(
                             Button::new("recover-unresolved-workspace", "Open Recent")
-                                .size(ButtonSize::Compact)
+                                .size(ButtonSize::Medium)
                                 .style(ButtonStyle::Filled)
                                 .aria_label("Open Recent Workspaces for Recovery")
                                 .on_click(cx.listener(|this, _, window, cx| {
@@ -11625,7 +11625,7 @@ impl Sidebar {
                         )
                         .child(
                             Button::new("dismiss-unresolved-workspace", "Dismiss")
-                                .size(ButtonSize::Compact)
+                                .size(ButtonSize::Medium)
                                 .style(ButtonStyle::Outlined)
                                 .aria_label("Dismiss Unresolved Workspace References")
                                 .tooltip(Tooltip::text(
