@@ -589,6 +589,13 @@ code, all launch gates pass, and known limitations are documented.
       knows the path agrees; conflicting values are omitted rather than
       guessed. A focused fallback regression is authored; formatting, diff,
       and identity checks pass, while compilation remains deferred.
+- [x] 2026-07-23: Scope graphical project settings to the originating
+      MultiWorkspace. Commit `a2d733eea3` stops a Settings window from merging
+      project files from unrelated OS windows, including after its source
+      window becomes unavailable. Project-file discovery, restricted-mode
+      lookup, opening, and mutation now share the scoped resolver; user settings
+      retain application-global semantics. Two cross-window regressions are
+      updated and await the consolidated compile gate.
 - [x] 2026-07-22: Feed live terminal cwd changes into Workspace evidence. Each
       record carries stable terminal-Session provenance, root refreshes preserve
       it, and Run Briefs include only cwd evidence owned by their terminal so

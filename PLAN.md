@@ -245,7 +245,10 @@ restoration; opening or closing a viewport does not change durable ownership.
       clear cannot change the other. Session Rail branch metadata now reads the
       owning open Workspace's repository snapshot; closed historical rows use
       only branch values that agree across every open Workspace and omit an
-      ambiguous branch instead of guessing.
+      ambiguous branch instead of guessing. A Settings window with an
+      originating viewport now discovers and mutates project settings only for
+      Workspaces in that MultiWorkspace; another OS window cannot silently
+      enter its project-settings scope.
 - [ ] Move eligible panel-only tools into ordinary pane Surfaces while keeping
       familiar toggles and dock layouts.
 - [ ] Prove Surfaces can move across panes and Workspaces without global root,
@@ -1174,3 +1177,11 @@ Notes decision:
   suppresses the branch rather than allowing iteration order to lie. A focused
   fallback regression is authored; formatting, diff, and identity checks pass.
   No Rust test, bundle build, or application launch was performed.
+- 2026-07-23: Scoped graphical project settings to their originating viewport
+  in `a2d733eea3`. Settings opened from one MultiWorkspace no longer aggregates
+  every live Project in the application or switches to unrelated Workspaces if
+  the originating window closes. Global settings remain global; project-file
+  discovery, restricted-mode lookup, file opening, and updates share the same
+  viewport-scoped project resolver. Two cross-window regressions are updated;
+  formatting, diff, and identity checks pass. No Rust test, bundle build, or
+  application launch was performed.
