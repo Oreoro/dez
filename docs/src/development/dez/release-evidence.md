@@ -996,3 +996,33 @@ separate from local engineering verification. The exact candidate is built and
 statically audited through `2452d3b4ec`; it is not currently running. A
 current-candidate launch and an available desktop are prerequisites for the
 visual, interaction, accessibility, and GUI-driven hosted-PTY recovery matrix.
+
+## 2026-07-23 source-only terminal and shell recovery
+
+The historical artifacts above are not evidence for the current source. After
+the later running-app reports, the source advanced through:
+
+- `c0de209e28`, which removes the reentrant Workspace mutation path from center
+  terminal creation;
+- `930292ad47`, which keeps a live terminal in the Session Rail when its
+  Workspace has no worktree;
+- `fb2b90e193`, which keeps a terminal tab header visible even when the inherited
+  single-tab auto-hide setting is enabled;
+- `7eca42a56c`, which launches the durable terminal Host in a separate Unix
+  process session;
+- `798df9ec04`, which replaces centered full-rail absence canvases with compact
+  top-anchored states, makes the welcome surface terminal-first, and removes
+  the duplicate global Command Palette control from the rail footer;
+- `7f0da8c04a`, which makes the full-size virtual session list and its empty
+  replacement mutually exclusive and top-aligns the scrollable welcome
+  content; and
+- `dcd38968d3`, which makes unqualified terminal creation center-first, names
+  the legacy terminal panel explicitly, suppresses inherited Zed
+  release-channel migration in Dez, and centralizes official-Zed-compatible
+  native-agent icon identity.
+
+For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
+pass. The touched documentation also passes Prettier. Per the active
+source-first gate, no application build, test binary, bundle, alternate binary,
+or visual launch was performed. Rendered proof for these commits remains open
+and must use the intended Dez artifact when the consolidated build gate resumes.

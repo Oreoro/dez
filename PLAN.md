@@ -445,7 +445,9 @@ with new labels.
       keeps the action as a labeled icon in the existing utility bar, hides the
       unowned upstream update surface, and renders the Canvas prefix row only
       while prefix mode is active. Formatting and diff checks pass; compiled
-      and rendered proof remain open.
+      and rendered proof remain open. Commit `798df9ec04` removes the remaining
+      duplicate Command Palette icon from the Session Rail footer and names the
+      rail-specific utility group for assistive technology.
 - [x] Make Session Rail orientation explicit in source with a named header,
       visible counted All and Attention scopes, truthful action-needed state,
       search, and a clear creation path. Singular/plural and accessibility
@@ -466,7 +468,14 @@ with new labels.
       exists. The app-wide audit remains open.
 - [ ] Align density, spacing, radii, borders, typography, hover, focus,
       selection, and animation across panes, Canvas, rails, cards, callouts,
-      menus, settings, and recovery surfaces.
+      menus, settings, and recovery surfaces. Commit `798df9ec04` replaces
+      oversized centered Session Rail absence states with compact, top-anchored
+      states using one icon tile, one explanation, and one full-width primary
+      recovery action. It also gives the welcome surface a terminal-first
+      hierarchy and ordered Start/Watch/Verify orientation. Commit
+      `7f0da8c04a` top-aligns the scrollable welcome surface so short windows do
+      not center content into inaccessible overflow. Rendered density and
+      narrow-height proof remain open.
 
 #### Interaction quality
 
@@ -553,7 +562,14 @@ with new labels.
       label. Commit `57290c27c3` then keeps creation behavior stable after the
       first session: the Workspace plus control, worktree picker, and default
       keyboard path all create a terminal, while **New Agent Thread** is an
-      explicit secondary Workspace option.
+      explicit secondary Workspace option. Commit `798df9ec04` makes the empty,
+      no-result, and caught-up panels compact and top anchored. Commit
+      `7f0da8c04a` makes the virtual session list and its empty replacement
+      mutually exclusive, preventing a full-size empty list from pushing the
+      recovery panel outside the visible rail. Commit `dcd38968d3` then makes
+      every plain **New Terminal** launch path on the welcome, Session Rail, and
+      empty Workspace surfaces open a center terminal; the legacy terminal
+      panel remains an explicitly named secondary menu action.
 - [ ] Remove dead buttons, unsupported provider actions, duplicate navigation,
       noisy badges, ambiguous icon-only controls, and success copy unsupported
       by observed evidence. The compiled Zed Pro trial-end overlay/reset action
@@ -561,7 +577,11 @@ with new labels.
       subscription CTA. Commit `ad59a60926` also hides five Session Rail
       settings whose branch/worktree/project/onboarding surfaces are removed in
       Dez while preserving their compatibility schema; the app-wide audit
-      remains open. Commit `933e3f515f` removes inherited diagnostics/metrics
+      remains open. Commit `dcd38968d3` also stops Dez from scanning or
+      advertising inherited Zed release-channel thread migration and replaces
+      the upstream native-agent glyph with a neutral agent mark across the
+      reachable Dez agent surfaces while preserving official Zed identity.
+      Commit `933e3f515f` removes inherited diagnostics/metrics
       opt-ins from Dez onboarding and Settings because the fork has no
       Dez-owned upload endpoint; Anthropic retention remains visible because it
       controls model-request policy instead. Commit `2680937952` also hides the

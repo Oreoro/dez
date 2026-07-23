@@ -1307,6 +1307,38 @@ code, all launch gates pass, and known limitations are documented.
       Workspaces. Commit `6f2061d2c7` asserts same-path Session records remain
       distinct and database-backed selections cannot be cleared across
       Workspace IDs. Formatting, diff, and identity checks pass.
+- [x] 2026-07-23: Stop terminal creation from reentering Workspace mutation.
+      Commit `c0de209e28` moves center-terminal creation through the deferred
+      workspace action boundary instead of mutating the active Workspace from
+      its own update callback.
+- [x] 2026-07-23: Keep terminal-only empty Workspaces visible. Commit
+      `930292ad47` projects a live terminal even when its Workspace has no
+      worktree, so the Session Rail does not regress to a false zero-session
+      state after New Terminal succeeds.
+- [x] 2026-07-23: Keep terminal sessions visually anchored. Commit `fb2b90e193`
+      lets a terminal request its tab header even when inherited single-tab
+      auto-hide is enabled. The same slice keeps the zero-session rail compact
+      instead of using the full rail as a centered onboarding canvas.
+- [x] 2026-07-23: Detach the durable terminal Host from the GUI process
+      session. Commit `7eca42a56c` launches the helper in a separate Unix
+      session so a normal GUI lifecycle does not imply helper termination.
+- [x] 2026-07-23: Polish the terminal-first welcome and Session Rail absence
+      states. Commit `798df9ec04` establishes a compact top-anchored state
+      grammar, one primary recovery action, a Start/Watch/Verify welcome
+      orientation, and a rail-only utility footer without the duplicate global
+      Command Palette action.
+- [x] 2026-07-23: Remove empty-state panels from full-size list flow. Commit
+      `7f0da8c04a` makes populated and empty Session Rail bodies mutually
+      exclusive and top-aligns the scrollable welcome surface. This is
+      source-only evidence; compilation, launch, and rendered verification
+      remain deliberately deferred.
+- [x] 2026-07-23: Align terminal launch and native-agent identity across the
+      retained shell. Commit `dcd38968d3` makes the empty Workspace and Dez
+      New Item menu use a center terminal as the unqualified primary action,
+      names the legacy panel explicitly, suppresses inherited Zed
+      release-channel migration work in Dez, and routes native-agent marks
+      through one official-Zed-compatible icon policy. A focused icon-policy
+      test is authored, and the static identity guard covers each boundary.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
