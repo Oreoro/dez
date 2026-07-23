@@ -1,4 +1,4 @@
-use gpui::AnyElement;
+use gpui::{AnyElement, Role};
 
 use crate::prelude::*;
 
