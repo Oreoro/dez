@@ -1270,6 +1270,9 @@ the later running-app reports, the source advanced through:
 - `7fbad3934e`, which guards the existing terminal-specific single-tab header
   override so shell-emitted prompt status or artwork cannot visually replace
   the Terminal Surface identity.
+- `83b1c59e07`, which removes Thread, buffer, Panel, and generic status-bar
+  terminology from reachable Dez Agent settings and adds the feedback
+  data-sharing disclosure while preserving official Zed.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

@@ -2322,6 +2322,20 @@ Completed for the terminal Surface composition audit:
 - no terminal output was altered and no build, test binary, alternate binary,
   or visual launch was performed.
 
+Completed for the Agents settings language and disclosure slice:
+
+- changed parent Thread wording to parent **Agent Session** in Dez;
+- described focused Agent review as single-file **Surfaces**;
+- removed Panel wording from edit-card and terminal-card presentation settings;
+- scoped the merge-conflict indicator to **Workspace status**;
+- disclosed that response rating sends the current Agent Session to the
+  upstream agent service;
+- preserved official Zed wording through a product branch;
+- added a pure copy test and static identity guards;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
 Completed for the first helper-process source slice:
 
 - new crate instructions and a rollbackable `dez_terminal_host` workspace

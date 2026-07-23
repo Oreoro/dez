@@ -2185,3 +2185,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   contract, pane policy, and Terminal override. Bash syntax, identity, locked
   offline metadata, formatting, and diff checks pass; no build, test binary, or
   visual launch was performed.
+- 2026-07-23: Finished the reachable Agents settings vocabulary and disclosure
+  pass in `83b1c59e07`. Dez now describes a subagent's parent **Agent Session**,
+  focused-review **Surfaces**, Agent edit and terminal cards, and **Workspace
+  status** without exposing Thread, buffer, Panel, or generic status-bar
+  implementation terms. Feedback settings now disclose that rating sends the
+  current Agent Session to the upstream agent service. Official Zed retains its
+  upstream wording. A pure product-copy test and identity guards cover the
+  boundary. Formatting, Bash syntax, identity, locked offline metadata, and
+  diff checks pass; no build, test binary, or visual launch was performed.

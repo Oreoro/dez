@@ -507,3 +507,8 @@ defer it.
   prompt status, clocks, or artwork. Terminal Session identity and lifecycle
   remain visible outside the PTY grid through the Surface tab header, even when
   the general single-tab auto-hide preference is enabled.
+- **2026-07-23: Settings disclose consequential Agent behavior where it is
+  configured.** Agent settings use Agent Session, Surface, Agent card, and
+  Workspace status vocabulary. A feedback toggle names its upstream
+  data-sharing effect instead of relying on a later hover tooltip. Official Zed
+  may retain upstream Thread, buffer, Panel, and status-bar copy.
