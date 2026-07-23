@@ -1894,9 +1894,28 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   full-screen, and new-session controls have explicit accessible names. Pure
   assertions, formatting, locked offline metadata, identity, and diff checks
   pass; rendered title/toolbar proof remains deferred.
-- 2026-07-23: Explained unavailable pane splitting in `c0a325da9d`. Supported
+- 2026-07-23: Explained unavailable pane splitting in `b42be6e0b2`. Supported
   Surfaces retain the standard Split Pane control; an unsupported Dez Surface
   now exposes **Split Pane Unavailable** and explains that it cannot be split
   or moved into a new pane. Pure copy assertions, formatting, locked offline
   metadata, identity, and diff checks pass; rendered disabled-control proof
   remains deferred.
+- 2026-07-23: Clarified two main-work-area controls. Commit `a6ff92643e`
+  names the worktree action **Close Worktree from Window**, making its scope
+  explicit. Commit `eb603481d5` names the tab-overflow affordance **Switch
+  Surface** and its menu **Surfaces**, matching Dez's model of terminals,
+  files, search results, and diagnostics as peer Surfaces. Pure copy
+  assertions and static identity guards pass; rendered menu proof remains
+  deferred.
+- 2026-07-23: Made the visible Agent title pencil perform its advertised
+  action in `e09bb2d73b`, guarded against regression by `b92e001bb3`. The
+  control now starts title editing for both Agent Sessions and terminal
+  Surfaces instead of presenting an inert hover affordance. Existing focused
+  tests cover both routes; compilation and rendered pointer/focus proof remain
+  deferred.
+- 2026-07-23: Removed four remaining hard-coded upstream Assistant glyphs from
+  Agent controls and notifications in `ab3f8e0408`. The Agent surface toggle,
+  Agent Session notifications, Agent diff Surface, and profile controls now
+  resolve through the app-aware native Agent icon, preserving Zed identity
+  upstream and using Dez's Robot identity in the fork. Static identity guards
+  cover all four call sites; rendered icon proof remains deferred.

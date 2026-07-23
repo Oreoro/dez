@@ -1550,12 +1550,28 @@ code, all launch gates pass, and known limitations are documented.
       icon buttons now have accurate accessible names; title retry uses a
       retry-shaped icon. Pure vocabulary assertions and static identity guards
       pass; rendered title/toolbar/accessibility-tree proof remains deferred.
-- [x] 2026-07-23: Explain unavailable pane splitting. Commit `c0a325da9d`
+- [x] 2026-07-23: Explain unavailable pane splitting. Commit `b42be6e0b2`
       preserves the ordinary **Split Pane** control when supported, but gives a
       disabled Dez control the accessible name **Split Pane Unavailable** and
       explains that the current Surface cannot be split or moved into a new
       pane. Pure copy assertions and static identity guards pass; rendered
       disabled-state proof remains deferred.
+- [x] 2026-07-23: Clarify main-work-area control intent. Commit `a6ff92643e`
+      names worktree removal **Close Worktree from Window**. Commit
+      `eb603481d5` renames the tab-overflow control **Switch Surface** and its
+      menu **Surfaces**, matching the product model. Pure copy assertions and
+      static identity guards pass; rendered menu proof remains deferred.
+- [x] 2026-07-23: Make the visible Agent title pencil actionable. Commit
+      `e09bb2d73b` routes the control to Agent Session or terminal title
+      editing, with focused coverage for both paths; commit `b92e001bb3` adds a
+      static regression guard. Compilation and rendered pointer/focus proof
+      remain deferred.
+- [x] 2026-07-23: Finish native Agent icon routing across Agent surfaces.
+      Commit `ab3f8e0408` routes the Agent toggle, Agent Session notifications,
+      Agent diff Surface, and profile controls through the app-aware native
+      Agent icon instead of a hard-coded upstream Assistant glyph. Static
+      identity guards cover all four paths; rendered icon proof remains
+      deferred.
 - [x] 2026-07-23: Restore cancelled Session Switcher previews through their
       original source. Commit `67a8152db7` preserves center Workspace items,
       durable Host Sessions, retained compatibility terminals, and Agent

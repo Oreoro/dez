@@ -103,6 +103,10 @@ Inactive Workspace actions may reveal on hover because selecting the Workspace
 first makes the same controls persistent. Every icon-only control must retain
 an accessible name and tooltip.
 
+Visible controls must also perform their advertised action: the Agent title
+pencil starts editing, worktree closure names its window scope, and the
+main-area overflow control is **Switch Surface**, not Open Tab.
+
 The main-area tab-bar plus control is named **Add to Main Work Area** in Dez.
 Its menu opens files, Workspace search and symbols, or a terminal in that same
 pane grid; it does not add a sidebar panel or create a second terminal model.

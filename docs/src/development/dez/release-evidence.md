@@ -1153,8 +1153,17 @@ the later running-app reports, the source advanced through:
 - `a3cf18ce8e`, which keeps the compatible `New thread` storage sentinel
   internal, presents **New Agent Session** everywhere visible, labels Agent
   toolbar icons, and gives title retry a retry-shaped control; and
-- `c0a325da9d`, which explains why pane splitting is unavailable instead of
-  leaving a disabled icon with its enabled tooltip.
+- `b42be6e0b2`, which explains why pane splitting is unavailable instead of
+  leaving a disabled icon with its enabled tooltip; and
+- `a6ff92643e`, which names worktree removal **Close Worktree from Window**,
+  plus `eb603481d5`, which names the main-area tab-overflow affordance **Switch
+  Surface** and its menu **Surfaces**; and
+- `e09bb2d73b`, which makes the Agent title pencil start Agent Session or
+  terminal title editing, plus `b92e001bb3`, which guards that action wiring;
+  and
+- `ab3f8e0408`, which removes hard-coded upstream Assistant glyphs from the
+  Agent toggle, Agent Session notifications, Agent diff Surface, and profile
+  controls while preserving official Zed identity.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
