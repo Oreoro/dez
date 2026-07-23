@@ -2292,6 +2292,22 @@ Completed for the Workspace Tools and Agent Settings slice:
 - locked offline Cargo metadata and `git diff --check`;
 - no Rust compile, test, alternate binary launch, or live interaction claim.
 
+Completed for the remaining live Agent Session terminology slice:
+
+- renamed the Add Context entry from **Threads** to **Agent Sessions** in Dez
+  without changing compatible `@thread` insertion syntax;
+- made message editing disclose that it restarts the Agent Session from that
+  point;
+- made feedback disclose that rating sends the current Agent Session to the
+  upstream agent service;
+- renamed response export to **Open Agent Session as Markdown**;
+- preserved official Zed's upstream Thread copy and added a static identity
+  guard over all four surfaces;
+- `cargo fmt --all -- --check`;
+- Bash syntax and `./script/dez-identity-check`;
+- locked offline Cargo metadata and `git diff --check`;
+- no Rust compile, test, alternate binary launch, or live interaction claim.
+
 Completed for the first helper-process source slice:
 
 - new crate instructions and a rollbackable `dez_terminal_host` workspace

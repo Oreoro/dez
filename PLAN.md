@@ -2167,3 +2167,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   setting. A pure visibility test and identity guards preserve both product
   branches. Formatting, Bash syntax, identity, locked offline metadata, and
   diff checks pass; no build, test binary, or visual launch was performed.
+- 2026-07-23: Finished the reachable Agent Session content terminology pass in
+  `5e6c925fb5`. Add Context now offers **Agent Sessions** while retaining the
+  compatible `@thread` insertion key. Edit-restart, feedback disclosure, and
+  Markdown export copy all name the Agent Session in Dez; official Zed retains
+  Thread language. The feedback tooltip explicitly states that rating a
+  response sends the current Agent Session to the upstream agent service. An
+  identity guard covers all four surfaces. Formatting, Bash syntax, identity,
+  locked offline metadata, and diff checks pass; no build, test binary, or
+  visual launch was performed.

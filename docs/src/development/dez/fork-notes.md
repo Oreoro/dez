@@ -497,3 +497,8 @@ defer it.
   remain compatible with upstream storage and APIs, but Dez does not expose
   dock position or dock-only sizing controls while legacy docks are hidden.
   Settings keep only controls whose effect is reachable in the public shell.
+- **2026-07-23: Agent Session is the visible conversation unit.** Context
+  menus, restart effects, feedback disclosures, export actions, recovery, and
+  history name Agent Sessions throughout Dez. Compatible internal Thread types,
+  persistence keys, telemetry events, and `@thread` insertion syntax may
+  remain. Official Zed keeps its upstream Thread vocabulary.

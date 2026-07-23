@@ -1264,6 +1264,9 @@ the later running-app reports, the source advanced through:
 - `2877de2c3a`, which replaces the inherited Dez **Panels** settings hierarchy
   with **Workspace Tools & Agent**, removes controls that only affect hidden
   legacy docks, and preserves official Zed's complete upstream settings.
+- `5e6c925fb5`, which removes the remaining hard-coded Thread vocabulary from
+  live Dez Agent Session context, edit, feedback, and Markdown export controls
+  while preserving official Zed and compatible internal syntax.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
