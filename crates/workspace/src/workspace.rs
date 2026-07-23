@@ -6662,7 +6662,39 @@ impl Workspace {
         self.open_panel::<T>(window, cx);
     }
 
-    pub fn close_panel<T: Panel>(&self, window: &mut Window, cx: &mut Context<Self>) {
+    pub fn close_panel<T: Panel>(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some((pane, _, _)) = self.panel_item_for::<T>(cx) {
+            if !pane.read(cx).is_visible() {
+                return;
+            }
+
+            let should_focus_fallback =
+                self.active_pane == pane || pane.read(cx).has_focus(window, cx);
+            let fallback_pane = if should_focus_fallback {
+                Some(
+                    self.last_tabbed_pane(cx)
+                        .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx)),
+                )
+            } else {
+                None
+            };
+
+            self.mark_canvas_layout_custom();
+            pane.update(cx, |pane, cx| pane.set_visible(false, cx));
+            self.center.mark_positions(cx);
+
+            if let Some(fallback_pane) = fallback_pane {
+                self.set_active_pane(&fallback_pane, window, cx);
+                fallback_pane.update(cx, |pane, cx| {
+                    window.focus(&pane.focus_handle(cx), cx);
+                });
+            }
+
+            self.serialize_workspace(window, cx);
+            cx.notify();
+            return;
+        }
+
         for dock in self.all_docks().iter() {
             dock.update(cx, |dock, cx| {
                 if dock.panel::<T>().is_some() {
@@ -16087,6 +16119,45 @@ mod tests {
             pane_kinds,
             vec![PaneKind::Project, PaneKind::Tabs, PaneKind::Agent]
         );
+    }
+
+    #[gpui::test]
+    async fn test_close_panel_hides_its_center_tool_pane(cx: &mut TestAppContext) {
+        init_test(cx);
+
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        let project_pane = workspace.update_in(cx, |workspace, window, cx| {
+            let project_pane = workspace.ensure_panel_pane(PanelPaneKind::Project, window, cx);
+            let panel = cx.new(|cx| TestPanel::new(DockPosition::Left, 100, cx));
+            workspace.add_panel(panel.clone(), window, cx);
+
+            let panel_handle: Arc<dyn PanelHandle> = Arc::new(panel);
+            let panel_item = cx.new(|_| PanelItem::new(panel_handle));
+            project_pane.update(cx, |pane, cx| {
+                pane.set_visible(true, cx);
+                pane.add_item(Box::new(panel_item), true, true, None, window, cx);
+            });
+            workspace.set_active_pane(&project_pane, window, cx);
+            project_pane
+        });
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            workspace.close_panel::<TestPanel>(window, cx);
+
+            assert!(
+                !project_pane.read(cx).is_visible(),
+                "closing a pane-tab panel must hide its Workspace Tools surface"
+            );
+            assert_eq!(workspace.active_pane().read(cx).pane_kind(), PaneKind::Tabs);
+            assert!(
+                workspace.active_pane().read(cx).is_visible(),
+                "closing Workspace Tools must preserve a visible editor or terminal pane"
+            );
+        });
     }
 
     #[gpui::test]
