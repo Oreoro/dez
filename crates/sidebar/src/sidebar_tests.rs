@@ -2091,6 +2091,48 @@ async fn test_plain_workspace_shell_appears_in_session_rail(cx: &mut TestAppCont
 }
 
 #[gpui::test]
+async fn test_switcher_cancel_restore_keeps_workspace_terminal_source(cx: &mut TestAppContext) {
+    let project = init_test_project_with_agent_panel("/my-project", cx).await;
+    let (multi_workspace, cx) =
+        cx.add_window_view(|window, cx| MultiWorkspace::test_new(project.clone(), window, cx));
+    let sidebar = setup_sidebar(&multi_workspace, cx);
+    let workspace = multi_workspace.read_with(cx, |mw, _cx| mw.workspace().clone());
+    let original_terminal = add_workspace_shell(&workspace, &project, cx);
+    let original_terminal_id = workspace.read_with(cx, |_workspace, cx| {
+        standalone_terminal_id(&workspace, &original_terminal, cx)
+    });
+    add_workspace_shell(&workspace, &project, cx);
+
+    multi_workspace.update_in(cx, |_, _window, cx| cx.notify());
+    cx.run_until_parked();
+
+    sidebar.update(cx, |sidebar, cx| {
+        sidebar.active_entry = Some(ActiveEntry::Terminal {
+            terminal_id: original_terminal_id,
+            workspace: workspace.clone(),
+        });
+        sidebar.update_entries(cx);
+
+        let entries = sidebar.mru_entries_for_switcher(cx);
+        let selection = sidebar
+            .switcher_selection_for_active_entry(&entries)
+            .expect("the original terminal should have a switcher restoration target");
+        match selection {
+            ThreadSwitcherSelection::Terminal {
+                source: TerminalEntrySource::WorkspaceItem(item),
+                ..
+            } => assert_eq!(item.entity_id(), original_terminal.entity_id()),
+            ThreadSwitcherSelection::Terminal { .. } => {
+                panic!("expected center-terminal source")
+            }
+            ThreadSwitcherSelection::Thread { .. } => {
+                panic!("expected terminal restoration target")
+            }
+        }
+    });
+}
+
+#[gpui::test]
 async fn test_empty_workspace_shell_appears_in_session_rail(cx: &mut TestAppContext) {
     init_test(cx);
 
