@@ -283,6 +283,9 @@ require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'fn agent_panel_session_label.*?app_name == "Zed".*?upstream_thread_label.*?dez_session_label.*?"Current Thread".*?"Current Agent Session".*?"Regenerate Thread Title".*?"Regenerate Agent Session Title".*?"Open Thread as Markdown".*?"Open Agent Session as Markdown".*?"New Thread\\u\{2026\}".*?"New Agent Session\\u\{2026\}"' \
     'the Dez Agent pane toolbar and menu can regress to mixed Thread/Agent Session terminology'
+require_multiline_pattern crates/agent_ui/src/completion_provider.rs \
+    'fn prompt_context_type_label.*?PromptContextType::Thread if app_name == "Zed".*?"Threads".*?PromptContextType::Thread => "Agent Sessions".*?Self::Thread => "thread".*?prompt_context_type_label\(paths::APP_NAME, \*self\)' \
+    'the Dez Agent context picker can regress to visible Thread terminology or break the compatible @thread keyword'
 require_multiline_pattern crates/agent_ui/src/mention_set.rs \
     'fn unsupported_session_mention_message.*?app_name == "Zed".*?"Thread mentions are only supported for the native agent".*?"Agent Session mentions are only supported by the built-in Dez Agent".*?unsupported_session_mention_message\([[:space:]]*paths::APP_NAME' \
     'unsupported Agent Session mentions can regress to upstream Thread/native-agent language'

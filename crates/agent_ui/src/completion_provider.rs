@@ -246,6 +246,19 @@ impl TryFrom<&str> for PromptContextType {
     }
 }
 
+fn prompt_context_type_label(app_name: &str, context_type: PromptContextType) -> &'static str {
+    match context_type {
+        PromptContextType::File => "Files & Directories",
+        PromptContextType::Symbol => "Symbols",
+        PromptContextType::Fetch => "Fetch",
+        PromptContextType::Thread if app_name == "Zed" => "Threads",
+        PromptContextType::Thread => "Agent Sessions",
+        PromptContextType::Skill => "Skills",
+        PromptContextType::Diagnostics => "Diagnostics",
+        PromptContextType::BranchDiff => "Branch Diff",
+    }
+}
+
 impl PromptContextType {
     pub fn keyword(&self) -> &'static str {
         match self {
@@ -260,15 +273,7 @@ impl PromptContextType {
     }
 
     pub fn label(&self) -> &'static str {
-        match self {
-            Self::File => "Files & Directories",
-            Self::Symbol => "Symbols",
-            Self::Fetch => "Fetch",
-            Self::Thread => "Threads",
-            Self::Skill => "Skills",
-            Self::Diagnostics => "Diagnostics",
-            Self::BranchDiff => "Branch Diff",
-        }
+        prompt_context_type_label(paths::APP_NAME, *self)
     }
 
     pub fn icon(&self) -> IconName {
@@ -2829,6 +2834,19 @@ fn completion_text_for_terminal_selections(
 mod tests {
     use super::*;
     use gpui::TestAppContext;
+
+    #[test]
+    fn dez_labels_thread_context_as_agent_sessions_without_changing_the_keyword() {
+        assert_eq!(
+            prompt_context_type_label("Dez", PromptContextType::Thread),
+            "Agent Sessions"
+        );
+        assert_eq!(
+            prompt_context_type_label("Zed", PromptContextType::Thread),
+            "Threads"
+        );
+        assert_eq!(PromptContextType::Thread.keyword(), "thread");
+    }
 
     #[test]
     fn test_prompt_completion_parse() {
