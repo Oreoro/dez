@@ -265,6 +265,12 @@ require_multiline_pattern crates/agent_ui/src/draft_prompt_store.rs \
 require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
     'fn agent_history_label.*?app_name == "Zed".*?upstream_thread_label.*?dez_session_label.*?"Search Agent Sessions…".*?"Delete Agent Session".*?"Archive Agent Session".*?"Import Agent Sessions".*?"No Agent Sessions yet\."' \
     'Agent History can regress to mixed Thread and Agent Session terminology'
+require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
+    'IconButton::new\("delete-thread".*?aria_label\(agent_history_label.*?"Delete Agent Session".*?IconButton::new\("archive-thread".*?aria_label\(agent_history_label.*?"Archive Agent Session"' \
+    'Agent History row actions can regress to unnamed icon controls'
+require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
+    'IconButton::new\("new-thread".*?aria_label\(agent_history_label.*?"Start New Agent Session".*?IconButton::new\("thread-import".*?aria_label\(agent_history_label.*?"Import Agent Sessions".*?IconButton::new\("filter-archived-only".*?aria_label\(filter_label\)' \
+    'Agent History toolbar actions can regress to unnamed icon controls'
 require_pattern crates/sidebar/src/sidebar.rs \
     '"Close Worktree from Window…"' \
     'the hover-only worktree close control has no keyboard-accessible menu path'
