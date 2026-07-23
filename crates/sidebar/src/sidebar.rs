@@ -284,6 +284,27 @@ fn session_overview_create_action_visible(session_count: usize) -> bool {
     session_count > 0
 }
 
+fn merge_unambiguous_branch(
+    branches: &mut HashMap<PathBuf, SharedString>,
+    ambiguous_paths: &mut HashSet<PathBuf>,
+    path: PathBuf,
+    branch: SharedString,
+) {
+    if ambiguous_paths.contains(&path) {
+        return;
+    }
+
+    if branches
+        .get(&path)
+        .is_some_and(|existing| existing != &branch)
+    {
+        branches.remove(&path);
+        ambiguous_paths.insert(path);
+    } else {
+        branches.entry(path).or_insert(branch);
+    }
+}
+
 fn canvas_thread_item_style(
     thread_item: ThreadItem,
     design_system: &DesignSystemSettings,
@@ -3117,26 +3138,39 @@ impl Sidebar {
         let path_detail_map: HashMap<PathBuf, usize> =
             all_paths.into_iter().zip(path_details).collect();
 
-        let mut branch_by_path: HashMap<PathBuf, SharedString> = HashMap::new();
+        let mut branches_by_workspace: HashMap<EntityId, HashMap<PathBuf, SharedString>> =
+            HashMap::new();
+        let mut unambiguous_branch_by_path: HashMap<PathBuf, SharedString> = HashMap::new();
+        let mut ambiguous_branch_paths = HashSet::new();
         for ws in &workspaces {
             let project = ws.read(cx).project().read(cx);
+            let mut workspace_branches = HashMap::new();
             for repo in project.repositories(cx).values() {
                 let snapshot = repo.read(cx).snapshot();
                 if let Some(branch) = &snapshot.branch {
-                    branch_by_path.insert(
+                    workspace_branches.insert(
                         snapshot.work_directory_abs_path.to_path_buf(),
                         SharedString::from(Arc::<str>::from(branch.name())),
                     );
                 }
                 for linked_wt in snapshot.linked_worktrees() {
                     if let Some(branch) = linked_wt.branch_name() {
-                        branch_by_path.insert(
+                        workspace_branches.insert(
                             linked_wt.path.clone(),
                             SharedString::from(Arc::<str>::from(branch)),
                         );
                     }
                 }
             }
+            for (path, branch) in &workspace_branches {
+                merge_unambiguous_branch(
+                    &mut unambiguous_branch_by_path,
+                    &mut ambiguous_branch_paths,
+                    path.clone(),
+                    branch.clone(),
+                );
+            }
+            branches_by_workspace.insert(ws.entity_id(), workspace_branches);
         }
 
         for group in &groups {
@@ -3160,8 +3194,14 @@ impl Sidebar {
                 linked_worktree_path_lists_for_workspaces(group_workspaces, cx);
             let make_terminal_entry =
                 |metadata: TerminalThreadMetadata, workspace: ThreadEntryWorkspace| {
+                    let branch_by_path = match &workspace {
+                        ThreadEntryWorkspace::Open(workspace) => branches_by_workspace
+                            .get(&workspace.entity_id())
+                            .unwrap_or(&unambiguous_branch_by_path),
+                        ThreadEntryWorkspace::Closed { .. } => &unambiguous_branch_by_path,
+                    };
                     let worktrees =
-                        worktree_info_from_thread_paths(&metadata.worktree_paths, &branch_by_path);
+                        worktree_info_from_thread_paths(&metadata.worktree_paths, branch_by_path);
                     let host_snapshot = metadata.session_ref.and_then(|session_ref| {
                         helper_snapshot_by_session.get(&session_ref.session_id)
                     });
@@ -3272,7 +3312,9 @@ impl Sidebar {
 
                         let worktrees = worktree_info_from_thread_paths(
                             &metadata.worktree_paths,
-                            &branch_by_path,
+                            branches_by_workspace
+                                .get(&ws.entity_id())
+                                .unwrap_or(&unambiguous_branch_by_path),
                         );
                         let has_notification =
                             notify_on_terminal_attention && terminal_view.read(cx).has_bell();
@@ -3350,8 +3392,12 @@ impl Sidebar {
                                 .or_else(|| metadata.detected_agent_kind())
                         })
                         .flatten();
-                    let worktrees =
-                        worktree_info_from_thread_paths(&metadata.worktree_paths, &branch_by_path);
+                    let worktrees = worktree_info_from_thread_paths(
+                        &metadata.worktree_paths,
+                        branches_by_workspace
+                            .get(&workspace.entity_id())
+                            .unwrap_or(&unambiguous_branch_by_path),
+                    );
                     let attention_priority = terminal_attention_priority(&metadata, agent.as_ref());
                     terminals.push(TerminalEntry {
                         metadata,
@@ -3443,8 +3489,14 @@ impl Sidebar {
                 let make_thread_entry =
                     |row: ThreadMetadata, workspace: ThreadEntryWorkspace| -> Arc<ThreadEntry> {
                         let (icon, icon_from_external_svg) = resolve_agent_icon(&row.agent_id);
+                        let branch_by_path = match &workspace {
+                            ThreadEntryWorkspace::Open(workspace) => branches_by_workspace
+                                .get(&workspace.entity_id())
+                                .unwrap_or(&unambiguous_branch_by_path),
+                            ThreadEntryWorkspace::Closed { .. } => &unambiguous_branch_by_path,
+                        };
                         let worktrees =
-                            worktree_info_from_thread_paths(&row.worktree_paths, &branch_by_path);
+                            worktree_info_from_thread_paths(&row.worktree_paths, branch_by_path);
                         let is_draft = row.is_draft();
                         Arc::new(ThreadEntry {
                             metadata: row,

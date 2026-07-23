@@ -94,6 +94,38 @@ fn zero_session_rail_hides_inert_scope_and_search_controls() {
     );
 }
 
+#[test]
+fn historical_branch_fallback_never_guesses_across_workspaces() {
+    let path = PathBuf::from("/shared/worktree");
+    let mut branches = HashMap::new();
+    let mut ambiguous_paths = HashSet::new();
+
+    merge_unambiguous_branch(
+        &mut branches,
+        &mut ambiguous_paths,
+        path.clone(),
+        "main".into(),
+    );
+    merge_unambiguous_branch(
+        &mut branches,
+        &mut ambiguous_paths,
+        path.clone(),
+        "feature/dez".into(),
+    );
+    merge_unambiguous_branch(
+        &mut branches,
+        &mut ambiguous_paths,
+        path.clone(),
+        "main".into(),
+    );
+
+    assert!(
+        !branches.contains_key(&path),
+        "a closed historical row must omit branch metadata when open Workspaces disagree"
+    );
+    assert!(ambiguous_paths.contains(&path));
+}
+
 #[gpui::test]
 async fn detached_host_session_prefers_durable_workspace_identity_over_shared_cwd(
     cx: &mut TestAppContext,
