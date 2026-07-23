@@ -1457,6 +1457,15 @@ code, all launch gates pass, and known limitations are documented.
       dispatch. Explicit accessible names cover all three actions. Formatting,
       locked offline metadata, and static identity guards pass; compilation and
       rendered narrow-width proof remain deferred.
+- [x] 2026-07-23: Give Session rows a width-aware information hierarchy. Commit
+      `be2a8d6ec6` keeps title, lifecycle state, attention, evidence, and recency
+      legible in compact and minimum-detailed rails. Actor, Host ownership, and
+      worktree context return at 440 px instead of competing in the same narrow
+      line; hidden actor and Host labels remain available to accessibility and
+      tooltip output. Plain terminal rows omit their redundant
+      **Terminal Session** actor label below that threshold. Focused source
+      assertions, formatting, locked offline metadata, and static identity
+      guards pass; compilation and rendered width/theme proof remain deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

@@ -1725,3 +1725,12 @@ Notes decision:
   preserve keyboard and assistive-technology clarity. Formatting, locked
   offline metadata, identity, and diff checks pass; rendered narrow-width proof
   remains deferred.
+- 2026-07-23: Rebalanced terminal and Agent Session rows in `be2a8d6ec6`.
+  Compact and minimum-detailed rails now prioritize title, live state, attention,
+  evidence, and recency instead of also forcing actor, Host ownership, and
+  worktree context into the same narrow metadata line. Those supplemental
+  labels return at 440 px; actor and Host identity remain in the row's
+  accessibility name and tooltip while visually hidden. Plain terminal rows
+  also omit the redundant **Terminal Session** actor label below that threshold.
+  Focused source assertions, formatting, locked offline metadata, identity, and
+  diff checks pass; rendered width/theme proof remains deferred.

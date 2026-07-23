@@ -1076,7 +1076,11 @@ the later running-app reports, the source advanced through:
   check/error/warning status; and
 - `281b6e22c9`, which removes inline shortcut keycaps from constrained empty
   Workspace launch buttons while preserving their keymaps in tooltips and
-  explicit accessible names.
+  explicit accessible names; and
+- `be2a8d6ec6`, which gives compact and minimum-detailed Session rows a strict
+  primary hierarchy and restores actor, Host, and worktree context only at
+  440 px, while retaining hidden actor and Host identity in accessibility and
+  tooltip output.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
