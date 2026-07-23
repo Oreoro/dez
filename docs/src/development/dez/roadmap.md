@@ -2348,6 +2348,21 @@ Completed for the Session Switcher discoverability slice:
   locked offline Cargo metadata, and `git diff --check`;
 - no build, test binary, alternate binary, or visual launch was performed.
 
+Completed for the Session Switcher guidance and collection-semantics slice:
+
+- replaced ambiguous footer copy with instructions specific to held-shortcut
+  and direct-command invocation;
+- attached the complete cycle, open, and cancel behavior to the dialog as its
+  accessible description;
+- exposed the visible footer as an accessibility status;
+- retained the selected row as the active descendant and added one-based row
+  position plus total collection size to every mixed Session entry;
+- added reusable `ThreadItem` collection semantics, focused copy assertions,
+  and static identity guards;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
 Completed for the first helper-process source slice:
 
 - new crate instructions and a rollbackable `dez_terminal_host` workspace

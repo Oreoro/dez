@@ -2204,3 +2204,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   preserve the mapping. Formatting, Bash syntax, identity, locked offline
   metadata, and diff checks pass; no build, test binary, or visual launch was
   performed.
+- 2026-07-23: Finished the Session Switcher's interaction guidance and
+  collection semantics in `d08a9697a9`. Held-shortcut mode now says to continue
+  cycling and release to open; direct command mode says to repeat, press Enter
+  to open, or Escape to return. The same explanation is attached to the dialog
+  for assistive technology, the footer is an explicit status, and every mixed
+  Terminal Session / Agent Session row reports its one-based position and total
+  collection size while preserving the existing active-descendant selection.
+  Reusable `ThreadItem` semantics and identity guards protect the contract.
+  Formatting, Bash syntax, identity, locked offline metadata, and diff checks
+  pass; no build, test binary, or visual launch was performed.

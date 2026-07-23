@@ -1275,7 +1275,11 @@ the later running-app reports, the source advanced through:
   data-sharing disclosure while preserving official Zed.
 - `2690f62f75`, which exposes the global Session Switcher command truthfully
   while preserving conventional Main Work Area `Ctrl-Tab` Surface switching
-  and focused Agent/Session Rail cycling.
+  and focused Agent/Session Rail cycling; and
+- `d08a9697a9`, which gives held-shortcut and direct-command Session Switcher
+  modes accurate visible and accessible guidance, preserves active-descendant
+  selection, and reports row position and collection size for every mixed
+  Terminal Session / Agent Session entry.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

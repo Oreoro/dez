@@ -518,3 +518,10 @@ defer it.
   global Command Palette exposes **Session Rail: Switch Sessions** so the
   supervision action remains keyboard-reachable without overriding editor
   muscle memory.
+- **2026-07-23: Session Switcher guidance follows its invocation mode.** When a
+  held shortcut opens the switcher, the footer and accessible description tell
+  the user to continue cycling and release to open. When a direct command opens
+  it, they tell the user to repeat the command, press Enter to open, or Escape
+  to return. Mixed Terminal Session and Agent Session rows retain quiet visual
+  metadata but expose type, selection, position, and collection size to
+  assistive technology. The switcher previews work; hovering never does.
