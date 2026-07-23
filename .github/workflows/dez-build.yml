@@ -1,0 +1,113 @@
+name: Build Dez for macOS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dez-macos-build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_DEV_SPLIT_DEBUGINFO: "off"
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: "1"
+
+jobs:
+  build_macos_arm64:
+    name: macOS arm64 artifact
+    runs-on: macos-15
+    timeout-minutes: 180
+
+    steps:
+      - name: Check out Dez
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "24"
+          check-latest: true
+          package-manager-cache: false
+
+      - name: Install guard prerequisites
+        run: command -v rg >/dev/null || brew install ripgrep
+
+      - name: Install the pinned Rust toolchain
+        run: |
+          set -euo pipefail
+          toolchain=$(
+            sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml
+          )
+          test -n "$toolchain"
+          rustup set profile minimal
+          rustup toolchain install "$toolchain" --profile minimal --no-self-update
+          rustup override set "$toolchain"
+          rustc --version --verbose
+          cargo --version
+
+      - name: Restore Cargo downloads
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            ~/.cargo/git
+            ~/.cargo/registry
+          key: dez-cargo-macos-arm64-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            dez-cargo-macos-arm64-
+
+      - name: Verify Dez source guards
+        run: ./script/dez-identity-check
+
+      - name: Build Dez and its terminal host
+        run: |
+          cargo build \
+            --locked \
+            -j 2 \
+            -p zed \
+            --bin dez \
+            -p dez_terminal_host \
+            --bin dez-terminal-host
+
+      - name: Verify the build
+        run: |
+          set -euo pipefail
+          test -x target/debug/dez
+          test -x target/debug/dez-terminal-host
+          test "$(lipo -archs target/debug/dez)" = "arm64"
+          test "$(lipo -archs target/debug/dez-terminal-host)" = "arm64"
+          file target/debug/dez target/debug/dez-terminal-host
+
+      - name: Package the artifact
+        run: |
+          set -euo pipefail
+          artifact_dir=target/dez-macos-arm64
+          mkdir -p "$artifact_dir"
+          cp target/debug/dez "$artifact_dir/"
+          cp target/debug/dez-terminal-host "$artifact_dir/"
+          chmod 755 "$artifact_dir/dez" "$artifact_dir/dez-terminal-host"
+
+          {
+            echo "commit=$(git rev-parse HEAD)"
+            echo "runner=${RUNNER_OS}-${RUNNER_ARCH}"
+            rustc --version
+            cargo --version
+            file "$artifact_dir/dez" "$artifact_dir/dez-terminal-host"
+            shasum -a 256 \
+              "$artifact_dir/dez" \
+              "$artifact_dir/dez-terminal-host"
+          } >"$artifact_dir/build-manifest.txt"
+
+          tar -C target -czf target/dez-macos-arm64.tar.gz dez-macos-arm64
+
+      - name: Upload the Dez artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: dez-macos-arm64-${{ github.sha }}
+          path: target/dez-macos-arm64.tar.gz
+          if-no-files-found: error
+          retention-days: 7

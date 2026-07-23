@@ -82,9 +82,9 @@ use util::ResultExt as _;
 use util::path_list::PathList;
 use workspace::{
     CloseWindow, DesignSystemSettings, MultiWorkspace, MultiWorkspaceEvent, NewCenterTerminal,
-    NextProject, NextThread, Open, OpenMode, PreviousProject, PreviousThread, ProjectGroupKey,
-    SaveIntent, Sidebar as WorkspaceSidebar, SidebarRenderState, SidebarSettings, SidebarSide,
-    Toast, ToggleSidebar, Workspace,
+    NextProject, NextThread, Open, OpenLog, OpenMode, PreviousProject, PreviousThread,
+    ProjectGroupKey, SaveIntent, Sidebar as WorkspaceSidebar, SidebarRenderState, SidebarSettings,
+    SidebarSide, Toast, ToggleSidebar, Workspace,
     evidence::{
         WorkspaceEvidenceKind as AuthoritativeWorkspaceEvidenceKind, WorkspaceEvidenceLifecycle,
         WorkspaceEvidenceProvenance,
@@ -297,6 +297,75 @@ fn session_rail_utility_labels_visible(width: Pixels) -> bool {
 
 fn session_row_actions_visible(is_hovered: bool, is_focused: bool, is_renaming: bool) -> bool {
     (is_hovered || is_focused) && !is_renaming
+}
+
+fn session_row_setup_action_visible(width: Pixels, setup_available: bool) -> bool {
+    setup_available && session_rail_supplemental_metadata_visible(width)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TerminalHostStatusKind {
+    Connecting,
+    Reconnecting,
+    Failed,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct TerminalHostStatusPresentation {
+    kind: TerminalHostStatusKind,
+    title: &'static str,
+    description: &'static str,
+}
+
+fn terminal_host_status_presentation(
+    state: &TerminalHostStartupState,
+) -> Option<TerminalHostStatusPresentation> {
+    match state {
+        TerminalHostStartupState::Disabled | TerminalHostStartupState::Connected { .. } => None,
+        TerminalHostStartupState::Connecting => Some(TerminalHostStatusPresentation {
+            kind: TerminalHostStatusKind::Connecting,
+            title: "Preparing Terminal Sessions",
+            description: "New terminals will open when the session service is ready. Dez has not started a shell yet.",
+        }),
+        TerminalHostStartupState::Reconnecting { .. } => Some(TerminalHostStatusPresentation {
+            kind: TerminalHostStatusKind::Reconnecting,
+            title: "Terminal Sessions are reconnecting",
+            description: "Running terminal processes remain untouched. New terminals wait until the connection returns. If this does not recover, restart Dez.",
+        }),
+        TerminalHostStartupState::Failed { .. } => Some(TerminalHostStatusPresentation {
+            kind: TerminalHostStatusKind::Failed,
+            title: "Terminal Sessions are unavailable",
+            description: "Dez could not start its terminal session service. No fallback shell or replacement computation was created. Restart Dez; if the problem returns, open the local log.",
+        }),
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct WorkspaceRestoreStatusPresentation {
+    title: String,
+    description: &'static str,
+    remove_label: &'static str,
+    remove_aria_label: String,
+}
+
+fn workspace_restore_status_presentation(
+    count: usize,
+) -> Option<WorkspaceRestoreStatusPresentation> {
+    match count {
+        0 => None,
+        1 => Some(WorkspaceRestoreStatusPresentation {
+            title: "Workspace could not reopen".to_owned(),
+            description: "Dez kept a recovery entry. Open Recent Workspaces to try again, or remove the entry without deleting its recent Workspace data.",
+            remove_label: "Remove Entry",
+            remove_aria_label: "Remove Unavailable Workspace Recovery Entry".to_owned(),
+        }),
+        count => Some(WorkspaceRestoreStatusPresentation {
+            title: format!("{count} Workspaces could not reopen"),
+            description: "Dez kept recovery entries. Open Recent Workspaces to try again, or remove the entries without deleting recent Workspace data.",
+            remove_label: "Remove Entries",
+            remove_aria_label: format!("Remove {count} Unavailable Workspace Recovery Entries"),
+        }),
+    }
 }
 
 fn session_overview_status_label(
@@ -1134,6 +1203,78 @@ mod session_row_action_tests {
         assert!(session_rail_utility_labels_visible(COMPACT_MAX_WIDTH));
         assert!(session_rail_utility_labels_visible(px(280.0)));
         assert!(!session_rail_utility_labels_visible(px(279.0)));
+    }
+
+    #[test]
+    fn setup_copy_stays_in_the_context_menu_until_the_row_has_room() {
+        assert!(!session_row_setup_action_visible(DEFAULT_WIDTH, true));
+        assert!(!session_row_setup_action_visible(
+            SUPPLEMENTAL_METADATA_MIN_WIDTH,
+            false
+        ));
+        assert!(session_row_setup_action_visible(
+            SUPPLEMENTAL_METADATA_MIN_WIDTH,
+            true
+        ));
+    }
+}
+
+#[cfg(test)]
+mod terminal_host_status_tests {
+    use super::*;
+
+    #[test]
+    fn host_status_copy_hides_transport_details_behind_explicit_actions() {
+        let connecting =
+            terminal_host_status_presentation(&TerminalHostStartupState::Connecting).unwrap();
+        assert_eq!(connecting.kind, TerminalHostStatusKind::Connecting);
+        assert_eq!(connecting.title, "Preparing Terminal Sessions");
+        assert!(connecting.description.contains("has not started a shell"));
+
+        let reconnecting =
+            terminal_host_status_presentation(&TerminalHostStartupState::Reconnecting {
+                message: "socket transport failed".to_owned(),
+            })
+            .unwrap();
+        assert_eq!(reconnecting.kind, TerminalHostStatusKind::Reconnecting);
+        assert_eq!(reconnecting.title, "Terminal Sessions are reconnecting");
+        assert!(!reconnecting.description.contains("socket"));
+
+        let failed = terminal_host_status_presentation(&TerminalHostStartupState::Failed {
+            message: "protocol secret".to_owned(),
+        })
+        .unwrap();
+        assert_eq!(failed.kind, TerminalHostStatusKind::Failed);
+        assert_eq!(failed.title, "Terminal Sessions are unavailable");
+        assert!(!failed.description.contains("DEZ_"));
+        assert!(!failed.description.contains("protocol secret"));
+
+        assert!(terminal_host_status_presentation(&TerminalHostStartupState::Disabled).is_none());
+    }
+}
+
+#[cfg(test)]
+mod workspace_restore_status_tests {
+    use super::*;
+
+    #[test]
+    fn unresolved_workspaces_name_retry_and_removal_outcomes() {
+        assert!(workspace_restore_status_presentation(0).is_none());
+
+        let singular = workspace_restore_status_presentation(1).unwrap();
+        assert_eq!(singular.title, "Workspace could not reopen");
+        assert_eq!(singular.remove_label, "Remove Entry");
+        assert!(singular.description.contains("Open Recent Workspaces"));
+        assert!(singular.description.contains("without deleting"));
+
+        let plural = workspace_restore_status_presentation(3).unwrap();
+        assert_eq!(plural.title, "3 Workspaces could not reopen");
+        assert_eq!(plural.remove_label, "Remove Entries");
+        assert_eq!(
+            plural.remove_aria_label,
+            "Remove 3 Unavailable Workspace Recovery Entries"
+        );
+        assert!(!plural.description.contains("Session reference"));
     }
 }
 
@@ -7419,7 +7560,7 @@ impl Sidebar {
         cx.spawn_in(window, async move |this, cx| {
             let connection =
                 terminal_view::wait_for_hosted_terminal_connection(session_ref.host_id, cx).await;
-            let (terminal, session_unavailable) = match connection {
+            let (terminal, session_unavailable_reason) = match connection {
                 Some(connection) => match terminal_view::restore_hosted_terminal(
                     &project,
                     connection,
@@ -7429,45 +7570,42 @@ impl Sidebar {
                 )
                 .await
                 {
-                    Ok(Some(terminal)) => (terminal, false),
+                    Ok(Some(terminal)) => (terminal, None),
                     Ok(None) => {
                         log::warn!("terminal host no longer owns session {session_id}");
                         let terminal = cx.update(|window, cx| {
-                            terminal_view::session_unavailable_terminal_with_message(
-                                &project,
-                                "The terminal host no longer owns this saved session.",
-                                window,
-                                cx,
-                            )
+                            terminal_view::session_unavailable_terminal(&project, window, cx)
                         })?;
-                        (terminal, true)
+                        (
+                            terminal,
+                            Some("The terminal host no longer owns this saved session.".to_owned()),
+                        )
                     }
                     Err(error) => {
                         log::warn!(
                             "failed to restore hosted terminal session {session_id}: {error:#}"
                         );
                         let terminal = cx.update(|window, cx| {
-                            terminal_view::session_unavailable_terminal_with_message(
-                                &project,
-                                "The terminal host could not confirm this saved session.",
-                                window,
-                                cx,
-                            )
+                            terminal_view::session_unavailable_terminal(&project, window, cx)
                         })?;
-                        (terminal, true)
+                        (
+                            terminal,
+                            Some(
+                                "The terminal host could not confirm this saved session."
+                                    .to_owned(),
+                            ),
+                        )
                     }
                 },
                 None => {
                     log::warn!("terminal host is unavailable for session {session_id}");
                     let terminal = cx.update(|window, cx| {
-                        terminal_view::session_unavailable_terminal_with_message(
-                            &project,
-                            "The terminal host is unavailable for this saved session.",
-                            window,
-                            cx,
-                        )
+                        terminal_view::session_unavailable_terminal(&project, window, cx)
                     })?;
-                    (terminal, true)
+                    (
+                        terminal,
+                        Some("The terminal host is unavailable for this saved session.".to_owned()),
+                    )
                 }
             };
             this.update_in(cx, |this, window, cx| {
@@ -7483,9 +7621,10 @@ impl Sidebar {
                         workspace, pane, terminal, focus_item, window, cx,
                     )
                 });
-                if session_unavailable {
+                if let Some(session_unavailable_reason) = session_unavailable_reason {
                     terminal_view.update(cx, |terminal_view, cx| {
-                        terminal_view.set_session_unavailable(true, cx);
+                        terminal_view
+                            .set_session_unavailable_reason(Some(session_unavailable_reason), cx);
                     });
                 }
                 this.active_entry = Some(ActiveEntry::Terminal {
@@ -10433,6 +10572,8 @@ impl Sidebar {
                 TerminalHostConnection::try_global(cx)
                     .is_some_and(|connection| connection.host_id() == session_ref.host_id)
             });
+        let show_copy_codex_hook =
+            session_row_setup_action_visible(rail_width, can_copy_codex_hook);
         let context_review_workspace = review_workspace.clone();
         let context_review_brief = review_brief.clone();
         let context_working_directory = terminal.metadata.working_directory.clone();
@@ -10530,7 +10671,7 @@ impl Sidebar {
                 this.action_slot(
                     h_flex()
                         .gap_0p5()
-                        .when(can_copy_codex_hook, |this| {
+                        .when(show_copy_codex_hook, |this| {
                             this.child(
                                 IconButton::new("copy-codex-hook-setup", IconName::Copy)
                                     .size(ButtonSize::Medium)
@@ -11524,8 +11665,8 @@ impl Sidebar {
         } else {
             (
                 IconName::Terminal,
-                "No sessions yet",
-                "Start a terminal in the active Workspace. It opens in the Main Work Area and appears here with live state.",
+                "No active sessions",
+                "Start a durable terminal in the Main Work Area. Live state, attention, and recovery will appear here.",
             )
         };
 
@@ -11537,18 +11678,18 @@ impl Sidebar {
             .min_h_0()
             .overflow_y_scroll()
             .px_3()
-            .py_6()
+            .py_4()
             .child(
                 v_flex()
                     .w_full()
-                    .gap_3()
+                    .gap_2()
                     .child(
                         h_flex()
                             .gap_2()
                             .child(
                                 div()
                                     .flex_none()
-                                    .size_8()
+                                    .size_7()
                                     .rounded_md()
                                     .border_1()
                                     .border_color(cx.theme().colors().border_variant)
@@ -11583,7 +11724,7 @@ impl Sidebar {
                         this.child(
                             Button::new("no-results-new-terminal", "New Terminal")
                                 .full_width()
-                                .style(ButtonStyle::Filled)
+                                .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
                                 .label_size(LabelSize::Small)
                                 .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
                                 .aria_label(active_workspace_terminal_destination_label())
@@ -11926,58 +12067,59 @@ impl Sidebar {
     }
 
     fn render_terminal_host_status(&self, cx: &App) -> Option<AnyElement> {
-        let callout = match TerminalHostStartupStatus::state(cx) {
-            TerminalHostStartupState::Disabled | TerminalHostStartupState::Connected { .. } => {
-                return None;
-            }
-            TerminalHostStartupState::Connecting => Callout::new()
-                .severity(Severity::Info)
-                .icon(IconName::Info)
-                .title("Connecting durable terminals")
-                .description(
-                    "New local terminals will wait instead of starting a disposable fallback. No process has started yet.",
-                ),
-            TerminalHostStartupState::Reconnecting { message } => {
-                let details = message.clone();
-                Callout::new()
-                    .severity(Severity::Warning)
-                    .icon(IconName::Warning)
-                    .title("Reconnecting durable terminals")
-                    .description(format!(
-                        "Existing processes are left untouched and no replacement work will start. Wait for reconnection; if it persists, restart Dez. {}",
-                        util::truncate_and_trailoff(&message, 180)
-                    ))
-                    .actions_slot(
-                        Button::new("copy-host-reconnect-details", "Copy Details")
-                            .size(ButtonSize::Medium)
-                            .style(ButtonStyle::Outlined)
-                            .aria_label("Copy Durable Host Reconnection Details")
-                            .on_click(move |_, _window, cx| {
-                                cx.write_to_clipboard(ClipboardItem::new_string(details.clone()));
-                            }),
-                    )
-            }
-            TerminalHostStartupState::Failed { message } => {
-                let details = message.clone();
-                Callout::new()
-                    .severity(Severity::Error)
-                    .icon(IconName::Warning)
-                    .title("Durable terminal host unavailable")
-                    .description(format!(
-                        "No fallback terminal was started, so no replacement computation exists. Check the helper error, then restart Dez; to return to ordinary GUI-owned shells on the next launch, omit DEZ_EXPERIMENTAL_TERMINAL_HOST=1. {}",
-                        util::truncate_and_trailoff(&message, 180)
-                    ))
-                    .actions_slot(
-                        Button::new("copy-host-failure-details", "Copy Details")
-                            .size(ButtonSize::Medium)
-                            .style(ButtonStyle::Outlined)
-                            .aria_label("Copy Durable Host Failure Details")
-                            .on_click(move |_, _window, cx| {
-                                cx.write_to_clipboard(ClipboardItem::new_string(details.clone()));
-                            }),
-                    )
-            }
+        let state = TerminalHostStartupStatus::state(cx);
+        let presentation = terminal_host_status_presentation(&state)?;
+        let (severity, icon) = match presentation.kind {
+            TerminalHostStatusKind::Connecting => (Severity::Info, IconName::Info),
+            TerminalHostStatusKind::Reconnecting => (Severity::Warning, IconName::Warning),
+            TerminalHostStatusKind::Failed => (Severity::Error, IconName::Warning),
         };
+        let details = match &state {
+            TerminalHostStartupState::Reconnecting { message }
+            | TerminalHostStartupState::Failed { message } => Some(message.clone()),
+            TerminalHostStartupState::Disabled
+            | TerminalHostStartupState::Connecting
+            | TerminalHostStartupState::Connected { .. } => None,
+        };
+
+        let callout = Callout::new()
+            .severity(severity)
+            .icon(icon)
+            .title(presentation.title)
+            .description(presentation.description)
+            .when_some(details, |callout, details| {
+                let copy_label = match presentation.kind {
+                    TerminalHostStatusKind::Failed => "Copy Error",
+                    TerminalHostStatusKind::Reconnecting => "Copy Details",
+                    TerminalHostStatusKind::Connecting => unreachable!(),
+                };
+                callout.actions_slot(
+                    h_flex()
+                        .flex_wrap()
+                        .gap_1()
+                        .child(
+                            Button::new("open-terminal-host-log", "Open Local Log")
+                                .size(ButtonSize::Medium)
+                                .style(ButtonStyle::Filled)
+                                .aria_label("Open Local Diagnostics Log")
+                                .tooltip(Tooltip::text("Open the local Dez diagnostics log"))
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(OpenLog.boxed_clone(), cx);
+                                }),
+                        )
+                        .child(
+                            Button::new("copy-terminal-host-details", copy_label)
+                                .size(ButtonSize::Medium)
+                                .style(ButtonStyle::Outlined)
+                                .aria_label(copy_label)
+                                .on_click(move |_, _window, cx| {
+                                    cx.write_to_clipboard(ClipboardItem::new_string(
+                                        details.clone(),
+                                    ));
+                                }),
+                        ),
+                )
+            });
         Some(callout.into_any_element())
     }
 
@@ -12009,42 +12151,46 @@ impl Sidebar {
             return None;
         }
         let count = unresolved_workspace_ids.len();
-        let title = if count == 1 {
-            "1 workspace needs recovery".to_string()
-        } else {
-            format!("{count} workspaces need recovery")
-        };
-        let description = if count == 1 {
-            "Dez kept the failed Session reference. Reopen it from Recent Workspaces, or dismiss only this unresolved reference."
-        } else {
-            "Dez kept the failed Session references. Reopen them from Recent Workspaces, or dismiss only these unresolved references."
-        };
+        let presentation = workspace_restore_status_presentation(count)?;
 
         Some(
             Callout::new()
                 .severity(Severity::Warning)
                 .icon(IconName::Warning)
-                .title(title)
-                .description(description)
+                .title(presentation.title)
+                .description(presentation.description)
                 .actions_slot(
                     h_flex()
+                        .flex_wrap()
                         .gap_1()
                         .child(
-                            Button::new("recover-unresolved-workspace", "Open Recent")
+                            Button::new(
+                                "recover-unresolved-workspace",
+                                "Open Recent Workspaces",
+                            )
                                 .size(ButtonSize::Medium)
                                 .style(ButtonStyle::Filled)
-                                .aria_label("Open Recent Workspaces for Recovery")
+                                .start_icon(
+                                    Icon::new(IconName::FolderOpen).size(IconSize::XSmall),
+                                )
+                                .aria_label("Open Recent Workspaces to Retry Recovery")
+                                .tooltip(Tooltip::text(
+                                    "Choose the unavailable Workspace to try opening it again",
+                                ))
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     this.recent_projects_popover_handle.toggle(window, cx);
                                 })),
                         )
                         .child(
-                            Button::new("dismiss-unresolved-workspace", "Dismiss")
+                            Button::new(
+                                "dismiss-unresolved-workspace",
+                                presentation.remove_label,
+                            )
                                 .size(ButtonSize::Medium)
                                 .style(ButtonStyle::Outlined)
-                                .aria_label("Dismiss Unresolved Workspace References")
+                                .aria_label(presentation.remove_aria_label)
                                 .tooltip(Tooltip::text(
-                                    "Remove only the unresolved Session references; recent workspace data remains available",
+                                    "Remove only the unavailable recovery entry; recent Workspace data remains available",
                                 ))
                                 .on_click(cx.listener(move |this, _, _window, cx| {
                                     if let Some(app_session) = this.app_session(cx) {

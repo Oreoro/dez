@@ -1,0 +1,160 @@
+#!/usr/bin/env node
+
+const fs = require("fs");
+const path = require("path");
+
+const root = path.resolve(__dirname, "..");
+const themePath = path.join(root, "assets/themes/lumin/lumin.json");
+const defaultSettingsPath = path.join(root, "assets/settings/default.json");
+const initialSettingsPath = path.join(root, "assets/settings/initial_user_settings.json");
+
+function fail(message) {
+  console.error(`Dez theme check failed: ${message}`);
+  process.exit(1);
+}
+
+function requireValue(condition, message) {
+  if (!condition) fail(message);
+}
+
+function parseHex(color) {
+  const value = color.replace("#", "");
+  requireValue(value.length === 6 || value.length === 8, `unsupported color ${color}`);
+  return {
+    red: Number.parseInt(value.slice(0, 2), 16) / 255,
+    green: Number.parseInt(value.slice(2, 4), 16) / 255,
+    blue: Number.parseInt(value.slice(4, 6), 16) / 255,
+    alpha: value.length === 8 ? Number.parseInt(value.slice(6, 8), 16) / 255 : 1,
+  };
+}
+
+function composite(foreground, background) {
+  const foregroundColor = parseHex(foreground);
+  const backgroundColor = parseHex(background);
+  const alpha = foregroundColor.alpha;
+  return {
+    red: foregroundColor.red * alpha + backgroundColor.red * (1 - alpha),
+    green: foregroundColor.green * alpha + backgroundColor.green * (1 - alpha),
+    blue: foregroundColor.blue * alpha + backgroundColor.blue * (1 - alpha),
+  };
+}
+
+function channelLuminance(channel) {
+  return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+}
+
+function luminance(color) {
+  return (
+    channelLuminance(color.red) * 0.2126 +
+    channelLuminance(color.green) * 0.7152 +
+    channelLuminance(color.blue) * 0.0722
+  );
+}
+
+function contrast(foreground, background) {
+  const foregroundLuminance = luminance(composite(foreground, background));
+  const backgroundLuminance = luminance(composite(background, background));
+  return (
+    (Math.max(foregroundLuminance, backgroundLuminance) + 0.05) /
+    (Math.min(foregroundLuminance, backgroundLuminance) + 0.05)
+  );
+}
+
+function requireContrast(label, foreground, backgrounds, minimum) {
+  for (const background of backgrounds) {
+    const ratio = contrast(foreground, background);
+    requireValue(
+      ratio >= minimum,
+      `${label} is ${ratio.toFixed(2)}:1 on ${background}; expected at least ${minimum}:1`,
+    );
+  }
+}
+
+const themeDocument = JSON.parse(fs.readFileSync(themePath, "utf8"));
+const themeByName = new Map(themeDocument.themes.map((theme) => [theme.name, theme]));
+const luminBlur = themeByName.get("Lumin Blur");
+const luminOpaque = themeByName.get("Lumin");
+const luminLight = themeByName.get("Lumin Light");
+
+requireValue(luminBlur?.appearance === "dark", "Lumin Blur must be dark");
+requireValue(
+  luminBlur?.style["background.appearance"] === "blurred",
+  "Lumin Blur must request the blurred window shell",
+);
+requireValue(luminOpaque?.style["background.appearance"] === "opaque", "Lumin must remain the opaque dark fallback");
+requireValue(luminLight?.appearance === "light", "Lumin Light must be light");
+requireValue(
+  luminLight?.style["background.appearance"] === "blurred",
+  "Lumin Light must request the blurred window shell",
+);
+
+const light = luminLight.style;
+const lightSurfaces = ["#FFFFFF", "#F5F5F5"];
+
+requireContrast("active control text", light.text, [light["element.active"]], 4.5);
+requireContrast("accent text", light["text.accent"], lightSurfaces, 4.5);
+requireContrast("focused border", light["border.focused"], lightSurfaces, 3);
+requireContrast("placeholder text", light["text.placeholder"], lightSurfaces, 4.5);
+requireContrast("editor line number", light["editor.line_number"], lightSurfaces, 4.5);
+
+for (const token of [
+  "error",
+  "success",
+  "warning",
+  "modified",
+  "renamed",
+  "conflict",
+  "link_text.hover",
+  "terminal.foreground",
+  "terminal.dim_foreground",
+  "terminal.ansi.red",
+  "terminal.ansi.green",
+  "terminal.ansi.yellow",
+  "terminal.ansi.blue",
+  "terminal.ansi.magenta",
+  "terminal.ansi.cyan",
+  "terminal.ansi.white",
+]) {
+  requireContrast(token, light[token], lightSurfaces, 4.5);
+}
+
+for (const [token, style] of Object.entries(light.syntax)) {
+  if (style.color) {
+    requireContrast(`syntax.${token}`, style.color, lightSurfaces, 4.5);
+  }
+}
+
+const defaultSettings = fs.readFileSync(defaultSettingsPath, "utf8");
+const initialSettings = fs.readFileSync(initialSettingsPath, "utf8");
+for (const settings of [defaultSettings, initialSettings]) {
+  requireValue(settings.includes('"light": "Lumin Light"'), "light default must select Lumin Light");
+  requireValue(settings.includes('"dark": "Lumin Blur"'), "dark default must select Lumin Blur");
+  requireValue(
+    settings.includes('"buffer_font_family": "JetBrains Mono"'),
+    "editor default must select JetBrains Mono",
+  );
+  requireValue(
+    settings.includes('"ui_font_family": ".ZedSans"'),
+    "UI default must retain the readable bundled sans-serif face",
+  );
+}
+requireValue(
+  defaultSettings.includes('"font_family": "JetBrains Mono"') &&
+    initialSettings.includes('"font_family": "JetBrains Mono"'),
+  "terminal default must select JetBrains Mono",
+);
+requireValue(
+  defaultSettings.includes('"markdown_preview_code_font_family": "JetBrains Mono"'),
+  "Markdown code must select JetBrains Mono",
+);
+
+for (const file of [
+  "JetBrainsMono-Regular.ttf",
+  "JetBrainsMono-Italic.ttf",
+  "JetBrainsMono-Bold.ttf",
+  "JetBrainsMono-BoldItalic.ttf",
+]) {
+  requireValue(fs.existsSync(path.join(root, "assets/fonts/jetbrains-mono", file)), `missing bundled font ${file}`);
+}
+
+console.log("Dez theme checks passed");

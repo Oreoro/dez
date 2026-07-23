@@ -1772,6 +1772,44 @@ code, all launch gates pass, and known limitations are documented.
       pile. Progress rotation respects reduced Canvas motion. Official Zed
       retains its inherited search landing page; compiled and rendered
       density/theme proof remains deferred.
+- [x] 2026-07-24: Turn unavailable terminals into an intentional recovery
+      surface. The saved failure reason, no-silent-replacement rule, and one
+      primary **Start Fresh Terminal** action now replace the blank terminal
+      grid plus floating warning. Selected normal terminal tabs use a compact
+      labeled status dot, while failed, unavailable, and unknown states keep
+      visible text. The default-width Session Rail keeps Codex hook setup in
+      the context menu until the row has enough room for a third inline action.
+      Formatting, identity, Bash syntax, and diff checks pass; this post-build
+      source pass still needs compiled and rendered proof.
+- [x] 2026-07-24: Productize terminal service startup and failure in the
+      Session Rail. Preparing, reconnecting, and unavailable states now use one
+      Terminal Session vocabulary and concise operational guidance. Raw
+      transport errors and the experimental environment switch no longer
+      appear in the primary UI. Reconnection and failure retain wrapped
+      **Open Local Log** plus **Copy Details** or **Copy Error** actions.
+      Severity continues to map to status, warning, and alert semantics.
+      Focused copy assertions, formatting, identity, Bash syntax, and diff
+      checks pass; compiled and rendered narrow-rail proof remains deferred.
+- [x] 2026-07-24: Make failed Workspace restoration explicit and responsive.
+      Singular and plural states now explain that Dez retained recovery
+      entries, route retry through **Open Recent Workspaces**, and name
+      non-destructive removal as **Remove Entry** or **Remove Entries**. The
+      copy no longer exposes failed Session references or implies that removal
+      deletes recent Workspace data. Both actions wrap at narrow Session Rail
+      widths. Focused copy assertions, formatting, identity, Bash syntax, and
+      diff checks pass; compiled interaction and rendered overflow proof remain
+      deferred.
+- [x] 2026-07-24: Repair Lumin Light contrast as a system instead of patching
+      individual controls. The active-control pairing moves from effectively
+      dark-on-dark to a readable pressed state. Focus, accent, semantic status,
+      terminal ANSI, line-number, placeholder, and every syntax foreground now
+      meet a checked 4.5:1 floor on white and off-white light surfaces while
+      retaining Lumin's orange, teal, blue, magenta, and violet character.
+      `script/dez-theme-check` parses the theme, validates the contrast matrix,
+      verifies blurred/opaque variants, confirms the bundled JetBrains Mono
+      faces, and guards editor, terminal, Markdown-code, and readable sans-serif
+      UI defaults. JSON, Node syntax, identity, Bash syntax, and diff checks
+      pass; rendered Lumin Light and system-translucency proof remains deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
@@ -2036,6 +2074,69 @@ code, all launch gates pass, and known limitations are documented.
   remains understandable when motion is reduced.
 
 ## Verification {#verification}
+
+Completed for the Lumin Light contrast and typography-default slice:
+
+- active controls no longer pair `#111111` text with a `#1C1C1C` background;
+- focus, accent, semantic state, terminal ANSI, placeholder, line-number, and
+  every syntax foreground pass a 4.5:1 contrast floor on white and off-white
+  light surfaces;
+- Lumin Blur remains the blurred dark default, Lumin remains the opaque dark
+  fallback, and Lumin Light remains the blurred light default;
+- editor, terminal, and Markdown code retain bundled JetBrains Mono while UI
+  chrome retains the readable bundled sans-serif face;
+- `node --check script/dez-theme-check`;
+- `./script/dez-theme-check`;
+- `cargo fmt --all -- --check`;
+- Bash syntax and `./script/dez-identity-check`;
+- `git diff --check`;
+- no build, Rust test binary, bundle, alternate binary, or visual launch was
+  performed after this source slice.
+
+Completed for the failed Workspace restoration slice:
+
+- singular and plural recovery states name the failed Workspace outcome;
+- **Open Recent Workspaces** accurately opens the existing retry path;
+- **Remove Entry** and **Remove Entries** describe non-destructive recovery
+  record removal without internal Session-reference language;
+- both controls wrap within narrow Session Rail widths;
+- pure singular/plural copy assertions were authored;
+- `cargo fmt --all -- --check`;
+- Bash syntax and `./script/dez-identity-check`;
+- `git diff --check`;
+- no build, Rust test binary, bundle, alternate binary, or visual launch was
+  performed after this source slice.
+
+Completed for the Terminal Session service-status slice:
+
+- preparing, reconnecting, and failure copy uses user-facing Terminal Session
+  language instead of internal Host and environment-switch terminology;
+- exact transport errors remain available through explicit copy actions rather
+  than appearing in the primary callout;
+- reconnecting and failed states provide a wrapped **Open Local Log** action;
+- info, warning, and error states preserve status and alert semantics through
+  the shared Callout component;
+- pure copy-matrix assertions were authored;
+- `cargo fmt --all -- --check`;
+- Bash syntax and `./script/dez-identity-check`;
+- `git diff --check`;
+- no build, Rust test binary, bundle, alternate binary, or visual launch was
+  performed after this source slice.
+
+Completed for the terminal status and recovery-surface slice:
+
+- unavailable saved Sessions render one top-aligned alert surface instead of a
+  blank terminal grid with a floating overlay;
+- normal selected terminal tabs retain a labeled status dot without repeating
+  status text, while exceptional states keep visible labels;
+- the default-width Session Rail preserves title room by keeping optional
+  setup copy in the existing context menu;
+- pure breakpoint and status-visibility assertions were authored;
+- `cargo fmt --all -- --check`;
+- Bash syntax and `./script/dez-identity-check`;
+- `git diff --check`;
+- no build, Rust test binary, bundle, alternate binary, or visual launch was
+  performed after this source slice.
 
 Completed for the Workspace Search state-hierarchy slice:
 

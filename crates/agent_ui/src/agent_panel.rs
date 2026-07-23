@@ -2669,19 +2669,18 @@ impl AgentPanel {
                         None => None,
                     };
                     let session_unavailable = restored.is_none();
+                    let unavailable_reason = session_unavailable.then(|| {
+                        if host_unavailable {
+                            "The terminal host is unavailable for this saved agent session."
+                        } else {
+                            "The terminal host no longer owns this saved agent session."
+                        }
+                        .to_owned()
+                    });
                     let terminal = match restored {
                         Some(terminal) => terminal,
                         None => cx.update(|window, cx| {
-                            terminal_view::session_unavailable_terminal_with_message(
-                                &project,
-                                if host_unavailable {
-                                    "The terminal host is unavailable for this saved agent session."
-                                } else {
-                                    "The terminal host no longer owns this saved agent session."
-                                },
-                                window,
-                                cx,
-                            )
+                            terminal_view::session_unavailable_terminal(&project, window, cx)
                         })?,
                     };
                     this.update_in(cx, |this, window, cx| {
@@ -2695,7 +2694,7 @@ impl AgentPanel {
                                 cx,
                             );
                             view.set_show_workspace_actions(false, cx);
-                            view.set_session_unavailable(session_unavailable, cx);
+                            view.set_session_unavailable_reason(unavailable_reason, cx);
                             view
                         });
                         this.insert_terminal(
@@ -2724,13 +2723,11 @@ impl AgentPanel {
                 return;
             }
             let session_unavailable = attached.is_none();
+            let unavailable_reason = session_unavailable.then(|| {
+                "The saved agent process is no longer available on this Dez host.".to_owned()
+            });
             let terminal = attached.unwrap_or_else(|| {
-                terminal_view::session_unavailable_terminal_with_message(
-                    &self.project,
-                    "The saved agent process is no longer available on this Dez host.",
-                    window,
-                    cx,
-                )
+                terminal_view::session_unavailable_terminal(&self.project, window, cx)
             });
             let terminal_view = cx.new(|cx| {
                 let mut view = TerminalView::new(
@@ -2742,7 +2739,7 @@ impl AgentPanel {
                     cx,
                 );
                 view.set_show_workspace_actions(false, cx);
-                view.set_session_unavailable(session_unavailable, cx);
+                view.set_session_unavailable_reason(unavailable_reason, cx);
                 view
             });
             self.insert_terminal(

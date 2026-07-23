@@ -23,7 +23,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes ripgrep
-      - name: Verify identity and updater isolation
+      - name: Verify identity, theme, and updater isolation
         run: ./script/dez-identity-check
 
   upstream:

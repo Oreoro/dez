@@ -296,7 +296,7 @@ reject_pattern crates/sidebar/src/sidebar.rs \
     '"(No running sessions|Start a terminal to begin|Open Folder…)"' \
     'the compact Session Rail start state has regained duplicate or folder-scoped copy'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn active_workspace_terminal_destination_label.*?"New Terminal in Main Work Area of Active Workspace".*?"Start a terminal in the active Workspace\. It opens in the Main Work Area and appears here with live state\.".*?Button::new\("no-results-new-terminal", "New Terminal"\).*?aria_label\(active_workspace_terminal_destination_label\(\)\).*?Button::new\("new-session", "New Terminal"\).*?aria_label\(active_workspace_terminal_destination_label\(\)\)' \
+    'fn active_workspace_terminal_destination_label.*?"New Terminal in Main Work Area of Active Workspace".*?"Start a durable terminal in the Main Work Area\. Live state, attention, and recovery will appear here\.".*?Button::new\("no-results-new-terminal", "New Terminal"\).*?aria_label\(active_workspace_terminal_destination_label\(\)\).*?Button::new\("new-session", "New Terminal"\).*?aria_label\(active_workspace_terminal_destination_label\(\)\)' \
     'global Session Rail terminal actions can regress to an ambiguous Workspace or Agent destination'
 reject_pattern crates/sidebar/src/sidebar.rs \
     'when\(!is_focused, \|this\| this\.visible_on_hover\(&group_name\)\)' \
@@ -815,7 +815,7 @@ require_multiline_pattern crates/workspace/src/pane.rs \
     'Button::new\("empty-project-terminal", "New Terminal"\).*?NewCenterTerminal::default\(\).*?dispatch_action.*?NewCenterTerminal::default\(\)' \
     'the empty Workspace primary terminal action can regress to the legacy panel'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'Button::new\("empty-project-terminal", "New Terminal"\).*?aria_label\("New Terminal"\).*?Tooltip::for_action.*?"New Terminal".*?Button::new\("empty-project-open-file", "Find File"\).*?aria_label\("Find File in Workspace"\).*?Tooltip::for_action.*?"Find File in Workspace".*?Button::new\("empty-project-new-file", "New File"\).*?aria_label\("New File"\).*?Tooltip::for_action\("New File"' \
+    'Button::new\("empty-project-terminal", "New Terminal"\).*?aria_label\("New Terminal in Main Work Area"\).*?Tooltip::for_action.*?"New Terminal in Main Work Area".*?Button::new\("empty-project-open-file", "Find File"\).*?aria_label\("Find File in Workspace"\).*?Tooltip::for_action.*?"Find File in Workspace".*?Button::new\("empty-project-new-file", "New File"\).*?aria_label\("New File"\).*?Tooltip::for_action\("New File"' \
     'empty Workspace launch actions can regress to clipped inline shortcut badges or unnamed controls'
 require_multiline_pattern crates/workspace/src/pane.rs \
     'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?else \{.*?"New Terminal".*?NewCenterTerminal::default' \
@@ -847,6 +847,9 @@ reject_pattern crates/workspace/src/pane.rs \
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_tab_status.*?"Unavailable".*?"Failed".*?"Exited".*?"Active"' \
     'terminal tabs do not expose truthful lifecycle state'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'fn terminal_tab_status_indicator_visible.*?selected.*?"Failed" \| "Unavailable" \| "Status unknown".*?fn terminal_tab_status_label_visible.*?"Failed" \| "Unavailable" \| "Status unknown".*?aria_label\(format!\("Status: \{status\}"\)\).*?terminal_tab_status_label_visible\(status\)' \
+    'terminal tabs can regress to noisy normal-state labels or unlabeled exceptional state'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_close_label.*?"Detach Terminal".*?"Close Terminal Tab"' \
     'durable terminal closure is still labeled like local tab disposal'
@@ -947,10 +950,25 @@ reject_pattern crates/terminal_view/src/terminal_view.rs \
     'assistant_enabled = false|AddSelectionToThread|InlineAssist::default' \
     'the terminal context menu retains permanently disabled Agent actions'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'fn terminal_unavailable_description.*?Dez did not start a replacement shell.*?Start fresh only when you want a separate computation.*?if self\.session_unavailable \{[[:space:]]*return false;.*?\.title\("Terminal Session unavailable"\).*?\.description\(unavailable_description\).*?"Start Fresh Terminal"' \
+    'fn terminal_unavailable_description.*?Dez did not start a replacement shell.*?Start fresh only when you want a separate computation.*?if self\.session_unavailable \{[[:space:]]*return false;.*?\.id\("terminal-unavailable-state"\).*?\.role\(gpui::Role::Alert\).*?\.aria_label\("Terminal Session unavailable"\).*?Headline::new\("Session unavailable"\).*?Label::new\(unavailable_description\).*?"Start Fresh Terminal"' \
     'unavailable terminal recovery can regress to internal Host jargon'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn session_row_setup_action_visible.*?setup_available && session_rail_supplemental_metadata_visible\(width\).*?let show_copy_codex_hook =.*?session_row_setup_action_visible\(rail_width, can_copy_codex_hook\).*?\.when\(show_copy_codex_hook' \
+    'compact Session rows can regress to crowding their title with a third inline setup action'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn terminal_host_status_presentation.*?"Preparing Terminal Sessions".*?has not started a shell.*?"Terminal Sessions are reconnecting".*?processes remain untouched.*?"Terminal Sessions are unavailable".*?No fallback shell or replacement computation.*?fn render_terminal_host_status.*?terminal_host_status_presentation.*?"Copy Error".*?"Copy Details".*?"Open Local Log".*?OpenLog\.boxed_clone' \
+    'Terminal Session startup recovery can regress to raw transport copy or lose its diagnostic actions'
+reject_pattern crates/sidebar/src/sidebar.rs \
+    'DEZ_EXPERIMENTAL_TERMINAL_HOST|Durable terminal host unavailable|Connecting durable terminals|Reconnecting durable terminals' \
+    'the Session Rail exposes experimental configuration or internal Host language'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn workspace_restore_status_presentation.*?"Workspace could not reopen".*?"Remove Entry".*?"\{count\} Workspaces could not reopen".*?"Remove Entries".*?fn render_workspace_restore_status.*?workspace_restore_status_presentation.*?\.flex_wrap\(\).*?"Open Recent Workspaces".*?"Open Recent Workspaces to Retry Recovery".*?presentation\.remove_label.*?presentation\.remove_aria_label' \
+    'unresolved Workspace recovery can regress to ambiguous actions or clipped narrow-rail controls'
+reject_pattern crates/sidebar/src/sidebar.rs \
+    'failed Session reference|failed Session references|"Open Recent"|"Dismiss Unresolved Workspace References"' \
+    'Workspace recovery exposes internal reference language or ambiguous actions'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'session_unavailable_reason: Option<String>.*?let \(terminal, session_unavailable_reason\) = match stored_session_ref.*?The terminal host no longer owns this saved session.*?The saved terminal process is no longer available on this Dez host.*?The saved terminal session reference is incomplete or invalid.*?if custom_title\.is_some\(\) \{[[:space:]]*view\.custom_title = custom_title;.*?view\.session_unavailable_reason = session_unavailable_reason.*?fn session_unavailable_terminal.*?session_unavailable_terminal_with_message\(project, "Session unavailable", window, cx\).*?fn session_unavailable_terminal_with_message.*?message: &str.*?\.with_display_text\(message, &\[\]\)' \
+    'session_unavailable_reason: Option<String>.*?set_session_unavailable_reason.*?self\.session_unavailable = reason\.is_some\(\).*?self\.session_unavailable_reason = reason.*?let \(terminal, session_unavailable_reason\) = match stored_session_ref.*?The terminal host no longer owns this saved session.*?The saved terminal process is no longer available on this Dez host.*?The saved terminal session reference is incomplete or invalid.*?if custom_title\.is_some\(\) \{[[:space:]]*view\.custom_title = custom_title;.*?view\.session_unavailable_reason = session_unavailable_reason.*?fn session_unavailable_terminal.*?\.with_display_text\("Session unavailable", &\[\]\)' \
     'unavailable Terminal Sessions can regress to losing their title, reason, or rendering duplicate fake terminal output'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'fn terminal_panel_surface_visible.*?app_name == "Zed".*?if terminal_panel_surface_visible\(APP_NAME\).*?terminal_panel::Toggle' \
@@ -1043,7 +1061,7 @@ require_pattern crates/workspace/src/pane.rs \
     '"Search Workspace…"' \
     'the Dez pane creation menu still exposes Project Search'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'Button::new\("empty-project-terminal", "New Terminal"\).*?\.aria_label\("New Terminal"\).*?Tooltip::for_action.*?"New Terminal".*?Button::new\("empty-project-open-file", "Find File"\).*?\.aria_label\("Find File in Workspace"\).*?Tooltip::for_action.*?"Find File in Workspace".*?Button::new\("empty-project-new-file", "New File"\).*?\.aria_label\("New File"\).*?Tooltip::for_action\("New File"' \
+    'Button::new\("empty-project-terminal", "New Terminal"\).*?\.aria_label\("New Terminal in Main Work Area"\).*?Tooltip::for_action.*?"New Terminal in Main Work Area".*?Button::new\("empty-project-open-file", "Find File"\).*?\.aria_label\("Find File in Workspace"\).*?Tooltip::for_action.*?"Find File in Workspace".*?Button::new\("empty-project-new-file", "New File"\).*?\.aria_label\("New File"\).*?Tooltip::for_action\("New File"' \
     'the Workspace-ready actions can regress to ambiguous or unnamed controls'
 require_pattern crates/settings_ui/src/page_data.rs \
     '"Trust All Workspaces By Default"' \
@@ -1142,5 +1160,7 @@ reject_pattern crates/edit_prediction/src/zeta.rs \
 reject_pattern crates/system_specs/src/system_specs.rs \
     '"Zed: v\{\}' \
     'system diagnostics still label the running product as Zed'
+
+node script/dez-theme-check
 
 echo "Dez identity checks passed"

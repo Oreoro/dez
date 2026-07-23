@@ -957,90 +957,105 @@ impl Pane {
 
         v_flex()
             .id("empty-project-state")
+            .role(gpui::Role::Region)
+            .aria_label("Main Work Area ready")
             .track_focus(&self.focus_handle(cx))
-            .max_w_96()
-            .w_full()
-            .px_6()
-            .gap_4()
+            .size_full()
+            .items_start()
+            .justify_start()
+            .px_8()
+            .pt_10()
             .child(
                 v_flex()
-                    .gap_1p5()
+                    .max_w(px(560.))
+                    .w_full()
+                    .gap_5()
                     .child(
-                        h_flex()
+                        v_flex()
                             .gap_2()
                             .child(
-                                Icon::new(IconName::FolderOpen)
-                                    .size(IconSize::Small)
+                                Label::new("MAIN WORK AREA")
+                                    .size(LabelSize::XSmall)
                                     .color(Color::Muted),
                             )
-                            .child(Headline::new("Workspace ready")),
-                    )
-                    .child(
-                        Label::new(
-                            "Start a terminal, find a file, or create one in this workspace.",
-                        )
-                        .size(LabelSize::Small)
-                        .color(Color::Muted),
-                    ),
-            )
-            .child(
-                v_flex()
-                    .gap_1()
-                    .child(
-                        Button::new("empty-project-terminal", "New Terminal")
-                            .full_width()
-                            .tab_index(0isize)
-                            .style(ButtonStyle::Filled)
-                            .start_icon(Icon::new(IconName::Terminal))
-                            .aria_label("New Terminal")
-                            .tooltip(|_, cx| {
-                                Tooltip::for_action(
-                                    "New Terminal",
-                                    &NewCenterTerminal::default(),
-                                    cx,
+                            .child(
+                                h_flex()
+                                    .gap_2()
+                                    .child(
+                                        Icon::new(IconName::Terminal)
+                                            .size(IconSize::Small)
+                                            .color(Color::Accent),
+                                    )
+                                    .child(Headline::new("Workspace ready")),
+                            )
+                            .child(
+                                Label::new(
+                                    "Start in a durable terminal or open a file. Sessions stay in the rail; code, diffs, diagnostics, and review stay here.",
                                 )
-                            })
-                            .on_click(move |_, window, cx| {
-                                terminal_focus.dispatch_action(
-                                    &NewCenterTerminal::default(),
-                                    window,
-                                    cx,
-                                );
-                            }),
+                                .size(LabelSize::Small)
+                                .color(Color::Muted),
+                            ),
                     )
                     .child(
-                        Button::new("empty-project-open-file", "Find File")
-                            .full_width()
-                            .tab_index(1isize)
-                            .style(ButtonStyle::Subtle)
-                            .start_icon(Icon::new(IconName::FolderSearch))
-                            .aria_label("Find File in Workspace")
-                            .tooltip(|_, cx| {
-                                Tooltip::for_action(
-                                    "Find File in Workspace",
-                                    &ToggleFileFinder::default(),
-                                    cx,
-                                )
-                            })
-                            .on_click(move |_, window, cx| {
-                                open_file_focus.dispatch_action(
-                                    &ToggleFileFinder::default(),
-                                    window,
-                                    cx,
-                                );
-                            }),
-                    )
-                    .child(
-                        Button::new("empty-project-new-file", "New File")
-                            .full_width()
-                            .tab_index(2isize)
-                            .style(ButtonStyle::Subtle)
-                            .start_icon(Icon::new(IconName::Plus))
-                            .aria_label("New File")
-                            .tooltip(|_, cx| Tooltip::for_action("New File", &NewFile, cx))
-                            .on_click(move |_, window, cx| {
-                                new_file_focus.dispatch_action(&NewFile, window, cx);
-                            }),
+                        h_flex()
+                            .w_full()
+                            .flex_wrap()
+                            .gap_2()
+                            .child(
+                                Button::new("empty-project-terminal", "New Terminal")
+                                    .tab_index(0isize)
+                                    .style(ButtonStyle::Filled)
+                                    .start_icon(Icon::new(IconName::Terminal))
+                                    .aria_label("New Terminal in Main Work Area")
+                                    .tooltip(|_, cx| {
+                                        Tooltip::for_action(
+                                            "New Terminal in Main Work Area",
+                                            &NewCenterTerminal::default(),
+                                            cx,
+                                        )
+                                    })
+                                    .on_click(move |_, window, cx| {
+                                        terminal_focus.dispatch_action(
+                                            &NewCenterTerminal::default(),
+                                            window,
+                                            cx,
+                                        );
+                                    }),
+                            )
+                            .child(
+                                Button::new("empty-project-open-file", "Find File")
+                                    .tab_index(1isize)
+                                    .style(ButtonStyle::Outlined)
+                                    .start_icon(Icon::new(IconName::FolderSearch))
+                                    .aria_label("Find File in Workspace")
+                                    .tooltip(|_, cx| {
+                                        Tooltip::for_action(
+                                            "Find File in Workspace",
+                                            &ToggleFileFinder::default(),
+                                            cx,
+                                        )
+                                    })
+                                    .on_click(move |_, window, cx| {
+                                        open_file_focus.dispatch_action(
+                                            &ToggleFileFinder::default(),
+                                            window,
+                                            cx,
+                                        );
+                                    }),
+                            )
+                            .child(
+                                Button::new("empty-project-new-file", "New File")
+                                    .tab_index(2isize)
+                                    .style(ButtonStyle::Subtle)
+                                    .start_icon(Icon::new(IconName::Plus))
+                                    .aria_label("New File")
+                                    .tooltip(|_, cx| {
+                                        Tooltip::for_action("New File", &NewFile, cx)
+                                    })
+                                    .on_click(move |_, window, cx| {
+                                        new_file_focus.dispatch_action(&NewFile, window, cx);
+                                    }),
+                            ),
                     ),
             )
     }

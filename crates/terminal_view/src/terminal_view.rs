@@ -53,8 +53,8 @@ use terminal_element::TerminalElement;
 use terminal_path_like_target::{hover_path_like_target, open_path_like_target};
 use terminal_scrollbar::TerminalScrollHandle;
 use ui::{
-    ButtonLike, Callout, ContextMenu, Divider, PopoverMenu, ScrollAxes, Scrollbars, Severity,
-    SplitButton, Tooltip, WithScrollbar,
+    ButtonLike, ContextMenu, Divider, PopoverMenu, ScrollAxes, Scrollbars, SplitButton, Tooltip,
+    WithScrollbar,
     prelude::*,
     scrollbars::{self, ScrollbarVisibility},
 };
@@ -62,7 +62,9 @@ use util::ResultExt;
 use workspace::{
     CloseActiveItem, DraggedSelection, DraggedTab, NewCenterTerminal, NewTerminal, OpenTerminal,
     Pane, ToolbarItemLocation, Workspace, WorkspaceId, delete_unloaded_items,
-    item::{HighlightedText, Item, ItemEvent, SerializableItem, TabTooltipContent},
+    item::{
+        HighlightedText, Item, ItemEvent, SerializableItem, TabContentParams, TabTooltipContent,
+    },
     register_serializable_item,
     searchable::{
         Direction, SearchEvent, SearchOptions, SearchToken, SearchableItem, SearchableItemHandle,
@@ -104,6 +106,25 @@ fn terminal_tab_status(
             None => "Active",
         }
     }
+}
+
+fn terminal_tab_status_color(status: &str) -> Color {
+    match status {
+        "Running" => Color::Accent,
+        "Completed" => Color::Success,
+        "Failed" | "Unavailable" => Color::Error,
+        "Status unknown" => Color::Warning,
+        "Active" | "Exited" => Color::Muted,
+        _ => Color::Muted,
+    }
+}
+
+fn terminal_tab_status_indicator_visible(status: &str, selected: bool) -> bool {
+    selected || matches!(status, "Failed" | "Unavailable" | "Status unknown")
+}
+
+fn terminal_tab_status_label_visible(status: &str) -> bool {
+    matches!(status, "Failed" | "Unavailable" | "Status unknown")
 }
 
 fn terminal_surface_accessibility_label(title: &str, status: &str) -> String {
@@ -889,6 +910,16 @@ impl TerminalView {
         if !unavailable {
             self.session_unavailable_reason = None;
         }
+        cx.notify();
+    }
+
+    pub fn set_session_unavailable_reason(
+        &mut self,
+        reason: Option<String>,
+        cx: &mut Context<Self>,
+    ) {
+        self.session_unavailable = reason.is_some();
+        self.session_unavailable_reason = reason;
         cx.notify();
     }
 
@@ -2102,6 +2133,98 @@ impl Render for TerminalView {
         };
         let unavailable_description =
             terminal_unavailable_description(self.session_unavailable_reason.as_deref());
+        let terminal_surface = if self.session_unavailable {
+            div()
+                .id("terminal-unavailable-state")
+                .role(gpui::Role::Alert)
+                .aria_label("Terminal Session unavailable")
+                .size_full()
+                .bg(cx.theme().colors().editor_background)
+                .px_8()
+                .pt_10()
+                .child(
+                    v_flex()
+                        .w_full()
+                        .max_w(px(600.))
+                        .gap_5()
+                        .child(
+                            v_flex()
+                                .gap_2()
+                                .child(
+                                    Label::new("TERMINAL SESSION")
+                                        .size(LabelSize::XSmall)
+                                        .color(Color::Muted),
+                                )
+                                .child(
+                                    h_flex()
+                                        .gap_2()
+                                        .child(
+                                            Icon::new(IconName::Warning)
+                                                .size(IconSize::Small)
+                                                .color(Color::Warning),
+                                        )
+                                        .child(Headline::new("Session unavailable")),
+                                )
+                                .child(
+                                    Label::new(unavailable_description)
+                                        .size(LabelSize::Small)
+                                        .color(Color::Muted),
+                                ),
+                        )
+                        .child(
+                            h_flex().w_full().flex_wrap().gap_2().child(
+                                Button::new(
+                                    "new-terminal-from-unavailable",
+                                    "Start Fresh Terminal",
+                                )
+                                .style(ButtonStyle::Filled)
+                                .start_icon(Icon::new(IconName::Terminal))
+                                .tab_index(0isize)
+                                .aria_label("Start Fresh Terminal in Main Work Area")
+                                .tooltip(|_, cx| {
+                                    Tooltip::for_action(
+                                        "Start Fresh Terminal in Main Work Area",
+                                        &NewCenterTerminal::default(),
+                                        cx,
+                                    )
+                                })
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(
+                                        NewCenterTerminal::default().boxed_clone(),
+                                        cx,
+                                    );
+                                }),
+                            ),
+                        ),
+                )
+                .into_any_element()
+        } else {
+            // This wrapper keeps TerminalElement from stealing events from the context menu.
+            div()
+                .id("terminal-view-container")
+                .size_full()
+                .bg(cx.theme().colors().editor_background)
+                .child(TerminalElement::new(
+                    terminal_handle,
+                    terminal_view_handle,
+                    self.workspace.clone(),
+                    self.focus_handle.clone(),
+                    focused,
+                    self.should_show_cursor(focused, cx),
+                    self.block_below_cursor.clone(),
+                    self.mode.clone(),
+                ))
+                .when(self.content_mode(window, cx).is_scrollable(), |div| {
+                    div.custom_scrollbars(
+                        Scrollbars::for_settings::<TerminalScrollbarSettingsWrapper>()
+                            .show_along(ScrollAxes::Vertical)
+                            .tracked_scroll_handle(&self.scroll_handle),
+                        window,
+                        cx,
+                    )
+                })
+                .into_any_element()
+        };
 
         div()
             .id("terminal-view")
@@ -2158,65 +2281,7 @@ impl Render for TerminalView {
                     }
                 }),
             )
-            .child(
-                // TODO: Oddly this wrapper div is needed for TerminalElement to not steal events from the context menu
-                div()
-                    .id("terminal-view-container")
-                    .size_full()
-                    .bg(cx.theme().colors().editor_background)
-                    .child(TerminalElement::new(
-                        terminal_handle,
-                        terminal_view_handle,
-                        self.workspace.clone(),
-                        self.focus_handle.clone(),
-                        focused,
-                        self.should_show_cursor(focused, cx),
-                        self.block_below_cursor.clone(),
-                        self.mode.clone(),
-                    ))
-                    .when(self.content_mode(window, cx).is_scrollable(), |div| {
-                        div.custom_scrollbars(
-                            Scrollbars::for_settings::<TerminalScrollbarSettingsWrapper>()
-                                .show_along(ScrollAxes::Vertical)
-                                .tracked_scroll_handle(&self.scroll_handle),
-                            window,
-                            cx,
-                        )
-                    }),
-            )
-            .when(self.session_unavailable, |this| {
-                this.child(
-                    div().absolute().top_0().left_0().right_0().child(
-                        Callout::new()
-                            .severity(Severity::Warning)
-                            .icon(IconName::Warning)
-                            .title("Terminal Session unavailable")
-                            .description(unavailable_description)
-                            .actions_slot(
-                                Button::new(
-                                    "new-terminal-from-unavailable",
-                                    "Start Fresh Terminal",
-                                )
-                                .style(ButtonStyle::Filled)
-                                .tab_index(0isize)
-                                .aria_label("Start Fresh Terminal in Main Work Area")
-                                .tooltip(|_, cx| {
-                                    Tooltip::for_action(
-                                        "Start Fresh Terminal in Main Work Area",
-                                        &NewCenterTerminal::default(),
-                                        cx,
-                                    )
-                                })
-                                .on_click(|_, window, cx| {
-                                    window.dispatch_action(
-                                        NewCenterTerminal::default().boxed_clone(),
-                                        cx,
-                                    );
-                                }),
-                            ),
-                    ),
-                )
-            })
+            .child(terminal_surface)
             .children(self.context_menu.as_ref().map(|(menu, position, _)| {
                 deferred(
                     anchored()
@@ -2231,6 +2296,59 @@ impl Render for TerminalView {
 
 impl Item for TerminalView {
     type Event = ItemEvent;
+
+    fn tab_content(&self, params: TabContentParams, window: &Window, cx: &App) -> AnyElement {
+        let title = self.tab_content_text(params.detail.unwrap_or_default(), cx);
+        let overlay = self.tab_content_overlay(window, cx);
+        let terminal = self.terminal().read(cx);
+        let status = terminal_tab_status(
+            self.session_unavailable,
+            terminal.process_exited(),
+            terminal.task().map(|task| &task.status),
+        );
+        let status_color = terminal_tab_status_color(status);
+
+        let content = h_flex()
+            .min_w_0()
+            .gap_1()
+            .child(
+                Label::new(title)
+                    .color(params.text_color())
+                    .truncate()
+                    .when(overlay.is_some(), |label| label.alpha(0.)),
+            )
+            .when(
+                overlay.is_none() && terminal_tab_status_indicator_visible(status, params.selected),
+                |this| {
+                    this.child(
+                        h_flex()
+                            .flex_none()
+                            .gap_1()
+                            .role(gpui::Role::Label)
+                            .aria_label(format!("Status: {status}"))
+                            .child(div().size(px(5.)).rounded_full().bg(status_color.color(cx)))
+                            .when(terminal_tab_status_label_visible(status), |this| {
+                                this.child(
+                                    Label::new(status)
+                                        .size(LabelSize::XSmall)
+                                        .color(status_color),
+                                )
+                            }),
+                    )
+                },
+            );
+
+        if let Some(overlay) = overlay {
+            h_flex()
+                .relative()
+                .min_w_0()
+                .child(content)
+                .child(div().absolute().top_0().left_0().size_full().child(overlay))
+                .into_any_element()
+        } else {
+            content.into_any_element()
+        }
+    }
 
     fn tab_tooltip_content(&self, cx: &App) -> Option<TabTooltipContent> {
         let title = self.tab_content_text(1, cx);
@@ -2946,20 +3064,6 @@ pub fn session_unavailable_terminal(
     window: &mut Window,
     cx: &mut App,
 ) -> Entity<Terminal> {
-    session_unavailable_terminal_with_message(project, "Session unavailable", window, cx)
-}
-
-/// Builds a terminal-shaped recovery surface with a caller-specific reason.
-///
-/// Persisted terminal and agent sessions use this to distinguish a missing
-/// host, a stale session identity, and a host-side restore failure without
-/// starting a replacement process.
-pub fn session_unavailable_terminal_with_message(
-    project: &Entity<Project>,
-    message: &str,
-    window: &mut Window,
-    cx: &mut App,
-) -> Entity<Terminal> {
     let settings = TerminalSettings::get_global(cx);
     let cursor_shape = settings.cursor_shape;
     let alternate_scroll = settings.alternate_scroll;
@@ -2974,7 +3078,11 @@ pub fn session_unavailable_terminal_with_message(
         cx.background_executor(),
         path_style,
     );
-    cx.new(|cx| builder.with_display_text(message, &[]).subscribe(cx))
+    cx.new(|cx| {
+        builder
+            .with_display_text("Session unavailable", &[])
+            .subscribe(cx)
+    })
 }
 
 impl SearchableItem for TerminalView {
@@ -3243,6 +3351,12 @@ mod tests {
         );
         assert_eq!(terminal_tab_status(false, true, None), "Exited");
         assert_eq!(terminal_tab_status(false, false, None), "Active");
+        assert!(terminal_tab_status_indicator_visible("Active", true));
+        assert!(!terminal_tab_status_indicator_visible("Active", false));
+        assert!(terminal_tab_status_indicator_visible("Failed", false));
+        assert!(!terminal_tab_status_label_visible("Active"));
+        assert!(terminal_tab_status_label_visible("Failed"));
+        assert!(terminal_tab_status_label_visible("Unavailable"));
         assert_eq!(
             terminal_surface_accessibility_label("tests", "Active"),
             "Terminal Session: tests. Status: Active"
