@@ -4513,6 +4513,7 @@ impl Sidebar {
                     .aria_label(workspace_accessibility_label)
                     .aria_selected(is_active)
                     .aria_expanded(!is_collapsed)
+                    .when(is_focused, |this| this.aria_active_descendant())
             })
             .group(&group_name)
             .when(!has_filter, |this| this.cursor_pointer())

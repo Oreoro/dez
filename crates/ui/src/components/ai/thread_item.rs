@@ -639,6 +639,7 @@ impl RenderOnce for ThreadItem {
             .py(row_padding_y)
             .px(row_padding_x)
             .when(self.selected, |s| s.bg(selected_color))
+            .when(self.focused, |s| s.aria_active_descendant())
             .border_1()
             .border_color(gpui::transparent_black())
             .when(self.focused, |s| s.border_color(focused_border_color))

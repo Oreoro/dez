@@ -184,6 +184,12 @@ require_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     '\.role\(gpui::Role::List\).*?\.aria_label\("Workspace Sessions"\)' \
     'Session rows are not contained by a named accessible list'
+require_pattern crates/ui/src/components/ai/thread_item.rs \
+    '\.when\(self\.focused, \|s\| s\.aria_active_descendant\(\)\)' \
+    'keyboard-selected Session rows do not report active-descendant focus'
+require_pattern crates/sidebar/src/sidebar.rs \
+    '\.when\(is_focused, \|this\| this\.aria_active_descendant\(\)\)' \
+    'keyboard-selected Workspace headers do not report active-descendant focus'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     '\.role\(gpui::Role::Group\).*?\.aria_label\("Session scope"\)' \
     'Session scope controls are not exposed as a named accessibility group'
