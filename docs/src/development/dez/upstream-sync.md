@@ -12,7 +12,7 @@ source repository.
 The normal remotes are:
 
 ```text
-origin    Dez repository
+origin    https://github.com/Oreoro/dez.git
 upstream  zed-industries/zed
 ```
 
@@ -29,8 +29,9 @@ Refreshed on 2026-07-22:
 - current merge base: `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
 - divergence: 242 Dez commits and 0 upstream commits after the merge base
 - latest stable tag fetched: `v1.11.3`
-- `origin`: `maxktz/superzed`
-- active branch at capture: `codex/canvas-plan`
+- prior fork source: `maxktz/superzed`
+- canonical public repository: `Oreoro/dez`
+- active integration branch at capture: `codex/canvas-plan`
 - Rust toolchain at the post-merge static gate: `rustc 1.95.0` and
   `cargo 1.95.0`
 

@@ -413,6 +413,14 @@ defer it.
 
 ## Permanent decisions {#permanent-decisions}
 
+- **2026-07-23: Public source must explain the product and its evidence
+  boundary.** The canonical repository front page names Dez, explains how the
+  Session Rail, Workspace Tools, Main Work Area, Agent, and one
+  Workspace-scoped Project fit together, credits Zed and third-party assets,
+  and distinguishes a v0.0.1 source candidate from a signed binary release.
+  Historical artifact hashes remain evidence after generated targets are
+  removed, but stale local paths must never be presented as runnable
+  candidates.
 - **2026-07-22: Keep permanent decisions separate from execution state.** The
   Fork Notes remain authoritative while the roadmap changes continuously. A
   single giant plan would mix product invariants with temporary implementation

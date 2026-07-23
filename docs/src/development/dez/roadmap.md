@@ -307,6 +307,14 @@ code, all launch gates pass, and known limitations are documented.
 
 ## Progress {#progress}
 
+- [x] 2026-07-23: Prepare the canonical public source repository. Replace the
+      inherited Zed front page with an honest Dez v0.0.1 source-candidate
+      README, add a public **What is Dez?** guide to documentation navigation,
+      explain the one-Project IDE integration and four-region screen model,
+      preserve Zed/Lumin/JetBrains attribution, and add static guards against
+      branding or readiness regressions. Reclassify deleted local build outputs
+      as historical evidence so no document points to a removed artifact as the
+      current runnable candidate.
 - [x] 2026-07-22: Merge the locally recorded upstream base through
       `f14fea9bf3c93797d5161f7440ed418655bc6c57`.
 - [x] 2026-07-22: Rename public executable and application identity to Dez

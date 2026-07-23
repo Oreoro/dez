@@ -68,7 +68,9 @@ Dez v0.0.1 is complete only when all of the following are true:
 ## Current evidence baseline
 
 Status below reflects repository evidence through 2026-07-23. The corrected
-app, CLI, helper, and signed bundle now exist; build proof still does not imply
+app, CLI, helper, and signed bundle existed at the recorded build checkpoint;
+their hashes remain historical evidence, but the regenerable local artifacts
+were removed before the public source push. Build proof still does not imply
 rendered or end-to-end interaction proof.
 
 | Area                   | Evidence now                                                                                                                                                                                                                                                                                                 | Completion gap                                                                                                                   |
@@ -85,10 +87,10 @@ rendered or end-to-end interaction proof.
 | UI/UX                  | The rebuilt bundle includes the rail, blank-center, footer, and utility-row corrections; newer source makes empty Dez windows terminal-first, replaces ambiguous zero-session/caught-up and `+ New` copy, hides inert zero-session filters/search, and gives compact chrome 280 px of usable width           | Rebuild the newest source, capture it, then complete shell hierarchy, outward polish, onboarding, accessibility, and state audit |
 | Release                | Static gates, focused tests, the corrected protocol-4 app/helper build at `679cdc28445c`, exact signed-bundle launch, authenticated runtime Session exercise, and deep-strict ad-hoc bundle audit pass                                                                                                       | Full GUI Session restart, visual/a11y, app-facing lint, public signing/install, coexistence, and partner proof                   |
 
-The intended raw executable was used for the first consolidated runtime gate;
-the current gate launches only
-`/Users/test/Documents/zed 3.0/target/debug/bundle/osx/Dez Dev.app`. The
-excluded untracked `dist/Superzed.app` has never been opened. The first unlocked
+The intended raw executable was used for the first consolidated runtime gate.
+No local executable is retained after the requested pre-push cache cleanup; the
+next runtime gate must rebuild and identify a fresh exact candidate. The
+excluded untracked `dist/Superzed.app` was removed without being opened. The first unlocked
 desktop capture exposed a client-decoration bug that stretched the Session Rail
 over the entire window. Commit `36d8024280` fixes the geometry; subsequent
 commits preserve durable Workspaces, retain terminal dimensions across Host

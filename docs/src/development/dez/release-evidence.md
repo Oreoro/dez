@@ -3,7 +3,7 @@
 This log records direct evidence for the consolidated release gate. A source
 claim is not a runtime claim, and an unchecked scenario remains unverified.
 
-## Frozen source and intended artifacts {#frozen-source-and-intended-artifacts}
+## Frozen source and historical artifacts {#frozen-source-and-intended-artifacts}
 
 - Protocol 4 app and Host build commit: `d0b0d9a908`
 - Corrected shell bundle source: `679cdc28445c824482923bdfdfd8463927f9a337`
@@ -114,21 +114,22 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Toolchain: `rustc 1.95.0 (59807616e 2026-04-14)`,
   `cargo 1.95.0 (f2d3ce0bd 2026-03-21)`, host
   `aarch64-apple-darwin`
-- Intended development executable:
+- Historical development executable:
   `/Users/test/Documents/zed 3.0/target/debug/dez`
-- Intended terminal Host helper:
+- Historical terminal Host helper:
   `/Users/test/Documents/zed 3.0/target/debug/dez-terminal-host`
-- Intended development CLI:
+- Historical development CLI:
   `/Users/test/Documents/zed 3.0/target/debug/cli`
-- Intended development bundle:
+- Historical development bundle:
   `/Users/test/Documents/zed 3.0/target/debug/bundle/osx/Dez Dev.app`
 - Legacy untracked artifact excluded from all evidence:
   `/Users/test/Documents/zed 3.0/dist/Superzed.app`
 
-The initial gate launched only the intended raw `target/debug/dez`. The current
-gate launches the matching `Dez Dev.app` through LaunchServices so the approved
-macOS visual and accessibility path can target it when the desktop is unlocked.
-The excluded Superzed artifact has never been opened.
+The initial gate launched only the intended raw `target/debug/dez`. A later
+gate launched the matching `Dez Dev.app` through LaunchServices. Before the
+public source push, the regenerable `target` directory and excluded `dist`
+artifact were removed. The excluded Superzed artifact was never opened. A new
+runtime gate must rebuild and identify a fresh exact candidate.
 
 ## Build evidence {#build-evidence}
 
@@ -159,8 +160,9 @@ arm64 Mach-O files:
 | `target/debug/cli`  | 12M  | `a3f293b360da74bb06971f6bb09fce3bc7cc91506700fb4a1be5fefbbce13d45` |
 | `dez-terminal-host` | 18M  | `54895fe7d27e74da5f6a429ce4b8b8f296a17be735b11b532b87f8757603b422` |
 
-The raw app, CLI, and helper remain present and match the hashes above. No Dez
-or Superzed process was running during the clean build or artifact capture.
+The raw app, CLI, and helper matched the hashes above at capture time and were
+later removed with the regenerable Cargo target directory. No Dez or Superzed
+process was running during the clean build or artifact capture.
 
 ## Debug bundle and coexistence evidence {#debug-bundle-and-coexistence-evidence}
 

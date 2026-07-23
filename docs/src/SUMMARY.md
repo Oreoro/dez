@@ -2,6 +2,7 @@
 
 # Welcome
 
+- [What is Dez?](./dez.md)
 - [Getting Started](./getting-started.md)
 - [Installation](./installation.md)
   - [Update](./update.md)

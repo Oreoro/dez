@@ -109,6 +109,30 @@ require_pattern assets/themes/lumin/LICENSE \
 require_pattern assets/fonts/jetbrains-mono/OFL.txt \
     '^Copyright 2020 The JetBrains Mono Project Authors' \
     'the JetBrains Mono source attribution is incomplete'
+require_multiline_pattern README.md \
+    '^# Dez.*?v0\.0\.1 source candidate.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Session Rail\*\*.*?\*\*Workspace Tools\*\*.*?\*\*Agent\*\*.*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?Before a public binary release' \
+    'the repository front page can regress to upstream branding, omit the Dez product model, or overstate release readiness'
+require_multiline_pattern README.md \
+    '## Visual baseline.*?Lumin Blur.*?Lumin Light.*?JetBrains Mono.*?## Upstream relationship.*?deliberate fork.*?## License and attribution.*?independent fork' \
+    'the repository front page can lose the Dez visual identity, upstream relationship, or independent-fork attribution'
+reject_pattern README.md \
+    '^# Zed$|download Zed directly|we.re hiring|Sponsorships go directly to Zed Industries' \
+    'the repository front page still presents Dez as the official upstream Zed product'
+require_multiline_pattern docs/src/dez.md \
+    '^# What is Dez\?.*?## The screen model.*?\*\*Session Rail\*\*.*?\*\*Workspace Tools\*\*.*?\*\*Main Work Area\*\*.*?\*\*Agent\*\*.*?## How coding work flows.*?## Terminal and Agent integration.*?## Source-preview limits' \
+    'the public product guide can lose the screen model, IDE integration, or honest source-preview boundary'
+require_pattern docs/src/SUMMARY.md \
+    '^- \[What is Dez\?\]\(\./dez\.md\)$' \
+    'the public product guide is no longer reachable from documentation navigation'
+require_multiline_pattern docs/src/development/dez/v0.0.1-release-runbook.md \
+    'there is currently no retained runnable.*?## Historical local candidate.*?future runtime.*?rebuild, identify, hash, sign, and audit a new exact candidate' \
+    'the release runbook can regress to presenting removed local targets as a current runnable candidate'
+reject_pattern docs/src/development/dez/v0.0.1-release-runbook.md \
+    'Use only this bundle for the current gate|output remains present|signed bundle copy remains the intended runnable candidate' \
+    'the release runbook still claims removed local artifacts are present'
+require_multiline_pattern docs/src/development/dez/release-evidence.md \
+    '## Frozen source and historical artifacts.*?Historical development executable.*?regenerable `target` directory.*?new.*?runtime gate must rebuild' \
+    'release evidence can regress to treating removed generated artifacts as present'
 require_pattern crates/zed/src/main.rs \
     'paths::APP_NAME == "Zed" && client::ClientSettings::get_global\(cx\)\.auto_connect' \
     'inherited settings can auto-connect Dez to the upstream Zed cloud'
