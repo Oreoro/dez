@@ -47,6 +47,8 @@ claim is not a runtime claim, and an unchecked scenario remains unverified.
 - Workspace-scoped Session Rail branch source: `27279ca542`
 - Viewport-scoped project settings source: `a2d733eea3`
 - Settings viewport-switch refresh source: `498f94a525`
+- Debug pane-Surface routing source: `5efa0398ad`
+- Terminal compatibility-Surface routing source: `1f186f9b8c`
 - Packaging and permission-copy foundation: `ce11c4ed3d`
 - Inside-out local bundle signing: `fcd1d06564`
 - Post-build lint compatibility commit: `3ad224dfd6`
@@ -456,6 +458,15 @@ select the wrong target. The cross-window regression now proves replacement in
 both directions. Formatting, diff, and identity checks pass; compilation
 remains deferred.
 
+Commits `5efa0398ad` and `1f186f9b8c` close the default-shell reachability gap
+for registered dock panels. With legacy docks hidden, Debug and the
+compatibility Terminal Panel join Project, Git, and Outline as ordinary tabs in
+the Project-tool pane; Agent remains in its dedicated pane. New Terminal still
+opens an ordinary center Surface, and enabling legacy docks retains upstream
+placement. A focused routing regression covers all surviving developer-tool
+panel keys and unknown-key rejection. Formatting, diff, and identity checks
+pass; compilation and rendered toggle proof remain deferred.
+
 The corrected `Dez Dev.app` is now registered and launched as launchd child PID
 `85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 `lsof` resolves its text executable to
@@ -689,7 +700,7 @@ The approved macOS UI-control path was retried after the exact packaged launch.
 The application is targetable, but the desktop is locked and automatic unlock
 fails. No alternate screenshot mechanism, AppleScript, or historical binary
 path is used as a substitute. Unlock alone is no longer sufficient for final
-visual evidence: the exact bundle must first be rebuilt from `498f94a525` or
+visual evidence: the exact bundle must first be rebuilt from `1f186f9b8c` or
 later and re-audited.
 
 ## Known external release dependencies {#known-external-release-dependencies}
@@ -707,6 +718,6 @@ predates `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `f89f55868c`, `f40877d4ab`, `526218a972`, `bb0cf408b4`, `a8ce563373`,
 `e101b63e43`, `f535c5e6ae`, `0e6507756e`, `ea2bb18453`, `0f8740b1a1`,
 `af232402f5`, `a4047d95c0`, `6f2061d2c7`, `27279ca542`, `a2d733eea3`, and
-`498f94a525`. A rebuild/re-audit and an unlocked
+`498f94a525`, `5efa0398ad`, and `1f186f9b8c`. A rebuild/re-audit and an unlocked
 desktop are both prerequisites for the visual, interaction, accessibility, and
 GUI-driven hosted-PTY recovery matrix.

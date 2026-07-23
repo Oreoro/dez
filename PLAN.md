@@ -249,8 +249,13 @@ restoration; opening or closing a viewport does not change durable ownership.
       originating viewport now discovers and mutates project settings only for
       Workspaces in that MultiWorkspace; another OS window cannot silently
       enter its project-settings scope.
-- [ ] Move eligible panel-only tools into ordinary pane Surfaces while keeping
-      familiar toggles and dock layouts.
+- [x] Move eligible panel-only tools into ordinary pane Surfaces while keeping
+      familiar toggles and dock layouts. With Dez's default legacy docks hidden,
+      Project, Git, Outline, Debug, and the compatibility Terminal Panel route
+      into the Project-tool pane, while Agent routes into its dedicated pane.
+      New Terminal still creates the opinionated center Surface. Enabling legacy
+      docks preserves upstream placement and toggles. A focused routing test
+      freezes reachability for every surviving developer-tool panel.
 - [ ] Prove Surfaces can move across panes and Workspaces without global root,
       repository, Host, or tool-state leakage.
 - [ ] Keep discovery lazy; opening a path must not imply recursive indexing,
@@ -1191,3 +1196,10 @@ Notes decision:
   from the prior viewport cannot receive the action. The cross-window test now
   proves scope replacement in both directions. Formatting, diff, and identity
   checks pass; compilation remains deferred.
+- 2026-07-23: Completed the registered-panel reachability map in
+  `5efa0398ad` and `1f186f9b8c`. Debug and the compatibility Terminal Panel now
+  join Project, Git, and Outline as ordinary Project-tool pane tabs whenever
+  Dez hides legacy docks; Agent retains its dedicated pane and center New
+  Terminal behavior is unchanged. The mapping test covers every surviving
+  developer-tool panel plus unknown-key rejection. Formatting, diff, and
+  identity checks pass; compilation and rendered toggle proof remain deferred.

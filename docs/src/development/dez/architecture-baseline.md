@@ -14,6 +14,7 @@ truth. Update it when a source change moves an ownership boundary.
 | Workspace                                                  | `workspace::Workspace`                                                             | Owns pane graph, items, local UI state, database ID, and one `Entity<Project>`                                                                                    | This is close to the target, but unresolved and empty workspace identity still needs end-to-end verification                        |
 | Durable workspace rows                                     | `workspace::WorkspaceDb`                                                           | SQLite stores workspace, pane, item, session, and window bindings; KVP stores `MultiWorkspace` state                                                              | The data can restore a prior launch, but the owner is distributed across DB, `AppSession`, `WorkspaceStore`, and windows            |
 | Project scope                                              | `project::Project`                                                                 | Each workspace constructs local or remote worktree, buffer, Git, LSP, task, debugger, environment, and agent-server stores                                        | Stores are project-owned rather than shared backend stores viewed through workspace scope                                           |
+| Pane tool Surfaces                                         | `workspace::PanelItem` in Project and Agent pane kinds                             | With legacy docks hidden, registered Project, Git, Outline, Debug, Terminal, and Agent panels remain Workspace-owned pane tabs; legacy docks remain compatible     | Cross-Workspace Surface movement and rendered serialization/focus proof remain open                                                  |
 | Local terminal and process                                 | `dez-terminal-host`, hosted `Terminal`, and `LocalTerminalHost` compatibility path | The opt-in helper owns PTYs across GUI lifetimes; the GUI emulator owns display state; the default path remains in-process pending verification                   | Helper routing is still experimental and task terminals have not moved; consolidated build and restart evidence remain open         |
 | Agent-terminal history                                     | `agent_ui::TerminalThreadMetadataStore` and Host/Session snapshots                 | SQLite stores terminal identity, workspace metadata, restart-safe attention, and nullable Host/Session references; the helper retains structured adapter state    | Structured state currently requires explicit Codex hook setup and the opt-in helper                                                 |
 | Native agent conversations                                 | `agent_ui::ThreadMetadataStore` and agent thread stores                            | Structured conversation metadata and provider state use their existing stores                                                                                     | Native evidence remains separate from the terminal Codex hook adapter                                                               |
@@ -49,13 +50,13 @@ requirements that are not yet current-state claims:
   explicit ordered viewport records, active selection, and unresolved records,
   but not live viewport composition, shared stores, Host, Run, or Change Set
   registries.
-- Workspace now owns the first typed `EvidenceSet` for visible worktree roots
-  and terminal working directories, with deterministic identity, provenance,
-  confidence, Host, lifecycle, and truncation truth. Root refresh preserves
-  session-provenanced cwd records, and review filters cwd evidence to the
-  owning terminal Session. Activity marks terminal evidence Current and
-  observed exit marks it Stale without deleting it. Explicit user evidence,
-  file-item evidence, and Host-reconnect events do not yet feed the same model.
+- Workspace owns a typed `EvidenceSet` for visible roots, open files, explicit
+  user-selected paths, and terminal working directories, with deterministic
+  identity, provenance, confidence, Host, lifecycle, persistence, and
+  truncation truth. Root refresh preserves Session-provenanced cwd records;
+  restore and live Host transitions reconcile Current, Unresolved, and Stale
+  lifecycle without deleting review history. Broader tool-local selection and
+  compiled restart proof remain open.
 - `Project::local` still constructs substantial per-Workspace store graphs.
   No shared-store/scoped-view refactor has proved isolation or lazy demand.
 - Change Set and Environment are vocabulary only. Git remains authoritative;

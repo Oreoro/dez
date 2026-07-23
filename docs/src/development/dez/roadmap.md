@@ -115,6 +115,13 @@ the same truthful state.
 independent evidence and tool scope. Moving a terminal moves its context without
 global leakage or eager home-folder scanning.
 
+Source progress: Project, Git, Outline, Debug, and the compatibility Terminal
+Panel now route to the Project-tool pane when legacy docks are hidden; Agent
+uses its dedicated pane. New Terminal remains a center Surface. Commits
+`5efa0398ad` and `1f186f9b8c` complete the registered-panel reachability map and
+add a focused routing regression; compiled and rendered toggle proof remains in
+the consolidated gate.
+
 ## Milestone 3: Serious multi-actor work {#milestone-3}
 
 - Evaluate and extend upstream remote/headless infrastructure for SSH session
