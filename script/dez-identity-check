@@ -550,6 +550,18 @@ require_multiline_pattern crates/agent/src/native_agent_server.rs \
 reject_pattern crates/agent_ui/src/agent_ui.rs \
     'Self::NativeAgent => Some\(IconName::ZedAgent\)' \
     'the Dez agent selector still hard-codes the upstream Zed glyph'
+reject_pattern crates/agent_ui/src/agent_panel.rs \
+    'then_some\(IconName::ZedAssistant\)' \
+    'the Dez Agent surface toggle still hard-codes the upstream Assistant glyph'
+reject_pattern crates/agent_ui/src/conversation_view.rs \
+    'IconName::ZedAssistant' \
+    'Dez Agent Session notifications still hard-code the upstream Assistant glyph'
+reject_pattern crates/agent_ui/src/agent_diff.rs \
+    'IconName::ZedAssistant' \
+    'the Dez Agent diff Surface still hard-codes the upstream Assistant glyph'
+reject_pattern crates/agent_ui/src/agent_configuration/manage_profiles_modal.rs \
+    'IconName::ZedAssistant' \
+    'Dez Agent profile controls still hard-code the upstream Assistant glyph'
 reject_pattern crates/sidebar/src/sidebar.rs \
     'Agent::NativeAgent => IconName::ZedAgent' \
     'the Session Rail still hard-codes the upstream Zed agent glyph'

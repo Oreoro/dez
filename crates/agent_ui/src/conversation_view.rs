@@ -2097,7 +2097,7 @@ impl ConversationView {
                         } else {
                             "New message"
                         },
-                        IconName::ZedAssistant,
+                        agent::native_agent_icon(),
                         window,
                         cx,
                     );

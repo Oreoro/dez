@@ -835,7 +835,7 @@ impl ManageProfilesModal {
                                         .inset(true)
                                         .spacing(manage_profiles_row_spacing(cx))
                                         .start_slot(
-                                            Icon::new(IconName::ZedAssistant)
+                                            Icon::new(agent::native_agent_icon())
                                                 .size(IconSize::Small)
                                                 .color(Color::Muted),
                                         )
