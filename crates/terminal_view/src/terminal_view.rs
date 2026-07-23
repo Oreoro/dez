@@ -106,6 +106,10 @@ fn terminal_tab_status(
     }
 }
 
+fn terminal_surface_accessibility_label(title: &str, status: &str) -> String {
+    format!("Terminal Session: {title}. Status: {status}")
+}
+
 fn terminal_close_label(is_hosted: bool) -> &'static str {
     if is_hosted {
         "Detach Terminal"
@@ -115,7 +119,7 @@ fn terminal_close_label(is_hosted: bool) -> &'static str {
 }
 
 fn terminal_terminate_label() -> &'static str {
-    "Terminate Terminal Process…"
+    "Terminate Terminal Session…"
 }
 
 fn terminal_termination_available(session_unavailable: bool, process_exited: bool) -> bool {
@@ -129,14 +133,14 @@ fn terminal_termination_confirmation(is_hosted: bool, title: &str) -> (String, S
     };
     let detail = if is_hosted {
         format!(
-            "This permanently stops the durable process owned by “{title}” and closes its terminal surface. Closing the terminal without this action only detaches it."
+            "“{title}” will stop immediately, including its shell and any foreground process. This cannot be undone. Its Surface will close; closing the Surface alone only detaches the persistent Terminal Session."
         )
     } else {
         format!(
-            "This stops the shell and any foreground process owned by “{title}”, then closes its terminal surface. This cannot be undone."
+            "“{title}” will stop immediately, including its shell and any foreground process, and its Surface will close. This cannot be undone."
         )
     };
-    ("Terminate terminal process?".to_owned(), detail)
+    ("Terminate Terminal Session?".to_owned(), detail)
 }
 
 /// Event to transmit the scroll from the element to the view
@@ -1233,7 +1237,7 @@ impl TerminalView {
             PromptLevel::Critical,
             &message,
             Some(&detail),
-            &["Terminate Process", "Cancel"],
+            &["Terminate Session", "Cancel"],
             cx,
         );
 
@@ -1682,6 +1686,7 @@ impl TerminalView {
             IconButton::new("rerun-icon", IconName::Rerun)
                 .icon_size(IconSize::Small)
                 .size(ButtonSize::Compact)
+                .aria_label("Rerun Task")
                 .icon_color(Color::Default)
                 .shape(ui::IconButtonShape::Square)
                 .tooltip(move |_window, cx| Tooltip::for_action("Rerun task", &RerunTask, cx))
@@ -2082,8 +2087,9 @@ impl Render for TerminalView {
         div()
             .id("terminal-view")
             .role(gpui::Role::Group)
-            .aria_label(format!(
-                "{accessibility_title}. {accessibility_status} terminal session"
+            .aria_label(terminal_surface_accessibility_label(
+                accessibility_title.as_ref(),
+                accessibility_status,
             ))
             .size_full()
             .relative()
@@ -2180,6 +2186,15 @@ impl Render for TerminalView {
                                         "Start New Terminal",
                                     )
                                     .style(ButtonStyle::Filled)
+                                    .tab_index(0isize)
+                                    .aria_label("Start New Terminal in Main Work Area")
+                                    .tooltip(|_, cx| {
+                                        Tooltip::for_action(
+                                            "Start New Terminal in Main Work Area",
+                                            &NewCenterTerminal::default(),
+                                            cx,
+                                        )
+                                    })
                                     .on_click(|_, window, cx| {
                                         window.dispatch_action(
                                             NewCenterTerminal::default().boxed_clone(),
@@ -2255,7 +2270,7 @@ impl Item for TerminalView {
                     )
                     .when_some(working_directory.clone(), |this, working_directory| {
                         this.child(
-                            Label::new(format!("Folder: {working_directory}"))
+                            Label::new(format!("Working directory: {working_directory}"))
                                 .color(Color::Muted)
                                 .size(LabelSize::Small),
                         )
@@ -3231,19 +3246,25 @@ mod tests {
         );
         assert_eq!(terminal_tab_status(false, true, None), "Exited");
         assert_eq!(terminal_tab_status(false, false, None), "Active");
+        assert_eq!(
+            terminal_surface_accessibility_label("tests", "Active"),
+            "Terminal Session: tests. Status: Active"
+        );
         assert_eq!(terminal_close_label(true), "Detach Terminal");
         assert_eq!(terminal_close_label(false), "Close Terminal Tab");
-        assert_eq!(terminal_terminate_label(), "Terminate Terminal Process…");
+        assert_eq!(terminal_terminate_label(), "Terminate Terminal Session…");
         assert!(terminal_termination_available(false, false));
         assert!(!terminal_termination_available(true, false));
         assert!(!terminal_termination_available(false, true));
         let (message, detail) = terminal_termination_confirmation(true, "build");
-        assert_eq!(message, "Terminate terminal process?");
-        assert!(detail.contains("durable process owned by “build”"));
-        assert!(detail.contains("only detaches it"));
+        assert_eq!(message, "Terminate Terminal Session?");
+        assert!(detail.contains("“build” will stop immediately"));
+        assert!(detail.contains("shell and any foreground process"));
+        assert!(detail.contains("only detaches the persistent Terminal Session"));
+        assert!(!detail.contains("durable"));
         let (_, detail) = terminal_termination_confirmation(false, "");
         assert!(detail.contains("shell and any foreground process"));
-        assert!(detail.contains("owned by “Terminal”"));
+        assert!(detail.contains("“Terminal” will stop immediately"));
     }
 
     fn expected_drop_text(paths: &[PathBuf]) -> String {

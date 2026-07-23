@@ -764,17 +764,29 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_close_label.*?"Detach Terminal".*?"Close Terminal Tab"' \
     'durable terminal closure is still labeled like local tab disposal'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'fn terminal_terminate_label.*?"Terminate Terminal Process…".*?fn terminal_termination_available.*?!session_unavailable && !process_exited' \
+    'fn terminal_terminate_label.*?"Terminate Terminal Session…".*?fn terminal_termination_available.*?!session_unavailable && !process_exited' \
     'terminal lifecycle actions can regress to generic Session wording'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'let \(is_hosted, can_terminate\).*?terminal\.is_hosted\(\).*?terminal_termination_available.*?terminal_close_label\(is_hosted\).*?\.action\(\s*close_label.*?\.when\(can_terminate.*?\.separator\(\).*?\.action\(terminate_label, Box::new\(TerminateSession\)\)' \
     'durable terminal closure can regress during Host reconnection'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'fn terminate_session.*?terminal_termination_available.*?window\.prompt\(\s*PromptLevel::Critical.*?"Terminate Process", "Cancel".*?confirmation\.await\.log_err\(\) != Some\(0\).*?terminal\.terminate_process\(cx\)' \
+    'fn terminal_termination_confirmation.*?shell and any foreground process.*?cannot be undone.*?"Terminate Terminal Session\?".*?fn terminate_session.*?terminal_termination_available.*?window\.prompt\(\s*PromptLevel::Critical.*?"Terminate Session", "Cancel".*?confirmation\.await\.log_err\(\) != Some\(0\).*?terminal\.terminate_process\(cx\)' \
     'terminal termination can bypass confirmation or route through a global Host instead of the terminal controller'
+reject_pattern crates/terminal_view/src/terminal_view.rs \
+    'durable process|Terminate Terminal Process|Terminate terminal process|Terminate Process' \
+    'the terminal Surface exposes process-centric or internal durability terminology'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'accessibility_title = self\.tab_content_text.*?accessibility_status.*?\.aria_label\(format!' \
+    'fn terminal_surface_accessibility_label.*?"Terminal Session: \{title\}\. Status: \{status\}".*?accessibility_title = self\.tab_content_text.*?accessibility_status.*?\.aria_label\(terminal_surface_accessibility_label' \
     'terminal panes do not expose their identity and lifecycle to assistive technology'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    '"Start New Terminal".*?\.aria_label\("Start New Terminal in Main Work Area"\).*?Tooltip::for_action\([[:space:]]*"Start New Terminal in Main Work Area".*?NewCenterTerminal::default' \
+    'the unavailable-terminal recovery action can regress to an ambiguous or unnamed destination'
+require_pattern crates/terminal_view/src/terminal_view.rs \
+    'Working directory: \{working_directory\}' \
+    'the terminal tab tooltip can regress to mislabeling the working directory as a folder'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'IconButton::new\("rerun-icon".*?\.aria_label\("Rerun Task"\).*?Tooltip::for_action\("Rerun task"' \
+    'the task-terminal rerun affordance can regress to an unnamed icon'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'pub fn set_custom_title.*?label\.trim\(\)\.to_string\(\).*?let terminal_title = self\.terminal\.read\(cx\)\.title\(false\).*?unwrap_or_else\(\|\| self\.terminal\.read\(cx\)\.title\(false\)\).*?"Rename Terminal…"' \
     'terminal renaming can regress to whitespace-padded, pre-truncated, or ambiguous labels'
@@ -818,7 +830,7 @@ reject_pattern crates/terminal_view/src/terminal_view.rs \
     '"New Terminal Panel"' \
     'the terminal context menu advertises a second terminal model'
 require_multiline_pattern docs/src/terminal.md \
-    'Dez has no separate Terminal Panel destination.*?Every ordinary \*\*New Terminal\*\*.*?main-area terminal Surface.*?\*\*Detach Terminal\*\*.*?\*\*Terminate Terminal Process…\*\*.*?selected terminal.s own controller' \
+    'Dez has no separate Terminal Panel destination.*?Every ordinary \*\*New Terminal\*\*.*?main-area terminal Surface.*?\*\*Detach Terminal\*\*.*?\*\*Terminate Terminal Session…\*\*.*?selected terminal.s own controller' \
     'the public terminal guide can regress to the removed Terminal Panel model or ambiguous lifecycle ownership'
 reject_pattern docs/src/terminal.md \
     'Toggle terminal panel|Terminal Panel vs Center Terminal' \
