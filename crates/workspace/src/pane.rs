@@ -1,8 +1,8 @@
 use crate::{
-    CloseWindow, NewCenterTerminal, NewFile, NewTerminal, OpenInTerminal, OpenOptions,
-    OpenTerminal, OpenVisible, SidebarSide, SplitDirection, ToggleAgentPane, ToggleFileFinder,
-    ToggleProjectPane, ToggleProjectSymbols, ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn,
-    ZoomOut,
+    AddActiveFileToEvidence, CloseWindow, NewCenterTerminal, NewFile, NewTerminal, OpenInTerminal,
+    OpenOptions, OpenTerminal, OpenVisible, RemoveActiveFileFromEvidence, SidebarSide,
+    SplitDirection, ToggleAgentPane, ToggleFileFinder, ToggleProjectPane, ToggleProjectSymbols,
+    ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
     focus_follows_mouse::FocusFollowsMouse as _,
     invalid_item_view::InvalidItemView,
     item::{
@@ -3749,6 +3749,28 @@ impl Pane {
                                         }),
                                     )
                                 })
+                                .entry(
+                                    "Add to Review Evidence",
+                                    Some(Box::new(AddActiveFileToEvidence)),
+                                    window.handler_for(&pane, move |pane, window, cx| {
+                                        pane.activate_item(ix, true, true, window, cx);
+                                        window.dispatch_action(
+                                            AddActiveFileToEvidence.boxed_clone(),
+                                            cx,
+                                        );
+                                    }),
+                                )
+                                .entry(
+                                    "Remove from Review Evidence",
+                                    Some(Box::new(RemoveActiveFileFromEvidence)),
+                                    window.handler_for(&pane, move |pane, window, cx| {
+                                        pane.activate_item(ix, true, true, window, cx);
+                                        window.dispatch_action(
+                                            RemoveActiveFileFromEvidence.boxed_clone(),
+                                            cx,
+                                        );
+                                    }),
+                                )
                                 .when(is_local, |menu| {
                                     menu.when_some(reveal_path, |menu, reveal_path| {
                                         menu.separator().entry(

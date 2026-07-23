@@ -97,6 +97,7 @@ pub struct ObservedRunActivity {
 pub enum WorkspaceEvidenceKind {
     WorkspaceRoot,
     OpenFile,
+    UserSelectedPath,
     TerminalWorkingDirectory,
 }
 
@@ -105,6 +106,7 @@ impl WorkspaceEvidenceKind {
         match self {
             Self::WorkspaceRoot => "Workspace root",
             Self::OpenFile => "Open file",
+            Self::UserSelectedPath => "Selected path",
             Self::TerminalWorkingDirectory => "Terminal working directory",
         }
     }
@@ -543,6 +545,10 @@ mod tests {
                     kind: WorkspaceEvidenceKind::TerminalWorkingDirectory,
                     path: PathBuf::from("/a"),
                 },
+                ObservedWorkspaceEvidence {
+                    kind: WorkspaceEvidenceKind::UserSelectedPath,
+                    path: PathBuf::from("/review.rs"),
+                },
             ],
             repository_evidence: vec![ObservedRepositoryEvidence {
                 worktree_path: PathBuf::from("/z"),
@@ -570,6 +576,7 @@ mod tests {
         let first_path = markdown.find("`/a`").unwrap_or(usize::MAX);
         let second_path = markdown.find("`/z`").unwrap_or_default();
         assert!(first_path < second_path);
+        assert!(markdown.contains("Selected path: `/review.rs`"));
         assert!(markdown.contains("Terminal working directory"));
         assert!(markdown.contains("Workspace root"));
         assert!(markdown.contains("file:///a"));

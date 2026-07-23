@@ -10,6 +10,7 @@ pub enum WorkspaceEvidenceHost {
 pub enum WorkspaceEvidenceProvenance {
     VisibleWorktree,
     OpenSurface,
+    UserSelection,
     TerminalSession { session_id: Arc<str> },
 }
 
@@ -30,7 +31,16 @@ pub enum WorkspaceEvidenceLifecycle {
 pub enum WorkspaceEvidenceKind {
     WorkspaceRoot,
     OpenFile,
+    UserSelectedPath,
     TerminalWorkingDirectory,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum WorkspaceEvidenceSelectionOutcome {
+    Added,
+    Removed,
+    Unchanged,
+    CapacityReached,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -54,6 +64,7 @@ pub struct WorkspaceEvidenceSet {
 
 impl WorkspaceEvidenceSet {
     const MAX_OPEN_FILE_RECORDS: usize = 256;
+    const MAX_USER_SELECTED_PATH_RECORDS: usize = 128;
 
     pub fn revision(&self) -> u64 {
         self.revision
@@ -65,6 +76,72 @@ impl WorkspaceEvidenceSet {
 
     pub fn is_truncated(&self) -> bool {
         self.truncated
+    }
+
+    pub fn is_user_selected_path(&self, path: &Path) -> bool {
+        self.records.iter().any(|record| {
+            record.kind == WorkspaceEvidenceKind::UserSelectedPath && record.path.as_ref() == path
+        })
+    }
+
+    pub fn add_user_selected_path(
+        &mut self,
+        workspace_id: Option<i64>,
+        path: Arc<Path>,
+        host: WorkspaceEvidenceHost,
+    ) -> WorkspaceEvidenceSelectionOutcome {
+        if self.is_user_selected_path(&path) {
+            return WorkspaceEvidenceSelectionOutcome::Unchanged;
+        }
+        if self
+            .records
+            .iter()
+            .filter(|record| record.kind == WorkspaceEvidenceKind::UserSelectedPath)
+            .count()
+            >= Self::MAX_USER_SELECTED_PATH_RECORDS
+        {
+            return WorkspaceEvidenceSelectionOutcome::CapacityReached;
+        }
+
+        let identity_prefix = workspace_id.map_or_else(
+            || "workspace:pending".to_owned(),
+            |workspace_id| format!("workspace:{workspace_id}"),
+        );
+        self.records.push(WorkspaceEvidenceRecord {
+            id: format!("{identity_prefix}:selected:{}", path.to_string_lossy()).into(),
+            kind: WorkspaceEvidenceKind::UserSelectedPath,
+            path,
+            provenance: WorkspaceEvidenceProvenance::UserSelection,
+            confidence: WorkspaceEvidenceConfidence::Authoritative,
+            host,
+            lifecycle: WorkspaceEvidenceLifecycle::Current,
+            truncated: false,
+        });
+        self.revision = self.revision.saturating_add(1);
+        WorkspaceEvidenceSelectionOutcome::Added
+    }
+
+    pub fn remove_user_selected_path(&mut self, path: &Path) -> WorkspaceEvidenceSelectionOutcome {
+        let previous_len = self.records.len();
+        self.records.retain(|record| {
+            record.kind != WorkspaceEvidenceKind::UserSelectedPath || record.path.as_ref() != path
+        });
+        if self.records.len() == previous_len {
+            return WorkspaceEvidenceSelectionOutcome::Unchanged;
+        }
+        self.revision = self.revision.saturating_add(1);
+        WorkspaceEvidenceSelectionOutcome::Removed
+    }
+
+    pub fn clear_user_selected_paths(&mut self) -> usize {
+        let previous_len = self.records.len();
+        self.records
+            .retain(|record| record.kind != WorkspaceEvidenceKind::UserSelectedPath);
+        let removed = previous_len.saturating_sub(self.records.len());
+        if removed > 0 {
+            self.revision = self.revision.saturating_add(1);
+        }
+        removed
     }
 
     pub fn replace_visible_worktree_roots(
@@ -334,5 +411,104 @@ mod tests {
             WorkspaceEvidenceSet::MAX_OPEN_FILE_RECORDS
         );
         assert!(evidence.is_truncated());
+    }
+
+    #[test]
+    fn user_selected_path_survives_open_surface_recomputation() {
+        let mut evidence = WorkspaceEvidenceSet::default();
+        let selected = Arc::<Path>::from(Path::new("/repo/review.rs"));
+        assert_eq!(
+            evidence.add_user_selected_path(
+                Some(7),
+                selected.clone(),
+                WorkspaceEvidenceHost::Local,
+            ),
+            WorkspaceEvidenceSelectionOutcome::Added
+        );
+        let selected_id = evidence.records()[0].id.clone();
+
+        evidence.replace_open_files(
+            Some(7),
+            [
+                selected.clone(),
+                Arc::<Path>::from(Path::new("/repo/open.rs")),
+            ],
+            WorkspaceEvidenceHost::Local,
+        );
+        evidence.replace_open_files(
+            Some(7),
+            [Arc::<Path>::from(Path::new("/repo/open.rs"))],
+            WorkspaceEvidenceHost::Local,
+        );
+
+        let selected_record = evidence
+            .records()
+            .iter()
+            .find(|record| record.kind == WorkspaceEvidenceKind::UserSelectedPath)
+            .expect("the explicit selection should outlive the open tab");
+        assert_eq!(selected_record.id, selected_id);
+        assert_eq!(selected_record.path, selected);
+        assert_eq!(
+            selected_record.provenance,
+            WorkspaceEvidenceProvenance::UserSelection
+        );
+    }
+
+    #[test]
+    fn user_selected_paths_are_idempotent_removable_and_bounded() {
+        let mut evidence = WorkspaceEvidenceSet::default();
+        let selected = Arc::<Path>::from(Path::new("/repo/review.rs"));
+        assert_eq!(
+            evidence.add_user_selected_path(
+                Some(7),
+                selected.clone(),
+                WorkspaceEvidenceHost::Local,
+            ),
+            WorkspaceEvidenceSelectionOutcome::Added
+        );
+        let revision = evidence.revision();
+        assert_eq!(
+            evidence.add_user_selected_path(
+                Some(7),
+                selected.clone(),
+                WorkspaceEvidenceHost::Local,
+            ),
+            WorkspaceEvidenceSelectionOutcome::Unchanged
+        );
+        assert_eq!(evidence.revision(), revision);
+
+        assert_eq!(
+            evidence.remove_user_selected_path(&selected),
+            WorkspaceEvidenceSelectionOutcome::Removed
+        );
+        assert!(!evidence.is_user_selected_path(&selected));
+        assert_eq!(
+            evidence.remove_user_selected_path(&selected),
+            WorkspaceEvidenceSelectionOutcome::Unchanged
+        );
+
+        for index in 0..WorkspaceEvidenceSet::MAX_USER_SELECTED_PATH_RECORDS {
+            assert_eq!(
+                evidence.add_user_selected_path(
+                    Some(7),
+                    Arc::<Path>::from(Path::new(&format!("/repo/{index:03}.rs"))),
+                    WorkspaceEvidenceHost::Local,
+                ),
+                WorkspaceEvidenceSelectionOutcome::Added
+            );
+        }
+        assert_eq!(
+            evidence.add_user_selected_path(
+                Some(7),
+                Arc::<Path>::from(Path::new("/repo/overflow.rs")),
+                WorkspaceEvidenceHost::Local,
+            ),
+            WorkspaceEvidenceSelectionOutcome::CapacityReached
+        );
+        assert_eq!(
+            evidence.clear_user_selected_paths(),
+            WorkspaceEvidenceSet::MAX_USER_SELECTED_PATH_RECORDS
+        );
+        assert_eq!(evidence.clear_user_selected_paths(), 0);
     }
 }

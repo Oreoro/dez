@@ -53,7 +53,10 @@ use client::{
 };
 use collections::{HashMap, HashSet, TypeIdHashMap, hash_map};
 use dock::{Dock, DockPosition, PanelHandle, RESIZE_HANDLE_SIZE};
-use evidence::{WorkspaceEvidenceHost, WorkspaceEvidenceLifecycle, WorkspaceEvidenceSet};
+use evidence::{
+    WorkspaceEvidenceHost, WorkspaceEvidenceLifecycle, WorkspaceEvidenceSelectionOutcome,
+    WorkspaceEvidenceSet,
+};
 use fs::Fs;
 use futures::{
     Future, FutureExt, StreamExt,
@@ -1603,6 +1606,12 @@ actions!(
         ActivatePreviousWindow,
         /// Adds a folder to the current project.
         AddFolderToProject,
+        /// Keeps the active file as explicit workspace evidence after its tab closes.
+        AddActiveFileToEvidence,
+        /// Removes the active file from explicit workspace evidence.
+        RemoveActiveFileFromEvidence,
+        /// Clears all explicitly selected workspace review evidence.
+        ClearReviewEvidence,
         /// Clears all bookmarks in the project.
         ClearBookmarks,
         /// Clears all notifications.
@@ -11253,6 +11262,116 @@ impl Workspace {
         &self.evidence_set
     }
 
+    fn active_file_evidence_path(&self, cx: &App) -> Option<PathBuf> {
+        let project_path = self.active_project_path(cx)?;
+        self.project.read(cx).absolute_path(&project_path, cx)
+    }
+
+    fn add_active_file_to_evidence(
+        &mut self,
+        _: &AddActiveFileToEvidence,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        struct ActiveFileEvidenceToast;
+        let Some(path) = self.active_file_evidence_path(cx) else {
+            self.show_toast(
+                Toast::new(
+                    NotificationId::unique::<ActiveFileEvidenceToast>(),
+                    "Open a project file before adding review evidence",
+                )
+                .autohide(),
+                cx,
+            );
+            return;
+        };
+        let (_, host) = workspace_evidence_inputs(&self.project, cx);
+        let outcome = self.evidence_set.add_user_selected_path(
+            self.database_id.map(i64::from),
+            Arc::<Path>::from(path.clone().into_boxed_path()),
+            host,
+        );
+        let message = match outcome {
+            WorkspaceEvidenceSelectionOutcome::Added => {
+                cx.notify();
+                format!("Added {} to review evidence", path.display())
+            }
+            WorkspaceEvidenceSelectionOutcome::Unchanged => {
+                format!("{} is already review evidence", path.display())
+            }
+            WorkspaceEvidenceSelectionOutcome::CapacityReached => {
+                "Review evidence is full; remove a selected path before adding another".to_owned()
+            }
+            WorkspaceEvidenceSelectionOutcome::Removed => unreachable!(),
+        };
+        self.show_toast(
+            Toast::new(NotificationId::unique::<ActiveFileEvidenceToast>(), message).autohide(),
+            cx,
+        );
+    }
+
+    fn remove_active_file_from_evidence(
+        &mut self,
+        _: &RemoveActiveFileFromEvidence,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        struct ActiveFileEvidenceToast;
+        let Some(path) = self.active_file_evidence_path(cx) else {
+            self.show_toast(
+                Toast::new(
+                    NotificationId::unique::<ActiveFileEvidenceToast>(),
+                    "Open a project file before removing review evidence",
+                )
+                .autohide(),
+                cx,
+            );
+            return;
+        };
+        let outcome = self.evidence_set.remove_user_selected_path(&path);
+        let message = match outcome {
+            WorkspaceEvidenceSelectionOutcome::Removed => {
+                cx.notify();
+                format!("Removed {} from review evidence", path.display())
+            }
+            WorkspaceEvidenceSelectionOutcome::Unchanged => {
+                format!("{} was not selected as review evidence", path.display())
+            }
+            WorkspaceEvidenceSelectionOutcome::Added
+            | WorkspaceEvidenceSelectionOutcome::CapacityReached => unreachable!(),
+        };
+        self.show_toast(
+            Toast::new(NotificationId::unique::<ActiveFileEvidenceToast>(), message).autohide(),
+            cx,
+        );
+    }
+
+    fn clear_review_evidence(
+        &mut self,
+        _: &ClearReviewEvidence,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        struct ReviewEvidenceClearedToast;
+        let removed = self.evidence_set.clear_user_selected_paths();
+        if removed > 0 {
+            cx.notify();
+        }
+        let message = if removed == 0 {
+            "No selected review evidence to clear".to_owned()
+        } else {
+            format!("Cleared {removed} selected review evidence path(s)")
+        };
+        self.show_toast(
+            Toast::new(
+                NotificationId::unique::<ReviewEvidenceClearedToast>(),
+                message,
+            )
+            .autohide(),
+            cx,
+        );
+    }
+
     pub fn set_terminal_working_directory_evidence(
         &mut self,
         terminal_session_id: impl Into<Arc<str>>,
@@ -11901,6 +12020,9 @@ impl Workspace {
             .on_action(cx.listener(Self::save_all))
             .on_action(cx.listener(Self::send_keystrokes))
             .on_action(cx.listener(Self::add_folder_to_project))
+            .on_action(cx.listener(Self::add_active_file_to_evidence))
+            .on_action(cx.listener(Self::remove_active_file_from_evidence))
+            .on_action(cx.listener(Self::clear_review_evidence))
             .on_action(cx.listener(Self::follow_next_collaborator))
             .on_action(cx.listener(Self::activate_pane_at_index))
             .on_action(cx.listener(Self::move_item_to_pane_at_index))

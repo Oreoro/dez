@@ -479,12 +479,21 @@ impl ThreadEntryWorkspace {
         };
         let workspace = workspace.read(cx);
         let evidence = workspace.evidence_set();
+        let user_selected_paths = evidence
+            .records()
+            .iter()
+            .filter(|record| record.kind == AuthoritativeWorkspaceEvidenceKind::UserSelectedPath)
+            .map(|record| record.path.as_ref())
+            .collect::<HashSet<_>>();
         let records = evidence
             .records()
             .iter()
             .filter(|record| match record.kind {
                 AuthoritativeWorkspaceEvidenceKind::WorkspaceRoot
-                | AuthoritativeWorkspaceEvidenceKind::OpenFile => true,
+                | AuthoritativeWorkspaceEvidenceKind::UserSelectedPath => true,
+                AuthoritativeWorkspaceEvidenceKind::OpenFile => {
+                    !user_selected_paths.contains(record.path.as_ref())
+                }
                 AuthoritativeWorkspaceEvidenceKind::TerminalWorkingDirectory => terminal_session_id
                     .is_some_and(|terminal_session_id| {
                         matches!(
@@ -508,6 +517,9 @@ impl ThreadEntryWorkspace {
                         }
                         AuthoritativeWorkspaceEvidenceKind::OpenFile => {
                             WorkspaceEvidenceKind::OpenFile
+                        }
+                        AuthoritativeWorkspaceEvidenceKind::UserSelectedPath => {
+                            WorkspaceEvidenceKind::UserSelectedPath
                         }
                         AuthoritativeWorkspaceEvidenceKind::TerminalWorkingDirectory => {
                             WorkspaceEvidenceKind::TerminalWorkingDirectory
