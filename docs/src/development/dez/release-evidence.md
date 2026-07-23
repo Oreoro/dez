@@ -1120,7 +1120,12 @@ the later running-app reports, the source advanced through:
   keeps the active Workspace options action visible and explicitly labeled; and
 - `c625c1f3b4`, which gives Agent title editing an accessible, surface-accurate
   label: Agent Session in Dez, Thread in official Zed, and Terminal for the
-  retained legacy terminal surface.
+  retained legacy terminal surface; and
+- `a0f51cbc3a`, which gives unsupported Agent Session mentions product-specific
+  guidance instead of upstream Thread/native-agent language; and
+- `94b27cb2db`, which confirms destructive draft discard from both Session Rail
+  and Agent Session tabs, protects unsent prompt text, and distinguishes draft
+  discard from reversible saved-session archive.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

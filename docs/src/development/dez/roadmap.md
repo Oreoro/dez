@@ -1510,6 +1510,19 @@ code, all launch gates pass, and known limitations are documented.
       in official Zed, and names a legacy terminal surface **Edit Terminal
       Title**. A pure label regression and the static identity guard cover the
       distinction; rendered hover and accessibility-tree proof remain deferred.
+- [x] 2026-07-23: Make unsupported Agent Session mentions understandable.
+      Commit `a0f51cbc3a` replaces upstream **Thread/native agent** wording in
+      Dez with **Agent Session/built-in Dez Agent**, while official Zed retains
+      its existing error. Product-copy assertions and the static identity guard
+      pass; rendered error-notice proof remains deferred.
+- [x] 2026-07-23: Protect unsent Agent Session drafts. Commit `94b27cb2db`
+      requires confirmation before a draft is discarded from either its
+      Session Rail row or main-area tab, states that unsent prompt text will be
+      permanently removed, and keeps saved-session archive immediate and
+      reversible. Tab labels distinguish discard from archive and preserve
+      official Zed behavior. Pure behavior assertions, formatting, locked
+      offline metadata, static identity, and diff checks pass; rendered modal
+      and focus-return proof remain deferred.
 - [x] 2026-07-23: Remove remaining terminal-thread language from Dez UI.
       Commit `d1ea4a914f` gives the external-session import flow consistent
       Agent Session, Agent History, count, empty, and completion copy. Commit
@@ -1559,13 +1572,6 @@ code, all launch gates pass, and known limitations are documented.
       source assertions, static guards, formatting, locked offline metadata,
       and diff checks pass; compilation and rendered upgrade proof remain
       deferred.
-- [x] 2026-07-23: Specify the everyday Workspace routing contract. Commit
-      `86775eb7bc` documents how editor and IDE capabilities share one
-      Workspace Project, preserves the active Workspace's options control
-      without requiring hover discovery, and gives that control an explicit
-      tooltip. Inactive Workspace rows remain visually quiet. Focused source
-      assertions and the static identity guard cover the affordance;
-      compilation and rendered rail-width proof remain deferred.
 - [x] 2026-07-23: Confirm permanent Agent Session deletion. Commit
       `9615b513d4` routes both the archived-row trash control and keyboard
       remove action through one critical prompt. The prompt names the selected

@@ -1823,3 +1823,16 @@ Notes decision:
   calls the retained compatibility terminal surface **Edit Terminal Title**.
   Pure label assertions and the static identity guard pass; rendered hover and
   accessibility-tree proof remain deferred.
+- 2026-07-23: Clarified unsupported Agent Session mentions in `a0f51cbc3a`.
+  Dez now explains that this capability requires the built-in Dez Agent instead
+  of exposing upstream Thread/native-agent terminology. Official Zed retains
+  its existing error. Product-copy assertions, formatting, locked offline
+  metadata, identity, and diff checks pass; rendered notice proof remains
+  deferred.
+- 2026-07-23: Protected unsent Agent Session drafts in `94b27cb2db`. Discarding
+  a draft through its Session Rail row, keyboard action, hover control, or
+  main-area tab now requires a warning that unsent prompt text will be
+  permanently removed. Saved Agent Sessions still archive immediately and can
+  be restored from Agent History. Pure behavior assertions, formatting, locked
+  offline metadata, identity, and diff checks pass; rendered confirmation and
+  focus-return proof remain deferred.

@@ -103,6 +103,11 @@ Inactive Workspace actions may reveal on hover because selecting the Workspace
 first makes the same controls persistent. Every icon-only control must retain
 an accessible name and tooltip.
 
+Discarding an Agent Session draft from either its Session Rail row or its
+main-area tab requires confirmation because unsent prompt text is permanently
+removed. Archiving a saved Agent Session remains immediate and reversible from
+Agent History.
+
 There is no Dez **Terminal Thread** destination. The inherited action remains
 only as an official-Zed compatibility implementation. Dez hides it from Agent
 menus and the command palette, redirects compatibility dispatches to **New
