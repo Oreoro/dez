@@ -6143,9 +6143,23 @@ impl AgentPanel {
                         }
 
                         menu = menu
-                            .action("Settings", Box::new(OpenSettings))
+                            .action(
+                                agent_panel_session_label(
+                                    paths::APP_NAME,
+                                    "Settings",
+                                    "Agent Settings",
+                                ),
+                                Box::new(OpenSettings),
+                            )
                             .separator()
-                            .action("Toggle Sidebar", Box::new(ToggleSidebar));
+                            .action(
+                                agent_panel_session_label(
+                                    paths::APP_NAME,
+                                    "Toggle Sidebar",
+                                    "Toggle Session Rail",
+                                ),
+                                Box::new(ToggleSidebar),
+                            );
 
                         if has_auth_methods || supports_logout {
                             menu = menu.separator()
@@ -7254,6 +7268,14 @@ mod tests {
         assert_eq!(
             agent_panel_session_label("Dez", "New Thread…", "New Agent Session…"),
             "New Agent Session…"
+        );
+        assert_eq!(
+            agent_panel_session_label("Dez", "Toggle Sidebar", "Toggle Session Rail"),
+            "Toggle Session Rail"
+        );
+        assert_eq!(
+            agent_panel_session_label("Dez", "Settings", "Agent Settings"),
+            "Agent Settings"
         );
     }
 

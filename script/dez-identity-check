@@ -281,8 +281,8 @@ require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'fn agent_panel_title_edit_label.*?is_terminal.*?"Edit Terminal Title".*?app_name == "Zed".*?"Edit Thread Title".*?"Edit Agent Session Title".*?aria_label\(title_edit_label\).*?Tooltip::text\(title_edit_label\)' \
     'the Agent title edit affordance can regress to unnamed or ambiguous Thread terminology'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
-    'fn agent_panel_session_label.*?app_name == "Zed".*?upstream_thread_label.*?dez_session_label.*?"Current Thread".*?"Current Agent Session".*?"Regenerate Thread Title".*?"Regenerate Agent Session Title".*?"Open Thread as Markdown".*?"Open Agent Session as Markdown".*?"New Thread\\u\{2026\}".*?"New Agent Session\\u\{2026\}"' \
-    'the Dez Agent pane toolbar and menu can regress to mixed Thread/Agent Session terminology'
+    'fn agent_panel_session_label.*?app_name == "Zed".*?upstream_thread_label.*?dez_session_label.*?"Current Thread".*?"Current Agent Session".*?"Regenerate Thread Title".*?"Regenerate Agent Session Title".*?"Open Thread as Markdown".*?"Open Agent Session as Markdown".*?"Settings".*?"Agent Settings".*?"Toggle Sidebar".*?"Toggle Session Rail".*?"New Thread\\u\{2026\}".*?"New Agent Session\\u\{2026\}"' \
+    'the Dez Agent pane toolbar and menu can regress to mixed vocabulary or ambiguous destinations'
 require_multiline_pattern crates/agent_ui/src/completion_provider.rs \
     'fn prompt_context_type_label.*?PromptContextType::Thread if app_name == "Zed".*?"Threads".*?PromptContextType::Thread => "Agent Sessions".*?Self::Thread => "thread".*?prompt_context_type_label\(paths::APP_NAME, \*self\)' \
     'the Dez Agent context picker can regress to visible Thread terminology or break the compatible @thread keyword'
@@ -526,6 +526,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\([[:space:]]*"agent-sidebar-options-menu".*?if labels_visible \{ "Agent Tools" \} else \{ "" \}.*?IconName::Settings.*?aria_label\("Agent Tools and Settings"\).*?header\("Agent Context"\).*?"Hide Session Rail"' \
     'the Session Rail footer can regress to a Robot icon that does not open Agent'
+require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
+    'fn session_switcher_title.*?app_name == "Zed".*?"Thread Switcher".*?"Switch Sessions".*?fn session_switcher_count.*?"1 recent session".*?"\{count\} recent sessions".*?viewport_size\(\)\.width \* 0\.9.*?Role::Dialog.*?aria_label\(title\).*?"session-switcher-header".*?"Release shortcut to open".*?"Choose a session".*?KeyBinding::for_action_in.*?menu::Confirm.*?KeyBinding::for_action_in.*?menu::Cancel' \
+    'the keyboard session switcher can regress to an unbounded, unnamed row stack without interaction guidance'
 reject_pattern crates/workspace/src/pane.rs \
     '"(Project ready|Project tools unavailable|Project navigation did not attach to this pane\.)"' \
     'the Dez center surface mixes Project terminology into the Workspace hierarchy'
