@@ -121,6 +121,13 @@ fn dez_git_clean_state_description(branch_name: Option<&str>) -> String {
     }
 }
 
+fn dez_git_setup_copy() -> (&'static str, &'static str) {
+    (
+        "No repository in this Workspace",
+        "Initialize Git to start tracking changes in the open folder.",
+    )
+}
+
 fn canvas_git_panel_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match contrast {
@@ -6965,26 +6972,80 @@ impl GitPanel {
     fn render_uninitialized_ui(&self, cx: &mut Context<Self>) -> AnyElement {
         let worktree_count = self.project.read(cx).visible_worktrees(cx).count();
         if worktree_count > 0 && self.active_repository.is_none() {
-            v_flex()
-                .gap_1()
-                .items_center()
-                .child(Label::new("No Git Repositories").color(Color::Muted))
-                .child(
-                    Button::new("initialize_repository", "Initialize Repository")
-                        .label_size(LabelSize::Small)
-                        .style(ButtonStyle::Outlined)
-                        .tooltip(Tooltip::for_action_title_in(
-                            "git init",
-                            &git::Init,
-                            &self.focus_handle,
-                        ))
-                        .on_click(move |_, _, cx| {
-                            cx.defer(move |cx| {
-                                cx.dispatch_action(&git::Init);
-                            })
-                        }),
-                )
-                .into_any_element()
+            if paths::APP_NAME == "Zed" {
+                v_flex()
+                    .gap_1()
+                    .items_center()
+                    .child(Label::new("No Git Repositories").color(Color::Muted))
+                    .child(
+                        Button::new("initialize_repository", "Initialize Repository")
+                            .label_size(LabelSize::Small)
+                            .style(ButtonStyle::Outlined)
+                            .tooltip(Tooltip::for_action_title_in(
+                                "git init",
+                                &git::Init,
+                                &self.focus_handle,
+                            ))
+                            .on_click(move |_, _, cx| {
+                                cx.defer(move |cx| {
+                                    cx.dispatch_action(&git::Init);
+                                })
+                            }),
+                    )
+                    .into_any_element()
+            } else {
+                let (title, description) = dez_git_setup_copy();
+
+                v_flex()
+                    .size_full()
+                    .items_center()
+                    .justify_start()
+                    .px_4()
+                    .pt_8()
+                    .role(gpui::Role::Region)
+                    .aria_label(format!("{title}. {description}"))
+                    .child(
+                        v_flex()
+                            .w_64()
+                            .max_w_full()
+                            .gap_2()
+                            .child(
+                                h_flex()
+                                    .gap_1p5()
+                                    .child(
+                                        Icon::new(IconName::GitBranch)
+                                            .size(IconSize::Small)
+                                            .color(Color::Accent),
+                                    )
+                                    .child(Label::new(title).size(LabelSize::Large)),
+                            )
+                            .child(
+                                Label::new(description)
+                                    .size(LabelSize::Small)
+                                    .color(Color::Muted),
+                            )
+                            .child(
+                                Button::new("initialize_repository", "Initialize Repository")
+                                    .full_width()
+                                    .start_icon(
+                                        Icon::new(IconName::GitBranchPlus).size(IconSize::Small),
+                                    )
+                                    .label_size(LabelSize::Small)
+                                    .style(ButtonStyle::Filled)
+                                    .tooltip(Tooltip::for_action_title_in(
+                                        "Initialize Git Repository",
+                                        &git::Init,
+                                        &self.focus_handle,
+                                    ))
+                                    .on_click(move |_, _, cx| {
+                                        cx.defer(move |cx| {
+                                            cx.dispatch_action(&git::Init);
+                                        })
+                                    }),
+                            ),
+                    )
+                    .into_any_element()
+            }
         } else if worktree_count == 0 {
             let focus_handle = self.focus_handle.clone();
             let empty_state = ProjectEmptyState::new(
@@ -9115,6 +9176,13 @@ mod tests {
         assert_eq!(
             dez_git_clean_state_description(None),
             "There are no uncommitted changes in this repository."
+        );
+        assert_eq!(
+            dez_git_setup_copy(),
+            (
+                "No repository in this Workspace",
+                "Initialize Git to start tracking changes in the open folder."
+            )
         );
     }
 
