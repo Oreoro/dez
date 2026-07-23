@@ -715,7 +715,7 @@ const CODEX_HOOK_SETUP: &str = include_str!("../../../assets/dez/codex-hooks.jso
 fn terminal_agent_state_label(
     agent: Option<&TerminalAgentSnapshot>,
     runtime: Option<&TerminalRuntimeInfo>,
-    has_notification: bool,
+    needs_attention: bool,
     is_snoozed: bool,
     setup_available: bool,
     show_detection_confidence: bool,
@@ -723,8 +723,8 @@ fn terminal_agent_state_label(
     let runtime_state = runtime.map(|runtime| runtime.state);
     let mut state = agent.map_or_else(
         || {
-            match runtime_state {
-                Some(TerminalRuntimeState::Live) if has_notification => "Needs attention",
+            let transport_state = match runtime_state {
+                Some(TerminalRuntimeState::Live) if needs_attention => "Needs attention",
                 Some(TerminalRuntimeState::Live) => "Live",
                 Some(TerminalRuntimeState::Detached) => "Detached",
                 Some(TerminalRuntimeState::Reconnecting) => "Reconnecting",
@@ -732,8 +732,12 @@ fn terminal_agent_state_label(
                 Some(TerminalRuntimeState::Missing) => "Missing",
                 Some(TerminalRuntimeState::Incompatible) => "Incompatible",
                 None => "Saved",
+            };
+            if needs_attention && transport_state != "Needs attention" {
+                format!("{transport_state} · Needs attention")
+            } else {
+                transport_state.to_owned()
             }
-            .to_owned()
         },
         |agent| {
             let mut state = agent.state.label().to_owned();
@@ -743,7 +747,7 @@ fn terminal_agent_state_label(
                 state.push_str(" · ");
                 state.push_str(runtime_state.label());
             }
-            if has_notification
+            if needs_attention
                 && !matches!(
                     agent.state,
                     TerminalAgentState::WaitingForPermission
@@ -923,6 +927,10 @@ mod terminal_runtime_label_tests {
             "Detected · Saved"
         );
         assert_eq!(
+            terminal_agent_state_label(None, None, true, false, false, true),
+            "Detected · Saved · Needs attention"
+        );
+        assert_eq!(
             terminal_agent_state_label(None, Some(&live), false, false, false, true),
             "Detected · Live"
         );
@@ -935,8 +943,16 @@ mod terminal_runtime_label_tests {
             "Detected · Detached"
         );
         assert_eq!(
+            terminal_agent_state_label(None, Some(&detached), true, false, false, true),
+            "Detected · Detached · Needs attention"
+        );
+        assert_eq!(
             terminal_agent_state_label(None, Some(&missing), false, false, false, true),
             "Detected · Missing"
+        );
+        assert_eq!(
+            terminal_agent_state_label(None, Some(&missing), true, false, false, true),
+            "Detected · Missing · Needs attention"
         );
         assert_eq!(
             terminal_agent_state_label(None, Some(&incompatible), false, false, false, true),
