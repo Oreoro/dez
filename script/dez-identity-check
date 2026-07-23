@@ -574,6 +574,9 @@ require_pattern crates/project_panel/src/project_panel.rs \
 require_pattern crates/workspace/src/pane.rs \
     '"Search Workspace"' \
     'the Dez pane creation menu still exposes Project Search'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    'Button::new\("empty-project-terminal", "New Terminal"\).*?\.aria_label\("New Terminal"\).*?Tooltip::for_action.*?"New Terminal".*?Button::new\("empty-project-open-file", "Find File"\).*?\.aria_label\("Find File in Workspace"\).*?Tooltip::for_action.*?"Find File in Workspace".*?Button::new\("empty-project-new-file", "New File"\).*?\.aria_label\("New File"\).*?Tooltip::for_action\("New File"' \
+    'the Workspace-ready actions can regress to ambiguous or unnamed controls'
 require_pattern crates/settings_ui/src/page_data.rs \
     '"Trust All Workspaces By Default"' \
     'the Dez trust setting still presents a Project boundary'
