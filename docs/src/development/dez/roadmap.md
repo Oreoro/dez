@@ -1402,6 +1402,14 @@ code, all launch gates pass, and known limitations are documented.
       instead of presenting loose upstream commands. Focused pure assertions
       and static identity guards pass; compilation and rendered native-menu
       proof remain deferred.
+- [x] 2026-07-23: Productize retained Command Palette names. Commit
+      `35c516a5bb` presents **Session Rail**, **Files**, **Workspace Search**,
+      **Workspace Symbols**, **Workspace Tools**, and **Dez** instead of
+      inherited implementation namespaces, and labels the Project category
+      **workspace** in Dez. Official Zed labels and the underlying action IDs,
+      keymaps, telemetry, and dispatch remain unchanged. Focused pure
+      assertions, formatting, and static identity guards pass; compilation and
+      rendered palette proof remain deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

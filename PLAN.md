@@ -1664,3 +1664,11 @@ Notes decision:
   links under one **Upstream Zed** submenu. Focused label assertions, static
   identity, formatting, and diff checks pass; rendered native-menu proof
   remains deferred.
+- 2026-07-23: Productized retained Command Palette names in `35c516a5bb`.
+  Dez now presents **Session Rail**, **Files**, **Workspace Search**,
+  **Workspace Symbols**, **Workspace Tools**, and **Dez** instead of inherited
+  implementation namespaces such as sidebar, project panel, and zed actions.
+  Project-category badges read **workspace** in Dez, while official Zed labels,
+  action IDs, keymaps, telemetry, and dispatch remain unchanged. Formatting,
+  static identity, and diff checks pass; rendered palette proof remains
+  deferred.

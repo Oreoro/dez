@@ -1051,7 +1051,11 @@ the later running-app reports, the source advanced through:
   branch; and
 - `218e346ede`, which aligns top-level menus with Workspace vocabulary and
   consolidates local diagnostics, licenses, and upstream attribution into a
-  deliberate Help hierarchy.
+  deliberate Help hierarchy; and
+- `35c516a5bb`, which replaces inherited implementation namespaces in the Dez
+  Command Palette with Session Rail, Files, Workspace Search, Workspace
+  Symbols, Workspace Tools, and Dez presentation while preserving action
+  identity and official Zed behavior.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
