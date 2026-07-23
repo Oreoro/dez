@@ -1683,3 +1683,15 @@ Notes decision:
   that terminal tabs already used, preventing valid Sessions from rendering as
   blank rows. Focused pure assertions, formatting, identity, and diff checks
   pass; rendered row/action proof remains deferred.
+- 2026-07-23: Replaced ambiguous bottom chrome in `91f738f83b`. At normal
+  Session Rail widths, the persistent footer now names **Agent Tools**,
+  **History**, and **Workspaces**; it collapses to the same accessible,
+  tooltip-backed icons only below the existing compact breakpoint. The center
+  status bar now calls its retained tools **Search Workspace Files** and
+  **Workspace Diagnostics** in Dez, and a terminal-focused Workspace with no
+  diagnostics shows the restrained text **No diagnostics** instead of an
+  unexplained checkmark. Official Zed retains Project labels and compact
+  zero-state presentation. The locked metadata graph was reconciled for the
+  new direct `paths` dependencies and an existing omitted `terminal_view`
+  edge. Formatting, locked no-dependency metadata, identity, and diff checks
+  pass; rendered responsive proof remains deferred.

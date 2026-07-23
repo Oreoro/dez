@@ -1420,6 +1420,16 @@ code, all launch gates pass, and known limitations are documented.
       gives empty PTY titles a **Terminal** fallback so a valid Session cannot
       render as a blank row. Focused pure assertions and static identity guards
       pass; compilation and rendered proof remain deferred.
+- [x] 2026-07-23: Clarify the persistent bottom utility chrome. Commit
+      `91f738f83b` labels the normal-width Session Rail footer **Agent Tools**,
+      **History**, and **Workspaces**, while retaining accessible icon-only
+      controls below the compact breakpoint. Dez's center status bar now says
+      **Search Workspace Files** and **Workspace Diagnostics** and renders
+      **No diagnostics** beside the otherwise ambiguous zero-state checkmark
+      when no editor is active. Official Zed keeps its Project vocabulary and
+      compact zero-state presentation. Focused pure assertions, locked
+      no-dependency metadata, formatting, and static identity guards pass;
+      compilation and rendered responsive proof remain deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

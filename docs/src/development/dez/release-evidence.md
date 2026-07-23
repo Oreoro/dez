@@ -1060,7 +1060,11 @@ the later running-app reports, the source advanced through:
   terminating a Host-only running Session, requires confirmation for the
   latter, and makes terminal ownership explicit in Session Rail rows; and
 - `ddd7f25f4e`, which gives blank PTY titles a Terminal fallback in the Session
-  Rail instead of rendering an empty row.
+  Rail instead of rendering an empty row; and
+- `91f738f83b`, which makes the normal-width Session Rail footer self-labeling,
+  keeps its compact icon mode accessible, productizes Workspace search and
+  diagnostics labels, and explains the zero-diagnostic checkmark when a
+  terminal or other non-editor surface is active.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
