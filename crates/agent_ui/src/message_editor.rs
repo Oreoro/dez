@@ -1,5 +1,5 @@
-use crate::DEFAULT_THREAD_TITLE;
 use crate::SendImmediately;
+use crate::default_agent_session_title;
 use crate::{
     ChatWithFollow,
     completion_provider::{
@@ -689,9 +689,9 @@ impl MessageEditor {
         let Some(workspace) = self.workspace.upgrade() else {
             return;
         };
-        let thread_title = title
-            .filter(|title| !title.is_empty())
-            .unwrap_or_else(|| SharedString::new_static(DEFAULT_THREAD_TITLE));
+        let thread_title = title.filter(|title| !title.is_empty()).unwrap_or_else(|| {
+            SharedString::new_static(default_agent_session_title(paths::APP_NAME))
+        });
         let uri = MentionUri::Thread {
             id: session_id,
             name: thread_title.to_string(),

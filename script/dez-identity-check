@@ -290,6 +290,21 @@ require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'fn icon_tooltip.*?agent_panel_session_label\([[:space:]]*paths::APP_NAME,[[:space:]]*"Agent Panel",[[:space:]]*"Agent"' \
     'the retained Dez Agent control can regress to exposing Panel implementation terminology'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'IconButton::new\("retry-thread-title", IconName::ArrowCircle\).*?aria_label\(agent_panel_session_label\([[:space:]]*paths::APP_NAME,[[:space:]]*"Retry Thread Title Generation",[[:space:]]*"Retry Agent Session Title Generation".*?Title generation failed\. Click to retry\.' \
+    'failed Agent Session title generation can regress to an unnamed or dismiss-shaped retry control'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'let agent_menu_label =.*?"Toggle Agent Menu".*?"Agent Options".*?IconButton::new\("agent-options-menu".*?aria_label\(agent_menu_label\).*?let full_screen_button = IconButton::new.*?aria_label\(tooltip_text\).*?let new_session_label =.*?"New Thread.*?"New Agent Session.*?IconButton::new\("new_thread_menu_btn".*?aria_label\(new_session_label\)' \
+    'Agent toolbar icon controls can regress to tooltip-only buttons without accessible names'
+require_multiline_pattern crates/agent_ui/src/agent_ui.rs \
+    'pub const DEFAULT_THREAD_TITLE.*?"New thread".*?pub fn default_agent_session_title.*?app_name == "Zed".*?DEFAULT_THREAD_TITLE.*?"New Agent Session".*?default_session_title_preserves_product_vocabulary' \
+    'untitled Dez conversations can regress to the upstream New thread placeholder'
+require_multiline_pattern crates/agent_ui/src/conversation_view.rs \
+    'pub fn title.*?default_agent_session_title\(paths::APP_NAME\).*?self\.is_draft.*?default_agent_session_title\(paths::APP_NAME\).*?thread\.title.*?default_agent_session_title\(paths::APP_NAME\).*?ServerState::Loading.*?default_agent_session_title\(paths::APP_NAME\)' \
+    'Agent conversation titles can regress to upstream default Thread vocabulary'
+require_multiline_pattern crates/agent_ui/src/thread_metadata_store.rs \
+    'pub fn display_title.*?default_agent_session_title\(paths::APP_NAME\)' \
+    'Session Rail metadata can regress to an upstream default Thread title'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     '"No active native thread to copy".*?"No active built-in Agent Session to copy".*?"Thread copied to clipboard \(base64 encoded\)".*?"Agent Session copied to clipboard \(base64 encoded\)".*?"Open a project to load a thread".*?"Open a Workspace to load an Agent Session".*?"Failed to parse thread data from clipboard".*?"Failed to parse Agent Session data from clipboard".*?"Thread loaded from clipboard".*?"Agent Session loaded from clipboard".*?"No active thread".*?"No active Agent Session".*?"All Sidebar Thread Metadata".*?"All Session Rail Agent Session Metadata"' \
     'Agent clipboard and metadata diagnostics can regress to upstream Thread/Sidebar terminology'
 require_multiline_pattern crates/agent_ui/src/completion_provider.rs \
@@ -550,6 +565,9 @@ require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn switcher_selection_for_active_entry.*?ActiveEntry::Thread.*?session_id.*?ThreadSwitcherEntry::Thread.*?switcher_entry\.selection\(\).*?ActiveEntry::Terminal.*?ThreadSwitcherEntry::Terminal.*?terminal_id.*?switcher_entry\.selection\(\).*?let original_selection = self\.switcher_selection_for_active_entry.*?ThreadSwitcherEvent::Dismissed.*?preview_switcher_selection\(selection' \
     'cancelling a session-switcher preview can regress to restoring terminals through the wrong ownership surface'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn render_import_onboarding_banner.*?let dismiss_label.*?format!\("Dismiss \{title\}"\).*?aria_label\(dismiss_label\.clone\(\)\).*?Tooltip::text\(dismiss_label\)' \
+    'Agent History import onboarding can regress to an unnamed close icon without pointer guidance'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'test_switcher_cancel_restore_keeps_workspace_terminal_source.*?add_workspace_shell.*?switcher_selection_for_active_entry.*?TerminalEntrySource::WorkspaceItem\(item\).*?item\.entity_id\(\), original_terminal\.entity_id\(\)' \
     'the session-switcher cancel contract lacks focused center-terminal source coverage'

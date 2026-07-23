@@ -7,7 +7,7 @@ use crate::agent_connection_store::AgentConnectionStore;
 use crate::thread_metadata_store::{
     ThreadId, ThreadMetadata, ThreadMetadataStore, worktree_info_from_thread_paths,
 };
-use crate::{Agent, ArchiveSelectedThread, DEFAULT_THREAD_TITLE, RemoveSelectedThread};
+use crate::{Agent, ArchiveSelectedThread, RemoveSelectedThread, default_agent_session_title};
 
 use agent::ThreadStore;
 use agent_client_protocol::schema::v1 as acp;
@@ -520,7 +520,7 @@ impl ThreadsArchiveView {
                     .title
                     .as_ref()
                     .map(|t| t.as_ref())
-                    .unwrap_or(DEFAULT_THREAD_TITLE);
+                    .unwrap_or(default_agent_session_title(paths::APP_NAME));
                 if let Some(positions) = fuzzy_match_positions(&query, title) {
                     positions
                 } else {
@@ -1593,7 +1593,7 @@ impl PickerDelegate for ProjectPickerDelegate {
                 .title
                 .as_ref()
                 .map(|t| t.as_ref())
-                .unwrap_or(DEFAULT_THREAD_TITLE)
+                .unwrap_or(default_agent_session_title(paths::APP_NAME))
         )
         .into()
     }

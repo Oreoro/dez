@@ -49,8 +49,8 @@ use crate::conversation_view::elicitation::{
 };
 use crate::message_editor::SessionCapabilities;
 use crate::{
-    AgentThreadSource, CanvasAgentUiSettings, DEFAULT_THREAD_TITLE, request_agent_window_attention,
-    resolve_agent_image,
+    AgentThreadSource, CanvasAgentUiSettings, default_agent_session_title,
+    request_agent_window_attention, resolve_agent_image,
 };
 use lru::LruCache;
 use rope::Point;
@@ -1896,20 +1896,22 @@ impl ConversationView {
     pub fn title(&self, cx: &App) -> SharedString {
         match &self.server_state {
             ServerState::Connected(view) => view.active_view().map_or_else(
-                || DEFAULT_THREAD_TITLE.into(),
+                || default_agent_session_title(paths::APP_NAME).into(),
                 |view| {
                     if self.is_draft(cx) {
-                        DEFAULT_THREAD_TITLE.into()
+                        default_agent_session_title(paths::APP_NAME).into()
                     } else {
                         let thread = view.read(cx).thread.clone();
                         let thread = thread.read(cx);
                         self.metadata_title(cx)
                             .or_else(|| thread.title())
-                            .unwrap_or_else(|| DEFAULT_THREAD_TITLE.into())
+                            .unwrap_or_else(|| default_agent_session_title(paths::APP_NAME).into())
                     }
                 },
             ),
-            ServerState::Loading { draft: Some(_), .. } => DEFAULT_THREAD_TITLE.into(),
+            ServerState::Loading { draft: Some(_), .. } => {
+                default_agent_session_title(paths::APP_NAME).into()
+            }
             ServerState::Loading { .. } => self
                 .loading_status
                 .clone()

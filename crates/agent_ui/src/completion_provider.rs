@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
-use crate::DEFAULT_THREAD_TITLE;
+use crate::default_agent_session_title;
 use crate::thread_metadata_store::{ThreadMetadata, ThreadMetadataStore};
 use acp_thread::MentionUri;
 use agent_client_protocol::schema::v1 as acp;
@@ -334,7 +334,7 @@ pub struct EntryMatch {
 fn session_title(title: Option<SharedString>) -> SharedString {
     title
         .filter(|title| !title.is_empty())
-        .unwrap_or_else(|| SharedString::new_static(DEFAULT_THREAD_TITLE))
+        .unwrap_or_else(|| SharedString::new_static(default_agent_session_title(paths::APP_NAME)))
 }
 
 #[derive(Debug, Clone)]

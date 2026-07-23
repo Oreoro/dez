@@ -1,8 +1,8 @@
 use crate::{
-    CanvasAgentUiSettings, DEFAULT_THREAD_TITLE, SelectPermissionGranularity,
+    CanvasAgentUiSettings, SelectPermissionGranularity,
     agent_configuration::configure_context_server_modal::default_markdown_style,
     conversation_view::thread_search_bar::{ThreadSearchBar, ThreadSearchBarEvent},
-    open_abs_path_at_point,
+    default_agent_session_title, open_abs_path_at_point,
     thread_metadata_store::{ThreadId, ThreadMetadataStore},
 };
 use agent_client_protocol::schema::v1 as acp;
@@ -904,7 +904,7 @@ impl ThreadView {
             } else {
                 thread.read(cx).title()
             }
-            .unwrap_or_else(|| DEFAULT_THREAD_TITLE.into());
+            .unwrap_or_else(|| default_agent_session_title(paths::APP_NAME).into());
             let editor = cx.new(|cx| {
                 let mut editor = Editor::single_line(window, cx);
                 editor.set_text(initial_title, window, cx);
@@ -2459,7 +2459,7 @@ impl ThreadView {
             EditorEvent::Blurred => {
                 if title_editor.read(cx).text(cx).is_empty() {
                     title_editor.update(cx, |editor, cx| {
-                        editor.set_text(DEFAULT_THREAD_TITLE, window, cx);
+                        editor.set_text(default_agent_session_title(paths::APP_NAME), window, cx);
                     });
                 }
             }
@@ -7600,7 +7600,7 @@ impl ThreadView {
         let thread = self.thread.read(cx);
         let thread_title = thread
             .title()
-            .unwrap_or_else(|| DEFAULT_THREAD_TITLE.into())
+            .unwrap_or_else(|| default_agent_session_title(paths::APP_NAME).into())
             .to_string();
         let markdown = thread.to_markdown(cx);
 

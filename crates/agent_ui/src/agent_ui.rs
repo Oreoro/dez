@@ -249,6 +249,15 @@ pub(crate) fn open_abs_path_at_point(
 }
 
 pub const DEFAULT_THREAD_TITLE: &str = "New thread";
+
+pub fn default_agent_session_title(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        DEFAULT_THREAD_TITLE
+    } else {
+        "New Agent Session"
+    }
+}
+
 const PARALLEL_AGENT_LAYOUT_BACKFILL_KEY: &str = "parallel_agent_layout_backfilled";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1055,6 +1064,12 @@ mod tests {
     use settings::{
         DockPosition, NotifyWhenAgentWaiting, PlaySoundWhenAgentDone, Settings, SettingsStore,
     };
+
+    #[test]
+    fn default_session_title_preserves_product_vocabulary() {
+        assert_eq!(default_agent_session_title("Dez"), "New Agent Session");
+        assert_eq!(default_agent_session_title("Zed"), DEFAULT_THREAD_TITLE);
+    }
 
     #[test]
     fn dez_treats_upstream_edit_prediction_providers_as_unavailable() {

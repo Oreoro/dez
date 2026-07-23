@@ -20,12 +20,12 @@ use agent_ui::threads_archive_view::{
 use agent_ui::{
     AcpThreadImportOnboarding, Agent, AgentPanel, AgentPanelEvent, AgentThreadItem,
     AgentThreadSource, ArchiveSelectedThread, CanvasAgentUiSettings, ConversationView,
-    CrossChannelImportOnboarding, DEFAULT_THREAD_TITLE, ManageProfiles, NewTerminalThread,
-    ObservedRepositoryEvidence, ObservedRunActivity, ObservedRunCheck, ObservedRunCheckStatus,
-    ObservedRunCommand, ObservedWorkspaceEvidence, OpenAgentDiff, RenameSelectedThread,
-    RunReviewBrief, RunReviewState, TerminalId, ThreadId, ThreadImportModal,
-    ThreadTitleRegenerationResult, ToggleOptionsMenu, WorkspaceEvidenceKind, channels_with_threads,
-    connection_store_for_project, create_agent_thread_in_workspace,
+    CrossChannelImportOnboarding, ManageProfiles, NewTerminalThread, ObservedRepositoryEvidence,
+    ObservedRunActivity, ObservedRunCheck, ObservedRunCheckStatus, ObservedRunCommand,
+    ObservedWorkspaceEvidence, OpenAgentDiff, RenameSelectedThread, RunReviewBrief, RunReviewState,
+    TerminalId, ThreadId, ThreadImportModal, ThreadTitleRegenerationResult, ToggleOptionsMenu,
+    WorkspaceEvidenceKind, channels_with_threads, connection_store_for_project,
+    create_agent_thread_in_workspace, default_agent_session_title,
     import_threads_from_other_channels, open_agent_thread_in_workspace,
 };
 use agent_ui::{MessageEditorEvent, StateChange, thread_worktree_archive};
@@ -6262,7 +6262,7 @@ impl Sidebar {
 
         let thread_title = title
             .map(|t| t.to_string())
-            .unwrap_or_else(|| DEFAULT_THREAD_TITLE.to_string());
+            .unwrap_or_else(|| default_agent_session_title(APP_NAME).to_string());
 
         let workspace = workspace.clone();
 
@@ -12582,6 +12582,8 @@ fn render_import_onboarding_banner(
     cx: &App,
 ) -> impl IntoElement {
     let id: SharedString = id.into();
+    let title: SharedString = title.into();
+    let dismiss_label: SharedString = format!("Dismiss {title}").into();
     let bg = cx.theme().colors().text_accent;
 
     v_flex()
@@ -12610,7 +12612,8 @@ fn render_import_onboarding_banner(
                     )
                     .size(ButtonSize::Medium)
                     .icon_size(IconSize::Small)
-                    .aria_label("Dismiss")
+                    .aria_label(dismiss_label.clone())
+                    .tooltip(Tooltip::text(dismiss_label))
                     .on_click(on_dismiss),
                 ),
         )

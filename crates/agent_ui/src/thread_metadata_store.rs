@@ -28,7 +28,7 @@ use ui::{App, Context, SharedString, ThreadItemWorktreeInfo, WorktreeKind};
 use util::ResultExt as _;
 use workspace::{PathList, SerializedWorkspaceLocation, WorkspaceDb};
 
-use crate::DEFAULT_THREAD_TITLE;
+use crate::{DEFAULT_THREAD_TITLE, default_agent_session_title};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ThreadId(uuid::Uuid);
@@ -333,7 +333,7 @@ impl ThreadMetadata {
 
     pub fn display_title(&self) -> SharedString {
         self.title()
-            .unwrap_or_else(|| crate::DEFAULT_THREAD_TITLE.into())
+            .unwrap_or_else(|| default_agent_session_title(paths::APP_NAME).into())
     }
 
     pub fn title(&self) -> Option<SharedString> {

@@ -5830,9 +5830,14 @@ impl AgentPanel {
                                 .gap_1()
                                 .child(editable_title)
                                 .child(
-                                    IconButton::new("retry-thread-title", IconName::XCircle)
+                                    IconButton::new("retry-thread-title", IconName::ArrowCircle)
                                         .icon_color(Color::Error)
                                         .icon_size(IconSize::Small)
+                                        .aria_label(agent_panel_session_label(
+                                            paths::APP_NAME,
+                                            "Retry Thread Title Generation",
+                                            "Retry Agent Session Title Generation",
+                                        ))
                                         .tooltip(move |_window, cx| {
                                             Tooltip::with_meta(
                                                 "Title generation failed. Click to retry.",
@@ -6045,18 +6050,16 @@ impl AgentPanel {
             .is_some();
 
         let workspace = self.workspace.clone();
+        let agent_menu_label =
+            agent_panel_session_label(paths::APP_NAME, "Toggle Agent Menu", "Agent Options");
 
         PopoverMenu::new("agent-options-menu")
             .trigger_with_tooltip(
                 IconButton::new("agent-options-menu", IconName::Ellipsis)
-                    .icon_size(IconSize::Small),
+                    .icon_size(IconSize::Small)
+                    .aria_label(agent_menu_label),
                 move |_window, cx| {
-                    Tooltip::for_action_in(
-                        "Toggle Agent Menu",
-                        &ToggleOptionsMenu,
-                        &focus_handle,
-                        cx,
-                    )
+                    Tooltip::for_action_in(agent_menu_label, &ToggleOptionsMenu, &focus_handle, cx)
                 },
             )
             .anchor(Anchor::TopRight)
@@ -6557,6 +6560,7 @@ impl AgentPanel {
         };
         let full_screen_button = IconButton::new(icon_id, icon_name)
             .icon_size(IconSize::Small)
+            .aria_label(tooltip_text)
             .tooltip(move |_, cx| Tooltip::for_action(tooltip_text, &ToggleZoom, cx))
             .on_click(cx.listener(move |this, _, window, cx| {
                 this.toggle_zoom(&ToggleZoom, window, cx);
@@ -6585,18 +6589,20 @@ impl AgentPanel {
         });
 
         let toolbar_content = {
+            let new_session_label = agent_panel_session_label(
+                paths::APP_NAME,
+                "New Thread\u{2026}",
+                "New Agent Session\u{2026}",
+            );
             let new_thread_menu = PopoverMenu::new("new_thread_menu")
                 .trigger_with_tooltip(
                     IconButton::new("new_thread_menu_btn", IconName::Plus)
-                        .icon_size(IconSize::Small),
+                        .icon_size(IconSize::Small)
+                        .aria_label(new_session_label),
                     {
                         move |_window, cx| {
                             Tooltip::for_action_in(
-                                agent_panel_session_label(
-                                    paths::APP_NAME,
-                                    "New Thread\u{2026}",
-                                    "New Agent Session\u{2026}",
-                                ),
+                                new_session_label,
                                 &ToggleNewThreadMenu,
                                 &focus_handle,
                                 cx,
