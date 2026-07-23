@@ -595,6 +595,12 @@ require_multiline_pattern crates/settings_ui/src/page_data.rs \
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn terminal_session_init_setting_visible\(app_name: &str\) -> bool \{[[:space:]]*app_name == "Zed".*?if terminal_session_init_setting_visible\(paths::APP_NAME\).*?Some\("agent\.terminal_init_command"\)' \
     'Dez Settings can regress to exposing the legacy Agent-Panel terminal startup control even though Main Work Area terminals do not consume it'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'fn workspace_surface_setting_path_visible.*?"project_panel\.dock".*?"outline_panel\.dock".*?"git_panel\.dock".*?"agent\.dock".*?"agent\.default_height".*?fn panels_page.*?"Outline Panel",[[:space:]]*"Outline".*?"Git Panel",[[:space:]]*"Git".*?"Agent Panel",[[:space:]]*"Agent".*?title: workspace_surface_copy\(paths::APP_NAME, "Panels", "Workspace Tools & Agent"\)' \
+    'Dez Settings can regress to exposing dock-only controls or inherited Panel hierarchy instead of Workspace Tools and Agent'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    '"Agent Panel Font",[[:space:]]*"Agent Typography".*?"Outline Panel Button",[[:space:]]*"Outline Control".*?"Git Panel Button",[[:space:]]*"Git Control".*?"Agent Panel Button",[[:space:]]*"Agent Control"' \
+    'Dez Settings can regress to Panel terminology in retained typography and status controls'
 require_pattern crates/sidebar/src/sidebar.rs \
     'session_overview_visible\(show_start_state\)' \
     'the empty Session Rail can regress to duplicating its creation action'

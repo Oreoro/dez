@@ -131,6 +131,50 @@ fn terminal_session_init_setting_visible(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn workspace_surface_copy(
+    app_name: &str,
+    upstream_panel_copy: &'static str,
+    dez_surface_copy: &'static str,
+) -> &'static str {
+    if app_name == "Zed" {
+        upstream_panel_copy
+    } else {
+        dez_surface_copy
+    }
+}
+
+fn workspace_surface_setting_path_visible(app_name: &str, json_path: Option<&str>) -> bool {
+    if app_name == "Zed" {
+        return true;
+    }
+
+    !matches!(
+        json_path,
+        Some(
+            "project_panel.dock"
+                | "project_panel.default_width"
+                | "outline_panel.dock"
+                | "outline_panel.default_width"
+                | "git_panel.dock"
+                | "git_panel.default_width"
+                | "agent.dock"
+                | "agent.flexible"
+                | "agent.default_width"
+                | "agent.default_height"
+        )
+    )
+}
+
+fn workspace_surface_setting_visible(app_name: &str, item: &SettingsPageItem) -> bool {
+    let json_path = match item {
+        SettingsPageItem::SettingItem(setting) => setting.field.json_path(),
+        SettingsPageItem::DynamicItem(setting) => setting.discriminant.field.json_path(),
+        _ => None,
+    };
+
+    workspace_surface_setting_path_visible(app_name, json_path)
+}
+
 fn developer_page(cx: &App) -> SettingsPage {
     use feature_flags::FeatureFlagAppExt as _;
 
@@ -1213,10 +1257,18 @@ fn appearance_page() -> SettingsPage {
 
     fn agent_panel_font_section() -> [SettingsPageItem; 3] {
         [
-            SettingsPageItem::SectionHeader("Agent Panel Font"),
+            SettingsPageItem::SectionHeader(workspace_surface_copy(
+                paths::APP_NAME,
+                "Agent Panel Font",
+                "Agent Typography",
+            )),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "UI Font Size",
-                description: "Font size for agent response text in the agent panel. Falls back to the regular UI font size.",
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Font size for agent response text in the agent panel. Falls back to the regular UI font size.",
+                    "Font size for Agent responses. Falls back to the regular UI font size.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("agent_ui_font_size"),
@@ -1236,7 +1288,11 @@ fn appearance_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Buffer Font Size",
-                description: "Font size for user messages text in the agent panel.",
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Font size for user messages text in the agent panel.",
+                    "Font size for your messages in Agent Sessions.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("agent_buffer_font_size"),
@@ -5161,7 +5217,7 @@ fn window_and_layout_page() -> SettingsPage {
 }
 
 fn panels_page() -> SettingsPage {
-    fn project_panel_section() -> [SettingsPageItem; 29] {
+    fn project_panel_section() -> Vec<SettingsPageItem> {
         fn files_copy(project_panel_copy: &'static str, files_copy: &'static str) -> &'static str {
             if paths::APP_NAME == "Zed" {
                 project_panel_copy
@@ -5890,14 +5946,29 @@ fn panels_page() -> SettingsPage {
                 files: USER,
             }),
         ]
+        .into_iter()
+        .filter(|item| workspace_surface_setting_visible(paths::APP_NAME, item))
+        .collect()
     }
 
-    fn outline_panel_section() -> [SettingsPageItem; 11] {
+    fn outline_panel_section() -> Vec<SettingsPageItem> {
         [
-            SettingsPageItem::SectionHeader("Outline Panel"),
+            SettingsPageItem::SectionHeader(workspace_surface_copy(
+                paths::APP_NAME,
+                "Outline Panel",
+                "Outline",
+            )),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Outline Panel Button",
-                description: "Show the outline panel button in the status bar.",
+                title: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Outline Panel Button",
+                    "Outline Control",
+                ),
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Show the outline panel button in the status bar.",
+                    "Show the Outline control in Workspace status.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("outline_panel.button"),
@@ -5953,7 +6024,11 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "File Icons",
-                description: "Show file icons in the outline panel.",
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Show file icons in the outline panel.",
+                    "Show file icons in Outline.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("outline_panel.file_icons"),
@@ -5972,7 +6047,11 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Folder Icons",
-                description: "Whether to show folder icons or chevrons for directories in the outline panel.",
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Whether to show folder icons or chevrons for directories in the outline panel.",
+                    "Whether Outline shows folder icons or chevrons for directories.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("outline_panel.folder_icons"),
@@ -5995,7 +6074,11 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Git Status",
-                description: "Show the Git status in the outline panel.",
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Show the Git status in the outline panel.",
+                    "Show Git status in Outline.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("outline_panel.git_status"),
@@ -6084,7 +6167,11 @@ fn panels_page() -> SettingsPage {
             SettingsPageItem::SettingItem(SettingItem {
                 files: USER,
                 title: "Show Indent Guides",
-                description: "When to show indent guides in the outline panel.",
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "When to show indent guides in the outline panel.",
+                    "When to show indent guides in Outline.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("outline_panel.indent_guides.show"),
@@ -6109,14 +6196,29 @@ fn panels_page() -> SettingsPage {
                 metadata: None,
             }),
         ]
+        .into_iter()
+        .filter(|item| workspace_surface_setting_visible(paths::APP_NAME, item))
+        .collect()
     }
 
-    fn git_panel_section() -> [SettingsPageItem; 17] {
+    fn git_panel_section() -> Vec<SettingsPageItem> {
         [
-            SettingsPageItem::SectionHeader("Git Panel"),
+            SettingsPageItem::SectionHeader(workspace_surface_copy(
+                paths::APP_NAME,
+                "Git Panel",
+                "Git",
+            )),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Git Panel Button",
-                description: "Show the Git panel button in the status bar.",
+                title: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Git Panel Button",
+                    "Git Control",
+                ),
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Show the Git panel button in the status bar.",
+                    "Show the Git control in Workspace status.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("git_panel.button"),
@@ -6162,7 +6264,11 @@ fn panels_page() -> SettingsPage {
                 files: USER,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Git Panel Status Style",
+                title: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Git Panel Status Style",
+                    "Status Style",
+                ),
                 description: "How entry statuses are displayed.",
                 field: Box::new(SettingField {
                     organization_override: None,
@@ -6205,7 +6311,11 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Sort By",
-                description: "How to sort entries in the git panel.",
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "How to sort entries in the git panel.",
+                    "How to sort entries in Git.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("git_panel.sort_by"),
@@ -6219,7 +6329,11 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Group By",
-                description: "How to group entries in the git panel.",
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "How to group entries in the git panel.",
+                    "How to group entries in Git.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("git_panel.group_by"),
@@ -6233,7 +6347,11 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Collapse Untracked Diff",
-                description: "Whether to collapse untracked files in the diff panel.",
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Whether to collapse untracked files in the diff panel.",
+                    "Whether to collapse untracked files in Git diffs.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("git_panel.collapse_untracked_diff"),
@@ -6291,7 +6409,11 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Folder Icons",
-                description: "Whether to show folder icons or chevrons for directories in the git panel.",
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Whether to show folder icons or chevrons for directories in the git panel.",
+                    "Whether Git shows folder icons or chevrons for directories.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("git_panel.folder_icons"),
@@ -6310,7 +6432,11 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Diff Stats",
-                description: "Whether to show the addition/deletion change count next to each file in the Git panel.",
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Whether to show the addition/deletion change count next to each file in the Git panel.",
+                    "Whether to show added and deleted line counts beside each changed file.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("git_panel.diff_stats"),
@@ -6329,7 +6455,11 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Primary Click Behavior",
-                description: "Default action when clicking a changed file in the Git panel.",
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Default action when clicking a changed file in the Git panel.",
+                    "Default action when clicking a changed file in Git.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("git_panel.entry_primary_click_action"),
@@ -6352,7 +6482,11 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Count Badge",
-                description: "Whether to show a badge on the git panel icon with the count of uncommitted changes.",
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Whether to show a badge on the git panel icon with the count of uncommitted changes.",
+                    "Whether the Git control shows the number of uncommitted changes.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("git_panel.show_count_badge"),
@@ -6426,6 +6560,9 @@ fn panels_page() -> SettingsPage {
                 files: USER,
             }),
         ]
+        .into_iter()
+        .filter(|item| workspace_surface_setting_visible(paths::APP_NAME, item))
+        .collect()
     }
 
     fn collaboration_panel_section() -> Vec<SettingsPageItem> {
@@ -6503,12 +6640,24 @@ fn panels_page() -> SettingsPage {
         ]
     }
 
-    fn agent_panel_section() -> [SettingsPageItem; 7] {
+    fn agent_panel_section() -> Vec<SettingsPageItem> {
         [
-            SettingsPageItem::SectionHeader("Agent Panel"),
+            SettingsPageItem::SectionHeader(workspace_surface_copy(
+                paths::APP_NAME,
+                "Agent Panel",
+                "Agent",
+            )),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Agent Panel Button",
-                description: "Whether to show the agent panel button in the status bar.",
+                title: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Agent Panel Button",
+                    "Agent Control",
+                ),
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Whether to show the agent panel button in the status bar.",
+                    "Whether to show the Agent control in Workspace status.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("agent.button"),
@@ -6587,7 +6736,11 @@ fn panels_page() -> SettingsPage {
                 discriminant: SettingItem {
                     files: USER,
                     title: "Limit Content Width",
-                    description: "Whether to constrain the agent panel content to a maximum width, centering it when the panel is wider, for optimal readability.",
+                    description: workspace_surface_copy(
+                        paths::APP_NAME,
+                        "Whether to constrain the agent panel content to a maximum width, centering it when the panel is wider, for optimal readability.",
+                        "Whether to constrain Agent content to a centered maximum width for comfortable reading.",
+                    ),
                     field: Box::new(SettingField::<bool> {
                         organization_override: None,
                         json_path: Some("agent.limit_content_width"),
@@ -6620,7 +6773,11 @@ fn panels_page() -> SettingsPage {
                     vec![SettingItem {
                         files: USER,
                         title: "Max Content Width",
-                        description: "Maximum content width in pixels. Content will be centered when the panel is wider than this value.",
+                        description: workspace_surface_copy(
+                            paths::APP_NAME,
+                            "Maximum content width in pixels. Content will be centered when the panel is wider than this value.",
+                            "Maximum Agent content width in pixels. Wider Agent regions center the content.",
+                        ),
                         field: Box::new(SettingField {
                             organization_override: None,
                             json_path: Some("agent.max_content_width"),
@@ -6639,10 +6796,13 @@ fn panels_page() -> SettingsPage {
                 ],
             }),
         ]
+        .into_iter()
+        .filter(|item| workspace_surface_setting_visible(paths::APP_NAME, item))
+        .collect()
     }
 
     SettingsPage {
-        title: "Panels",
+        title: workspace_surface_copy(paths::APP_NAME, "Panels", "Workspace Tools & Agent"),
         items: concat_sections![
             project_panel_section(),
             outline_panel_section(),
@@ -11232,6 +11392,53 @@ mod tests {
             terminal_session_init_setting_copy("Zed").0,
             "Terminal Thread Init Command"
         );
+    }
+
+    #[test]
+    fn dez_settings_present_workspace_tools_and_hide_dock_only_controls() {
+        assert_eq!(
+            workspace_surface_copy("Dez", "Panels", "Workspace Tools & Agent"),
+            "Workspace Tools & Agent"
+        );
+        assert_eq!(
+            workspace_surface_copy("Zed", "Panels", "Workspace Tools & Agent"),
+            "Panels"
+        );
+
+        for dock_only_path in [
+            "project_panel.dock",
+            "project_panel.default_width",
+            "outline_panel.dock",
+            "outline_panel.default_width",
+            "git_panel.dock",
+            "git_panel.default_width",
+            "agent.dock",
+            "agent.flexible",
+            "agent.default_width",
+            "agent.default_height",
+        ] {
+            assert!(!workspace_surface_setting_path_visible(
+                "Dez",
+                Some(dock_only_path)
+            ));
+            assert!(workspace_surface_setting_path_visible(
+                "Zed",
+                Some(dock_only_path)
+            ));
+        }
+
+        for live_surface_path in [
+            "project_panel.file_icons",
+            "outline_panel.button",
+            "git_panel.button",
+            "agent.button",
+            "agent.limit_content_width",
+        ] {
+            assert!(workspace_surface_setting_path_visible(
+                "Dez",
+                Some(live_surface_path)
+            ));
+        }
     }
 
     #[test]
