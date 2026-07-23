@@ -1286,7 +1286,10 @@ the later running-app reports, the source advanced through:
   and
 - `03daa99d53`, which replaces the centered generic Outline placeholder with a
   top-aligned, accessible four-state explanation, a labeled filter, and a
-  direct **Clear Filter** recovery action while preserving official Zed.
+  direct **Clear Filter** recovery action while preserving official Zed; and
+- `f883f2f8a0`, which presents a clean Git repository as a top-aligned positive
+  status, names its active branch, and offers an explained **Review Branch
+  Changes** action only where a base-branch comparison is relevant.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

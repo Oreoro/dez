@@ -538,3 +538,9 @@ defer it.
   immediate—for example **Clear Filter**—and the state is a named accessibility
   status near the top of the region rather than decoration floating in dead
   space.
+- **2026-07-23: A clean Git repository is a positive state.** Git presents
+  **Working tree clean** with the active branch, not an error-like “nothing”
+  sentence. On a feature branch it offers **Review Branch Changes** and names
+  the base-branch comparison; on `main` or `master` it does not advertise an
+  irrelevant comparison. The state follows the same compact top-aligned
+  Workspace Tool hierarchy.

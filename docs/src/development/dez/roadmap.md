@@ -2394,6 +2394,20 @@ Completed for the Outline empty/search-state slice:
   locked offline Cargo metadata, and `git diff --check`;
 - no build, test binary, alternate binary, or visual launch was performed.
 
+Completed for the clean Git-state slice:
+
+- replaced the centered generic sentence with a top-aligned, success-marked
+  **Working tree clean** status;
+- included the active branch in the clean-state explanation;
+- limited branch comparison to non-main branches;
+- renamed **View Branch Diff** to the intent-oriented **Review Branch Changes**
+  in Dez and explained its base-branch comparison;
+- preserved official Zed's upstream clean-state presentation;
+- added pure branch-copy assertions and a static identity guard;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
 Completed for the first helper-process source slice:
 
 - new crate instructions and a rollbackable `dez_terminal_host` workspace

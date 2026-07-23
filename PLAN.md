@@ -2232,3 +2232,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   assertions and an identity guard protect the complete state matrix.
   Formatting, Bash syntax, identity, locked offline metadata, and diff checks
   pass; no build, test binary, or visual launch was performed.
+- 2026-07-23: Replaced Git's centered **No changes to commit** placeholder with
+  an inspectable clean-repository state in `f883f2f8a0`. Dez now presents a
+  success-marked **Working tree clean** status, names the current branch in its
+  explanation, and only offers **Review Branch Changes** on non-main branches.
+  That full-width action explains that it compares committed work with the base
+  branch. The state is top-aligned and accessible; official Zed retains its
+  upstream presentation. Pure branch-copy assertions and an identity guard
+  protect the contract. Formatting, Bash syntax, identity, locked offline
+  metadata, and diff checks pass; no build, test binary, or visual launch was
+  performed.
