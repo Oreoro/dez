@@ -576,6 +576,12 @@ code, all launch gates pass, and known limitations are documented.
       over cwd prefix inference. Compatibility, Host-model, and integrated
       same-cwd/two-Workspace tests are authored; compiled detach/reattach proof
       remains in the consolidated gate.
+- [x] 2026-07-23: Add direct Workspace evidence isolation proof. Commit
+      `6f2061d2c7` covers live terminal cwd evidence in two same-path Workspace
+      entities and selected-evidence persistence in two durable Workspaces.
+      Records remain distinct, and clearing one Workspace leaves the other
+      unchanged. Formatting, diff, and identity checks pass; focused tests are
+      authored and await the consolidated compile gate.
 - [x] 2026-07-22: Feed live terminal cwd changes into Workspace evidence. Each
       record carries stable terminal-Session provenance, root refreshes preserve
       it, and Run Briefs include only cwd evidence owned by their terminal so
@@ -936,6 +942,10 @@ code, all launch gates pass, and known limitations are documented.
       Sessions an optional durable Workspace owner, with legacy cwd fallback
       only when ownership is absent. Focused tests are authored; compiled
       runtime proof remains deferred.
+- [x] 2026-07-23: Prove live and persisted evidence isolation between two
+      Workspaces. Commit `6f2061d2c7` asserts same-path Session records remain
+      distinct and database-backed selections cannot be cleared across
+      Workspace IDs. Formatting, diff, and identity checks pass.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

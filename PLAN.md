@@ -240,7 +240,9 @@ restoration; opening or closing a viewport does not change durable ownership.
       carry an additive durable Workspace ID; TerminalView associates both the
       in-process and helper Host Session, and Session Rail resolves that owner
       before conservative cwd fallback. The broader tool-by-tool scope audit
-      remains.
+      remains. Focused live same-path terminal evidence and two-Workspace
+      selected-evidence persistence tests now prove one Workspace's mutation or
+      clear cannot change the other.
 - [ ] Move eligible panel-only tools into ordinary pane Surfaces while keeping
       familiar toggles and dock layouts.
 - [ ] Prove Surfaces can move across panes and Workspaces without global root,
@@ -1156,3 +1158,9 @@ Notes decision:
   to unknown ownership and retain the conservative fallback. Model,
   compatibility, and integrated same-cwd/two-Workspace tests are authored;
   formatting, diff, and identity checks pass. No bundle was built or launched.
+- 2026-07-23: Added focused live and persisted Workspace evidence isolation
+  proof in `6f2061d2c7`. Two same-path Workspace entities retain different
+  Session cwd records and identities; two durable Workspaces retain independent
+  selected paths, and clearing one does not mutate the other. Tests are
+  authored; formatting, diff, and identity checks pass. No bundle was built or
+  launched.
