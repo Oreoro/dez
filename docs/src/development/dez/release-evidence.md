@@ -1187,7 +1187,10 @@ the later running-app reports, the source advanced through:
   labels; and
 - `38524c9c01`, which makes the Session Rail/main-work-area boundary explicit
   in the first-use state, exposes Workspace scanning as an accessible status,
-  and makes automatic trust name its folder and developer-service scope.
+  and makes automatic trust name its folder and developer-service scope; and
+- `ff63d573ba`, which names the editor destination **Files** and preserves
+  **Canvas Layout** as the Dez layout concept without exposing compatibility
+  Project Panel or dock-backed Panel terminology.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

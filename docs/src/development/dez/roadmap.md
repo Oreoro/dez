@@ -1722,6 +1722,13 @@ code, all launch gates pass, and known limitations are documented.
       Official Zed retains its Project terminology. Formatting, locked offline
       metadata, identity, and diff checks pass; compilation and rendered
       first-use proof remain deferred.
+- [x] 2026-07-23: Remove remaining visible Panel implementation terminology.
+      Commit `ff63d573ba` changes editor file actions to **Reveal in Files** and
+      keeps the Workspace layout menu named **Canvas Layout** in Dez even when
+      a compatibility setting uses dock-backed panels. Official Zed retains its
+      Project Panel and Panel Layout labels. Pure copy assertions, formatting,
+      locked offline metadata, identity, and diff checks pass; compilation and
+      rendered menu proof remain deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

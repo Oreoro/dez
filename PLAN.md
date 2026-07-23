@@ -1978,3 +1978,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   language servers, and configured tools it enables. Official Zed retains its
   Project copy. Formatting, locked offline metadata, identity, and diff checks
   pass; compilation and rendered first-use proof remain deferred.
+- 2026-07-23: Removed two remaining leaks of panel implementation terminology
+  in `ff63d573ba`. Editor file actions now say **Reveal in Files**, and the Dez
+  layout menu remains **Canvas Layout** even if compatibility settings route
+  tools through dock-backed panels. Official Zed retains **Reveal In Project
+  Panel** and **Panel Layout** where appropriate. Pure copy assertions,
+  formatting, locked offline metadata, identity, and diff checks pass;
+  compilation and rendered menu proof remain deferred.
