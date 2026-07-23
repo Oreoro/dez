@@ -139,6 +139,7 @@ gpui::actions!(
 
 const DEFAULT_WIDTH: Pixels = px(300.0);
 const COMPACT_MAX_WIDTH: Pixels = px(280.0);
+const UTILITY_LABELS_MIN_WIDTH: Pixels = px(280.0);
 const DETAILED_MIN_WIDTH: Pixels = px(380.0);
 const SUPPLEMENTAL_METADATA_MIN_WIDTH: Pixels = px(440.0);
 const MIN_WIDTH: Pixels = px(240.0);
@@ -288,6 +289,10 @@ fn session_rail_recency_visible(width: Pixels, has_priority_metadata: bool) -> b
 
 fn session_rail_supplemental_metadata_visible(width: Pixels) -> bool {
     width >= SUPPLEMENTAL_METADATA_MIN_WIDTH
+}
+
+fn session_rail_utility_labels_visible(width: Pixels) -> bool {
+    width >= UTILITY_LABELS_MIN_WIDTH
 }
 
 fn session_row_actions_visible(is_hovered: bool, is_focused: bool, is_renaming: bool) -> bool {
@@ -1114,6 +1119,13 @@ mod session_row_action_tests {
         assert!(session_row_actions_visible(false, true, false));
         assert!(!session_row_actions_visible(false, false, false));
         assert!(!session_row_actions_visible(true, true, true));
+    }
+
+    #[test]
+    fn default_compact_rail_keeps_utility_labels() {
+        assert!(session_rail_utility_labels_visible(COMPACT_MAX_WIDTH));
+        assert!(session_rail_utility_labels_visible(px(280.0)));
+        assert!(!session_rail_utility_labels_visible(px(279.0)));
     }
 }
 
@@ -12373,7 +12385,7 @@ impl Sidebar {
         };
         let on_right = self.side(cx) == SidebarSide::Right;
         let rail_width = SessionRailSettings::get_global(cx).width(self.width);
-        let labels_visible = !session_rail_row_is_compact(rail_width);
+        let labels_visible = session_rail_utility_labels_visible(rail_width);
 
         v_flex()
             .p_1()

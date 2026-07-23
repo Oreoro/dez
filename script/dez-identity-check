@@ -302,8 +302,8 @@ reject_pattern crates/sidebar/src/sidebar.rs \
     '\.actor_label\("Terminal Session"\)' \
     'plain terminal rows can regress to repeating their type as a fake actor label'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn render_sidebar_bottom_bar.*?let labels_visible = !session_rail_row_is_compact.*?Button::new\("history", if labels_visible \{ "History" \} else \{ "" \}\)' \
-    'the Session Rail footer can regress to unexplained icon-only utilities at normal widths'
+    'const COMPACT_MAX_WIDTH: Pixels = px\(280\.0\).*?const UTILITY_LABELS_MIN_WIDTH: Pixels = px\(280\.0\).*?fn session_rail_utility_labels_visible.*?width >= UTILITY_LABELS_MIN_WIDTH.*?fn render_sidebar_bottom_bar.*?let labels_visible = session_rail_utility_labels_visible\(rail_width\).*?Button::new\("history", if labels_visible \{ "History" \} else \{ "" \}\)' \
+    'the default compact Session Rail footer can regress to unexplained icon-only utilities'
 require_pattern crates/sidebar/src/sidebar.rs \
     'if labels_visible \{ "Agent Tools" \} else \{ "" \}' \
     'the Session Rail settings utility can regress to an unexplained glyph'
