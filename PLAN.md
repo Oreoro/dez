@@ -1717,3 +1717,11 @@ Notes decision:
   instead of rendering an unexplained status-only tab. Official Zed retains
   Project labels. Focused pure assertions, formatting, locked offline metadata,
   identity, and diff checks pass; rendered destination proof remains deferred.
+- 2026-07-23: Removed the clipped shortcut-badge failure mode from the empty
+  Workspace launcher in `281b6e22c9`. **New Terminal**, **Find File**, and
+  **New File** remain full-width actions with unchanged dispatch and keymaps,
+  but shortcut discovery now lives in each action tooltip instead of competing
+  with the label inside the constrained button width. Explicit accessible names
+  preserve keyboard and assistive-technology clarity. Formatting, locked
+  offline metadata, identity, and diff checks pass; rendered narrow-width proof
+  remains deferred.

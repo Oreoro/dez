@@ -1073,7 +1073,10 @@ the later running-app reports, the source advanced through:
   icon-only row and toolbar actions; and
 - `ce770c5eee`, which keeps Workspace Search scoped to the Workspace after it
   opens and makes the Workspace Diagnostics tab retain its identity alongside
-  check/error/warning status.
+  check/error/warning status; and
+- `281b6e22c9`, which removes inline shortcut keycaps from constrained empty
+  Workspace launch buttons while preserving their keymaps in tooltips and
+  explicit accessible names.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

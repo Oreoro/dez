@@ -1450,6 +1450,13 @@ code, all launch gates pass, and known limitations are documented.
       status-only tab. Official Zed retains Project labels. Focused pure
       assertions, formatting, locked offline metadata, and static identity
       guards pass; compilation and rendered destination proof remain deferred.
+- [x] 2026-07-23: Prevent clipped shortcut badges in the empty Workspace
+      launcher. Commit `281b6e22c9` keeps **New Terminal**, **Find File**, and
+      **New File** as full-width actions but moves shortcut discovery from
+      inline end slots into action tooltips, preserving the same keymaps and
+      dispatch. Explicit accessible names cover all three actions. Formatting,
+      locked offline metadata, and static identity guards pass; compilation and
+      rendered narrow-width proof remain deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
