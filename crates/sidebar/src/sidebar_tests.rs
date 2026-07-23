@@ -87,6 +87,14 @@ fn compact_session_rows_prioritize_actions_and_evidence_over_recency() {
         session_rail_recency_visible(DETAILED_MIN_WIDTH, true),
         "detailed rows have enough room for evidence and recency"
     );
+    assert!(
+        !session_rail_supplemental_metadata_visible(DETAILED_MIN_WIDTH),
+        "the minimum detailed rail must not crowd rows with host and worktree metadata"
+    );
+    assert!(
+        session_rail_supplemental_metadata_visible(SUPPLEMENTAL_METADATA_MIN_WIDTH),
+        "wide rails can restore ownership and worktree context"
+    );
 }
 
 #[test]

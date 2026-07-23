@@ -94,8 +94,10 @@ pub struct ThreadItem {
     project_paths: Option<Arc<[PathBuf]>>,
     project_name: Option<SharedString>,
     actor_label: Option<SharedString>,
+    actor_label_visible: bool,
     state_label: Option<SharedString>,
     host_label: Option<SharedString>,
+    host_label_visible: bool,
     evidence_label: Option<SharedString>,
     evidence_status: ThreadItemEvidenceStatus,
     worktrees: Vec<ThreadItemWorktreeInfo>,
@@ -138,8 +140,10 @@ impl ThreadItem {
             project_paths: None,
             project_name: None,
             actor_label: None,
+            actor_label_visible: true,
             state_label: None,
             host_label: None,
+            host_label_visible: true,
             evidence_label: None,
             evidence_status: ThreadItemEvidenceStatus::default(),
             worktrees: Vec::new(),
@@ -249,6 +253,11 @@ impl ThreadItem {
         self
     }
 
+    pub fn actor_label_visible(mut self, visible: bool) -> Self {
+        self.actor_label_visible = visible;
+        self
+    }
+
     pub fn state_label(mut self, label: impl Into<SharedString>) -> Self {
         self.state_label = Some(label.into());
         self
@@ -256,6 +265,11 @@ impl ThreadItem {
 
     pub fn host_label(mut self, label: impl Into<SharedString>) -> Self {
         self.host_label = Some(label.into());
+        self
+    }
+
+    pub fn host_label_visible(mut self, visible: bool) -> Self {
+        self.host_label_visible = visible;
         self
     }
 
@@ -631,8 +645,10 @@ impl RenderOnce for ThreadItem {
 
         let has_project_name = self.project_name.is_some();
         let has_actor_label = self.actor_label.is_some();
+        let has_visible_actor_label = has_actor_label && self.actor_label_visible;
         let has_state_label = self.state_label.is_some();
         let has_host_label = self.host_label.is_some();
+        let has_visible_host_label = has_host_label && self.host_label_visible;
         let has_evidence_label = self.evidence_label.is_some();
         let has_project_paths = project_paths.is_some();
         let has_timestamp = !self.timestamp.is_empty();
@@ -651,9 +667,9 @@ impl RenderOnce for ThreadItem {
 
         let labels_visible = self.labels_visible;
         let has_metadata = labels_visible
-            && (has_actor_label
+            && (has_visible_actor_label
                 || has_state_label
-                || has_host_label
+                || has_visible_host_label
                 || has_evidence_label
                 || has_project_name
                 || has_project_paths
@@ -752,13 +768,15 @@ impl RenderOnce for ThreadItem {
                                             .color(Color::Muted),
                                     )
                                 })
-                                .when_some(self.actor_label, |this, actor| {
-                                    this.child(
-                                        Label::new(actor)
-                                            .size(LabelSize::XSmall)
-                                            .color(Color::Muted)
-                                            .truncate(),
-                                    )
+                                .when(self.actor_label_visible, |this| {
+                                    this.when_some(self.actor_label, |this, actor| {
+                                        this.child(
+                                            Label::new(actor)
+                                                .size(LabelSize::XSmall)
+                                                .color(Color::Muted)
+                                                .truncate(),
+                                        )
+                                    })
                                 })
                                 .when_some(self.state_label, |this, state| {
                                     this.child(
@@ -778,23 +796,25 @@ impl RenderOnce for ThreadItem {
                                             ),
                                     )
                                 })
-                                .when_some(self.host_label, |this, host| {
-                                    this.child(
-                                        h_flex()
-                                            .min_w_0()
-                                            .gap_0p5()
-                                            .child(
-                                                Icon::new(IconName::Server)
-                                                    .size(IconSize::XSmall)
-                                                    .color(Color::Muted),
-                                            )
-                                            .child(
-                                                Label::new(host)
-                                                    .size(LabelSize::XSmall)
-                                                    .color(Color::Muted)
-                                                    .truncate(),
-                                            ),
-                                    )
+                                .when(self.host_label_visible, |this| {
+                                    this.when_some(self.host_label, |this, host| {
+                                        this.child(
+                                            h_flex()
+                                                .min_w_0()
+                                                .gap_0p5()
+                                                .child(
+                                                    Icon::new(IconName::Server)
+                                                        .size(IconSize::XSmall)
+                                                        .color(Color::Muted),
+                                                )
+                                                .child(
+                                                    Label::new(host)
+                                                        .size(LabelSize::XSmall)
+                                                        .color(Color::Muted)
+                                                        .truncate(),
+                                                ),
+                                        )
+                                    })
                                 })
                                 .when_some(self.project_name, |this, name| {
                                     this.child(

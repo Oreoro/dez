@@ -413,6 +413,12 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_rail_row_is_compact.*?width < DETAILED_MIN_WIDTH.*?fn session_rail_recency_visible' \
     'compact Session rows do not have an explicit metadata hierarchy'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'SUPPLEMENTAL_METADATA_MIN_WIDTH.*?fn session_rail_supplemental_metadata_visible.*?show_worktree_metadata && supplemental_metadata_visible.*?actor_label_visible\(supplemental_metadata_visible\).*?host_label_visible\(supplemental_metadata_visible\)' \
+    'narrow Session rows can regress to crowding primary state with actor, host, and worktree detail'
+require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
+    'actor_label_visible: bool.*?host_label_visible: bool.*?pub fn actor_label_visible.*?pub fn host_label_visible.*?has_visible_actor_label.*?has_visible_host_label.*?when\(self\.actor_label_visible.*?when\(self\.host_label_visible' \
+    'hidden Session ownership context can regress to disappearing from accessibility and tooltips'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
     '\.when\(!compact_row.*?rename_button.*?\.when\(!compact_row && has_changes' \
     'compact native-agent rows can regress to covering titles with secondary actions'
 require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \

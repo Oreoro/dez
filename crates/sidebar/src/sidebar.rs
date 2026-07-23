@@ -140,6 +140,7 @@ gpui::actions!(
 const DEFAULT_WIDTH: Pixels = px(300.0);
 const COMPACT_MAX_WIDTH: Pixels = px(280.0);
 const DETAILED_MIN_WIDTH: Pixels = px(380.0);
+const SUPPLEMENTAL_METADATA_MIN_WIDTH: Pixels = px(440.0);
 const MIN_WIDTH: Pixels = px(240.0);
 const MAX_WIDTH: Pixels = px(800.0);
 
@@ -279,6 +280,10 @@ fn session_rail_row_is_compact(width: Pixels) -> bool {
 
 fn session_rail_recency_visible(width: Pixels, has_priority_metadata: bool) -> bool {
     !session_rail_row_is_compact(width) || !has_priority_metadata
+}
+
+fn session_rail_supplemental_metadata_visible(width: Pixels) -> bool {
+    width >= SUPPLEMENTAL_METADATA_MIN_WIDTH
 }
 
 fn session_overview_status_label(
@@ -9610,6 +9615,7 @@ impl Sidebar {
         let session_rail_settings = SessionRailSettings::get_global(cx);
         let rail_width = session_rail_settings.width(self.width);
         let compact_row = session_rail_row_is_compact(rail_width);
+        let supplemental_metadata_visible = session_rail_supplemental_metadata_visible(rail_width);
         let design_system = DesignSystemSettings::get_global(cx);
         let labels_visible = session_rail_labels_visible(&design_system);
         let show_agent_attention =
@@ -9626,14 +9632,15 @@ impl Sidebar {
 
         let is_remote = thread.workspace.is_remote(cx);
 
-        let worktrees = if session_rail_settings.show_worktree_metadata {
-            apply_worktree_label_mode(
-                thread.worktrees.clone(),
-                cx.flag_value::<AgentThreadWorktreeLabelFlag>(),
-            )
-        } else {
-            Vec::new()
-        };
+        let worktrees =
+            if session_rail_settings.show_worktree_metadata && supplemental_metadata_visible {
+                apply_worktree_label_mode(
+                    thread.worktrees.clone(),
+                    cx.flag_value::<AgentThreadWorktreeLabelFlag>(),
+                )
+            } else {
+                Vec::new()
+            };
 
         let (icon, icon_svg) = if is_draft {
             (IconName::Circle, None)
@@ -9678,6 +9685,7 @@ impl Sidebar {
                 .when(session_rail_settings.show_agent_state_metadata, |this| {
                     this.actor_label(actor_label).state_label(state_label)
                 })
+                .actor_label_visible(supplemental_metadata_visible)
                 .is_remote(is_remote)
                 .when_some(icon_svg, |this, svg| {
                     this.custom_icon_from_external_svg(svg)
@@ -10171,15 +10179,17 @@ impl Sidebar {
         let focus_handle = self.focus_handle.clone();
         let session_rail_settings = SessionRailSettings::get_global(cx);
         let rail_width = session_rail_settings.width(self.width);
+        let supplemental_metadata_visible = session_rail_supplemental_metadata_visible(rail_width);
         let has_evidence = evidence_label.is_some();
-        let worktrees = if session_rail_settings.show_worktree_metadata {
-            apply_worktree_label_mode(
-                terminal.worktrees.clone(),
-                cx.flag_value::<AgentThreadWorktreeLabelFlag>(),
-            )
-        } else {
-            Vec::new()
-        };
+        let worktrees =
+            if session_rail_settings.show_worktree_metadata && supplemental_metadata_visible {
+                apply_worktree_label_mode(
+                    terminal.worktrees.clone(),
+                    cx.flag_value::<AgentThreadWorktreeLabelFlag>(),
+                )
+            } else {
+                Vec::new()
+            };
         let is_remote = terminal.workspace.is_remote(cx);
 
         let display_title = terminal.metadata.display_title();
@@ -10265,18 +10275,22 @@ impl Sidebar {
                     )
                 })
                 .when(terminal_agent_kind.is_none(), |this| {
-                    this.actor_label("Terminal Session")
-                        .state_label(terminal_agent_state_label(
-                            terminal.agent.as_ref(),
-                            terminal.runtime.as_ref(),
-                            needs_attention,
-                            attention_is_muted,
-                            false,
-                            false,
-                        ))
+                    this.when(supplemental_metadata_visible, |this| {
+                        this.actor_label("Terminal Session")
+                    })
+                    .state_label(terminal_agent_state_label(
+                        terminal.agent.as_ref(),
+                        terminal.runtime.as_ref(),
+                        needs_attention,
+                        attention_is_muted,
+                        false,
+                        false,
+                    ))
                 })
                 .host_label(host_label)
+                .host_label_visible(supplemental_metadata_visible)
             })
+            .actor_label_visible(supplemental_metadata_visible)
             .worktrees(worktrees)
             .when_some(evidence_label, |this, (label, status)| {
                 this.evidence(label, status)
