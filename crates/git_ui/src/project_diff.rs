@@ -969,10 +969,18 @@ pub(crate) fn render_send_review_to_agent_button(
             .color(Color::Muted),
     )
     .tooltip(Tooltip::for_action_title_in(
-        "Send all review comments to the Agent panel",
+        send_review_to_agent_tooltip(paths::APP_NAME),
         &SendReviewToAgent,
         focus_handle,
     ))
+}
+
+fn send_review_to_agent_tooltip(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Send all review comments to the Agent panel"
+    } else {
+        "Send all review comments to Agent"
+    }
 }
 
 #[cfg(test)]
@@ -1016,6 +1024,18 @@ mod tests {
     use zed_actions::git as git_actions;
 
     use crate::project_diff::{self, ProjectDiff};
+
+    #[test]
+    fn dez_review_handoff_names_agent_without_compatibility_panel() {
+        assert_eq!(
+            send_review_to_agent_tooltip("Dez"),
+            "Send all review comments to Agent"
+        );
+        assert_eq!(
+            send_review_to_agent_tooltip("Zed"),
+            "Send all review comments to the Agent panel"
+        );
+    }
 
     #[test]
     fn test_legacy_branch_diff_rows_migrate_to_their_own_kind() {

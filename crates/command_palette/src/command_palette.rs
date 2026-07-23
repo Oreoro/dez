@@ -960,6 +960,10 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
     for (source, product) in [
         ("zed_actions::", "dez::"),
         ("sidebar::", "session_rail::"),
+        ("agent_panel::", "agent::"),
+        ("debug_panel::", "debug::"),
+        ("git_panel::", "git::"),
+        ("outline_panel::", "outline::"),
         ("project_panel::", "files::"),
         ("project_search::", "workspace_search::"),
         ("project_symbols::", "workspace_symbols::"),
@@ -1113,6 +1117,22 @@ mod tests {
             "files: toggle focus"
         );
         assert_eq!(
+            humanize_action_name_for_product("outline_panel::ToggleFocus", "Dez"),
+            "outline: toggle focus"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("git_panel::ToggleFocus", "Dez"),
+            "git: toggle focus"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("debug_panel::ToggleFocus", "Dez"),
+            "debug: toggle focus"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("agent_panel::ToggleFocus", "Dez"),
+            "agent: toggle focus"
+        );
+        assert_eq!(
             humanize_action_name_for_product("workspace::ToggleProjectPane", "Dez"),
             "workspace tools: toggle"
         );
@@ -1159,6 +1179,10 @@ mod tests {
         assert_eq!(
             humanize_action_name_for_product("project_panel::ToggleFocus", "Zed"),
             "project panel: toggle focus"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("outline_panel::ToggleFocus", "Zed"),
+            "outline panel: toggle focus"
         );
     }
 

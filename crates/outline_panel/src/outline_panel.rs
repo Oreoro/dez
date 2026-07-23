@@ -105,6 +105,15 @@ actions!(
 );
 
 const OUTLINE_PANEL_KEY: &str = "OutlinePanel";
+
+fn outline_toggle_hint(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Toggle Panel With"
+    } else {
+        "Toggle Outline With"
+    }
+}
+
 const UPDATE_DEBOUNCE: Duration = Duration::from_millis(50);
 
 fn canvas_outline_panel_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
@@ -4753,7 +4762,7 @@ impl OutlinePanel {
                     h_flex()
                         .gap_1()
                         .justify_center()
-                        .child(Label::new("Toggle Panel With").color(Color::Muted))
+                        .child(Label::new(outline_toggle_hint(paths::APP_NAME)).color(Color::Muted))
                         .when_some(
                             match self.position(window, cx) {
                                 DockPosition::Left => Some(
@@ -5466,6 +5475,12 @@ mod tests {
     use super::*;
 
     const SELECTED_MARKER: &str = "  <==== selected";
+
+    #[test]
+    fn dez_empty_state_names_outline_instead_of_compatibility_panel() {
+        assert_eq!(outline_toggle_hint("Dez"), "Toggle Outline With");
+        assert_eq!(outline_toggle_hint("Zed"), "Toggle Panel With");
+    }
 
     #[gpui::test(iterations = 10)]
     async fn test_project_search_results_toggling(cx: &mut TestAppContext) {
