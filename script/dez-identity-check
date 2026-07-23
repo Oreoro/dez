@@ -265,6 +265,12 @@ require_pattern crates/sidebar/src/sidebar.rs \
 require_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\("Start a session"\)' \
     'the empty Session Rail funnels terminal-native work into a project-first frame'
+require_multiline_pattern crates/onboarding/src/basics_page.rs \
+    '\.role\(gpui::Role::Region\).*?\.aria_label\("Terminal-first workflow"\)' \
+    'the Dez first-run workflow is not exposed as a named accessibility region'
+require_multiline_pattern crates/onboarding/src/basics_page.rs \
+    'Label::new\(.*?Close hides a view.*?\.flex_wrap\(\).*?Button::new\("onboarding-copy-codex-hook"' \
+    'the first-run safety copy can regress to competing horizontally with its actions'
 require_pattern crates/sidebar/src/sidebar.rs \
     'session_overview_visible\(show_start_state\)' \
     'the empty Session Rail can regress to duplicating its creation action'

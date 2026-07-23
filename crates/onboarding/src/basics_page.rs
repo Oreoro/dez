@@ -267,6 +267,8 @@ fn render_dez_workflow_section(tab_index: &mut isize, cx: &mut App) -> impl Into
     *tab_index += 1;
     let new_terminal_tab_index = *tab_index;
     v_flex()
+        .role(gpui::Role::Region)
+        .aria_label("Terminal-first workflow")
         .w_full()
         .gap_3()
         .p_4()
@@ -288,12 +290,16 @@ fn render_dez_workflow_section(tab_index: &mut isize, cx: &mut App) -> impl Into
         )
         .child(
             div()
+                .role(gpui::Role::List)
+                .aria_label("Terminal workflow steps")
                 .w_full()
                 .grid()
                 .grid_cols(3)
                 .gap_2()
                 .children(steps.into_iter().map(|(icon, title, description)| {
                     v_flex()
+                        .role(gpui::Role::ListItem)
+                        .aria_label(format!("{title}. {description}"))
                         .min_w_0()
                         .gap_1()
                         .p_3()
@@ -318,10 +324,9 @@ fn render_dez_workflow_section(tab_index: &mut isize, cx: &mut App) -> impl Into
                 })),
         )
         .child(
-            h_flex()
+            v_flex()
                 .w_full()
-                .gap_3()
-                .justify_between()
+                .gap_2()
                 .child(
                     Label::new(
                         "Close hides a view. Detach keeps a Host-owned session. Terminate ends the process. Persistence depends on the connected Host. Hooks are never installed automatically.",
@@ -331,12 +336,14 @@ fn render_dez_workflow_section(tab_index: &mut isize, cx: &mut App) -> impl Into
                 )
                 .child(
                     h_flex()
-                        .flex_shrink_0()
+                        .w_full()
                         .flex_wrap()
                         .gap_1()
+                        .justify_end()
                         .child(
                             Button::new("onboarding-copy-codex-hook", "Copy Codex Hook")
                                 .tab_index(copy_hook_tab_index)
+                                .size(ButtonSize::Medium)
                                 .style(ButtonStyle::Outlined)
                                 .start_icon(Icon::new(IconName::Copy).size(IconSize::Small))
                                 .aria_label("Copy Deliberate Codex Hook Setup")
@@ -352,6 +359,7 @@ fn render_dez_workflow_section(tab_index: &mut isize, cx: &mut App) -> impl Into
                         .child(
                             Button::new("onboarding-new-terminal", "New Terminal")
                                 .tab_index(new_terminal_tab_index)
+                                .size(ButtonSize::Medium)
                                 .style(ButtonStyle::Filled)
                                 .start_icon(Icon::new(IconName::Terminal).size(IconSize::Small))
                                 .on_click(|_, window, cx| {
