@@ -1810,6 +1810,18 @@ fn session_rail_default_creation_is_terminal_first() {
 }
 
 #[test]
+fn workspace_header_accessibility_copy_is_state_complete_without_color() {
+    assert_eq!(
+        workspace_header_accessibility_label("dez", false, false, 0),
+        "Workspace dez, ready for a session"
+    );
+    assert_eq!(
+        workspace_header_accessibility_label("dez", true, true, 2),
+        "Workspace dez, running work, 2 sessions need attention"
+    );
+}
+
+#[test]
 fn worktree_menu_accessible_name_preserves_multi_root_scope() {
     let labels = [
         WorkspaceMenuWorktreeLabel {

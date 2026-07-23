@@ -295,6 +295,27 @@ fn session_overview_create_action_visible(session_count: usize) -> bool {
     session_count > 0
 }
 
+fn workspace_header_accessibility_label(
+    workspace_name: &str,
+    has_sessions: bool,
+    has_running_sessions: bool,
+    attention_count: usize,
+) -> String {
+    let mut label = format!("Workspace {workspace_name}");
+    if !has_sessions {
+        label.push_str(", ready for a session");
+    }
+    if has_running_sessions {
+        label.push_str(", running work");
+    }
+    if attention_count == 1 {
+        label.push_str(", 1 session needs attention");
+    } else if attention_count > 1 {
+        label.push_str(&format!(", {attention_count} sessions need attention"));
+    }
+    label
+}
+
 fn merge_unambiguous_branch(
     branches: &mut HashMap<PathBuf, SharedString>,
     ambiguous_paths: &mut HashSet<PathBuf>,
@@ -4396,6 +4417,12 @@ impl Sidebar {
         let id = SharedString::from(format!("{id_prefix}project-header-{ix}"));
         let group_name = SharedString::from(format!("{id_prefix}header-group-{ix}"));
         let workspace_name = label.clone();
+        let workspace_accessibility_label = workspace_header_accessibility_label(
+            workspace_name.as_ref(),
+            has_threads,
+            has_running_threads,
+            attention_thread_count,
+        );
 
         let is_collapsed = self.is_group_collapsed(key, cx);
         let disclosure_icon = if is_collapsed {
@@ -4468,6 +4495,12 @@ impl Sidebar {
 
         let header = h_flex()
             .id(id)
+            .when(!is_sticky, |this| {
+                this.role(gpui::Role::ListItem)
+                    .aria_label(workspace_accessibility_label)
+                    .aria_selected(is_active)
+                    .aria_expanded(!is_collapsed)
+            })
             .group(&group_name)
             .when(!has_filter, |this| this.cursor_pointer())
             .relative()
@@ -12544,6 +12577,8 @@ impl Render for Sidebar {
                                     })
                                     .child(
                                         v_flex()
+                                            .role(gpui::Role::List)
+                                            .aria_label("Workspace Sessions")
                                             .relative()
                                             .flex_1()
                                             .overflow_hidden()
