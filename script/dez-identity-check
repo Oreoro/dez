@@ -436,6 +436,9 @@ require_multiline_pattern crates/settings_ui/src/page_data.rs \
 require_pattern crates/sidebar/src/sidebar.rs \
     'session_overview_visible\(show_start_state\)' \
     'the empty Session Rail can regress to duplicating its creation action'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn create_new_terminal.*?multi_workspace\.activate\(workspace\.clone\(\).*?workspace_focus\.dispatch_action\(&NewCenterTerminal::default\(\)' \
+    'Workspace-scoped Session Rail actions can regress to opening inherited Agent terminal threads instead of main-area terminals'
 require_pattern crates/sidebar/src/sidebar.rs \
     'session_overview_create_action_visible\(self\.contents\.session_count\)' \
     'the zero-session Workspace state can regress to duplicating its creation action'

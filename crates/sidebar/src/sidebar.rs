@@ -11066,14 +11066,8 @@ impl Sidebar {
             multi_workspace.activate(workspace.clone(), None, window, cx);
         });
 
-        workspace.update(cx, |workspace, cx| {
-            if let Some(panel) = workspace.panel::<AgentPanel>(cx) {
-                panel.update(cx, |panel, cx| {
-                    panel.new_terminal(Some(workspace), AgentThreadSource::Sidebar, window, cx);
-                });
-            }
-            workspace.focus_panel::<AgentPanel>(window, cx);
-        });
+        let workspace_focus = workspace.read(cx).focus_handle(cx);
+        workspace_focus.dispatch_action(&NewCenterTerminal::default(), window, cx);
     }
 
     fn selected_group_key(&self) -> Option<ProjectGroupKey> {
