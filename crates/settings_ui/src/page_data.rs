@@ -93,6 +93,14 @@ fn dez_settings_page_visible(app_name: &str, title: &str) -> bool {
     app_name == "Zed" || title != "Collaboration"
 }
 
+fn dez_privacy_setting_visible(app_name: &str, json_path: Option<&str>) -> bool {
+    app_name == "Zed"
+        || !matches!(
+            json_path,
+            Some("telemetry.diagnostics" | "telemetry.metrics")
+        )
+}
+
 fn developer_page(cx: &App) -> SettingsPage {
     use feature_flags::FeatureFlagAppExt as _;
 
@@ -428,7 +436,7 @@ fn general_page(cx: &App) -> SettingsPage {
         ]
     }
 
-    fn privacy_section() -> [SettingsPageItem; 4] {
+    fn privacy_section() -> Vec<SettingsPageItem> {
         [
             SettingsPageItem::SectionHeader("Privacy"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -495,6 +503,17 @@ fn general_page(cx: &App) -> SettingsPage {
                 files: USER,
             }),
         ]
+        .into_iter()
+        .filter(|item| match item {
+            SettingsPageItem::SettingItem(item) => {
+                dez_privacy_setting_visible(paths::APP_NAME, item.field.json_path())
+            }
+            SettingsPageItem::SectionHeader(_)
+            | SettingsPageItem::SubPageLink(_)
+            | SettingsPageItem::DynamicItem(_)
+            | SettingsPageItem::ActionLink(_) => true,
+        })
+        .collect()
     }
 
     fn auto_update_section() -> [SettingsPageItem; 2] {
@@ -11078,6 +11097,23 @@ mod tests {
         assert!(dez_edit_prediction_setting_visible(
             "Zed",
             Some("edit_predictions.allow_data_collection")
+        ));
+
+        assert!(!dez_privacy_setting_visible(
+            "Dez",
+            Some("telemetry.diagnostics")
+        ));
+        assert!(!dez_privacy_setting_visible(
+            "Dez",
+            Some("telemetry.metrics")
+        ));
+        assert!(dez_privacy_setting_visible(
+            "Dez",
+            Some("telemetry.anthropic_retention")
+        ));
+        assert!(dez_privacy_setting_visible(
+            "Zed",
+            Some("telemetry.metrics")
         ));
     }
 

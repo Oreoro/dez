@@ -546,12 +546,17 @@ pub struct TelemetrySettings {
     pub anthropic_retention: bool,
 }
 
+fn upstream_telemetry_uploads_enabled(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 impl settings::Settings for TelemetrySettings {
     fn from_settings(content: &SettingsContent) -> Self {
         let telemetry = content.telemetry.as_ref().unwrap();
+        let uploads_enabled = upstream_telemetry_uploads_enabled(paths::APP_NAME);
         Self {
-            diagnostics: telemetry.diagnostics.unwrap(),
-            metrics: telemetry.metrics.unwrap(),
+            diagnostics: uploads_enabled && telemetry.diagnostics.unwrap(),
+            metrics: uploads_enabled && telemetry.metrics.unwrap(),
             anthropic_retention: telemetry.anthropic_retention.unwrap(),
         }
     }
@@ -2012,6 +2017,12 @@ mod tests {
     use proto::TypedEnvelope;
     use settings::SettingsStore;
     use std::future;
+
+    #[test]
+    fn fork_builds_never_upload_upstream_telemetry() {
+        assert!(upstream_telemetry_uploads_enabled("Zed"));
+        assert!(!upstream_telemetry_uploads_enabled("Dez"));
+    }
 
     #[test]
     fn test_proxy_settings_trims_and_ignores_empty_proxy() {
