@@ -1349,6 +1349,14 @@ code, all launch gates pass, and known limitations are documented.
       authored; compilation and rendered proof remain deferred. Commit
       `dd2459eef9` then bases hosted ownership on the terminal backing type so
       reconnecting Sessions cannot regress to local close terminology.
+- [x] 2026-07-23: Give compact Session Rail rows a deliberate information and
+      action hierarchy. Commit `059656999e` keeps identity, priority evidence,
+      Review Brief, and the contextual lifecycle action in the narrow layout;
+      rename and raw-diff controls remain in the context menu and return inline
+      only when the rail is detailed. Compact rows omit recency when stronger
+      evidence is present, while a wrapping tooltip preserves the complete
+      title and state metadata. Focused pure assertions and the static identity
+      guard cover the responsive contract; rendered proof remains deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

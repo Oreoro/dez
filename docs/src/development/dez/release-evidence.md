@@ -1024,7 +1024,12 @@ the later running-app reports, the source advanced through:
   projects truthful lifecycle text into the tab tooltip and accessibility
   label, calls hosted closure Detach, and keeps termination separate; and
 - `dd2459eef9`, which preserves hosted identity and detach semantics through
-  transient Host registration changes by reading the terminal backing type.
+  transient Host registration changes by reading the terminal backing type;
+  and
+- `059656999e`, which reduces compact Session Rail rows to identity, priority
+  evidence, Review Brief, and the contextual lifecycle action, while preserving
+  full row identity in a wrapping tooltip and moving secondary controls to the
+  context menu.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

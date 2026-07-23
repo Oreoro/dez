@@ -1595,3 +1595,11 @@ Notes decision:
   contains only the expected arm64 app, CLI, Host, and Git executables, and
   passes deep strict ad-hoc signature verification. Runtime launch and fresh
   visual/accessibility evidence remain open.
+- 2026-07-23: Reduced compact Session Rail rows to one legible decision
+  hierarchy in `059656999e`. Narrow rows retain identity, priority evidence,
+  Review Brief, and the contextual lifecycle action; rename and raw-diff
+  controls remain in the context menu and return inline only in the detailed
+  layout. Stronger evidence displaces redundant recency at compact widths, and
+  the full title plus state metadata remains available in a wrapping tooltip.
+  Formatting, static identity checks, and diff checks pass; rendered proof
+  remains deferred by the active no-build gate.
