@@ -81,7 +81,10 @@ impl Render for EditPredictionButton {
 
         let language_settings = all_language_settings(None, cx);
 
-        match language_settings.edit_predictions.provider {
+        match effective_edit_prediction_provider(
+            paths::APP_NAME,
+            language_settings.edit_predictions.provider,
+        ) {
             EditPredictionProvider::Copilot => {
                 let Some(copilot) = EditPredictionStore::try_global(cx)
                     .and_then(|store| store.read(cx).copilot_for_project(&self.project.upgrade()?))
@@ -1461,7 +1464,9 @@ pub fn set_completion_provider(fs: Arc<dyn Fs>, cx: &mut App, provider: EditPred
 pub fn get_available_providers(cx: &mut App) -> Vec<EditPredictionProvider> {
     let mut providers = Vec::new();
 
-    providers.push(EditPredictionProvider::Zed);
+    if paths::APP_NAME == "Zed" {
+        providers.push(EditPredictionProvider::Zed);
+    }
 
     let app_state = workspace::AppState::global(cx);
     if copilot::GlobalCopilotAuth::try_get_or_init(app_state, cx)
@@ -1486,14 +1491,31 @@ pub fn get_available_providers(cx: &mut App) -> Vec<EditPredictionProvider> {
         providers.push(EditPredictionProvider::OpenAiCompatibleApi);
     }
 
-    if edit_prediction::mercury::mercury_api_token(cx)
-        .read(cx)
-        .has_key()
+    if paths::APP_NAME == "Zed"
+        && edit_prediction::mercury::mercury_api_token(cx)
+            .read(cx)
+            .has_key()
     {
         providers.push(EditPredictionProvider::Mercury);
     }
 
     providers
+}
+
+/// Keeps provider-facing UI aligned with the providers the application can actually start.
+///
+/// Dez deliberately does not initialize Zed-hosted prediction services. Older settings files may
+/// still name one of those providers, so normalize them before rendering status or setup controls.
+pub fn effective_edit_prediction_provider(
+    app_name: &str,
+    provider: EditPredictionProvider,
+) -> EditPredictionProvider {
+    match provider {
+        EditPredictionProvider::Zed | EditPredictionProvider::Mercury if app_name != "Zed" => {
+            EditPredictionProvider::None
+        }
+        provider => provider,
+    }
 }
 
 fn toggle_show_edit_predictions_for_language(
@@ -1656,6 +1678,26 @@ fn copilot_settings_url(enterprise_uri: Option<&str>) -> Arc<str> {
 mod tests {
     use super::*;
     use gpui::TestAppContext;
+
+    #[test]
+    fn dez_hides_upstream_edit_prediction_providers() {
+        assert_eq!(
+            effective_edit_prediction_provider("Dez", EditPredictionProvider::Zed),
+            EditPredictionProvider::None
+        );
+        assert_eq!(
+            effective_edit_prediction_provider("Dez", EditPredictionProvider::Mercury),
+            EditPredictionProvider::None
+        );
+        assert_eq!(
+            effective_edit_prediction_provider("Dez", EditPredictionProvider::Ollama),
+            EditPredictionProvider::Ollama
+        );
+        assert_eq!(
+            effective_edit_prediction_provider("Zed", EditPredictionProvider::Zed),
+            EditPredictionProvider::Zed
+        );
+    }
 
     #[gpui::test]
     async fn test_copilot_settings_url_with_enterprise_uri(cx: &mut TestAppContext) {

@@ -4,7 +4,9 @@ use edit_prediction::{
     mercury::{MERCURY_CREDENTIALS_URL, mercury_api_token},
     open_ai_compatible::{open_ai_compatible_api_token, open_ai_compatible_api_url},
 };
-use edit_prediction_ui::{get_available_providers, set_completion_provider};
+use edit_prediction_ui::{
+    effective_edit_prediction_provider, get_available_providers, set_completion_provider,
+};
 use gpui::{App, Entity, ScrollHandle, TaskExt, prelude::*};
 use language::language_settings::AllLanguageSettings;
 
@@ -32,7 +34,7 @@ pub(crate) fn render_edit_prediction_setup_page(
     let providers = [
         Some(render_provider_dropdown(window, cx)),
         render_github_copilot_provider(window, cx).map(IntoElement::into_any_element),
-        Some(
+        (paths::APP_NAME == "Zed").then(|| {
             render_api_key_provider(
                 IconName::Inception,
                 "Mercury",
@@ -45,8 +47,8 @@ pub(crate) fn render_edit_prediction_setup_page(
                 window,
                 cx,
             )
-            .into_any_element(),
-        ),
+            .into_any_element()
+        }),
         Some(
             render_api_key_provider(
                 IconName::AiMistral,
@@ -115,9 +117,12 @@ pub(crate) fn render_edit_prediction_setup_page(
 }
 
 fn render_provider_dropdown(window: &mut Window, cx: &mut App) -> AnyElement {
-    let current_provider = AllLanguageSettings::get_global(cx)
-        .edit_predictions
-        .provider;
+    let current_provider = effective_edit_prediction_provider(
+        paths::APP_NAME,
+        AllLanguageSettings::get_global(cx)
+            .edit_predictions
+            .provider,
+    );
     let current_provider_name = current_provider.display_name().unwrap_or("No provider set");
 
     let menu = ContextMenu::build(window, cx, move |mut menu, _, cx| {

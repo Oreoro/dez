@@ -79,6 +79,12 @@ require_pattern crates/zed/src/zed/edit_prediction_registry.rs \
 require_pattern crates/zed/src/zed/edit_prediction_registry.rs \
     'EditPredictionProvider::Mercury if paths::APP_NAME != "Zed" => None' \
     'the upstream Mercury edit-prediction provider is reachable in Dez'
+require_multiline_pattern crates/edit_prediction_ui/src/edit_prediction_button.rs \
+    'EditPredictionProvider::Zed \| EditPredictionProvider::Mercury if app_name != "Zed" => \{.*?EditPredictionProvider::None' \
+    'Dez can advertise disabled upstream edit-prediction providers'
+require_pattern crates/settings_ui/src/pages/edit_prediction_provider_setup.rs \
+    '^        \(paths::APP_NAME == "Zed"\)\.then\(\|\| \{$' \
+    'Dez settings still advertise the unavailable Mercury provider'
 require_multiline_pattern crates/zed/src/zed.rs \
     'let channels_panel = \(APP_NAME == "Zed"\)\.then\(\|\| \{.*?CollabPanel::load' \
     'Dez eagerly loads the upstream collaboration panel'
