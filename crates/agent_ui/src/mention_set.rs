@@ -41,6 +41,14 @@ use crate::ui::MentionCrease;
 
 pub type MentionTask = Shared<Task<Result<Mention, String>>>;
 
+fn unsupported_session_mention_message(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Thread mentions are only supported for the native agent"
+    } else {
+        "Agent Session mentions are only supported by the built-in Dez Agent"
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Mention {
     Text {
@@ -603,9 +611,9 @@ impl MentionSet {
         cx: &mut Context<Self>,
     ) -> Task<Result<Mention>> {
         let Some(thread_store) = self.thread_store.clone() else {
-            return Task::ready(Err(anyhow!(
-                "Thread mentions are only supported for the native agent"
-            )));
+            return Task::ready(Err(anyhow!(unsupported_session_mention_message(
+                paths::APP_NAME
+            ))));
         };
         let Some(project) = self.project.upgrade() else {
             return Task::ready(Err(anyhow!("project not found")));
@@ -766,7 +774,7 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn test_thread_mentions_disabled(cx: &mut TestAppContext) {
+    async fn test_session_mentions_disabled(cx: &mut TestAppContext) {
         init_test(cx);
 
         let fs = FakeFs::new(cx.executor());
@@ -783,8 +791,20 @@ mod tests {
         assert!(
             error
                 .to_string()
-                .contains("Thread mentions are only supported for the native agent"),
+                .contains("Agent Session mentions are only supported by the built-in Dez Agent"),
             "Unexpected error: {error:#}"
+        );
+    }
+
+    #[test]
+    fn session_mention_error_preserves_product_vocabulary() {
+        assert_eq!(
+            unsupported_session_mention_message("Dez"),
+            "Agent Session mentions are only supported by the built-in Dez Agent"
+        );
+        assert_eq!(
+            unsupported_session_mention_message("Zed"),
+            "Thread mentions are only supported for the native agent"
         );
     }
 
