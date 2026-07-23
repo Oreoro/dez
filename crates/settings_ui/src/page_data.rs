@@ -8916,7 +8916,7 @@ fn evidence_page() -> SettingsPage {
         }),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Observe Terminal Evidence",
-            description: "Observe local terminal lifecycle signals and accept authenticated structured adapter events. Dez stores bounded Host metadata, not transcripts; obvious secret-bearing environment assignments and CLI flags are redacted from retained commands. Dez never installs hooks or edits provider configuration automatically.",
+            description: "Observe local terminal lifecycle signals and accept authenticated structured adapter events. Commands and file targets remain bounded between the owning Host and Dez; transcripts are not retained. Obvious secret environment assignments, CLI flags, and URL credentials are redacted from commands. File paths remain verbatim for review navigation. Dez never installs hooks or edits provider configuration automatically.",
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("agent_ui.connect_hooks"),

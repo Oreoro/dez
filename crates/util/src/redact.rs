@@ -11,6 +11,17 @@ static REDACT_CLI_FLAG_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
+static REDACT_URL_USERINFO_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r#"(?i)\b((?:https?|ssh|git)://)([^/\s:@]+):([^@\s/]+)@"#).unwrap()
+});
+
+static REDACT_URL_QUERY_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(
+        r#"(?i)([?&][a-z0-9_.-]*(?:api[-_]?key|token|password|secret|pass|credentials|license)=)([^&\s"']+)"#,
+    )
+    .unwrap()
+});
+
 /// Whether a given environment variable name should have its value redacted
 pub fn should_redact(env_var_name: &str) -> bool {
     const REDACTED_SUFFIXES: &[&str] = &[
@@ -27,7 +38,8 @@ pub fn should_redact(env_var_name: &str) -> bool {
         .any(|suffix| env_var_name.ends_with(suffix))
 }
 
-/// Redact a string which could include a command with environment variables
+/// Redact common secret-bearing environment assignments, CLI flags, and URL
+/// credentials from a command while preserving its reviewable structure.
 pub fn redact_command(command: &str) -> String {
     let command = REDACT_REGEX
         .replace_all(command, |caps: &regex::Captures| {
@@ -40,9 +52,19 @@ pub fn redact_command(command: &str) -> String {
             }
         })
         .to_string();
-    REDACT_CLI_FLAG_REGEX
+    let command = REDACT_CLI_FLAG_REGEX
         .replace_all(&command, |caps: &regex::Captures| {
             format!(r#"{}{}"[REDACTED]""#, &caps[1], &caps[2])
+        })
+        .to_string();
+    let command = REDACT_URL_USERINFO_REGEX
+        .replace_all(&command, |caps: &regex::Captures| {
+            format!("{}{}:[REDACTED]@", &caps[1], &caps[2])
+        })
+        .to_string();
+    REDACT_URL_QUERY_REGEX
+        .replace_all(&command, |caps: &regex::Captures| {
+            format!("{}[REDACTED]", &caps[1])
         })
         .to_string()
 }
@@ -64,6 +86,14 @@ mod tests {
         let input = r#"deploy --api-key=abc123 --mode check --access-token 'secret value' --license-file ./license.toml"#;
         let result = redact_command(input);
         let expected = r#"deploy --api-key="[REDACTED]" --mode check --access-token "[REDACTED]" --license-file ./license.toml"#;
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_redact_url_credentials_without_masking_host_or_path() {
+        let input = "git clone https://deploy:secret@example.com/team/repo.git?access_token=query-secret&depth=1";
+        let result = redact_command(input);
+        let expected = "git clone https://deploy:[REDACTED]@example.com/team/repo.git?access_token=[REDACTED]&depth=1";
         assert_eq!(result, expected);
     }
 }
