@@ -1588,6 +1588,13 @@ code, all launch gates pass, and known limitations are documented.
       Static identity, formatting, locked offline metadata, and documentation
       format checks pass; compilation and rendered hierarchy proof remain
       deferred.
+- [x] 2026-07-23: Make the center and Agent add controls name their true
+      destinations. Commit `9ef23f920a` labels the center plus control **Add to
+      Main Work Area**, describes its file/search/terminal choices, and removes
+      remaining Thread vocabulary from Dez's Agent pane headers, tooltips, and
+      session actions. Official Zed behavior and copy remain compatible.
+      Source assertions, formatting, identity, and diff checks pass; rendered
+      tooltip/menu proof remains deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

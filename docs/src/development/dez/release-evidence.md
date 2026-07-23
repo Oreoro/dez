@@ -1125,7 +1125,11 @@ the later running-app reports, the source advanced through:
   guidance instead of upstream Thread/native-agent language; and
 - `94b27cb2db`, which confirms destructive draft discard from both Session Rail
   and Agent Session tabs, protects unsent prompt text, and distinguishes draft
-  discard from reversible saved-session archive.
+  discard from reversible saved-session archive; and
+- `9ef23f920a`, which names the center-tab plus control **Add to Main Work
+  Area**, describes its file/search/terminal destinations, and removes the
+  remaining mixed Thread vocabulary from Dez's Agent pane while preserving
+  official-Zed wording.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

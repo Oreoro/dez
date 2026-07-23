@@ -76,7 +76,7 @@ rendered or end-to-end interaction proof.
 | Upstream               | Integrated `upstream/main` `9d0ef37a2571` through two-parent merge `2be63cfea347`; eleven conflicts are resolved and classified; consolidated build provenance is recorded                                                                                                                                   | Complete runtime regression, installed coexistence, and design-partner proof                                                     |
 | Identity               | Dez source guards pass; the corrected arm64 app, helper, and `dev.dez.Dez-Dev`/`dez-dev` ad-hoc bundle are audited; the rebuilt raw CLI exposes `--dez <PATH>` and no visible legacy alias; the launched app held no TCP connection or listener during the recorded soak                                     | Official-Zed install coexistence, consolidated rebuild, public signing/notarization, updater, remote, and visual proof           |
 | App Session            | Restore barrier, lifecycle state, ordered Workspace registry, explicit ordered viewport records, active selection, unresolved identity retention, live background-viewport attachment, durable final-project fallback, and distinct restore-failure truth exist in source; all 12 focused Session tests pass | Shared live entity composition and consolidated runtime proof                                                                    |
-| Workspace and Surfaces | Pane/Canvas repair, panel-to-pane work, startup request ordering, authoritative bounded EvidenceSet, explicit selection persistence, terminal lifecycle reconciliation, durable terminal ownership, same-path isolation tests, and Workspace-owned Session Rail branch projection exist                    | Complete tool-by-tool scope audit, movement proof, and shared-store isolation                                                    |
+| Workspace and Surfaces | Pane/Canvas repair, panel-to-pane work, startup request ordering, authoritative bounded EvidenceSet, explicit selection persistence, terminal lifecycle reconciliation, durable terminal ownership, same-path isolation tests, and Workspace-owned Session Rail branch projection exist                      | Complete tool-by-tool scope audit, movement proof, and shared-store isolation                                                    |
 | Local Host             | Protocol 4 app/helper builds and focused tests pass; an authenticated packaged-runtime Session retained one shell PID, 88 replay chunks, both pre/post-resize dimensions, and explicit Detached state                                                                                                        | GUI-exit/same-Session reattach proof and default-backend decision                                                                |
 | Terminal recovery      | Host/Session references, attach/detach/terminate, recovery surfaces, honest transport states, and dimension-aware replay exist in source and packaged runtime                                                                                                                                                | Full GUI restart scenario, stale-host cleanup, and rendered UX verification                                                      |
 | Agent adapter          | Structured Codex hook path, observation-only capabilities, bounded file targets, objective/context projection, and onboarding exist                                                                                                                                                                          | Live hook proof and a second adapter after the PMF gate                                                                          |
@@ -1377,7 +1377,7 @@ Notes decision:
 - 2026-07-23: Distinguished the supplied crushed-shell screenshot, the running
   bundle, and current source instead of treating them as one artifact. The
   screenshot is timestamped 20:10 and visibly contains `0 sessions · caught
-  up`; a read-only string fingerprint confirms that copy is absent from PID
+up`; a read-only string fingerprint confirms that copy is absent from PID
   `85053`'s 01:10 executable. That executable contains the intermediate
   **Project ready** state but not the later **Start a session** or **Workspace
   ready** source. The screenshot remains valid defect evidence, but neither it
@@ -1836,3 +1836,10 @@ Notes decision:
   be restored from Agent History. Pure behavior assertions, formatting, locked
   offline metadata, identity, and diff checks pass; rendered confirmation and
   focus-return proof remain deferred.
+- 2026-07-23: Clarified the final pane-boundary controls in `9ef23f920a`.
+  Dez's center-tab plus button now says **Add to Main Work Area** and explains
+  that it adds a file, search, or terminal. The Agent pane now consistently
+  uses **Agent Session** for its current-session header, new-session tooltip,
+  title actions, Markdown export, and empty state, while official Zed retains
+  Thread vocabulary. Pure copy assertions, formatting, identity, and diff
+  checks pass; rendered tooltip/menu proof remains deferred.

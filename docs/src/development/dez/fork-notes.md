@@ -103,6 +103,10 @@ Inactive Workspace actions may reveal on hover because selecting the Workspace
 first makes the same controls persistent. Every icon-only control must retain
 an accessible name and tooltip.
 
+The main-area tab-bar plus control is named **Add to Main Work Area** in Dez.
+Its menu opens files, Workspace search and symbols, or a terminal in that same
+pane grid; it does not add a sidebar panel or create a second terminal model.
+
 Discarding an Agent Session draft from either its Session Rail row or its
 main-area tab requires confirmation because unsent prompt text is permanently
 removed. Archiving a saved Agent Session remains immediate and reversible from
