@@ -240,10 +240,16 @@ fn render_sidebar_header_controls_for_state(
                 .as_ref()
                 .map(|workspace| workspace.read(cx).panel_pane_visible(PaneKind::Project, cx))
         })?;
-        let label = if is_visible {
-            "Hide Project Pane"
+        let label = if paths::APP_NAME == "Zed" {
+            if is_visible {
+                "Hide Project Pane"
+            } else {
+                "Show Project Pane"
+            }
+        } else if is_visible {
+            "Hide Workspace Tools"
         } else {
-            "Show Project Pane"
+            "Show Workspace Tools"
         };
 
         Some(

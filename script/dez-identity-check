@@ -154,6 +154,15 @@ reject_pattern crates/sidebar/src/sidebar.rs \
 reject_pattern crates/workspace/src/pane.rs \
     '"(Project ready|Project tools unavailable|Project navigation did not attach to this pane\.)"' \
     'the Dez center surface mixes Project terminology into the Workspace hierarchy'
+require_pattern crates/workspace/src/panel_pane.rs \
+    '"ProjectPanel" => "Files"' \
+    'the Dez file-tree Surface is not labeled Files'
+require_pattern crates/workspace/src/multi_workspace.rs \
+    '"Hide Workspace Tools"' \
+    'the Dez Workspace-tools toggle regressed to upstream Project Pane copy'
+require_pattern crates/project_panel/src/project_panel.rs \
+    'paths::APP_NAME == "Zed"' \
+    'the Files surface does not preserve an explicit official-Zed compatibility branch'
 require_pattern crates/release_channel/src/lib.rs \
     'ReleaseChannel::Stable => "Dez"' \
     'stable release display name is not Dez'

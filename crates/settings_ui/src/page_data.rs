@@ -4080,12 +4080,12 @@ fn window_and_layout_page() -> SettingsPage {
         let project_pane_title = if paths::APP_NAME == "Zed" {
             "Project Pane Button"
         } else {
-            "Files Pane Button"
+            "Workspace Tools Button"
         };
         let project_pane_description = if paths::APP_NAME == "Zed" {
             "Show the project pane toggle button in the Session Rail header."
         } else {
-            "Show the file-tree toggle button in the Session Rail header."
+            "Show the Workspace tools toggle button in the Session Rail header."
         };
         [
             SettingsPageItem::SectionHeader("Session Rail Chrome"),
@@ -4619,8 +4619,16 @@ fn window_and_layout_page() -> SettingsPage {
                 files: USER,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Enable Preview From Project Panel",
-                description: "Whether to open tabs in preview mode when opened from the project panel with a single click.",
+                title: if paths::APP_NAME == "Zed" {
+                    "Enable Preview From Project Panel"
+                } else {
+                    "Enable Preview From Files"
+                },
+                description: if paths::APP_NAME == "Zed" {
+                    "Whether to open tabs in preview mode when opened from the project panel with a single click."
+                } else {
+                    "Whether to open preview tabs when files are single-clicked in Files."
+                },
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("preview_tabs.enable_preview_from_project_panel"),
@@ -5047,10 +5055,22 @@ fn window_and_layout_page() -> SettingsPage {
 fn panels_page() -> SettingsPage {
     fn project_panel_section() -> [SettingsPageItem; 29] {
         [
-            SettingsPageItem::SectionHeader("Project Panel"),
+            SettingsPageItem::SectionHeader(if paths::APP_NAME == "Zed" {
+                "Project Panel"
+            } else {
+                "Files"
+            }),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Project Panel Dock",
-                description: "Where to dock the project panel.",
+                title: if paths::APP_NAME == "Zed" {
+                    "Project Panel Dock"
+                } else {
+                    "Files Legacy Dock"
+                },
+                description: if paths::APP_NAME == "Zed" {
+                    "Where to dock the project panel."
+                } else {
+                    "Where to dock Files when legacy docks are enabled."
+                },
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.dock"),
@@ -5063,8 +5083,16 @@ fn panels_page() -> SettingsPage {
                 files: USER,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Project Panel Default Width",
-                description: "Default width of the project panel in pixels.",
+                title: if paths::APP_NAME == "Zed" {
+                    "Project Panel Default Width"
+                } else {
+                    "Files Legacy Dock Width"
+                },
+                description: if paths::APP_NAME == "Zed" {
+                    "Default width of the project panel in pixels."
+                } else {
+                    "Default width of Files when it uses a legacy side dock."
+                },
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.default_width"),

@@ -73,7 +73,8 @@ impl PanelItem {
 
     fn tab_label(&self) -> &'static str {
         match self.panel.panel_key() {
-            "ProjectPanel" => "Project",
+            "ProjectPanel" if paths::APP_NAME == "Zed" => "Project",
+            "ProjectPanel" => "Files",
             "GitPanel" => "Git",
             "OutlinePanel" => "Outline",
             "DebugPanel" => "Debug",

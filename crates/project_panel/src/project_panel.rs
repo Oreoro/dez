@@ -7607,7 +7607,11 @@ impl Render for ProjectPanel {
                 .bg(cx.theme().colors().editor_background)
                 .child(
                     ProjectEmptyState::new(
-                        "Project Panel",
+                        if paths::APP_NAME == "Zed" {
+                            "Project Panel"
+                        } else {
+                            "Files"
+                        },
                         focus_handle.clone(),
                         KeyBinding::for_action_in(&workspace::Open::default(), &focus_handle, cx),
                     )
@@ -7731,7 +7735,11 @@ impl Panel for ProjectPanel {
     }
 
     fn icon_tooltip(&self, _window: &Window, _cx: &App) -> Option<&'static str> {
-        Some("Project Panel")
+        Some(if paths::APP_NAME == "Zed" {
+            "Project Panel"
+        } else {
+            "Files"
+        })
     }
 
     fn toggle_action(&self) -> Box<dyn Action> {

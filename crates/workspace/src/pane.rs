@@ -135,7 +135,8 @@ impl PaneKind {
     fn accessibility_label(self) -> &'static str {
         match self {
             Self::Tabs => "Editor pane",
-            Self::Project => "Project pane",
+            Self::Project if paths::APP_NAME == "Zed" => "Project pane",
+            Self::Project => "Workspace tools pane",
             Self::Agent => "Agent pane",
         }
     }
@@ -3810,7 +3811,11 @@ impl Pane {
                                 .map(pin_tab_entries)
                                 .when(visible_in_project_panel, |menu| {
                                     menu.entry(
-                                        "Reveal In Project Panel",
+                                        if paths::APP_NAME == "Zed" {
+                                            "Reveal In Project Panel"
+                                        } else {
+                                            "Reveal in Files"
+                                        },
                                         Some(Box::new(RevealInProjectPanel::default())),
                                         window.handler_for(&pane, move |pane, _, cx| {
                                             pane.project
