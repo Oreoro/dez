@@ -1601,6 +1601,22 @@ code, all launch gates pass, and known limitations are documented.
       Advanced actions remain registered for deliberate workflows. Static
       identity, formatting, locked offline metadata, and diff checks pass;
       rendered menu height/selection/manager proof remains deferred.
+- [x] 2026-07-23: Polish the interactive Agent Review Surface. Commit
+      `c7f73fb0fe` replaces Agent Diff/Hunk terminology in Dez with Agent
+      Review/Change, gives the empty state a compact top-aligned hierarchy and
+      **Return to Agent** action, names previous/next/review-all icons, exposes
+      generation as visible status, and explains why a newly created file
+      cannot be rejected one change at a time. Commit `c782f2fc63` adds
+      narrow-pane padding and guards the full toolbar accessibility contract.
+      Official Zed retains upstream terminology. Pure copy assertions,
+      formatting, locked offline metadata, identity, and diff checks pass;
+      rendered navigation/disabled-state/focus-return proof remains deferred.
+- [x] 2026-07-23: Simplify Workspace tool labels. Commit `6223c05368` makes
+      Dez tool controls and tooltips say **Files**, **Outline**, **Git**, and
+      **Debug** without inherited Panel terminology, while official Zed retains
+      its original labels. The Outline crate now declares its product-identity
+      dependency explicitly. Static identity, formatting, locked offline
+      metadata, and diff checks pass; rendered tooltip proof remains deferred.
 - [x] 2026-07-23: Restore cancelled Session Switcher previews through their
       original source. Commit `67a8152db7` preserves center Workspace items,
       durable Host Sessions, retained compatibility terminals, and Agent

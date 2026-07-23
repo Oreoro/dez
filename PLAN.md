@@ -1951,3 +1951,22 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   workflows without dominating routine UI.
   Formatting, locked offline metadata, identity, and diff checks pass; rendered
   menu height, selection, and saved-layout-manager proof remain deferred.
+- 2026-07-23: Reframed the interactive agent diff as **Agent Review** in
+  `c7f73fb0fe`, with narrow-pane padding and toolbar guards tightened in
+  `c782f2fc63`. The Surface and tooltip now name their review purpose; the
+  empty state is compact and top-aligned with an explicit **Return to Agent**
+  path. User actions say Keep/Reject Change and Keep/Reject All Changes instead
+  of exposing hunk jargon. Previous, next, and review-all icons have matching
+  accessible names; generation is a visible status, and the unavailable
+  per-change reject path for a newly created file explains its limitation.
+  Official Zed retains upstream Diff/Hunk copy. Pure copy assertions,
+  formatting, locked offline metadata, identity, and diff checks pass;
+  rendered hunk navigation, narrow-pane, disabled-tooltip, and focus-return
+  proof remain deferred.
+- 2026-07-23: Removed remaining tool-implementation terminology in
+  `6223c05368`. Dez tool controls and tooltips now say **Files**, **Outline**,
+  **Git**, and **Debug** consistently instead of exposing Outline Panel, Git
+  Panel, or Debug Panel. Official Zed retains its inherited labels, and the
+  Outline crate declares its product-identity dependency explicitly. Static
+  identity, formatting, locked offline metadata, and diff checks pass; rendered
+  tool-tooltip proof remains deferred.

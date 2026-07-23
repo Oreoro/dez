@@ -169,7 +169,9 @@ context all resolve through that same Workspace and Project:
   do not create a second root or copy state into the Session Rail.
 - The Agent pane uses the active Workspace's Project context. Agent edits land
   in ordinary buffers and Git changes, so they remain reviewable with the same
-  editor, diff, diagnostics, and Git tools.
+  editor, diagnostics, and Git tools. **Agent Review** is the interactive
+  change Surface for Keep/Reject decisions; a **Review Brief** is the separate
+  evidence summary for a Run.
 - Search, settings, diagnostics, and review briefs open as normal main-area
   Surfaces. They can be tabbed or split without becoming permanent sidebars.
 - The Session Rail observes these surfaces and durable sessions. It adds

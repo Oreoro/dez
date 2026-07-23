@@ -1176,7 +1176,12 @@ the later running-app reports, the source advanced through:
   and consolidate saved-layout storage behind **Manage Saved Layouts…**; and
 - `df8864833d`, which makes the curated submenu reachable through the active
   Workspace's persistent **Workspace Options** control without adding another
-  global chrome row or changing official Zed account behavior.
+  global chrome row or changing official Zed account behavior; and
+- `c7f73fb0fe` and `c782f2fc63`, which turn the implementation-named Agent Diff
+  into a compact, accessible **Agent Review** workflow with change-oriented
+  decisions, explicit generation status, and a clear return to Agent; and
+- `6223c05368`, which removes inherited Panel terminology from Dez's Outline,
+  Git, and Debug tool controls while preserving official Zed labels.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active
