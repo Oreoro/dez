@@ -8,7 +8,7 @@ Do not erase completed evidence.
 
 ## Objective {#objective}
 
-Ship Dez v0.0.1 as a credible public preview for terminal-native developers
+Ship Dez v0.0.2 as a credible public preview for terminal-native developers
 supervising concurrent coding agents. Prove one complete recovery and review
 loop before expanding into a general orchestration platform.
 
@@ -44,7 +44,7 @@ Its twelve delivery milestones map onto the active dependency plan as follows:
 | Local Host, persistent terminals, and PMF Run (5–7)                | Current vertical slice; broad source exists, consolidated restart proof open                |
 | ACP and power operations (8–9)                                     | Preserve upstream substrate now; project into the common model only after the vertical gate |
 | Remote Hosts and environments (10)                                 | Milestone 3 after local lifecycle truth is proven                                           |
-| Platform and commercial coordination (11–12)                       | Post-PMF hypotheses, not v0.0.1 scope                                                       |
+| Platform and commercial coordination (11–12)                       | Post-PMF hypotheses, not v0.0.2 scope                                                       |
 
 Change Set storage, Environment orchestration, browser automation, provider
 platforms, relay, mobile, and team policy do not enter the critical path merely
@@ -293,7 +293,7 @@ network proof remains deferred.
 disconnect safely; two agents remain visible; conflict warnings are advisory,
 traceable, and low-noise.
 
-## Milestone 4: v0.0.1 release {#milestone-4}
+## Milestone 4: v0.0.2 release {#milestone-4}
 
 - Complete first-run guidance, recovery copy, accessibility, keyboard and
   pointer parity, crash behavior, packaging, migration, and release provenance.
@@ -1842,7 +1842,7 @@ code, all launch gates pass, and known limitations are documented.
 - [ ] Demonstrate the complete restart-and-review vertical slice.
 - [ ] Complete workspace-scoped `Project` and evidence behavior.
 - [ ] Add remote continuity, conflict radar, recipes, and worktree brokering.
-- [ ] Complete the v0.0.1 release gate.
+- [ ] Complete the v0.0.2 release gate.
 
 ## Discoveries {#discoveries}
 

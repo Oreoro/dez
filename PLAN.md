@@ -2367,3 +2367,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Workspace before opening IDE context, so the workflow creates no duplicate
   terminal or project. This remains source-only; no build or visual launch was
   performed.
+- 2026-07-25: Removed release-version drift from the active product story. The
+  application manifest, README, public product guide, roadmap objective, and
+  active plan now agree that the current source train is v0.0.2. v0.0.1
+  documents are explicitly historical evidence. The stale task list that still
+  requested the already-complete upstream merge now records the actual
+  sequence: finish source interaction work, freeze a checkpoint, build that
+  exact source, prove the hero/restart/recovery/visual matrices, verify
+  coexistence, and only then sign and publish. This is documentation and guard
+  work only; no build or visual launch was performed.

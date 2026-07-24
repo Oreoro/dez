@@ -428,7 +428,7 @@ defer it.
   boundary.** The canonical repository front page names Dez, explains how the
   Session Rail, Workspace Tools, Main Work Area, Agent, and one
   Workspace-scoped Project fit together, credits Zed and third-party assets,
-  and distinguishes a v0.0.1 source candidate from a signed binary release.
+  and distinguishes the current source candidate from a signed binary release.
   Historical artifact hashes remain evidence after generated targets are
   removed, but stale local paths must never be presented as runnable
   candidates.

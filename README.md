@@ -11,7 +11,7 @@ and agent ecosystem, then reorganizes them around a clearer product promise:
 > See what is running, what needs attention, what changed, and what is ready
 > for review without reconstructing terminal and editor state.
 
-This repository is the **Dez v0.0.1 source candidate**. It is not yet a signed
+This repository is the **Dez v0.0.2 source candidate**. It is not yet a signed
 or supported binary release.
 
 ## What Dez does
@@ -88,16 +88,18 @@ and typography roles remain configurable through normal settings.
 
 ## Current status
 
-The v0.0.1 source candidate already contains the opinionated Dez shell,
+The v0.0.2 source candidate already contains the opinionated Dez shell,
 identity isolation, Workspace composition, Session Rail, session vocabulary,
 terminal lifecycle safeguards, first-run experience, Lumin/JetBrains visual
 defaults, and a large set of static product-contract checks.
 
-Before a public binary release, the project still requires a consolidated
-release build and rendered, restart, crash, accessibility, and coexistence
-evidence on supported platforms. The exact state and open gates are documented
-in the [v0.0.1 release runbook](./docs/src/development/dez/v0.0.1-release-runbook.md)
-and [release evidence](./docs/src/development/dez/release-evidence.md).
+Before a public binary release, the project still requires a build of the
+current source checkpoint plus rendered, restart, crash, accessibility, and
+coexistence evidence on supported platforms. The exact state and open gates are
+documented in the
+[v0.0.2 active plan](./docs/src/development/dez/v0.0.2-active-plan.md) and
+[release evidence](./docs/src/development/dez/release-evidence.md). The v0.0.1
+runbook remains historical evidence, not the current release plan.
 
 ## Documentation
 
@@ -157,7 +159,7 @@ flow from Zed.
 
 ## Contributing
 
-The public contributor workflow is being prepared for v0.0.1. Until its
+The public contributor workflow is being prepared for v0.0.2. Until its
 fork-specific policy is complete, use [CONTRIBUTING.md](./CONTRIBUTING.md) for
 the inherited engineering workflow and include:
 

@@ -110,7 +110,7 @@ require_pattern assets/fonts/jetbrains-mono/OFL.txt \
     '^Copyright 2020 The JetBrains Mono Project Authors' \
     'the JetBrains Mono source attribution is incomplete'
 require_multiline_pattern README.md \
-    '^# Dez.*?v0\.0\.1 source candidate.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Session Rail\*\*.*?\*\*Workspace Tools\*\*.*?\*\*Agent\*\*.*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?Before a public binary release' \
+    '^# Dez.*?v0\.0\.2 source candidate.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Session Rail\*\*.*?\*\*Workspace Tools\*\*.*?\*\*Agent\*\*.*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?Before a public binary release' \
     'the repository front page can regress to upstream branding, omit the Dez product model, or overstate release readiness'
 require_multiline_pattern README.md \
     '## Visual baseline.*?Lumin Blur.*?Lumin Light.*?JetBrains Mono.*?## Upstream relationship.*?deliberate fork.*?## License and attribution.*?independent fork' \
@@ -119,7 +119,7 @@ reject_pattern README.md \
     '^# Zed$|download Zed directly|we.re hiring|Sponsorships go directly to Zed Industries' \
     'the repository front page still presents Dez as the official upstream Zed product'
 require_multiline_pattern docs/src/dez.md \
-    '^# What is Dez\?.*?## The screen model.*?\*\*Session Rail\*\*.*?\*\*Workspace Tools\*\*.*?\*\*Main Work Area\*\*.*?\*\*Agent\*\*.*?## How coding work flows.*?## Terminal and Agent integration.*?## Source-preview limits' \
+    '^# What is Dez\?.*?## The screen model.*?\*\*Session Rail\*\*.*?\*\*Workspace Tools\*\*.*?\*\*Main Work Area\*\*.*?\*\*Agent\*\*.*?## How coding work flows.*?## Terminal and Agent integration.*?The v0\.0\.2 source.*?The v0\.0\.2 goal.*?## Source-preview limits' \
     'the public product guide can lose the screen model, IDE integration, or honest source-preview boundary'
 require_pattern docs/src/SUMMARY.md \
     '^- \[What is Dez\?\]\(\./dez\.md\)$' \

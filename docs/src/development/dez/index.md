@@ -25,14 +25,13 @@ documents according to their authority, not their age.
 9. [Consolidated Plan Reconciliation](./consolidated-plan-reconciliation.md)
    records how the revised long-range plan was adopted, adapted, deferred, or
    rejected. It is an intake record, not a competing source of truth.
-10. [Dez v0.0.1](../dez-v0.0.1.md) is the current release snapshot and launch
-    checklist.
+10. [Dez v0.0.1](../dez-v0.0.1.md) is the historical first-release snapshot
+    and launch checklist. It does not describe the active v0.0.2 train.
 11. [Release Evidence](./release-evidence.md) records direct build, runtime,
     visual, coexistence, and packaging proof for the current release candidate.
-12. [v0.0.1 Release Runbook](./v0.0.1-release-runbook.md) contains release
-    notes, recovery semantics, exact artifact identity and checksums, known
-    limitations, safe verification, rollback, and public-preview promotion
-    gates.
+12. [v0.0.1 Release Runbook](./v0.0.1-release-runbook.md) preserves historical
+    release notes, recovery semantics, artifact identity, checksums, known
+    limitations, rollback, and promotion gates.
 
 The older Superzed and Canvas documents remain design research and
 implementation history. They do not override this section.

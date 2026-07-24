@@ -131,7 +131,7 @@ Dez does not put the terminal inside chat.
   exit, and file-target evidence without making process-name detection a source
   of truth.
 
-The v0.0.1 source contains an experimental local terminal Host that can own PTYs
+The v0.0.2 source contains an experimental local terminal Host that can own PTYs
 outside the GUI process. It is intentionally not the default until consolidated
 build, restart, transport-loss, and crash evidence is complete. Default task
 terminals remain GUI-owned because retaining a task after the UI reports
@@ -159,7 +159,7 @@ Dez is not:
 - a second project tree hidden in the Session Rail; or
 - a claim that every session already survives every crash.
 
-The v0.0.1 goal is a complete native IDE with one sharp wedge: trustworthy
+The v0.0.2 goal is a complete native IDE with one sharp wedge: trustworthy
 supervision and review of terminal-native and agent-driven work.
 
 ## Source-preview limits
@@ -171,7 +171,7 @@ restart, crash, accessibility, upgrade, and coexistence evidence.
 For precise implementation state, read:
 
 - [Fork Notes](./development/dez/fork-notes.md)
+- [v0.0.2 Active Plan](./development/dez/v0.0.2-active-plan.md)
 - [Architecture Baseline](./development/dez/architecture-baseline.md)
 - [Roadmap](./development/dez/roadmap.md)
-- [v0.0.1 Release Runbook](./development/dez/v0.0.1-release-runbook.md)
 - [Release Evidence](./development/dez/release-evidence.md)
