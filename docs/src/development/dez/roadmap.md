@@ -1820,6 +1820,14 @@ code, all launch gates pass, and known limitations are documented.
       syntax foreground, icons, and focus indicators. Semantic JSON comparison
       confirms that formatting normalization changed no additional theme
       values. Rendered wallpaper, width, and opacity proof remains deferred.
+- [x] 2026-07-24: Keep recovery UI usable in short windows. Workspace-restore
+      and terminal-service callouts now share one named Session Rail notice
+      region that scrolls and cannot consume half the viewport, so the session
+      list remains the primary surface even when both failures are present.
+      Empty Main Work Area and unavailable-terminal recovery surfaces gain
+      bounded vertical scrolling plus bottom breathing room. A pure invariant
+      test and static guards protect the height cap and all three overflow
+      paths. Compiled and rendered short-window proof remains deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
@@ -2084,6 +2092,23 @@ code, all launch gates pass, and known limitations are documented.
   remains understandable when motion is reduced.
 
 ## Verification {#verification}
+
+Completed for the responsive recovery-surface slice:
+
+- simultaneous Workspace and terminal-service failures render inside one
+  labeled **Session Rail notices** region;
+- the notice region scrolls and is capped at 42% of the viewport, leaving most
+  of the window for the session list and Main Work Area;
+- empty Main Work Area and unavailable-terminal recovery surfaces scroll
+  vertically and retain bottom spacing at short heights;
+- a pure layout invariant keeps the notice cap above 25% and below 50%;
+- static guards cover the notice-region cap and both Main Work Area overflow
+  paths;
+- `cargo fmt --all -- --check`;
+- Bash syntax and `./script/dez-identity-check`;
+- locked offline Cargo metadata and `git diff --check`;
+- no build, Rust test binary, bundle, alternate binary, or visual launch was
+  performed after this source slice.
 
 Completed for the Lumin dark-theme contrast slice:
 

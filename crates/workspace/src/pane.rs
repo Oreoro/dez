@@ -961,10 +961,13 @@ impl Pane {
             .aria_label("Main Work Area ready")
             .track_focus(&self.focus_handle(cx))
             .size_full()
+            .min_h_0()
+            .overflow_y_scroll()
             .items_start()
             .justify_start()
             .px_8()
             .pt_10()
+            .pb_8()
             .child(
                 v_flex()
                     .max_w(px(560.))

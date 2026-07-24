@@ -952,6 +952,18 @@ reject_pattern crates/terminal_view/src/terminal_view.rs \
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_unavailable_description.*?Dez did not start a replacement shell.*?Start fresh only when you want a separate computation.*?if self\.session_unavailable \{[[:space:]]*return false;.*?\.id\("terminal-unavailable-state"\).*?\.role\(gpui::Role::Alert\).*?\.aria_label\("Terminal Session unavailable"\).*?Headline::new\("Session unavailable"\).*?Label::new\(unavailable_description\).*?"Start Fresh Terminal"' \
     'unavailable terminal recovery can regress to internal Host jargon'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    '\.id\("terminal-unavailable-state"\).*?\.size_full\(\).*?\.min_h_0\(\).*?\.overflow_y_scroll\(\).*?\.pt_10\(\).*?\.pb_8\(\)' \
+    'unavailable terminal recovery can clip its explanation or action in a short Main Work Area'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    '\.id\("empty-project-state"\).*?\.size_full\(\).*?\.min_h_0\(\).*?\.overflow_y_scroll\(\).*?\.pt_10\(\).*?\.pb_8\(\)' \
+    'the empty Main Work Area can clip its primary actions in a short window'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'const SESSION_NOTICES_MAX_VIEWPORT_FRACTION: f32 = 0\.42;.*?fn render_session_notices.*?\.id\("session-rail-notices"\).*?\.role\(gpui::Role::Region\).*?\.aria_label\("Session Rail notices"\).*?\.max_h\(vh\(SESSION_NOTICES_MAX_VIEWPORT_FRACTION, window\)\).*?\.overflow_y_scroll\(\)' \
+    'simultaneous recovery notices can consume the Session Rail instead of yielding to its primary list'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn render_session_notices.*?impl Render for Sidebar.*?self\.render_session_notices\(window, cx\).*?self\.render_session_notices\(window, cx\)' \
+    'the Session Rail can regress to unbounded notices in its start or populated state'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_row_setup_action_visible.*?setup_available && session_rail_supplemental_metadata_visible\(width\).*?let show_copy_codex_hook =.*?session_row_setup_action_visible\(rail_width, can_copy_codex_hook\).*?\.when\(show_copy_codex_hook' \
     'compact Session rows can regress to crowding their title with a third inline setup action'

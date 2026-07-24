@@ -144,6 +144,7 @@ const DETAILED_MIN_WIDTH: Pixels = px(380.0);
 const SUPPLEMENTAL_METADATA_MIN_WIDTH: Pixels = px(440.0);
 const MIN_WIDTH: Pixels = px(240.0);
 const MAX_WIDTH: Pixels = px(800.0);
+const SESSION_NOTICES_MAX_VIEWPORT_FRACTION: f32 = 0.42;
 
 #[derive(Clone, Debug, settings::RegisterSetting)]
 struct SessionRailSettings {
@@ -1216,6 +1217,12 @@ mod session_row_action_tests {
             SUPPLEMENTAL_METADATA_MIN_WIDTH,
             true
         ));
+    }
+
+    #[test]
+    fn notice_stack_preserves_most_of_the_window_for_primary_work() {
+        assert!(SESSION_NOTICES_MAX_VIEWPORT_FRACTION > 0.25);
+        assert!(SESSION_NOTICES_MAX_VIEWPORT_FRACTION < 0.5);
     }
 }
 
@@ -12211,6 +12218,40 @@ impl Sidebar {
         )
     }
 
+    fn render_session_notices(
+        &self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        let mut notices = Vec::with_capacity(2);
+        if let Some(workspace_restore_status) = self.render_workspace_restore_status(cx) {
+            notices.push(workspace_restore_status);
+        }
+        if let Some(terminal_host_status) = self.render_terminal_host_status(cx) {
+            notices.push(terminal_host_status);
+        }
+        if notices.is_empty() {
+            return None;
+        }
+
+        Some(
+            v_flex()
+                .id("session-rail-notices")
+                .role(gpui::Role::Region)
+                .aria_label("Session Rail notices")
+                .flex_none()
+                .min_h_0()
+                .max_h(vh(SESSION_NOTICES_MAX_VIEWPORT_FRACTION, window))
+                .overflow_y_scroll()
+                .gap_1()
+                .p_1p5()
+                .border_b_1()
+                .border_color(cx.theme().colors().border)
+                .children(notices)
+                .into_any_element(),
+        )
+    }
+
     fn render_sidebar_header(&self, window: &Window, cx: &mut Context<Self>) -> impl IntoElement {
         let sidebar_side = self.side(cx);
         let sidebar_state = SidebarRenderState {
@@ -13158,12 +13199,9 @@ impl Render for Sidebar {
                     .map(|this| {
                         if show_start_state {
                             this.when_some(
-                                self.render_workspace_restore_status(cx),
+                                self.render_session_notices(window, cx),
                                 |this, status| this.child(status),
                             )
-                            .when_some(self.render_terminal_host_status(cx), |this, status| {
-                                this.child(status)
-                            })
                             .child(self.render_empty_state(cx))
                         } else {
                             this.child(
@@ -13171,11 +13209,7 @@ impl Render for Sidebar {
                                     .flex_1()
                                     .overflow_hidden()
                                     .when_some(
-                                        self.render_workspace_restore_status(cx),
-                                        |this, status| this.child(status),
-                                    )
-                                    .when_some(
-                                        self.render_terminal_host_status(cx),
+                                        self.render_session_notices(window, cx),
                                         |this, status| this.child(status),
                                     )
                                     .when(show_session_search, |this| {

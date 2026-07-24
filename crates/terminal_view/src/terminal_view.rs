@@ -2139,9 +2139,12 @@ impl Render for TerminalView {
                 .role(gpui::Role::Alert)
                 .aria_label("Terminal Session unavailable")
                 .size_full()
+                .min_h_0()
+                .overflow_y_scroll()
                 .bg(cx.theme().colors().editor_background)
                 .px_8()
                 .pt_10()
+                .pb_8()
                 .child(
                     v_flex()
                         .w_full()
