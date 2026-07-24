@@ -136,6 +136,24 @@ require_multiline_pattern assets/settings/default.json \
 require_multiline_pattern assets/settings/initial_user_settings.json \
     '"ui_font_family": "JetBrains Mono".*?"buffer_font_family": "JetBrains Mono".*?"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"terminal": \{.*?"font_family": "JetBrains Mono".*?"font_size": 14' \
     'first-run settings can override Dez with stale themes or typography'
+require_multiline_pattern assets/settings/initial_user_settings.json \
+    '"icon_theme": "Dez \(Default\)".*?"markdown_preview_code_font_family": "JetBrains Mono"' \
+    'first-run settings can omit the Dez icons or coherent Markdown code font'
+require_multiline_pattern crates/zed_actions/src/lib.rs \
+    'pub mod dez.*?actions!\([[:space:]]*dez.*?RestoreVisualProfile' \
+    'the explicit Dez visual-profile recovery action is no longer registered'
+require_multiline_pattern crates/zed/src/zed.rs \
+    'fn restore_dez_visual_profile.*?ui_font_family = Some\(jetbrains_mono\.clone\(\)\).*?buffer_font_family = Some\(jetbrains_mono\.clone\(\)\).*?markdown_preview_code_font_family = Some\(jetbrains_mono\.clone\(\)\).*?ThemeSelection::Dynamic.*?ThemeAppearanceMode::System.*?Lumin Light.*?Lumin Blur.*?IconThemeSelection::Static.*?Dez \(Default\).*?terminal.*?font_family = Some\(jetbrains_mono\)' \
+    'visual-profile recovery can stop restoring the complete scoped Dez identity'
+require_multiline_pattern crates/zed/src/zed.rs \
+    'RestoreVisualProfile.*?APP_NAME == "Zed".*?update_settings_file_with_completion.*?restore_dez_visual_profile.*?completion\.await\?\?.*?Restored Lumin, JetBrains Mono, and Dez icons\..*?Failed to restore the Dez visual profile' \
+    'visual-profile recovery can affect official Zed, report before persistence, or fail silently'
+require_multiline_pattern crates/zed/src/zed.rs \
+    'fn dez_visual_profile_restores_identity_without_resetting_font_size.*?ui_font_size = Some\(18\.0\.into\(\)\).*?restore_dez_visual_profile.*?Lumin Light.*?Lumin Blur.*?Dez \(Default\).*?JetBrains Mono.*?ui_font_size.*?18\.0' \
+    'the scoped visual-profile mutation is no longer covered against size resets'
+require_multiline_pattern crates/zed/src/zed/app_menus.rs \
+    'APP_NAME != "Zed".*?Restore Dez Visual Profile.*?zed_actions::dez::RestoreVisualProfile' \
+    'the visual-profile recovery action can disappear from the Dez Settings menu'
 require_multiline_pattern crates/settings/src/settings_store.rs \
     'fn migrate_dez_generated_visual_profile.*?GENERATED_MONO_CODE_PROFILE.*?GENERATED_ONE_LIGHT_PROFILE.*?OLD_UI_FONT.*?OLD_LIGHT_MODE.*?OLD_LIGHT_THEME.*?app_name != "Dez".*?GENERATED_MONO_CODE_PROFILE.*?JetBrains Mono.*?GENERATED_ONE_LIGHT_PROFILE.*?OLD_LIGHT_MODE.*?OLD_LIGHT_THEME.*?replacen\(OLD_UI_FONT.*?JetBrains Mono.*?replacen\(OLD_LIGHT_MODE.*?system.*?replacen\(OLD_LIGHT_THEME.*?Lumin Light' \
     'known generated Dez profiles can retain inherited typography/theme or overwrite deliberate Zed/user choices'

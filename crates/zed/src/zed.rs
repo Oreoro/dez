@@ -853,6 +853,23 @@ async fn initialize_agent_panel(
     anyhow::Ok(())
 }
 
+fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
+    let jetbrains_mono = settings::FontFamilyName(Arc::from("JetBrains Mono"));
+
+    settings.theme.ui_font_family = Some(jetbrains_mono.clone());
+    settings.theme.buffer_font_family = Some(jetbrains_mono.clone());
+    settings.theme.markdown_preview_code_font_family = Some(jetbrains_mono.clone());
+    settings.theme.theme = Some(settings::ThemeSelection::Dynamic {
+        mode: settings::ThemeAppearanceMode::System,
+        light: settings::ThemeName(Arc::from("Lumin Light")),
+        dark: settings::ThemeName(Arc::from("Lumin Blur")),
+    });
+    settings.theme.icon_theme = Some(settings::IconThemeSelection::Static(
+        settings::IconThemeName(Arc::from("Dez (Default)")),
+    ));
+    settings.terminal.get_or_insert_default().font_family = Some(jetbrains_mono);
+}
+
 fn register_actions(
     app_state: Arc<AppState>,
     workspace: &mut Workspace,
@@ -1168,6 +1185,41 @@ fn register_actions(
                     theme_settings::reset_agent_ui_font_size(cx);
                     theme_settings::reset_agent_buffer_font_size(cx);
                 }
+            }
+        })
+        .register_action({
+            let fs = app_state.fs.clone();
+            move |_, _: &zed_actions::dez::RestoreVisualProfile, window, cx| {
+                if APP_NAME == "Zed" {
+                    cx.propagate();
+                    return;
+                }
+
+                let completion =
+                    settings::update_settings_file_with_completion(fs.clone(), cx, |settings, _| {
+                        restore_dez_visual_profile(settings);
+                    });
+                cx.spawn_in(window, async move |workspace, cx| {
+                    completion.await??;
+                    workspace.update_in(cx, |workspace, _, cx| {
+                        struct RestoreDezVisualProfile;
+
+                        workspace.show_toast(
+                            Toast::new(
+                                NotificationId::unique::<RestoreDezVisualProfile>(),
+                                "Restored Lumin, JetBrains Mono, and Dez icons.",
+                            ),
+                            cx,
+                        );
+                    })?;
+                    anyhow::Ok(())
+                })
+                .detach_and_prompt_err(
+                    "Failed to restore the Dez visual profile",
+                    window,
+                    cx,
+                    |_, _, _| None,
+                );
             }
         })
         .register_action(|_, _: &install_cli::RegisterDezScheme, window, cx| {
@@ -2856,6 +2908,33 @@ mod tests {
     fn dez_empty_workspace_preserves_the_actionable_launch_surface() {
         assert!(!should_seed_empty_workspace_with_blank_file("Dez"));
         assert!(should_seed_empty_workspace_with_blank_file("Zed"));
+    }
+
+    #[test]
+    fn dez_visual_profile_restores_identity_without_resetting_font_size() {
+        let mut settings = settings::SettingsContent::default();
+        settings.theme.ui_font_size = Some(18.0.into());
+
+        restore_dez_visual_profile(&mut settings);
+
+        let settings = serde_json::to_value(settings).unwrap();
+        assert_eq!(settings["ui_font_family"], "JetBrains Mono");
+        assert_eq!(settings["buffer_font_family"], "JetBrains Mono");
+        assert_eq!(
+            settings["markdown_preview_code_font_family"],
+            "JetBrains Mono"
+        );
+        assert_eq!(
+            settings["theme"],
+            json!({
+                "mode": "system",
+                "light": "Lumin Light",
+                "dark": "Lumin Blur"
+            })
+        );
+        assert_eq!(settings["icon_theme"], "Dez (Default)");
+        assert_eq!(settings["terminal"]["font_family"], "JetBrains Mono");
+        assert_eq!(settings["ui_font_size"], 18.0);
     }
 
     #[test]

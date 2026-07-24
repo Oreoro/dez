@@ -86,6 +86,18 @@ actions!(
     ]
 );
 
+pub mod dez {
+    use gpui::actions;
+
+    actions!(
+        dez,
+        [
+            /// Restores the bundled Lumin, JetBrains Mono, and Dez icon visual profile.
+            RestoreVisualProfile
+        ]
+    );
+}
+
 #[derive(PartialEq, Clone, Copy, Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExtensionCategoryFilter {

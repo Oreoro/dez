@@ -3113,3 +3113,18 @@ Completed for the compact healthy-status source slice:
 - added static compactness and accessibility regression guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the visual-profile recovery source slice:
+
+- traced Lumin Blur/Light through the theme setting, transparent renderer, and
+  native macOS whole-window visual-effect path;
+- added **Restore Dez Visual Profile** to the app Settings menu and command
+  palette;
+- limited recovery to the Lumin pair, Dez icons, and JetBrains Mono UI, editor,
+  terminal, and Markdown-code roles while preserving sizes and unrelated
+  preferences;
+- awaited the settings write before success feedback and added a focused
+  settings-mutation regression test;
+- made first-run icon and Markdown-code choices explicit;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

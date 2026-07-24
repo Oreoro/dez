@@ -230,6 +230,10 @@ JetBrains Mono is bundled and used across interface, editor, terminal, prompt,
 and review roles so the installed product has one unmistakable typographic
 identity. Users can still override any role through normal settings.
 
+If imported settings hide that identity, **Dez → Settings → Restore Dez Visual
+Profile** restores only Lumin, JetBrains Mono, and the built-in Dez icons while
+preserving font sizes and non-visual preferences.
+
 Blur belongs to the stable window shell. Focus borders, selected rows, active
 lines, pane boundaries, and scrollbars remain visible. Rail/drawer surfaces,
 the Main Work Area, tab strips, and elevated menus use distinct neutral layers

@@ -9,6 +9,13 @@ Dez starts with the translucent Lumin theme and JetBrains Mono across the
 interface, editor, terminal, prompts, and review surfaces. This guide shows how
 to customize those visual defaults.
 
+If imported or older settings make Dez look like plain Zed, choose
+**Dez → Settings → Restore Dez Visual Profile** or run
+{#action dez::RestoreVisualProfile}. The command restores only Lumin
+Light/Blur, JetBrains Mono, and the built-in Dez icons. It preserves font sizes
+and every non-visual preference, and reports success only after the settings
+file is updated.
+
 For information on how the settings system works, see [All Settings](./reference/all-settings.md).
 
 ## Customize Dez in 5 Minutes
@@ -26,6 +33,9 @@ Here's how to make Dez feel like home:
 5. **Adjust font size**: In the same Settings Editor, search for `buffer_font_size` and `ui_font_size` to tweak the editor and interface text sizes.
 
 That's it. You now have a personalized Dez setup.
+
+To return to the cohesive shipped appearance without resetting the rest of
+your configuration, run {#action dez::RestoreVisualProfile}.
 
 ## Themes
 

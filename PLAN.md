@@ -2571,3 +2571,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   messages remain visible. This reduces the bottom-bar prose visible in the
   installed screenshot without sacrificing discoverability or accessibility.
   This is source-only; no build or visual launch was performed.
+- 2026-07-25: Verified that Lumin Blur/Light already reaches the native macOS
+  whole-window blur path, then added a discoverable **Restore Dez Visual
+  Profile** action to Settings and the command palette. It restores the
+  system-selected Lumin pair, bundled JetBrains Mono roles, and built-in Dez
+  icons; preserves font sizes and non-visual settings; awaits persistence
+  before showing success; and has a focused settings-mutation test. First-run
+  settings now explicitly name the Dez icons and Markdown code font too. This
+  is source-only; no build or visual launch was performed.

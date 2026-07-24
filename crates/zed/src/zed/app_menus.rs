@@ -143,6 +143,46 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
         view_items.push(MenuItem::separator());
     }
 
+    let mut settings_items = vec![
+        MenuItem::action("Open Settings", zed_actions::OpenSettings),
+        MenuItem::action("Open Settings File", super::OpenSettingsFile),
+        MenuItem::action(
+            product_menu_label(APP_NAME, "Open Workspace Settings", "Open Project Settings"),
+            zed_actions::OpenProjectSettings,
+        ),
+        MenuItem::action(
+            product_menu_label(
+                APP_NAME,
+                "Open Workspace Settings File",
+                "Open Project Settings File",
+            ),
+            super::OpenProjectSettingsFile,
+        ),
+        MenuItem::action("Open Default Settings", super::OpenDefaultSettings),
+        MenuItem::separator(),
+        MenuItem::action("Open Keymap", zed_actions::OpenKeymap),
+        MenuItem::action("Open Keymap File", zed_actions::OpenKeymapFile),
+        MenuItem::action("Open Default Key Bindings", zed_actions::OpenDefaultKeymap),
+        MenuItem::separator(),
+        MenuItem::action(
+            "Select Theme...",
+            zed_actions::theme_selector::Toggle::default(),
+        ),
+        MenuItem::action(
+            "Select Icon Theme...",
+            zed_actions::icon_theme_selector::Toggle::default(),
+        ),
+    ];
+    if APP_NAME != "Zed" {
+        settings_items.extend([
+            MenuItem::separator(),
+            MenuItem::action(
+                "Restore Dez Visual Profile",
+                zed_actions::dez::RestoreVisualProfile,
+            ),
+        ]);
+    }
+
     let mut app_items = vec![MenuItem::action(
         format!("About {APP_NAME}"),
         zed_actions::About,
@@ -152,36 +192,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
     }
     app_items.extend([
         MenuItem::separator(),
-        MenuItem::submenu(Menu::new("Settings").items([
-            MenuItem::action("Open Settings", zed_actions::OpenSettings),
-            MenuItem::action("Open Settings File", super::OpenSettingsFile),
-            MenuItem::action(
-                product_menu_label(APP_NAME, "Open Workspace Settings", "Open Project Settings"),
-                zed_actions::OpenProjectSettings,
-            ),
-            MenuItem::action(
-                product_menu_label(
-                    APP_NAME,
-                    "Open Workspace Settings File",
-                    "Open Project Settings File",
-                ),
-                super::OpenProjectSettingsFile,
-            ),
-            MenuItem::action("Open Default Settings", super::OpenDefaultSettings),
-            MenuItem::separator(),
-            MenuItem::action("Open Keymap", zed_actions::OpenKeymap),
-            MenuItem::action("Open Keymap File", zed_actions::OpenKeymapFile),
-            MenuItem::action("Open Default Key Bindings", zed_actions::OpenDefaultKeymap),
-            MenuItem::separator(),
-            MenuItem::action(
-                "Select Theme...",
-                zed_actions::theme_selector::Toggle::default(),
-            ),
-            MenuItem::action(
-                "Select Icon Theme...",
-                zed_actions::icon_theme_selector::Toggle::default(),
-            ),
-        ])),
+        MenuItem::submenu(Menu::new("Settings").items(settings_items)),
         MenuItem::separator(),
     ]);
     #[cfg(target_os = "macos")]

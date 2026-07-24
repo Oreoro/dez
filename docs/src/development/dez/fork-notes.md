@@ -281,6 +281,12 @@ defaults. They must not pin a stale upstream theme or oversized typography that
 makes a fresh install look different from the intended Dez experience. Users
 remain free to override every role through normal settings.
 
+The app menu and command palette expose **Restore Dez Visual Profile** as an
+explicit recovery path. It writes only the system-selected Lumin Light/Lumin
+Blur pair, **Dez (Default)** icons, and JetBrains Mono for interface, buffer,
+terminal, and Markdown code roles. It preserves sizes and unrelated settings,
+waits for persistence, and shows success only after the write completes.
+
 The upgrade path recognizes only known exact Dez-generated profile signatures.
 The first used `.ZedSans` beside Lumin; the earlier installed profile also
 pinned light mode to One Light despite claiming to follow the system. Dez
@@ -528,6 +534,11 @@ defer it.
   expands Search and zero-diagnostics into persistent text labels. Their
   keyboard stops, tooltips, and complete accessible names remain, while real
   errors, warnings, counts, and diagnostic messages stay visible.
+- **2026-07-25: Visual identity has an explicit safe recovery action.**
+  **Restore Dez Visual Profile** is available from Settings and the command
+  palette. It restores only Lumin, JetBrains Mono, and built-in Dez icons,
+  preserves sizes and non-visual preferences, and confirms only after the
+  settings write succeeds.
 - **2026-07-23: Public source must explain the product and its evidence
   boundary.** The canonical repository front page names Dez, explains how the
   Session Rail, Workspace Tools, Main Work Area, Agent, and one
