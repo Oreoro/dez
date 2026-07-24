@@ -2718,6 +2718,13 @@ Completed for the launchable Apple M2 workflow repair:
 - changed the uploaded payload to the already-compressed DMG plus a build
   manifest, SHA-256 checksum, and first-launch guide, with artifact ZIP
   recompression disabled to reduce download overhead;
+- completed
+  [GitHub Actions run 30112409817](https://github.com/Oreoro/dez/actions/runs/30112409817)
+  in 1h7m25s at `91a1514f0236b7d63c946431b08a00114e41f4d4`;
+  the job built `Dez.app`, created and mounted the DMG, validated
+  `dev.dez.Dez`, confirmed the application, CLI, terminal Host, and Git helper
+  as arm64, passed strict deep signature verification, and uploaded the
+  144,521,832-byte `Dez-macOS-M2-91a1514f…` artifact;
 - kept distribution status honest: this snapshot is ad-hoc signed and not
   notarized, and runtime is not proven until the exact downloaded app opens.
 
