@@ -319,6 +319,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_row_actions_visible.*?\(is_hovered \|\| is_focused\) && !is_renaming.*?pointer_and_keyboard_selection_reveal_the_same_row_actions' \
     'Session Rail row controls can regress to pointer-hover-only discovery'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn agent_session_stop_label.*?"Stop Generation".*?"Stop Agent Run".*?IconButton::new\("stop-thread".*?aria_label\(stop_label\).*?tooltip\(Tooltip::text\(stop_label\)\).*?if is_running \{[[:space:]]*menu\.separator\(\)\.entry\(stop_label.*?sidebar\.stop_thread\(&thread_id.*?\} else \{[[:space:]]*menu\.separator\(\)\.entry\(archive_label.*?sidebar\.archive_thread' \
+    'a running Agent Session can regress to vague stop language or expose archive through its context menu'
 require_pattern crates/ui/src/components/ai/thread_item.rs \
     '\.when\(self\.hovered \|\| self\.focused, \|this\|' \
     'the shared Session row can hide its supplied actions from keyboard selection'

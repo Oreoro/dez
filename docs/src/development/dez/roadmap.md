@@ -2662,6 +2662,19 @@ Completed for the unavailable Terminal Session slice:
   locked offline Cargo metadata, and `git diff --check`;
 - no build, test binary, alternate binary, or visual launch was performed.
 
+Completed for the running Agent Session action-parity slice:
+
+- replaced Dez's implementation-shaped **Stop Generation** row action with
+  **Stop Agent Run**, while preserving official Zed's upstream label;
+- removed **Archive Agent Session** from the context menu while the selected
+  run is active;
+- exposed **Stop Agent Run** in that context menu so pointer, focus, context
+  menu, and selected-row keyboard paths share one lifecycle policy;
+- retained immediate, reversible archive for completed and failed Agent
+  Sessions;
+- added focused product-copy assertions and a static identity guard;
+- no build, test binary, alternate binary, or visual launch was performed.
+
 Completed for the first helper-process source slice:
 
 - new crate instructions and a rollbackable `dez_terminal_host` workspace

@@ -259,6 +259,10 @@ fn agent_session_label(
     }
 }
 
+fn agent_session_stop_label(app_name: &str) -> &'static str {
+    agent_session_label(app_name, "Stop Generation", "Stop Agent Run")
+}
+
 fn draft_discard_requires_confirmation(app_name: &str) -> bool {
     app_name != "Zed"
 }
@@ -277,6 +281,8 @@ mod agent_session_label_tests {
             agent_session_label("Dez", "Archive Thread", "Archive Agent Session"),
             "Archive Agent Session"
         );
+        assert_eq!(agent_session_stop_label("Zed"), "Stop Generation");
+        assert_eq!(agent_session_stop_label("Dez"), "Stop Agent Run");
     }
 }
 
@@ -9947,6 +9953,7 @@ impl Sidebar {
             agent_session_label(APP_NAME, "Rename Title", "Rename Agent Session");
         let archive_label =
             agent_session_label(APP_NAME, "Archive Thread", "Archive Agent Session");
+        let stop_label = agent_session_stop_label(APP_NAME);
         let regenerate_title_label = agent_session_label(
             APP_NAME,
             "Regenerate Thread Title",
@@ -10127,8 +10134,8 @@ impl Sidebar {
                                 .tab_index(0isize)
                                 .icon_color(Color::Error)
                                 .style(ButtonStyle::Tinted(TintColor::Error))
-                                .aria_label("Stop Generation")
-                                .tooltip(Tooltip::text("Stop Generation"))
+                                .aria_label(stop_label)
+                                .tooltip(Tooltip::text(stop_label))
                                 .on_click(cx.listener(move |this, _, _window, cx| {
                                     this.stop_thread(&thread_id_for_actions, cx);
                                 }))
@@ -10466,16 +10473,29 @@ impl Sidebar {
                             });
                         }
 
-                        menu.separator().entry(archive_label, None, {
-                            let session_id = session_id.clone();
-                            move |window, cx| {
-                                sidebar
-                                    .update(cx, |sidebar, cx| {
-                                        sidebar.archive_thread(&session_id, window, cx);
-                                    })
-                                    .ok();
-                            }
-                        })
+                        if is_running {
+                            menu.separator().entry(stop_label, None, {
+                                let sidebar = sidebar.clone();
+                                move |_window, cx| {
+                                    sidebar
+                                        .update(cx, |sidebar, cx| {
+                                            sidebar.stop_thread(&thread_id, cx);
+                                        })
+                                        .ok();
+                                }
+                            })
+                        } else {
+                            menu.separator().entry(archive_label, None, {
+                                let session_id = session_id.clone();
+                                move |window, cx| {
+                                    sidebar
+                                        .update(cx, |sidebar, cx| {
+                                            sidebar.archive_thread(&session_id, window, cx);
+                                        })
+                                        .ok();
+                                }
+                            })
+                        }
                     })
                 }
             })
