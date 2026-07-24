@@ -89,9 +89,11 @@ invokes the same editor.
 
 At zero sessions, the overview owns the rail title and **No sessions yet**
 status. The compact start block does not repeat an empty-state headline or
-decorative card: it explains that terminals open in the Main Work Area, then
-offers one filled **New Terminal** action and one outlined **Open Workspace…**
-alternative. Both name their destination in accessibility output.
+decorative card. Without a Workspace it explains the complete
+edit/run/supervise/review loop, offers one filled **Open Workspace…** action,
+and keeps **Open Scratch Terminal** as the outlined pathless alternative. With
+an active Workspace but no Session, the primary recovery action is **Start
+Terminal Session**. All actions name their destination in accessibility output.
 
 Workspace Tools and Agent are ordinary pane-grid regions with stable placement
 and normal focus behavior. Hiding one keeps its items available, returns focus
@@ -473,6 +475,13 @@ defer it.
   controls enter the keyboard tab order and carry explicit accessible names.
   The Agent title-edit control remains visible in Dez instead of existing only
   inside a pointer-hover group. Official Zed retains its upstream presentation.
+- **2026-07-25: Establish IDE context before pathless computation.** In a truly
+  empty app, both Welcome and Session Rail make **Open Workspace** the primary
+  transition. **Open Scratch Terminal** remains available but secondary because
+  it has no Files or Git context. Once a Workspace exists, **Start Terminal
+  Session** becomes the primary zero-session recovery. Restoration status takes
+  precedence over stale attention styling so **Loading sessions** cannot show
+  a contradictory warning icon.
 - **2026-07-23: Public source must explain the product and its evidence
   boundary.** The canonical repository front page names Dez, explains how the
   Session Rail, Workspace Tools, Main Work Area, Agent, and one

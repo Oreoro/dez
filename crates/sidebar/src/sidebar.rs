@@ -467,8 +467,27 @@ fn session_empty_state_copy(
         (
             IconName::Terminal,
             "No active sessions",
-            "Start a terminal in the Main Work Area. Live state, attention, and recovery will appear here.",
+            "Start a Terminal Session for this Workspace. Live state, attention, and recovery will appear here.",
         )
+    }
+}
+
+fn session_overview_status_icon(
+    is_searching: bool,
+    is_restoring: bool,
+    has_attention: bool,
+    session_count: usize,
+) -> IconName {
+    if is_searching {
+        IconName::MagnifyingGlass
+    } else if is_restoring {
+        IconName::ArrowCircle
+    } else if has_attention {
+        IconName::Warning
+    } else if session_count == 0 {
+        IconName::Terminal
+    } else {
+        IconName::Check
     }
 }
 
@@ -513,9 +532,9 @@ fn session_start_state_visible(
 
 fn session_start_state_copy() -> (&'static str, &'static str, &'static str) {
     (
-        "Terminals open in the Main Work Area. Live state and attention return here.",
-        "Open Scratch Terminal",
+        "Open a Workspace to edit, run, supervise, and review in one place.",
         "Open Workspace…",
+        "Open Scratch Terminal",
     )
 }
 
@@ -12422,9 +12441,9 @@ impl Sidebar {
                     })
                     .when(!has_query && !is_restoring, |this| {
                         this.child(
-                            Button::new("no-results-new-terminal", "New Terminal")
+                            Button::new("no-results-new-terminal", "Start Terminal Session")
                                 .full_width()
-                                .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
+                                .style(ButtonStyle::Filled)
                                 .label_size(LabelSize::Small)
                                 .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
                                 .aria_label(active_workspace_terminal_destination_label())
@@ -12512,20 +12531,17 @@ impl Sidebar {
             attention_sessions_accessibility_label(self.contents.attention_count);
         let all_scope_focus = self.focus_handle.clone();
         let attention_scope_focus = self.focus_handle.clone();
-        let status_color = if has_attention && !is_searching {
+        let status_color = if has_attention && !is_searching && !is_restoring {
             Color::Warning
         } else {
             Color::Muted
         };
-        let status_icon = if is_searching {
-            IconName::MagnifyingGlass
-        } else if has_attention {
-            IconName::Warning
-        } else if self.contents.session_count == 0 {
-            IconName::Terminal
-        } else {
-            IconName::Check
-        };
+        let status_icon = session_overview_status_icon(
+            is_searching,
+            is_restoring,
+            has_attention,
+            self.contents.session_count,
+        );
 
         v_flex()
             .flex_none()
@@ -12702,7 +12718,8 @@ impl Sidebar {
     }
 
     fn render_empty_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let (description, new_terminal_label, open_workspace_label) = session_start_state_copy();
+        let (description, open_workspace_label, scratch_terminal_label) =
+            session_start_state_copy();
 
         v_flex()
             .id("sidebar-start-state")
@@ -12723,30 +12740,10 @@ impl Sidebar {
                             .color(Color::Muted),
                     )
                     .child(
-                        Button::new("start-terminal", new_terminal_label)
-                            .full_width()
-                            .style(ButtonStyle::Filled)
-                            .start_icon(Icon::new(IconName::Terminal).size(IconSize::Small))
-                            .aria_label("Open Scratch Terminal in Main Work Area")
-                            .tooltip(|_, cx| {
-                                Tooltip::for_action(
-                                    "Open Scratch Terminal in Main Work Area",
-                                    &NewCenterTerminal::default(),
-                                    cx,
-                                )
-                            })
-                            .on_click(|_, window, cx| {
-                                window.dispatch_action(
-                                    NewCenterTerminal::default().boxed_clone(),
-                                    cx,
-                                );
-                            }),
-                    )
-                    .child(
                         Button::new("start-open", open_workspace_label)
                             .full_width()
-                            .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
-                            .start_icon(Icon::new(IconName::FolderOpen).size(IconSize::XSmall))
+                            .style(ButtonStyle::Filled)
+                            .start_icon(Icon::new(IconName::FolderOpen).size(IconSize::Small))
                             .aria_label(open_workspace_label)
                             .tooltip(move |_, cx| {
                                 Tooltip::for_action(
@@ -12763,6 +12760,26 @@ impl Sidebar {
                                         create_new_window: Some(false),
                                     }
                                     .boxed_clone(),
+                                    cx,
+                                );
+                            }),
+                    )
+                    .child(
+                        Button::new("start-terminal", scratch_terminal_label)
+                            .full_width()
+                            .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
+                            .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                            .aria_label("Open Scratch Terminal in Main Work Area")
+                            .tooltip(|_, cx| {
+                                Tooltip::for_action(
+                                    "Open Scratch Terminal in Main Work Area",
+                                    &NewCenterTerminal::default(),
+                                    cx,
+                                )
+                            })
+                            .on_click(|_, window, cx| {
+                                window.dispatch_action(
+                                    NewCenterTerminal::default().boxed_clone(),
                                     cx,
                                 );
                             }),

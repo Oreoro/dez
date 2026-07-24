@@ -297,6 +297,16 @@ fn session_overview_copy_distinguishes_empty_search_attention_and_caught_up_stat
         session_empty_state_copy(false, false).1,
         "No active sessions"
     );
+    assert_eq!(
+        session_overview_status_icon(false, true, true, 3),
+        IconName::ArrowCircle,
+        "restoration state should not display a stale attention warning"
+    );
+    assert_eq!(
+        session_overview_status_icon(true, true, true, 3),
+        IconName::MagnifyingGlass,
+        "an explicit search remains the visible status while restoration continues"
+    );
 }
 
 #[test]
@@ -322,6 +332,11 @@ fn start_state_waits_for_restore_and_only_describes_a_true_empty_app() {
     assert!(!session_start_state_visible(false, 0, false, true, false));
     assert_eq!(
         session_start_state_copy().1,
+        "Open Workspace…",
+        "the empty app should establish IDE context before suggesting computation"
+    );
+    assert_eq!(
+        session_start_state_copy().2,
         "Open Scratch Terminal",
         "a pathless zero-state terminal should name its transient scope"
     );

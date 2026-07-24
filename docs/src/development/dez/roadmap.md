@@ -3035,3 +3035,15 @@ Completed for the primary-action and toolbar-focus source slice:
 - added focused source assertions and static regression guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the progressive empty-app activation source slice:
+
+- aligned Welcome and the true-empty Session Rail on **Open Workspace** as the
+  single filled first action;
+- retained **Open Scratch Terminal** as an explicit secondary pathless route;
+- made **Start Terminal Session** the filled action when a Workspace exists but
+  has no Sessions;
+- gave loading state priority over stale attention icon and color state;
+- added focused pure assertions and static regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

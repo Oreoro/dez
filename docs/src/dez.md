@@ -70,6 +70,12 @@ compact icons, but every control has a specific accessible name, tooltip, and
 place in the keyboard tab order. A critical action is never available only on
 pointer hover.
 
+The empty Session Rail follows the same activation loop. It asks for a
+Workspace first, keeps **Open Scratch Terminal** as a secondary pathless
+option, and changes its primary action to **Start Terminal Session** once a
+Workspace is ready. This prevents a first-run terminal in the home directory
+from looking connected to Files or Git when it is not.
+
 ## The core objects
 
 You only need four concepts for everyday use:

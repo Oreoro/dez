@@ -2529,3 +2529,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   editing stays visible in Dez rather than hiding behind pointer hover.
   Official Zed compatibility behavior remains unchanged. This is source-only;
   no build or visual launch was performed.
+- 2026-07-25: Removed the empty-app pathless-terminal trap. Session Rail now
+  matches Welcome by making **Open Workspace** its filled first action and
+  keeping **Open Scratch Terminal** secondary. When a Workspace is ready but
+  has no Sessions, **Start Terminal Session** becomes the filled recovery.
+  Restoration status now overrides stale attention color/icon state, so
+  **Loading sessions** cannot present as a warning. This is source-only; no
+  build or visual launch was performed.

@@ -335,13 +335,13 @@ require_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\("Session Rail"\)' \
     'the supervision region has regressed to an ambiguous Sessions heading'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_start_state_visible.*?!has_open_projects.*?session_count == 0.*?!has_query.*?!attention_only.*?!is_restoring.*?fn session_start_state_copy.*?"Terminals open in the Main Work Area\. Live state and attention return here\.".*?"Open Scratch Terminal".*?"Open Workspace…".*?fn render_empty_state.*?aria_label\("Start working in Dez"\).*?\.px_2\(\).*?\.py_2\(\).*?Button::new\("start-terminal", new_terminal_label\).*?aria_label\("Open Scratch Terminal in Main Work Area"\).*?Button::new\("start-open", open_workspace_label\).*?ButtonStyle::OutlinedCustom.*?OpenFolder \{.*?create_new_window: Some\(false\)' \
+    'fn session_start_state_visible.*?!has_open_projects.*?session_count == 0.*?!has_query.*?!attention_only.*?!is_restoring.*?fn session_start_state_copy.*?"Open a Workspace to edit, run, supervise, and review in one place\.".*?"Open Workspace…".*?"Open Scratch Terminal".*?fn render_empty_state.*?aria_label\("Start working in Dez"\).*?\.px_2\(\).*?\.py_2\(\).*?Button::new\("start-open", open_workspace_label\).*?ButtonStyle::Filled.*?OpenFolder \{.*?create_new_window: Some\(false\).*?Button::new\("start-terminal", scratch_terminal_label\).*?ButtonStyle::OutlinedCustom.*?aria_label\("Open Scratch Terminal in Main Work Area"\)' \
     'the empty Session Rail can regress to a duplicated card, ambiguous actions, or the wrong terminal destination'
 reject_pattern crates/sidebar/src/sidebar.rs \
     '"(No running sessions|Start a terminal to begin|Open Folder…)"' \
     'the compact Session Rail start state has regained duplicate or folder-scoped copy'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn active_workspace_terminal_destination_label.*?"New Terminal in Main Work Area of Active Workspace".*?Button::new\("no-results-new-terminal", "New Terminal"\).*?aria_label\(active_workspace_terminal_destination_label\(\)\).*?Button::new\("new-session", "New Terminal"\).*?aria_label\(active_workspace_terminal_destination_label\(\)\)' \
+    'fn active_workspace_terminal_destination_label.*?"New Terminal in Main Work Area of Active Workspace".*?Button::new\("no-results-new-terminal", "Start Terminal Session"\).*?ButtonStyle::Filled.*?aria_label\(active_workspace_terminal_destination_label\(\)\).*?Button::new\("new-session", "New Terminal"\).*?aria_label\(active_workspace_terminal_destination_label\(\)\)' \
     'global Session Rail terminal actions can regress to an ambiguous Workspace or Agent destination'
 reject_pattern crates/sidebar/src/sidebar.rs \
     'when\(!is_focused, \|this\| this\.visible_on_hover\(&group_name\)\)' \
@@ -371,7 +371,10 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_overview_status_label.*?is_restoring: bool.*?"Loading sessions".*?fn session_empty_state_copy.*?"Restoring Workspaces and reconciling saved Terminal Sessions\.".*?workspace_restore_is_pending.*?WorkspaceRestoreState::Ready' \
     'Session Rail can claim to be empty while Workspace and terminal restoration is unresolved'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    '\.when\(!has_query && !is_restoring.*?Button::new\("no-results-new-terminal", "New Terminal"\)' \
+    'fn session_overview_status_icon.*?is_searching.*?IconName::MagnifyingGlass.*?is_restoring.*?IconName::ArrowCircle.*?has_attention.*?IconName::Warning.*?status_color = if has_attention && !is_searching && !is_restoring.*?session_overview_status_icon\(' \
+    'Session Rail restoration can regress to displaying stale attention status'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    '\.when\(!has_query && !is_restoring.*?Button::new\("no-results-new-terminal", "Start Terminal Session"\)' \
     'Session Rail can expose its true-empty action before restoration is complete'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_has_persistent_owner.*?TerminalHostConnection::try_global.*?TerminalHostSnapshotStore::try_global.*?snapshot\.host_id == host_id && snapshot\.session_id == session_id.*?terminal_ownership_label\(has_persistent_owner, session_unavailable\)' \
