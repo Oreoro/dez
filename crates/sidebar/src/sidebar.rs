@@ -1003,19 +1003,19 @@ fn split_leading_icon_char(
 fn terminal_agent_icon(kind: TerminalAgentKind) -> IconName {
     match kind {
         TerminalAgentKind::Claude => IconName::AiClaude,
-        TerminalAgentKind::Codex => IconName::Robot,
+        TerminalAgentKind::Codex => IconName::AiOpenAi,
         TerminalAgentKind::Copilot => IconName::Copilot,
         TerminalAgentKind::Cursor => IconName::EditorCursor,
-        TerminalAgentKind::Gemini
-        | TerminalAgentKind::Aider
+        TerminalAgentKind::Gemini => IconName::AiGemini,
+        TerminalAgentKind::OpenCode => IconName::AiOpenCode,
+        TerminalAgentKind::Grok => IconName::AiXAi,
+        TerminalAgentKind::Aider
         | TerminalAgentKind::Agy
-        | TerminalAgentKind::OpenCode
         | TerminalAgentKind::Amp
         | TerminalAgentKind::Crush
         | TerminalAgentKind::Devin
         | TerminalAgentKind::Droid
         | TerminalAgentKind::Goose
-        | TerminalAgentKind::Grok
         | TerminalAgentKind::OpenHands
         | TerminalAgentKind::Pi
         | TerminalAgentKind::Qwen => IconName::Robot,
@@ -1315,6 +1315,34 @@ mod session_start_state_tests {
 #[cfg(test)]
 mod session_row_action_tests {
     use super::*;
+
+    #[test]
+    fn known_terminal_agents_use_distinct_provider_icons() {
+        assert_eq!(
+            terminal_agent_icon(TerminalAgentKind::Codex),
+            IconName::AiOpenAi
+        );
+        assert_eq!(
+            terminal_agent_icon(TerminalAgentKind::Claude),
+            IconName::AiClaude
+        );
+        assert_eq!(
+            terminal_agent_icon(TerminalAgentKind::Gemini),
+            IconName::AiGemini
+        );
+        assert_eq!(
+            terminal_agent_icon(TerminalAgentKind::OpenCode),
+            IconName::AiOpenCode
+        );
+        assert_eq!(
+            terminal_agent_icon(TerminalAgentKind::Grok),
+            IconName::AiXAi
+        );
+        assert_eq!(
+            terminal_agent_icon(TerminalAgentKind::Aider),
+            IconName::Robot
+        );
+    }
 
     #[test]
     fn pointer_and_keyboard_selection_reveal_the_same_row_actions() {

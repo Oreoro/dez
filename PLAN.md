@@ -2593,3 +2593,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   or changing any destination behavior. Focused helper assertions and static
   identity guards protect all three width states. This is source-only; no
   build or visual launch was performed.
+- 2026-07-25: Replaced the Session Rail's generic provider glyphs with the
+  bundled Codex/OpenAI, Claude, Gemini, OpenCode, Grok, Copilot, and Cursor
+  marks. Providers without a specific bundled mark retain the neutral Robot
+  fallback. The Session Rail now owns one icon mapping shared by the keyboard
+  session switcher, preventing the two navigation surfaces from drifting.
+  Focused assertions and identity guards cover the provider and fallback
+  contracts. The screenshot mascot remains verified PTY content, not Dez
+  decoration. This is source-only; no build or visual launch was performed.

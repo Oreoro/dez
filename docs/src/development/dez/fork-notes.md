@@ -299,6 +299,9 @@ computation, Folder Open means Workspace/Files, File means file creation, Diff
 means change review, Info means Session details, List Tree means supervision,
 Clock means Agent History, and Settings means configuration. Visible labels
 remain authoritative; icons reinforce them instead of replacing them.
+Recognized terminal-agent providers use their bundled provider icon in both the
+Session Rail and session switcher; only providers without a specific bundled
+mark fall back to the neutral Robot icon. One shared mapping owns both surfaces.
 The selector exposes the built-in file/folder set as **Dez (Default)**.
 **Zed (Default)** remains registered only as a compatibility alias for
 upstream behavior and existing settings.

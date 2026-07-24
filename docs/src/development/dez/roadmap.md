@@ -3150,3 +3150,15 @@ Completed for the responsive Session Rail destination-label source slice:
 - added focused three-breakpoint assertions and static regression guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the terminal-provider icon coherence source slice:
+
+- mapped recognized Codex/OpenAI, Claude, Gemini, OpenCode, Grok, Copilot, and
+  Cursor terminal agents to their bundled provider-specific icons;
+- retained the neutral Robot fallback for providers without a specific bundled
+  mark;
+- removed the session switcher's duplicate mapping and made it consume the
+  Session Rail's authoritative provider map;
+- added focused provider/fallback assertions and static anti-drift guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

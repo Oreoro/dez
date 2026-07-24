@@ -17,7 +17,9 @@ use ui::{
 use workspace::{DesignSystemSettings, ModalView, Workspace};
 use zed_actions::sidebar::ToggleThreadSwitcher;
 
-use super::{TerminalEntrySource, ThreadEntryWorkspace, canvas_thread_item_style};
+use super::{
+    TerminalEntrySource, ThreadEntryWorkspace, canvas_thread_item_style, terminal_agent_icon,
+};
 
 #[derive(Clone)]
 pub(crate) struct ThreadSwitcherThreadEntry {
@@ -195,28 +197,6 @@ impl ThreadSwitcherEntry {
             Self::Thread(_) => None,
             Self::Terminal(entry) => Some(entry.metadata.terminal_id),
         }
-    }
-}
-
-fn terminal_agent_icon(kind: TerminalAgentKind) -> IconName {
-    match kind {
-        TerminalAgentKind::Claude => IconName::AiClaude,
-        TerminalAgentKind::Codex => IconName::Robot,
-        TerminalAgentKind::Copilot => IconName::Copilot,
-        TerminalAgentKind::Cursor => IconName::EditorCursor,
-        TerminalAgentKind::Gemini
-        | TerminalAgentKind::Aider
-        | TerminalAgentKind::Agy
-        | TerminalAgentKind::OpenCode
-        | TerminalAgentKind::Amp
-        | TerminalAgentKind::Crush
-        | TerminalAgentKind::Devin
-        | TerminalAgentKind::Droid
-        | TerminalAgentKind::Goose
-        | TerminalAgentKind::Grok
-        | TerminalAgentKind::OpenHands
-        | TerminalAgentKind::Pi
-        | TerminalAgentKind::Qwen => IconName::Robot,
     }
 }
 
