@@ -159,6 +159,14 @@ one persistent close control named **Hide Workspace Tools** or **Hide Agent**.
 Accessibility landmarks use the same visible region names: **Main work area**,
 **Workspace Tools**, and **Agent**.
 
+Every visible pane-chrome control is a keyboard tab stop: Back, Forward, Add to
+Main Work Area, Switch Surface, Split, Zoom, Hide Workspace Tools, and Hide
+Agent. In Dez, the active unpinned Surface keeps its close control visible and
+keyboard-focusable even when the user preference otherwise reveals tab close
+buttons on hover. Inactive tabs remain quiet, and pinned tabs preserve their
+dirty/status indicator until hover reveals Unpin. Official Zed retains its
+upstream tab-close presentation.
+
 Discarding an Agent Session draft from either its Session Rail row or its
 main-area tab requires confirmation because unsent prompt text is permanently
 removed. Archiving a saved Agent Session remains immediate and reversible from
@@ -489,6 +497,11 @@ defer it.
   already-open Workspace menu, per-worktree close controls remain visible and
   enter the tab order rather than requiring a second pointer hover. Search
   clearing and import-banner dismissal follow the same rule.
+- **2026-07-25: Main Work Area chrome uses one keyboard contract.** Back,
+  Forward, Add, Switch Surface, Split, Zoom, and auxiliary Hide controls all
+  enter the tab order and retain explicit destination names. The active
+  unpinned Dez tab keeps Close visible without hover; inactive tabs remain
+  visually subordinate, and pinned dirty tabs keep their status indicator.
 - **2026-07-23: Public source must explain the product and its evidence
   boundary.** The canonical repository front page names Dez, explains how the
   Session Rail, Workspace Tools, Main Work Area, Agent, and one

@@ -2543,3 +2543,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   search clearing and onboarding-banner dismissal also enter the tab order.
   Static guards cover the focus, visibility, naming, and tab-order contract.
   This is source-only; no build or visual launch was performed.
+- 2026-07-25: Normalized the Main Work Area's pane-control row. Back, Forward,
+  Add, Switch Surface, Split, Zoom, Hide Workspace Tools, and Hide Agent are now
+  explicit tab stops with their existing accessible destination names. The
+  active unpinned Dez Surface keeps Close visible and keyboard-focusable under
+  the hover-close preference; inactive tabs remain quiet and pinned dirty tabs
+  retain their status indicator. Official Zed retains upstream tab-close
+  behavior. This is source-only; no build or visual launch was performed.

@@ -3291,6 +3291,9 @@ impl Pane {
                 .shape(IconButtonShape::Square)
                 .icon_color(Color::Muted)
                 .icon_size(IconSize::Small)
+                .when(paths::APP_NAME != "Zed" && is_active, |this| {
+                    this.tab_index(0isize)
+                })
                 .aria_label(if toggleable {
                     "Unlock File"
                 } else {
@@ -3464,8 +3467,19 @@ impl Pane {
                     })
                 };
 
+                let active_control_is_keyboard_focusable =
+                    pane_tab_end_control_is_keyboard_focusable(
+                        paths::APP_NAME,
+                        is_active,
+                        is_pinned,
+                        indicator.is_some(),
+                    );
                 let Some(end_slot_control) = end_slot_control.map(|this| {
-                    let this = this.aria_label(end_slot_tooltip_text);
+                    let this = this
+                        .when(active_control_is_keyboard_focusable, |this| {
+                            this.tab_index(0isize)
+                        })
+                        .aria_label(end_slot_tooltip_text);
                     if is_active {
                         let focus_handle = focus_handle.clone();
                         this.tooltip(move |window, cx| {
@@ -3487,8 +3501,12 @@ impl Pane {
                     };
                 };
 
-                let show_control_on_hover =
-                    show_close_button == ShowCloseButton::Hover || is_pinned && indicator.is_some();
+                let show_control_on_hover = pane_tab_end_control_requires_hover(
+                    paths::APP_NAME,
+                    is_active,
+                    show_close_button == ShowCloseButton::Hover,
+                    is_pinned && indicator.is_some(),
+                );
                 let end_slot = if show_control_on_hover {
                     if let Some(indicator) = indicator {
                         h_flex()
@@ -3924,6 +3942,7 @@ impl Pane {
         let navigate_backward = IconButton::new("navigate_backward", IconName::ArrowLeft)
             .size(ButtonSize::Medium)
             .icon_size(IconSize::Small)
+            .tab_index(0isize)
             .aria_label("Go Back")
             .on_click({
                 let entity = cx.entity();
@@ -3949,6 +3968,7 @@ impl Pane {
         let navigate_forward = IconButton::new("navigate_forward", IconName::ArrowRight)
             .size(ButtonSize::Medium)
             .icon_size(IconSize::Small)
+            .tab_index(0isize)
             .aria_label("Go Forward")
             .on_click({
                 let entity = cx.entity();
@@ -4250,6 +4270,7 @@ impl Pane {
                 IconButton::new("pane-tab-overflow-menu-button", IconName::ListTree)
                     .size(ButtonSize::Medium)
                     .icon_size(IconSize::Small)
+                    .tab_index(0isize)
                     .aria_label(overflow_control_label),
                 Tooltip::text(overflow_control_label),
             )
@@ -5406,6 +5427,7 @@ fn default_render_tab_bar_buttons(
                     IconButton::new("split", IconName::Split)
                         .size(ButtonSize::Medium)
                         .icon_size(IconSize::Small)
+                        .tab_index(0isize)
                         .aria_label(split_aria_label)
                         .disabled(!split_enabled),
                     Tooltip::text(split_tooltip),
@@ -5446,6 +5468,7 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
             IconButton::new("plus", IconName::Plus)
                 .size(ButtonSize::Medium)
                 .icon_size(IconSize::Small)
+                .tab_index(0isize)
                 .aria_label(aria_label),
             Tooltip::text(tooltip),
         )
@@ -5482,6 +5505,7 @@ fn render_auxiliary_pane_hide_control(pane_kind: PaneKind) -> AnyElement {
         PaneKind::Project => IconButton::new("hide-workspace-tools", IconName::Close)
             .size(ButtonSize::Medium)
             .icon_size(IconSize::Small)
+            .tab_index(0isize)
             .aria_label(label)
             .tooltip(move |_, cx| Tooltip::for_action(label, &ToggleProjectPane, cx))
             .on_click(|_, window, cx| {
@@ -5491,6 +5515,7 @@ fn render_auxiliary_pane_hide_control(pane_kind: PaneKind) -> AnyElement {
         PaneKind::Agent => IconButton::new("hide-agent", IconName::Close)
             .size(ButtonSize::Medium)
             .icon_size(IconSize::Small)
+            .tab_index(0isize)
             .aria_label(label)
             .tooltip(move |_, cx| Tooltip::for_action(label, &ToggleAgentPane, cx))
             .on_click(|_, window, cx| {
@@ -5551,12 +5576,31 @@ fn pane_tab_overflow_copy(app_name: &str) -> (&'static str, &'static str) {
     }
 }
 
+fn pane_tab_end_control_requires_hover(
+    app_name: &str,
+    is_active: bool,
+    close_button_uses_hover: bool,
+    pinned_indicator_uses_hover: bool,
+) -> bool {
+    pinned_indicator_uses_hover || close_button_uses_hover && (app_name == "Zed" || !is_active)
+}
+
+fn pane_tab_end_control_is_keyboard_focusable(
+    app_name: &str,
+    is_active: bool,
+    is_pinned: bool,
+    has_indicator: bool,
+) -> bool {
+    app_name != "Zed" && is_active && (!is_pinned || !has_indicator)
+}
+
 pub(crate) fn render_toggle_zoom_button(pane: &Pane, cx: &mut Context<Pane>) -> IconButton {
     let zoomed = pane.is_zoomed();
     let label = if zoomed { "Zoom Out" } else { "Zoom In" };
     IconButton::new("toggle_zoom", IconName::Maximize)
         .size(ButtonSize::Medium)
         .icon_size(IconSize::Small)
+        .tab_index(0isize)
         .aria_label(label)
         .toggle_state(zoomed)
         .selected_icon(IconName::Minimize)
@@ -6379,6 +6423,29 @@ mod tests {
             ("Switch Surface", "Surfaces")
         );
         assert_eq!(pane_tab_overflow_copy("Zed"), ("Open Tab", "Tabs"));
+        assert!(
+            !pane_tab_end_control_requires_hover("Dez", true, true, false),
+            "the active Dez tab close control should not require pointer hover"
+        );
+        assert!(pane_tab_end_control_requires_hover(
+            "Dez", false, true, false
+        ));
+        assert!(pane_tab_end_control_requires_hover(
+            "Zed", true, true, false
+        ));
+        assert!(
+            pane_tab_end_control_requires_hover("Dez", true, false, true),
+            "a pinned dirty tab keeps its status indicator until hover"
+        );
+        assert!(pane_tab_end_control_is_keyboard_focusable(
+            "Dez", true, false, false
+        ));
+        assert!(!pane_tab_end_control_is_keyboard_focusable(
+            "Dez", true, true, true
+        ));
+        assert!(!pane_tab_end_control_is_keyboard_focusable(
+            "Zed", true, false, false
+        ));
     }
 
     // drop_call_count is a Cell here because `handle_drop` takes &self, not &mut self.

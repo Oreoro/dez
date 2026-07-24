@@ -82,6 +82,11 @@ keeps its scoped close controls visible as well. Search clearing and banner
 dismissal are keyboard-focusable, so pointer hover is never the only route to a
 visible shell action.
 
+The Main Work Area follows the same rule. Back, Forward, Add, Switch Surface,
+Split, Zoom, and the Workspace Tools/Agent hide controls are keyboard-focusable
+and specifically named. The active unpinned Surface keeps its close control
+visible in Dez; inactive tabs remain visually quiet.
+
 ## The core objects
 
 You only need four concepts for everyday use:

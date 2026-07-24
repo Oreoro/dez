@@ -3061,3 +3061,16 @@ Completed for the Session Rail focus-parity source slice:
 - added focused pure assertions and static regression guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Main Work Area pane-chrome source slice:
+
+- put Back, Forward, Add, Switch Surface, Split, Zoom, Hide Workspace Tools,
+  and Hide Agent into the keyboard tab order;
+- kept their specific accessible destination names and tooltips;
+- made the active unpinned Dez Surface close control visible and focusable
+  without filling every inactive tab with controls;
+- preserved pinned dirty/status indicators until hover reveals Unpin;
+- preserved official Zed's upstream active-tab presentation;
+- added focused pure assertions and static regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

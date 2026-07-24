@@ -1066,20 +1066,26 @@ require_multiline_pattern crates/workspace/src/pane.rs \
     'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?else \{.*?"New Terminal".*?NewCenterTerminal::default' \
     'the Dez New Item menu can regress from the single center-terminal model'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'fn render_new_surface_control.*?pane_new_surface_control_copy\(paths::APP_NAME\).*?aria_label\(aria_label\).*?Tooltip::text\(tooltip\).*?fn pane_new_surface_control_copy.*?"New Item".*?"New…".*?"Add to Main Work Area".*?"Add a file, search, or terminal"' \
+    'fn render_new_surface_control.*?pane_new_surface_control_copy\(paths::APP_NAME\).*?IconButton::new\("plus", IconName::Plus\).*?tab_index\(0isize\).*?aria_label\(aria_label\).*?Tooltip::text\(tooltip\).*?fn pane_new_surface_control_copy.*?"New Item".*?"New…".*?"Add to Main Work Area".*?"Add a file, search, or terminal"' \
     'the main-work-area add control can regress to an unexplained generic plus button'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'fn accessibility_label_for_app.*?"Editor pane".*?"Project pane".*?"Agent pane".*?"Main work area".*?"Workspace Tools".*?"Agent".*?if paths::APP_NAME != "Zed".*?PaneKind::Project.*?render_auxiliary_pane_hide_control\(PaneKind::Project\).*?PaneKind::Agent.*?render_auxiliary_pane_hide_control\(PaneKind::Agent\).*?if !has_focus.*?Some\(add_control\).*?fn render_auxiliary_pane_hide_control.*?"Hide Workspace Tools".*?"Hide Agent"' \
+    'fn accessibility_label_for_app.*?"Editor pane".*?"Project pane".*?"Agent pane".*?"Main work area".*?"Workspace Tools".*?"Agent".*?if paths::APP_NAME != "Zed".*?PaneKind::Project.*?render_auxiliary_pane_hide_control\(PaneKind::Project\).*?PaneKind::Agent.*?render_auxiliary_pane_hide_control\(PaneKind::Agent\).*?if !has_focus.*?Some\(add_control\).*?fn render_auxiliary_pane_hide_control.*?"hide-workspace-tools".*?tab_index\(0isize\).*?"hide-agent".*?tab_index\(0isize\).*?fn pane_auxiliary_hide_control_copy.*?"Hide Workspace Tools".*?"Hide Agent"' \
     'main-area creation controls can regress into auxiliary panes or pane landmarks can lose their product-region identity'
 require_multiline_pattern crates/workspace/src/pane.rs \
     'fn pane_new_surface_menu_copy.*?"Open File…".*?"Search Workspace…".*?"Go to Symbol…"' \
     'the Main Work Area creation menu can regress to ambiguous commands that conceal a follow-up'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'let split_enabled = can_clone \|\| can_split_move.*?pane_split_control_copy\(paths::APP_NAME, split_enabled\).*?aria_label\(split_aria_label\).*?disabled\(!split_enabled\).*?Tooltip::text\(split_tooltip\).*?fn pane_split_control_copy.*?app_name == "Zed" \|\| enabled.*?"Split Pane Unavailable".*?"This Surface cannot be split or moved into a new pane"' \
+    'let split_enabled = can_clone \|\| can_split_move.*?pane_split_control_copy\(paths::APP_NAME, split_enabled\).*?IconButton::new\("split", IconName::Split\).*?tab_index\(0isize\).*?aria_label\(split_aria_label\).*?disabled\(!split_enabled\).*?Tooltip::text\(split_tooltip\).*?fn pane_split_control_copy.*?app_name == "Zed" \|\| enabled.*?"Split Pane Unavailable".*?"This Surface cannot be split or moved into a new pane"' \
     'the pane split control can regress to a disabled icon with no explanation'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'pane_tab_overflow_copy\(paths::APP_NAME\).*?aria_label\(overflow_control_label\).*?Tooltip::text\(overflow_control_label\).*?menu\.header\(overflow_menu_header\).*?fn pane_tab_overflow_copy.*?"Open Tab".*?"Tabs".*?"Switch Surface".*?"Surfaces"' \
+    'pane_tab_overflow_copy\(paths::APP_NAME\).*?"pane-tab-overflow-menu-button".*?tab_index\(0isize\).*?aria_label\(overflow_control_label\).*?Tooltip::text\(overflow_control_label\).*?menu\.header\(overflow_menu_header\).*?fn pane_tab_overflow_copy.*?"Open Tab".*?"Tabs".*?"Switch Surface".*?"Surfaces"' \
     'the Dez Surface switcher can regress to a misleading Open Tab control'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    '"navigate_backward".*?tab_index\(0isize\).*?aria_label\("Go Back"\).*?"navigate_forward".*?tab_index\(0isize\).*?aria_label\("Go Forward"\).*?fn render_toggle_zoom_button.*?"toggle_zoom".*?tab_index\(0isize\).*?aria_label\(label\)' \
+    'Main Work Area navigation or zoom controls can regress out of the keyboard tab order'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    'active_control_is_keyboard_focusable.*?tab_index\(0isize\).*?pane_tab_end_control_requires_hover\(.*?fn pane_tab_end_control_requires_hover.*?pinned_indicator_uses_hover \|\| close_button_uses_hover && \(app_name == "Zed" \|\| !is_active\).*?fn pane_tab_end_control_is_keyboard_focusable.*?app_name != "Zed" && is_active && \(!is_pinned \|\| !has_indicator\)' \
+    'the active Dez tab close control can regress to pointer-hover-only access'
 require_multiline_pattern crates/editor/src/element/header.rs \
     'fn reveal_in_files_label.*?app_name == "Zed".*?"Reveal In Project Panel".*?"Reveal in Files".*?reveal_in_files_label\(paths::APP_NAME\)' \
     'the editor file menu can regress to exposing the inherited Project Panel destination'
