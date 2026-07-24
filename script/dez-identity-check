@@ -520,14 +520,14 @@ reject_pattern crates/sidebar/src/sidebar.rs \
     '\.actor_label\("Terminal Session"\)' \
     'plain terminal rows can regress to repeating their type as a fake actor label'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'const COMPACT_MAX_WIDTH: Pixels = px\(280\.0\).*?const UTILITY_LABELS_MIN_WIDTH: Pixels = px\(280\.0\).*?fn session_rail_utility_labels_visible.*?width >= UTILITY_LABELS_MIN_WIDTH.*?fn render_sidebar_bottom_bar.*?let labels_visible = session_rail_utility_labels_visible\(rail_width\).*?Button::new\("history", if labels_visible \{ "History" \} else \{ "" \}\)' \
+    'const COMPACT_MAX_WIDTH: Pixels = px\(280\.0\).*?const UTILITY_LABELS_MIN_WIDTH: Pixels = px\(280\.0\).*?const DETAILED_MIN_WIDTH: Pixels = px\(380\.0\).*?fn session_rail_utility_labels_visible.*?width >= UTILITY_LABELS_MIN_WIDTH.*?fn session_rail_agent_history_utility_label.*?width >= DETAILED_MIN_WIDTH.*?"Agent History".*?"History".*?fn session_rail_recent_workspaces_utility_label.*?width >= DETAILED_MIN_WIDTH.*?"Recent Workspaces".*?"Workspaces"' \
     'the default compact Session Rail footer can regress to unexplained icon-only utilities'
 require_pattern crates/sidebar/src/sidebar.rs \
     'if labels_visible \{ "Agent Tools" \} else \{ "" \}' \
     'the Session Rail settings utility can regress to an unexplained glyph'
-require_pattern crates/sidebar/src/sidebar.rs \
-    'if labels_visible \{ "Workspaces" \} else \{ "" \}' \
-    'the Session Rail recent-Workspace utility can regress to an unexplained glyph'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'Button::new\([[:space:]]*"open-recent-workspaces",[[:space:]]*session_rail_recent_workspaces_utility_label\(rail_width\).*?aria_label\("Open Recent Workspaces"\)' \
+    'the Session Rail recent-Workspace utility can regress to an unexplained or ambiguous destination'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\([[:space:]]*"open-recent-workspaces".*?\.size\(ButtonSize::Compact\)' \
     'the labeled recent-Workspace utility can regress to medium padding that overflows the compact rail'
@@ -535,7 +535,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\([[:space:]]*"agent-sidebar-options-menu".*?\.size\(ButtonSize::Compact\)' \
     'the labeled Agent Tools utility can regress to medium padding that overflows the compact rail'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'Button::new\("history", if labels_visible \{ "History" \} else \{ "" \}\).*?\.size\(ButtonSize::Compact\)' \
+    'let history_visible_label = session_rail_agent_history_utility_label\(rail_width\).*?Button::new\("history", history_visible_label\).*?\.size\(ButtonSize::Compact\)' \
     'the labeled History utility can regress to medium padding that overflows the compact rail'
 require_multiline_pattern crates/agent_ui/src/terminal_thread_metadata_store.rs \
     'fn compose_terminal_thread_title.*?match terminal_title\.trim\(\).*?SharedString::new_static\("Terminal"\)' \
@@ -1066,7 +1066,7 @@ reject_pattern crates/sidebar/src/sidebar.rs \
     '"(Show Thread History|Hide Thread History|Command Search)"' \
     'the Session Rail exposes ambiguous or internally inconsistent utility labels'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'Button::new\([[:space:]]*"open-recent-workspaces".*?if labels_visible \{ "Workspaces" \} else \{ "" \}.*?IconName::FolderOpen.*?aria_label\("Open Recent Workspaces"\).*?Tooltip::for_action\("Open Recent Workspaces"' \
+    'Button::new\([[:space:]]*"open-recent-workspaces".*?session_rail_recent_workspaces_utility_label\(rail_width\).*?IconName::FolderOpen.*?aria_label\("Open Recent Workspaces"\).*?Tooltip::for_action\("Open Recent Workspaces"' \
     'the Session Rail footer can regress to an ambiguous Open Workspace utility'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\([[:space:]]*"agent-sidebar-options-menu".*?if labels_visible \{ "Agent Tools" \} else \{ "" \}.*?IconName::Settings.*?aria_label\("Agent Tools and Settings"\).*?header\("Agent Context"\).*?"Hide Session Rail"' \

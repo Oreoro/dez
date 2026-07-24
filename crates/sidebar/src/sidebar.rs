@@ -312,6 +312,26 @@ fn session_rail_utility_labels_visible(width: Pixels) -> bool {
     width >= UTILITY_LABELS_MIN_WIDTH
 }
 
+fn session_rail_agent_history_utility_label(width: Pixels) -> &'static str {
+    if width >= DETAILED_MIN_WIDTH {
+        "Agent History"
+    } else if session_rail_utility_labels_visible(width) {
+        "History"
+    } else {
+        ""
+    }
+}
+
+fn session_rail_recent_workspaces_utility_label(width: Pixels) -> &'static str {
+    if width >= DETAILED_MIN_WIDTH {
+        "Recent Workspaces"
+    } else if session_rail_utility_labels_visible(width) {
+        "Workspaces"
+    } else {
+        ""
+    }
+}
+
 fn session_row_actions_visible(is_hovered: bool, is_focused: bool, is_renaming: bool) -> bool {
     (is_hovered || is_focused) && !is_renaming
 }
@@ -1309,6 +1329,24 @@ mod session_row_action_tests {
         assert!(session_rail_utility_labels_visible(COMPACT_MAX_WIDTH));
         assert!(session_rail_utility_labels_visible(px(280.0)));
         assert!(!session_rail_utility_labels_visible(px(279.0)));
+        assert_eq!(
+            session_rail_agent_history_utility_label(COMPACT_MAX_WIDTH),
+            "History"
+        );
+        assert_eq!(
+            session_rail_recent_workspaces_utility_label(COMPACT_MAX_WIDTH),
+            "Workspaces"
+        );
+        assert_eq!(
+            session_rail_agent_history_utility_label(DETAILED_MIN_WIDTH),
+            "Agent History"
+        );
+        assert_eq!(
+            session_rail_recent_workspaces_utility_label(DETAILED_MIN_WIDTH),
+            "Recent Workspaces"
+        );
+        assert_eq!(session_rail_agent_history_utility_label(px(279.0)), "");
+        assert_eq!(session_rail_recent_workspaces_utility_label(px(279.0)), "");
     }
 
     #[test]
@@ -11664,7 +11702,7 @@ impl Sidebar {
 
     fn render_recent_projects_button(
         &self,
-        labels_visible: bool,
+        rail_width: Pixels,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let multi_workspace = self.multi_workspace.upgrade();
@@ -11703,7 +11741,7 @@ impl Sidebar {
             .trigger_with_tooltip(
                 Button::new(
                     "open-recent-workspaces",
-                    if labels_visible { "Workspaces" } else { "" },
+                    session_rail_recent_workspaces_utility_label(rail_width),
                 )
                 .size(ButtonSize::Compact)
                 .label_size(LabelSize::Small)
@@ -13317,6 +13355,7 @@ impl Sidebar {
         let on_right = self.side(cx) == SidebarSide::Right;
         let rail_width = SessionRailSettings::get_global(cx).width(self.width);
         let labels_visible = session_rail_utility_labels_visible(rail_width);
+        let history_visible_label = session_rail_agent_history_utility_label(rail_width);
 
         v_flex()
             .p_1()
@@ -13334,7 +13373,7 @@ impl Sidebar {
                     .when(on_right, |this| this.flex_row_reverse())
                     .child(self.render_agent_options_menu(labels_visible, cx))
                     .child(
-                        Button::new("history", if labels_visible { "History" } else { "" })
+                        Button::new("history", history_visible_label)
                             .size(ButtonSize::Compact)
                             .label_size(LabelSize::Small)
                             .start_icon(Icon::new(IconName::Clock).size(IconSize::Small))
@@ -13350,7 +13389,7 @@ impl Sidebar {
                             })),
                     )
                     .child(div().flex_1())
-                    .child(self.render_recent_projects_button(labels_visible, cx)),
+                    .child(self.render_recent_projects_button(rail_width, cx)),
             )
     }
 

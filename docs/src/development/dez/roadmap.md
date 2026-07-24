@@ -3139,3 +3139,14 @@ Completed for the pane-size reset hierarchy source slice:
   layout shown in the installed screenshot;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the responsive Session Rail destination-label source slice:
+
+- expanded the wide footer's ambiguous **History** label to **Agent History**;
+- expanded the wide footer's **Workspaces** label to **Recent Workspaces**;
+- retained the shorter labels at the default compact width and the existing
+  accessible names, tooltips, selected state, and expanded state at every
+  width;
+- added focused three-breakpoint assertions and static regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

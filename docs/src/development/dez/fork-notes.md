@@ -615,7 +615,9 @@ defer it.
   Session Rail footer does not inherit the wider breakpoint used for
   supplemental row metadata. The default compact width must keep Agent Tools,
   History, and Workspaces visible; only genuinely narrower rails collapse those
-  labels into named, tooltip-backed icons.
+  labels into named, tooltip-backed icons. At detailed widths, History expands
+  to Agent History and Workspaces expands to Recent Workspaces so neither
+  destination is confused with Git history or the active Workspace.
 - **2026-07-23: Responsive labels reserve space before they appear.** Controls
   made visible at a compact breakpoint use compact padding and typography. A
   breakpoint is incomplete if its newly revealed labels can only fit by

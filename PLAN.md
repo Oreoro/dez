@@ -2585,3 +2585,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   constrained. Reset now reapplies the Dez auxiliary-pane budget, and a focused
   two-pane assertion protects the exact Git-plus-terminal screenshot shape.
   This is source-only; no build or visual launch was performed.
+- 2026-07-25: Disambiguated the Session Rail's responsive footer navigation.
+  Detailed rails now name **Agent History** and **Recent Workspaces**, while
+  the default compact rail retains the shorter **History** and **Workspaces**
+  labels and genuinely narrow rails retain named, tooltip-backed icons. This
+  separates agent-run history from Git history without widening compact chrome
+  or changing any destination behavior. Focused helper assertions and static
+  identity guards protect all three width states. This is source-only; no
+  build or visual launch was performed.
