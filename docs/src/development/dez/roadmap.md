@@ -3047,3 +3047,17 @@ Completed for the progressive empty-app activation source slice:
 - added focused pure assertions and static regression guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Session Rail focus-parity source slice:
+
+- made keyboard focus reveal the same Workspace New Terminal and Options
+  controls as pointer hover;
+- added explicit tab stops while preserving Workspace-specific accessible names
+  and tooltips;
+- kept scoped worktree close controls visible and keyboard-focusable inside the
+  already-open Options menu;
+- made session-search clearing and onboarding-banner dismissal explicit tab
+  stops;
+- added focused pure assertions and static regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

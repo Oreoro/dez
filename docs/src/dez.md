@@ -76,6 +76,12 @@ option, and changes its primary action to **Start Terminal Session** once a
 Workspace is ready. This prevents a first-run terminal in the home directory
 from looking connected to Files or Git when it is not.
 
+Workspace controls follow focus. Selecting or keyboard-focusing a Workspace
+keeps its New Terminal and Options actions visible; opening the Options menu
+keeps its scoped close controls visible as well. Search clearing and banner
+dismissal are keyboard-focusable, so pointer hover is never the only route to a
+visible shell action.
+
 ## The core objects
 
 You only need four concepts for everyday use:

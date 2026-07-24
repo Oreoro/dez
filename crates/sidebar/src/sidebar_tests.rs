@@ -121,21 +121,23 @@ fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
 }
 
 #[test]
-fn active_workspace_keeps_its_new_terminal_action_discoverable() {
-    assert!(workspace_new_terminal_action_persistent(true, false));
-    assert!(workspace_new_terminal_action_persistent(false, true));
+fn active_or_focused_workspace_keeps_its_new_terminal_action_discoverable() {
+    assert!(workspace_new_terminal_action_persistent(true, false, false));
+    assert!(workspace_new_terminal_action_persistent(false, true, false));
+    assert!(workspace_new_terminal_action_persistent(false, false, true));
     assert!(
-        !workspace_new_terminal_action_persistent(false, false),
+        !workspace_new_terminal_action_persistent(false, false, false),
         "inactive Workspace actions may stay hover-revealed to protect row hierarchy"
     );
 }
 
 #[test]
-fn active_workspace_keeps_its_options_action_discoverable() {
-    assert!(workspace_options_action_persistent(true, false));
-    assert!(workspace_options_action_persistent(false, true));
+fn active_or_focused_workspace_keeps_its_options_action_discoverable() {
+    assert!(workspace_options_action_persistent(true, false, false));
+    assert!(workspace_options_action_persistent(false, true, false));
+    assert!(workspace_options_action_persistent(false, false, true));
     assert!(
-        !workspace_options_action_persistent(false, false),
+        !workspace_options_action_persistent(false, false, false),
         "inactive Workspace options may stay hover-revealed to protect row hierarchy"
     );
 }

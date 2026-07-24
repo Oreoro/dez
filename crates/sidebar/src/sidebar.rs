@@ -542,12 +542,20 @@ fn active_workspace_terminal_destination_label() -> &'static str {
     "New Terminal in Main Work Area of Active Workspace"
 }
 
-fn workspace_new_terminal_action_persistent(is_active: bool, is_menu_open: bool) -> bool {
-    is_active || is_menu_open
+fn workspace_new_terminal_action_persistent(
+    is_active: bool,
+    is_focused: bool,
+    is_menu_open: bool,
+) -> bool {
+    is_active || is_focused || is_menu_open
 }
 
-fn workspace_options_action_persistent(is_active: bool, is_menu_open: bool) -> bool {
-    is_active || is_menu_open
+fn workspace_options_action_persistent(
+    is_active: bool,
+    is_focused: bool,
+    is_menu_open: bool,
+) -> bool {
+    is_active || is_focused || is_menu_open
 }
 
 fn workspace_header_accessibility_label(
@@ -5237,6 +5245,7 @@ impl Sidebar {
                         &group_name,
                         &workspace_name,
                         is_active,
+                        is_focused,
                         cx,
                     ))
                     .child(self.render_project_header_ellipsis_menu(
@@ -5244,6 +5253,7 @@ impl Sidebar {
                         id_prefix,
                         key,
                         is_active,
+                        is_focused,
                         has_threads,
                         &group_name,
                         &workspace_name,
@@ -5357,6 +5367,7 @@ impl Sidebar {
         group_name: &SharedString,
         workspace_name: &SharedString,
         is_active: bool,
+        is_focused: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let focus_handle = self.focus_handle.clone();
@@ -5377,9 +5388,10 @@ impl Sidebar {
         .size(ButtonSize::Medium)
         .selected_style(ButtonStyle::Tinted(TintColor::Accent))
         .icon_size(IconSize::Small)
+        .tab_index(0isize)
         .aria_label(new_terminal_label.clone())
         .when(
-            !workspace_new_terminal_action_persistent(is_active, is_menu_open),
+            !workspace_new_terminal_action_persistent(is_active, is_focused, is_menu_open),
             |this| this.visible_on_hover(group_name),
         );
 
@@ -5667,6 +5679,7 @@ impl Sidebar {
         id_prefix: &str,
         project_group_key: &ProjectGroupKey,
         is_active: bool,
+        is_focused: bool,
         has_threads: bool,
         group_name: &SharedString,
         workspace_name: &SharedString,
@@ -5700,10 +5713,11 @@ impl Sidebar {
                     .size(ButtonSize::Medium)
                     .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                     .icon_size(IconSize::Small)
+                    .tab_index(0isize)
                     .aria_label(workspace_options_label.clone())
                     .tooltip(Tooltip::text(workspace_options_label))
                     .when(
-                        !workspace_options_action_persistent(is_active, is_menu_open),
+                        !workspace_options_action_persistent(is_active, is_focused, is_menu_open),
                         |el| el.visible_on_hover(group_name),
                     ),
             )
@@ -5956,12 +5970,8 @@ impl Sidebar {
                                         let close_multi_workspace = close_multi_workspace.clone();
                                         let close_weak_menu = close_weak_menu.clone();
                                         let close_workspace = close_workspace.clone();
-                                        let row_group_name = SharedString::from(format!(
-                                            "workspace-menu-row-{workspace_index}"
-                                        ));
 
                                         h_flex()
-                                            .group(&row_group_name)
                                             .w_full()
                                             .gap_2()
                                             .justify_between()
@@ -6000,8 +6010,8 @@ impl Sidebar {
                                                     )
                                                     .size(ButtonSize::Medium)
                                                     .icon_size(IconSize::Small)
+                                                    .tab_index(0isize)
                                                     .aria_label("Close Worktree from Window")
-                                                    .visible_on_hover(&row_group_name)
                                                     .tooltip(Tooltip::text(
                                                         "Close Worktree from Window",
                                                     ))
@@ -12707,6 +12717,7 @@ impl Sidebar {
                     IconButton::new("clear-session-search", IconName::Close)
                         .size(ButtonSize::Medium)
                         .icon_size(IconSize::Small)
+                        .tab_index(0isize)
                         .aria_label("Clear Session Search")
                         .tooltip(Tooltip::text("Clear Session Search"))
                         .on_click(cx.listener(|this, _, window, cx| {
@@ -13663,6 +13674,7 @@ fn render_import_onboarding_banner(
                     )
                     .size(ButtonSize::Medium)
                     .icon_size(IconSize::Small)
+                    .tab_index(0isize)
                     .aria_label(dismiss_label.clone())
                     .tooltip(Tooltip::text(dismiss_label))
                     .on_click(on_dismiss),

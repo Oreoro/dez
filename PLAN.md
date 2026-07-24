@@ -2536,3 +2536,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Restoration status now overrides stale attention color/icon state, so
   **Loading sessions** cannot present as a warning. This is source-only; no
   build or visual launch was performed.
+- 2026-07-25: Closed a Session Rail keyboard/pointer parity gap. Keyboard focus
+  now keeps a Workspace's New Terminal and Options controls visible, and both
+  controls are explicit tab stops. An already-open Workspace menu keeps its
+  scoped close controls visible instead of requiring a second hover. Session
+  search clearing and onboarding-banner dismissal also enter the tab order.
+  Static guards cover the focus, visibility, naming, and tab-order contract.
+  This is source-only; no build or visual launch was performed.

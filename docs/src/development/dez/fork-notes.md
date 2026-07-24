@@ -114,12 +114,13 @@ terminology:
 | Hide Workspace Tools or Agent                 | Hides that region and returns focus to an editor or terminal           |
 | Split or move a Surface                       | Rearranges the same Workspace; it does not create a second project     |
 
-The active Workspace keeps **New Terminal** and **Workspace Options** visible.
-Inactive Workspace actions may reveal on hover because selecting the Workspace
-first makes the same controls persistent. Every icon-only control must retain
-an accessible name and tooltip. Repeated Workspace-row controls include the
-visible Workspace name in both; internal element and hover-group identifiers
-are presentation-only and must never enter user-facing copy.
+The active or keyboard-focused Workspace keeps **New Terminal** and
+**Workspace Options** visible. Other inactive Workspace actions may reveal on
+hover because selecting or focusing the Workspace first makes the same controls
+persistent. Every icon-only control must retain an accessible name, tooltip,
+and keyboard tab stop. Repeated Workspace-row controls include the visible
+Workspace name in both; internal element and hover-group identifiers are
+presentation-only and must never enter user-facing copy.
 
 Visible controls must also perform their advertised action: the Agent title
 pencil starts editing, worktree closure names its window scope, and the
@@ -482,6 +483,12 @@ defer it.
   Session** becomes the primary zero-session recovery. Restoration status takes
   precedence over stale attention styling so **Loading sessions** cannot show
   a contradictory warning icon.
+- **2026-07-25: Keyboard focus reveals the same Workspace controls as
+  pointer hover.** A focused Session Rail Workspace keeps its named New
+  Terminal and Options controls visible and keyboard-focusable. Inside an
+  already-open Workspace menu, per-worktree close controls remain visible and
+  enter the tab order rather than requiring a second pointer hover. Search
+  clearing and import-banner dismissal follow the same rule.
 - **2026-07-23: Public source must explain the product and its evidence
   boundary.** The canonical repository front page names Dez, explains how the
   Session Rail, Workspace Tools, Main Work Area, Agent, and one
