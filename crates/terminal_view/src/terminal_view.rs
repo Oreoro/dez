@@ -62,8 +62,9 @@ use ui::{
 };
 use util::ResultExt;
 use workspace::{
-    CloseActiveItem, DraggedSelection, DraggedTab, NewCenterTerminal, NewTerminal, OpenTerminal,
-    Pane, ToolbarItemLocation, Workspace, WorkspaceId, delete_unloaded_items,
+    CloseActiveItem, DraggedSelection, DraggedTab, NewCenterTerminal, NewTerminal,
+    Open as OpenWorkspace, OpenTerminal, Pane, ToolbarItemLocation, Workspace, WorkspaceId,
+    delete_unloaded_items,
     item::{
         HighlightedText, Item, ItemEvent, SerializableItem, TabContentParams, TabTooltipContent,
     },
@@ -2273,6 +2274,7 @@ impl TerminalView {
         let details_changes = changes_label.clone();
         let details_working_directory = working_directory.clone();
         let details_session_id = session_id.clone();
+        let details_has_workspace_files = has_workspace_files;
         let ownership_note = if has_persistent_owner {
             "The external Dez Terminal Host owns this process."
         } else {
@@ -2319,7 +2321,12 @@ impl TerminalView {
                     .header("How Dez Works")
                     .label("Run · computation stays in this Terminal Session.")
                     .label("Supervise · Session Rail shows live state and attention.")
-                    .label("Review · Files and Git inspect this same Workspace.")
+                    .when(details_has_workspace_files, |menu| {
+                        menu.label("Review · Files and Git inspect this same Workspace.")
+                    })
+                    .when(!details_has_workspace_files, |menu| {
+                        menu.label("Connect · open a Workspace to add Files and Git review.")
+                    })
                 }))
             })
             .anchor(Anchor::TopRight)
@@ -2415,6 +2422,32 @@ impl TerminalView {
                                 .aria_label("Open Files for this Workspace")
                                 .on_click(|_, window, cx| {
                                     window.dispatch_action(ToggleFilesFocus.boxed_clone(), cx);
+                                }),
+                            )
+                        })
+                        .when(!has_workspace_files, |this| {
+                            this.child(
+                                Button::new(
+                                    ("terminal-context-open-workspace", terminal_entity_id),
+                                    "Open Workspace",
+                                )
+                                .size(ButtonSize::Compact)
+                                .style(ButtonStyle::Subtle)
+                                .start_icon(
+                                    Icon::new(IconName::FolderOpen).size(IconSize::XSmall),
+                                )
+                                .tab_index(0isize)
+                                .aria_label(
+                                    "Open a Workspace in this window and keep this Terminal Session",
+                                )
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(
+                                        OpenWorkspace {
+                                            create_new_window: Some(false),
+                                        }
+                                        .boxed_clone(),
+                                        cx,
+                                    );
                                 }),
                             )
                         })

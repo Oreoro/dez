@@ -682,7 +682,10 @@ with new labels.
       behind the official Zed product gate; install interaction remains open.
       Once a terminal exists, the guide remains available inside **Session
       Details** as **How Dez Works**, preserving **Run → Supervise → Review**
-      without adding another permanent help row.
+      without adding another permanent help row. A Scratch Terminal shows
+      **Open Workspace** in its context strip; the selected codebase joins the
+      same window so the running computation is preserved while Files and Git
+      review become available.
 - [ ] Group Dez settings by Workspace, Sessions, Agents, Attention, Evidence,
       Appearance, Privacy, and Advanced compatibility; hide experimental
       internals from the default path. The settings shell now names Workspace
@@ -2412,3 +2415,9 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   same Workspace through Files and Git. The trigger names both purposes for
   assistive technology and pointer users. This is source-only; no build or
   visual launch was performed.
+- 2026-07-25: Removed the Scratch Terminal's post-activation dead end. When no
+  codebase is attached, its context strip now offers **Open Workspace** instead
+  of hiding Files/Git with no direct next step. The action forces a same-window
+  open, preserving the running Terminal Session while the selected codebase
+  gains Files and Git review. The collapsed guide says **Connect** until that
+  context exists. This is source-only; no build or visual launch was performed.

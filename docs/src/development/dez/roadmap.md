@@ -2826,3 +2826,17 @@ Completed for the post-activation orientation source slice:
 - documented the product model and protected its copy with a static guard;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Scratch Terminal-to-Workspace handoff source slice:
+
+- replaced the details-only Scratch Terminal context with a visible **Open
+  Workspace** next step;
+- forced that open into the current window so the running Terminal Session is
+  preserved;
+- switched automatically to the normal Files/Git handoff once codebase context
+  exists;
+- made **How Dez Works** say **Connect** while review is unavailable instead of
+  promising hidden actions;
+- protected the same-window and product-copy contract with a static guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
