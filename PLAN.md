@@ -2642,3 +2642,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   decisions enter the tab order; Permission Scope reports value, expanded
   state, and open treatment. Static guards cover all three contracts. This is
   source-only; no build or visual launch was performed.
+- 2026-07-25: Made Agent Review a persistent IDE workflow. Per-file Review,
+  Reject, and Keep actions remain visible, use row-specific identity, enter the
+  tab order, and explain pending-edit disablement. Review Changes, Reject All,
+  Keep All, Stop Subagent, and Return to Parent Agent Session are specifically
+  named keyboard controls. Restore Checkpoint now warns that it replaces
+  Workspace files and requires Restore Files confirmation before targeting the
+  exact checkpoint. Message-edit cancel/restart controls are named tab stops.
+  Static guards cover visibility, ownership, focus, and confirmation. This is
+  source-only; no build or visual launch was performed.

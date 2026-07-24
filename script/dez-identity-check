@@ -684,6 +684,18 @@ reject_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
 require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
     'Button::new\(\("allow-btn".*?tab_index\(0isize\).*?Button::new\(\("deny-btn".*?tab_index\(0isize\).*?Button::new\(\("granularity-trigger".*?tab_index\(0isize\).*?aria_label\("Permission Scope"\).*?aria_value\(current_label\).*?aria_expanded\(dropdown_open\).*?selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\).*?Button::new\("apply-patterns".*?tab_index\(0isize\).*?Button::new\(\(option_id, entry_ix\).*?tab_index\(0isize\)' \
     'Agent permission decisions can regress to keyboard-inaccessible choices or a stateless scope popup'
+require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
+    'id\(\("edited-buttons-container", index\)\).*?flex_none\(\).*?Button::new\(\("review-file", index\), "Review"\).*?tab_index\(0isize\).*?Button::new\(\("reject-file", index\), "Reject"\).*?tab_index\(0isize\).*?disabled\(pending_edits\).*?EDIT_NOT_READY_TOOLTIP_LABEL.*?Button::new\(\("keep-file", index\), "Keep"\).*?tab_index\(0isize\).*?disabled\(pending_edits\).*?EDIT_NOT_READY_TOOLTIP_LABEL' \
+    'per-file Agent review can regress to repeated IDs, hover-only actions, or unexplained disabled decisions'
+reject_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
+    'visible_on_hover\\("edited-code"\\)' \
+    'per-file Agent review can regress to pointer-hover-only visibility'
+require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
+    'IconButton::new\("review-changes".*?tab_index\(0isize\).*?aria_label\("Review Changes"\).*?Button::new\("reject-all-changes".*?tab_index\(0isize\).*?Button::new\("keep-all-changes".*?tab_index\(0isize\).*?IconButton::new\("stop_subagent".*?tab_index\(0isize\).*?aria_label\("Stop Subagent"\).*?IconButton::new\("minimize_subagent".*?tab_index\(0isize\).*?aria_label\("Return to Parent Agent Session"\).*?Tooltip::text\("Return to Parent Agent Session"\)' \
+    'Agent review-all or subagent navigation can regress to unnamed or keyboard-inaccessible controls'
+require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
+    'Button::new\([[:space:]]*\("restore-checkpoint", entry_ix\).*?tab_index\(0isize\).*?window\.prompt\([[:space:]]*gpui::PromptLevel::Warning,[[:space:]]*"Restore this checkpoint\?".*?"Restore Files", "Cancel".*?prompt\.await\.log_err\(\) != Some\(0\).*?restore_checkpoint\(&client_id, cx\).*?IconButton::new\([[:space:]]*\("cancel-message-edit", entry_ix\).*?tab_index\(0isize\).*?aria_label\("Cancel Editing Message"\).*?IconButton::new\([[:space:]]*\("regenerate-message", entry_ix\).*?tab_index\(0isize\).*?"Restart Agent Session from Edited Message"' \
+    'Agent checkpoint restore or message-edit recovery can regress to an immediate destructive action or unnamed controls'
 require_multiline_pattern crates/agent_ui/src/agent_ui.rs \
     'pub const DEFAULT_THREAD_TITLE.*?"New thread".*?pub fn default_agent_session_title.*?app_name == "Zed".*?DEFAULT_THREAD_TITLE.*?"New Agent Session".*?default_session_title_preserves_product_vocabulary' \
     'untitled Dez conversations can regress to the upstream New thread placeholder'

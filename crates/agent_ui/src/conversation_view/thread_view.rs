@@ -3273,7 +3273,6 @@ impl ThreadView {
                             action_log,
                             &telemetry,
                             pending_edits,
-                            editor_bg_color,
                             cx,
                         );
 
@@ -3341,17 +3340,14 @@ impl ThreadView {
         action_log: &Entity<ActionLog>,
         telemetry: &ActionLogTelemetry,
         pending_edits: bool,
-        editor_bg_color: Hsla,
         cx: &Context<Self>,
     ) -> impl IntoElement {
         h_flex()
-            .id("edited-buttons-container")
-            .visible_on_hover("edited-code")
-            .absolute()
-            .right_0()
-            .px_1()
+            .id(("edited-buttons-container", index))
+            .flex_none()
+            .opacity(0.72)
+            .hover(|style| style.opacity(1.0))
             .gap_1()
-            .bg(editor_bg_color)
             .on_hover(cx.listener(move |this, is_hovered, _window, cx| {
                 if *is_hovered {
                     this.hovered_edited_file_buttons = Some(index);
@@ -3361,8 +3357,9 @@ impl ThreadView {
                 cx.notify();
             }))
             .child(
-                Button::new("review", "Review")
+                Button::new(("review-file", index), "Review")
                     .label_size(LabelSize::Small)
+                    .tab_index(0isize)
                     .on_click({
                         let buffer = buffer.clone();
                         cx.listener(move |this, _, window, cx| {
@@ -3373,7 +3370,11 @@ impl ThreadView {
             .child(
                 Button::new(("reject-file", index), "Reject")
                     .label_size(LabelSize::Small)
+                    .tab_index(0isize)
                     .disabled(pending_edits)
+                    .when(pending_edits, |this| {
+                        this.tooltip(Tooltip::text(EDIT_NOT_READY_TOOLTIP_LABEL))
+                    })
                     .on_click({
                         let buffer = buffer.clone();
                         let action_log = action_log.clone();
@@ -3398,7 +3399,11 @@ impl ThreadView {
             .child(
                 Button::new(("keep-file", index), "Keep")
                     .label_size(LabelSize::Small)
+                    .tab_index(0isize)
                     .disabled(pending_edits)
+                    .when(pending_edits, |this| {
+                        this.tooltip(Tooltip::text(EDIT_NOT_READY_TOOLTIP_LABEL))
+                    })
                     .on_click({
                         let buffer = buffer.clone();
                         let action_log = action_log.clone();
@@ -4146,6 +4151,8 @@ impl ThreadView {
                     .child(
                         IconButton::new("review-changes", IconName::ListTodo)
                             .icon_size(IconSize::Small)
+                            .tab_index(0isize)
+                            .aria_label("Review Changes")
                             .tooltip({
                                 let focus_handle = focus_handle.clone();
                                 move |_window, cx| {
@@ -4165,6 +4172,7 @@ impl ThreadView {
                     .child(
                         Button::new("reject-all-changes", "Reject All")
                             .label_size(LabelSize::Small)
+                            .tab_index(0isize)
                             .disabled(pending_edits)
                             .when(pending_edits, |this| {
                                 this.tooltip(Tooltip::text(EDIT_NOT_READY_TOOLTIP_LABEL))
@@ -4180,6 +4188,7 @@ impl ThreadView {
                     .child(
                         Button::new("keep-all-changes", "Keep All")
                             .label_size(LabelSize::Small)
+                            .tab_index(0isize)
                             .disabled(pending_edits)
                             .when(pending_edits, |this| {
                                 this.tooltip(Tooltip::text(EDIT_NOT_READY_TOOLTIP_LABEL))
@@ -4279,6 +4288,8 @@ impl ThreadView {
                                         IconButton::new("stop_subagent", IconName::Stop)
                                             .icon_size(IconSize::Small)
                                             .icon_color(Color::Error)
+                                            .tab_index(0isize)
+                                            .aria_label("Stop Subagent")
                                             .tooltip(Tooltip::text("Stop Subagent"))
                                             .on_click(move |_, _, cx| {
                                                 thread.update(cx, |thread, cx| {
@@ -4290,7 +4301,9 @@ impl ThreadView {
                                 .child(
                                     IconButton::new("minimize_subagent", IconName::Dash)
                                         .icon_size(IconSize::Small)
-                                        .tooltip(Tooltip::text("Minimize Subagent"))
+                                        .tab_index(0isize)
+                                        .aria_label("Return to Parent Agent Session")
+                                        .tooltip(Tooltip::text("Return to Parent Agent Session"))
                                         .on_click(move |_, window, cx| {
                                             let _ = server_view.update(cx, |server_view, cx| {
                                                 server_view.navigate_to_thread(
@@ -6441,17 +6454,45 @@ impl ThreadView {
                                 .gap_2()
                                 .child(Divider::horizontal())
                                 .child(
-                                    Button::new("restore-checkpoint", "Restore Checkpoint")
+                                    Button::new(
+                                        ("restore-checkpoint", entry_ix),
+                                        "Restore Checkpoint",
+                                    )
                                         .start_icon(Icon::new(IconName::Undo).size(IconSize::XSmall).color(Color::Muted))
                                         .label_size(LabelSize::XSmall)
                                         .color(Color::Muted)
+                                        .tab_index(0isize)
                                         .tooltip(Tooltip::text(if paths::APP_NAME == "Zed" {
                                             "Restores all files in the project to the content they had at this point in the conversation."
                                         } else {
                                             "Restores all files in the workspace to the content they had at this point in the conversation."
                                         }))
-                                        .on_click(cx.listener(move |this, _, _window, cx| {
-                                            this.restore_checkpoint(&client_id, cx);
+                                        .on_click(cx.listener(move |_this, _, window, cx| {
+                                            let detail = if paths::APP_NAME == "Zed" {
+                                                "This replaces all project files with their content at this point in the conversation."
+                                            } else {
+                                                "This replaces all Workspace files with their content at this point in the Agent Session."
+                                            };
+                                            let prompt = window.prompt(
+                                                gpui::PromptLevel::Warning,
+                                                "Restore this checkpoint?",
+                                                Some(detail),
+                                                &["Restore Files", "Cancel"],
+                                                cx,
+                                            );
+                                            let client_id = client_id.clone();
+
+                                            cx.spawn_in(window, async move |this, cx| -> anyhow::Result<()> {
+                                                if prompt.await.log_err() != Some(0) {
+                                                    return Ok(());
+                                                }
+
+                                                this.update(cx, |this, cx| {
+                                                    this.restore_checkpoint(&client_id, cx);
+                                                })?;
+                                                Ok(())
+                                            })
+                                            .detach_and_log_err(cx);
                                         }))
                                 )
                                 .child(Divider::horizontal())
@@ -6510,10 +6551,18 @@ impl ThreadView {
                                     this.child(
                                         base_container
                                             .child(
-                                                IconButton::new("cancel", IconName::Close)
+                                                IconButton::new(
+                                                    ("cancel-message-edit", entry_ix),
+                                                    IconName::Close,
+                                                )
                                                     .disabled(is_loading_contents)
                                                     .icon_color(Color::Error)
                                                     .icon_size(IconSize::XSmall)
+                                                    .tab_index(0isize)
+                                                    .aria_label("Cancel Editing Message")
+                                                    .tooltip(Tooltip::text(
+                                                        "Cancel Editing Message",
+                                                    ))
                                                     .on_click(cx.listener(Self::cancel_editing))
                                             )
                                             .child(
@@ -6524,9 +6573,18 @@ impl ThreadView {
                                                         .child(loading_contents_spinner(IconSize::XSmall))
                                                         .into_any_element()
                                                 } else {
-                                                    IconButton::new("regenerate", IconName::Return)
+                                                    IconButton::new(
+                                                        ("regenerate-message", entry_ix),
+                                                        IconName::Return,
+                                                    )
                                                         .icon_color(Color::Muted)
                                                         .icon_size(IconSize::XSmall)
+                                                        .tab_index(0isize)
+                                                        .aria_label(agent_session_label(
+                                                            paths::APP_NAME,
+                                                            "Restart Thread from Edited Message",
+                                                            "Restart Agent Session from Edited Message",
+                                                        ))
                                                         .tooltip(Tooltip::text(agent_session_label(
                                                             paths::APP_NAME,
                                                             "Editing will restart the thread from this point.",

@@ -190,6 +190,16 @@ Agent Review supports interactive Keep/Reject decisions. A Review Brief is a
 different Surface: it summarizes observed evidence and calls missing evidence
 missing.
 
+Changed-file rows keep Review, Reject, and Keep visible and keyboard-reachable.
+Each decision targets that exact file; pending edits explain why Keep and
+Reject are temporarily unavailable. Review Changes opens the interactive Agent
+diff, while Keep All and Reject All remain explicit whole-review decisions.
+
+Subagent controls distinguish stopping work from returning to the parent Agent
+Session. Restoring a checkpoint is different again: because it replaces
+Workspace files with their earlier content, Dez names that scope and requires
+confirmation before **Restore Files** runs.
+
 You do not need to hunt for the matching project after supervising a terminal.
 Its context bar and selected Session Rail row provide the same direct handoff:
 **Files** opens the owning Workspace tree, **Review Changes** opens Agent review

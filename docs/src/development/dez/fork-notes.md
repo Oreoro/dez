@@ -178,6 +178,23 @@ expanded state, uses selected treatment while open, and applies the chosen
 scope to the exact pending tool call. A warning may disable Allow, but it must
 not hide Deny or Retry.
 
+Agent Review is an IDE workflow, not hover decoration. Every changed-file row
+keeps Review, Reject, and Keep visible at rest, assigns row-specific element
+identity, and preserves the exact Buffer target. Pending edits disable Keep and
+Reject with an explicit reason. Review Changes, Reject All, and Keep All are
+keyboard tab stops.
+
+A subagent title bar names **Stop Subagent** and **Return to Parent Agent
+Session** as keyboard actions. Returning changes presentation only; it
+navigates to the existing parent conversation and does not cancel or recreate
+either Session.
+
+Restoring an Agent checkpoint is a consequential Workspace-wide file
+replacement. Dez names the scope, requires a warning confirmation with
+**Restore Files** and **Cancel**, and only invokes the exact message checkpoint
+after confirmation. Cancelling or restarting an edited message is separately
+named and keyboard-reachable.
+
 The everyday Canvas Layout menu is a workflow picker, not a diagnostics or
 storage dashboard. It exposes Full, Agent Control, Focus Editor,
 Code/Run/Observe, Review, and Debug; saved-layout detail belongs in **Manage

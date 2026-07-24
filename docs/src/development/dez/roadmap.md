@@ -3233,3 +3233,21 @@ Completed for the Agent response, queue, and permission source slice:
   regression guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Agent Review and checkpoint-safety source slice:
+
+- replaced hover-only per-file Review, Reject, and Keep controls with a quiet
+  but persistently visible row action group;
+- gave every changed-file action group and Review control row-specific
+  identity and retained exact Buffer ownership;
+- made per-file and review-all decisions explicit tab stops and explained
+  pending-edit disablement;
+- named and keyboard-enabled Stop Subagent and Return to Parent Agent Session,
+  preserving navigation-versus-cancellation semantics;
+- added a warning confirmation before Restore Checkpoint can replace Workspace
+  files, retaining exact message-checkpoint identity after confirmation;
+- named and keyboard-enabled edited-message cancel and Agent Session restart;
+- added static visibility, identity, ownership, focus, disabled-reason, and
+  confirmation regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
