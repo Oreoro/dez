@@ -2687,6 +2687,9 @@ Completed for the running Agent Session action-parity slice:
 - exposed the virtualized History collection as **Agent Session history** and
   gave each Session a one-based position plus total collection size while
   excluding visual time-bucket separators from the count;
+- replaced the count-only toolbar with a named **Agent History · N** header,
+  a compact full-count accessibility label, and an explicit, keyboard-focusable
+  **Back to Sessions** control wired to the existing close lifecycle;
 - turned empty and no-results recovery into a named, vertically scrollable
   region with bottom breathing room so its action remains reachable in a short
   Session Rail;

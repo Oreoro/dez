@@ -1213,6 +1213,11 @@ impl ThreadsArchiveView {
         } else {
             format!("{entry_count} agent sessions")
         };
+        let title = agent_history_label(paths::APP_NAME, "Thread History", "Agent History");
+        let heading_label = format!("{title} · {entry_count}");
+        let toolbar_accessibility_label = format!("{title}. {count_label}");
+        let back_label =
+            agent_history_label(paths::APP_NAME, "Back to Threads", "Back to Sessions");
         let filter_label = if self.thread_filter == ThreadFilter::ArchivedOnly {
             agent_history_label(
                 paths::APP_NAME,
@@ -1228,6 +1233,9 @@ impl ThreadsArchiveView {
         };
 
         h_flex()
+            .id("agent-history-toolbar")
+            .role(gpui::Role::Region)
+            .aria_label(toolbar_accessibility_label)
             .relative()
             .flex_none()
             .pl(thread_archive_toolbar_padding_start(cx))
@@ -1245,12 +1253,25 @@ impl ThreadsArchiveView {
                     .border_color(thread_archive_border(cx)),
             )
             .child(
-                Label::new(count_label)
-                    .size(LabelSize::Small)
-                    .color(Color::Muted),
+                h_flex()
+                    .min_w_0()
+                    .flex_1()
+                    .gap(thread_archive_toolbar_gap(cx))
+                    .child(
+                        IconButton::new("close-agent-history", IconName::ArrowLeft)
+                            .icon_size(IconSize::Small)
+                            .tab_index(0isize)
+                            .aria_label(back_label)
+                            .tooltip(Tooltip::text(back_label))
+                            .on_click(cx.listener(|_this, _, _, cx| {
+                                cx.emit(ThreadsArchiveViewEvent::Close);
+                            })),
+                    )
+                    .child(Label::new(heading_label).size(LabelSize::Small).truncate()),
             )
             .child(
                 h_flex()
+                    .flex_none()
                     .gap(thread_archive_toolbar_gap(cx))
                     .child(
                         IconButton::new("new-thread", IconName::Plus)
