@@ -2802,3 +2802,15 @@ Completed for the terminal-to-diff source slice:
 - added product-vocabulary assertions and a static ownership guard;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the audited focus-root source slice:
+
+- traced the installed runtime's repeated missing-accessibility-node warnings
+  back to primary views that tracked focus without exposing a complete node;
+- gave populated and empty Files, Outline, Git Changes/History, Debug, Agent,
+  native and external Agent Sessions, Agent History, and terminal failure/panel
+  roots stable IDs, semantic roles, and specific labels;
+- preserved official Zed vocabulary where the fork shares those views;
+- added a static guard for every repaired source owner;
+- retained source-only evidence: the next rebuilt artifact must still prove a
+  clean accessibility log through the keyboard workflow.

@@ -750,7 +750,12 @@ with new labels.
       and recovery controls. Commit `33f7ff5893` adds non-visual shortcut
       metadata to shared text/icon buttons and exposes Shift+A and Shift+V on
       the Session scope and Review Brief controls, matching their tooltips. The
-      rendered matrix remains open.
+      primary focus roots observed in the installed audit now pair their tracked
+      focus handles with stable IDs, Region or Alert roles, and specific labels:
+      populated/empty Files, Outline, Git Changes/History, Debug, Agent, native
+      and external Agent Sessions, Agent History, and terminal failure/panel
+      surfaces. The rebuilt accessibility log and broader rendered matrix remain
+      open.
 - [ ] Capture a visual state matrix at compact, balanced, and spacious density
       in representative light and dark themes and at narrow/normal/wide rail
       widths.
@@ -2389,3 +2394,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   changes list without an actual review surface. Command Palette vocabulary and
   identity guards cover the new contract. No build or visual launch was
   performed.
+- 2026-07-25: Repaired the primary missing-accessibility-node paths recorded by
+  the installed runtime audit. Populated and empty Files, Outline, Git
+  Changes/History, Debug, Agent, native and external Agent Sessions, Agent
+  History, and terminal failure/panel roots now expose an element ID, semantic
+  role, product-specific label, and the same focus handle they track. Static
+  guards protect every owner. This is source evidence only; the rebuilt
+  artifact must still prove that its accessibility log remains clean through
+  the keyboard workflow.

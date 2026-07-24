@@ -1486,6 +1486,13 @@ impl Render for ThreadsArchiveView {
         };
 
         v_flex()
+            .id("agent-history")
+            .role(gpui::Role::Region)
+            .aria_label(agent_history_label(
+                paths::APP_NAME,
+                "Thread history",
+                "Agent History",
+            ))
             .key_context("ThreadsArchiveView")
             .track_focus(&self.focus_handle)
             .on_action(cx.listener(Self::select_next))

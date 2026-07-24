@@ -5344,6 +5344,12 @@ impl Render for OutlinePanel {
 
         v_flex()
             .id("outline-panel")
+            .role(gpui::Role::Region)
+            .aria_label(if paths::APP_NAME == "Zed" {
+                "Outline Panel"
+            } else {
+                "Outline"
+            })
             .size_full()
             .bg(canvas_outline_panel_background(canvas_contrast, cx))
             .overflow_hidden()

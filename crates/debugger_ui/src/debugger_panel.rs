@@ -1671,6 +1671,9 @@ impl Render for DebugPanel {
         let docked_to_bottom = self.position(window, cx) == DockPosition::Bottom;
 
         v_flex()
+            .id("debug-panel")
+            .role(gpui::Role::Region)
+            .aria_label(debug_region_label(paths::APP_NAME))
             .size_full()
             .bg(panel_background)
             .key_context("DebugPanel")

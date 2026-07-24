@@ -343,6 +343,33 @@ require_multiline_pattern crates/git_ui/src/git_panel.rs \
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'AUXILIARY_PANE_MAX_INITIAL_WIDTH: f32 = 360\..*?AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0\.22.*?fn auxiliary_pane_initial_width.*?remember_horizontal_split_size\(preferred_width\).*?split_with_size_hint' \
     'Workspace Tools can regress to an equal-width column that overwhelms the Main Work Area'
+require_multiline_pattern crates/project_panel/src/project_panel.rs \
+    '\.id\("project-panel"\).*?\.role\(gpui::Role::Region\).*?"Files".*?\.track_focus\(&self\.focus_handle\(cx\)\).*?\.id\("project-panel"\).*?\.role\(gpui::Role::Region\).*?"Files".*?\.track_focus\(&self\.focus_handle\(cx\)\)' \
+    'the populated or empty Files region can regain a focus handle with no accessibility node'
+require_multiline_pattern crates/outline_panel/src/outline_panel.rs \
+    '\.id\("outline-panel"\).*?\.role\(gpui::Role::Region\).*?"Outline".*?\.track_focus\(&self\.focus_handle\)' \
+    'the Outline region can regain a focus handle with no accessibility node'
+require_multiline_pattern crates/git_ui/src/git_panel.rs \
+    '\.id\("git_panel"\).*?\.role\(gpui::Role::Region\).*?GitPanelTab::Changes => "Git Changes".*?GitPanelTab::History => "Git History".*?\.track_focus\(&self\.focus_handle\)' \
+    'Git focus can regress to announcing the whole window instead of its active tool'
+require_multiline_pattern crates/debugger_ui/src/debugger_panel.rs \
+    '\.id\("debug-panel"\).*?\.role\(gpui::Role::Region\).*?\.aria_label\(debug_region_label\(paths::APP_NAME\)\).*?\.track_focus\(&self\.focus_handle\(cx\)\)' \
+    'Debug focus can regress to an unnamed accessibility root'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    '\.id\("agent-panel"\).*?\.role\(gpui::Role::Region\).*?"Agent Panel".*?"Agent".*?\.track_focus\(&self\.focus_handle\)' \
+    'the Agent region can regain a focus handle with no accessibility node'
+require_multiline_pattern crates/agent_ui/src/conversation_view.rs \
+    '\.id\(\("agent-conversation", cx\.entity_id\(\)\)\).*?\.role\(gpui::Role::Region\).*?"Agent thread".*?"Agent Session".*?\.track_focus\(&self\.focus_handle\)' \
+    'native Agent conversation focus can regress to announcing the whole window'
+require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
+    '\.id\(\("agent-session", cx\.entity_id\(\)\)\).*?\.role\(gpui::Role::Region\).*?"Agent thread".*?"Agent Session".*?\.track_focus\(&self\.focus_handle\)' \
+    'external Agent Session focus can regress to an unnamed accessibility root'
+require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
+    '\.id\("agent-history"\).*?\.role\(gpui::Role::Region\).*?agent_history_label\(.*?"Thread history".*?"Agent History".*?\.track_focus\(&self\.focus_handle\)' \
+    'Agent History focus can regress to announcing the whole window'
+require_multiline_pattern crates/terminal_view/src/terminal_panel.rs \
+    '\.id\("terminal-failed-to-start"\).*?\.role\(gpui::Role::Alert\).*?\.aria_label\("Terminal did not start"\).*?\.track_focus\(&self\.focus_handle\).*?\.id\("terminal-panel"\).*?\.role\(gpui::Role::Region\).*?\.aria_label\("Terminal Panel"\).*?\.track_focus\(&self\.focus_handle\)' \
+    'terminal panel or launch-failure focus can regress to an unnamed accessibility root'
 require_multiline_pattern crates/gpui/src/app.rs \
     'pub const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs\(2\).*?block_with_timeout\(SHUTDOWN_TIMEOUT, futures\)' \
     'normal session persistence can regress to the former 200 ms aggregate quit race'

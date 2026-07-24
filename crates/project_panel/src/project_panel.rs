@@ -7109,6 +7109,12 @@ impl Render for ProjectPanel {
             }
             h_flex()
                 .id("project-panel")
+                .role(gpui::Role::Region)
+                .aria_label(if paths::APP_NAME == "Zed" {
+                    "Project Panel"
+                } else {
+                    "Files"
+                })
                 .group("project-panel")
                 .when(panel_settings.drag_and_drop, |this| {
                     this.on_drag_move(cx.listener(handle_drag_move::<ExternalPaths>))
@@ -7638,7 +7644,14 @@ impl Render for ProjectPanel {
             };
 
             v_flex()
-                .id("empty-project_panel-wrapper")
+                .id("project-panel")
+                .role(gpui::Role::Region)
+                .aria_label(if paths::APP_NAME == "Zed" {
+                    "Project Panel"
+                } else {
+                    "Files"
+                })
+                .track_focus(&self.focus_handle(cx))
                 .size_full()
                 .bg(cx.theme().colors().editor_background)
                 .child(

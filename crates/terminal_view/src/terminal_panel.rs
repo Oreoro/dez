@@ -1257,6 +1257,9 @@ impl Render for FailedToSpawnTerminal {
             });
 
         v_flex()
+            .id("terminal-failed-to-start")
+            .role(gpui::Role::Alert)
+            .aria_label("Terminal did not start")
             .track_focus(&self.focus_handle)
             .size_full()
             .p_4()
@@ -1314,6 +1317,9 @@ impl Render for TerminalPanel {
         self.workspace
             .update(cx, |workspace, cx| {
                 registrar
+                    .id("terminal-panel")
+                    .role(gpui::Role::Region)
+                    .aria_label("Terminal Panel")
                     .track_focus(&self.focus_handle)
                     .size_full()
                     .child(self.center.render(

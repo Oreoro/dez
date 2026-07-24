@@ -6955,6 +6955,13 @@ impl Render for AgentPanel {
         // - Scrolling in all views works as expected
         // - Files can be dropped into the panel
         let content = v_flex()
+            .id("agent-panel")
+            .role(gpui::Role::Region)
+            .aria_label(if paths::APP_NAME == "Zed" {
+                "Agent Panel"
+            } else {
+                "Agent"
+            })
             .key_context(self.key_context())
             .relative()
             .size_full()

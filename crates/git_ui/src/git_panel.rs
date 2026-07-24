@@ -8528,6 +8528,11 @@ impl Render for GitPanel {
 
         v_flex()
             .id("git_panel")
+            .role(gpui::Role::Region)
+            .aria_label(match self.active_tab {
+                GitPanelTab::Changes => "Git Changes",
+                GitPanelTab::History => "Git History",
+            })
             .key_context(self.dispatch_context(window, cx))
             .track_focus(&self.focus_handle)
             .when(has_write_access && !project.is_read_only(cx), |this| {

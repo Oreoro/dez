@@ -12445,6 +12445,13 @@ impl Render for ThreadView {
             });
 
         v_flex()
+            .id(("agent-session", cx.entity_id()))
+            .role(gpui::Role::Region)
+            .aria_label(if paths::APP_NAME == "Zed" {
+                "Agent thread"
+            } else {
+                "Agent Session"
+            })
             .key_context("AcpThread")
             .track_focus(&self.focus_handle)
             .on_action(cx.listener(|this, _: &menu::Cancel, _, cx| {

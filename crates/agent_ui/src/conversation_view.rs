@@ -4051,6 +4051,13 @@ impl Render for ConversationView {
         };
 
         v_flex()
+            .id(("agent-conversation", cx.entity_id()))
+            .role(gpui::Role::Region)
+            .aria_label(if paths::APP_NAME == "Zed" {
+                "Agent thread"
+            } else {
+                "Agent Session"
+            })
             .track_focus(&self.focus_handle)
             .size_full()
             .bg(cx.theme().colors().panel_background)
