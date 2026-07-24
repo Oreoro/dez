@@ -2550,3 +2550,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   the hover-close preference; inactive tabs remain quiet and pinned dirty tabs
   retain their status indicator. Official Zed retains upstream tab-close
   behavior. This is source-only; no build or visual launch was performed.
+- 2026-07-25: Found the concrete reason the installed screenshots did not show
+  the promised typography or glass theme: the machine's older generated Dez
+  profile pinned `.ZedSans`, `"mode": "light"`, and One Light. Expanded the
+  narrowly scoped migration to recognize that exact generated signature and
+  upgrade UI font, appearance mode, and light theme together while preserving
+  all unrelated settings. Official Zed and arbitrary custom profiles remain
+  excluded. The local generated profile was aligned directly to JetBrains Mono
+  and system-selected Lumin Light/Lumin Blur without a build or app launch.

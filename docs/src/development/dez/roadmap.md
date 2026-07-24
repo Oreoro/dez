@@ -3074,3 +3074,19 @@ Completed for the Main Work Area pane-chrome source slice:
 - added focused pure assertions and static regression guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the installed generated-visual-profile source slice:
+
+- inspected the actual Superzed settings profile instead of relying on default
+  source claims;
+- identified its generated `.ZedSans`, light-only mode, and One Light pins as
+  the reason JetBrains/Lumin were absent from the installed screenshots;
+- expanded migration only for that exact generated signature, upgrading font,
+  appearance mode, and light theme together;
+- preserved unrelated settings plus arbitrary custom and official Zed
+  profiles;
+- aligned the current local generated profile directly without building or
+  launching Dez;
+- added focused pure assertions and static regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

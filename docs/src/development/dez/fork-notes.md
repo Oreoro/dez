@@ -271,10 +271,12 @@ defaults. They must not pin a stale upstream theme or oversized typography that
 makes a fresh install look different from the intended Dez experience. Users
 remain free to override every role through normal settings.
 
-The upgrade path recognizes only the exact old Dez-generated settings header
-and `.ZedSans` value. It applies JetBrains Mono in memory and uses the normal
-backup-and-update flow; it never rewrites official Zed settings or an arbitrary
-custom UI font.
+The upgrade path recognizes only known exact Dez-generated profile signatures.
+The first used `.ZedSans` beside Lumin; the earlier installed profile also
+pinned light mode to One Light despite claiming to follow the system. Dez
+upgrades those generated values in memory to JetBrains Mono, system appearance,
+Lumin Light, and Lumin Blur through the normal backup-and-update flow. It never
+rewrites official Zed settings or an arbitrary custom font/theme profile.
 
 Primary icon roles are semantic and stable: Terminal means terminal
 computation, Folder Open means Workspace/Files, File means file creation, Diff
@@ -502,6 +504,11 @@ defer it.
   enter the tab order and retain explicit destination names. The active
   unpinned Dez tab keeps Close visible without hover; inactive tabs remain
   visually subordinate, and pinned dirty tabs keep their status indicator.
+- **2026-07-25: Generated visual profiles migrate as a unit.** The older
+  installed Dez profile pinned `.ZedSans`, light mode, and One Light while its
+  generated comment promised Lumin system behavior. The migration recognizes
+  that exact signature and upgrades UI font, appearance mode, and light theme
+  together. Deliberate custom settings and official Zed remain untouched.
 - **2026-07-23: Public source must explain the product and its evidence
   boundary.** The canonical repository front page names Dez, explains how the
   Session Rail, Workspace Tools, Main Work Area, Agent, and one

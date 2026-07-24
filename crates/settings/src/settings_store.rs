@@ -793,15 +793,17 @@ impl SettingsStore {
         let (settings, parse_status) = if user_settings_content.is_empty() {
             SettingsContentType::parse_json("{}")
         } else {
-            let dez_font_migration = matches!(file, SettingsFile::User)
-                .then(|| migrate_dez_generated_ui_font(paths::APP_NAME, user_settings_content))
+            let dez_visual_profile_migration = matches!(file, SettingsFile::User)
+                .then(|| {
+                    migrate_dez_generated_visual_profile(paths::APP_NAME, user_settings_content)
+                })
                 .flatten();
-            let migration_input = dez_font_migration
+            let migration_input = dez_visual_profile_migration
                 .as_deref()
                 .unwrap_or(user_settings_content);
             let migration_res = migrator::migrate_settings(migration_input);
             migration_status = match &migration_res {
-                Ok(_) if dez_font_migration.is_some() => MigrationStatus::Succeeded,
+                Ok(_) if dez_visual_profile_migration.is_some() => MigrationStatus::Succeeded,
                 Ok(Some(_)) => MigrationStatus::Succeeded,
                 Ok(None) => MigrationStatus::NotNeeded,
                 Err(err) => MigrationStatus::Failed {
@@ -1657,24 +1659,45 @@ impl<T: Settings> AnySettingValue for SettingValue<T> {
     }
 }
 
-fn migrate_dez_generated_ui_font(app_name: &str, content: &str) -> Option<String> {
-    const OLD_GENERATED_PROFILE: &str =
+fn migrate_dez_generated_visual_profile(app_name: &str, content: &str) -> Option<String> {
+    const GENERATED_MONO_CODE_PROFILE: &str =
         "// Dez starts with Lumin, JetBrains Mono for code, and a readable sans-serif";
+    const GENERATED_ONE_LIGHT_PROFILE: &str = "// Lumin follows the system appearance. JetBrains Mono is used for code and\n// terminals; the bundled sans-serif face keeps interface chrome readable.";
     const OLD_UI_FONT: &str = "\"ui_font_family\": \".ZedSans\"";
+    const OLD_LIGHT_MODE: &str = "\"mode\": \"light\"";
+    const OLD_LIGHT_THEME: &str = "\"light\": \"One Light\"";
 
     if app_name != "Dez"
-        || !content.contains(OLD_GENERATED_PROFILE)
+        || !content.contains("// Dez settings")
         || !content.contains(OLD_UI_FONT)
         || !content.contains("\"buffer_font_family\": \"JetBrains Mono\"")
-        || !content.contains("\"light\": \"Lumin Light\"")
-        || !content.contains("\"dark\": \"Lumin Blur\"")
         || !content.contains("\"terminal\"")
         || !content.contains("\"font_family\": \"JetBrains Mono\"")
     {
         return None;
     }
 
-    Some(content.replacen(OLD_UI_FONT, "\"ui_font_family\": \"JetBrains Mono\"", 1))
+    if content.contains(GENERATED_MONO_CODE_PROFILE)
+        && content.contains("\"light\": \"Lumin Light\"")
+        && content.contains("\"dark\": \"Lumin Blur\"")
+    {
+        return Some(content.replacen(OLD_UI_FONT, "\"ui_font_family\": \"JetBrains Mono\"", 1));
+    }
+
+    if content.contains(GENERATED_ONE_LIGHT_PROFILE)
+        && content.contains(OLD_LIGHT_MODE)
+        && content.contains(OLD_LIGHT_THEME)
+        && content.contains("\"dark\": \"Lumin Blur\"")
+    {
+        return Some(
+            content
+                .replacen(OLD_UI_FONT, "\"ui_font_family\": \"JetBrains Mono\"", 1)
+                .replacen(OLD_LIGHT_MODE, "\"mode\": \"system\"", 1)
+                .replacen(OLD_LIGHT_THEME, "\"light\": \"Lumin Light\"", 1),
+        );
+    }
+
+    None
 }
 
 #[cfg(test)]
@@ -1692,7 +1715,7 @@ mod tests {
     use util::rel_path::rel_path;
 
     #[test]
-    fn migrates_only_the_old_generated_dez_ui_font() {
+    fn migrates_only_known_generated_dez_visual_profiles() {
         let generated = r#"// Dez starts with Lumin, JetBrains Mono for code, and a readable sans-serif
 {
   "ui_font_family": ".ZedSans",
@@ -1701,11 +1724,32 @@ mod tests {
   "terminal": { "font_family": "JetBrains Mono" }
 }"#;
 
-        let migrated = migrate_dez_generated_ui_font("Dez", generated).unwrap();
+        let migrated = migrate_dez_generated_visual_profile("Dez", generated).unwrap();
         assert!(migrated.contains("\"ui_font_family\": \"JetBrains Mono\""));
-        assert_eq!(migrate_dez_generated_ui_font("Zed", generated), None);
+        assert_eq!(migrate_dez_generated_visual_profile("Zed", generated), None);
+
+        let one_light_generated = r#"// Dez settings
+//
+// Lumin follows the system appearance. JetBrains Mono is used for code and
+// terminals; the bundled sans-serif face keeps interface chrome readable.
+{
+  "diff_view_style": "unified",
+  "ui_font_family": ".ZedSans",
+  "buffer_font_family": "JetBrains Mono",
+  "theme": {
+    "mode": "light",
+    "light": "One Light",
+    "dark": "Lumin Blur"
+  },
+  "terminal": { "font_family": "JetBrains Mono" }
+}"#;
+        let migrated = migrate_dez_generated_visual_profile("Dez", one_light_generated).unwrap();
+        assert!(migrated.contains("\"ui_font_family\": \"JetBrains Mono\""));
+        assert!(migrated.contains("\"mode\": \"system\""));
+        assert!(migrated.contains("\"light\": \"Lumin Light\""));
+        assert!(migrated.contains("\"diff_view_style\": \"unified\""));
         assert_eq!(
-            migrate_dez_generated_ui_font(
+            migrate_dez_generated_visual_profile(
                 "Dez",
                 r#"{ "ui_font_family": ".ZedSans", "buffer_font_family": "JetBrains Mono" }"#,
             ),

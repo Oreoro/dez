@@ -87,6 +87,11 @@ Split, Zoom, and the Workspace Tools/Agent hide controls are keyboard-focusable
 and specifically named. The active unpinned Surface keeps its close control
 visible in Dez; inactive tabs remain visually quiet.
 
+Existing generated Dez profiles are upgraded consistently. A known legacy
+profile that pinned `.ZedSans`, One Light, and light-only appearance migrates
+to JetBrains Mono with system-selected Lumin Light/Lumin Blur. Custom font or
+theme choices are not treated as generated defaults.
+
 ## The core objects
 
 You only need four concepts for everyday use:

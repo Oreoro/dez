@@ -137,11 +137,11 @@ require_multiline_pattern assets/settings/initial_user_settings.json \
     '"ui_font_family": "JetBrains Mono".*?"buffer_font_family": "JetBrains Mono".*?"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"terminal": \{.*?"font_family": "JetBrains Mono".*?"font_size": 14' \
     'first-run settings can override Dez with stale themes or typography'
 require_multiline_pattern crates/settings/src/settings_store.rs \
-    'fn migrate_dez_generated_ui_font.*?OLD_GENERATED_PROFILE.*?app_name != "Dez".*?content\.replacen\(OLD_UI_FONT,.*?JetBrains Mono' \
-    'existing Dez profiles can retain the old generated sans-serif UI or overwrite deliberate Zed/user choices'
+    'fn migrate_dez_generated_visual_profile.*?GENERATED_MONO_CODE_PROFILE.*?GENERATED_ONE_LIGHT_PROFILE.*?OLD_UI_FONT.*?OLD_LIGHT_MODE.*?OLD_LIGHT_THEME.*?app_name != "Dez".*?GENERATED_MONO_CODE_PROFILE.*?JetBrains Mono.*?GENERATED_ONE_LIGHT_PROFILE.*?OLD_LIGHT_MODE.*?OLD_LIGHT_THEME.*?replacen\(OLD_UI_FONT.*?JetBrains Mono.*?replacen\(OLD_LIGHT_MODE.*?system.*?replacen\(OLD_LIGHT_THEME.*?Lumin Light' \
+    'known generated Dez profiles can retain inherited typography/theme or overwrite deliberate Zed/user choices'
 require_multiline_pattern crates/settings/src/settings_store.rs \
-    'fn migrates_only_the_old_generated_dez_ui_font.*?migrate_dez_generated_ui_font\("Dez", generated\).*?migrate_dez_generated_ui_font\("Zed", generated\), None.*?migrate_dez_generated_ui_font\([[:space:]]*"Dez".*?\.ZedSans.*?None' \
-    'the Dez UI font migration is not protected against official Zed and custom settings'
+    'fn migrates_only_known_generated_dez_visual_profiles.*?migrate_dez_generated_visual_profile\("Dez", generated\).*?migrate_dez_generated_visual_profile\("Zed", generated\), None.*?one_light_generated.*?"mode": "light".*?"light": "One Light".*?migrate_dez_generated_visual_profile\("Dez", one_light_generated\).*?system.*?Lumin Light.*?diff_view_style.*?migrate_dez_generated_visual_profile\([[:space:]]*"Dez".*?\.ZedSans.*?None' \
+    'the Dez visual-profile migration is not covered or protected against official Zed and custom settings'
 require_file assets/themes/lumin/lumin.json \
     'the bundled Lumin theme asset is missing'
 require_file assets/themes/lumin/LICENSE \
