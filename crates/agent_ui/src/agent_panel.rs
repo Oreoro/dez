@@ -5897,6 +5897,7 @@ impl AgentPanel {
                                     IconButton::new("retry-thread-title", IconName::ArrowCircle)
                                         .icon_color(Color::Error)
                                         .icon_size(IconSize::Small)
+                                        .tab_index(0isize)
                                         .aria_label(agent_panel_session_label(
                                             paths::APP_NAME,
                                             "Retry Thread Title Generation",
@@ -6006,7 +6007,9 @@ impl AgentPanel {
                 this.when(opaque_window, |this| this.child(gradient_overlay))
                     .child(
                         h_flex()
-                            .visible_on_hover("title_editor")
+                            .when(paths::APP_NAME == "Zed", |this| {
+                                this.visible_on_hover("title_editor")
+                            })
                             .absolute()
                             .right_0()
                             .h_full()
@@ -6014,6 +6017,7 @@ impl AgentPanel {
                             .child(
                                 IconButton::new("edit_tile", IconName::Pencil)
                                     .icon_size(IconSize::Small)
+                                    .tab_index(0isize)
                                     .aria_label(title_edit_label)
                                     .tooltip(Tooltip::text(title_edit_label))
                                     .on_click(cx.listener(|this, _, window, cx| {
@@ -6124,6 +6128,7 @@ impl AgentPanel {
             .trigger_with_tooltip(
                 IconButton::new("agent-options-menu", IconName::Ellipsis)
                     .icon_size(IconSize::Small)
+                    .tab_index(0isize)
                     .aria_label(agent_menu_label),
                 move |_window, cx| {
                     Tooltip::for_action_in(agent_menu_label, &ToggleOptionsMenu, &focus_handle, cx)
@@ -6634,6 +6639,7 @@ impl AgentPanel {
         let zoom_label = agent_panel_zoom_label(paths::APP_NAME, is_full_screen);
         let full_screen_button = IconButton::new(icon_id, icon_name)
             .icon_size(IconSize::Small)
+            .tab_index(0isize)
             .aria_label(zoom_label)
             .tooltip(move |_, cx| Tooltip::for_action(zoom_label, &ToggleZoom, cx))
             .on_click(cx.listener(move |this, _, window, cx| {
@@ -6675,6 +6681,7 @@ impl AgentPanel {
                         agent_panel_create_icon(paths::APP_NAME),
                     )
                     .icon_size(IconSize::Small)
+                    .tab_index(0isize)
                     .aria_label(new_session_label),
                     {
                         move |_window, cx| {

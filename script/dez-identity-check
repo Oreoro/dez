@@ -799,6 +799,21 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'const DEZ_CONTENT:.*?IconName::FolderOpen,[[:space:]]*title: "Open Workspace".*?IconName::Terminal,[[:space:]]*title: "Open Scratch Terminal".*?IconName::File,[[:space:]]*title: "New File".*?const DEZ_WORKSPACE_CONTENT:.*?IconName::Terminal,[[:space:]]*title: "Start Terminal Session".*?IconName::FolderOpen,[[:space:]]*title: "Open Files".*?IconName::File,[[:space:]]*title: "New File".*?IconName::FolderOpen,[[:space:]]*title: "Open Another Workspace"' \
     'the Dez welcome surface can regress to generic or contradictory action icons'
+require_multiline_pattern crates/workspace/src/welcome.rs \
+    'when\(self\.primary.*?ButtonStyle::Filled.*?aria_description\("Recommended first step"\).*?fn welcome_emphasizes_first_action.*?app_name != "Zed".*?first_section\.render\(.*?welcome_emphasizes_first_action\(APP_NAME\)' \
+    'Dez Welcome can regress to equally weighted actions or lose its recommended first transition'
+require_multiline_pattern crates/debugger_ui/src/debugger_panel.rs \
+    'fn debug_start_icon.*?IconName::Plus.*?IconName::Debug.*?fn debug_stop_icon.*?IconName::Power.*?IconName::Stop.*?"debug-new-session".*?tab_index\(0isize\).*?aria_label\("Start Debug Session"\).*?"debug-stop".*?tab_index\(0isize\).*?aria_label\(stop_label\).*?"debug-disconnect".*?tab_index\(0isize\).*?aria_label\("Detach Debug Session"\)' \
+    'the Dez Debug toolbar can regress to ambiguous icons or tooltip-only controls'
+require_multiline_pattern crates/git_ui/src/git_panel.rs \
+    '"view-options-menu-trigger".*?tab_index\(0isize\).*?aria_label\("Git View Options"\).*?"generate-commit-message".*?tab_index\(0isize\).*?aria_label\("Generate Commit Message"\).*?"git-graph-button".*?tab_index\(0isize\).*?aria_label\("Open Git Graph"\)' \
+    'the Git toolbar can regress to pointer-only or unnamed controls'
+require_multiline_pattern crates/outline_panel/src/outline_panel.rs \
+    '"clear_filter".*?tab_index\(0isize\).*?aria_label\("Clear Outline Filter"\).*?IconButton::new\(pin_button_id, icon\).*?tab_index\(0isize\).*?aria_label\(icon_tooltip\)' \
+    'the Outline toolbar can regress to pointer-only or unnamed controls'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'when\(paths::APP_NAME == "Zed".*?visible_on_hover\("title_editor"\).*?"edit_tile".*?tab_index\(0isize\).*?aria_label\(title_edit_label\).*?"agent-options-menu".*?tab_index\(0isize\).*?aria_label\(agent_menu_label\)' \
+    'the Dez Agent title and toolbar controls can regress to hover-only or unnamed actions'
 require_multiline_pattern crates/onboarding/src/basics_page.rs \
     'Label::new\(.*?Close hides a view.*?\.flex_wrap\(\).*?Button::new\("onboarding-copy-codex-hook"' \
     'the first-run safety copy can regress to competing horizontally with its actions'

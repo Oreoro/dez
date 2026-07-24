@@ -3021,3 +3021,17 @@ Completed for the first-party product-icon isolation source slice:
 - added focused source assertions and static rejection guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the primary-action and toolbar-focus source slice:
+
+- gave state-aware Welcome exactly one filled recommended action while keeping
+  secondary actions quieter;
+- used Debug and Stop for Dez debugger lifecycle controls while preserving
+  official Zed's Plus and Power compatibility behavior;
+- put visible Git, Debug, Outline, and Agent icon controls into the keyboard tab
+  order with specific accessible names;
+- kept Agent title editing visible in Dez instead of making it pointer-hover
+  only;
+- added focused source assertions and static regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

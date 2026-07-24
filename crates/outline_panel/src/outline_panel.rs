@@ -5097,6 +5097,8 @@ impl OutlinePanel {
                         this.child(
                             IconButton::new("clear_filter", IconName::Close)
                                 .shape(IconButtonShape::Square)
+                                .tab_index(0isize)
+                                .aria_label("Clear Outline Filter")
                                 .tooltip(Tooltip::text("Clear Filter"))
                                 .on_click(cx.listener(|outline_panel, _, window, cx| {
                                     outline_panel.filter_editor.update(cx, |editor, cx| {
@@ -5108,6 +5110,8 @@ impl OutlinePanel {
                     })
                     .child(
                         IconButton::new(pin_button_id, icon)
+                            .tab_index(0isize)
+                            .aria_label(icon_tooltip)
                             .tooltip(Tooltip::text(icon_tooltip))
                             .shape(IconButtonShape::Square)
                             .on_click(cx.listener(|outline_panel, _, window, cx| {

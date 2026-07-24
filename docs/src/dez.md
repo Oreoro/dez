@@ -62,6 +62,14 @@ in for an object-specific Terminal or File icon, and review/details controls
 do not reuse each other's symbols. Dez does not reuse Zed-branded assistant
 marks for these controls.
 
+Hierarchy follows the next useful action. Welcome gives one filled,
+keyboard-focusable recommendation—**Open Workspace** when no codebase is open,
+or **Start Terminal Session** inside an active Workspace—while related actions
+remain quieter alternatives. Dense Workspace Tools and Agent toolbars use
+compact icons, but every control has a specific accessible name, tooltip, and
+place in the keyboard tab order. A critical action is never available only on
+pointer hover.
+
 ## The core objects
 
 You only need four concepts for everyday use:

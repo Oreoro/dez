@@ -123,6 +123,15 @@ Visible controls must also perform their advertised action: the Agent title
 pencil starts editing, worktree closure names its window scope, and the
 main-area overflow control is **Switch Surface**, not Open Tab.
 
+Action hierarchy follows the next useful transition. Dez Welcome emphasizes
+exactly one recommended first action: **Open Workspace** without a codebase, or
+**Start Terminal Session** in an active Workspace. Secondary creation and
+navigation actions remain available without competing for the same visual
+weight. Critical controls must not depend on pointer hover in Dez. Icon-only
+toolbar controls must be keyboard-focusable, expose a specific accessible
+name, and use the same wording in their tooltip. Official Zed compatibility
+branches may retain upstream hover and icon behavior.
+
 Empty primary regions use compact, top-anchored recovery guidance rather than
 floating a small prompt in the middle of an empty pane. The heading names the
 missing prerequisite, the explanation is specific to Files, Git, or Agent, and
@@ -457,6 +466,13 @@ defer it.
   Sessions, Sparkle for Inline Assist, and Blocks for the external-Agent
   registry across editor, terminal, diagnostics, Git review, conflicts, setup,
   and Agent controls. Provider-supplied icons remain provider-owned.
+- **2026-07-25: Visual priority and input priority must agree.** Welcome has
+  one filled recommended transition rather than a grid of equally weighted
+  choices. Debug uses object-specific Debug and Stop icons in Dez instead of
+  generic creation and power symbols. Git, Debug, Outline, and Agent toolbar
+  controls enter the keyboard tab order and carry explicit accessible names.
+  The Agent title-edit control remains visible in Dez instead of existing only
+  inside a pointer-hover group. Official Zed retains its upstream presentation.
 - **2026-07-23: Public source must explain the product and its evidence
   boundary.** The canonical repository front page names Dez, explains how the
   Session Rail, Workspace Tools, Main Work Area, Agent, and one

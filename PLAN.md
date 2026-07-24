@@ -2521,3 +2521,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   uses Blocks instead of a generic plus. Static guards reject direct inherited
   Assistant marks in those production surfaces. This is source-only; no build
   or visual launch was performed.
+- 2026-07-25: Aligned visual hierarchy with keyboard and accessibility
+  hierarchy. Dez Welcome now has one filled recommended transition determined
+  by Workspace state; the remaining actions stay secondary. Git, Debug,
+  Outline, and Agent toolbar controls are keyboard-focusable and explicitly
+  named. Debug uses Debug/Stop instead of generic Plus/Power, and Agent title
+  editing stays visible in Dez rather than hiding behind pointer hover.
+  Official Zed compatibility behavior remains unchanged. This is source-only;
+  no build or visual launch was performed.

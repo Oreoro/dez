@@ -68,6 +68,22 @@ fn debug_region_label(app_name: &str) -> &'static str {
     }
 }
 
+fn debug_start_icon(app_name: &str) -> IconName {
+    if app_name == "Zed" {
+        IconName::Plus
+    } else {
+        IconName::Debug
+    }
+}
+
+fn debug_stop_icon(app_name: &str) -> IconName {
+    if app_name == "Zed" {
+        IconName::Power
+    } else {
+        IconName::Stop
+    }
+}
+
 fn dez_debug_idle_copy() -> (&'static str, &'static str) {
     (
         "Start debugging",
@@ -689,8 +705,10 @@ impl DebugPanel {
         let div = h_flex();
 
         let new_session_button = || {
-            IconButton::new("debug-new-session", IconName::Plus)
+            IconButton::new("debug-new-session", debug_start_icon(paths::APP_NAME))
                 .icon_size(IconSize::Small)
+                .tab_index(0isize)
+                .aria_label("Start Debug Session")
                 .on_click({
                     move |_, window, cx| window.dispatch_action(crate::Start.boxed_clone(), cx)
                 })
@@ -710,22 +728,28 @@ impl DebugPanel {
         let edit_debug_json_button = || {
             IconButton::new("debug-edit-debug-json", IconName::Code)
                 .icon_size(IconSize::Small)
+                .tab_index(0isize)
+                .aria_label("Edit Debug Configuration")
                 .on_click(|_, window, cx| {
                     window.dispatch_action(zed_actions::OpenProjectDebugTasks.boxed_clone(), cx);
                 })
-                .tooltip(Tooltip::text("Edit debug.json"))
+                .tooltip(Tooltip::text("Edit Debug Configuration"))
         };
 
         let documentation_button = || {
             IconButton::new("debug-open-documentation", IconName::CircleHelp)
                 .icon_size(IconSize::Small)
+                .tab_index(0isize)
+                .aria_label("Open Debug Documentation")
                 .on_click(move |_, _, cx| cx.open_url("https://zed.dev/docs/debugger"))
-                .tooltip(Tooltip::text("Open Documentation"))
+                .tooltip(Tooltip::text("Open Debug Documentation"))
         };
 
         let logs_button = || {
             IconButton::new("debug-open-logs", IconName::Notepad)
                 .icon_size(IconSize::Small)
+                .tab_index(0isize)
+                .aria_label("Open Debug Adapter Logs")
                 .on_click(move |_, window, cx| {
                     window.dispatch_action(debugger_tools::OpenDebugAdapterLogs.boxed_clone(), cx)
                 })
@@ -767,6 +791,14 @@ impl DebugPanel {
                                         let capabilities = running_state.read(cx).capabilities(cx);
                                         let supports_detach =
                                             running_state.read(cx).session().read(cx).is_attached();
+                                        let stop_label = if capabilities
+                                            .supports_terminate_threads_request
+                                            .unwrap_or_default()
+                                        {
+                                            "Terminate Thread"
+                                        } else {
+                                            "Terminate All Threads"
+                                        };
 
                                         this.map(|this| {
                                             if thread_status == ThreadStatus::Running {
@@ -776,6 +808,8 @@ impl DebugPanel {
                                                         IconName::DebugPause,
                                                     )
                                                     .icon_size(IconSize::Small)
+                                                    .tab_index(0isize)
+                                                    .aria_label("Pause Program")
                                                     .on_click(window.listener_for(
                                                         running_state,
                                                         |this, _, _window, cx| {
@@ -801,6 +835,8 @@ impl DebugPanel {
                                                         IconName::DebugContinue,
                                                     )
                                                     .icon_size(IconSize::Small)
+                                                    .tab_index(0isize)
+                                                    .aria_label("Continue Program")
                                                     .on_click(window.listener_for(
                                                         running_state,
                                                         |this, _, _window, cx| {
@@ -827,6 +863,8 @@ impl DebugPanel {
                                         .child(
                                             IconButton::new("step-over", IconName::DebugStepOver)
                                                 .icon_size(IconSize::Small)
+                                                .tab_index(0isize)
+                                                .aria_label("Step Over")
                                                 .on_click(window.listener_for(
                                                     running_state,
                                                     |this, _, _window, cx| {
@@ -849,6 +887,8 @@ impl DebugPanel {
                                         .child(
                                             IconButton::new("step-into", IconName::DebugStepInto)
                                                 .icon_size(IconSize::Small)
+                                                .tab_index(0isize)
+                                                .aria_label("Step In")
                                                 .on_click(window.listener_for(
                                                     running_state,
                                                     |this, _, _window, cx| {
@@ -871,6 +911,8 @@ impl DebugPanel {
                                         .child(
                                             IconButton::new("step-out", IconName::DebugStepOut)
                                                 .icon_size(IconSize::Small)
+                                                .tab_index(0isize)
+                                                .aria_label("Step Out")
                                                 .on_click(window.listener_for(
                                                     running_state,
                                                     |this, _, _window, cx| {
@@ -894,6 +936,8 @@ impl DebugPanel {
                                         .child(
                                             IconButton::new("debug-restart", IconName::RotateCcw)
                                                 .icon_size(IconSize::Small)
+                                                .tab_index(0isize)
+                                                .aria_label("Rerun Debug Session")
                                                 .on_click(window.listener_for(
                                                     running_state,
                                                     |this, _, window, cx| {
@@ -904,7 +948,7 @@ impl DebugPanel {
                                                     let focus_handle = focus_handle.clone();
                                                     move |_window, cx| {
                                                         Tooltip::for_action_in(
-                                                            "Rerun Session",
+                                                            "Rerun Debug Session",
                                                             &RerunSession,
                                                             &focus_handle,
                                                             cx,
@@ -913,51 +957,45 @@ impl DebugPanel {
                                                 }),
                                         )
                                         .child(
-                                            IconButton::new("debug-stop", IconName::Power)
-                                                .icon_size(IconSize::Small)
-                                                .on_click(window.listener_for(
-                                                    running_state,
-                                                    |this, _, _window, cx| {
-                                                        if this.session().read(cx).is_building() {
-                                                            this.session().update(
-                                                                cx,
-                                                                |session, cx| {
-                                                                    session.shutdown(cx).detach()
-                                                                },
-                                                            );
-                                                        } else {
-                                                            this.stop_thread(cx);
-                                                        }
-                                                    },
-                                                ))
-                                                .disabled(active_session.as_ref().is_none_or(
-                                                    |session| {
-                                                        session
-                                                            .read(cx)
-                                                            .session(cx)
-                                                            .read(cx)
-                                                            .is_terminated()
-                                                    },
-                                                ))
-                                                .tooltip({
-                                                    let focus_handle = focus_handle.clone();
-                                                    let label = if capabilities
-                                                        .supports_terminate_threads_request
-                                                        .unwrap_or_default()
-                                                    {
-                                                        "Terminate Thread"
+                                            IconButton::new(
+                                                "debug-stop",
+                                                debug_stop_icon(paths::APP_NAME),
+                                            )
+                                            .icon_size(IconSize::Small)
+                                            .tab_index(0isize)
+                                            .aria_label(stop_label)
+                                            .on_click(window.listener_for(
+                                                running_state,
+                                                |this, _, _window, cx| {
+                                                    if this.session().read(cx).is_building() {
+                                                        this.session().update(cx, |session, cx| {
+                                                            session.shutdown(cx).detach()
+                                                        });
                                                     } else {
-                                                        "Terminate All Threads"
-                                                    };
-                                                    move |_window, cx| {
-                                                        Tooltip::for_action_in(
-                                                            label,
-                                                            &Stop,
-                                                            &focus_handle,
-                                                            cx,
-                                                        )
+                                                        this.stop_thread(cx);
                                                     }
-                                                }),
+                                                },
+                                            ))
+                                            .disabled(active_session.as_ref().is_none_or(
+                                                |session| {
+                                                    session
+                                                        .read(cx)
+                                                        .session(cx)
+                                                        .read(cx)
+                                                        .is_terminated()
+                                                },
+                                            ))
+                                            .tooltip({
+                                                let focus_handle = focus_handle.clone();
+                                                move |_window, cx| {
+                                                    Tooltip::for_action_in(
+                                                        stop_label,
+                                                        &Stop,
+                                                        &focus_handle,
+                                                        cx,
+                                                    )
+                                                }
+                                            }),
                                         )
                                         .when(supports_detach, |div| {
                                             div.child(
@@ -965,6 +1003,8 @@ impl DebugPanel {
                                                     "debug-disconnect",
                                                     IconName::DebugDetach,
                                                 )
+                                                .tab_index(0isize)
+                                                .aria_label("Detach Debug Session")
                                                 .disabled(
                                                     thread_status != ThreadStatus::Stopped
                                                         && thread_status != ThreadStatus::Running,
@@ -980,7 +1020,7 @@ impl DebugPanel {
                                                     let focus_handle = focus_handle.clone();
                                                     move |_window, cx| {
                                                         Tooltip::for_action_in(
-                                                            "Detach",
+                                                            "Detach Debug Session",
                                                             &Detach,
                                                             &focus_handle,
                                                             cx,
@@ -2215,6 +2255,10 @@ mod product_copy_tests {
     fn dez_debug_region_and_idle_states_use_workspace_language() {
         assert_eq!(debug_region_label("Dez"), "Debug");
         assert_eq!(debug_region_label("Zed"), "Debugger");
+        assert_eq!(debug_start_icon("Dez"), IconName::Debug);
+        assert_eq!(debug_start_icon("Zed"), IconName::Plus);
+        assert_eq!(debug_stop_icon("Dez"), IconName::Stop);
+        assert_eq!(debug_stop_icon("Zed"), IconName::Power);
         assert_eq!(
             dez_debug_idle_copy(),
             (

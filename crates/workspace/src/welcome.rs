@@ -75,6 +75,7 @@ struct SectionButton {
     action: Box<dyn Action>,
     tab_index: usize,
     focus_handle: FocusHandle,
+    primary: bool,
 }
 
 impl SectionButton {
@@ -84,6 +85,7 @@ impl SectionButton {
         action: &dyn Action,
         tab_index: usize,
         focus_handle: FocusHandle,
+        primary: bool,
     ) -> Self {
         Self {
             label: label.into(),
@@ -91,6 +93,7 @@ impl SectionButton {
             action: action.boxed_clone(),
             tab_index,
             focus_handle,
+            primary,
         }
     }
 }
@@ -99,10 +102,19 @@ impl RenderOnce for SectionButton {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let id = format!("onb-button-{}-{}", self.label, self.tab_index);
         let action_ref: &dyn Action = &*self.action;
+        let icon_color = if self.primary {
+            Color::Default
+        } else {
+            Color::Muted
+        };
 
         ButtonLike::new(id)
             .tab_index(self.tab_index as isize)
             .aria_label(self.label.clone())
+            .when(self.primary, |this| {
+                this.style(ButtonStyle::Filled)
+                    .aria_description("Recommended first step")
+            })
             .full_width()
             .size(ButtonSize::Medium)
             .child(
@@ -112,11 +124,7 @@ impl RenderOnce for SectionButton {
                     .child(
                         h_flex()
                             .gap_2()
-                            .child(
-                                Icon::new(self.icon)
-                                    .color(Color::Muted)
-                                    .size(IconSize::Small),
-                            )
+                            .child(Icon::new(self.icon).color(icon_color).size(IconSize::Small))
                             .child(Label::new(self.label)),
                     )
                     .child(
@@ -150,7 +158,12 @@ struct SectionEntry {
 }
 
 impl SectionEntry {
-    fn render(&self, button_index: usize, focus: &FocusHandle) -> Option<impl IntoElement> {
+    fn render(
+        &self,
+        button_index: usize,
+        focus: &FocusHandle,
+        primary: bool,
+    ) -> Option<impl IntoElement> {
         self.visibility_guard.is_visible().then(|| {
             SectionButton::new(
                 self.title,
@@ -158,6 +171,7 @@ impl SectionEntry {
                 self.action,
                 button_index,
                 focus.clone(),
+                primary,
             )
         })
     }
@@ -177,6 +191,10 @@ fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     } else {
         "Run in the terminal. Supervise in the rail. Review in the IDE."
     }
+}
+
+fn welcome_emphasizes_first_action(app_name: &str) -> bool {
+    app_name != "Zed"
 }
 
 const ZED_CONTENT: (Section<5>, Section<3>) = (
@@ -377,7 +395,12 @@ struct Section<const COLS: usize> {
 }
 
 impl<const COLS: usize> Section<COLS> {
-    fn render(self, index_offset: usize, focus: &FocusHandle) -> impl IntoElement {
+    fn render(
+        self,
+        index_offset: usize,
+        focus: &FocusHandle,
+        emphasize_first: bool,
+    ) -> impl IntoElement {
         v_flex()
             .min_w_full()
             .child(SectionHeader::new(self.title))
@@ -385,7 +408,9 @@ impl<const COLS: usize> Section<COLS> {
                 self.entries
                     .iter()
                     .enumerate()
-                    .filter_map(|(index, entry)| entry.render(index_offset + index, focus)),
+                    .filter_map(|(index, entry)| {
+                        entry.render(index_offset + index, focus, emphasize_first && index == 0)
+                    }),
             )
     }
 }
@@ -514,6 +539,7 @@ impl WelcomePage {
             },
             tab_index,
             self.focus_handle.clone(),
+            false,
         )
     }
 }
@@ -558,7 +584,7 @@ impl Render for WelcomePage {
                 .into_any_element()
         } else {
             second_section
-                .render(first_section_entries, &self.focus_handle)
+                .render(first_section_entries, &self.focus_handle, false)
                 .into_any_element()
         };
 
@@ -697,7 +723,11 @@ impl Render for WelcomePage {
                                 )),
                         )
                     })
-                    .child(first_section.render(Default::default(), &self.focus_handle))
+                    .child(first_section.render(
+                        Default::default(),
+                        &self.focus_handle,
+                        welcome_emphasizes_first_action(APP_NAME),
+                    ))
                     .child(second_section)
                     .when(
                         APP_NAME == "Zed" && !self.fallback_to_recent_projects,
@@ -929,5 +959,7 @@ mod tests {
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[1].title, "Open Files");
         assert_eq!(ZED_CONTENT.0.entries[0].title, "New Terminal");
         assert_eq!(OPEN_WORKSPACE.create_new_window, Some(false));
+        assert!(welcome_emphasizes_first_action("Dez"));
+        assert!(!welcome_emphasizes_first_action("Zed"));
     }
 }

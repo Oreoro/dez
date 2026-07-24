@@ -5387,7 +5387,9 @@ impl GitPanel {
         PopoverMenu::new(id.into())
             .trigger_with_tooltip(
                 IconButton::new("view-options-menu-trigger", IconName::Filter)
-                    .icon_size(IconSize::Small),
+                    .icon_size(IconSize::Small)
+                    .tab_index(0isize)
+                    .aria_label("Git View Options"),
                 Tooltip::text("View Options"),
             )
             .menu(move |window, cx| {
@@ -5416,6 +5418,8 @@ impl GitPanel {
                         IconButton::new("cancel-generate-commit-message", IconName::Stop)
                             .icon_color(Color::Error)
                             .icon_size(IconSize::Small)
+                            .tab_index(0isize)
+                            .aria_label("Cancel Commit Message Generation")
                             .style(ButtonStyle::Tinted(TintColor::Error))
                             .tooltip(Tooltip::text("Cancel Commit Message Generation"))
                             .on_click(cx.listener(|this, _event, _window, cx| {
@@ -5442,6 +5446,8 @@ impl GitPanel {
 
         let button = IconButton::new("generate-commit-message", IconName::AiEdit)
             .shape(ui::IconButtonShape::Square)
+            .tab_index(0isize)
+            .aria_label("Generate Commit Message")
             .icon_color(if has_commit_model_configuration_error {
                 Color::Disabled
             } else {
@@ -5482,6 +5488,11 @@ impl GitPanel {
         } else {
             ("Add co-authored-by", IconName::UserCheck)
         };
+        let aria_label = if self.add_coauthors {
+            "Remove Commit Co-authors"
+        } else {
+            "Add Commit Co-authors"
+        };
 
         if potential_co_authors.is_empty() {
             None
@@ -5489,6 +5500,8 @@ impl GitPanel {
             Some(
                 IconButton::new("co-authors", icon)
                     .shape(ui::IconButtonShape::Square)
+                    .tab_index(0isize)
+                    .aria_label(aria_label)
                     .icon_color(Color::Disabled)
                     .selected_icon_color(Color::Selected)
                     .toggle_state(self.add_coauthors)
@@ -5897,6 +5910,8 @@ impl GitPanel {
             .child(
                 IconButton::new("expand-commit-editor", IconName::MaximizeAlt)
                     .icon_size(IconSize::Small)
+                    .tab_index(0isize)
+                    .aria_label("Open Commit Modal")
                     .tooltip({
                         move |_window, cx| {
                             Tooltip::for_action_in(
@@ -5923,6 +5938,8 @@ impl GitPanel {
 
                 IconButton::new("fill-commit-editor", icon)
                     .icon_size(IconSize::Small)
+                    .tab_index(0isize)
+                    .aria_label(label)
                     .tooltip({
                         move |_window, cx| {
                             Tooltip::for_action_in(
@@ -6221,6 +6238,8 @@ impl GitPanel {
                             this.child(
                                 IconButton::new("undo", IconName::Undo)
                                     .icon_size(IconSize::Small)
+                                    .tab_index(0isize)
+                                    .aria_label("Uncommit Last Commit")
                                     .tooltip(move |_window, cx| {
                                         Tooltip::with_meta(
                                             "Uncommit",
@@ -6243,6 +6262,8 @@ impl GitPanel {
                         .child(
                             IconButton::new("git-graph-button", IconName::GitGraph)
                                 .icon_size(IconSize::Small)
+                                .tab_index(0isize)
+                                .aria_label("Open Git Graph")
                                 .tooltip(|_window, cx| {
                                     Tooltip::for_action(
                                         "Open Git Graph",
