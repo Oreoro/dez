@@ -50,6 +50,7 @@ use menu::{
 use notifications::status_toast::StatusToast;
 use paths::APP_NAME;
 use project::{AgentId, AgentRegistryStore, Event as ProjectEvent, WorktreeId};
+use project_panel::ToggleFocus as ToggleFilesFocus;
 use recent_projects::sidebar_recent_projects::SidebarRecentProjects;
 use remote::{RemoteConnectionOptions, same_remote_connection_identity};
 use serde::{Deserialize, Serialize};
@@ -94,7 +95,10 @@ use workspace::{
     render_sidebar_header_controls_with_state,
 };
 
-use git_ui::worktree_service::{RemoteBranchName, worktree_create_targets};
+use git_ui::{
+    git_panel::{FocusChanges, ToggleFocus as ToggleGitFocus},
+    worktree_service::{RemoteBranchName, worktree_create_targets},
+};
 use zed_actions::agent::OpenSettings;
 use zed_actions::assistant::{ManageSkills, OpenGlobalAgentsMdRules, OpenProjectAgentsMdRules};
 use zed_actions::editor::{MoveDown, MoveUp};
@@ -1939,6 +1943,20 @@ fn terminal_run_review_state(
             TerminalAgentState::Exited => RunReviewState::Exited,
         },
     )
+}
+
+fn workspace_git_change_count(workspace: &ThreadEntryWorkspace, cx: &App) -> usize {
+    let ThreadEntryWorkspace::Open(workspace) = workspace else {
+        return 0;
+    };
+    let git_store = workspace.read(cx).project().read(cx).git_store().clone();
+    git_store
+        .read(cx)
+        .repositories()
+        .values()
+        .fold(0usize, |count, repository| {
+            count.saturating_add(repository.read(cx).status_summary().count)
+        })
 }
 
 impl ThreadEntry {
@@ -10779,6 +10797,9 @@ impl Sidebar {
         let review_action_metadata = metadata.clone();
         let review_action_workspace = workspace.clone();
         let review_action_source = source.clone();
+        let changes_action_metadata = metadata.clone();
+        let changes_action_workspace = workspace.clone();
+        let changes_action_source = source.clone();
         let close_action_metadata = metadata.clone();
         let close_action_workspace = workspace.clone();
         let close_action_source = source.clone();
@@ -10795,6 +10816,8 @@ impl Sidebar {
             ThreadEntryWorkspace::Open(workspace) => Some(workspace.clone()),
             ThreadEntryWorkspace::Closed { .. } => self.active_workspace(cx),
         };
+        let changed_files = workspace_git_change_count(&terminal.workspace, cx);
+        let has_changes = changed_files > 0;
         let focus_handle = self.focus_handle.clone();
         let session_rail_settings = SessionRailSettings::get_global(cx);
         let rail_width = session_rail_settings.width(self.width);
@@ -10865,6 +10888,10 @@ impl Sidebar {
             session_row_setup_action_visible(rail_width, can_copy_codex_hook);
         let context_review_workspace = review_workspace.clone();
         let context_review_brief = review_brief.clone();
+        let context_files_workspace = match &terminal.workspace {
+            ThreadEntryWorkspace::Open(workspace) => Some(workspace.clone()),
+            ThreadEntryWorkspace::Closed { .. } => None,
+        };
         let context_working_directory = terminal.metadata.working_directory.clone();
         let context_session_ref = terminal.metadata.session_ref;
         let context_terminal_id = terminal.metadata.terminal_id;
@@ -11026,6 +11053,40 @@ impl Sidebar {
                                     }),
                             )
                         })
+                        .when(!compact_row && has_changes, |this| {
+                            this.child(
+                                IconButton::new("review-terminal-changes", IconName::Diff)
+                                    .size(ButtonSize::Medium)
+                                    .icon_size(IconSize::Small)
+                                    .tab_index(0isize)
+                                    .icon_color(Color::Accent)
+                                    .aria_label(format!(
+                                        "Review {changed_files} changed {}",
+                                        if changed_files == 1 { "file" } else { "files" }
+                                    ))
+                                    .tooltip(Tooltip::text("Review Changes"))
+                                    .on_click({
+                                        let sidebar = sidebar.clone();
+                                        move |_, window, cx| {
+                                            sidebar
+                                                .update(cx, |sidebar, cx| {
+                                                    sidebar.activate_terminal_entry(
+                                                        changes_action_metadata.clone(),
+                                                        changes_action_workspace.clone(),
+                                                        changes_action_source.clone(),
+                                                        false,
+                                                        window,
+                                                        cx,
+                                                    );
+                                                })
+                                                .ok();
+                                            window
+                                                .dispatch_action(ToggleGitFocus.boxed_clone(), cx);
+                                            window.dispatch_action(FocusChanges.boxed_clone(), cx);
+                                        }
+                                    }),
+                            )
+                        })
                         .when_some(review_workspace, |this, review_workspace| {
                             this.child(
                                 IconButton::new("review-terminal-run", IconName::ListTodo)
@@ -11033,13 +11094,13 @@ impl Sidebar {
                                     .icon_size(IconSize::Small)
                                     .tab_index(0isize)
                                     .icon_color(Color::Muted)
-                                    .aria_label("Open Review Brief")
+                                    .aria_label("Open Terminal Session Details")
                                     .aria_keyshortcuts("Shift+V")
                                     .tooltip({
                                         let focus_handle = focus_handle.clone();
                                         move |_window, cx| {
                                             Tooltip::for_action_in(
-                                                "Open Review Brief",
+                                                "Open Terminal Session Details",
                                                 &OpenSelectedReviewBrief,
                                                 &focus_handle,
                                                 cx,
@@ -11120,6 +11181,7 @@ impl Sidebar {
             .menu(move |window, cx| {
                 let review_workspace = context_review_workspace.clone();
                 let review_brief = context_review_brief.clone();
+                let files_workspace = context_files_workspace.clone();
                 let working_directory = context_working_directory.clone();
                 let agent_panel = context_agent_panel.clone();
                 let terminal_view = context_terminal_view.clone();
@@ -11131,8 +11193,55 @@ impl Sidebar {
                 let close_workspace = workspace.clone();
                 let close_source = source.clone();
                 ContextMenu::build(window, cx, move |mut menu, _window, _cx| {
+                    if files_workspace.is_some() {
+                        menu = menu.entry("Open Files", None, {
+                            let sidebar = sidebar.clone();
+                            let metadata = close_metadata.clone();
+                            let workspace = close_workspace.clone();
+                            let source = close_source.clone();
+                            move |window, cx| {
+                                sidebar
+                                    .update(cx, |sidebar, cx| {
+                                        sidebar.activate_terminal_entry(
+                                            metadata.clone(),
+                                            workspace.clone(),
+                                            source.clone(),
+                                            false,
+                                            window,
+                                            cx,
+                                        );
+                                    })
+                                    .ok();
+                                window.dispatch_action(ToggleFilesFocus.boxed_clone(), cx);
+                            }
+                        });
+                    }
+                    if has_changes {
+                        menu = menu.entry("Review Changes", None, {
+                            let sidebar = sidebar.clone();
+                            let metadata = close_metadata.clone();
+                            let workspace = close_workspace.clone();
+                            let source = close_source.clone();
+                            move |window, cx| {
+                                sidebar
+                                    .update(cx, |sidebar, cx| {
+                                        sidebar.activate_terminal_entry(
+                                            metadata.clone(),
+                                            workspace.clone(),
+                                            source.clone(),
+                                            false,
+                                            window,
+                                            cx,
+                                        );
+                                    })
+                                    .ok();
+                                window.dispatch_action(ToggleGitFocus.boxed_clone(), cx);
+                                window.dispatch_action(FocusChanges.boxed_clone(), cx);
+                            }
+                        });
+                    }
                     if let Some(review_workspace) = review_workspace.clone() {
-                        menu = menu.entry("Open Review Brief", None, {
+                        menu = menu.entry("Open Terminal Session Details", None, {
                             let review_brief = review_brief.clone();
                             let sidebar = sidebar.clone();
                             let metadata = close_metadata.clone();

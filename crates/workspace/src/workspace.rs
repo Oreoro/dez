@@ -210,6 +210,16 @@ fn canvas_layout_modal_row_background(cx: &App) -> Hsla {
     }
 }
 
+const AUXILIARY_PANE_MAX_INITIAL_WIDTH: f32 = 360.;
+const AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0.22;
+
+fn auxiliary_pane_initial_width(available_width: Pixels) -> Pixels {
+    px(
+        (available_width.as_f32() * AUXILIARY_PANE_MAX_INITIAL_RATIO)
+            .min(AUXILIARY_PANE_MAX_INITIAL_WIDTH),
+    )
+}
+
 fn canvas_layout_modal_row_border(cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match DesignSystemSettings::get_global(cx).contrast {
@@ -8522,7 +8532,20 @@ impl Workspace {
             .unwrap_or_else(|| self.center.first_pane());
 
         let pane = self.add_pane_with_kind(pane_kind, false, window, cx);
-        self.center.split(&split_target, &pane, split_direction, cx);
+        let available_width = self.center.horizontal_size_for_pane(&split_target);
+        let preferred_width = available_width
+            .map(auxiliary_pane_initial_width)
+            .unwrap_or_else(|| px(AUXILIARY_PANE_MAX_INITIAL_WIDTH));
+        pane.update(cx, |pane, _| {
+            pane.remember_horizontal_split_size(preferred_width);
+        });
+        let size_hint = available_width
+            .map(|available_width| {
+                SplitSizeHint::inserted_size_in_available_space(preferred_width, available_width)
+            })
+            .or_else(|| Some(SplitSizeHint::inserted_size(preferred_width)));
+        self.center
+            .split_with_size_hint(&split_target, &pane, split_direction, size_hint, cx);
         cx.notify();
         pane
     }
@@ -16110,6 +16133,7 @@ mod tests {
             test::{TestItem, TestProjectItem},
         },
     };
+
     use fs::FakeFs;
     use gpui::{
         DismissEvent, Empty, EventEmitter, FocusHandle, Focusable, Render, TestAppContext,
@@ -16120,6 +16144,19 @@ mod tests {
     use settings::SettingsStore;
     use util::path;
     use util::rel_path::rel_path;
+
+    #[test]
+    fn auxiliary_panes_start_compact_and_preserve_the_main_work_area() {
+        assert_eq!(auxiliary_pane_initial_width(px(1000.)), px(220.));
+        assert_eq!(auxiliary_pane_initial_width(px(2000.)), px(360.));
+
+        let after_project = px(1000.) - auxiliary_pane_initial_width(px(1000.));
+        let after_agent = after_project - auxiliary_pane_initial_width(after_project);
+        assert!(
+            after_agent >= px(600.),
+            "opening both contextual panes must preserve at least 60% of the Main Work Area"
+        );
+    }
 
     #[test]
     fn empty_window_title_uses_outward_product_vocabulary() {

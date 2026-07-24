@@ -11,6 +11,7 @@ use editor::{
     ui_scrollbar_settings_from_raw,
 };
 use futures::{channel::oneshot, future::join_all};
+use git_ui::git_panel::{FocusChanges, ToggleFocus as ToggleGitFocus};
 use gpui::{
     Action, Anchor, AnyElement, App, AsyncApp, AsyncWindowContext, ClipboardEntry, DismissEvent,
     Entity, EventEmitter, ExternalPaths, FocusHandle, Focusable, Font, KeyContext, KeyDownEvent,
@@ -21,6 +22,7 @@ use gpui::{
 use menu;
 use persistence::{StoredTerminalSessionRef, TerminalDb};
 use project::{Project, ProjectEntryId, search::SearchQuery};
+use project_panel::ToggleFocus as ToggleFilesFocus;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use settings::{
@@ -137,6 +139,83 @@ fn terminal_unavailable_description(reason: Option<&str>) -> String {
     format!(
         "{reason} Dez did not start a replacement shell. Start fresh only when you want a separate computation."
     )
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct TerminalWorkspaceContext {
+    workspace_label: Option<String>,
+    branch_label: Option<String>,
+    changed_files: usize,
+}
+
+fn workspace_label_from_paths(paths: &[PathBuf]) -> Option<String> {
+    let first = paths.first()?;
+    let first = first
+        .file_name()
+        .filter(|name| !name.is_empty())
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| first.to_string_lossy().into_owned());
+    Some(if paths.len() == 1 {
+        first
+    } else {
+        format!("{first} +{}", paths.len() - 1)
+    })
+}
+
+fn terminal_workspace_context(
+    project: Option<&Entity<Project>>,
+    cx: &App,
+) -> TerminalWorkspaceContext {
+    let Some(project) = project else {
+        return TerminalWorkspaceContext {
+            workspace_label: None,
+            branch_label: None,
+            changed_files: 0,
+        };
+    };
+    let (workspace_paths, git_store) = {
+        let project = project.read(cx);
+        (
+            project
+                .worktree_paths(cx)
+                .folder_path_list()
+                .ordered_paths()
+                .cloned()
+                .collect::<Vec<_>>(),
+            project.git_store().clone(),
+        )
+    };
+    let repositories = git_store.read(cx);
+    let mut changed_files = 0usize;
+    let branch_labels = repositories
+        .repositories()
+        .values()
+        .filter_map(|repository| {
+            let repository = repository.read(cx);
+            changed_files = changed_files.saturating_add(repository.status_summary().count);
+            repository
+                .snapshot()
+                .branch
+                .as_ref()
+                .map(|branch| branch.name().to_owned())
+        })
+        .unique()
+        .collect::<Vec<_>>();
+
+    TerminalWorkspaceContext {
+        workspace_label: workspace_label_from_paths(&workspace_paths),
+        branch_label: (branch_labels.len() == 1).then(|| branch_labels[0].clone()),
+        changed_files,
+    }
+}
+
+fn changed_files_label(changed_files: usize) -> String {
+    let noun = if changed_files == 1 {
+        "change"
+    } else {
+        "changes"
+    };
+    format!("{changed_files} {noun}")
 }
 
 fn terminal_close_label(is_hosted: bool) -> &'static str {
@@ -863,7 +942,7 @@ impl TerminalView {
             )
         });
 
-        let subscriptions = vec![
+        let mut subscriptions = vec![
             cx.on_release(|this, cx| {
                 let session_id = this.terminal.read(cx).session_id();
                 if let Some(host) = terminal::session_host::LocalTerminalHost::try_global(cx) {
@@ -877,6 +956,10 @@ impl TerminalView {
             cx.observe(&blink_manager, |_, _, cx| cx.notify()),
             cx.observe_global::<SettingsStore>(Self::settings_changed),
         ];
+        if let Some(project) = project.upgrade() {
+            let git_store = project.read(cx).git_store().clone();
+            subscriptions.push(cx.subscribe(&git_store, |_, _, _, cx| cx.notify()));
+        }
 
         Self {
             terminal,
@@ -2132,6 +2215,215 @@ impl TerminalView {
         });
         cx.notify();
     }
+
+    fn render_session_context_strip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        if paths::APP_NAME == "Zed"
+            || !matches!(&self.mode, TerminalMode::Standalone)
+            || self.session_unavailable
+        {
+            return None;
+        }
+
+        let terminal = self.terminal.read(cx);
+        let terminal_entity_id = self.terminal.entity_id();
+        let status = terminal_tab_status(
+            false,
+            terminal.process_exited(),
+            terminal.task().map(|task| &task.status),
+        );
+        let status_color = terminal_tab_status_color(status);
+        let has_persistent_owner = terminal_has_persistent_owner(&terminal, cx);
+        let ownership = terminal_ownership_label(has_persistent_owner, false);
+        let working_directory = terminal
+            .working_directory()
+            .map(|path| path.to_string_lossy().into_owned());
+        let session_id = terminal.session_id().to_string();
+        drop(terminal);
+
+        let project = self.project.upgrade();
+        let workspace_context = terminal_workspace_context(project.as_ref(), cx);
+        let workspace_label = workspace_context
+            .workspace_label
+            .clone()
+            .unwrap_or_else(|| "Scratch Workspace".to_owned());
+        let repository_label = workspace_context
+            .branch_label
+            .as_ref()
+            .map(|branch| format!("{workspace_label} / {branch}"))
+            .unwrap_or_else(|| workspace_label.clone());
+        let changed_files = workspace_context.changed_files;
+        let changes_label = changed_files_label(changed_files);
+        let has_workspace_files = workspace_context.workspace_label.is_some();
+
+        let details_status = format!("{status} · {ownership}");
+        let details_repository = repository_label.clone();
+        let details_changes = changes_label.clone();
+        let details_working_directory = working_directory.clone();
+        let details_session_id = session_id.clone();
+        let ownership_note = if has_persistent_owner {
+            "The external Dez Terminal Host owns this process."
+        } else {
+            "This Workspace owns the process. Persistence requires the Dez Terminal Host."
+        };
+        let details_menu = PopoverMenu::new(("terminal-session-details", terminal_entity_id))
+            .trigger(
+                Button::new(
+                    ("terminal-session-details-trigger", terminal_entity_id),
+                    "Session Details",
+                )
+                .size(ButtonSize::Compact)
+                .style(ButtonStyle::Subtle)
+                .start_icon(Icon::new(IconName::Info).size(IconSize::XSmall))
+                .tab_index(0isize)
+                .aria_label("Open Terminal Session Details"),
+            )
+            .menu(move |window, cx| {
+                let details_working_directory = details_working_directory.clone();
+                let details_session_id = details_session_id.clone();
+                Some(ContextMenu::build(window, cx, move |mut menu, _, _| {
+                    menu = menu
+                        .header("Terminal Session")
+                        .label(details_status.clone())
+                        .label(details_repository.clone())
+                        .label(details_changes.clone())
+                        .label(ownership_note);
+                    if let Some(working_directory) = details_working_directory.clone() {
+                        menu = menu
+                            .label(format!("Working directory: {working_directory}"))
+                            .entry("Copy Working Directory", None, move |_window, cx| {
+                                cx.write_to_clipboard(ClipboardItem::new_string(
+                                    working_directory.clone(),
+                                ));
+                            });
+                    }
+                    menu.entry("Copy Session ID", None, move |_window, cx| {
+                        cx.write_to_clipboard(ClipboardItem::new_string(
+                            details_session_id.clone(),
+                        ));
+                    })
+                }))
+            })
+            .anchor(Anchor::TopRight)
+            .offset(gpui::Point {
+                x: px(0.),
+                y: px(2.),
+            });
+
+        Some(
+            h_flex()
+                .id(("terminal-session-context", terminal_entity_id))
+                .role(gpui::Role::Toolbar)
+                .aria_label(format!(
+                    "Terminal Session controls. Status: {status}. {repository_label}. {changes_label}."
+                ))
+                .w_full()
+                .h(px(40.))
+                .flex_none()
+                .gap_2()
+                .px_2()
+                .border_b_1()
+                .border_color(cx.theme().colors().border_variant)
+                .bg(cx.theme().colors().panel_background)
+                .child(
+                    h_flex()
+                        .min_w_0()
+                        .flex_1()
+                        .gap_2()
+                        .child(
+                            h_flex()
+                                .flex_none()
+                                .gap_1()
+                                .child(
+                                    Icon::new(IconName::Terminal)
+                                        .size(IconSize::XSmall)
+                                        .color(Color::Accent),
+                                )
+                                .child(
+                                    Label::new("Terminal Session")
+                                        .size(LabelSize::Small)
+                                        .color(Color::Default),
+                                ),
+                        )
+                        .child(
+                            h_flex()
+                                .flex_none()
+                                .gap_1()
+                                .child(
+                                    div()
+                                        .size(px(5.))
+                                        .rounded_full()
+                                        .bg(status_color.color(cx)),
+                                )
+                                .child(
+                                    Label::new(status)
+                                        .size(LabelSize::XSmall)
+                                        .color(status_color),
+                                ),
+                        )
+                        .child(div().h_4().border_l_1().border_color(
+                            cx.theme().colors().border_variant,
+                        ))
+                        .child(
+                            Label::new(repository_label)
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted)
+                                .truncate(),
+                        )
+                        .when(changed_files > 0, |this| {
+                            this.child(
+                                Label::new(changes_label)
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Accent),
+                            )
+                        }),
+                )
+                .child(
+                    h_flex()
+                        .flex_none()
+                        .gap_1()
+                        .when(has_workspace_files, |this| {
+                            this.child(
+                                Button::new(
+                                    ("terminal-context-files", terminal_entity_id),
+                                    "Files",
+                                )
+                                .size(ButtonSize::Compact)
+                                .style(ButtonStyle::Subtle)
+                                .start_icon(
+                                    Icon::new(IconName::FolderOpen).size(IconSize::XSmall),
+                                )
+                                .tab_index(0isize)
+                                .aria_label("Open Files for this Workspace")
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(ToggleFilesFocus.boxed_clone(), cx);
+                                }),
+                            )
+                        })
+                        .when(changed_files > 0, |this| {
+                            this.child(
+                                Button::new(
+                                    ("terminal-context-review", terminal_entity_id),
+                                    "Review Changes",
+                                )
+                                .size(ButtonSize::Compact)
+                                .style(ButtonStyle::Subtle)
+                                .start_icon(Icon::new(IconName::Diff).size(IconSize::XSmall))
+                                .tab_index(0isize)
+                                .aria_label(format!(
+                                    "Review {changed_files} changed {}",
+                                    if changed_files == 1 { "file" } else { "files" }
+                                ))
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(ToggleGitFocus.boxed_clone(), cx);
+                                    window.dispatch_action(FocusChanges.boxed_clone(), cx);
+                                }),
+                            )
+                        })
+                        .child(details_menu),
+                )
+                .into_any_element(),
+        )
+    }
 }
 
 impl Render for TerminalView {
@@ -2165,6 +2457,7 @@ impl Render for TerminalView {
         };
         let unavailable_description =
             terminal_unavailable_description(self.session_unavailable_reason.as_deref());
+        let session_context_strip = self.render_session_context_strip(cx);
         let terminal_surface = if self.session_unavailable {
             div()
                 .id("terminal-unavailable-state")
@@ -2316,7 +2609,13 @@ impl Render for TerminalView {
                     }
                 }),
             )
-            .child(terminal_surface)
+            .child(
+                v_flex()
+                    .size_full()
+                    .min_h_0()
+                    .children(session_context_strip)
+                    .child(div().flex_1().min_h_0().child(terminal_surface)),
+            )
             .children(self.context_menu.as_ref().map(|(menu, position, _)| {
                 deferred(
                     anchored()
@@ -3338,6 +3637,25 @@ mod tests {
     use util::rel_path::RelPath;
     use workspace::item::test::{TestItem, TestProjectItem};
     use workspace::{AppState, MultiWorkspace, SelectedEntry};
+
+    #[test]
+    fn terminal_context_copy_keeps_workspace_and_change_counts_compact() {
+        assert_eq!(
+            workspace_label_from_paths(&[PathBuf::from("/code/dez")]),
+            Some("dez".to_owned())
+        );
+        assert_eq!(
+            workspace_label_from_paths(&[
+                PathBuf::from("/code/dez"),
+                PathBuf::from("/code/dez-worktree")
+            ]),
+            Some("dez +1".to_owned())
+        );
+        assert_eq!(workspace_label_from_paths(&[]), None);
+        assert_eq!(changed_files_label(0), "0 changes");
+        assert_eq!(changed_files_label(1), "1 change");
+        assert_eq!(changed_files_label(5), "5 changes");
+    }
 
     #[test]
     fn hosted_session_state_maps_to_truthful_workspace_evidence_lifecycle() {
