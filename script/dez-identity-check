@@ -1135,6 +1135,33 @@ require_pattern crates/dez_terminal_host/Cargo.toml \
 require_pattern script/bundle-mac \
     'Contents/MacOS/dez-terminal-host' \
     'the macOS bundle does not package the durable terminal helper'
+require_pattern script/bundle-mac \
+    'channel="\$\{DEZ_BUNDLE_CHANNEL:-\$source_channel\}"' \
+    'the macOS bundle cannot select a release identity without rewriting source'
+require_multiline_pattern script/bundle-mac \
+    'case "\$channel" in.*?dev\|nightly\|preview\|stable' \
+    'the macOS bundle accepts an unknown release identity'
+require_multiline_pattern script/bundle-mac \
+    'DEZ_BUNDLE_SKIP_REMOTE_SERVER:-false.*?!= "true".*?package remote_server' \
+    'the machine-focused macOS bundle cannot omit the unrelated remote server'
+require_pattern .github/workflows/dez-build.yml \
+    'target-cpu=apple-m2' \
+    'the manual macOS workflow is no longer optimized for the Apple M2 target'
+require_pattern .github/workflows/dez-build.yml \
+    '^  DEZ_BUNDLE_CHANNEL: stable$' \
+    'the downloadable macOS workflow no longer produces the canonical Dez identity'
+require_pattern .github/workflows/dez-build.yml \
+    '^  CARGO_PROFILE_RELEASE_STRIP: symbols$' \
+    'the downloadable macOS workflow no longer strips release symbols'
+require_pattern .github/workflows/dez-build.yml \
+    '\./script/bundle-mac aarch64-apple-darwin' \
+    'the manual macOS workflow bypasses the canonical application bundler'
+require_multiline_pattern .github/workflows/dez-build.yml \
+    'hdiutil verify.*?Dez\.app.*?Contents/MacOS/dez-terminal-host.*?CFBundleIdentifier.*?dev\.dez\.Dez.*?codesign --verify --deep --strict' \
+    'the manual macOS workflow does not verify its DMG, identity, helper, and signature'
+require_multiline_pattern .github/workflows/dez-build.yml \
+    'Dez-macOS-M2\.dmg.*?INSTALL\.txt.*?SHA256SUMS\.txt.*?compression-level: 0' \
+    'the manual macOS artifact is not a fast-download DMG with install and checksum evidence'
 require_pattern crates/terminal/src/terminal.rs \
     'env\.insert\("DEZ_TERM"\.to_string\(\), "true"\.to_string\(\)\);' \
     'terminal sessions do not expose the Dez capability marker'

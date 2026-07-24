@@ -12,14 +12,18 @@ concurrency:
 
 env:
   CARGO_INCREMENTAL: "0"
-  CARGO_PROFILE_DEV_DEBUG: "0"
-  CARGO_PROFILE_DEV_SPLIT_DEBUGINFO: "off"
+  CARGO_PROFILE_RELEASE_DEBUG: "0"
+  CARGO_PROFILE_RELEASE_STRIP: symbols
+  CARGO_PROFILE_RELEASE_PACKAGE_ZED_CODEGEN_UNITS: "1"
   CARGO_TERM_COLOR: always
+  DEZ_BUNDLE_CHANNEL: stable
+  DEZ_BUNDLE_SKIP_REMOTE_SERVER: "true"
   RUST_BACKTRACE: "1"
+  RUSTFLAGS: "-C symbol-mangling-version=v0 --cfg tokio_unstable -C target-cpu=apple-m2"
 
 jobs:
   build_macos_arm64:
-    name: macOS arm64 artifact
+    name: macOS Apple M2 app
     runs-on: macos-15
     timeout-minutes: 180
 
@@ -54,60 +58,132 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: |
+            ~/.cargo/bin/cargo-bundle
             ~/.cargo/git
             ~/.cargo/registry
           key: dez-cargo-macos-arm64-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             dez-cargo-macos-arm64-
 
-      - name: Verify Dez source guards
-        run: ./script/dez-identity-check
-
-      - name: Build Dez and its terminal host
-        run: |
-          cargo build \
-            --locked \
-            -j 2 \
-            -p zed \
-            --bin dez \
-            -p dez_terminal_host \
-            --bin dez-terminal-host
-
-      - name: Verify the build
+      - name: Verify the Apple M2 build target
         run: |
           set -euo pipefail
-          test -x target/debug/dez
-          test -x target/debug/dez-terminal-host
-          test "$(lipo -archs target/debug/dez)" = "arm64"
-          test "$(lipo -archs target/debug/dez-terminal-host)" = "arm64"
-          file target/debug/dez target/debug/dez-terminal-host
+          test "$(uname -m)" = "arm64"
+          test "$(rustc -vV | sed -n 's/^host: //p')" = "aarch64-apple-darwin"
+          mkdir -p target
+          printf 'fn main() {}\n' |
+            rustc \
+              --target aarch64-apple-darwin \
+              -C target-cpu=apple-m2 \
+              --emit=metadata \
+              -o target/apple-m2-target-check.rmeta \
+              -
+          echo "Runner CPU: $(sysctl -n machdep.cpu.brand_string)"
+          echo "Dez target CPU: apple-m2"
 
-      - name: Package the artifact
+      - name: Verify Dez source and bundle guards
         run: |
           set -euo pipefail
-          artifact_dir=target/dez-macos-arm64
+          bash -n script/bundle-mac
+          ./script/dez-identity-check
+
+      - name: Build the optimized Dez application bundle
+        run: |
+          set -euo pipefail
+          ./script/bundle-mac aarch64-apple-darwin
+
+      - name: Verify and package the launchable application
+        run: |
+          set -euo pipefail
+          dmg=target/aarch64-apple-darwin/release/Dez-aarch64.dmg
+          test -f "$dmg"
+          hdiutil verify "$dmg"
+
+          mount_dir="${RUNNER_TEMP}/dez-m2-dmg"
+          mkdir -p "$mount_dir"
+          hdiutil attach \
+            -readonly \
+            -nobrowse \
+            -mountpoint "$mount_dir" \
+            "$dmg" \
+            >target/dez-dmg-attach.txt
+          trap 'hdiutil detach "$mount_dir" >/dev/null' EXIT
+
+          app="$mount_dir/Dez.app"
+          plist="$app/Contents/Info.plist"
+          main="$app/Contents/MacOS/dez"
+          cli="$app/Contents/MacOS/cli"
+          terminal_host="$app/Contents/MacOS/dez-terminal-host"
+          git_binary="$app/Contents/MacOS/git"
+
+          test -d "$app"
+          test -f "$plist"
+          plutil -lint "$plist"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")" = "Dez"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")" = "dev.dez.Dez"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$plist")" = "dez"
+
+          for binary in "$main" "$cli" "$terminal_host" "$git_binary"; do
+            test -x "$binary"
+            test "$(lipo -archs "$binary")" = "arm64"
+          done
+
+          codesign --verify --deep --strict --verbose=2 "$app"
+
+          artifact_dir=target/dez-macos-m2
           mkdir -p "$artifact_dir"
-          cp target/debug/dez "$artifact_dir/"
-          cp target/debug/dez-terminal-host "$artifact_dir/"
-          chmod 755 "$artifact_dir/dez" "$artifact_dir/dez-terminal-host"
+          cp "$dmg" "$artifact_dir/Dez-macOS-M2.dmg"
 
           {
             echo "commit=$(git rev-parse HEAD)"
             echo "runner=${RUNNER_OS}-${RUNNER_ARCH}"
+            echo "target=aarch64-apple-darwin"
+            echo "target_cpu=apple-m2"
+            echo "optimization=release thin-LTO single-codegen-unit stripped"
+            echo "bundle_name=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")"
+            echo "bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")"
+            echo "bundle_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")"
+            echo "signature=ad-hoc (not notarized)"
             rustc --version
             cargo --version
-            file "$artifact_dir/dez" "$artifact_dir/dez-terminal-host"
-            shasum -a 256 \
-              "$artifact_dir/dez" \
-              "$artifact_dir/dez-terminal-host"
+            file "$main" "$cli" "$terminal_host" "$git_binary"
+            codesign -dv --verbose=4 "$app" 2>&1
+            shasum -a 256 "$main" "$cli" "$terminal_host" "$git_binary"
           } >"$artifact_dir/build-manifest.txt"
 
-          tar -C target -czf target/dez-macos-arm64.tar.gz dez-macos-arm64
+          {
+            echo "Dez for Apple M2"
+            echo "================="
+            echo
+            echo "1. Open Dez-macOS-M2.dmg."
+            echo "2. Drag Dez.app to Applications."
+            echo "3. For the first launch, Control-click Dez in Applications,"
+            echo "   choose Open, then choose Open again."
+            echo
+            echo "This development snapshot is ad-hoc signed and is not notarized."
+            echo "macOS may therefore require the Control-click Open flow. If Finder"
+            echo "reports that the app is damaged after you trust this exact build,"
+            echo "run:"
+            echo
+            echo "    xattr -dr com.apple.quarantine /Applications/Dez.app"
+            echo
+            echo "The application, CLI, terminal host, Git helper, resources, bundle"
+            echo "identifier, arm64 architecture, and deep signature were verified"
+            echo "in GitHub Actions before upload."
+          } >"$artifact_dir/INSTALL.txt"
 
-      - name: Upload the Dez artifact
+          shasum -a 256 \
+            "$artifact_dir/Dez-macOS-M2.dmg" \
+            >"$artifact_dir/SHA256SUMS.txt"
+
+          hdiutil detach "$mount_dir"
+          trap - EXIT
+
+      - name: Upload the launchable Dez application
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: dez-macos-arm64-${{ github.sha }}
-          path: target/dez-macos-arm64.tar.gz
+          name: Dez-macOS-M2-${{ github.sha }}
+          path: target/dez-macos-m2/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 14
+          compression-level: 0

@@ -50,9 +50,18 @@ done
 shift $((OPTIND-1))
 
 
-# Get release channel
+# Get release channel. Manual fork builds may select one of the existing Dez
+# bundle identities without rewriting the checked-in development channel.
 pushd crates/zed
-channel=$(<RELEASE_CHANNEL)
+source_channel=$(<RELEASE_CHANNEL)
+channel="${DEZ_BUNDLE_CHANNEL:-$source_channel}"
+case "$channel" in
+    dev|nightly|preview|stable) ;;
+    *)
+        echo "Unsupported Dez bundle channel: $channel"
+        exit 1
+        ;;
+esac
 export ZED_RELEASE_CHANNEL="${channel}"
 popd
 
@@ -110,7 +119,7 @@ if [[ "$reuse_debug_artifacts" = true ]]; then
 else
     cargo build ${build_flag} --package zed --package cli --package dez_terminal_host ${cargo_target_arg}
 fi
-if [[ "$debug_build" = false ]]; then
+if [[ "$debug_build" = false && "${DEZ_BUNDLE_SKIP_REMOTE_SERVER:-false}" != "true" ]]; then
     # Build remote_server separately so feature unification from the app does
     # not influence its required dynamic libraries.
     cargo build ${build_flag} --package remote_server ${cargo_target_arg}
@@ -373,7 +382,7 @@ cp "${artifact_dir}/cli" "${app_path}/Contents/MacOS/cli"
 cp "${artifact_dir}/dez-terminal-host" "${app_path}/Contents/MacOS/dez-terminal-host"
 sign_app_binaries
 
-if [[ "$debug_build" = false ]]; then
+if [[ "$debug_build" = false && "${DEZ_BUNDLE_SKIP_REMOTE_SERVER:-false}" != "true" ]]; then
     sign_binary "${artifact_dir}/remote_server"
     gzip -f --stdout --best "${artifact_dir}/remote_server" > target/zed-remote-server-macos-$arch_suffix.gz
 fi

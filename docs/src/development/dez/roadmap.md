@@ -2702,6 +2702,25 @@ Completed for the running Agent Session action-parity slice:
 - added focused product-copy assertions and a static identity guard;
 - no build, test binary, alternate binary, or visual launch was performed.
 
+Completed for the launchable Apple M2 workflow repair:
+
+- identified GitHub workflow run #2 as compile evidence only: its downloadable
+  tarball contained loose Mach-O executables rather than a Finder-launchable
+  macOS application;
+- routed the workflow through the canonical macOS bundler and stable Dez
+  identity so the output is `Dez.app` inside `Dez-macOS-M2.dmg`;
+- selected the Apple M2 target CPU and stripped thin-LTO release profile while
+  retaining the workspace's required Rust configuration flags;
+- omitted the unrelated remote server from this machine-focused application
+  artifact and cached the pinned `cargo-bundle` helper for later runs;
+- added CI checks for the DMG, property list, bundle identifier, executable
+  inventory, arm64 architecture, and deep signature;
+- changed the uploaded payload to the already-compressed DMG plus a build
+  manifest, SHA-256 checksum, and first-launch guide, with artifact ZIP
+  recompression disabled to reduce download overhead;
+- kept distribution status honest: this snapshot is ad-hoc signed and not
+  notarized, and runtime is not proven until the exact downloaded app opens.
+
 Completed for the first helper-process source slice:
 
 - new crate instructions and a rollbackable `dez_terminal_host` workspace
