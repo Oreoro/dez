@@ -1810,6 +1810,16 @@ code, all launch gates pass, and known limitations are documented.
       faces, and guards editor, terminal, Markdown-code, and readable sans-serif
       UI defaults. JSON, Node syntax, identity, Bash syntax, and diff checks
       pass; rendered Lumin Light and system-translucency proof remains deferred.
+- [x] 2026-07-24: Apply the same measurable contract to Lumin Blur and its
+      opaque fallback. Placeholder text, line numbers, dim terminal text,
+      standard and bright ANSI black, booleans, constants, and special-function
+      definitions now clear a 4.5:1 foreground floor across representative dark
+      translucent and opaque surfaces. Pane focus clears a 3:1 non-text floor.
+      The repository guard now composites blurred backdrops and interactive
+      overlays before testing UI text, every terminal ANSI foreground, every
+      syntax foreground, icons, and focus indicators. Semantic JSON comparison
+      confirms that formatting normalization changed no additional theme
+      values. Rendered wallpaper, width, and opacity proof remains deferred.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated
@@ -2074,6 +2084,27 @@ code, all launch gates pass, and known limitations are documented.
   remains understandable when motion is reduced.
 
 ## Verification {#verification}
+
+Completed for the Lumin dark-theme contrast slice:
+
+- Lumin Blur is checked after its translucent shell is composited over dark
+  backdrop samples, and Lumin is checked on its opaque dark surfaces;
+- placeholder text, line numbers, dim terminal text, all standard and bright
+  ANSI foregrounds, and every syntax foreground pass a 4.5:1 floor;
+- booleans and constants remain restrained neutral gray, while
+  special-function definitions inherit the established function color instead
+  of disappearing as black text;
+- identified pane focus borders pass a 3:1 non-text floor;
+- text on hover, active, selected, search-match, editor-line, and selection
+  overlays is checked after alpha compositing;
+- semantic JSON comparison against the prior checkpoint reports only the 18
+  intended dark color-value changes across Lumin Blur and Lumin;
+- `node --check script/dez-theme-check`;
+- `./script/dez-theme-check`;
+- Bash syntax and `./script/dez-identity-check`;
+- `git diff --check`;
+- no build, Rust test binary, bundle, alternate binary, or visual launch was
+  performed after this source slice.
 
 Completed for the Lumin Light contrast and typography-default slice:
 

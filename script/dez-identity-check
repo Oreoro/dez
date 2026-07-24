@@ -101,7 +101,7 @@ require_file assets/fonts/jetbrains-mono/JetBrainsMono-BoldItalic.ttf \
 require_file assets/fonts/jetbrains-mono/OFL.txt \
     'the bundled JetBrains Mono license is missing'
 require_multiline_pattern assets/themes/lumin/lumin.json \
-    '"author": "Daksh Sharma".*?"name": "Lumin Blur".*?"background\.appearance": "blurred".*?"pane\.focused_border": "#FFC79966".*?"name": "Lumin Light".*?"background\.appearance": "blurred"' \
+    '"author": "Daksh Sharma".*?"name": "Lumin Blur".*?"background\.appearance": "blurred".*?"pane\.focused_border": "#FFC79970".*?"name": "Lumin Light".*?"background\.appearance": "blurred"' \
     'the attributed Lumin variants or their blur-safe focus hierarchy are missing'
 require_pattern assets/themes/lumin/LICENSE \
     '^Copyright \(c\) 2026 Daksh Sharma$' \
