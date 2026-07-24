@@ -1,6 +1,6 @@
 use crate::{
-    NewCenterTerminal, NewFile, Open, OpenMode, PathList, RecentWorkspace,
-    SerializedWorkspaceLocation, ToggleProjectPane, Workspace, WorkspaceSettings,
+    NewCenterTerminal, NewFile, Open, OpenFolder, OpenMode, PathList, RecentWorkspace, RevealFiles,
+    SerializedWorkspaceLocation, Workspace, WorkspaceSettings,
     item::{Item, ItemEvent},
     persistence::WorkspaceDb,
 };
@@ -164,7 +164,10 @@ impl SectionEntry {
 }
 
 const NEW_CENTER_TERMINAL: NewCenterTerminal = NewCenterTerminal { local: false };
-const TOGGLE_PROJECT_PANE: ToggleProjectPane = ToggleProjectPane;
+const OPEN_WORKSPACE: OpenFolder = OpenFolder {
+    create_new_window: Some(false),
+};
+const REVEAL_FILES: RevealFiles = RevealFiles;
 
 fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
@@ -247,7 +250,7 @@ const DEZ_CONTENT: (Section<5>, Section<3>) = (
             SectionEntry {
                 icon: IconName::FolderOpen,
                 title: "Open Workspace",
-                action: &Open::DEFAULT,
+                action: &OPEN_WORKSPACE,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
@@ -317,7 +320,7 @@ const DEZ_WORKSPACE_CONTENT: (Section<5>, Section<3>) = (
             SectionEntry {
                 icon: IconName::FolderOpen,
                 title: "Open Files",
-                action: &TOGGLE_PROJECT_PANE,
+                action: &REVEAL_FILES,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
@@ -335,7 +338,7 @@ const DEZ_WORKSPACE_CONTENT: (Section<5>, Section<3>) = (
             SectionEntry {
                 icon: IconName::FolderOpen,
                 title: "Open Another Workspace",
-                action: &Open::DEFAULT,
+                action: &OPEN_WORKSPACE,
                 visibility_guard: SectionVisibility::Always,
             },
         ],
@@ -925,5 +928,6 @@ mod tests {
         );
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[1].title, "Open Files");
         assert_eq!(ZED_CONTENT.0.entries[0].title, "New Terminal");
+        assert_eq!(OPEN_WORKSPACE.create_new_window, Some(false));
     }
 }

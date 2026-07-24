@@ -2503,3 +2503,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   into the current window so the running Terminal Session survives. Static
   guards cover the action definition, picker policy, and terminal route. This
   is source-only; no build or visual launch was performed.
+- 2026-07-25: Unified start-state navigation around truthful destinations.
+  **Open Files** is now a Workspace-owned action shared by Welcome, Terminal,
+  and Session Rail; its Project Panel implementation always reveals and focuses
+  Files, so repeated activation cannot close Workspace Tools or expose a
+  different retained tool. Welcome and the zero-session rail use the
+  folder-only, same-window **Open Workspace** route. The true-empty terminal
+  action is explicitly **Open Scratch Terminal**, and all start-fresh actions
+  remain withheld while App Session restoration is pending. Focused assertions
+  and identity guards cover the new contracts. This is source-only; no build or
+  visual launch was performed.

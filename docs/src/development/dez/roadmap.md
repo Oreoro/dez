@@ -2992,3 +2992,19 @@ Completed for the persistent Main Work Area budget source slice:
   proportions and region ownership;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the truthful start-state navigation source slice:
+
+- moved **Open Files** to one Workspace-owned action used by Welcome, Terminal,
+  and Session Rail;
+- kept Project Panel as the implementation owner while making every public
+  route reveal and focus Files idempotently;
+- changed Welcome and empty Session Rail **Open Workspace** controls to the
+  folder-only, same-window route;
+- named the pathless zero-state action **Open Scratch Terminal**;
+- kept loading in its own state and withheld creation controls until App
+  Session restoration is ready;
+- added focused source assertions and static guards for destination, scope, and
+  restoration behavior;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

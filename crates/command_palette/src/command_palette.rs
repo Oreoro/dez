@@ -957,7 +957,7 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
         "sidebar::OpenSelectedReviewBrief" => {
             return "session_rail::OpenSelectedSessionDetails".to_owned();
         }
-        "project_panel::Reveal" => return "files::Open".to_owned(),
+        "workspace::RevealFiles" => return "files::Open".to_owned(),
         "zed_actions::OpenProjectSettings" => return "workspace::OpenSettings".to_owned(),
         "zed::OpenProjectSettingsFile" => return "workspace::OpenSettingsFile".to_owned(),
         _ => {}
@@ -1123,7 +1123,7 @@ mod tests {
             "files: toggle focus"
         );
         assert_eq!(
-            humanize_action_name_for_product("project_panel::Reveal", "Dez"),
+            humanize_action_name_for_product("workspace::RevealFiles", "Dez"),
             "files: open"
         );
         assert_eq!(

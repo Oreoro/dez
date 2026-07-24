@@ -305,7 +305,7 @@ require_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\("Session Rail"\)' \
     'the supervision region has regressed to an ambiguous Sessions heading'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_start_state_copy.*?"Terminals open in the Main Work Area\. Live state and attention return here\.".*?"New Terminal".*?"Open Workspace…".*?fn render_empty_state.*?aria_label\("Start working in Dez"\).*?\.px_2\(\).*?\.py_2\(\).*?Button::new\("start-terminal", new_terminal_label\).*?aria_label\("New Terminal in Main Work Area"\).*?Button::new\("start-open", open_workspace_label\).*?ButtonStyle::OutlinedCustom.*?aria_label\(open_workspace_label\)' \
+    'fn session_start_state_visible.*?!has_open_projects.*?session_count == 0.*?!has_query.*?!attention_only.*?!is_restoring.*?fn session_start_state_copy.*?"Terminals open in the Main Work Area\. Live state and attention return here\.".*?"Open Scratch Terminal".*?"Open Workspace…".*?fn render_empty_state.*?aria_label\("Start working in Dez"\).*?\.px_2\(\).*?\.py_2\(\).*?Button::new\("start-terminal", new_terminal_label\).*?aria_label\("Open Scratch Terminal in Main Work Area"\).*?Button::new\("start-open", open_workspace_label\).*?ButtonStyle::OutlinedCustom.*?OpenFolder \{.*?create_new_window: Some\(false\)' \
     'the empty Session Rail can regress to a duplicated card, ambiguous actions, or the wrong terminal destination'
 reject_pattern crates/sidebar/src/sidebar.rs \
     '"(No running sessions|Start a terminal to begin|Open Folder…)"' \
@@ -377,7 +377,7 @@ require_multiline_pattern crates/workspace/src/persistence.rs \
     'fn pane_kind_from_storage.*?"tabs" => PaneKind::Tabs.*?"project" => PaneKind::Project.*?"agent" => PaneKind::Agent' \
     'a restored Agent pane can lose its region identity and return as a Main Work Area tab pane'
 require_multiline_pattern crates/project_panel/src/project_panel.rs \
-    'actions!\([[:space:]]*project_panel,.*?Reveal,.*?pub fn init.*?_: &Reveal.*?reveal_panel::<ProjectPanel>.*?focus_panel::<ProjectPanel>' \
+    'pub fn init.*?_: &workspace::RevealFiles.*?reveal_panel::<ProjectPanel>.*?focus_panel::<ProjectPanel>' \
     'Files can regress from an idempotent reveal/focus action to a toggle that closes its own destination'
 reject_pattern crates/terminal_view/src/terminal_view.rs \
     'ToggleFilesFocus|project_panel::ToggleFocus' \
@@ -749,7 +749,7 @@ require_multiline_pattern crates/command_palette/src/command_palette.rs \
     '"sidebar::OpenSelectedReviewBrief".*?"session_rail::OpenSelectedSessionDetails".*?"sidebar::ReturnToSelectedSession".*?"session rail: return to selected session".*?"sidebar::OpenSelectedSessionFiles".*?"session rail: open selected session files".*?"sidebar::ReviewSelectedSessionChanges".*?"session rail: review selected session changes"' \
     'the Command Palette can regress to implementation-shaped selected-session actions'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
-    '"project_panel::Reveal".*?"files::Open".*?humanize_action_name_for_product\("project_panel::Reveal", "Dez"\).*?"files: open"' \
+    '"workspace::RevealFiles".*?"files::Open".*?humanize_action_name_for_product\("workspace::RevealFiles", "Dez"\).*?"files: open"' \
     'the idempotent Files action can regress to implementation-shaped Command Palette copy'
 require_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\("new-session", "New Terminal"\)' \
@@ -1220,11 +1220,14 @@ require_multiline_pattern crates/workspace/src/welcome.rs \
     'fn welcome_summary.*?"Run in this Workspace\. Supervise in the rail\. Review changes here\.".*?"Run in the terminal\. Supervise in the rail\. Review in the IDE\.".*?Label::new\(welcome_summary\(APP_NAME, has_workspace\)\)' \
     'the Dez welcome headline no longer explains the terminal, rail, and IDE loop'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'const DEZ_CONTENT.*?title: "Start a Dez Workflow".*?title: "Open Workspace".*?title: "Open Scratch Terminal"' \
+    'const OPEN_WORKSPACE: OpenFolder = OpenFolder \{.*?create_new_window: Some\(false\).*?const DEZ_CONTENT.*?title: "Start a Dez Workflow".*?title: "Open Workspace",[[:space:]]*action: &OPEN_WORKSPACE.*?title: "Open Scratch Terminal"' \
     'the Dez welcome actions no longer make Workspace context primary'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'const DEZ_WORKSPACE_CONTENT.*?title: "Start in This Workspace".*?title: "Start Terminal Session".*?title: "Open Files".*?has_workspace.*?DEZ_WORKSPACE_CONTENT' \
+    'const REVEAL_FILES: RevealFiles = RevealFiles.*?const DEZ_WORKSPACE_CONTENT.*?title: "Start in This Workspace".*?title: "Start Terminal Session".*?title: "Open Files",[[:space:]]*action: &REVEAL_FILES.*?has_workspace.*?DEZ_WORKSPACE_CONTENT' \
     'the Dez welcome screen can regress to asking for a Workspace that is already open'
+reject_pattern crates/workspace/src/welcome.rs \
+    'title: "Open Files",[[:space:]]*action: &TOGGLE_PROJECT_PANE' \
+    'the welcome Files destination can regress to a region toggle that closes or reveals the wrong Workspace Tool'
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'let workflow_steps =.*?"1".*?"Run".*?"2".*?"Supervise".*?"3".*?"Review".*?aria_label\("How Dez works: Run, Supervise, Review"\)' \
     'the Dez welcome surface no longer teaches its Run, Supervise, Review sequence'

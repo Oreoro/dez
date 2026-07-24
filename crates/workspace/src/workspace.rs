@@ -2082,6 +2082,8 @@ actions!(
         ToggleAgentPane,
         /// Toggles the project pane.
         ToggleProjectPane,
+        /// Reveals and focuses Files without closing an already-visible Files surface.
+        RevealFiles,
     ]
 );
 

@@ -86,8 +86,11 @@ A Workspace supplies one Zed-compatible Project. That Project owns language
 servers, buffers, diagnostics, search, Git, tasks, debugger state, terminal
 context, and Agent context.
 
-Opening a folder therefore enables one coherent IDE scope. Files, Outline, Git,
-and Debug are views of the same Project, not separate roots.
+**Open Workspace** accepts folders and keeps the current Dez window so existing
+Sessions stay visible. Opening a folder therefore enables one coherent IDE
+scope. Files, Outline, Git, and Debug are views of the same Project, not
+separate roots. **Open Files** always reveals and focuses Files; repeating it
+does not close the destination.
 
 ### 2. Work directly or delegate
 

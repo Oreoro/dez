@@ -50,7 +50,6 @@ use menu::{
 use notifications::status_toast::StatusToast;
 use paths::APP_NAME;
 use project::{AgentId, AgentRegistryStore, Event as ProjectEvent, WorktreeId};
-use project_panel::Reveal as RevealFiles;
 use recent_projects::sidebar_recent_projects::SidebarRecentProjects;
 use remote::{RemoteConnectionOptions, same_remote_connection_identity};
 use serde::{Deserialize, Serialize};
@@ -84,9 +83,9 @@ use util::ResultExt as _;
 use util::path_list::PathList;
 use workspace::{
     CloseWindow, DesignSystemSettings, MultiWorkspace, MultiWorkspaceEvent, NewCenterTerminal,
-    NextProject, NextThread, Open, OpenLog, OpenMode, PreviousProject, PreviousThread,
-    ProjectGroupKey, SaveIntent, Sidebar as WorkspaceSidebar, SidebarRenderState, SidebarSettings,
-    SidebarSide, Toast, ToggleSidebar, Workspace,
+    NextProject, NextThread, Open, OpenFolder, OpenLog, OpenMode, PreviousProject, PreviousThread,
+    ProjectGroupKey, RevealFiles, SaveIntent, Sidebar as WorkspaceSidebar, SidebarRenderState,
+    SidebarSettings, SidebarSide, Toast, ToggleSidebar, Workspace,
     evidence::{
         WorkspaceEvidenceKind as AuthoritativeWorkspaceEvidenceKind, WorkspaceEvidenceLifecycle,
         WorkspaceEvidenceProvenance,
@@ -502,10 +501,20 @@ fn session_overview_create_action_visible(session_count: usize) -> bool {
     session_count > 0
 }
 
+fn session_start_state_visible(
+    has_open_projects: bool,
+    session_count: usize,
+    has_query: bool,
+    attention_only: bool,
+    is_restoring: bool,
+) -> bool {
+    !has_open_projects && session_count == 0 && !has_query && !attention_only && !is_restoring
+}
+
 fn session_start_state_copy() -> (&'static str, &'static str, &'static str) {
     (
         "Terminals open in the Main Work Area. Live state and attention return here.",
-        "New Terminal",
+        "Open Scratch Terminal",
         "Open Workspace…",
     )
 }
@@ -12718,10 +12727,10 @@ impl Sidebar {
                             .full_width()
                             .style(ButtonStyle::Filled)
                             .start_icon(Icon::new(IconName::Terminal).size(IconSize::Small))
-                            .aria_label("New Terminal in Main Work Area")
+                            .aria_label("Open Scratch Terminal in Main Work Area")
                             .tooltip(|_, cx| {
                                 Tooltip::for_action(
-                                    "New Terminal in Main Work Area",
+                                    "Open Scratch Terminal in Main Work Area",
                                     &NewCenterTerminal::default(),
                                     cx,
                                 )
@@ -12742,7 +12751,7 @@ impl Sidebar {
                             .tooltip(move |_, cx| {
                                 Tooltip::for_action(
                                     open_workspace_label,
-                                    &Open {
+                                    &OpenFolder {
                                         create_new_window: Some(false),
                                     },
                                     cx,
@@ -12750,7 +12759,7 @@ impl Sidebar {
                             })
                             .on_click(|_, window, cx| {
                                 window.dispatch_action(
-                                    Open {
+                                    OpenFolder {
                                         create_new_window: Some(false),
                                     }
                                     .boxed_clone(),
@@ -13808,10 +13817,13 @@ impl Render for Sidebar {
         let no_search_results = self.contents.entries.is_empty();
         let has_query = self.has_filter_query(cx);
         let show_session_search = session_search_visible(self.contents.session_count, has_query);
-        let show_start_state = !self.contents.has_open_projects
-            && self.contents.session_count == 0
-            && !has_query
-            && !self.attention_only;
+        let show_start_state = session_start_state_visible(
+            self.contents.has_open_projects,
+            self.contents.session_count,
+            has_query,
+            self.attention_only,
+            self.workspace_restore_is_pending(cx),
+        );
 
         v_flex()
             .id("workspace-sidebar")

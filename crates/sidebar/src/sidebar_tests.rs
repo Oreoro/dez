@@ -312,6 +312,21 @@ fn session_scope_accessibility_copy_keeps_control_names_stable() {
     );
 }
 
+#[test]
+fn start_state_waits_for_restore_and_only_describes_a_true_empty_app() {
+    assert!(session_start_state_visible(false, 0, false, false, false));
+    assert!(!session_start_state_visible(false, 0, false, false, true));
+    assert!(!session_start_state_visible(true, 0, false, false, false));
+    assert!(!session_start_state_visible(false, 1, false, false, false));
+    assert!(!session_start_state_visible(false, 0, true, false, false));
+    assert!(!session_start_state_visible(false, 0, false, true, false));
+    assert_eq!(
+        session_start_state_copy().1,
+        "Open Scratch Terminal",
+        "a pathless zero-state terminal should name its transient scope"
+    );
+}
+
 #[track_caller]
 fn assert_active_thread(sidebar: &Sidebar, session_id: &acp::SessionId, msg: &str) {
     let active = sidebar.active_entry.as_ref();

@@ -446,6 +446,12 @@ defer it.
   keyboard resizing, visibility changes, layout recipes, and persisted-layout
   restoration. Persistence must retain Agent, Workspace Tools, and Main Work
   Area region identity.
+- **2026-07-25: Destination labels imply idempotent navigation.** **Open
+  Workspace** accepts folders, not standalone files, and keeps the current
+  window when the flow promises to preserve Sessions. **Open Files** reveals
+  and focuses Files; repeating it never toggles Workspace Tools closed or
+  exposes whichever tool happened to be active before. Start-fresh controls
+  remain unavailable while App Session restoration is pending.
 - **2026-07-23: Public source must explain the product and its evidence
   boundary.** The canonical repository front page names Dez, explains how the
   Session Rail, Workspace Tools, Main Work Area, Agent, and one

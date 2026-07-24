@@ -22,7 +22,6 @@ use gpui::{
 use menu;
 use persistence::{StoredTerminalSessionRef, TerminalDb};
 use project::{Project, ProjectEntryId, search::SearchQuery};
-use project_panel::Reveal as RevealFiles;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use settings::{
@@ -63,8 +62,8 @@ use ui::{
 use util::ResultExt;
 use workspace::{
     CloseActiveItem, DraggedSelection, DraggedTab, NewCenterTerminal, NewTerminal,
-    OpenFolder as OpenWorkspace, OpenTerminal, Pane, ToolbarItemLocation, Workspace, WorkspaceId,
-    delete_unloaded_items,
+    OpenFolder as OpenWorkspace, OpenTerminal, Pane, RevealFiles, ToolbarItemLocation, Workspace,
+    WorkspaceId, delete_unloaded_items,
     item::{
         HighlightedText, Item, ItemEvent, SerializableItem, TabContentParams, TabTooltipContent,
     },
