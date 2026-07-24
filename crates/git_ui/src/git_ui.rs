@@ -1017,6 +1017,7 @@ mod remote_button {
             .trigger(crate::render_split_button_chevron_trigger(
                 "split-button-right",
                 menu_open,
+                "More Remote Actions",
             ))
             .with_handle(menu_handle)
             .menu(move |window, cx| {
@@ -1068,12 +1069,15 @@ mod remote_button {
                 )
         }
 
+        let left_label = left_label.into();
         let should_render_counts = left_icon.is_none() && (ahead_count > 0 || behind_count > 0);
         let is_in_progress = in_progress_operation.is_some();
 
         let left = ButtonLike::new_rounded_left(format!("split-button-left-{}", id))
             .layer(ElevationIndex::ModalSurface)
             .size(ButtonSize::Compact)
+            .tab_index(0isize)
+            .aria_label(left_label.clone())
             .disabled(is_in_progress)
             .when(should_render_counts, |this| {
                 this.child(
@@ -1132,6 +1136,7 @@ mod remote_button {
 pub(crate) fn render_split_button_chevron_trigger(
     id: impl Into<ElementId>,
     menu_open: bool,
+    label: &'static str,
 ) -> ButtonLike {
     let chevron_button_size = rems_from_px(20.);
     let chevron_icon = if menu_open {
@@ -1145,6 +1150,10 @@ pub(crate) fn render_split_button_chevron_trigger(
         .selected_style(ButtonStyle::Tinted(TintColor::Accent))
         .width(chevron_button_size)
         .height(chevron_button_size.into())
+        .tab_index(0isize)
+        .aria_label(label)
+        .aria_expanded(menu_open)
+        .tooltip(move |_, cx| Tooltip::simple(label, cx))
         .child(Icon::new(chevron_icon).size(IconSize::XSmall))
 }
 

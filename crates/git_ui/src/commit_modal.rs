@@ -286,6 +286,7 @@ impl CommitModal {
                 crate::render_split_button_chevron_trigger(
                     "modal-commit-split-button-right",
                     menu_open,
+                    "More Commit Options",
                 )
                 .disabled(disabled),
             )
@@ -462,6 +463,8 @@ impl CommitModal {
                         ButtonLike::new_rounded_left(format!("split-button-left-{}", commit_label))
                             .layer(ElevationIndex::ModalSurface)
                             .size(ButtonSize::Compact)
+                            .tab_index(0isize)
+                            .aria_label(commit_label)
                             .disabled(!can_commit)
                             .child(Label::new(commit_label).size(LabelSize::Small).mr_0p5())
                             .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {

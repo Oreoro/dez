@@ -247,6 +247,11 @@ context all resolve through that same Workspace and Project:
   when it is dirty; otherwise it deterministically selects the first dirty
   repository and opens a real changed-file diff. It never advertises aggregate
   changes and then reviews an unrelated clean repository.
+- Git Changes reserves the Workspace Tools column for changed-file navigation.
+  Its collapsed commit composer is four lines; longer work uses the explicit
+  full-height or modal expansion controls. View Diff, stage/unstage, commit,
+  remote, and split-menu controls all enter the keyboard tab order, expose
+  specific accessible names, and report whether their popup is open.
 - Workspace readiness uses Workspace vocabulary and accessible status
   semantics. Automatic trust names the newly opened folder scope and the
   language servers, Workspace settings, and configured tools that it enables.

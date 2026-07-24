@@ -3175,3 +3175,16 @@ Completed for the responsive terminal-review handoff source slice:
 - added focused width/routing assertions and static ownership guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the compact Git Changes interaction source slice:
+
+- reduced the collapsed commit composer from six lines to four while retaining
+  explicit full-height and modal expansion;
+- made View Diff, Stage/Unstage All, Commit, and remote split-button actions
+  keyboard tab stops with specific accessible names;
+- gave every Git split-menu chevron a matching tooltip and reported expanded
+  state;
+- covered inline and modal commit flows with static density, naming, focus, and
+  popup-state guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

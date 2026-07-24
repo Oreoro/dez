@@ -2611,3 +2611,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   static ownership guard cover active-dirty, active-clean, no-active, and
   all-clean cases. This is source-only; no build or visual launch was
   performed.
+- 2026-07-25: Rebalanced Git Changes around review instead of permanent commit
+  composition. The collapsed commit editor now reserves four lines rather than
+  six, while the existing full-height and modal expansions remain explicit.
+  View Diff, Stage/Unstage All, Commit, remote actions, and every split-menu
+  chevron are now tab stops with specific accessible names; chevrons expose
+  matching tooltips and expanded state. Static guards cover both the density
+  and interaction contracts. This is source-only; no build or visual launch
+  was performed.

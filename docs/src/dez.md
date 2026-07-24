@@ -181,6 +181,12 @@ keeps Files open and focused; repeating **Review Changes** keeps Git Changes
 open and returns to the current review. Neither action closes the destination
 because it was already visible.
 
+Git Changes keeps changed-file navigation ahead of commit composition. The
+inline commit editor shows four lines by default; use its full-height or modal
+expansion for a longer message. View Diff, stage/unstage, commit, remote, and
+split-menu controls remain keyboard reachable and announce their action and
+open state.
+
 If a saved Session owns a closed Workspace, **Files** restores that exact
 Workspace and Session before revealing the project tree. It does not silently
 do nothing or manufacture a replacement Session.

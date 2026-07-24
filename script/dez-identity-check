@@ -438,6 +438,15 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/git_ui/src/git_panel.rs \
     'fn review_repository_position.*?active_repository.*?filter.*?changed_file_counts.*?position.*?fn review_repository_with_changes.*?repositories\(\).*?sort_by.*?review_repository_position.*?fn first_review_change.*?cached_status.*?min_by.*?fn review_prefers_the_active_dirty_repository_then_the_first_dirty_repository.*?ReviewChanges,.*?register\(workspace: &mut Workspace\).*?_: &ReviewChanges.*?review_repository_with_changes.*?repository_changed.*?set_as_active_repository.*?reveal_panel::<GitPanel>.*?GitPanelTab::Changes.*?schedule_update.*?select_first_entry_if_none.*?first_review_change.*?ProjectDiff::deploy_at' \
     'Review Changes can regress to revealing an oversized tool column without an actual Main Work Area diff'
+require_multiline_pattern crates/git_ui/src/git_ui.rs \
+    'fn split_button.*?let left_label = left_label\.into\(\).*?ButtonLike::new_rounded_left.*?tab_index\(0isize\).*?aria_label\(left_label\.clone\(\).*?fn render_split_button_chevron_trigger.*?label: &'"'"'static str.*?tab_index\(0isize\).*?aria_label\(label\).*?aria_expanded\(menu_open\).*?Tooltip::simple\(label' \
+    'Git remote split buttons can regress to pointer-only controls or unnamed popup state'
+require_multiline_pattern crates/git_ui/src/git_panel.rs \
+    'const COLLAPSED_COMMIT_EDITOR_LINES: usize = 4;.*?"More Commit Options".*?EditorMode::AutoHeight.*?min_lines: COLLAPSED_COMMIT_EDITOR_LINES.*?max_lines: Some\(COLLAPSED_COMMIT_EDITOR_LINES\).*?"More Change Actions".*?ButtonLike::new_rounded_left\("git-changes-actions-split-button-left"\).*?tab_index\(0isize\).*?aria_label\(text\).*?ButtonLike::new\("diff-button"\).*?tab_index\(0isize\).*?aria_label\("View Diff"\).*?editor\.max_point.*?COLLAPSED_COMMIT_EDITOR_LINES.*?ButtonLike::new_rounded_left\(format!\("split-button-left-\{\}", title\)\).*?tab_index\(0isize\).*?aria_label\(title\)' \
+    'Git Changes can regress to an oversized commit composer or pointer-only review and commit actions'
+require_multiline_pattern crates/git_ui/src/commit_modal.rs \
+    '"More Commit Options".*?ButtonLike::new_rounded_left\(format!\("split-button-left-\{\}", commit_label\)\).*?tab_index\(0isize\).*?aria_label\(commit_label\)' \
+    'the expanded Git commit flow can regress behind pointer-only split-button controls'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'AUXILIARY_PANE_MAX_INITIAL_WIDTH: f32 = 360\..*?AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0\.22.*?MAIN_WORK_AREA_MINIMUM_RATIO: f32 = 0\.60.*?fn auxiliary_pane_initial_width.*?enforce_dez_main_work_area_width_budget.*?constrain_auxiliary_horizontal_flexes' \
     'Workspace Tools can regress to an equal-width column or lose the persistent Main Work Area budget'

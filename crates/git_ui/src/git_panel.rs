@@ -1229,7 +1229,7 @@ impl From<&Arc<InitialGraphCommitData>> for CommitHistoryEntry {
     }
 }
 
-const MAX_PANEL_EDITOR_LINES: usize = 6;
+const COLLAPSED_COMMIT_EDITOR_LINES: usize = 4;
 
 pub(crate) fn commit_message_editor(
     commit_message_buffer: Entity<Buffer>,
@@ -1240,7 +1240,11 @@ pub(crate) fn commit_message_editor(
     cx: &mut Context<Editor>,
 ) -> Editor {
     let buffer = cx.new(|cx| MultiBuffer::singleton(commit_message_buffer, cx));
-    let max_lines = if in_panel { MAX_PANEL_EDITOR_LINES } else { 18 };
+    let max_lines = if in_panel {
+        COLLAPSED_COMMIT_EDITOR_LINES
+    } else {
+        18
+    };
     let mut commit_editor = Editor::new(
         EditorMode::AutoHeight {
             min_lines: max_lines,
@@ -5637,8 +5641,12 @@ impl GitPanel {
 
         PopoverMenu::new(id.into())
             .trigger(
-                crate::render_split_button_chevron_trigger("commit-split-button-right", menu_open)
-                    .disabled(disabled),
+                crate::render_split_button_chevron_trigger(
+                    "commit-split-button-right",
+                    menu_open,
+                    "More Commit Options",
+                )
+                .disabled(disabled),
             )
             .with_handle(self.commit_menu_handle.clone())
             .menu({
@@ -5754,8 +5762,8 @@ impl GitPanel {
                 })
             } else {
                 editor.set_mode(EditorMode::AutoHeight {
-                    min_lines: MAX_PANEL_EDITOR_LINES,
-                    max_lines: Some(MAX_PANEL_EDITOR_LINES),
+                    min_lines: COLLAPSED_COMMIT_EDITOR_LINES,
+                    max_lines: Some(COLLAPSED_COMMIT_EDITOR_LINES),
                 })
             }
         });
@@ -5797,6 +5805,7 @@ impl GitPanel {
             .trigger(crate::render_split_button_chevron_trigger(
                 "changes-actions-split-button-right",
                 menu_open,
+                "More Change Actions",
             ))
             .with_handle(self.changes_actions_menu_handle.clone())
             .menu(move |window, cx| {
@@ -5829,6 +5838,8 @@ impl GitPanel {
             ButtonLike::new_rounded_left("git-changes-actions-split-button-left")
                 .layer(ElevationIndex::ModalSurface)
                 .size(ButtonSize::Compact)
+                .tab_index(0isize)
+                .aria_label(text)
                 .child(Label::new(text).size(LabelSize::Small).mr_0p5())
                 .tooltip(Tooltip::for_action_title_in(
                     tooltip,
@@ -5876,6 +5887,8 @@ impl GitPanel {
                 .justify_between()
                 .child(
                     ButtonLike::new("diff-button")
+                        .tab_index(0isize)
+                        .aria_label("View Diff")
                         .child(
                             h_flex()
                                 .gap_1()
@@ -5981,7 +5994,7 @@ impl GitPanel {
                 .trim_end_matches("/"),
         ));
         let editor_is_long = self.commit_editor.update(cx, |editor, cx| {
-            editor.max_point(cx).row().0 >= MAX_PANEL_EDITOR_LINES as u32
+            editor.max_point(cx).row().0 >= COLLAPSED_COMMIT_EDITOR_LINES as u32
         });
 
         let max_title_length = GitPanelSettings::get_global(cx).commit_title_max_length;
@@ -6189,6 +6202,8 @@ impl GitPanel {
                 ButtonLike::new_rounded_left(format!("split-button-left-{}", title))
                     .layer(ElevationIndex::ModalSurface)
                     .size(ButtonSize::Compact)
+                    .tab_index(0isize)
+                    .aria_label(title)
                     .disabled(!can_commit || self.modal_open)
                     .child(
                         Label::new(title)
