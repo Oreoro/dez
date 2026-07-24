@@ -37,6 +37,25 @@ same rules. Workspace Tools and Agent are hideable regions around that grid.
 The Session Rail is a projection over the real owners: selecting a row focuses
 or reattaches its existing Surface instead of opening a duplicate.
 
+## The control grammar
+
+Dez uses the same icon for the same object or transition everywhere:
+
+| Icon role    | Meaning                                                  |
+| ------------ | -------------------------------------------------------- |
+| Terminal     | Start or return to terminal computation                  |
+| Folder open  | Open a Workspace or reveal its Files                     |
+| File         | Create a new file                                        |
+| Diff         | Review observed Workspace changes                        |
+| Information  | Inspect Terminal Session details and evidence boundaries |
+| Session list | Supervise Sessions and attention                         |
+| Clock        | Open Agent Session history                               |
+| Settings     | Configure Agent tools and application behavior           |
+
+Icons support labels; they never replace them. A creation icon does not stand
+in for an object-specific Terminal or File icon, and review/details controls
+do not reuse each other's symbols.
+
 ## The core objects
 
 You only need four concepts for everyday use:
@@ -113,6 +132,10 @@ keeps Files open and focused; repeating **Review Changes** keeps Git Changes
 open and returns to the current review. Neither action closes the destination
 because it was already visible.
 
+If a saved Session owns a closed Workspace, **Files** restores that exact
+Workspace and Session before revealing the project tree. It does not silently
+do nothing or manufacture a replacement Session.
+
 Session Details also states the trust boundary. Lifecycle comes from the
 Terminal and Host; Git counts belong to the Workspace and are not automatically
 attributed to one Session; agent confidence and checks require trusted adapter
@@ -154,8 +177,9 @@ cancellation would be dishonest.
 ## Visual design
 
 Dez follows the system appearance with **Lumin Blur** and **Lumin Light**.
-JetBrains Mono is bundled for editor, terminal, prompt, and code roles, while a
-bundled sans-serif face keeps interface labels readable.
+JetBrains Mono is bundled and used across interface, editor, terminal, prompt,
+and review roles so the installed product has one unmistakable typographic
+identity. Users can still override any role through normal settings.
 
 Blur belongs to the stable window shell. Focus borders, selected rows, active
 lines, pane boundaries, and scrollbars remain visible. Rail/drawer surfaces,

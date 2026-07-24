@@ -1,23 +1,24 @@
 // Dez settings
 //
-// Dez starts with Lumin, JetBrains Mono for code, and a readable sans-serif
-// interface. Change any value here to make the experience your own.
+// Dez starts with Lumin and JetBrains Mono across the interface, editor,
+// terminal, prompts, and review surfaces. Change any value here to make the
+// experience your own.
 //
 // To see every Dez default without changing your custom settings, run
 // `dez: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
-  "ui_font_family": ".ZedSans",
+  "ui_font_family": "JetBrains Mono",
   "ui_font_size": 14,
   "buffer_font_family": "JetBrains Mono",
   "buffer_font_size": 14,
   "theme": {
     "mode": "system",
     "light": "Lumin Light",
-    "dark": "Lumin Blur",
+    "dark": "Lumin Blur"
   },
   "terminal": {
     "font_family": "JetBrains Mono",
-    "font_size": 14,
-  },
+    "font_size": 14
+  }
 }

@@ -52,7 +52,8 @@ From a selected Session Rail row, `Enter` returns to the existing Session,
 `Shift+F` opens its Workspace files, `Shift+G` opens its change review, and
 `Shift+V` opens evidence-backed Session details. The same Files, Review Changes,
 and Session Details handoff appears on standalone terminals; it never creates a
-duplicate shell or project.
+duplicate shell or project. If the owning Workspace is closed, Files restores
+that Workspace and the exact selected Session before revealing the tree.
 
 Read [What is Dez?](./docs/src/dez.md) for the product model and a concrete
 workflow.
@@ -79,8 +80,8 @@ Dez ships with an attributed adaptation of
 
 - **Lumin Blur** in dark mode;
 - **Lumin Light** in light mode;
-- **JetBrains Mono** for editor, terminal, prompts, and code;
-- a bundled sans-serif face for readable interface chrome;
+- **JetBrains Mono** across interface, editor, terminal, prompts, and review;
+- **Dez (Default)** as the product-facing built-in file and folder icon set;
 - distinct rail/drawer, Main Work Area, tab, and elevated-overlay surfaces;
 - restrained structural boundaries, with ordered hover, active, selection,
   scrollbar, and focus signals.

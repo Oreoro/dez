@@ -87,6 +87,35 @@ function describeColor(color) {
   return `#${channel(color.red)}${channel(color.green)}${channel(color.blue)}`;
 }
 
+function requireAlphaRange(theme, token, minimum, maximum) {
+  const color = parseHex(theme.style[token]);
+  requireValue(
+    color.alpha >= minimum && color.alpha <= maximum,
+    `${theme.name}.${token} alpha is ${color.alpha.toFixed(2)}; expected ${minimum.toFixed(2)}–${maximum.toFixed(2)}`,
+  );
+}
+
+function requireGlassMaterial(theme) {
+  requireAlphaRange(theme, "background", 0.55, 0.8);
+  for (const token of [
+    "surface.background",
+    "panel.background",
+    "editor.background",
+    "editor.gutter.background",
+    "terminal.background",
+    "tab_bar.background",
+    "toolbar.background",
+  ]) {
+    requireAlphaRange(theme, token, 0.25, 0.65);
+  }
+  for (const token of ["title_bar.background", "status_bar.background"]) {
+    requireAlphaRange(theme, token, 0.55, 0.8);
+  }
+  for (const token of ["elevated_surface.background", "panel.overlay_background"]) {
+    requireAlphaRange(theme, token, 0.8, 0.95);
+  }
+}
+
 function requireContrast(label, foreground, backgrounds, minimum) {
   for (const background of backgrounds) {
     const ratio = contrast(foreground, background);
@@ -193,6 +222,8 @@ requireValue(
   luminLight?.style["background.appearance"] === "blurred",
   "Lumin Light must request the blurred window shell",
 );
+requireGlassMaterial(luminBlur);
+requireGlassMaterial(luminLight);
 
 const darkTextTokens = [
   "text",
@@ -285,16 +316,21 @@ function requireDarkThemeContrast(theme, surfaces) {
 }
 
 const opaqueDarkSurfaces = resolvedThemeSurfaces(luminOpaque, ["#000000"]);
-const blurredDarkSurfaces = resolvedThemeSurfaces(luminBlur, ["#000000", "#303030"]);
+const blurredDarkBackdrops = ["#000000", "#303030", "#18212B"];
+const blurredDarkSurfaces = resolvedThemeSurfaces(luminBlur, blurredDarkBackdrops);
 requireDarkThemeContrast(luminBlur, blurredDarkSurfaces);
 requireDarkThemeContrast(luminOpaque, opaqueDarkSurfaces);
-requireRegionHierarchy(luminBlur, ["#000000", "#303030"]);
+requireRegionHierarchy(luminBlur, blurredDarkBackdrops);
 requireRegionHierarchy(luminOpaque, ["#000000"]);
-requireInteractionHierarchy(luminBlur, ["#000000", "#303030"]);
+requireInteractionHierarchy(luminBlur, blurredDarkBackdrops);
 requireInteractionHierarchy(luminOpaque, ["#000000"]);
 
 const light = luminLight.style;
-const lightSurfaces = ["#FFFFFF", "#F5F5F5"];
+const blurredLightBackdrops = ["#FFFFFF", "#D8E2EC", "#E9DED2"];
+const lightSurfaces = resolvedThemeSurfaces(luminLight, blurredLightBackdrops);
+const lightEditorSurfaces = blurredLightBackdrops.map((backdrop) =>
+  resolvedThemeSurface(luminLight.style, "editor.background", backdrop),
+);
 
 requireContrast("active control text", light.text, [light["element.active"]], 4.5);
 requireContrast("accent text", light["text.accent"], lightSurfaces, 4.5);
@@ -325,11 +361,11 @@ for (const token of [
 
 for (const [token, style] of Object.entries(light.syntax)) {
   if (style.color) {
-    requireContrast(`syntax.${token}`, style.color, lightSurfaces, 4.5);
+    requireContrast(`syntax.${token}`, style.color, lightEditorSurfaces, 4.5);
   }
 }
-requireRegionHierarchy(luminLight, ["#FFFFFF"]);
-requireInteractionHierarchy(luminLight, ["#FFFFFF"]);
+requireRegionHierarchy(luminLight, blurredLightBackdrops);
+requireInteractionHierarchy(luminLight, blurredLightBackdrops);
 
 const defaultSettings = fs.readFileSync(defaultSettingsPath, "utf8");
 const initialSettings = fs.readFileSync(initialSettingsPath, "utf8");
@@ -341,14 +377,18 @@ for (const settings of [defaultSettings, initialSettings]) {
     "editor default must select JetBrains Mono",
   );
   requireValue(
-    settings.includes('"ui_font_family": ".ZedSans"'),
-    "UI default must retain the readable bundled sans-serif face",
+    settings.includes('"ui_font_family": "JetBrains Mono"'),
+    "UI default must select the bundled JetBrains Mono identity",
   );
 }
 requireValue(
   defaultSettings.includes('"font_family": "JetBrains Mono"') &&
     initialSettings.includes('"font_family": "JetBrains Mono"'),
   "terminal default must select JetBrains Mono",
+);
+requireValue(
+  defaultSettings.includes('"icon_theme": "Dez (Default)"'),
+  "default icon theme must use the product-facing Dez name",
 );
 requireValue(
   defaultSettings.includes('"markdown_preview_code_font_family": "JetBrains Mono"'),

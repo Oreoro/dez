@@ -2749,7 +2749,7 @@ Example:
 
 - Description: The icon theme setting can be specified in two forms - either as the name of an icon theme or as an object containing the `mode`, `dark`, and `light` icon themes for files/folders inside Zed.
 - Setting: `icon_theme`
-- Default: `Zed (Default)`
+- Default: `Dez (Default)`
 
 ### Icon Theme Object
 
@@ -2761,8 +2761,8 @@ Example:
 {
   "icon_theme": {
     "mode": "system",
-    "dark": "Zed (Default)",
-    "light": "Zed (Default)"
+    "dark": "Dez (Default)",
+    "light": "Dez (Default)"
   }
 }
 ```
@@ -2781,8 +2781,8 @@ Example:
 {
   "icon_theme": {
     "mode": "dark",
-    "dark": "Zed (Default)",
-    "light": "Zed (Default)"
+    "dark": "Dez (Default)",
+    "light": "Dez (Default)"
   }
 }
 ```
@@ -2793,8 +2793,8 @@ Example:
 {
   "icon_theme": {
     "mode": "light",
-    "dark": "Zed (Default)",
-    "light": "Zed (Default)"
+    "dark": "Dez (Default)",
+    "light": "Dez (Default)"
   }
 }
 ```
@@ -2805,8 +2805,8 @@ Example:
 {
   "icon_theme": {
     "mode": "system",
-    "dark": "Zed (Default)",
-    "light": "Zed (Default)"
+    "dark": "Dez (Default)",
+    "light": "Dez (Default)"
   }
 }
 ```
@@ -2815,7 +2815,7 @@ Example:
 
 - Description: The name of the dark icon theme.
 - Setting: `dark`
-- Default: `Zed (Default)`
+- Default: `Dez (Default)`
 
 **Options**
 
@@ -2825,7 +2825,7 @@ Run the {#action icon_theme_selector::Toggle} action in the command palette to s
 
 - Description: The name of the light icon theme.
 - Setting: `light`
-- Default: `Zed (Default)`
+- Default: `Dez (Default)`
 
 **Options**
 
@@ -5641,7 +5641,7 @@ Float values between `0.0` and `0.9`, where:
 
 - Description: The name of the font to use for text in the UI.
 - Setting: `ui_font_family`
-- Default: `.ZedSans`. This currently aliases to [IBM Plex](https://www.ibm.com/plex/).
+- Dez default: `JetBrains Mono`.
 
 **Options**
 

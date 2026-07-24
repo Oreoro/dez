@@ -1807,8 +1807,8 @@ code, all launch gates pass, and known limitations are documented.
       retaining Lumin's orange, teal, blue, magenta, and violet character.
       `script/dez-theme-check` parses the theme, validates the contrast matrix,
       verifies blurred/opaque variants, confirms the bundled JetBrains Mono
-      faces, and guards editor, terminal, Markdown-code, and readable sans-serif
-      UI defaults. JSON, Node syntax, identity, Bash syntax, and diff checks
+      faces, and guards interface, editor, terminal, and Markdown-code defaults.
+      JSON, Node syntax, identity, Bash syntax, and diff checks
       pass; rendered Lumin Light and system-translucency proof remains deferred.
 - [x] 2026-07-24: Apply the same measurable contract to Lumin Blur and its
       opaque fallback. Placeholder text, line numbers, dim terminal text,
@@ -1996,8 +1996,8 @@ code, all launch gates pass, and known limitations are documented.
 - **2026-07-23:** Lock the v0.0.1 visual baseline to the system-aware Lumin
   Blur/Lumin Light pair and role-based typography. Commit `67001bf0ef` removes
   stale first-run One theme and oversized font overrides, uses bundled
-  JetBrains Mono at 14 px for editor and terminal work, retains `.ZedSans` for
-  interface readability, and adds subtle structural, focus, active-line, and
+  JetBrains Mono at 14 px for editor and terminal work, and adds subtle
+  structural, focus, active-line, and
   scrollbar contrast to Lumin without layering additional blur effects inside
   high-motion work surfaces. Theme attribution, font licensing, assets,
   defaults, and first-run settings have static guards. Rendered dark/light,
@@ -2139,8 +2139,8 @@ Completed for the Lumin Light contrast and typography-default slice:
   light surfaces;
 - Lumin Blur remains the blurred dark default, Lumin remains the opaque dark
   fallback, and Lumin Light remains the blurred light default;
-- editor, terminal, and Markdown code retain bundled JetBrains Mono while UI
-  chrome retains the readable bundled sans-serif face;
+- interface, editor, terminal, Markdown, prompt, Git, and review roles use the
+  bundled JetBrains Mono identity;
 - `node --check script/dez-theme-check`;
 - `./script/dez-theme-check`;
 - `cargo fmt --all -- --check`;
@@ -2799,6 +2799,38 @@ Completed for the closed-Workspace Files handoff source slice:
 - removed the previous silent no-op for saved Sessions whose Workspace was
   closed;
 - guarded the ordering and documented the recovery behavior;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the whole-window Lumin glass and typography source slice:
+
+- bounded alpha for shell, rail, editor, terminal, toolbar, tab strip, title
+  bar, status bar, and overlays instead of compounding near-opaque layers;
+- checked dark, neutral, cool, white, blue-gray, and warm backdrops;
+- preserved measured region, interaction, focus, structural, text, syntax, and
+  terminal contrast;
+- applied bundled JetBrains Mono to interface, editor, terminal, prompt,
+  Markdown, Git, and review roles;
+- added a narrow product-scoped migration for the exact old Dez-generated
+  `.ZedSans` profile while protecting custom fonts and official Zed settings;
+- updated public product guidance, Fork Notes, source plans, and static guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the first-party control-icon source slice:
+
+- normalized Terminal, Workspace/Files, File, Diff, Session Details,
+  supervision, Agent History, and Settings roles across Welcome, Onboarding,
+  Session Rail, and terminal context;
+- replaced generic creation pluses on Dez file/terminal routes with
+  object-specific icons;
+- aligned Terminal Session details on the same Info symbol used by the terminal
+  context strip;
+- aligned first-run vocabulary with the product's Run, Supervise, Review loop;
+- documented and guarded the icon grammar while preserving official Zed
+  welcome icons;
+- exposed the built-in file/folder set as **Dez (Default)** while retaining
+  the original Zed name as a compatibility alias;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
 

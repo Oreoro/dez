@@ -263,7 +263,7 @@ const DEZ_CONTENT: (Section<5>, Section<3>) = (
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
-                icon: IconName::Plus,
+                icon: IconName::File,
                 title: "New File",
                 action: &NewFile,
                 visibility_guard: SectionVisibility::Always,
@@ -321,7 +321,7 @@ const DEZ_WORKSPACE_CONTENT: (Section<5>, Section<3>) = (
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
-                icon: IconName::Plus,
+                icon: IconName::File,
                 title: "New File",
                 action: &NewFile,
                 visibility_guard: SectionVisibility::Always,
@@ -333,7 +333,7 @@ const DEZ_WORKSPACE_CONTENT: (Section<5>, Section<3>) = (
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
-                icon: IconName::Folder,
+                icon: IconName::FolderOpen,
                 title: "Open Another Workspace",
                 action: &Open::DEFAULT,
                 visibility_guard: SectionVisibility::Always,

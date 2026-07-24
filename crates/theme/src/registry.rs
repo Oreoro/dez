@@ -10,6 +10,7 @@ use thiserror::Error;
 use crate::{
     Appearance, AppearanceContent, ChevronIcons, DEFAULT_ICON_THEME_NAME, DirectoryIcons,
     IconDefinition, IconTheme, IconThemeFamilyContent, Theme, ThemeFamily, default_icon_theme,
+    dez_default_icon_theme,
 };
 
 /// The metadata for a theme.
@@ -113,11 +114,15 @@ impl ThemeRegistry {
         registry.insert_theme_families([crate::fallback_themes::zed_default_themes()]);
 
         let default_icon_theme = crate::default_icon_theme();
-        registry
-            .state
-            .write()
+        let dez_default_icon_theme = crate::dez_default_icon_theme();
+        let mut state = registry.state.write();
+        state
             .icon_themes
             .insert(default_icon_theme.name.clone(), default_icon_theme);
+        state
+            .icon_themes
+            .insert(dez_default_icon_theme.name.clone(), dez_default_icon_theme);
+        drop(state);
 
         registry
     }

@@ -247,12 +247,12 @@ fn render_dez_workflow_section(tab_index: &mut isize, cx: &mut App) -> impl Into
     let steps = [
         (
             IconName::Terminal,
-            "Start",
+            "Run",
             "Run work in an ordinary terminal or a pane-native agent.",
         ),
         (
             IconName::ListTree,
-            "Watch",
+            "Supervise",
             "Use the Session Rail to scan activity and attention without changing context.",
         ),
         (

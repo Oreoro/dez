@@ -5,9 +5,9 @@ description: Customize Dez's themes, fonts, icons, UI density, and other visual 
 
 # Appearance
 
-Dez starts with the translucent Lumin theme, JetBrains Mono for code and
-terminals, and a readable sans-serif interface. This guide shows how to
-customize those visual defaults.
+Dez starts with the translucent Lumin theme and JetBrains Mono across the
+interface, editor, terminal, prompts, and review surfaces. This guide shows how
+to customize those visual defaults.
 
 For information on how the settings system works, see [All Settings](./reference/all-settings.md).
 
@@ -57,8 +57,8 @@ Like color themes, icon themes support separate light and dark variants:
 {
   "icon_theme": {
     "mode": "system",
-    "light": "Zed (Default)",
-    "dark": "Zed (Default)"
+    "light": "Dez (Default)",
+    "dark": "Dez (Default)"
   }
 }
 ```
@@ -67,7 +67,14 @@ Like color themes, icon themes support separate light and dark variants:
 
 ## Fonts
 
-Dez uses a sans-serif face for interface chrome and JetBrains Mono for code.
+Dez uses JetBrains Mono for interface chrome and code, giving the application
+one coherent terminal-native identity.
+
+When an existing Dez profile still contains the exact old generated
+Lumin/JetBrains settings header and `.ZedSans` UI value, Dez migrates that one
+generated value in memory and offers the normal backed-up settings update. It
+does not change official Zed settings or a custom font choice.
+
 The bundled font means editor and terminal typography is consistent even on a
 new machine.
 
@@ -83,7 +90,7 @@ Example configuration:
 {
   "buffer_font_family": "JetBrains Mono",
   "buffer_font_size": 14,
-  "ui_font_family": ".ZedSans",
+  "ui_font_family": "JetBrains Mono",
   "ui_font_size": 14,
   "terminal": {
     "font_family": "JetBrains Mono",

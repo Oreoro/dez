@@ -235,13 +235,13 @@ controls legible. Elevated menus and overlays remain visually solid enough for
 text. Editor and terminal regions reuse the single shell material instead of
 stacking independent blur effects over continuously updating content.
 
-Typography uses explicit roles:
+Typography uses one explicit Dez identity:
 
 - **JetBrains Mono** is bundled under the SIL Open Font License and is the
-  default for buffers, terminals, Agent prompt/code content, Markdown code,
-  and Git commit input.
-- **`.ZedSans`**, currently the bundled IBM Plex Sans family, is the default
-  for navigation, labels, prose, menus, settings, and other interface chrome.
+  default for navigation, labels, menus, buffers, terminals, Agent content,
+  Markdown, review, settings, and Git commit input.
+- Users can independently override UI, buffer, terminal, Agent, and Markdown
+  roles through normal settings when they prefer proportional prose.
 - The balanced v0.0.1 baseline is 14 px for UI, editor, Agent, and terminal
   text, with a 1.5 editor line height and a slightly smaller 13 px Git commit
   input.
@@ -250,6 +250,20 @@ First-run settings must select the same Lumin and font profile as product
 defaults. They must not pin a stale upstream theme or oversized typography that
 makes a fresh install look different from the intended Dez experience. Users
 remain free to override every role through normal settings.
+
+The upgrade path recognizes only the exact old Dez-generated settings header
+and `.ZedSans` value. It applies JetBrains Mono in memory and uses the normal
+backup-and-update flow; it never rewrites official Zed settings or an arbitrary
+custom UI font.
+
+Primary icon roles are semantic and stable: Terminal means terminal
+computation, Folder Open means Workspace/Files, File means file creation, Diff
+means change review, Info means Session details, List Tree means supervision,
+Clock means Agent History, and Settings means configuration. Visible labels
+remain authoritative; icons reinforce them instead of replacing them.
+The selector exposes the built-in file/folder set as **Dez (Default)**.
+**Zed (Default)** remains registered only as a compatibility alias for
+upstream behavior and existing settings.
 
 ## Locked identity {#locked-identity}
 

@@ -421,11 +421,13 @@ fn icon_keys_by_association(
 
 /// The name of the default icon theme.
 pub const DEFAULT_ICON_THEME_NAME: &str = "Zed (Default)";
+/// The product-facing name of the built-in icon theme in Dez.
+pub const DEZ_DEFAULT_ICON_THEME_NAME: &str = "Dez (Default)";
 
-static DEFAULT_ICON_THEME: LazyLock<Arc<IconTheme>> = LazyLock::new(|| {
+fn built_in_icon_theme(id: &str, name: &str) -> Arc<IconTheme> {
     Arc::new(IconTheme {
-        id: "zed".into(),
-        name: DEFAULT_ICON_THEME_NAME.into(),
+        id: id.into(),
+        name: name.into(),
         appearance: Appearance::Dark,
         directory_icons: DirectoryIcons {
             collapsed: Some("icons/file_icons/folder.svg".into()),
@@ -447,9 +449,19 @@ static DEFAULT_ICON_THEME: LazyLock<Arc<IconTheme>> = LazyLock::new(|| {
             )
         })),
     })
-});
+}
+
+static DEFAULT_ICON_THEME: LazyLock<Arc<IconTheme>> =
+    LazyLock::new(|| built_in_icon_theme("zed", DEFAULT_ICON_THEME_NAME));
+static DEZ_DEFAULT_ICON_THEME: LazyLock<Arc<IconTheme>> =
+    LazyLock::new(|| built_in_icon_theme("dez", DEZ_DEFAULT_ICON_THEME_NAME));
 
 /// Returns the default icon theme.
 pub fn default_icon_theme() -> Arc<IconTheme> {
     DEFAULT_ICON_THEME.clone()
+}
+
+/// Returns the product-facing Dez alias for the built-in icon theme.
+pub fn dez_default_icon_theme() -> Arc<IconTheme> {
+    DEZ_DEFAULT_ICON_THEME.clone()
 }

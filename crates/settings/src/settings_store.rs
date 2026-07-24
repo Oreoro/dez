@@ -793,8 +793,15 @@ impl SettingsStore {
         let (settings, parse_status) = if user_settings_content.is_empty() {
             SettingsContentType::parse_json("{}")
         } else {
-            let migration_res = migrator::migrate_settings(user_settings_content);
+            let dez_font_migration = matches!(file, SettingsFile::User)
+                .then(|| migrate_dez_generated_ui_font(paths::APP_NAME, user_settings_content))
+                .flatten();
+            let migration_input = dez_font_migration
+                .as_deref()
+                .unwrap_or(user_settings_content);
+            let migration_res = migrator::migrate_settings(migration_input);
             migration_status = match &migration_res {
+                Ok(_) if dez_font_migration.is_some() => MigrationStatus::Succeeded,
                 Ok(Some(_)) => MigrationStatus::Succeeded,
                 Ok(None) => MigrationStatus::NotNeeded,
                 Err(err) => MigrationStatus::Failed {
@@ -803,8 +810,8 @@ impl SettingsStore {
             };
             let content = match &migration_res {
                 Ok(Some(content)) => content,
-                Ok(None) => user_settings_content,
-                Err(_) => user_settings_content,
+                Ok(None) => migration_input,
+                Err(_) => migration_input,
             };
             SettingsContentType::parse_json(content)
         };
@@ -1650,6 +1657,26 @@ impl<T: Settings> AnySettingValue for SettingValue<T> {
     }
 }
 
+fn migrate_dez_generated_ui_font(app_name: &str, content: &str) -> Option<String> {
+    const OLD_GENERATED_PROFILE: &str =
+        "// Dez starts with Lumin, JetBrains Mono for code, and a readable sans-serif";
+    const OLD_UI_FONT: &str = "\"ui_font_family\": \".ZedSans\"";
+
+    if app_name != "Dez"
+        || !content.contains(OLD_GENERATED_PROFILE)
+        || !content.contains(OLD_UI_FONT)
+        || !content.contains("\"buffer_font_family\": \"JetBrains Mono\"")
+        || !content.contains("\"light\": \"Lumin Light\"")
+        || !content.contains("\"dark\": \"Lumin Blur\"")
+        || !content.contains("\"terminal\"")
+        || !content.contains("\"font_family\": \"JetBrains Mono\"")
+    {
+        return None;
+    }
+
+    Some(content.replacen(OLD_UI_FONT, "\"ui_font_family\": \"JetBrains Mono\"", 1))
+}
+
 #[cfg(test)]
 mod tests {
     use std::{cell::RefCell, num::NonZeroU32};
@@ -1663,6 +1690,28 @@ mod tests {
     use fs::FakeFs;
     use unindent::Unindent;
     use util::rel_path::rel_path;
+
+    #[test]
+    fn migrates_only_the_old_generated_dez_ui_font() {
+        let generated = r#"// Dez starts with Lumin, JetBrains Mono for code, and a readable sans-serif
+{
+  "ui_font_family": ".ZedSans",
+  "buffer_font_family": "JetBrains Mono",
+  "theme": { "light": "Lumin Light", "dark": "Lumin Blur" },
+  "terminal": { "font_family": "JetBrains Mono" }
+}"#;
+
+        let migrated = migrate_dez_generated_ui_font("Dez", generated).unwrap();
+        assert!(migrated.contains("\"ui_font_family\": \"JetBrains Mono\""));
+        assert_eq!(migrate_dez_generated_ui_font("Zed", generated), None);
+        assert_eq!(
+            migrate_dez_generated_ui_font(
+                "Dez",
+                r#"{ "ui_font_family": ".ZedSans", "buffer_font_family": "JetBrains Mono" }"#,
+            ),
+            None
+        );
+    }
 
     #[derive(Debug, PartialEq)]
     struct AutoUpdateSetting {

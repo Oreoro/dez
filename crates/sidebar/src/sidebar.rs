@@ -11332,7 +11332,7 @@ impl Sidebar {
                         })
                         .when_some(review_workspace, |this, review_workspace| {
                             this.child(
-                                IconButton::new("review-terminal-run", IconName::ListTodo)
+                                IconButton::new("review-terminal-run", IconName::Info)
                                     .size(ButtonSize::Medium)
                                     .icon_size(IconSize::Small)
                                     .tab_index(0isize)
@@ -12562,7 +12562,9 @@ impl Sidebar {
                                 Button::new("new-session", "New Terminal")
                                     .size(ButtonSize::Medium)
                                     .style(ButtonStyle::Filled)
-                                    .start_icon(Icon::new(IconName::Plus).size(IconSize::XSmall))
+                                    .start_icon(
+                                        Icon::new(IconName::Terminal).size(IconSize::XSmall),
+                                    )
                                     .aria_label(active_workspace_terminal_destination_label())
                                     .tooltip(|_, cx| {
                                         Tooltip::for_action(

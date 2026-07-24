@@ -71,6 +71,15 @@ require_pattern assets/settings/default.json \
 require_pattern assets/settings/default.json \
     '^  "auto_connect": false,$' \
     'upstream cloud auto-connect is enabled by default'
+require_pattern assets/settings/default.json \
+    '^  "icon_theme": "Dez \(Default\)",$' \
+    'the default icon selector still exposes the base-fork product name'
+require_multiline_pattern crates/theme/src/icon_theme.rs \
+    'DEZ_DEFAULT_ICON_THEME_NAME: &str = "Dez \(Default\)".*?built_in_icon_theme\("dez", DEZ_DEFAULT_ICON_THEME_NAME\).*?pub fn dez_default_icon_theme' \
+    'the Dez default icon theme alias is missing'
+require_multiline_pattern crates/theme/src/registry.rs \
+    'default_icon_theme = crate::default_icon_theme.*?dez_default_icon_theme = crate::dez_default_icon_theme.*?insert\(default_icon_theme.name.clone\(\), default_icon_theme\).*?insert\(dez_default_icon_theme.name.clone\(\), dez_default_icon_theme\)' \
+    'the icon registry no longer preserves both Dez and Zed compatibility names'
 require_multiline_pattern assets/settings/default.json \
     '"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur"' \
     'the Dez default appearance no longer follows the system with the Lumin light/blur pair'
@@ -78,14 +87,20 @@ require_pattern assets/settings/default.json \
     '^  "buffer_font_family": "JetBrains Mono",$' \
     'the editor no longer defaults to bundled JetBrains Mono'
 require_pattern assets/settings/default.json \
-    '^  "ui_font_family": "\.ZedSans",$' \
-    'interface chrome no longer uses the readable bundled sans-serif role'
+    '^  "ui_font_family": "JetBrains Mono",$' \
+    'interface chrome no longer uses the bundled JetBrains Mono identity'
 require_multiline_pattern assets/settings/default.json \
     '^  "terminal": \{.*?^    "font_size": 14,.*?^    "font_family": "JetBrains Mono",$' \
     'the terminal no longer shares the polished JetBrains Mono typography profile'
 require_multiline_pattern assets/settings/initial_user_settings.json \
-    '"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"terminal": \{.*?"font_family": "JetBrains Mono".*?"font_size": 14' \
+    '"ui_font_family": "JetBrains Mono".*?"buffer_font_family": "JetBrains Mono".*?"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"terminal": \{.*?"font_family": "JetBrains Mono".*?"font_size": 14' \
     'first-run settings can override Dez with stale themes or typography'
+require_multiline_pattern crates/settings/src/settings_store.rs \
+    'fn migrate_dez_generated_ui_font.*?OLD_GENERATED_PROFILE.*?app_name != "Dez".*?content\.replacen\(OLD_UI_FONT,.*?JetBrains Mono' \
+    'existing Dez profiles can retain the old generated sans-serif UI or overwrite deliberate Zed/user choices'
+require_multiline_pattern crates/settings/src/settings_store.rs \
+    'fn migrates_only_the_old_generated_dez_ui_font.*?migrate_dez_generated_ui_font\("Dez", generated\).*?migrate_dez_generated_ui_font\("Zed", generated\), None.*?migrate_dez_generated_ui_font\([[:space:]]*"Dez".*?\.ZedSans.*?None' \
+    'the Dez UI font migration is not protected against official Zed and custom settings'
 require_file assets/themes/lumin/lumin.json \
     'the bundled Lumin theme asset is missing'
 require_file assets/themes/lumin/LICENSE \
@@ -101,7 +116,7 @@ require_file assets/fonts/jetbrains-mono/JetBrainsMono-BoldItalic.ttf \
 require_file assets/fonts/jetbrains-mono/OFL.txt \
     'the bundled JetBrains Mono license is missing'
 require_multiline_pattern assets/themes/lumin/lumin.json \
-    '"author": "Daksh Sharma".*?"name": "Lumin Blur".*?"background\.appearance": "blurred".*?"border": "#FFFFFF26".*?"tab_bar\.background": "#0D0D0DC7".*?"panel\.background": "#0B0B0BB8".*?"editor\.background": "#121212B8".*?"pane\.focused_border": "#FFC79970".*?"name": "Lumin Light".*?"background\.appearance": "blurred".*?"border": "#0000002E".*?"tab_bar\.background": "#E9E6E2F2".*?"panel\.background": "#EDEAE6F2".*?"editor\.background": "#FAF9F7F2"' \
+    '"author": "Daksh Sharma".*?"name": "Lumin Blur".*?"background\.appearance": "blurred".*?"background": "#101010A6".*?"tab_bar\.background": "#0909098F".*?"panel\.background": "#08080880".*?"editor\.background": "#1818184D".*?"terminal\.background": "#10101059".*?"pane\.focused_border": "#FFC79970".*?"name": "Lumin Light".*?"background\.appearance": "blurred".*?"background": "#F2F0EDB8".*?"tab_bar\.background": "#E4DED68F".*?"panel\.background": "#E6DED580".*?"editor\.background": "#FFFEFC59".*?"terminal\.background": "#FFFEFC59"' \
     'the attributed Lumin variants or their blur-safe focus hierarchy are missing'
 require_pattern assets/themes/lumin/LICENSE \
     '^Copyright \(c\) 2026 Daksh Sharma$' \
@@ -734,8 +749,20 @@ require_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\("new-session", "New Terminal"\)' \
     'the primary Session Rail creation action is ambiguous'
 require_multiline_pattern crates/onboarding/src/basics_page.rs \
-    '\.role\(gpui::Role::Region\).*?\.aria_label\("Terminal-first workflow"\)' \
+    'IconName::Terminal,[[:space:]]*"Run".*?IconName::ListTree,[[:space:]]*"Supervise".*?IconName::Diff,[[:space:]]*"Review".*?\.role\(gpui::Role::Region\).*?\.aria_label\("Terminal-first workflow"\)' \
     'the Dez first-run workflow is not exposed as a named accessibility region'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'IconButton::new\("review-terminal-changes", IconName::Diff\).*?IconButton::new\("review-terminal-run", IconName::Info\)' \
+    'Terminal Session review actions can regress to contradictory icon roles'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'Button::new\("new-session", "New Terminal"\).*?IconName::Terminal' \
+    'the Session Rail primary creation action can regress to a generic icon'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'render_agent_options_menu.*?IconName::Settings.*?Button::new\("history".*?IconName::Clock.*?render_recent_projects_button' \
+    'the Session Rail can regress to inconsistent primary action icon roles'
+require_multiline_pattern crates/workspace/src/welcome.rs \
+    'const DEZ_CONTENT:.*?IconName::FolderOpen,[[:space:]]*title: "Open Workspace".*?IconName::Terminal,[[:space:]]*title: "Open Scratch Terminal".*?IconName::File,[[:space:]]*title: "New File".*?const DEZ_WORKSPACE_CONTENT:.*?IconName::Terminal,[[:space:]]*title: "Start Terminal Session".*?IconName::FolderOpen,[[:space:]]*title: "Open Files".*?IconName::File,[[:space:]]*title: "New File".*?IconName::FolderOpen,[[:space:]]*title: "Open Another Workspace"' \
+    'the Dez welcome surface can regress to generic or contradictory action icons'
 require_multiline_pattern crates/onboarding/src/basics_page.rs \
     'Label::new\(.*?Close hides a view.*?\.flex_wrap\(\).*?Button::new\("onboarding-copy-codex-hook"' \
     'the first-run safety copy can regress to competing horizontally with its actions'
