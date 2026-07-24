@@ -103,7 +103,10 @@ Its context bar and selected Session Rail row provide the same direct handoff:
 **Files** opens the owning Workspace tree, **Review Changes** opens Agent review
 or Git Changes as appropriate, and **Session Details** opens the observed run
 summary. Returning to the row focuses the existing Session rather than starting
-another shell.
+another shell. A Git review destination identifies itself in the Main Work Area
+as **Diff · filename**; its tooltip retains the diff base and relative path, so
+switching between terminal, file, and review never leaves a generic
+“Uncommitted Diff” surface.
 
 Dez does not treat an agent saying “tests passed” as equivalent to an observed
 command with an exit status.

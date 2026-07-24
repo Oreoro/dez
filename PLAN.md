@@ -374,7 +374,8 @@ terminates explicitly, and reports observed exit truthfully.
       Terminal review now uses one Workspace-owned Git action that reveals the
       bounded Git Changes drawer, selects a changed file, and opens the
       uncommitted diff in the Main Work Area; repeating it cannot accidentally
-      close the drawer.
+      close the drawer. The destination now identifies itself as **Diff ·
+      filename**, while its tooltip retains the diff base and relative path.
 - [x] Add explicit review outcomes without inventing a second Run owner. Every
       editable Review Brief contains Continue, Request changes, and Accept as
       reviewed checkboxes and states that they are reviewer notes, not lifecycle
@@ -442,7 +443,10 @@ with new labels.
       `56f7c46db6` keeps the persistent terminal header useful without adding
       another status bar: its tooltip now always identifies lifecycle,
       ownership, folder, and available process or Session details, including
-      durable terminals that have no local PID.
+      durable terminals that have no local PID. Project Diff tabs now identify
+      the active Dez review Surface and file as **Diff · filename**, with base
+      and relative path retained in hover detail; official Zed remains
+      unchanged.
 - [ ] Keep fixed shell chrome bounded under real project names and narrow
       widths. Commit `0d8496969f` gives the project identity and Git controls
       explicit shrinkable, overflow-hidden regions so their one-line labels do
@@ -2421,3 +2425,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   open, preserving the running Terminal Session while the selected codebase
   gains Files and Git review. The collapsed guide says **Connect** until that
   context exists. This is source-only; no build or visual launch was performed.
+- 2026-07-25: Made the terminal-to-review destination self-identifying. Dez
+  Project Diff tabs now render **Diff · filename** for the active reviewed file
+  instead of the generic inherited **Uncommitted Diff**. Hover detail preserves
+  the diff base and relative path, and official Zed keeps its upstream
+  vocabulary. Focused source assertions and an identity guard cover both
+  product branches. This is source-only; no build or visual launch was
+  performed.

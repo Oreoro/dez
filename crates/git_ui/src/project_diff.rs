@@ -58,6 +58,47 @@ actions!(
 #[action(namespace = git, name = "BranchDiff")]
 pub(crate) struct DeployBranchDiff;
 
+fn project_diff_base_label(diff_base: &DiffBase) -> String {
+    match diff_base {
+        DiffBase::Head => "Uncommitted Diff".to_owned(),
+        DiffBase::Index => "Unstaged Diff".to_owned(),
+        DiffBase::Staged => "Staged Diff".to_owned(),
+        DiffBase::Merge { base_ref } => format!("Diff since {base_ref}"),
+    }
+}
+
+fn project_diff_tab_label(
+    app_name: &str,
+    base_label: &str,
+    active_file_name: Option<&str>,
+) -> SharedString {
+    if app_name == "Zed" {
+        base_label.to_owned().into()
+    } else if let Some(active_file_name) = active_file_name {
+        format!("Diff · {active_file_name}").into()
+    } else {
+        let scope = base_label
+            .strip_suffix(" Diff")
+            .or_else(|| base_label.strip_prefix("Diff "))
+            .unwrap_or(base_label);
+        format!("Diff · {scope}").into()
+    }
+}
+
+fn project_diff_tooltip_label(
+    app_name: &str,
+    base_label: &str,
+    active_path: Option<&str>,
+) -> SharedString {
+    if app_name == "Zed" {
+        base_label.to_owned().into()
+    } else if let Some(active_path) = active_path {
+        format!("{base_label} · {active_path}").into()
+    } else {
+        base_label.to_owned().into()
+    }
+}
+
 pub struct ProjectDiff {
     project: Entity<Project>,
     workspace: WeakEntity<Workspace>,
@@ -406,7 +447,17 @@ impl Item for ProjectDiff {
     }
 
     fn tab_tooltip_text(&self, cx: &App) -> Option<SharedString> {
-        Some(self.tab_content_text(0, cx))
+        let base_label = project_diff_base_label(self.diff_base(cx));
+        let active_path = self
+            .diff
+            .read(cx)
+            .active_project_path(cx)
+            .map(|project_path| project_path.path.to_string());
+        Some(project_diff_tooltip_label(
+            paths::APP_NAME,
+            &base_label,
+            active_path.as_deref(),
+        ))
     }
 
     fn tab_content(&self, params: TabContentParams, _window: &Window, cx: &App) -> AnyElement {
@@ -420,12 +471,12 @@ impl Item for ProjectDiff {
     }
 
     fn tab_content_text(&self, _detail: usize, cx: &App) -> SharedString {
-        match self.diff_base(cx) {
-            DiffBase::Head => "Uncommitted Diff".into(),
-            DiffBase::Index => "Unstaged Diff".into(),
-            DiffBase::Staged => "Staged Diff".into(),
-            DiffBase::Merge { base_ref } => format!("Diff since {}", base_ref).into(),
-        }
+        let base_label = project_diff_base_label(self.diff_base(cx));
+        let active_path = self.diff.read(cx).active_project_path(cx);
+        let active_file_name = active_path
+            .as_ref()
+            .and_then(|project_path| project_path.path.file_name());
+        project_diff_tab_label(paths::APP_NAME, &base_label, active_file_name)
     }
 
     fn telemetry_event_text(&self) -> Option<&'static str> {
@@ -1034,6 +1085,38 @@ mod tests {
         assert_eq!(
             send_review_to_agent_tooltip("Zed"),
             "Send all review comments to the Agent panel"
+        );
+    }
+
+    #[test]
+    fn dez_project_diff_names_the_surface_and_active_file() {
+        assert_eq!(
+            project_diff_tab_label("Dez", "Uncommitted Diff", Some("PLAN.md")),
+            "Diff · PLAN.md"
+        );
+        assert_eq!(
+            project_diff_tab_label("Dez", "Uncommitted Diff", None),
+            "Diff · Uncommitted"
+        );
+        assert_eq!(
+            project_diff_tab_label("Dez", "Diff since main", None),
+            "Diff · since main"
+        );
+        assert_eq!(
+            project_diff_tooltip_label("Dez", "Uncommitted Diff", Some("docs/src/terminal.md")),
+            "Uncommitted Diff · docs/src/terminal.md"
+        );
+    }
+
+    #[test]
+    fn official_zed_preserves_project_diff_vocabulary() {
+        assert_eq!(
+            project_diff_tab_label("Zed", "Uncommitted Diff", Some("PLAN.md")),
+            "Uncommitted Diff"
+        );
+        assert_eq!(
+            project_diff_tooltip_label("Zed", "Uncommitted Diff", Some("docs/src/terminal.md")),
+            "Uncommitted Diff"
         );
     }
 

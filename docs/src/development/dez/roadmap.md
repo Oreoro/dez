@@ -2840,3 +2840,15 @@ Completed for the Scratch Terminal-to-Workspace handoff source slice:
 - protected the same-window and product-copy contract with a static guard;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Main Work Area review-identity source slice:
+
+- named the active Dez Project Diff **Diff · filename** instead of leaving a
+  generic inherited **Uncommitted Diff** tab;
+- kept the tab concise while preserving diff base and relative path in its
+  tooltip;
+- updated the title as the active reviewed file changes;
+- preserved official Zed's inherited Project Diff vocabulary;
+- added focused source assertions, public documentation, and a static guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

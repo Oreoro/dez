@@ -892,6 +892,9 @@ require_multiline_pattern crates/debugger_ui/src/debugger_panel.rs \
 require_multiline_pattern crates/git_ui/src/project_diff.rs \
     'send_review_to_agent_tooltip\(paths::APP_NAME\).*?fn send_review_to_agent_tooltip.*?app_name == "Zed".*?"Send all review comments to the Agent panel".*?"Send all review comments to Agent"' \
     'the Git review handoff can regress to describing Agent as an inherited Panel'
+require_multiline_pattern crates/git_ui/src/project_diff.rs \
+    'fn project_diff_base_label.*?"Uncommitted Diff".*?"Unstaged Diff".*?"Staged Diff".*?"Diff since \{base_ref\}".*?fn project_diff_tab_label.*?app_name == "Zed".*?"Diff · \{active_file_name\}".*?strip_suffix\(" Diff"\).*?strip_prefix\("Diff "\).*?"Diff · \{scope\}".*?fn project_diff_tooltip_label.*?app_name == "Zed".*?"\{base_label\} · \{active_path\}".*?fn tab_tooltip_text.*?active_project_path.*?project_diff_tooltip_label.*?fn tab_content_text.*?active_project_path.*?file_name.*?project_diff_tab_label\(paths::APP_NAME' \
+    'the Main Work Area Git review can regress to a generic tab with no active file identity'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'paths::APP_NAME == "Zed".*?with_copy\(.*?"Agent needs a Workspace".*?"Open Workspace…".*?top_aligned\(\)' \
     'the empty Dez Agent region regressed to centered project-centric recovery copy'
