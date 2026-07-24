@@ -9835,6 +9835,7 @@ impl Workspace {
     pub fn reset_pane_sizes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.mark_canvas_layout_custom();
         self.center.reset_pane_sizes(cx);
+        self.enforce_dez_main_work_area_width_budget(cx);
         self.serialize_workspace(window, cx);
         cx.notify();
     }
@@ -16291,6 +16292,42 @@ mod tests {
             assert!(
                 !workspace.enforce_dez_main_work_area_width_budget(cx),
                 "an already-safe layout should remain stable"
+            );
+        });
+    }
+
+    #[gpui::test]
+    async fn test_reset_pane_sizes_preserves_dez_main_work_area_budget(cx: &mut TestAppContext) {
+        init_test(cx);
+
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            let project_pane = workspace.ensure_panel_pane(PanelPaneKind::Project, window, cx);
+            project_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+
+            let Member::Axis(axis) = &workspace.center.root else {
+                panic!("Workspace Tools and Main Work Area should share a horizontal axis");
+            };
+            *axis.flexes.lock() = vec![0.1, 1.9];
+
+            workspace.reset_pane_sizes(window, cx);
+
+            let Member::Axis(axis) = &workspace.center.root else {
+                unreachable!();
+            };
+            let flexes = axis.flexes.lock().clone();
+            let total = flexes.iter().sum::<f32>();
+            assert!(
+                flexes[0] / total <= AUXILIARY_PANE_MAX_INITIAL_RATIO + f32::EPSILON,
+                "Reset Pane Sizes must not expand Workspace Tools to half the window"
+            );
+            assert!(
+                flexes[1] / total >= MAIN_WORK_AREA_MINIMUM_RATIO - f32::EPSILON,
+                "Reset Pane Sizes must preserve the Main Work Area hierarchy"
             );
         });
     }

@@ -481,9 +481,11 @@ defer it.
   terminal, and review canvas. Each starts at no more than 360 px or 22% of
   visible horizontal space, and their combined width cannot silently reduce
   the Main Work Area below 60%. This invariant applies after pointer or
-  keyboard resizing, visibility changes, layout recipes, and persisted-layout
-  restoration. Persistence must retain Agent, Workspace Tools, and Main Work
-  Area region identity.
+  keyboard resizing, explicit pane-size reset, visibility changes, layout
+  recipes, and persisted-layout restoration. **Reset Pane Sizes** returns to
+  the Dez hierarchy rather than equalizing contextual tools with active work.
+  Persistence must retain Agent, Workspace Tools, and Main Work Area region
+  identity.
 - **2026-07-25: Destination labels imply idempotent navigation.** **Open
   Workspace** accepts folders, not standalone files, and keeps the current
   window when the flow promises to preserve Sessions. **Open Files** reveals

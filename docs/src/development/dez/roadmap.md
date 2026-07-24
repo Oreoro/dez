@@ -3128,3 +3128,14 @@ Completed for the visual-profile recovery source slice:
 - made first-run icon and Markdown-code choices explicit;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the pane-size reset hierarchy source slice:
+
+- found the one action path that could still return Workspace Tools/Git and the
+  Main Work Area to equal-width columns;
+- made **Reset Pane Sizes** reapply Dez's 22% per-auxiliary and 60% minimum Main
+  Work Area budget after recursively equalizing ordinary editor splits;
+- added focused two-pane coverage for the exact Workspace Tools plus terminal
+  layout shown in the installed screenshot;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

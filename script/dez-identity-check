@@ -432,6 +432,12 @@ require_multiline_pattern crates/git_ui/src/git_panel.rs \
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'AUXILIARY_PANE_MAX_INITIAL_WIDTH: f32 = 360\..*?AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0\.22.*?MAIN_WORK_AREA_MINIMUM_RATIO: f32 = 0\.60.*?fn auxiliary_pane_initial_width.*?enforce_dez_main_work_area_width_budget.*?constrain_auxiliary_horizontal_flexes' \
     'Workspace Tools can regress to an equal-width column or lose the persistent Main Work Area budget'
+require_multiline_pattern crates/workspace/src/workspace.rs \
+    'pub fn reset_pane_sizes.*?center\.reset_pane_sizes\(cx\).*?enforce_dez_main_work_area_width_budget\(cx\).*?serialize_workspace' \
+    'Reset Pane Sizes can bypass the Dez Main Work Area budget before persistence'
+require_multiline_pattern crates/workspace/src/workspace.rs \
+    'fn test_reset_pane_sizes_preserves_dez_main_work_area_budget.*?PanelPaneKind::Project.*?set_visible\(true.*?reset_pane_sizes\(window, cx\).*?AUXILIARY_PANE_MAX_INITIAL_RATIO.*?MAIN_WORK_AREA_MINIMUM_RATIO' \
+    'Reset Pane Sizes can regress to a 50/50 Workspace Tools and Main Work Area layout'
 require_multiline_pattern crates/workspace/src/pane_group.rs \
     'fn constrain_auxiliary_horizontal_flexes.*?Axis::Horizontal.*?maximum_auxiliary_fraction.*?minimum_main_fraction.*?target_auxiliary_fractions.*?target_main_total' \
     'restored or interactively resized auxiliary panes can overwhelm the Main Work Area'

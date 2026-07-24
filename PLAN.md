@@ -2579,3 +2579,9 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   before showing success; and has a focused settings-mutation test. First-run
   settings now explicitly name the Dez icons and Markdown code font too. This
   is source-only; no build or visual launch was performed.
+- 2026-07-25: Closed the remaining Main Work Area width-budget escape hatch.
+  **Reset Pane Sizes** previously equalized Workspace Tools/Git and a terminal
+  to 50/50 after every other reveal, resize, restore, and recipe path had been
+  constrained. Reset now reapplies the Dez auxiliary-pane budget, and a focused
+  two-pane assertion protects the exact Git-plus-terminal screenshot shape.
+  This is source-only; no build or visual launch was performed.
