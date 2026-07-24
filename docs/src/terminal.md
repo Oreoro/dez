@@ -72,6 +72,12 @@ repository remains on Git's explicit clean state. The review tab is named
 **Session Details** opens the evidence-backed run summary. None of these actions
 starts another terminal or creates a second project context.
 
+Inside Session Details, **Evidence** explains the boundary behind those facts:
+lifecycle is observed from the Terminal and Host, Git counts belong to the
+Workspace rather than automatically to this Session, and agent confidence or
+checks require trusted evidence. Arbitrary terminal text remains display
+content, not proof.
+
 ## Working with Multiple Terminals
 
 Create additional terminals from **New Terminal**. Each terminal is an

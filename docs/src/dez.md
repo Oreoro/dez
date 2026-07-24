@@ -108,6 +108,12 @@ as **Diff · filename**; its tooltip retains the diff base and relative path, so
 switching between terminal, file, and review never leaves a generic
 “Uncommitted Diff” surface.
 
+Session Details also states the trust boundary. Lifecycle comes from the
+Terminal and Host; Git counts belong to the Workspace and are not automatically
+attributed to one Session; agent confidence and checks require trusted adapter
+evidence. Dez never treats arbitrary terminal text as proof that a command or
+check succeeded.
+
 Dez does not treat an agent saying “tests passed” as equivalent to an observed
 command with an exit status.
 

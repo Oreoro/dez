@@ -689,7 +689,11 @@ with new labels.
       without adding another permanent help row. A Scratch Terminal shows
       **Open Workspace** in its context strip; the selected codebase joins the
       same window so the running computation is preserved while Files and Git
-      review become available.
+      review become available. The same disclosure contains a compact
+      **Evidence** contract: Terminal/Host owns lifecycle, Git counts remain
+      Workspace-owned, Session attribution is not inferred, agent
+      confidence/checks require trusted evidence, and terminal prose is not
+      proof.
 - [ ] Group Dez settings by Workspace, Sessions, Agents, Attention, Evidence,
       Appearance, Privacy, and Advanced compatibility; hide experimental
       internals from the default path. The settings shell now names Workspace
@@ -2432,3 +2436,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   vocabulary. Focused source assertions and an identity guard cover both
   product branches. This is source-only; no build or visual launch was
   performed.
+- 2026-07-25: Made Terminal Session provenance visible without adding permanent
+  chrome. **Session Details** now includes a compact **Evidence** section that
+  distinguishes Terminal/Host lifecycle, Workspace-owned Git counts,
+  non-inferred Session attribution, adapter-gated agent confidence/checks, and
+  untrusted terminal prose. The public product and terminal guides use the same
+  contract, and the identity check protects the exact disclosure. This is
+  source-only; no build or visual launch was performed.

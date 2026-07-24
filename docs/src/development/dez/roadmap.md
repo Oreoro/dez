@@ -2852,3 +2852,17 @@ Completed for the Main Work Area review-identity source slice:
 - added focused source assertions, public documentation, and a static guard;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Terminal Session evidence-disclosure source slice:
+
+- added a compact **Evidence** section inside existing **Session Details**;
+- distinguished Terminal/Host lifecycle from Workspace-owned Git counts;
+- stated that Dez does not assign Workspace changes to one Session without
+  evidence;
+- required trusted evidence for agent confidence/checks and rejected terminal
+  prose as proof;
+- kept the contract in progressive disclosure instead of adding permanent
+  shell chrome;
+- aligned public documentation and protected the copy with a static guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

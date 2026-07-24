@@ -2318,6 +2318,13 @@ impl TerminalView {
                         ));
                     })
                     .separator()
+                    .header("Evidence")
+                    .label("Lifecycle · observed from Terminal and Host.")
+                    .label("Git · changed-file counts belong to the Workspace.")
+                    .label("Attribution · changes are not assigned to this Session.")
+                    .label("Agents · confidence and checks require trusted evidence.")
+                    .label("Terminal text is display content, not proof.")
+                    .separator()
                     .header("How Dez Works")
                     .label("Run · computation stays in this Terminal Session.")
                     .label("Supervise · Session Rail shows live state and attention.")
