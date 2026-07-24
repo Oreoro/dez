@@ -1015,7 +1015,7 @@ pub(crate) fn render_send_review_to_agent_button(
         format!("Send Review to Agent ({})", review_count),
     )
     .start_icon(
-        Icon::new(IconName::ZedAssistant)
+        Icon::new(ui::assistant_icon_for_app(paths::APP_NAME))
             .size(IconSize::Small)
             .color(Color::Muted),
     )

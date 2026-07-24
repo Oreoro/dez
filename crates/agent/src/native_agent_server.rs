@@ -21,11 +21,7 @@ impl NativeAgentServer {
 }
 
 fn native_agent_icon_for_app(app_name: &str) -> ui::IconName {
-    if app_name == "Zed" {
-        ui::IconName::ZedAgent
-    } else {
-        ui::IconName::Robot
-    }
+    ui::agent_icon_for_app(app_name)
 }
 
 pub fn native_agent_icon() -> ui::IconName {

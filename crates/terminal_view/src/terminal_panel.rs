@@ -1666,17 +1666,21 @@ struct InlineAssistTabBarButton {
 impl RenderOnce for InlineAssistTabBarButton {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
         let focus_handle = self.focus_handle;
-        IconButton::new("terminal_inline_assistant", IconName::ZedAssistant)
-            .icon_size(IconSize::Small)
-            .on_click({
-                let focus_handle = focus_handle.clone();
-                move |_, window, cx| {
-                    focus_handle.dispatch_action(&InlineAssist::default(), window, cx);
-                }
-            })
-            .tooltip(move |_window, cx| {
-                Tooltip::for_action_in("Inline Assist", &InlineAssist::default(), &focus_handle, cx)
-            })
+        IconButton::new(
+            "terminal_inline_assistant",
+            ui::assistant_icon_for_app(paths::APP_NAME),
+        )
+        .icon_size(IconSize::Small)
+        .aria_label("Inline Assist")
+        .on_click({
+            let focus_handle = focus_handle.clone();
+            move |_, window, cx| {
+                focus_handle.dispatch_action(&InlineAssist::default(), window, cx);
+            }
+        })
+        .tooltip(move |_window, cx| {
+            Tooltip::for_action_in("Inline Assist", &InlineAssist::default(), &focus_handle, cx)
+        })
     }
 }
 

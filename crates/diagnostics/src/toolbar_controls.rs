@@ -71,8 +71,9 @@ impl Render for ToolbarControls {
             })
             .when(is_agent_enabled, |this| {
                 this.child(
-                    IconButton::new("inline_assist", IconName::ZedAssistant)
+                    IconButton::new("inline_assist", ui::assistant_icon_for_app(paths::APP_NAME))
                         .icon_size(IconSize::Small)
+                        .aria_label("Inline Assist")
                         .tooltip(Tooltip::for_action_title(
                             "Inline Assist",
                             &InlineAssist::default(),

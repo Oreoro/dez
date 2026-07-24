@@ -809,7 +809,7 @@ impl Render for BranchDiffToolbar {
                 this.child(Divider::vertical()).child(
                     Button::new("review-diff", "Review Diff")
                         .start_icon(
-                            Icon::new(IconName::ZedAssistant)
+                            Icon::new(ui::assistant_icon_for_app(paths::APP_NAME))
                                 .size(IconSize::Small)
                                 .color(Color::Muted),
                         )

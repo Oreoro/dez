@@ -181,6 +181,22 @@ fn agent_panel_session_label(
     }
 }
 
+fn agent_panel_create_icon(app_name: &str) -> IconName {
+    if app_name == "Zed" {
+        IconName::Plus
+    } else {
+        IconName::Robot
+    }
+}
+
+fn agent_panel_registry_icon(app_name: &str) -> IconName {
+    if app_name == "Zed" {
+        IconName::Plus
+    } else {
+        IconName::Blocks
+    }
+}
+
 fn canvas_agent_panel_toolbar_background(cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match DesignSystemSettings::get_global(cx).contrast {
@@ -6531,7 +6547,7 @@ impl AgentPanel {
                         .separator()
                         .item(
                             ContextMenuEntry::new("Add More Agents")
-                                .icon(IconName::Plus)
+                                .icon(agent_panel_registry_icon(paths::APP_NAME))
                                 .icon_color(Color::Muted)
                                 .handler({
                                     move |window, cx| {
@@ -6654,9 +6670,12 @@ impl AgentPanel {
             );
             let new_thread_menu = PopoverMenu::new("new_thread_menu")
                 .trigger_with_tooltip(
-                    IconButton::new("new_thread_menu_btn", IconName::Plus)
-                        .icon_size(IconSize::Small)
-                        .aria_label(new_session_label),
+                    IconButton::new(
+                        "new_thread_menu_btn",
+                        agent_panel_create_icon(paths::APP_NAME),
+                    )
+                    .icon_size(IconSize::Small)
+                    .aria_label(new_session_label),
                     {
                         move |_window, cx| {
                             Tooltip::for_action_in(
@@ -7418,6 +7437,14 @@ mod tests {
             agent_panel_session_label("Dez", "Settings", "Agent Settings"),
             "Agent Settings"
         );
+    }
+
+    #[test]
+    fn agent_panel_icons_preserve_product_identity() {
+        assert_eq!(agent_panel_create_icon("Zed"), IconName::Plus);
+        assert_eq!(agent_panel_create_icon("Dez"), IconName::Robot);
+        assert_eq!(agent_panel_registry_icon("Zed"), IconName::Plus);
+        assert_eq!(agent_panel_registry_icon("Dez"), IconName::Blocks);
     }
 
     #[test]

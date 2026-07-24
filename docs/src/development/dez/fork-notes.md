@@ -452,6 +452,11 @@ defer it.
   and focuses Files; repeating it never toggles Workspace Tools closed or
   exposes whichever tool happened to be active before. Start-fresh controls
   remain unavailable while App Session restoration is pending.
+- **2026-07-25: Product marks are not generic object icons.** Official Zed may
+  retain its branded Agent and Assistant marks. Dez uses Robot for Agent
+  Sessions, Sparkle for Inline Assist, and Blocks for the external-Agent
+  registry across editor, terminal, diagnostics, Git review, conflicts, setup,
+  and Agent controls. Provider-supplied icons remain provider-owned.
 - **2026-07-23: Public source must explain the product and its evidence
   boundary.** The canonical repository front page names Dez, explains how the
   Session Rail, Workspace Tools, Main Work Area, Agent, and one

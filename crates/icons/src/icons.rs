@@ -314,6 +314,22 @@ impl IconName {
     }
 }
 
+pub fn assistant_icon_for_app(app_name: &str) -> IconName {
+    if app_name == "Zed" {
+        IconName::ZedAssistant
+    } else {
+        IconName::Sparkle
+    }
+}
+
+pub fn agent_icon_for_app(app_name: &str) -> IconName {
+    if app_name == "Zed" {
+        IconName::ZedAgent
+    } else {
+        IconName::Robot
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
@@ -353,5 +369,13 @@ mod tests {
         }
 
         Ok(())
+    }
+
+    #[test]
+    fn product_icons_keep_zed_branding_out_of_dez() {
+        assert_eq!(crate::assistant_icon_for_app("Zed"), IconName::ZedAssistant);
+        assert_eq!(crate::assistant_icon_for_app("Dez"), IconName::Sparkle);
+        assert_eq!(crate::agent_icon_for_app("Zed"), IconName::ZedAgent);
+        assert_eq!(crate::agent_icon_for_app("Dez"), IconName::Robot);
     }
 }

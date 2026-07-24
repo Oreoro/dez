@@ -2513,3 +2513,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   remain withheld while App Session restoration is pending. Focused assertions
   and identity guards cover the new contracts. This is source-only; no build or
   visual launch was performed.
+- 2026-07-25: Completed a first-party product-icon isolation pass. A shared
+  resolver now preserves Zed's Agent and Assistant marks only for official Zed,
+  while Dez uses Robot for Agent identity and Sparkle for Inline Assist.
+  Editor, terminal, diagnostics, Git branch/diff/conflict, settings, and setup
+  controls use the neutral grammar. Agent creation uses Robot and its registry
+  uses Blocks instead of a generic plus. Static guards reject direct inherited
+  Assistant marks in those production surfaces. This is source-only; no build
+  or visual launch was performed.

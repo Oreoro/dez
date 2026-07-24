@@ -80,6 +80,36 @@ require_multiline_pattern crates/theme/src/icon_theme.rs \
 require_multiline_pattern crates/theme/src/registry.rs \
     'default_icon_theme = crate::default_icon_theme.*?dez_default_icon_theme = crate::dez_default_icon_theme.*?insert\(default_icon_theme.name.clone\(\), default_icon_theme\).*?insert\(dez_default_icon_theme.name.clone\(\), dez_default_icon_theme\)' \
     'the icon registry no longer preserves both Dez and Zed compatibility names'
+require_multiline_pattern crates/icons/src/icons.rs \
+    'pub fn assistant_icon_for_app.*?app_name == "Zed".*?IconName::ZedAssistant.*?IconName::Sparkle.*?pub fn agent_icon_for_app.*?app_name == "Zed".*?IconName::ZedAgent.*?IconName::Robot' \
+    'product-aware assistant and agent icons no longer isolate inherited Zed branding'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'fn agent_panel_create_icon.*?IconName::Plus.*?IconName::Robot.*?fn agent_panel_registry_icon.*?IconName::Plus.*?IconName::Blocks.*?new_thread_menu_btn.*?agent_panel_create_icon\(paths::APP_NAME\)' \
+    'Dez Agent creation can regress to generic or inherited branded icons'
+reject_pattern crates/zed/src/zed/quick_action_bar.rs \
+    'IconName::ZedAssistant' \
+    'the Dez editor quick-action bar can expose an inherited Zed assistant mark'
+reject_pattern crates/terminal_view/src/terminal_panel.rs \
+    'IconName::ZedAssistant' \
+    'the Dez terminal toolbar can expose an inherited Zed assistant mark'
+require_multiline_pattern crates/terminal_view/src/terminal_panel.rs \
+    'terminal_inline_assistant.*?assistant_icon_for_app\(paths::APP_NAME\).*?aria_label\("Inline Assist"\)' \
+    'the terminal Inline Assist icon can lose its neutral product identity or accessible name'
+reject_pattern crates/git_ui/src/branch_diff.rs \
+    'IconName::ZedAssistant' \
+    'the Dez branch review toolbar can expose an inherited Zed assistant mark'
+reject_pattern crates/git_ui/src/project_diff.rs \
+    'IconName::ZedAssistant' \
+    'the Dez diff review toolbar can expose an inherited Zed assistant mark'
+reject_pattern crates/git_ui/src/conflict_view.rs \
+    'IconName::ZedAssistant' \
+    'the Dez conflict resolver can expose an inherited Zed assistant mark'
+reject_pattern crates/diagnostics/src/toolbar_controls.rs \
+    'IconName::ZedAssistant' \
+    'the Dez diagnostics toolbar can expose an inherited Zed assistant mark'
+require_multiline_pattern crates/diagnostics/src/toolbar_controls.rs \
+    'IconButton::new\("inline_assist", ui::assistant_icon_for_app\(paths::APP_NAME\)\).*?aria_label\("Inline Assist"\)' \
+    'the diagnostics Inline Assist icon can lose its neutral product identity or accessible name'
 require_multiline_pattern assets/settings/default.json \
     '"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur"' \
     'the Dez default appearance no longer follows the system with the Lumin light/blur pair'
@@ -560,7 +590,7 @@ require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'fn edit_visible_title.*?title_editor\.focus_handle\(cx\)\.focus\(window, cx\).*?self\.edit_terminal_title\(terminal_id, window, cx\).*?IconButton::new\("edit_tile".*?aria_label\(title_edit_label\).*?on_click.*?edit_visible_title\(window, cx\)' \
     'the Agent title pencil can regress to a visual-only affordance that does not start editing'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
-    'fn agent_panel_zoom_label.*?app_name == "Zed".*?"Disable Full Screen".*?"Enable Full Screen".*?"Restore Agent".*?"Expand Agent".*?let agent_menu_label =.*?"Toggle Agent Menu".*?"Agent Options".*?IconButton::new\("agent-options-menu".*?aria_label\(agent_menu_label\).*?let zoom_label = agent_panel_zoom_label\(paths::APP_NAME, is_full_screen\).*?let full_screen_button = IconButton::new.*?aria_label\(zoom_label\).*?let new_session_label =.*?"New Thread.*?"New Agent Session.*?IconButton::new\("new_thread_menu_btn".*?aria_label\(new_session_label\)' \
+    'fn agent_panel_zoom_label.*?app_name == "Zed".*?"Disable Full Screen".*?"Enable Full Screen".*?"Restore Agent".*?"Expand Agent".*?let agent_menu_label =.*?"Toggle Agent Menu".*?"Agent Options".*?IconButton::new\("agent-options-menu".*?aria_label\(agent_menu_label\).*?let zoom_label = agent_panel_zoom_label\(paths::APP_NAME, is_full_screen\).*?let full_screen_button = IconButton::new.*?aria_label\(zoom_label\).*?let new_session_label =.*?"New Thread.*?"New Agent Session.*?IconButton::new\([[:space:]]*"new_thread_menu_btn".*?aria_label\(new_session_label\)' \
     'Agent toolbar icon controls can regress to tooltip-only buttons without accessible names'
 require_multiline_pattern crates/agent_ui/src/agent_ui.rs \
     'pub const DEFAULT_THREAD_TITLE.*?"New thread".*?pub fn default_agent_session_title.*?app_name == "Zed".*?DEFAULT_THREAD_TITLE.*?"New Agent Session".*?default_session_title_preserves_product_vocabulary' \
@@ -884,7 +914,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn should_render_cross_channel_import_onboarding.*?APP_NAME == "Zed"' \
     'Dez still exposes the inherited Zed release-channel import banner'
 require_multiline_pattern crates/agent/src/native_agent_server.rs \
-    'fn native_agent_icon_for_app.*?app_name == "Zed".*?IconName::Robot.*?pub fn native_agent_icon.*?paths::APP_NAME' \
+    'fn native_agent_icon_for_app.*?ui::agent_icon_for_app\(app_name\).*?pub fn native_agent_icon.*?paths::APP_NAME' \
     'the native Dez agent still inherits the upstream Zed glyph'
 reject_pattern crates/agent_ui/src/agent_ui.rs \
     'Self::NativeAgent => Some\(IconName::ZedAgent\)' \

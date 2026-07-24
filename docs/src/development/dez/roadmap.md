@@ -3008,3 +3008,16 @@ Completed for the truthful start-state navigation source slice:
   restoration behavior;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the first-party product-icon isolation source slice:
+
+- centralized app-aware Agent and Assistant icon resolution;
+- preserved Zed Agent and Assistant marks for official Zed while using Robot
+  and Sparkle in Dez;
+- removed direct inherited Assistant marks from editor, terminal, diagnostics,
+  Git branch/diff/conflict, settings, and setup controls;
+- changed Dez Agent creation to Robot and external-Agent discovery to Blocks
+  while preserving upstream plus icons in official Zed;
+- added focused source assertions and static rejection guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

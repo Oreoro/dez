@@ -54,10 +54,13 @@ Dez uses the same icon for the same object or transition everywhere:
 | Session list | Supervise Sessions and attention                         |
 | Clock        | Open Agent Session history                               |
 | Settings     | Configure Agent tools and application behavior           |
+| Robot        | Create or identify a Dez Agent Session                   |
+| Sparkle      | Invoke Inline Assist on the current editor context       |
 
 Icons support labels; they never replace them. A creation icon does not stand
 in for an object-specific Terminal or File icon, and review/details controls
-do not reuse each other's symbols.
+do not reuse each other's symbols. Dez does not reuse Zed-branded assistant
+marks for these controls.
 
 ## The core objects
 
