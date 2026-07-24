@@ -5581,6 +5581,7 @@ impl ThreadView {
         let message_editor = self.message_editor.read(cx);
         let is_editor_empty = message_editor.is_empty(cx);
         let focus_handle = message_editor.focus_handle(cx);
+        let stop_label = agent_session_label(paths::APP_NAME, "Stop Generation", "Stop Agent Run");
 
         let is_generating = self.thread.read(cx).status() != ThreadStatus::Idle;
 
@@ -5595,8 +5596,9 @@ impl ThreadView {
             IconButton::new("stop-generation", IconName::Stop)
                 .icon_color(Color::Error)
                 .style(ButtonStyle::Tinted(TintColor::Error))
+                .aria_label(stop_label)
                 .tooltip(move |_window, cx| {
-                    Tooltip::for_action("Stop Generation", &editor::actions::Cancel, cx)
+                    Tooltip::for_action(stop_label, &editor::actions::Cancel, cx)
                 })
                 .on_click(cx.listener(|this, _event, _, cx| this.cancel_generation(cx)))
                 .into_any_element()

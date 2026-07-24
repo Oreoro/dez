@@ -322,6 +322,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn agent_session_stop_label.*?"Stop Generation".*?"Stop Agent Run".*?IconButton::new\("stop-thread".*?aria_label\(stop_label\).*?tooltip\(Tooltip::text\(stop_label\)\).*?if is_running \{[[:space:]]*menu\.separator\(\)\.entry\(stop_label.*?sidebar\.stop_thread\(&thread_id.*?\} else \{[[:space:]]*menu\.separator\(\)\.entry\(archive_label.*?sidebar\.archive_thread' \
     'a running Agent Session can regress to vague stop language or expose archive through its context menu'
+require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
+    'let stop_label =.*?agent_session_label\(paths::APP_NAME, "Stop Generation", "Stop Agent Run"\).*?IconButton::new\("stop-generation".*?aria_label\(stop_label\).*?Tooltip::for_action\(stop_label, &editor::actions::Cancel' \
+    'the in-session Agent Run stop control can regress to vague wording or lose its accessible name and shortcut'
 require_pattern crates/ui/src/components/ai/thread_item.rs \
     '\.when\(self\.hovered \|\| self\.focused, \|this\|' \
     'the shared Session row can hide its supplied actions from keyboard selection'

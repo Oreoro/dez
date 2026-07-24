@@ -2666,6 +2666,8 @@ Completed for the running Agent Session action-parity slice:
 
 - replaced Dez's implementation-shaped **Stop Generation** row action with
   **Stop Agent Run**, while preserving official Zed's upstream label;
+- applied the same wording to the in-session stop control, gave its icon an
+  explicit accessible name, and retained the Escape shortcut in its tooltip;
 - removed **Archive Agent Session** from the context menu while the selected
   run is active;
 - exposed **Stop Agent Run** in that context menu so pointer, focus, context
