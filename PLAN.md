@@ -2320,3 +2320,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   incomplete restore state. Identity guards protect both contracts. These are
   source-only repairs and still require a new artifact plus close/reopen smoke
   verification.
+- 2026-07-24: Made the Session Rail zero state restore-aware. While Workspace
+  restoration and saved Terminal Session reconciliation are pending, the rail
+  now reports **Loading sessions** instead of **No sessions yet** or **No active
+  sessions**. It withholds the true-empty **New Terminal** action until
+  restoration reaches ready, avoiding duplicate computation during startup.
+  Pure state-copy assertions and identity guards protect the contract. This is
+  source-only and is not present in the installed artifact.

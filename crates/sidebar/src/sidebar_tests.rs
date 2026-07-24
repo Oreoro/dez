@@ -261,32 +261,41 @@ async fn detached_host_session_prefers_durable_workspace_identity_over_shared_cw
 #[test]
 fn session_overview_copy_distinguishes_empty_search_attention_and_caught_up_states() {
     assert_eq!(
-        session_overview_status_label(0, 0, 1, false),
+        session_overview_status_label(0, 0, 1, false, false),
         "1 workspace ready"
     );
     assert_eq!(
-        session_overview_status_label(0, 0, 2, true),
+        session_overview_status_label(0, 0, 2, true, true),
         "0 matching sessions"
     );
     assert_eq!(
-        session_overview_status_label(3, 1, 2, false),
+        session_overview_status_label(3, 1, 2, false, false),
         "1 needs attention · 3 total"
     );
     assert_eq!(
-        session_overview_status_label(3, 2, 2, false),
+        session_overview_status_label(3, 2, 2, false, false),
         "2 need attention · 3 total"
     );
     assert_eq!(
-        session_overview_status_label(3, 0, 2, false),
+        session_overview_status_label(3, 0, 2, false, false),
         "3 sessions · caught up"
     );
     assert_eq!(
-        session_overview_status_label(0, 0, 2, false),
+        session_overview_status_label(0, 0, 2, false, false),
         "2 workspaces ready"
     );
     assert_eq!(
-        session_overview_status_label(0, 0, 0, false),
+        session_overview_status_label(0, 0, 0, false, false),
         "No sessions yet"
+    );
+    assert_eq!(
+        session_overview_status_label(0, 0, 0, false, true),
+        "Loading sessions"
+    );
+    assert_eq!(session_empty_state_copy(false, true).1, "Loading sessions");
+    assert_eq!(
+        session_empty_state_copy(false, false).1,
+        "No active sessions"
     );
 }
 

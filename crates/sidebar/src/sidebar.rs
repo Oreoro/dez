@@ -53,7 +53,7 @@ use project::{AgentId, AgentRegistryStore, Event as ProjectEvent, WorktreeId};
 use recent_projects::sidebar_recent_projects::SidebarRecentProjects;
 use remote::{RemoteConnectionOptions, same_remote_connection_identity};
 use serde::{Deserialize, Serialize};
-use session::{AppSession, AppSessionEvent, DurableWorkspaceResolution};
+use session::{AppSession, AppSessionEvent, DurableWorkspaceResolution, WorkspaceRestoreState};
 use settings::Settings as _;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
@@ -405,6 +405,7 @@ fn session_overview_status_label(
     attention_count: usize,
     workspace_count: usize,
     is_searching: bool,
+    is_restoring: bool,
 ) -> String {
     let session_noun = if session_count == 1 {
         "session"
@@ -413,6 +414,8 @@ fn session_overview_status_label(
     };
     if is_searching {
         format!("{session_count} matching {session_noun}")
+    } else if is_restoring {
+        "Loading sessions".to_owned()
     } else if session_count == 0 {
         if workspace_count == 0 {
             return "No sessions yet".to_owned();
@@ -432,6 +435,31 @@ fn session_overview_status_label(
         format!("{attention_count} {attention_verb} attention · {session_count} total")
     } else {
         format!("{session_count} {session_noun} · caught up")
+    }
+}
+
+fn session_empty_state_copy(
+    has_query: bool,
+    is_restoring: bool,
+) -> (IconName, &'static str, &'static str) {
+    if has_query {
+        (
+            IconName::ListX,
+            "No matching sessions",
+            "Try another term or clear the search to return to your current work.",
+        )
+    } else if is_restoring {
+        (
+            IconName::ArrowCircle,
+            "Loading sessions",
+            "Restoring Workspaces and reconciling saved Terminal Sessions.",
+        )
+    } else {
+        (
+            IconName::Terminal,
+            "No active sessions",
+            "Start a terminal in the Main Work Area. Live state, attention, and recovery will appear here.",
+        )
     }
 }
 
@@ -11979,19 +12007,8 @@ impl Sidebar {
 
     fn render_no_results(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let has_query = self.has_filter_query(cx);
-        let (icon, title, description) = if has_query {
-            (
-                IconName::ListX,
-                "No matching sessions",
-                "Try another term or clear the search to return to your current work.",
-            )
-        } else {
-            (
-                IconName::Terminal,
-                "No active sessions",
-                "Start a durable terminal in the Main Work Area. Live state, attention, and recovery will appear here.",
-            )
-        };
+        let is_restoring = self.workspace_restore_is_pending(cx);
+        let (icon, title, description) = session_empty_state_copy(has_query, is_restoring);
 
         v_flex()
             .id("sidebar-no-results")
@@ -12043,7 +12060,7 @@ impl Sidebar {
                                 })),
                         )
                     })
-                    .when(!has_query, |this| {
+                    .when(!has_query && !is_restoring, |this| {
                         this.child(
                             Button::new("no-results-new-terminal", "New Terminal")
                                 .full_width()
@@ -12120,11 +12137,13 @@ impl Sidebar {
     fn render_session_overview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let has_attention = self.contents.has_attention;
         let is_searching = self.has_filter_query(cx);
+        let is_restoring = self.workspace_restore_is_pending(cx);
         let status_label = session_overview_status_label(
             self.contents.session_count,
             self.contents.attention_count,
             self.contents.project_header_indices.len(),
             is_searching,
+            is_restoring,
         );
         let all_scope_label = format!("All {}", self.contents.session_count);
         let attention_scope_label = format!("Attention {}", self.contents.attention_count);
@@ -12451,6 +12470,12 @@ impl Sidebar {
         let workspace = multi_workspace.read(cx).workspace().clone();
         let app_session = workspace.read(cx).app_state().session.clone();
         Some(app_session)
+    }
+
+    fn workspace_restore_is_pending(&self, cx: &App) -> bool {
+        self.app_session(cx).is_some_and(|app_session| {
+            app_session.read(cx).workspace_restore_state() != WorkspaceRestoreState::Ready
+        })
     }
 
     fn unresolved_workspace_ids(&self, cx: &App) -> Vec<i64> {
