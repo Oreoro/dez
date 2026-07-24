@@ -1130,6 +1130,10 @@ mod tests {
             "git: toggle focus"
         );
         assert_eq!(
+            humanize_action_name_for_product("git_panel::ReviewChanges", "Dez"),
+            "git: review changes"
+        );
+        assert_eq!(
             humanize_action_name_for_product("debug_panel::ToggleFocus", "Dez"),
             "debug: toggle focus"
         );

@@ -332,11 +332,14 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_has_persistent_owner.*?TerminalHostConnection::try_global.*?TerminalHostSnapshotStore::try_global.*?snapshot\.host_id == host_id && snapshot\.session_id == session_id.*?terminal_ownership_label\(has_persistent_owner, session_unavailable\)' \
     'terminal tooltips can claim persistence without a matching external terminal Host snapshot'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'fn terminal_surface_tab_label.*?app_name == "Zed".*?"Terminal · \{title\}".*?fn terminal_workspace_context.*?status_summary\(\)\.count.*?fn render_session_context_strip.*?paths::APP_NAME == "Zed".*?"Session Details".*?role\(gpui::Role::Toolbar\).*?"Terminal Session".*?"Files".*?ToggleFilesFocus.*?"Review Changes".*?ToggleGitFocus.*?FocusChanges' \
+    'fn terminal_surface_tab_label.*?app_name == "Zed".*?"Terminal · \{title\}".*?fn terminal_workspace_context.*?status_summary\(\)\.count.*?fn render_session_context_strip.*?paths::APP_NAME == "Zed".*?"Session Details".*?role\(gpui::Role::Toolbar\).*?"Terminal Session".*?"Files".*?ToggleFilesFocus.*?"Review Changes".*?ReviewGitChanges' \
     'the active Dez terminal can regress to an isolated shell with no authoritative IDE handoff'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn workspace_git_change_count.*?status_summary\(\)\.count.*?IconButton::new\("review-terminal-changes", IconName::Diff\).*?ToggleGitFocus.*?FocusChanges.*?"Open Terminal Session Details"' \
+    'fn workspace_git_change_count.*?status_summary\(\)\.count.*?IconButton::new\("review-terminal-changes", IconName::Diff\).*?ReviewGitChanges.*?"Open Terminal Session Details"' \
     'Session Rail terminal rows can regress behind the active terminal review workflow'
+require_multiline_pattern crates/git_ui/src/git_panel.rs \
+    'ReviewChanges,.*?register\(workspace: &mut Workspace\).*?_: &ReviewChanges.*?status_summary\(\)\.count > 0.*?reveal_panel::<GitPanel>.*?GitPanelTab::Changes.*?select_first_entry_if_none.*?change_entries_by_path.*?ProjectDiff::deploy_at' \
+    'Review Changes can regress to revealing an oversized tool column without an actual Main Work Area diff'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'AUXILIARY_PANE_MAX_INITIAL_WIDTH: f32 = 360\..*?AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0\.22.*?fn auxiliary_pane_initial_width.*?remember_horizontal_split_size\(preferred_width\).*?split_with_size_hint' \
     'Workspace Tools can regress to an equal-width column that overwhelms the Main Work Area'
@@ -668,7 +671,7 @@ require_multiline_pattern assets/keymaps/default-windows.json \
     '"shift-enter": "sidebar::ReturnToSelectedSession".*?"shift-f": "sidebar::OpenSelectedSessionFiles".*?"shift-g": "sidebar::ReviewSelectedSessionChanges".*?"shift-v": "sidebar::OpenSelectedReviewBrief"' \
     'the Windows Session Rail lost its selected-session IDE handoff'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'ReturnToSelectedSession,.*?OpenSelectedSessionFiles,.*?ReviewSelectedSessionChanges,.*?fn selected_or_active_session.*?fn return_to_selected_session.*?fn open_selected_session_files.*?ToggleFilesFocus.*?fn review_selected_session_changes.*?OpenAgentDiff.*?ToggleGitFocus.*?FocusChanges' \
+    'ReturnToSelectedSession,.*?OpenSelectedSessionFiles,.*?ReviewSelectedSessionChanges,.*?fn selected_or_active_session.*?fn return_to_selected_session.*?fn open_selected_session_files.*?ToggleFilesFocus.*?fn review_selected_session_changes.*?OpenAgentDiff.*?ReviewGitChanges' \
     'selected Session Rail rows can regress to creating duplicate or disconnected IDE context'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
     '"sidebar::OpenSelectedReviewBrief".*?"session_rail::OpenSelectedSessionDetails".*?"sidebar::ReturnToSelectedSession".*?"session rail: return to selected session".*?"sidebar::OpenSelectedSessionFiles".*?"session rail: open selected session files".*?"sidebar::ReviewSelectedSessionChanges".*?"session rail: review selected session changes"' \

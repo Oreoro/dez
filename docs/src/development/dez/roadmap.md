@@ -2788,3 +2788,17 @@ Completed for the selected-session IDE handoff source slice:
 - documented the workflow in the public product and terminal guides;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the terminal-to-diff source slice:
+
+- replaced the independent Git panel toggle/focus sequence with one
+  Workspace-owned **Review Changes** action;
+- made the action reveal Git Changes, select a real changed file, and open the
+  uncommitted diff in the Main Work Area;
+- kept clean repositories on their explicit clean state rather than opening an
+  empty diff;
+- routed terminal context bars, Session Rail row controls, context menus, and
+  selected-row keyboard actions through the same transition;
+- added product-vocabulary assertions and a static ownership guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

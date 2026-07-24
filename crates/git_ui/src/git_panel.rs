@@ -237,6 +237,8 @@ actions!(
         FocusEditor,
         /// Focuses on the changes list.
         FocusChanges,
+        /// Reveals Git Changes and opens the first uncommitted diff in the Main Work Area.
+        ReviewChanges,
         /// Select next git panel menu item, and show it in the diff view
         NextEntry,
         /// Select previous git panel menu item, and show it in the diff view
@@ -490,6 +492,30 @@ pub(crate) enum RemoteOperationKind {
 pub fn register(workspace: &mut Workspace) {
     workspace.register_action(|workspace, _: &ToggleFocus, window, cx| {
         workspace.toggle_panel_focus::<GitPanel>(window, cx);
+    });
+    workspace.register_action(|workspace, _: &ReviewChanges, window, cx| {
+        let has_changes = workspace
+            .project()
+            .read(cx)
+            .active_repository(cx)
+            .is_some_and(|repository| repository.read(cx).status_summary().count > 0);
+
+        workspace.reveal_panel::<GitPanel>(window, cx);
+        let selected_change = workspace.panel::<GitPanel>(cx).and_then(|panel| {
+            panel.update(cx, |panel, cx| {
+                panel.set_active_tab(GitPanelTab::Changes, window, cx);
+                panel.select_first_entry_if_none(window, cx);
+                panel
+                    .get_selected_entry()
+                    .and_then(GitListEntry::status_entry)
+                    .cloned()
+                    .or_else(|| panel.change_entries_by_path().next().cloned())
+            })
+        });
+
+        if has_changes {
+            ProjectDiff::deploy_at(workspace, selected_change, window, cx);
+        }
     });
     workspace.register_action(|workspace, _: &Toggle, window, cx| {
         if !workspace.toggle_panel_focus::<GitPanel>(window, cx) {

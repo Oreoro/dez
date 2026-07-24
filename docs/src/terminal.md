@@ -53,9 +53,11 @@ under **Session Rail**.
 
 These actions first activate the selected Session and its owning Workspace.
 **Files** reveals the existing Workspace tree. **Review Changes** opens the
-Agent change review for an Agent Session and Git Changes for a Terminal
-Session. **Session Details** opens the evidence-backed run summary. None of
-these actions starts another terminal or creates a second project context.
+Agent change review for an Agent Session. For a Terminal Session, it reveals
+Git Changes and opens the first uncommitted diff in the Main Work Area; a clean
+repository remains on Git's explicit clean state. **Session Details** opens the
+evidence-backed run summary. None of these actions starts another terminal or
+creates a second project context.
 
 ## Working with Multiple Terminals
 

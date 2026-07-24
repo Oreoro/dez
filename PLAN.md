@@ -371,6 +371,10 @@ terminates explicitly, and reports observed exit truthfully.
       observed changes expose the same direct Review Changes action on hover and
       in the context menu. Structured terminal activity, commands, and checks
       retain their observed working directory as a direct local source link.
+      Terminal review now uses one Workspace-owned Git action that reveals the
+      bounded Git Changes drawer, selects a changed file, and opens the
+      uncommitted diff in the Main Work Area; repeating it cannot accidentally
+      close the drawer.
 - [x] Add explicit review outcomes without inventing a second Run owner. Every
       editable Review Brief contains Continue, Request changes, and Accept as
       reviewed checkboxes and states that they are reviewer notes, not lifecycle
@@ -2376,3 +2380,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   exact source, prove the hero/restart/recovery/visual matrices, verify
   coexistence, and only then sign and publish. This is documentation and guard
   work only; no build or visual launch was performed.
+- 2026-07-25: Completed the source-side terminal-to-diff transition. Every
+  Terminal Session **Review Changes** entry point now dispatches one
+  Workspace-owned Git action. It reveals Git Changes, selects a concrete
+  changed file when available, and opens the uncommitted diff in the Main Work
+  Area; a clean repository stays on the truthful clean state. This replaces the
+  previous pair of toggles that could close an already-focused drawer or show a
+  changes list without an actual review surface. Command Palette vocabulary and
+  identity guards cover the new contract. No build or visual launch was
+  performed.

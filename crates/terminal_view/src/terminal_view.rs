@@ -11,7 +11,7 @@ use editor::{
     ui_scrollbar_settings_from_raw,
 };
 use futures::{channel::oneshot, future::join_all};
-use git_ui::git_panel::{FocusChanges, ToggleFocus as ToggleGitFocus};
+use git_ui::git_panel::ReviewChanges as ReviewGitChanges;
 use gpui::{
     Action, Anchor, AnyElement, App, AsyncApp, AsyncWindowContext, ClipboardEntry, DismissEvent,
     Entity, EventEmitter, ExternalPaths, FocusHandle, Focusable, Font, KeyContext, KeyDownEvent,
@@ -2427,8 +2427,7 @@ impl TerminalView {
                                     if changed_files == 1 { "file" } else { "files" }
                                 ))
                                 .on_click(|_, window, cx| {
-                                    window.dispatch_action(ToggleGitFocus.boxed_clone(), cx);
-                                    window.dispatch_action(FocusChanges.boxed_clone(), cx);
+                                    window.dispatch_action(ReviewGitChanges.boxed_clone(), cx);
                                 }),
                             )
                         })

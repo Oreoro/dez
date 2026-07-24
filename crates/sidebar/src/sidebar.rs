@@ -96,7 +96,7 @@ use workspace::{
 };
 
 use git_ui::{
-    git_panel::{FocusChanges, ToggleFocus as ToggleGitFocus},
+    git_panel::ReviewChanges as ReviewGitChanges,
     worktree_service::{RemoteBranchName, worktree_create_targets},
 };
 use zed_actions::agent::OpenSettings;
@@ -6885,8 +6885,7 @@ impl Sidebar {
                     window,
                     cx,
                 );
-                window.dispatch_action(ToggleGitFocus.boxed_clone(), cx);
-                window.dispatch_action(FocusChanges.boxed_clone(), cx);
+                window.dispatch_action(ReviewGitChanges.boxed_clone(), cx);
             }
             ListEntry::ProjectHeader { .. } => {}
         }
@@ -11225,9 +11224,10 @@ impl Sidebar {
                                                     );
                                                 })
                                                 .ok();
-                                            window
-                                                .dispatch_action(ToggleGitFocus.boxed_clone(), cx);
-                                            window.dispatch_action(FocusChanges.boxed_clone(), cx);
+                                            window.dispatch_action(
+                                                ReviewGitChanges.boxed_clone(),
+                                                cx,
+                                            );
                                         }
                                     }),
                             )
@@ -11380,8 +11380,7 @@ impl Sidebar {
                                         );
                                     })
                                     .ok();
-                                window.dispatch_action(ToggleGitFocus.boxed_clone(), cx);
-                                window.dispatch_action(FocusChanges.boxed_clone(), cx);
+                                window.dispatch_action(ReviewGitChanges.boxed_clone(), cx);
                             }
                         });
                     }
