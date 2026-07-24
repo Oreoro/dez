@@ -860,6 +860,15 @@ impl ThreadsArchiveView {
 
                 let is_focused = self.selection == Some(ix);
                 let is_hovered = self.hovered_index == Some(ix);
+                let collection_size = self
+                    .items
+                    .iter()
+                    .filter(|item| matches!(item, ArchiveListItem::Entry { .. }))
+                    .count();
+                let position_in_set = self.items[..=ix]
+                    .iter()
+                    .filter(|item| matches!(item, ArchiveListItem::Entry { .. }))
+                    .count();
 
                 let focus_handle = self.focus_handle.clone();
 
@@ -914,6 +923,8 @@ impl ThreadsArchiveView {
                     })
                     .timestamp(timestamp)
                     .highlight_positions(highlight_positions.clone())
+                    .position_in_set(position_in_set)
+                    .set_size(collection_size)
                     .project_paths(thread.folder_paths().paths_owned())
                     .worktrees(worktrees)
                     .density(thread_archive_item_density(cx))
@@ -1376,12 +1387,19 @@ impl Render for ThreadsArchiveView {
             .any(|thread| !thread.is_draft());
         let (empty_title, empty_detail, empty_action) =
             agent_history_empty_copy(paths::APP_NAME, has_query);
+        let empty_accessibility_label = format!("{empty_title}. {empty_detail}");
 
         let content = if is_empty {
             v_flex()
+                .id("agent-history-empty-state")
+                .role(gpui::Role::Region)
+                .aria_label(empty_accessibility_label)
                 .flex_1()
+                .min_h_0()
+                .overflow_y_scroll()
                 .items_center()
                 .pt_8()
+                .pb_8()
                 .px_4()
                 .child(
                     v_flex()
@@ -1416,14 +1434,27 @@ impl Render for ThreadsArchiveView {
         } else {
             v_flex()
                 .flex_1()
+                .min_h_0()
                 .overflow_hidden()
                 .child(
-                    list(
-                        self.list_state.clone(),
-                        cx.processor(Self::render_list_entry),
-                    )
-                    .flex_1()
-                    .size_full(),
+                    div()
+                        .id("agent-history-list")
+                        .role(gpui::Role::List)
+                        .aria_label(agent_history_label(
+                            paths::APP_NAME,
+                            "Thread history",
+                            "Agent Session history",
+                        ))
+                        .flex_1()
+                        .min_h_0()
+                        .child(
+                            list(
+                                self.list_state.clone(),
+                                cx.processor(Self::render_list_entry),
+                            )
+                            .flex_1()
+                            .size_full(),
+                        ),
                 )
                 .custom_scrollbars(
                     Scrollbars::new(ScrollAxes::Vertical).tracked_scroll_handle(&self.list_state),

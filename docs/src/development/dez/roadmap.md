@@ -2684,6 +2684,12 @@ Completed for the running Agent Session action-parity slice:
 - placed row lifecycle actions, restore cancellation, toolbar utilities,
   search clearing, and empty-state recovery in the keyboard tab order, with an
   explicit **Cancel Agent Session Restore** name;
+- exposed the virtualized History collection as **Agent Session history** and
+  gave each Session a one-based position plus total collection size while
+  excluding visual time-bucket separators from the count;
+- turned empty and no-results recovery into a named, vertically scrollable
+  region with bottom breathing room so its action remains reachable in a short
+  Session Rail;
 - retained immediate, reversible archive for completed and failed Agent
   Sessions;
 - added focused product-copy assertions and a static identity guard;

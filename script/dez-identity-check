@@ -427,6 +427,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
     'IconButton::new\("new-thread".*?tab_index\(0isize\).*?IconButton::new\("thread-import".*?tab_index\(0isize\).*?IconButton::new\("filter-archived-only".*?tab_index\(0isize\).*?IconButton::new\("clear-agent-history-search".*?tab_index\(0isize\).*?Button::new\("agent-history-empty-action".*?tab_index\(0isize\)' \
     'Agent History toolbar, search, or recovery controls can regress out of the keyboard tab order'
+require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
+    'let collection_size = self.*?ArchiveListItem::Entry.*?let position_in_set = self\.items\[\.\.=ix\].*?ArchiveListItem::Entry.*?position_in_set\(position_in_set\).*?set_size\(collection_size\).*?id\("agent-history-empty-state"\).*?role\(gpui::Role::Region\).*?aria_label\(empty_accessibility_label\).*?min_h_0\(\).*?overflow_y_scroll\(\).*?pb_8\(\).*?id\("agent-history-list"\).*?role\(gpui::Role::List\).*?"Agent Session history"' \
+    'Agent History can regress to an unnamed virtual row stack or clip empty-state recovery in short windows'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'fn agent_panel_title_edit_label.*?is_terminal.*?"Edit Terminal Title".*?app_name == "Zed".*?"Edit Thread Title".*?"Edit Agent Session Title".*?fn edit_visible_title.*?BaseView::AgentThread.*?title_editor\.focus_handle.*?BaseView::Terminal.*?edit_terminal_title.*?aria_label\(title_edit_label\).*?Tooltip::text\(title_edit_label\).*?edit_visible_title\(window, cx\)' \
     'the Agent title edit affordance can regress to an unnamed, inert, or incorrectly routed control'
