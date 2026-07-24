@@ -517,8 +517,11 @@ require_multiline_pattern crates/agent_ui/src/terminal_thread_metadata_store.rs 
     'fn compose_terminal_thread_title.*?match terminal_title\.trim\(\).*?SharedString::new_static\("Terminal"\)' \
     'a terminal with an empty PTY title can regress to a blank Session Rail row'
 require_multiline_pattern crates/search/src/search_status_button.rs \
-    'fn workspace_search_label.*?app_name == "Zed".*?"Project Search".*?"Search Workspace Files"' \
+    'fn workspace_search_label.*?app_name == "Zed".*?"Project Search".*?"Search Workspace Files".*?IconButton::new\("project-search-indicator", SEARCH_ICON\).*?tab_index\(0isize\).*?aria_label\(search_label\).*?Tooltip::for_action' \
     'the Dez status bar can regress to Project Search vocabulary'
+reject_pattern crates/search/src/search_status_button.rs \
+    '"Search files"' \
+    'healthy terminal-focused status chrome can regress to a redundant visible search label'
 require_multiline_pattern crates/search/src/project_search.rs \
     'fn workspace_search_title.*?app_name == "Zed".*?"Project Search".*?"Workspace Search".*?fn workspace_search_loading_label.*?"Loading project…".*?"Loading workspace…".*?fn workspace_search_no_results_label.*?"No results found in this project.*?"No files in this Workspace match the current query' \
     'Workspace Search can regress to Project scope after the status-bar action opens it'
@@ -532,8 +535,11 @@ require_multiline_pattern crates/diagnostics/src/diagnostics.rs \
     'fn diagnostics_title.*?app_name == "Zed".*?"Project Diagnostics".*?"Workspace Diagnostics".*?fn tab_content.*?Label::new\("Diagnostics"\)' \
     'Workspace Diagnostics can regress to a Project tooltip or an unlabeled status-only tab'
 require_multiline_pattern crates/diagnostics/src/items.rs \
-    'APP_NAME != "Zed" && self\.active_editor\.is_none\(\).*?Label::new\("No diagnostics"\)' \
-    'terminal-first status chrome can regress to an unexplained checkmark'
+    '\(0, 0\) => h_flex\(\).*?IconName::Check.*?diagnostics_status_label\([[:space:]]*APP_NAME.*?ButtonLike::new\("diagnostic-indicator"\).*?tab_index\(0isize\).*?aria_label\(diagnostics_label\).*?Tooltip::for_action\(diagnostics_scope_label' \
+    'healthy diagnostics can regress to an unexplained icon or redundant visible status text'
+reject_pattern crates/diagnostics/src/items.rs \
+    'Label::new\("No diagnostics"\)' \
+    'healthy terminal-focused status chrome can regress to a redundant visible diagnostics label'
 require_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\("Ready for a session"\)' \
     'empty Workspace groups regress to repeated absence copy'

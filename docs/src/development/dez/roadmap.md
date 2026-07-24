@@ -3102,3 +3102,14 @@ Completed for the Session Rail creation-priority source slice:
 - added static hierarchy and copy regression guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the compact healthy-status source slice:
+
+- removed terminal-only **Search files** and **No diagnostics** text that
+  duplicated conventional icons and the surrounding product orientation;
+- retained keyboard tab stops, action tooltips, and complete Workspace-scoped
+  accessible names;
+- preserved visible diagnostic errors, warnings, counts, and messages;
+- added static compactness and accessibility regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

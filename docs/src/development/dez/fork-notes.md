@@ -170,6 +170,13 @@ buttons on hover. Inactive tabs remain quiet, and pinned tabs preserve their
 dirty/status indicator until hover reveals Unpin. Official Zed retains its
 upstream tab-close presentation.
 
+The global Workspace status strip stays compact in healthy states. Search uses
+one conventional icon with the accessible name **Search Workspace Files**;
+zero diagnostics uses a check icon announced as **Workspace diagnostics: no
+problems**. Errors, warnings, counts, and diagnostic messages remain visible.
+The strip does not spell out healthy utility labels merely because a terminal
+has focus; orientation belongs to Session Rail and the terminal context strip.
+
 Discarding an Agent Session draft from either its Session Rail row or its
 main-area tab requires confirmation because unsent prompt text is permanently
 removed. Archiving a saved Agent Session remains immediate and reversible from
@@ -517,6 +524,10 @@ defer it.
   names the target Workspace. After Sessions exist, the overview's **New
   Terminal** remains visible but becomes an outlined utility so it does not
   compete with supervision and review.
+- **2026-07-25: Healthy Workspace status is compact.** Terminal focus no longer
+  expands Search and zero-diagnostics into persistent text labels. Their
+  keyboard stops, tooltips, and complete accessible names remain, while real
+  errors, warnings, counts, and diagnostic messages stay visible.
 - **2026-07-23: Public source must explain the product and its evidence
   boundary.** The canonical repository front page names Dez, explains how the
   Session Rail, Workspace Tools, Main Work Area, Agent, and one

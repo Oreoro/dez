@@ -97,6 +97,11 @@ shows a filled **Start Terminal Session** action. Once work exists, **New
 Terminal** remains available as an outlined utility while the Session list
 becomes the primary content.
 
+The bottom Workspace status strip is intentionally terse. Search and a healthy
+diagnostics state use familiar icons with complete tooltips and accessible
+names; actual errors, warnings, counts, and messages remain visible. Terminal
+focus does not expand routine healthy state into another row of prose.
+
 ## The core objects
 
 You only need four concepts for everyday use:

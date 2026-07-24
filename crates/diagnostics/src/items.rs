@@ -70,20 +70,11 @@ impl Render for DiagnosticIndicator {
         }
 
         let diagnostic_indicator = match (self.summary.error_count, self.summary.warning_count) {
-            (0, 0) => h_flex()
-                .gap_1()
-                .child(
-                    Icon::new(IconName::Check)
-                        .size(IconSize::Small)
-                        .color(Color::Muted),
-                )
-                .when(APP_NAME != "Zed" && self.active_editor.is_none(), |this| {
-                    this.child(
-                        Label::new("No diagnostics")
-                            .size(LabelSize::Small)
-                            .color(Color::Muted),
-                    )
-                }),
+            (0, 0) => h_flex().gap_1().child(
+                Icon::new(IconName::Check)
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
+            ),
             (error_count, warning_count) => h_flex()
                 .gap_1()
                 .when(error_count > 0, |this| {

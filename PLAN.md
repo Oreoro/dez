@@ -2564,3 +2564,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   visible but becomes outlined so repeat creation does not compete with the
   Session list, attention, and review. This is source-only; no build or visual
   launch was performed.
+- 2026-07-25: Removed two persistent healthy-state labels from terminal-focused
+  Workspace status. Search remains a keyboard-focusable icon named **Search
+  Workspace Files**; zero diagnostics remains a check icon announced as
+  **Workspace diagnostics: no problems**. Real errors, warnings, counts, and
+  messages remain visible. This reduces the bottom-bar prose visible in the
+  installed screenshot without sacrificing discoverability or accessibility.
+  This is source-only; no build or visual launch was performed.
