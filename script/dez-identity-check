@@ -334,6 +334,18 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_surface_tab_label.*?app_name == "Zed".*?"Terminal · \{title\}".*?fn terminal_workspace_context.*?status_summary\(\)\.count.*?fn render_session_context_strip.*?paths::APP_NAME == "Zed".*?"Session Details".*?"Evidence".*?"Lifecycle · observed from Terminal and Host\.".*?"Git · changed-file counts belong to the Workspace\.".*?"Attribution · changes are not assigned to this Session\.".*?"Agents · confidence and checks require trusted evidence\.".*?"Terminal text is display content, not proof\.".*?"How Dez Works".*?"Run · computation stays in this Terminal Session\.".*?"Supervise · Session Rail shows live state and attention\.".*?"Review · Files and Git inspect this same Workspace\.".*?"Connect · open a Workspace to add Files and Git review\.".*?role\(gpui::Role::Toolbar\).*?min_w_0\(\).*?flex_1\(\).*?overflow_hidden\(\).*?"Terminal Session".*?"Files".*?RevealFiles.*?"Open Workspace".*?Open a Workspace in this window and keep this Terminal Session.*?OpenWorkspace.*?create_new_window: Some\(false\).*?"Review Changes".*?ReviewGitChanges' \
     'the active Dez terminal can regress to an isolated shell with no authoritative IDE handoff'
+require_pattern crates/terminal_view/src/terminal_view.rs \
+    'OpenFolder as OpenWorkspace' \
+    'Scratch Terminal Open Workspace can regress to a generic file-or-folder picker'
+reject_pattern crates/terminal_view/src/terminal_view.rs \
+    'Open as OpenWorkspace' \
+    'Scratch Terminal Open Workspace accepts files that cannot provide the promised Workspace context'
+require_multiline_pattern crates/workspace/src/workspace.rs \
+    'pub struct OpenFolder.*?create_new_window: Option<bool>.*?impl Default for OpenFolder' \
+    'the folder-only Workspace action or its window-placement policy is missing'
+require_multiline_pattern crates/zed/src/zed.rs \
+    'action: &workspace::OpenFolder.*?PathPromptOptions \{.*?files: false.*?directories: true.*?multiple: true.*?prompt: Some\("Open Workspace"\.into\(\)\).*?action\.create_new_window' \
+    'Open Workspace can regress to a picker that accepts files or ignores same-window placement'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_git_change_count.*?status_summary\(\)\.count.*?IconButton::new\("review-terminal-changes", IconName::Diff\).*?ReviewGitChanges.*?"Open Terminal Session Details"' \
     'Session Rail terminal rows can regress behind the active terminal review workflow'

@@ -1595,6 +1595,28 @@ impl Default for Open {
     }
 }
 
+/// Opens one or more directories as Workspaces.
+#[derive(Clone, PartialEq, Deserialize, JsonSchema, Action)]
+#[action(namespace = workspace)]
+pub struct OpenFolder {
+    /// When true, opens in a new window. When false, adds to the current
+    /// window as a new Workspace. When omitted, uses `default_open_behavior`.
+    #[serde(default)]
+    pub create_new_window: Option<bool>,
+}
+
+impl OpenFolder {
+    pub const DEFAULT: Self = Self {
+        create_new_window: None,
+    };
+}
+
+impl Default for OpenFolder {
+    fn default() -> Self {
+        Self::DEFAULT
+    }
+}
+
 actions!(
     workspace,
     [

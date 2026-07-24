@@ -59,9 +59,9 @@ adding a permanent help row.
 
 An **Open Scratch Terminal** begins without a project tree by design. Its
 context strip shows **Open Workspace** instead of pretending that Files or Git
-review are already available. The selected folder is added to the same window,
-so the running Terminal Session remains intact and gains the normal Files and
-review handoff.
+review are already available. Its picker accepts folders only. Every selected
+folder is added to the same window, so the running Terminal Session remains
+intact and gains the normal Files and review handoff.
 
 These actions first activate the selected Session and its owning Workspace.
 **Files** reveals the existing Workspace tree. **Review Changes** opens the

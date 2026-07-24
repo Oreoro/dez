@@ -989,6 +989,27 @@ fn register_actions(
                 cx,
             );
         })
+        .register_action(|workspace, action: &workspace::OpenFolder, window, cx| {
+            telemetry::event!("Workspace Folder Opened");
+            workspace::prompt_for_open_path_and_open(
+                workspace,
+                workspace.app_state().clone(),
+                PathPromptOptions {
+                    files: false,
+                    directories: true,
+                    multiple: true,
+                    prompt: Some("Open Workspace".into()),
+                },
+                action.create_new_window.unwrap_or_else(|| {
+                    matches!(
+                        WorkspaceSettings::get_global(cx).default_open_behavior,
+                        DefaultOpenBehavior::NewWindow
+                    )
+                }),
+                window,
+                cx,
+            );
+        })
         .register_action(|workspace, _: &workspace::OpenFiles, window, cx| {
             let directories = cx.can_select_mixed_files_and_dirs();
             workspace::prompt_for_open_path_and_open(

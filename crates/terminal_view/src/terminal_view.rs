@@ -63,7 +63,7 @@ use ui::{
 use util::ResultExt;
 use workspace::{
     CloseActiveItem, DraggedSelection, DraggedTab, NewCenterTerminal, NewTerminal,
-    Open as OpenWorkspace, OpenTerminal, Pane, ToolbarItemLocation, Workspace, WorkspaceId,
+    OpenFolder as OpenWorkspace, OpenTerminal, Pane, ToolbarItemLocation, Workspace, WorkspaceId,
     delete_unloaded_items,
     item::{
         HighlightedText, Item, ItemEvent, SerializableItem, TabContentParams, TabTooltipContent,

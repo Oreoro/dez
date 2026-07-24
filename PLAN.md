@@ -700,8 +700,9 @@ with new labels.
       Details** as **How Dez Works**, preserving **Run → Supervise → Review**
       without adding another permanent help row. A Scratch Terminal shows
       **Open Workspace** in its context strip; the selected codebase joins the
-      same window so the running computation is preserved while Files and Git
-      review become available. The same disclosure contains a compact
+      same window through a folder-only picker, so the running computation is
+      preserved while Files and Git review become available. The same
+      disclosure contains a compact
       **Evidence** contract: Terminal/Host owns lifecycle, Git counts remain
       Workspace-owned, Session attribution is not inferred, agent
       confidence/checks require trusted evidence, and terminal prose is not
@@ -2482,3 +2483,9 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Session Details and in the toolbar's accessible name. The identity guard
   protects this layout order. This is source-only; no build or visual launch
   was performed.
+- 2026-07-25: Made the Scratch Terminal's **Open Workspace** contract exact.
+  It now dispatches a dedicated folder-only action rather than the inherited
+  file-or-directory picker, allows multiple Workspace folders, and forces them
+  into the current window so the running Terminal Session survives. Static
+  guards cover the action definition, picker policy, and terminal route. This
+  is source-only; no build or visual launch was performed.

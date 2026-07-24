@@ -2920,3 +2920,16 @@ Completed for the compact terminal-context source slice:
 - added a static layout-order guard and updated terminal/product plans;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Scratch Terminal folder-picker source slice:
+
+- added a dedicated **Open Folder** Workspace action with explicit window
+  placement;
+- made **Open Workspace** accept one or more directories, never standalone
+  files;
+- forced the Scratch Terminal route into the current window so the running
+  computation survives;
+- guarded the action definition, picker options, and terminal alias;
+- updated the terminal and execution documentation;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
