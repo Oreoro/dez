@@ -1,6 +1,6 @@
 use crate::{
     NewCenterTerminal, NewFile, Open, OpenMode, PathList, RecentWorkspace,
-    SerializedWorkspaceLocation, Workspace, WorkspaceSettings,
+    SerializedWorkspaceLocation, ToggleProjectPane, Workspace, WorkspaceSettings,
     item::{Item, ItemEvent},
     persistence::WorkspaceDb,
 };
@@ -164,10 +164,13 @@ impl SectionEntry {
 }
 
 const NEW_CENTER_TERMINAL: NewCenterTerminal = NewCenterTerminal { local: false };
+const TOGGLE_PROJECT_PANE: ToggleProjectPane = ToggleProjectPane;
 
-fn welcome_summary(app_name: &str) -> &'static str {
+fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Write. Delegate. Watch. Verify."
+    } else if has_workspace {
+        "Run in this Workspace. Supervise in the rail. Review changes here."
     } else {
         "Run in the terminal. Supervise in the rail. Review in the IDE."
     }
@@ -301,6 +304,70 @@ const DEZ_CONTENT: (Section<5>, Section<3>) = (
     },
 );
 
+const DEZ_WORKSPACE_CONTENT: (Section<5>, Section<3>) = (
+    Section {
+        title: "Start in This Workspace",
+        entries: [
+            SectionEntry {
+                icon: IconName::Terminal,
+                title: "Start Terminal Session",
+                action: &NEW_CENTER_TERMINAL,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
+                icon: IconName::FolderOpen,
+                title: "Open Files",
+                action: &TOGGLE_PROJECT_PANE,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
+                icon: IconName::Plus,
+                title: "New File",
+                action: &NewFile,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
+                icon: IconName::ListCollapse,
+                title: "Open Command Palette",
+                action: &command_palette::Toggle,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
+                icon: IconName::Folder,
+                title: "Open Another Workspace",
+                action: &Open::DEFAULT,
+                visibility_guard: SectionVisibility::Always,
+            },
+        ],
+    },
+    Section {
+        title: "Configure Dez",
+        entries: [
+            SectionEntry {
+                icon: IconName::Settings,
+                title: "Open Settings",
+                action: &OpenSettings,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
+                icon: IconName::Keyboard,
+                title: "Customize Keymaps",
+                action: &OpenKeymap,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
+                icon: IconName::Blocks,
+                title: "Explore Extensions",
+                action: &Extensions {
+                    category_filter: None,
+                    id: None,
+                },
+                visibility_guard: SectionVisibility::Always,
+            },
+        ],
+    },
+);
+
 struct Section<const COLS: usize> {
     title: &'static str,
     entries: [SectionEntry; COLS],
@@ -337,6 +404,9 @@ impl WelcomePage {
         let focus_handle = cx.focus_handle();
         cx.on_focus(&focus_handle, window, |_, _, cx| cx.notify())
             .detach();
+        if let Some(workspace) = workspace.upgrade() {
+            cx.observe(&workspace, |_, _, cx| cx.notify()).detach();
+        }
 
         if fallback_to_recent_projects {
             let fs = workspace
@@ -447,8 +517,14 @@ impl WelcomePage {
 
 impl Render for WelcomePage {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let has_workspace = self
+            .workspace
+            .upgrade()
+            .is_some_and(|workspace| workspace.read(cx).worktrees(cx).next().is_some());
         let (first_section, second_section) = if APP_NAME == "Zed" {
             ZED_CONTENT
+        } else if has_workspace {
+            DEZ_WORKSPACE_CONTENT
         } else {
             DEZ_CONTENT
         };
@@ -492,7 +568,11 @@ impl Render for WelcomePage {
             (
                 "1",
                 "Run",
-                "Open a Workspace, then start a Terminal Session in its codebase.",
+                if has_workspace {
+                    "Start a Terminal Session in this Workspace."
+                } else {
+                    "Open a Workspace, then start a Terminal Session in its codebase."
+                },
             ),
             (
                 "2",
@@ -558,7 +638,7 @@ impl Render for WelcomePage {
                                     )
                                     .child(Headline::new(welcome_label))
                                     .child(
-                                        Label::new(welcome_summary(APP_NAME))
+                                        Label::new(welcome_summary(APP_NAME, has_workspace))
                                             .size(LabelSize::Small)
                                             .color(Color::Muted),
                                     ),
@@ -826,12 +906,24 @@ mod tests {
     #[test]
     fn dez_welcome_summary_teaches_the_workflow_without_a_promotion_card() {
         assert_eq!(
-            welcome_summary("Dez"),
+            welcome_summary("Dez", false),
             "Run in the terminal. Supervise in the rail. Review in the IDE."
         );
-        assert_eq!(welcome_summary("Zed"), "Write. Delegate. Watch. Verify.");
+        assert_eq!(
+            welcome_summary("Dez", true),
+            "Run in this Workspace. Supervise in the rail. Review changes here."
+        );
+        assert_eq!(
+            welcome_summary("Zed", true),
+            "Write. Delegate. Watch. Verify."
+        );
         assert_eq!(DEZ_CONTENT.0.entries[0].title, "Open Workspace");
         assert_eq!(DEZ_CONTENT.0.entries[1].title, "Open Scratch Terminal");
+        assert_eq!(
+            DEZ_WORKSPACE_CONTENT.0.entries[0].title,
+            "Start Terminal Session"
+        );
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[1].title, "Open Files");
         assert_eq!(ZED_CONTENT.0.entries[0].title, "New Terminal");
     }
 }

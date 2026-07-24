@@ -133,6 +133,19 @@ fn terminal_surface_accessibility_label(title: &str, status: &str) -> String {
     format!("Terminal Session: {title}. Status: {status}")
 }
 
+fn terminal_surface_tab_label(app_name: &str, title: &str) -> SharedString {
+    let title = title.trim();
+    if app_name == "Zed" || title.is_empty() || title == "Terminal" {
+        if title.is_empty() {
+            "Terminal".into()
+        } else {
+            title.to_owned().into()
+        }
+    } else {
+        format!("Terminal · {title}").into()
+    }
+}
+
 fn terminal_unavailable_description(reason: Option<&str>) -> String {
     let reason =
         reason.unwrap_or("The saved terminal process is no longer available on this Dez host.");
@@ -2632,7 +2645,11 @@ impl Item for TerminalView {
     type Event = ItemEvent;
 
     fn tab_content(&self, params: TabContentParams, window: &Window, cx: &App) -> AnyElement {
-        let title = self.tab_content_text(params.detail.unwrap_or_default(), cx);
+        let title = terminal_surface_tab_label(
+            paths::APP_NAME,
+            self.tab_content_text(params.detail.unwrap_or_default(), cx)
+                .as_ref(),
+        );
         let overlay = self.tab_content_overlay(window, cx);
         let terminal_entity_id = self.terminal().entity_id();
         let terminal = self.terminal().read(cx);
@@ -3655,6 +3672,18 @@ mod tests {
         assert_eq!(changed_files_label(0), "0 changes");
         assert_eq!(changed_files_label(1), "1 change");
         assert_eq!(changed_files_label(5), "5 changes");
+        assert_eq!(
+            terminal_surface_tab_label("Dez", "Codex"),
+            SharedString::from("Terminal · Codex")
+        );
+        assert_eq!(
+            terminal_surface_tab_label("Dez", "Terminal"),
+            SharedString::from("Terminal")
+        );
+        assert_eq!(
+            terminal_surface_tab_label("Zed", "Codex"),
+            SharedString::from("Codex")
+        );
     }
 
     #[test]

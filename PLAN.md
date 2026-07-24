@@ -2345,3 +2345,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   the canvas equally; opening both preserves at least 60% for the Main Work
   Area. Pure copy/sizing assertions and identity guards cover these contracts.
   This remains source-only; no build or alternate binary was launched.
+- 2026-07-25: Made first-run guidance and terminal surface naming contextual.
+  With no project, Welcome leads with **Open Workspace** and **Open Scratch
+  Terminal**. Once a Workspace exists, it stops repeating that request and
+  instead leads with **Start Terminal Session** and **Open Files**, with
+  Workspace-specific Run copy. Meaningfully titled Dez terminal tabs now use
+  **Terminal · title** so the Main Work Area identifies the surface before its
+  content; official Zed keeps its inherited titles. Focused assertions and
+  identity guards protect both product branches. This is source-only; no build
+  or visual launch was performed.
