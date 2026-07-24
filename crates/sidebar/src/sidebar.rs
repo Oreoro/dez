@@ -8743,6 +8743,21 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if self.contents.entries.iter().any(|entry| {
+            matches!(
+                entry,
+                ListEntry::Thread(thread)
+                    if thread.metadata.session_id.as_ref() == Some(session_id)
+                        && matches!(
+                            thread.status,
+                            AgentThreadStatus::Running
+                                | AgentThreadStatus::WaitingForConfirmation
+                        )
+            )
+        }) {
+            return;
+        }
+
         let store = ThreadMetadataStore::global(cx);
         let metadata = store.read(cx).entry_by_session(session_id).cloned();
         let metadata_thread_id = metadata.as_ref().map(|metadata| metadata.thread_id);
@@ -12893,6 +12908,9 @@ impl Sidebar {
                 }
                 ThreadsArchiveViewEvent::Activate { thread } => {
                     this.open_thread_from_archive(thread.clone(), window, cx);
+                }
+                ThreadsArchiveViewEvent::Archive { session_id } => {
+                    this.archive_thread(session_id, window, cx);
                 }
                 ThreadsArchiveViewEvent::CancelRestore { thread_id } => {
                     this.restoring_tasks.remove(thread_id);

@@ -115,6 +115,10 @@ fn agent_history_archive_available(status: Option<AgentThreadStatus>) -> bool {
     )
 }
 
+fn agent_history_delete_available(is_archived: bool, status: Option<AgentThreadStatus>) -> bool {
+    is_archived && agent_history_archive_available(status)
+}
+
 fn thread_archive_background(cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match DesignSystemSettings::get_global(cx).contrast {
@@ -350,6 +354,7 @@ pub fn fuzzy_match_positions(query: &str, candidate: &str) -> Option<Vec<usize>>
 pub enum ThreadsArchiveViewEvent {
     Close,
     Activate { thread: ThreadMetadata },
+    Archive { session_id: acp::SessionId },
     CancelRestore { thread_id: ThreadId },
     Import,
     NewThread,
@@ -645,9 +650,18 @@ impl ThreadsArchiveView {
         });
     }
 
-    fn archive_thread(&mut self, thread_id: ThreadId, cx: &mut Context<Self>) {
+    fn request_archive_thread(&mut self, thread: &ThreadMetadata, cx: &mut Context<Self>) {
+        if thread.archived
+            || !agent_history_archive_available((self.thread_status)(thread.thread_id, cx))
+        {
+            return;
+        }
+        let Some(session_id) = thread.session_id.clone() else {
+            return;
+        };
+
         self.preserve_selection_on_next_update = true;
-        ThreadMetadataStore::global(cx).update(cx, |store, cx| store.archive(thread_id, None, cx));
+        cx.emit(ThreadsArchiveViewEvent::Archive { session_id });
     }
 
     fn archive_selected_thread(
@@ -660,14 +674,9 @@ impl ThreadsArchiveView {
         let Some(ArchiveListItem::Entry { thread, .. }) = self.items.get(ix) else {
             return;
         };
+        let thread = thread.clone();
 
-        if thread.archived
-            || !agent_history_archive_available((self.thread_status)(thread.thread_id, cx))
-        {
-            return;
-        }
-
-        self.archive_thread(thread.thread_id, cx);
+        self.request_archive_thread(&thread, cx);
     }
 
     fn unarchive_thread(
@@ -873,6 +882,7 @@ impl ThreadsArchiveView {
                 let is_archived = thread.archived;
                 let live_status = (self.thread_status)(thread.thread_id, cx);
                 let archive_available = agent_history_archive_available(live_status);
+                let delete_available = agent_history_delete_available(is_archived, live_status);
 
                 let branch_names_for_thread: HashMap<PathBuf, SharedString> = self
                     .archived_branch_names
@@ -898,10 +908,7 @@ impl ThreadsArchiveView {
                             .icon_color(archived_color)
                             .title_label_color(Color::Muted)
                     })
-                    .when_some(
-                        (!is_archived).then_some(live_status).flatten(),
-                        |this, status| this.status(status),
-                    )
+                    .when_some(live_status, |this, status| this.status(status))
                     .when_some(icon_from_external_svg, |this, svg| {
                         this.custom_icon_from_external_svg(svg)
                     })
@@ -933,7 +940,9 @@ impl ThreadsArchiveView {
                             IconButton::new("cancel-restore", IconName::Close)
                                 .icon_size(IconSize::Small)
                                 .icon_color(Color::Muted)
-                                .tooltip(Tooltip::text("Cancel Restore"))
+                                .tab_index(0isize)
+                                .aria_label("Cancel Agent Session Restore")
+                                .tooltip(Tooltip::text("Cancel Agent Session Restore"))
                                 .on_click({
                                     let thread_id = thread.thread_id;
                                     cx.listener(move |this, _, _, cx| {
@@ -946,11 +955,12 @@ impl ThreadsArchiveView {
                                 }),
                         )
                         .into_any_element()
-                } else if is_archived {
+                } else if delete_available {
                     base.action_slot(
                         IconButton::new("delete-thread", IconName::Trash)
                             .icon_size(IconSize::Small)
                             .icon_color(Color::Muted)
+                            .tab_index(0isize)
                             .aria_label(agent_history_label(
                                 paths::APP_NAME,
                                 "Delete Thread",
@@ -985,11 +995,20 @@ impl ThreadsArchiveView {
                         })
                     })
                     .into_any_element()
+                } else if is_archived {
+                    base.on_click({
+                        let thread = thread.clone();
+                        cx.listener(move |this, _, window, cx| {
+                            this.unarchive_thread(thread.clone(), window, cx);
+                        })
+                    })
+                    .into_any_element()
                 } else if archive_available {
                     base.action_slot(
                         IconButton::new("archive-thread", IconName::Archive)
                             .icon_size(IconSize::Small)
                             .icon_color(Color::Muted)
+                            .tab_index(0isize)
                             .aria_label(agent_history_label(
                                 paths::APP_NAME,
                                 "Archive Thread",
@@ -1010,9 +1029,9 @@ impl ThreadsArchiveView {
                                 }
                             })
                             .on_click({
-                                let thread_id = thread.thread_id;
+                                let thread = thread.clone();
                                 cx.listener(move |this, _, _, cx| {
-                                    this.archive_thread(thread_id, cx);
+                                    this.request_archive_thread(&thread, cx);
                                     cx.stop_propagation();
                                 })
                             }),
@@ -1053,7 +1072,12 @@ impl ThreadsArchiveView {
             return;
         };
 
-        self.confirm_delete_thread(thread.clone(), window, cx);
+        if agent_history_delete_available(
+            thread.archived,
+            (self.thread_status)(thread.thread_id, cx),
+        ) {
+            self.confirm_delete_thread(thread.clone(), window, cx);
+        }
     }
 
     fn confirm_delete_thread(
@@ -1062,6 +1086,13 @@ impl ThreadsArchiveView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if !agent_history_delete_available(
+            thread.archived,
+            (self.thread_status)(thread.thread_id, cx),
+        ) {
+            return;
+        }
+
         let title = thread.display_title();
         let (message, detail) = permanent_delete_prompt(paths::APP_NAME, title.as_ref());
         let prompt = window.prompt(
@@ -1078,6 +1109,17 @@ impl ThreadsArchiveView {
             }
 
             this.update_in(cx, |this, _window, cx| {
+                let is_still_archived = ThreadMetadataStore::global(cx)
+                    .read(cx)
+                    .entry(thread.thread_id)
+                    .is_some_and(|metadata| metadata.archived);
+                if !agent_history_delete_available(
+                    is_still_archived,
+                    (this.thread_status)(thread.thread_id, cx),
+                ) {
+                    return;
+                }
+
                 this.preserve_selection_on_next_update = true;
                 this.delete_thread(
                     thread.thread_id,
@@ -1202,6 +1244,7 @@ impl ThreadsArchiveView {
                     .child(
                         IconButton::new("new-thread", IconName::Plus)
                             .icon_size(IconSize::Small)
+                            .tab_index(0isize)
                             .aria_label(agent_history_label(
                                 paths::APP_NAME,
                                 "Start New Agent Thread",
@@ -1219,6 +1262,7 @@ impl ThreadsArchiveView {
                     .child(
                         IconButton::new("thread-import", IconName::Download)
                             .icon_size(IconSize::Small)
+                            .tab_index(0isize)
                             .aria_label(agent_history_label(
                                 paths::APP_NAME,
                                 "Import Threads",
@@ -1236,6 +1280,7 @@ impl ThreadsArchiveView {
                     .child(
                         IconButton::new("filter-archived-only", IconName::Archive)
                             .icon_size(IconSize::Small)
+                            .tab_index(0isize)
                             .disabled(!has_archived_threads)
                             .toggle_state(self.thread_filter == ThreadFilter::ArchivedOnly)
                             .aria_label(filter_label)
@@ -1281,6 +1326,7 @@ impl ThreadsArchiveView {
                     IconButton::new("clear-agent-history-search", IconName::Close)
                         .size(ButtonSize::Medium)
                         .icon_size(IconSize::Small)
+                        .tab_index(0isize)
                         .aria_label("Clear Agent History Search")
                         .tooltip(Tooltip::text("Clear Agent History Search"))
                         .on_click(cx.listener(|this, _, window, cx| {
@@ -1351,6 +1397,7 @@ impl Render for ThreadsArchiveView {
                         .child(
                             Button::new("agent-history-empty-action", empty_action)
                                 .full_width()
+                                .tab_index(0isize)
                                 .style(if has_query {
                                     ButtonStyle::Subtle
                                 } else {
@@ -2001,6 +2048,31 @@ mod tests {
             AgentThreadStatus::Error
         )));
         assert!(agent_history_archive_available(None));
+    }
+
+    #[test]
+    fn permanent_delete_requires_an_archived_inactive_session() {
+        assert!(!agent_history_delete_available(
+            false,
+            Some(AgentThreadStatus::Completed)
+        ));
+        assert!(!agent_history_delete_available(
+            true,
+            Some(AgentThreadStatus::Running)
+        ));
+        assert!(!agent_history_delete_available(
+            true,
+            Some(AgentThreadStatus::WaitingForConfirmation)
+        ));
+        assert!(agent_history_delete_available(
+            true,
+            Some(AgentThreadStatus::Completed)
+        ));
+        assert!(agent_history_delete_available(
+            true,
+            Some(AgentThreadStatus::Error)
+        ));
+        assert!(agent_history_delete_available(true, None));
     }
 
     #[test]

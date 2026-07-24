@@ -2675,6 +2675,15 @@ Completed for the running Agent Session action-parity slice:
 - made Agent History consume the Session Rail's live status, show active and
   permission-blocked state, and withhold both its archive icon and keyboard
   archive path until the run reaches a terminal state;
+- closed the corresponding permanent-delete bypass: keyboard deletion,
+  pointer deletion, and the post-confirmation race check now all require an
+  archived, non-running Session;
+- routed Agent History archive requests through the Session Rail's
+  authoritative Workspace/worktree lifecycle instead of mutating metadata
+  directly;
+- placed row lifecycle actions, restore cancellation, toolbar utilities,
+  search clearing, and empty-state recovery in the keyboard tab order, with an
+  explicit **Cancel Agent Session Restore** name;
 - retained immediate, reversible archive for completed and failed Agent
   Sessions;
 - added focused product-copy assertions and a static identity guard;

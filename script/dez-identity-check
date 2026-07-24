@@ -326,7 +326,7 @@ require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
     'let stop_label =.*?agent_session_label\(paths::APP_NAME, "Stop Generation", "Stop Agent Run"\).*?IconButton::new\("stop-generation".*?aria_label\(stop_label\).*?Tooltip::for_action\(stop_label, &editor::actions::Cancel' \
     'the in-session Agent Run stop control can regress to vague wording or lose its accessible name and shortcut'
 require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
-    'fn agent_history_archive_available.*?!matches!.*?AgentThreadStatus::Running \| AgentThreadStatus::WaitingForConfirmation.*?archive_selected_thread.*?!agent_history_archive_available\(\(self\.thread_status\).*?let live_status = \(self\.thread_status\).*?let archive_available = agent_history_archive_available\(live_status\).*?when_some\(.*?!is_archived.*?live_status.*?else if archive_available \{.*?IconButton::new\("archive-thread".*?active_agent_runs_cannot_be_archived_from_history' \
+    'fn agent_history_archive_available.*?!matches!.*?AgentThreadStatus::Running \| AgentThreadStatus::WaitingForConfirmation.*?fn request_archive_thread.*?!agent_history_archive_available\(\(self\.thread_status\).*?archive_selected_thread.*?request_archive_thread.*?let live_status = \(self\.thread_status\).*?let archive_available = agent_history_archive_available\(live_status\).*?when_some\(live_status.*?else if archive_available \{.*?IconButton::new\("archive-thread".*?active_agent_runs_cannot_be_archived_from_history' \
     'Agent History can regress to archiving a running or permission-blocked Agent Session'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn thread_status\(&self, thread_id: ThreadId\).*?ListEntry::Thread.*?Some\(thread\.status\).*?fn show_archive.*?let thread_status = Rc::new.*?sidebar\.read\(cx\)\.thread_status\(thread_id\).*?ThreadsArchiveView::new\(.*?thread_status' \
@@ -413,8 +413,20 @@ require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
     'fn agent_history_label.*?app_name == "Zed".*?upstream_thread_label.*?dez_session_label.*?"Search Agent Sessions…".*?"Delete Agent Session".*?"Archive Agent Session".*?"Import Agent Sessions".*?"No Agent Sessions yet\."' \
     'Agent History can regress to mixed Thread and Agent Session terminology'
 require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
-    'IconButton::new\("delete-thread".*?aria_label\(agent_history_label.*?"Delete Agent Session".*?IconButton::new\("archive-thread".*?aria_label\(agent_history_label.*?"Archive Agent Session"' \
-    'Agent History row actions can regress to unnamed icon controls'
+    'IconButton::new\("cancel-restore".*?tab_index\(0isize\).*?aria_label\("Cancel Agent Session Restore"\).*?Tooltip::text\("Cancel Agent Session Restore"\).*?IconButton::new\("delete-thread".*?tab_index\(0isize\).*?aria_label\(agent_history_label.*?"Delete Agent Session".*?IconButton::new\("archive-thread".*?tab_index\(0isize\).*?aria_label\(agent_history_label.*?"Archive Agent Session"' \
+    'Agent History row actions can regress to unnamed or pointer-only icon controls'
+require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
+    'fn agent_history_delete_available.*?is_archived && agent_history_archive_available\(status\).*?fn request_archive_thread.*?agent_history_archive_available\(\(self\.thread_status\).*?ThreadsArchiveViewEvent::Archive.*?fn remove_selected_thread.*?agent_history_delete_available.*?fn confirm_delete_thread.*?agent_history_delete_available.*?is_still_archived.*?permanent_delete_requires_an_archived_inactive_session' \
+    'Agent History can regress to deleting an active Session or bypassing the full archive lifecycle'
+reject_pattern crates/agent_ui/src/threads_archive_view.rs \
+    'store\.archive\(' \
+    'Agent History directly mutates archive metadata instead of requesting the authoritative Session Rail lifecycle'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn archive_thread.*?thread\.metadata\.session_id\.as_ref\(\) == Some\(session_id\).*?AgentThreadStatus::Running.*?AgentThreadStatus::WaitingForConfirmation.*?ThreadsArchiveViewEvent::Archive \{ session_id \}.*?this\.archive_thread\(session_id, window, cx\)' \
+    'Agent Session archive can regress to bypassing live-status and linked-worktree handling'
+require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
+    'IconButton::new\("new-thread".*?tab_index\(0isize\).*?IconButton::new\("thread-import".*?tab_index\(0isize\).*?IconButton::new\("filter-archived-only".*?tab_index\(0isize\).*?IconButton::new\("clear-agent-history-search".*?tab_index\(0isize\).*?Button::new\("agent-history-empty-action".*?tab_index\(0isize\)' \
+    'Agent History toolbar, search, or recovery controls can regress out of the keyboard tab order'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'fn agent_panel_title_edit_label.*?is_terminal.*?"Edit Terminal Title".*?app_name == "Zed".*?"Edit Thread Title".*?"Edit Agent Session Title".*?fn edit_visible_title.*?BaseView::AgentThread.*?title_editor\.focus_handle.*?BaseView::Terminal.*?edit_terminal_title.*?aria_label\(title_edit_label\).*?Tooltip::text\(title_edit_label\).*?edit_visible_title\(window, cx\)' \
     'the Agent title edit affordance can regress to an unnamed, inert, or incorrectly routed control'
