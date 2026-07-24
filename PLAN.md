@@ -2627,3 +2627,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   treatment while their popovers are open. Static guards cover routing,
   keyboard reachability, and popup state. This is source-only; no build or
   visual launch was performed.
+- 2026-07-25: Unified the Agent composer's primary controls. Expand/Minimize,
+  Add Context, Follow, Fast Mode, Thinking Mode, thinking effort, Send/Queue,
+  Stop Agent Run, and Sandbox Settings now enter the keyboard tab order and
+  expose specific accessible names. Toggles report state, popovers report
+  expanded state and values, and selected treatment supplements icon color.
+  Static guards cover the complete control row. This is source-only; no build
+  or visual launch was performed.

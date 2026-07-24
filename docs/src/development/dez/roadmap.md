@@ -3200,3 +3200,18 @@ Completed for the Agent recovery and toolbar-state source slice:
 - added static routing, focus, and popup-state regression guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Agent composer control-contract source slice:
+
+- made Expand/Minimize, Add Context, Follow, Fast Mode, Thinking Mode, thinking
+  effort, Send/Queue, Stop Agent Run, and Sandbox Settings explicit keyboard
+  tab stops;
+- supplied specific accessible names for icon-only controls and the current
+  value for thinking effort;
+- exposed toggle and popup state and supplemented icon color with selected
+  treatment;
+- documented that composer controls operate the current Agent Session and do
+  not create hidden terminal or Project ownership;
+- added static focus, naming, value, and state regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

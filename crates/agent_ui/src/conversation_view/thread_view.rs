@@ -4381,6 +4381,8 @@ impl ThreadView {
                                             IconButton::new("toggle-height", expand_icon)
                                                 .icon_size(IconSize::Small)
                                                 .icon_color(Color::Muted)
+                                                .tab_index(0isize)
+                                                .aria_label(expand_tooltip)
                                                 .tooltip({
                                                     move |_window, cx| {
                                                         Tooltip::for_action_in(
@@ -5152,6 +5154,8 @@ impl ThreadView {
                     IconButton::new("sandbox-status", icon)
                         .icon_size(IconSize::Small)
                         .icon_color(icon_color)
+                        .tab_index(0isize)
+                        .aria_label("Open Agent Sandbox Settings")
                         .tooltip(Tooltip::element(move |_window, _cx| {
                             tooltip.clone().into_any_element()
                         }))
@@ -5206,11 +5210,16 @@ impl ThreadView {
 
         let icon_button = IconButton::new("fast-mode", icon)
             .icon_size(IconSize::Small)
-            .icon_color(color);
+            .icon_color(color)
+            .tab_index(0isize)
+            .aria_label(tooltip_label)
+            .toggle_state(is_fast)
+            .selected_style(ButtonStyle::Tinted(TintColor::Accent));
 
         if let Some((provider_id, model_id, confirmation)) = pending_confirmation {
             let weak_self = cx.entity().downgrade();
             let tooltip_focus = focus_handle;
+            let icon_button = icon_button.aria_expanded(self.fast_mode_menu_handle.is_deployed());
 
             return Some(
                 PopoverMenu::new("fast-mode-warning")
@@ -5357,6 +5366,10 @@ impl ThreadView {
         let thinking_toggle = IconButton::new("thinking-mode", icon)
             .icon_size(IconSize::Small)
             .icon_color(color)
+            .tab_index(0isize)
+            .aria_label(tooltip_label)
+            .toggle_state(thinking)
+            .selected_style(ButtonStyle::Tinted(TintColor::Accent))
             .tooltip(move |_, cx| {
                 Tooltip::for_action_in(tooltip_label, &ToggleThinkingMode, &focus_handle, cx)
             })
@@ -5490,18 +5503,31 @@ impl ThreadView {
                             .size(IconSize::Small)
                             .color(Color::Accent),
                     )
-                    .child(Label::new(label).size(LabelSize::Small).color(label_color))
+                    .child(
+                        Label::new(label.clone())
+                            .size(LabelSize::Small)
+                            .color(label_color),
+                    )
                     .child(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted)),
             )
         } else {
             ButtonLike::new_rounded_right("effort-selector-trigger")
-                .child(Label::new(label).size(LabelSize::Small).color(label_color))
+                .child(
+                    Label::new(label.clone())
+                        .size(LabelSize::Small)
+                        .color(label_color),
+                )
                 .child(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
         };
 
         PopoverMenu::new("effort-selector")
             .trigger_with_tooltip(
-                trigger.selected_style(ButtonStyle::Tinted(TintColor::Accent)),
+                trigger
+                    .tab_index(0isize)
+                    .aria_label("Change Thinking Effort")
+                    .aria_value(label)
+                    .aria_expanded(self.thinking_effort_menu_handle.is_deployed())
+                    .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
                 tooltip,
             )
             .menu(move |window, cx| {
@@ -5596,6 +5622,7 @@ impl ThreadView {
             IconButton::new("stop-generation", IconName::Stop)
                 .icon_color(Color::Error)
                 .style(ButtonStyle::Tinted(TintColor::Error))
+                .tab_index(0isize)
                 .aria_label(stop_label)
                 .tooltip(move |_window, cx| {
                     Tooltip::for_action(stop_label, &editor::actions::Cancel, cx)
@@ -5608,8 +5635,15 @@ impl ThreadView {
             } else {
                 IconName::Send
             };
+            let send_label = if is_generating {
+                "Queue Message"
+            } else {
+                "Send Message"
+            };
             IconButton::new("send-message", send_icon)
                 .style(ButtonStyle::Filled)
+                .tab_index(0isize)
+                .aria_label(send_label)
                 .map(|this| {
                     if is_editor_empty && !is_generating {
                         this.disabled(true).icon_color(Color::Muted)
@@ -5663,12 +5697,17 @@ impl ThreadView {
     fn render_add_context_button(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
         let focus_handle = self.message_editor.focus_handle(cx);
         let weak_self = cx.weak_entity();
+        let menu_open = self.add_context_menu_handle.is_deployed();
 
         PopoverMenu::new("add-context-menu")
             .trigger_with_tooltip(
                 IconButton::new("add-context", IconName::Plus)
                     .icon_size(IconSize::Small)
-                    .icon_color(Color::Muted),
+                    .icon_color(Color::Muted)
+                    .tab_index(0isize)
+                    .aria_label("Add Context")
+                    .aria_expanded(menu_open)
+                    .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
                 {
                     move |_window, cx| {
                         Tooltip::for_action_in(
@@ -5873,11 +5912,15 @@ impl ThreadView {
                 format!("Follow {}", self.agent_id)
             }
         };
+        let accessibility_label = tooltip_label.clone();
 
         IconButton::new("follow-agent", IconName::Crosshair)
             .icon_size(IconSize::Small)
             .icon_color(Color::Muted)
+            .tab_index(0isize)
+            .aria_label(accessibility_label)
             .toggle_state(following)
+            .selected_style(ButtonStyle::Tinted(TintColor::Accent))
             .selected_icon_color(Some(Color::Custom(cx.theme().players().agent().cursor)))
             .tooltip(move |_window, cx| {
                 if following {

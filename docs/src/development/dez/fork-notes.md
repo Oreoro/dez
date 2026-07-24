@@ -152,6 +152,15 @@ Agent Options and New Agent Session use selected treatment while open and
 report expanded state to assistive technology; closing the popover clears both
 signals.
 
+The Agent composer control row has one interaction contract. Expand or
+minimize, Add Context, Follow, Fast Mode, Thinking Mode, thinking effort,
+Send/Queue, Stop Agent Run, and Sandbox Settings are keyboard tab stops with
+specific accessible names. Toggle controls report their current state, popup
+controls report expanded state and current value where applicable, and active
+state uses selected treatment rather than icon color alone. These controls
+configure or operate the current Agent Session; they do not create hidden
+terminal ownership or a second Project.
+
 The everyday Canvas Layout menu is a workflow picker, not a diagnostics or
 storage dashboard. It exposes Full, Agent Control, Focus Editor,
 Code/Run/Observe, Review, and Debug; saved-layout detail belongs in **Manage

@@ -150,6 +150,13 @@ mode switches. Agent Options and New Agent Session are explicit popovers: their
 triggers stay highlighted while open and announce that state to keyboard and
 assistive-technology users.
 
+The Agent composer is the control point for the current conversation. Its
+context, follow, speed, thinking, effort, send/queue, stop, size, and sandbox
+controls are keyboard-reachable and announce their action or current state.
+Follow changes presentation, Add Context changes prompt input, and Sandbox
+opens the applicable settings; none of them moves work into a hidden terminal
+or creates another Workspace.
+
 ### 3. Supervise without polling every tab
 
 The Session Rail groups work by Workspace and projects:
