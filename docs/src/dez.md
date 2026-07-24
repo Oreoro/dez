@@ -157,6 +157,18 @@ Follow changes presentation, Add Context changes prompt input, and Sandbox
 opens the applicable settings; none of them moves work into a hidden terminal
 or creates another Workspace.
 
+Response actions stay visible and keyboard-reachable: copy an Agent response,
+return to its user prompt, return to the top, or submit feedback. Queued prompts
+are a named ordered list rather than hidden editor state. Each row exposes
+Remove, Edit, Steer, and Send Now; Steer means “interrupt at the next agent
+step,” while Send Now targets that exact queued prompt.
+
+When an Agent requests permission, Allow, Deny, Retry, and provider-supplied
+choices remain keyboard-reachable. Permission Scope announces both the current
+selection and whether its menu is open. The decision applies to the pending
+tool call shown in that card, not globally unless the selected scope explicitly
+says so.
+
 ### 3. Supervise without polling every tab
 
 The Session Rail groups work by Workspace and projects:

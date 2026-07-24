@@ -4646,6 +4646,7 @@ impl ThreadView {
 
         Button::new(("steer", index), "Steer")
             .label_size(LabelSize::Small)
+            .tab_index(0isize)
             .toggle_state(steer_on)
             .selected_style(ButtonStyle::Tinted(TintColor::Accent))
             .when(is_next, |this| {
@@ -4682,6 +4683,8 @@ impl ThreadView {
 
         v_flex()
             .id("message_queue_list")
+            .role(gpui::Role::List)
+            .aria_label("Queued messages")
             .max_h_40()
             .overflow_y_scroll()
             .children(self.message_queue.iter().enumerate().map(|(index, entry)| {
@@ -4699,9 +4702,19 @@ impl ThreadView {
                 let steer_on = entry.steer;
 
                 let min_width = rems_from_px(160.);
+                let position_in_set = index + 1;
+                let queue_position_label = if is_next {
+                    format!("Next queued message, {position_in_set} of {queue_len}")
+                } else {
+                    format!("Queued message, {position_in_set} of {queue_len}")
+                };
 
                 h_flex()
                     .group("queue_entry")
+                    .role(gpui::Role::ListItem)
+                    .aria_label(queue_position_label)
+                    .position_in_set(position_in_set)
+                    .set_size(queue_len)
                     .w_full()
                     .p_1p5()
                     .gap_1()
@@ -4712,7 +4725,7 @@ impl ThreadView {
                     })
                     .child(
                         div()
-                            .id("next_in_queue")
+                            .id(("queue-position", index))
                             .child(
                                 Icon::new(IconName::Circle)
                                     .size(IconSize::Small)
@@ -4729,6 +4742,8 @@ impl ThreadView {
                             .child(
                                 IconButton::new(("edit", index), IconName::Pencil)
                                     .icon_size(IconSize::Small)
+                                    .tab_index(0isize)
+                                    .aria_label("Edit Queued Message")
                                     .tooltip(|_window, cx| {
                                         Tooltip::with_meta(
                                             "Edit Queued Message",
@@ -4752,6 +4767,7 @@ impl ThreadView {
                                 Button::new(("send_now_focused", index), "Send Now")
                                     .label_size(LabelSize::Small)
                                     .style(ButtonStyle::Outlined)
+                                    .tab_index(0isize)
                                     .key_binding(
                                         KeyBinding::for_action_in(
                                             &SendImmediately,
@@ -4766,13 +4782,17 @@ impl ThreadView {
                             )
                     } else {
                         h_flex()
-                            .when(!is_next, |this| this.visible_on_hover("queue_entry"))
+                            .when(!is_next, |this| {
+                                this.opacity(0.7).hover(|style| style.opacity(1.0))
+                            })
                             .gap_1()
                             .min_w(min_width)
                             .justify_end()
                             .child(
                                 IconButton::new(("delete", index), IconName::Trash)
                                     .icon_size(IconSize::Small)
+                                    .tab_index(0isize)
+                                    .aria_label("Remove Message from Queue")
                                     .tooltip({
                                         let focus_handle = focus_handle.clone();
                                         move |_window, cx| {
@@ -4796,6 +4816,8 @@ impl ThreadView {
                             .child(
                                 IconButton::new(("edit", index), IconName::Pencil)
                                     .icon_size(IconSize::Small)
+                                    .tab_index(0isize)
+                                    .aria_label("Edit Queued Message")
                                     .tooltip({
                                         let focus_handle = focus_handle.clone();
                                         move |_window, cx| {
@@ -4825,6 +4847,7 @@ impl ThreadView {
                             .child(
                                 Button::new(("send_now", index), "Send Now")
                                     .label_size(LabelSize::Small)
+                                    .tab_index(0isize)
                                     .when(is_next, |this| this.style(ButtonStyle::Outlined))
                                     .when(is_next && message_editor.is_empty(cx), |this| {
                                         let action: Box<dyn gpui::Action> = if can_fast_track {
@@ -7126,6 +7149,9 @@ impl ThreadView {
                             .icon_color(Color::Error)
                             .icon_size(IconSize::XSmall)
                             .shape(ui::IconButtonShape::Square)
+                            .tab_index(0isize)
+                            .aria_label("Cancel Feedback")
+                            .tooltip(Tooltip::text("Cancel Feedback"))
                             .on_click(cx.listener(move |this, _, _window, cx| {
                                 this.thread_feedback.dismiss_comments();
                                 cx.notify();
@@ -7135,6 +7161,9 @@ impl ThreadView {
                         IconButton::new("submit-feedback-message", IconName::Return)
                             .icon_size(IconSize::XSmall)
                             .shape(ui::IconButtonShape::Square)
+                            .tab_index(0isize)
+                            .aria_label("Submit Feedback")
+                            .tooltip(Tooltip::text("Submit Feedback"))
                             .on_click(cx.listener(move |this, _, _window, cx| {
                                 this.submit_feedback_message(cx);
                             })),
@@ -7187,6 +7216,8 @@ impl ThreadView {
             IconButton::new(("copy_agent_response", entry_ix), IconName::Copy)
                 .icon_size(IconSize::Small)
                 .icon_color(Color::Muted)
+                .tab_index(0isize)
+                .aria_label("Copy This Agent Response")
                 .tooltip(Tooltip::text("Copy This Agent Response"))
                 .on_click(cx.listener(move |this, _, _, cx| {
                     let entries = this.thread.read(cx).entries();
@@ -7203,6 +7234,8 @@ impl ThreadView {
         )
         .icon_size(IconSize::Small)
         .icon_color(Color::Muted)
+        .tab_index(0isize)
+        .aria_label("Scroll to User Message")
         .tooltip(Tooltip::text("Scroll to User Message"))
         .on_click(cx.listener(move |this, _, _, cx| {
             this.scroll_to_user_message_index(user_message_index, cx);
@@ -7212,6 +7245,8 @@ impl ThreadView {
             IconButton::new(("scroll_to_top", entry_ix), IconName::ArrowUp)
                 .icon_size(IconSize::Small)
                 .icon_color(Color::Muted)
+                .tab_index(0isize)
+                .aria_label("Scroll to Top")
                 .tooltip(Tooltip::text("Scroll to Top"))
                 .on_click(cx.listener(move |this, _, _, cx| {
                     this.scroll_to_top(cx);
@@ -7265,6 +7300,10 @@ impl ThreadView {
                                     Some(ThreadFeedback::Positive) => Color::Accent,
                                     _ => Color::Muted,
                                 })
+                                .tab_index(0isize)
+                                .aria_label("Helpful Response")
+                                .toggle_state(feedback == Some(ThreadFeedback::Positive))
+                                .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                                 .tooltip(move |window, cx| match feedback {
                                     Some(ThreadFeedback::Positive) => {
                                         Tooltip::text("Thanks for your feedback!")(window, cx)
@@ -7287,6 +7326,10 @@ impl ThreadView {
                                     Some(ThreadFeedback::Negative) => Color::Accent,
                                     _ => Color::Muted,
                                 })
+                                .tab_index(0isize)
+                                .aria_label("Not Helpful Response")
+                                .toggle_state(feedback == Some(ThreadFeedback::Negative))
+                                .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                                 .tooltip(move |window, cx| match feedback {
                                     Some(ThreadFeedback::Negative) => Tooltip::text(
                                         "We appreciate your feedback and will use it to improve in the future.",
@@ -7320,8 +7363,6 @@ impl ThreadView {
             .py_1p5()
             .px_4()
             .justify_end()
-            .opacity(0.4)
-            .hover(|s| s.opacity(1.))
             .when(
                 last_turn_tokens_label.is_some() || last_turn_clock.is_some(),
                 |this| {
@@ -9782,6 +9823,7 @@ impl ThreadView {
                     .child(
                         Button::new(("allow-btn", entry_ix), "Allow")
                             .disabled(allow_disabled)
+                            .tab_index(0isize)
                             .start_icon(
                                 Icon::new(IconName::Check)
                                     .size(IconSize::XSmall)
@@ -9814,6 +9856,7 @@ impl ThreadView {
                     )
                     .child(
                         Button::new(("deny-btn", entry_ix), "Deny")
+                            .tab_index(0isize)
                             .start_icon(
                                 Icon::new(IconName::Close)
                                     .size(IconSize::XSmall)
@@ -9863,11 +9906,17 @@ impl ThreadView {
             .collect();
 
         let permission_dropdown_handle = self.permission_dropdown_handle.clone();
+        let dropdown_open = permission_dropdown_handle.is_deployed();
 
         PopoverMenu::new(("permission-granularity", entry_ix))
             .with_handle(permission_dropdown_handle)
             .trigger(
-                Button::new(("granularity-trigger", entry_ix), current_label)
+                Button::new(("granularity-trigger", entry_ix), current_label.clone())
+                    .tab_index(0isize)
+                    .aria_label("Permission Scope")
+                    .aria_value(current_label)
+                    .aria_expanded(dropdown_open)
+                    .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                     .end_icon(
                         Icon::new(IconName::ChevronDown)
                             .size(IconSize::XSmall)
@@ -9950,6 +9999,7 @@ impl ThreadView {
 
         let pattern_count = patterns.len();
         let permission_dropdown_handle = self.permission_dropdown_handle.clone();
+        let dropdown_open = permission_dropdown_handle.is_deployed();
         let view = cx.entity().downgrade();
 
         PopoverMenu::new(("permission-granularity", entry_ix))
@@ -9957,7 +10007,12 @@ impl ThreadView {
             .anchor(gpui::Anchor::TopRight)
             .attach(gpui::Anchor::BottomRight)
             .trigger(
-                Button::new(("granularity-trigger", entry_ix), current_label)
+                Button::new(("granularity-trigger", entry_ix), current_label.clone())
+                    .tab_index(0isize)
+                    .aria_label("Permission Scope")
+                    .aria_value(current_label)
+                    .aria_expanded(dropdown_open)
+                    .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                     .end_icon(
                         Icon::new(IconName::ChevronDown)
                             .size(IconSize::XSmall)
@@ -10088,6 +10143,7 @@ impl ThreadView {
                                         .full_width()
                                         .style(ButtonStyle::Outlined)
                                         .label_size(LabelSize::Small)
+                                        .tab_index(0isize)
                                         .disabled(!any_patterns_checked)
                                         .on_click({
                                             let dropdown_handle = dropdown_handle.clone();
@@ -10129,6 +10185,7 @@ impl ThreadView {
             .children(options.iter().map(move |option| {
                 let option_id = SharedString::from(option.option_id.0.clone());
                 Button::new((option_id, entry_ix), option.name.clone())
+                    .tab_index(0isize)
                     .map(|this| {
                         // The sandbox-fallback prompt offers a "Retry" option
                         // that re-attempts creating the sandbox; it isn't an

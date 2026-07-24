@@ -161,6 +161,23 @@ state uses selected treatment rather than icon color alone. These controls
 configure or operate the current Agent Session; they do not create hidden
 terminal ownership or a second Project.
 
+Conversation follow-up controls remain visible at rest instead of lowering the
+entire action row to decorative contrast. Copy Response, return-to-prompt,
+return-to-top, feedback, and feedback submission are named keyboard tab stops;
+feedback reports its selected state.
+
+Queued messages form a named ordered list. Every row reports its position and
+whether it is next, uses a row-specific status identifier, and keeps Remove,
+Edit, Steer, and Send Now visibly available to pointer and keyboard users.
+Steer changes when that queued message interrupts the current Agent Run; Send
+Now operates on the exact queued-message identity.
+
+Agent permission prompts keep Allow, Deny, retry, and provider-supplied choices
+in the keyboard tab order. Permission Scope reports its current value and
+expanded state, uses selected treatment while open, and applies the chosen
+scope to the exact pending tool call. A warning may disable Allow, but it must
+not hide Deny or Retry.
+
 The everyday Canvas Layout menu is a workflow picker, not a diagnostics or
 storage dashboard. It exposes Full, Agent Control, Focus Editor,
 Code/Run/Observe, Review, and Debug; saved-layout detail belongs in **Manage

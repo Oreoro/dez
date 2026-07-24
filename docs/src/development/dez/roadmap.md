@@ -3215,3 +3215,21 @@ Completed for the Agent composer control-contract source slice:
 - added static focus, naming, value, and state regression guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Agent response, queue, and permission source slice:
+
+- removed whole-row dimming from response follow-up actions and made copy,
+  navigation, feedback, feedback cancel, and feedback submit named tab stops;
+- made positive and negative feedback expose selected state in addition to
+  color;
+- made queued prompts a named ordered list with row position, next-message
+  state, unique status identifiers, and visible keyboard-reachable Remove,
+  Edit, Steer, and Send Now actions;
+- made Allow, Deny, retry, provider choices, pattern application, and Permission
+  Scope keyboard-reachable;
+- made Permission Scope expose its current value, expanded state, and open
+  treatment while retaining exact pending-tool-call ownership;
+- added static visibility, identity, ordering, focus, naming, and popup-state
+  regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

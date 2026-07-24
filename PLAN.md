@@ -2634,3 +2634,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   expanded state and values, and selected treatment supplements icon color.
   Static guards cover the complete control row. This is source-only; no build
   or visual launch was performed.
+- 2026-07-25: Repaired Agent follow-up interaction hierarchy. Response,
+  navigation, and feedback actions are no longer dimmed as a decorative row
+  and now expose keyboard names and selected feedback state. Queued prompts are
+  a named ordered list with visible, keyboard-reachable Remove, Edit, Steer,
+  and Send Now actions and row-specific status identifiers. Permission
+  decisions enter the tab order; Permission Scope reports value, expanded
+  state, and open treatment. Static guards cover all three contracts. This is
+  source-only; no build or visual launch was performed.
