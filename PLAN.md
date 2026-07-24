@@ -512,7 +512,9 @@ with new labels.
       action; the separate New Agent Thread command remains available. The
       selected-session handoff now also exposes Shift+Enter to return,
       Shift+F for Files, and Shift+G for Agent or Git change review across the
-      three default desktop keymaps. Broader Host/actor switching remains open.
+      three default desktop keymaps. Files now uses a dedicated idempotent
+      reveal/focus action, so repeating that route cannot close the destination.
+      Broader Host/actor switching remains open.
 - [ ] Preserve selection and focus intentionally when filtering, switching
       scope, opening review, moving a Surface, or returning from an overlay.
       Session Rail rebuilds now preserve keyboard selection by stable session
@@ -2443,3 +2445,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   untrusted terminal prose. The public product and terminal guides use the same
   contract, and the identity check protects the exact disclosure. This is
   source-only; no build or visual launch was performed.
+- 2026-07-25: Removed toggle semantics from the terminal-to-Files handoff.
+  Terminal context controls, Session Rail selected-row keyboard actions, and
+  terminal context menus now dispatch one Project Panel **Reveal** action that
+  opens and focuses Files idempotently. Repeating **Files** no longer closes an
+  already-visible destination. The Command Palette names the new action
+  **files: open**, and guards reject the old toggle path. This is source-only;
+  no build or visual launch was performed.

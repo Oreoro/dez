@@ -22,7 +22,7 @@ use gpui::{
 use menu;
 use persistence::{StoredTerminalSessionRef, TerminalDb};
 use project::{Project, ProjectEntryId, search::SearchQuery};
-use project_panel::ToggleFocus as ToggleFilesFocus;
+use project_panel::Reveal as RevealFiles;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use settings::{
@@ -2428,7 +2428,7 @@ impl TerminalView {
                                 .tab_index(0isize)
                                 .aria_label("Open Files for this Workspace")
                                 .on_click(|_, window, cx| {
-                                    window.dispatch_action(ToggleFilesFocus.boxed_clone(), cx);
+                                    window.dispatch_action(RevealFiles.boxed_clone(), cx);
                                 }),
                             )
                         })

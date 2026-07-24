@@ -2866,3 +2866,15 @@ Completed for the Terminal Session evidence-disclosure source slice:
 - aligned public documentation and protected the copy with a static guard;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the idempotent Files-handoff source slice:
+
+- added one Project Panel **Reveal** action that opens and focuses Files;
+- routed the active terminal, Session Rail selected-session action, and terminal
+  context menu through the same destination;
+- prevented repeated **Files** activation from closing an already-visible
+  Files surface;
+- exposed the action as **files: open** in Dez's Command Palette;
+- added static guards that reject the old terminal/Session Rail toggle path;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

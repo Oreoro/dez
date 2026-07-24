@@ -72,6 +72,9 @@ repository remains on Git's explicit clean state. The review tab is named
 **Session Details** opens the evidence-backed run summary. None of these actions
 starts another terminal or creates a second project context.
 
+**Files** and **Review Changes** are idempotent destination actions. Repeating
+them keeps the requested tool visible and focused instead of toggling it closed.
+
 Inside Session Details, **Evidence** explains the boundary behind those facts:
 lifecycle is observed from the Terminal and Host, Git counts belong to the
 Workspace rather than automatically to this Session, and agent confidence or

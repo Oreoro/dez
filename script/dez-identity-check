@@ -332,7 +332,7 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_has_persistent_owner.*?TerminalHostConnection::try_global.*?TerminalHostSnapshotStore::try_global.*?snapshot\.host_id == host_id && snapshot\.session_id == session_id.*?terminal_ownership_label\(has_persistent_owner, session_unavailable\)' \
     'terminal tooltips can claim persistence without a matching external terminal Host snapshot'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'fn terminal_surface_tab_label.*?app_name == "Zed".*?"Terminal · \{title\}".*?fn terminal_workspace_context.*?status_summary\(\)\.count.*?fn render_session_context_strip.*?paths::APP_NAME == "Zed".*?"Session Details".*?"Evidence".*?"Lifecycle · observed from Terminal and Host\.".*?"Git · changed-file counts belong to the Workspace\.".*?"Attribution · changes are not assigned to this Session\.".*?"Agents · confidence and checks require trusted evidence\.".*?"Terminal text is display content, not proof\.".*?"How Dez Works".*?"Run · computation stays in this Terminal Session\.".*?"Supervise · Session Rail shows live state and attention\.".*?"Review · Files and Git inspect this same Workspace\.".*?"Connect · open a Workspace to add Files and Git review\.".*?role\(gpui::Role::Toolbar\).*?"Terminal Session".*?"Files".*?ToggleFilesFocus.*?"Open Workspace".*?Open a Workspace in this window and keep this Terminal Session.*?OpenWorkspace.*?create_new_window: Some\(false\).*?"Review Changes".*?ReviewGitChanges' \
+    'fn terminal_surface_tab_label.*?app_name == "Zed".*?"Terminal · \{title\}".*?fn terminal_workspace_context.*?status_summary\(\)\.count.*?fn render_session_context_strip.*?paths::APP_NAME == "Zed".*?"Session Details".*?"Evidence".*?"Lifecycle · observed from Terminal and Host\.".*?"Git · changed-file counts belong to the Workspace\.".*?"Attribution · changes are not assigned to this Session\.".*?"Agents · confidence and checks require trusted evidence\.".*?"Terminal text is display content, not proof\.".*?"How Dez Works".*?"Run · computation stays in this Terminal Session\.".*?"Supervise · Session Rail shows live state and attention\.".*?"Review · Files and Git inspect this same Workspace\.".*?"Connect · open a Workspace to add Files and Git review\.".*?role\(gpui::Role::Toolbar\).*?"Terminal Session".*?"Files".*?RevealFiles.*?"Open Workspace".*?Open a Workspace in this window and keep this Terminal Session.*?OpenWorkspace.*?create_new_window: Some\(false\).*?"Review Changes".*?ReviewGitChanges' \
     'the active Dez terminal can regress to an isolated shell with no authoritative IDE handoff'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_git_change_count.*?status_summary\(\)\.count.*?IconButton::new\("review-terminal-changes", IconName::Diff\).*?ReviewGitChanges.*?"Open Terminal Session Details"' \
@@ -343,6 +343,15 @@ require_multiline_pattern crates/git_ui/src/git_panel.rs \
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'AUXILIARY_PANE_MAX_INITIAL_WIDTH: f32 = 360\..*?AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0\.22.*?fn auxiliary_pane_initial_width.*?remember_horizontal_split_size\(preferred_width\).*?split_with_size_hint' \
     'Workspace Tools can regress to an equal-width column that overwhelms the Main Work Area'
+require_multiline_pattern crates/project_panel/src/project_panel.rs \
+    'actions!\([[:space:]]*project_panel,.*?Reveal,.*?pub fn init.*?_: &Reveal.*?reveal_panel::<ProjectPanel>.*?focus_panel::<ProjectPanel>' \
+    'Files can regress from an idempotent reveal/focus action to a toggle that closes its own destination'
+reject_pattern crates/terminal_view/src/terminal_view.rs \
+    'ToggleFilesFocus|project_panel::ToggleFocus' \
+    'the terminal Files handoff can regress to closing an already-visible Files surface'
+reject_pattern crates/sidebar/src/sidebar.rs \
+    'ToggleFilesFocus' \
+    'the Session Rail Files handoff can regress to closing an already-visible Files surface'
 require_multiline_pattern crates/project_panel/src/project_panel.rs \
     '\.id\("project-panel"\).*?\.role\(gpui::Role::Region\).*?"Files".*?\.track_focus\(&self\.focus_handle\(cx\)\).*?\.id\("project-panel"\).*?\.role\(gpui::Role::Region\).*?"Files".*?\.track_focus\(&self\.focus_handle\(cx\)\)' \
     'the populated or empty Files region can regain a focus handle with no accessibility node'
@@ -698,11 +707,14 @@ require_multiline_pattern assets/keymaps/default-windows.json \
     '"shift-enter": "sidebar::ReturnToSelectedSession".*?"shift-f": "sidebar::OpenSelectedSessionFiles".*?"shift-g": "sidebar::ReviewSelectedSessionChanges".*?"shift-v": "sidebar::OpenSelectedReviewBrief"' \
     'the Windows Session Rail lost its selected-session IDE handoff'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'ReturnToSelectedSession,.*?OpenSelectedSessionFiles,.*?ReviewSelectedSessionChanges,.*?fn selected_or_active_session.*?fn return_to_selected_session.*?fn open_selected_session_files.*?ToggleFilesFocus.*?fn review_selected_session_changes.*?OpenAgentDiff.*?ReviewGitChanges' \
+    'ReturnToSelectedSession,.*?OpenSelectedSessionFiles,.*?ReviewSelectedSessionChanges,.*?fn selected_or_active_session.*?fn return_to_selected_session.*?fn open_selected_session_files.*?RevealFiles.*?fn review_selected_session_changes.*?OpenAgentDiff.*?ReviewGitChanges' \
     'selected Session Rail rows can regress to creating duplicate or disconnected IDE context'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
     '"sidebar::OpenSelectedReviewBrief".*?"session_rail::OpenSelectedSessionDetails".*?"sidebar::ReturnToSelectedSession".*?"session rail: return to selected session".*?"sidebar::OpenSelectedSessionFiles".*?"session rail: open selected session files".*?"sidebar::ReviewSelectedSessionChanges".*?"session rail: review selected session changes"' \
     'the Command Palette can regress to implementation-shaped selected-session actions'
+require_multiline_pattern crates/command_palette/src/command_palette.rs \
+    '"project_panel::Reveal".*?"files::Open".*?humanize_action_name_for_product\("project_panel::Reveal", "Dez"\).*?"files: open"' \
+    'the idempotent Files action can regress to implementation-shaped Command Palette copy'
 require_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\("new-session", "New Terminal"\)' \
     'the primary Session Rail creation action is ambiguous'

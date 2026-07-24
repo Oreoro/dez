@@ -334,6 +334,8 @@ struct SelectPrevDiagnostic {
 actions!(
     project_panel,
     [
+        /// Reveals and focuses Files without toggling an already-visible Files surface closed.
+        Reveal,
         /// Expands the selected entry in the project tree.
         ExpandSelectedEntry,
         /// Collapses the selected entry in the project tree.
@@ -463,6 +465,10 @@ impl FoldedAncestors {
 
 pub fn init(cx: &mut App) {
     cx.observe_new(|workspace: &mut Workspace, _, _| {
+        workspace.register_action(|workspace, _: &Reveal, window, cx| {
+            workspace.reveal_panel::<ProjectPanel>(window, cx);
+            workspace.focus_panel::<ProjectPanel>(window, cx);
+        });
         workspace.register_action(|workspace, _: &ToggleFocus, window, cx| {
             workspace.toggle_panel_focus::<ProjectPanel>(window, cx);
         });

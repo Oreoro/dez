@@ -50,7 +50,7 @@ use menu::{
 use notifications::status_toast::StatusToast;
 use paths::APP_NAME;
 use project::{AgentId, AgentRegistryStore, Event as ProjectEvent, WorktreeId};
-use project_panel::ToggleFocus as ToggleFilesFocus;
+use project_panel::Reveal as RevealFiles;
 use recent_projects::sidebar_recent_projects::SidebarRecentProjects;
 use remote::{RemoteConnectionOptions, same_remote_connection_identity};
 use serde::{Deserialize, Serialize};
@@ -6835,7 +6835,7 @@ impl Sidebar {
                     return;
                 };
                 self.activate_thread(thread.metadata, &workspace, true, window, cx);
-                window.dispatch_action(ToggleFilesFocus.boxed_clone(), cx);
+                window.dispatch_action(RevealFiles.boxed_clone(), cx);
             }
             ListEntry::Terminal(terminal) => {
                 if !matches!(&terminal.workspace, ThreadEntryWorkspace::Open(_)) {
@@ -6849,7 +6849,7 @@ impl Sidebar {
                     window,
                     cx,
                 );
-                window.dispatch_action(ToggleFilesFocus.boxed_clone(), cx);
+                window.dispatch_action(RevealFiles.boxed_clone(), cx);
             }
             ListEntry::ProjectHeader { .. } => {}
         }
@@ -11357,7 +11357,7 @@ impl Sidebar {
                                         );
                                     })
                                     .ok();
-                                window.dispatch_action(ToggleFilesFocus.boxed_clone(), cx);
+                                window.dispatch_action(RevealFiles.boxed_clone(), cx);
                             }
                         });
                     }

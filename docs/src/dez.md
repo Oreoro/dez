@@ -108,6 +108,11 @@ as **Diff · filename**; its tooltip retains the diff base and relative path, so
 switching between terminal, file, and review never leaves a generic
 “Uncommitted Diff” surface.
 
+These are destination actions, not visibility toggles. Repeating **Files**
+keeps Files open and focused; repeating **Review Changes** keeps Git Changes
+open and returns to the current review. Neither action closes the destination
+because it was already visible.
+
 Session Details also states the trust boundary. Lifecycle comes from the
 Terminal and Host; Git counts belong to the Workspace and are not automatically
 attributed to one Session; agent confidence and checks require trusted adapter
