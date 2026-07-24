@@ -3712,6 +3712,21 @@ impl AgentPanel {
         self.terminals.contains_key(&terminal_id)
     }
 
+    pub fn set_terminal_custom_title(
+        &mut self,
+        terminal_id: TerminalId,
+        custom_title: Option<String>,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(terminal) = self.terminals.get(&terminal_id) else {
+            return false;
+        };
+        terminal.view.update(cx, |terminal_view, cx| {
+            terminal_view.set_custom_title(custom_title, cx);
+        });
+        true
+    }
+
     pub fn terminals(&self, cx: &App) -> Vec<AgentPanelTerminalInfo> {
         self.terminals
             .iter()

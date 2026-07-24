@@ -55,7 +55,11 @@ You can open multiple terminals and move among them like other IDE Surfaces.
 
 ## Terminal Session Titles {#terminal-thread-titles}
 
-The terminal title in the toolbar updates automatically to reflect the running shell or process. You can also set a custom name by clicking the title or the pencil icon that appears on hover.
+The terminal title updates automatically to reflect the running shell or
+process. You can set a custom name from its tab or Session Rail row. At normal
+rail widths, hover or keyboard-select the row and use its pencil. At narrow
+widths, use the row's context menu or the selected-row rename action. Editing
+the name does not freeze a running-agent or shell status prefix.
 
 The Main Work Area tab and Session Rail row receive the full title. Each visual
 surface truncates it only when its own available width requires it, so tooltips,

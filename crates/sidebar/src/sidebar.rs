@@ -9,6 +9,7 @@ use agent_ui::terminal_thread_metadata_store::{
     TerminalAgentKind, TerminalAttentionCondition, TerminalAttentionPresentation,
     TerminalAttentionPriority, TerminalAttentionState, TerminalThreadMetadata,
     TerminalThreadMetadataStore, detect_terminal_agent_command, terminal_title_prefix,
+    terminal_title_without_prefix,
 };
 use agent_ui::thread_metadata_store::{
     ThreadMetadata, ThreadMetadataStore, WorktreePaths, worktree_info_from_thread_paths,
@@ -308,6 +309,30 @@ fn session_row_actions_visible(is_hovered: bool, is_focused: bool, is_renaming: 
 
 fn session_row_setup_action_visible(width: Pixels, setup_available: bool) -> bool {
     setup_available && session_rail_supplemental_metadata_visible(width)
+}
+
+fn terminal_title_for_editing(metadata: &TerminalThreadMetadata) -> SharedString {
+    metadata.custom_title.clone().unwrap_or_else(|| {
+        let title = terminal_title_without_prefix(metadata.title.as_ref()).trim();
+        if title.is_empty() {
+            "Terminal".into()
+        } else {
+            title.to_owned().into()
+        }
+    })
+}
+
+fn terminal_custom_title_from_edit(
+    metadata: &TerminalThreadMetadata,
+    edited_title: &str,
+) -> Option<SharedString> {
+    let edited_title = edited_title.trim();
+    let terminal_title = terminal_title_without_prefix(metadata.title.as_ref()).trim();
+    if edited_title.is_empty() || edited_title == terminal_title {
+        None
+    } else {
+        Some(edited_title.to_owned().into())
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1226,6 +1251,33 @@ mod session_row_action_tests {
     }
 
     #[test]
+    fn terminal_title_editing_preserves_live_prefixes_and_resets_cleanly() {
+        let mut metadata = TerminalThreadMetadata {
+            terminal_id: TerminalId::from_stable_key("test", "rename"),
+            title: "⠋ Codex".into(),
+            custom_title: None,
+            created_at: Utc::now(),
+            worktree_paths: WorktreePaths::default(),
+            remote_connection: None,
+            working_directory: None,
+            attention: TerminalAttentionState::default(),
+            session_ref: None,
+        };
+
+        assert_eq!(terminal_title_for_editing(&metadata).as_ref(), "Codex");
+        assert_eq!(
+            terminal_custom_title_from_edit(&metadata, "  API review  ").as_deref(),
+            Some("API review")
+        );
+        assert_eq!(terminal_custom_title_from_edit(&metadata, "Codex"), None);
+        assert_eq!(terminal_custom_title_from_edit(&metadata, "   "), None);
+
+        metadata.custom_title = Some("API review".into());
+        assert_eq!(terminal_title_for_editing(&metadata).as_ref(), "API review");
+        assert_eq!(metadata.display_title().as_ref(), "⠋ API review");
+    }
+
+    #[test]
     fn notice_stack_preserves_most_of_the_window_for_primary_work() {
         assert!(SESSION_NOTICES_MAX_VIEWPORT_FRACTION > 0.25);
         assert!(SESSION_NOTICES_MAX_VIEWPORT_FRACTION < 0.5);
@@ -1778,6 +1830,13 @@ enum TerminalEntrySource {
     AgentPanel,
     WorkspaceItem(Entity<TerminalView>),
     HostSession(TerminalSessionId),
+}
+
+#[derive(Clone)]
+struct RenamingTerminalEntry {
+    metadata: TerminalThreadMetadata,
+    workspace: ThreadEntryWorkspace,
+    source: TerminalEntrySource,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -2782,6 +2841,7 @@ pub struct Sidebar {
     active_entry: Option<ActiveEntry>,
     hovered_thread_index: Option<usize>,
     renaming_thread_id: Option<ThreadId>,
+    renaming_terminal: Option<RenamingTerminalEntry>,
     /// Threads in the database-backed regeneration path need their own loading
     /// state because they do not have a live `agent::Thread` to report it.
     regenerating_titles: HashSet<ThreadId>,
@@ -3013,6 +3073,7 @@ impl Sidebar {
             active_entry: None,
             hovered_thread_index: None,
             renaming_thread_id: None,
+            renaming_terminal: None,
             regenerating_titles: HashSet::new(),
             suppress_next_rename_edit: false,
 
@@ -3708,7 +3769,7 @@ impl Sidebar {
             let linked_worktree_path_lists =
                 linked_worktree_path_lists_for_workspaces(group_workspaces, cx);
             let make_terminal_entry =
-                |metadata: TerminalThreadMetadata, workspace: ThreadEntryWorkspace| {
+                |mut metadata: TerminalThreadMetadata, workspace: ThreadEntryWorkspace| {
                     let branch_by_path = match &workspace {
                         ThreadEntryWorkspace::Open(workspace) => branches_by_workspace
                             .get(&workspace.entity_id())
@@ -3720,6 +3781,10 @@ impl Sidebar {
                     let host_snapshot = metadata.session_ref.and_then(|session_ref| {
                         helper_snapshot_by_session.get(&session_ref.session_id)
                     });
+                    if let Some(title) = host_snapshot.and_then(|snapshot| snapshot.title.as_ref())
+                    {
+                        metadata.title = title.clone().into();
+                    }
                     let source = match stored_terminal_source(
                         APP_NAME,
                         live_terminal_runtime.contains_key(&metadata.terminal_id),
@@ -6089,7 +6154,8 @@ impl Sidebar {
         let is_renaming_thread = self
             .thread_rename_editor
             .focus_handle(cx)
-            .is_focused(window);
+            .is_focused(window)
+            && (self.renaming_thread_id.is_some() || self.renaming_terminal.is_some());
 
         let is_searching = self.filter_editor.focus_handle(cx).is_focused(window)
             || matches!(
@@ -6119,8 +6185,7 @@ impl Sidebar {
     }
 
     fn cancel(&mut self, _: &Cancel, window: &mut Window, cx: &mut Context<Self>) {
-        if self.renaming_thread_id.is_some() {
-            self.finish_thread_rename(window, cx);
+        if self.finish_active_rename(window, cx) {
             return;
         }
 
@@ -6192,6 +6257,9 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if self.renaming_terminal.is_some() {
+            self.finish_terminal_rename(window, cx);
+        }
         if self.renaming_thread_id.is_some() && self.renaming_thread_id != Some(thread_id) {
             self.finish_thread_rename(window, cx);
         }
@@ -6225,16 +6293,21 @@ impl Sidebar {
                     return;
                 }
                 let new_title = title_editor.read(cx).text(cx);
-                if new_title.is_empty() {
-                    return;
+                if let Some(thread_id) = self.renaming_thread_id {
+                    if !new_title.is_empty() {
+                        self.apply_thread_rename(
+                            thread_id,
+                            SharedString::from(new_title),
+                            window,
+                            cx,
+                        );
+                    }
+                } else if let Some(terminal) = self.renaming_terminal.clone() {
+                    self.apply_terminal_rename(&terminal, &new_title, cx);
                 }
-                let Some(thread_id) = self.renaming_thread_id else {
-                    return;
-                };
-                self.apply_thread_rename(thread_id, SharedString::from(new_title), window, cx);
             }
             editor::EditorEvent::Blurred => {
-                self.finish_thread_rename(window, cx);
+                self.finish_active_rename(window, cx);
             }
             _ => {}
         }
@@ -6297,6 +6370,95 @@ impl Sidebar {
         self.focus_handle.focus(window, cx);
         self.update_entries(cx);
         true
+    }
+
+    fn start_renaming_terminal(
+        &mut self,
+        ix: usize,
+        terminal: &TerminalEntry,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self
+            .renaming_terminal
+            .as_ref()
+            .is_some_and(|entry| entry.metadata.terminal_id == terminal.metadata.terminal_id)
+        {
+            self.thread_rename_editor.focus_handle(cx).focus(window, cx);
+            return;
+        }
+        self.finish_active_rename(window, cx);
+        self.selection = Some(ix);
+        self.renaming_terminal = Some(RenamingTerminalEntry {
+            metadata: terminal.metadata.clone(),
+            workspace: terminal.workspace.clone(),
+            source: terminal.source.clone(),
+        });
+        self.suppress_next_rename_edit = true;
+        self.list_state.scroll_to_reveal_item(ix);
+        let title = terminal_title_for_editing(&terminal.metadata);
+        self.thread_rename_editor.update(cx, |editor, cx| {
+            editor.set_text(title, window, cx);
+            editor.select_all(&editor::actions::SelectAll, window, cx);
+            editor.focus_handle(cx).focus(window, cx);
+        });
+        cx.notify();
+    }
+
+    fn apply_terminal_rename(
+        &mut self,
+        terminal: &RenamingTerminalEntry,
+        edited_title: &str,
+        cx: &mut Context<Self>,
+    ) {
+        let custom_title = terminal_custom_title_from_edit(&terminal.metadata, edited_title);
+        let custom_title_string = custom_title.as_ref().map(ToString::to_string);
+
+        match (&terminal.workspace, &terminal.source) {
+            (ThreadEntryWorkspace::Open(_), TerminalEntrySource::WorkspaceItem(terminal_view)) => {
+                terminal_view.update(cx, |terminal_view, cx| {
+                    terminal_view.set_custom_title(custom_title_string.clone(), cx);
+                });
+            }
+            (ThreadEntryWorkspace::Open(workspace), TerminalEntrySource::AgentPanel) => {
+                if let Some(agent_panel) = workspace.read(cx).panel::<AgentPanel>(cx) {
+                    agent_panel.update(cx, |agent_panel, cx| {
+                        agent_panel.set_terminal_custom_title(
+                            terminal.metadata.terminal_id,
+                            custom_title_string.clone(),
+                            cx,
+                        );
+                    });
+                }
+            }
+            (
+                ThreadEntryWorkspace::Open(_) | ThreadEntryWorkspace::Closed { .. },
+                TerminalEntrySource::HostSession(_),
+            )
+            | (
+                ThreadEntryWorkspace::Closed { .. },
+                TerminalEntrySource::WorkspaceItem(_) | TerminalEntrySource::AgentPanel,
+            ) => {}
+        }
+
+        let mut metadata = terminal.metadata.clone();
+        metadata.custom_title = custom_title;
+        TerminalThreadMetadataStore::global(cx).update(cx, |store, cx| {
+            store.save(metadata, cx);
+        });
+    }
+
+    fn finish_terminal_rename(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
+        if self.renaming_terminal.take().is_none() {
+            return false;
+        }
+        self.focus_handle.focus(window, cx);
+        self.update_entries(cx);
+        true
+    }
+
+    fn finish_active_rename(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
+        self.finish_thread_rename(window, cx) || self.finish_terminal_rename(window, cx)
     }
 
     fn editor_move_down(&mut self, _: &MoveDown, window: &mut Window, cx: &mut Context<Self>) {
@@ -6470,7 +6632,7 @@ impl Sidebar {
     }
 
     fn confirm(&mut self, _: &Confirm, window: &mut Window, cx: &mut Context<Self>) {
-        if self.finish_thread_rename(window, cx) {
+        if self.finish_active_rename(window, cx) {
             return;
         }
 
@@ -9375,12 +9537,17 @@ impl Sidebar {
         let Some(ix) = self.selection else {
             return;
         };
-        let Some(ListEntry::Thread(thread)) = self.contents.entries.get(ix) else {
-            return;
-        };
-        let thread_id = thread.metadata.thread_id;
-        let title = thread.metadata.display_title();
-        self.start_renaming_thread(ix, thread_id, title, window, cx);
+        match self.contents.entries.get(ix).cloned() {
+            Some(ListEntry::Thread(thread)) => {
+                let thread_id = thread.metadata.thread_id;
+                let title = thread.metadata.display_title();
+                self.start_renaming_thread(ix, thread_id, title, window, cx);
+            }
+            Some(ListEntry::Terminal(terminal)) => {
+                self.start_renaming_terminal(ix, &terminal, window, cx);
+            }
+            Some(ListEntry::ProjectHeader { .. }) | None => {}
+        }
     }
 
     fn record_thread_access(&mut self, id: &ThreadId) {
@@ -10579,6 +10746,7 @@ impl Sidebar {
         let focus_handle = self.focus_handle.clone();
         let session_rail_settings = SessionRailSettings::get_global(cx);
         let rail_width = session_rail_settings.width(self.width);
+        let compact_row = session_rail_row_is_compact(rail_width);
         let supplemental_metadata_visible = session_rail_supplemental_metadata_visible(rail_width);
         let has_evidence = evidence_label.is_some();
         let worktrees =
@@ -10593,6 +10761,15 @@ impl Sidebar {
         let is_remote = terminal.workspace.is_remote(cx);
 
         let display_title = terminal.metadata.display_title();
+        let is_renaming = self
+            .renaming_terminal
+            .as_ref()
+            .is_some_and(|entry| entry.metadata.terminal_id == terminal.metadata.terminal_id);
+        let show_row_actions = session_row_actions_visible(is_hovered, is_focused, is_renaming);
+        let title_editor = self.thread_rename_editor.clone();
+        let rename_terminal = terminal.clone();
+        let context_rename_terminal = terminal.clone();
+        let rename_label = "Rename Terminal Session";
         let agent_ui_settings = CanvasAgentUiSettings::get_global(cx);
         let design_system = DesignSystemSettings::get_global(cx);
         let labels_visible = session_rail_labels_visible(&design_system);
@@ -10718,10 +10895,61 @@ impl Sidebar {
                 }
                 cx.notify();
             }))
-            .when(is_hovered || is_focused, |this| {
+            .when(is_renaming, |this| {
+                this.is_truncated(false).title_slot(
+                    div()
+                        .h_full()
+                        .min_w_0()
+                        .flex_1()
+                        .capture_action(cx.listener(
+                            |this, _: &editor::actions::Newline, window, cx| {
+                                this.finish_terminal_rename(window, cx);
+                            },
+                        ))
+                        .on_action(cx.listener(|this, _: &Confirm, window, cx| {
+                            this.finish_terminal_rename(window, cx);
+                        }))
+                        .on_action(
+                            cx.listener(|this, _: &editor::actions::Cancel, window, cx| {
+                                this.finish_terminal_rename(window, cx);
+                            }),
+                        )
+                        .child(title_editor),
+                )
+            })
+            .when(show_row_actions, |this| {
                 this.action_slot(
                     h_flex()
                         .gap_0p5()
+                        .when(!compact_row, |this| {
+                            this.child(
+                                IconButton::new(("rename-terminal", ix), IconName::Pencil)
+                                    .size(ButtonSize::Medium)
+                                    .icon_size(IconSize::Small)
+                                    .tab_index(0isize)
+                                    .icon_color(Color::Muted)
+                                    .aria_label(rename_label)
+                                    .tooltip({
+                                        let focus_handle = focus_handle.clone();
+                                        move |_window, cx| {
+                                            Tooltip::for_action_in(
+                                                rename_label,
+                                                &RenameSelectedThread,
+                                                &focus_handle,
+                                                cx,
+                                            )
+                                        }
+                                    })
+                                    .on_click(cx.listener(move |this, _, window, cx| {
+                                        this.start_renaming_terminal(
+                                            ix,
+                                            &rename_terminal,
+                                            window,
+                                            cx,
+                                        );
+                                    })),
+                            )
+                        })
                         .when(show_copy_codex_hook, |this| {
                             this.child(
                                 IconButton::new("copy-codex-hook-setup", IconName::Copy)
@@ -10837,6 +11065,8 @@ impl Sidebar {
                 let terminal_view = context_terminal_view.clone();
                 let attention_metadata = context_attention_metadata.clone();
                 let sidebar = sidebar.clone();
+                let rename_sidebar = sidebar.clone();
+                let rename_terminal = context_rename_terminal.clone();
                 let close_metadata = metadata.clone();
                 let close_workspace = workspace.clone();
                 let close_source = source.clone();
@@ -10862,6 +11092,13 @@ impl Sidebar {
                             }
                         });
                     }
+                    menu = menu.entry(rename_label, None, move |window, cx| {
+                        rename_sidebar
+                            .update(cx, |sidebar, cx| {
+                                sidebar.start_renaming_terminal(ix, &rename_terminal, window, cx);
+                            })
+                            .ok();
+                    });
                     if let Some(working_directory) = working_directory.clone() {
                         menu = menu.entry("Copy Working Directory", None, move |_window, cx| {
                             cx.write_to_clipboard(ClipboardItem::new_string(

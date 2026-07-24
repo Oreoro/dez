@@ -1342,7 +1342,13 @@ the later running-app reports, the source advanced through:
 - `8dc53f4077`, which removes duplicate synthetic recovery output and the inert
   cursor from unavailable terminals, preserves the saved title and concrete
   failure reason, and makes **Start Fresh Terminal** an explicit separate
-  computation in the Main Work Area.
+  computation in the Main Work Area; and
+- the current source slice, which gives Terminal Session rows the same inline,
+  pointer, context-menu, and selected-row keyboard rename paths as Agent
+  Sessions. It persists custom names across detached Host ownership, updates
+  live Workspace and Agent terminal Surfaces, preserves dynamic shell and agent
+  prefixes, and keeps the extra pencil out of compact rows where lifecycle
+  actions need the space.
 
 For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
 pass. The touched documentation also passes Prettier. Per the active

@@ -1168,6 +1168,24 @@ require_pattern crates/terminal/src/terminal.rs \
 require_pattern crates/terminal/src/terminal.rs \
     'env\.insert\("TERM_PROGRAM"\.to_string\(\), "dez"\.to_string\(\)\);' \
     'terminal sessions do not identify TERM_PROGRAM as Dez'
+require_pattern crates/sidebar/src/sidebar.rs \
+    'let rename_label = "Rename Terminal Session";' \
+    'Session Rail terminal rename lost its explicit product label'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'Some\(ListEntry::Terminal\(terminal\)\).*?start_renaming_terminal\(ix, &terminal' \
+    'selected Terminal Sessions no longer enter the shared keyboard rename flow'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'when\(!compact_row.*?IconName::Pencil.*?tab_index\(0isize\).*?aria_label\(rename_label\)' \
+    'normal-width terminal rows lost their keyboard-focusable rename affordance'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'menu = menu\.entry\(rename_label.*?start_renaming_terminal\(ix, &rename_terminal' \
+    'compact terminal rows no longer retain context-menu rename'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn apply_terminal_rename\(.*?set_custom_title\(custom_title_string\.clone\(\), cx\).*?set_terminal_custom_title\(.*?metadata\.custom_title = custom_title;.*?store\.save\(metadata, cx\)' \
+    'terminal rename no longer updates live surfaces and durable Session metadata together'
+require_pattern crates/agent_ui/src/agent_panel.rs \
+    '^    pub fn set_terminal_custom_title\($' \
+    'Agent-owned Terminal Sessions cannot receive Session Rail title edits'
 require_multiline_pattern docs/src/ai/terminal-threads.md \
     '# Terminal Sessions.*?Main Work Area.*?Session Rail.*?Agent region owns conversations.*?## Closing and Terminating.*?Terminate Running Terminal…' \
     'the public terminal guide can regress to the removed Terminal Thread inside the Agent Panel model'
