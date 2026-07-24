@@ -90,6 +90,7 @@ fn viewport_line_for_point(point: Point, display_offset: usize) -> Option<usize>
 const CURSOR_BLINK_INTERVAL: Duration = Duration::from_millis(500);
 const TERMINAL_HOST_RESTORE_ATTEMPTS: usize = 40;
 const TERMINAL_HOST_RESTORE_INTERVAL: Duration = Duration::from_millis(50);
+const TERMINAL_CONTEXT_ACTION_LABELS_MIN_WIDTH: Pixels = px(700.);
 
 fn terminal_tab_status(
     session_unavailable: bool,
@@ -131,6 +132,10 @@ fn terminal_tab_status_label_visible(status: &str) -> bool {
 
 fn terminal_surface_accessibility_label(title: &str, status: &str) -> String {
     format!("Terminal Session: {title}. Status: {status}")
+}
+
+fn terminal_context_action_labels_visible(width: Pixels) -> bool {
+    width >= TERMINAL_CONTEXT_ACTION_LABELS_MIN_WIDTH
 }
 
 fn terminal_surface_tab_label(app_name: &str, title: &str) -> SharedString {
@@ -2239,6 +2244,8 @@ impl TerminalView {
 
         let terminal = self.terminal.read(cx);
         let terminal_entity_id = self.terminal.entity_id();
+        let context_width = terminal.last_content().terminal_bounds.bounds.size.width;
+        let action_labels_visible = terminal_context_action_labels_visible(context_width);
         let status = terminal_tab_status(
             false,
             terminal.process_exited(),
@@ -2274,6 +2281,26 @@ impl TerminalView {
         let details_working_directory = working_directory.clone();
         let details_session_id = session_id.clone();
         let details_has_workspace_files = has_workspace_files;
+        let details_visible_label = if action_labels_visible {
+            "Session Details"
+        } else {
+            ""
+        };
+        let files_visible_label = if action_labels_visible { "Files" } else { "" };
+        let open_workspace_visible_label = if action_labels_visible {
+            "Open Workspace"
+        } else {
+            ""
+        };
+        let review_visible_label = if action_labels_visible {
+            "Review Changes"
+        } else {
+            ""
+        };
+        let review_accessibility_label = format!(
+            "Review {changed_files} changed {}",
+            if changed_files == 1 { "file" } else { "files" }
+        );
         let ownership_note = if has_persistent_owner {
             "The external Dez Terminal Host owns this process."
         } else {
@@ -2283,7 +2310,7 @@ impl TerminalView {
             .trigger(
                 Button::new(
                     ("terminal-session-details-trigger", terminal_entity_id),
-                    "Session Details",
+                    details_visible_label,
                 )
                 .size(ButtonSize::Compact)
                 .style(ButtonStyle::Subtle)
@@ -2418,7 +2445,7 @@ impl TerminalView {
                             this.child(
                                 Button::new(
                                     ("terminal-context-files", terminal_entity_id),
-                                    "Files",
+                                    files_visible_label,
                                 )
                                 .size(ButtonSize::Compact)
                                 .style(ButtonStyle::Subtle)
@@ -2427,6 +2454,7 @@ impl TerminalView {
                                 )
                                 .tab_index(0isize)
                                 .aria_label("Open Files for this Workspace")
+                                .tooltip(Tooltip::text("Open Files for this Workspace"))
                                 .on_click(|_, window, cx| {
                                     window.dispatch_action(RevealFiles.boxed_clone(), cx);
                                 }),
@@ -2436,7 +2464,7 @@ impl TerminalView {
                             this.child(
                                 Button::new(
                                     ("terminal-context-open-workspace", terminal_entity_id),
-                                    "Open Workspace",
+                                    open_workspace_visible_label,
                                 )
                                 .size(ButtonSize::Compact)
                                 .style(ButtonStyle::Subtle)
@@ -2447,6 +2475,9 @@ impl TerminalView {
                                 .aria_label(
                                     "Open a Workspace in this window and keep this Terminal Session",
                                 )
+                                .tooltip(Tooltip::text(
+                                    "Open a Workspace in this window and keep this Terminal Session",
+                                ))
                                 .on_click(|_, window, cx| {
                                     window.dispatch_action(
                                         OpenWorkspace {
@@ -2462,16 +2493,14 @@ impl TerminalView {
                             this.child(
                                 Button::new(
                                     ("terminal-context-review", terminal_entity_id),
-                                    "Review Changes",
+                                    review_visible_label,
                                 )
                                 .size(ButtonSize::Compact)
                                 .style(ButtonStyle::Subtle)
                                 .start_icon(Icon::new(IconName::Diff).size(IconSize::XSmall))
                                 .tab_index(0isize)
-                                .aria_label(format!(
-                                    "Review {changed_files} changed {}",
-                                    if changed_files == 1 { "file" } else { "files" }
-                                ))
+                                .aria_label(review_accessibility_label.clone())
+                                .tooltip(Tooltip::text(review_accessibility_label.clone()))
                                 .on_click(|_, window, cx| {
                                     window.dispatch_action(ReviewGitChanges.boxed_clone(), cx);
                                 }),
@@ -3729,6 +3758,8 @@ mod tests {
             terminal_surface_tab_label("Zed", "Codex"),
             SharedString::from("Codex")
         );
+        assert!(!terminal_context_action_labels_visible(px(699.)));
+        assert!(terminal_context_action_labels_visible(px(700.)));
     }
 
     #[test]

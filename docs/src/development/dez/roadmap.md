@@ -3162,3 +3162,16 @@ Completed for the terminal-provider icon coherence source slice:
 - added focused provider/fallback assertions and static anti-drift guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the responsive terminal-review handoff source slice:
+
+- made terminal context actions retain text at normal widths and collapse to
+  the same semantic, fully named, tooltip-backed icons in narrow panes;
+- aligned Workspace-wide changed-file counts with Review Changes routing;
+- retained an active dirty repository and otherwise selected the first dirty
+  repository deterministically before revealing Git Changes;
+- opened a real changed-file diff after repository switching and retained the
+  explicit clean state when every repository is clean;
+- added focused width/routing assertions and static ownership guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

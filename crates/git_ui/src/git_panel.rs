@@ -124,6 +124,82 @@ fn dez_git_clean_state_description(branch_name: Option<&str>) -> String {
     }
 }
 
+fn review_repository_position(
+    active_repository: Option<usize>,
+    changed_file_counts: &[usize],
+) -> Option<usize> {
+    active_repository
+        .filter(|index| {
+            changed_file_counts
+                .get(*index)
+                .is_some_and(|count| *count > 0)
+        })
+        .or_else(|| changed_file_counts.iter().position(|count| *count > 0))
+}
+
+fn review_repository_with_changes(
+    project: &Entity<Project>,
+    cx: &App,
+) -> Option<Entity<Repository>> {
+    let git_store = project.read(cx).git_store().clone();
+    let repositories = git_store.read(cx);
+    let active_repository_id = repositories
+        .active_repository()
+        .as_ref()
+        .map(Entity::entity_id);
+    let mut candidates = repositories
+        .repositories()
+        .values()
+        .cloned()
+        .collect::<Vec<_>>();
+    drop(repositories);
+
+    candidates.sort_by(|left, right| {
+        left.read(cx)
+            .work_directory_abs_path
+            .cmp(&right.read(cx).work_directory_abs_path)
+    });
+    let active_repository = active_repository_id.and_then(|active_repository_id| {
+        candidates
+            .iter()
+            .position(|repository| repository.entity_id() == active_repository_id)
+    });
+    let changed_file_counts = candidates
+        .iter()
+        .map(|repository| repository.read(cx).status_summary().count)
+        .collect::<Vec<_>>();
+
+    review_repository_position(active_repository, &changed_file_counts)
+        .and_then(|index| candidates.get(index).cloned())
+}
+
+fn first_review_change(repository: &Entity<Repository>, cx: &App) -> Option<GitStatusEntry> {
+    repository
+        .read(cx)
+        .cached_status()
+        .min_by(|left, right| left.repo_path.cmp(&right.repo_path))
+        .map(|status| GitStatusEntry {
+            repo_path: status.repo_path,
+            status: status.status,
+            staging: status.status.staging(),
+            diff_stat: status.diff_stat,
+        })
+}
+
+#[cfg(test)]
+mod review_repository_routing_tests {
+    use super::review_repository_position;
+
+    #[test]
+    fn review_prefers_the_active_dirty_repository_then_the_first_dirty_repository() {
+        assert_eq!(review_repository_position(Some(1), &[3, 2]), Some(1));
+        assert_eq!(review_repository_position(Some(0), &[0, 2, 1]), Some(1));
+        assert_eq!(review_repository_position(None, &[0, 0, 4]), Some(2));
+        assert_eq!(review_repository_position(Some(0), &[0, 0]), None);
+        assert_eq!(review_repository_position(None, &[]), None);
+    }
+}
+
 fn dez_git_setup_copy() -> (&'static str, &'static str) {
     (
         "No repository in this Workspace",
@@ -494,26 +570,46 @@ pub fn register(workspace: &mut Workspace) {
         workspace.toggle_panel_focus::<GitPanel>(window, cx);
     });
     workspace.register_action(|workspace, _: &ReviewChanges, window, cx| {
-        let has_changes = workspace
-            .project()
+        let project = workspace.project().clone();
+        let active_repository_id = project
             .read(cx)
             .active_repository(cx)
-            .is_some_and(|repository| repository.read(cx).status_summary().count > 0);
+            .as_ref()
+            .map(Entity::entity_id);
+        let review_repository = review_repository_with_changes(&project, cx);
+        let repository_changed = review_repository
+            .as_ref()
+            .is_some_and(|repository| Some(repository.entity_id()) != active_repository_id);
+        if repository_changed && let Some(repository) = review_repository.as_ref() {
+            repository.update(cx, |repository, cx| repository.set_as_active_repository(cx));
+        }
 
         workspace.reveal_panel::<GitPanel>(window, cx);
-        let selected_change = workspace.panel::<GitPanel>(cx).and_then(|panel| {
-            panel.update(cx, |panel, cx| {
-                panel.set_active_tab(GitPanelTab::Changes, window, cx);
-                panel.select_first_entry_if_none(window, cx);
-                panel
-                    .get_selected_entry()
-                    .and_then(GitListEntry::status_entry)
-                    .cloned()
-                    .or_else(|| panel.change_entries_by_path().next().cloned())
+        let selected_change = workspace
+            .panel::<GitPanel>(cx)
+            .and_then(|panel| {
+                panel.update(cx, |panel, cx| {
+                    panel.set_active_tab(GitPanelTab::Changes, window, cx);
+                    if repository_changed {
+                        panel.schedule_update(window, cx);
+                        None
+                    } else {
+                        panel.select_first_entry_if_none(window, cx);
+                        panel
+                            .get_selected_entry()
+                            .and_then(GitListEntry::status_entry)
+                            .cloned()
+                            .or_else(|| panel.change_entries_by_path().next().cloned())
+                    }
+                })
             })
-        });
+            .or_else(|| {
+                review_repository
+                    .as_ref()
+                    .and_then(|repository| first_review_change(repository, cx))
+            });
 
-        if has_changes {
+        if review_repository.is_some() {
             ProjectDiff::deploy_at(workspace, selected_change, window, cx);
         }
     });

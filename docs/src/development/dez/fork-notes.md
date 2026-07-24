@@ -242,6 +242,11 @@ context all resolve through that same Workspace and Project:
 - Empty and recovery states must state this ownership boundary in their visible
   copy. A Session Rail action may open a terminal in the main work area, but it
   must never imply that the terminal runs inside the rail.
+- Workspace change counts and **Review Changes** share the same repository
+  scope. In a multi-repository Workspace, review keeps the active repository
+  when it is dirty; otherwise it deterministically selects the first dirty
+  repository and opens a real changed-file diff. It never advertises aggregate
+  changes and then reviews an unrelated clean repository.
 - Workspace readiness uses Workspace vocabulary and accessible status
   semantics. Automatic trust names the newly opened folder scope and the
   language servers, Workspace settings, and configured tools that it enables.
@@ -648,6 +653,11 @@ defer it.
   prompt status, clocks, or artwork. Terminal Session identity and lifecycle
   remain visible outside the PTY grid through the Surface tab header, even when
   the general single-tab auto-hide preference is enabled.
+- **2026-07-25: Terminal context actions yield before they clip.** At normal
+  Main Work Area widths, Files/Open Workspace, Review Changes, and Session
+  Details retain their visible labels. In narrow panes they become the same
+  icon-backed controls with complete accessible names and matching tooltips;
+  lifecycle and Workspace metadata remain available through Session Details.
 - **2026-07-23: Settings disclose consequential Agent behavior where it is
   configured.** Agent settings use Agent Session, Surface, Agent card, and
   Workspace status vocabulary. A feedback toggle names its upstream

@@ -69,16 +69,21 @@ and only then reveals the existing project tree. It never fails silently or
 creates a replacement Session. **Files** reveals the existing Workspace tree.
 **Review Changes** opens the
 Agent change review for an Agent Session. For a Terminal Session, it reveals
-Git Changes and opens the first uncommitted diff in the Main Work Area; a clean
-repository remains on Git's explicit clean state. The review tab is named
-**Diff · filename**, with diff base and relative path retained in its tooltip.
+Git Changes and opens the first uncommitted diff in the Main Work Area. In a
+multi-repository Workspace, it keeps the active repository when that repository
+has changes; otherwise it selects the first dirty repository deterministically.
+A completely clean Workspace remains on Git's explicit clean state. The review
+tab is named **Diff · filename**, with diff base and relative path retained in
+its tooltip.
 **Session Details** opens the evidence-backed run summary. None of these actions
 starts another terminal or creates a second project context.
 
 **Files** and **Review Changes** are idempotent destination actions. Repeating
 them keeps the requested tool visible and focused instead of toggling it closed.
-At narrow pane widths, lifecycle/repository metadata clips before the fixed
-action group, and its full values remain available in **Session Details**.
+At narrow pane widths, the action labels yield to their icons before the
+lifecycle/repository metadata or toolbar can clip. Every icon retains its full
+accessible name and matching tooltip, and the full metadata remains available
+in **Session Details**.
 
 Inside Session Details, **Evidence** explains the boundary behind those facts:
 lifecycle is observed from the Terminal and Host, Git counts belong to the

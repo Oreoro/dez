@@ -2493,10 +2493,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
 - 2026-07-25: Hardened the terminal context strip for compact panes. Its
   lifecycle/repository cluster is now explicitly overflow-hidden inside the
   shrinkable region, while Files, Review Changes, Open Workspace, and Session
-  Details remain fixed-priority actions. Hidden metadata is still available in
-  Session Details and in the toolbar's accessible name. The identity guard
-  protects this layout order. This is source-only; no build or visual launch
-  was performed.
+  Details remain fixed-priority actions. At narrow widths their labels now
+  yield to the same semantic icons with full accessible names and matching
+  tooltips. Hidden metadata remains available in Session Details and in the
+  toolbar's accessible name. The identity guard protects this layout order.
+  This is source-only; no build or visual launch was performed.
 - 2026-07-25: Made the Scratch Terminal's **Open Workspace** contract exact.
   It now dispatches a dedicated folder-only action rather than the inherited
   file-or-directory picker, allows multiple Workspace folders, and forces them
@@ -2601,3 +2602,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Focused assertions and identity guards cover the provider and fallback
   contracts. The screenshot mascot remains verified PTY content, not Dez
   decoration. This is source-only; no build or visual launch was performed.
+- 2026-07-25: Repaired the multi-repository terminal-to-review contract. The
+  terminal context count already aggregated the whole Workspace, but Review
+  Changes inspected only the active repository and could therefore advertise
+  work before opening no diff. Review now keeps an active dirty repository or
+  deterministically activates the first dirty repository, synchronizes Git
+  Changes, and opens an actual changed-file diff. A pure routing assertion and
+  static ownership guard cover active-dirty, active-clean, no-active, and
+  all-clean cases. This is source-only; no build or visual launch was
+  performed.
