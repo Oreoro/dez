@@ -2311,3 +2311,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   its upstream presentation. Identity guards cover all three product
   boundaries. This remains source-only and is not present in the installed
   `91a1514` artifact.
+- 2026-07-24: Repaired two P0 lifecycle contradictions found in the installed
+  runtime. Session Rail now synthesizes a transient empty-Workspace group for
+  a Scratch Terminal, so the visible live shell is projected even before a
+  project is opened. Application shutdown now permits two seconds for
+  concurrent PTY cleanup and session-state database writes; the former 200 ms
+  aggregate deadline produced normal `app_will_quit` timeouts and risked
+  incomplete restore state. Identity guards protect both contracts. These are
+  source-only repairs and still require a new artifact plus close/reopen smoke
+  verification.

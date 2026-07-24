@@ -3649,7 +3649,31 @@ impl Sidebar {
             (icon, icon_from_external_svg)
         };
 
-        let groups = mw.project_groups(cx);
+        let mut groups = mw.project_groups(cx);
+        let pathless_workspaces = workspaces
+            .iter()
+            .filter(|workspace| {
+                workspace_path_list(workspace, cx).paths().is_empty()
+                    && !groups
+                        .iter()
+                        .any(|group| group.workspaces.contains(workspace))
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        if let Some(workspace) = pathless_workspaces.first() {
+            // MultiWorkspace intentionally does not persist empty project groups.
+            // Session Rail still needs a transient group for scratch terminals,
+            // otherwise the visible Main Work Area can contain a live terminal
+            // while the supervisor incorrectly says "No sessions yet".
+            groups.insert(
+                0,
+                workspace::ProjectGroup {
+                    key: workspace.read(cx).project_group_key(cx),
+                    workspaces: pathless_workspaces,
+                    expanded: true,
+                },
+            );
+        }
         let mut live_notified_terminal_ids: HashSet<TerminalId> = HashSet::new();
         let mut live_terminal_runtime: HashMap<TerminalId, TerminalRuntimeInfo> = HashMap::new();
         if show_terminal_agents {

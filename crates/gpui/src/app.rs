@@ -72,7 +72,13 @@ mod test_context;
 mod visual_test_context;
 
 /// The duration for which futures returned from [Context::on_app_quit] can run before the application fully quits.
-pub const SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(200);
+///
+/// Shutdown observers flush window/session state and terminate ordinary PTY
+/// process groups concurrently. A 200 ms aggregate budget made normal local
+/// database latency race the shutdown deadline, leaving restore state
+/// incomplete. Windows are already cleared before this wait, so the larger
+/// correctness budget does not keep application chrome visible.
+pub const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// Temporary(?) wrapper around [`RefCell<App>`] to help us debug any double borrows.
 /// Strongly consider removing after stabilization.

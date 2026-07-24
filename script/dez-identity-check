@@ -319,9 +319,15 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let has_persistent_owner = terminal\.metadata\.session_ref.*?TerminalHostConnection::try_global.*?connection\.host_id\(\) == session_ref\.host_id.*?TerminalHostSnapshotStore::try_global.*?snapshot\.host_id == session_ref\.host_id.*?snapshot\.session_id == session_ref\.session_id.*?owns_active_host && owns_saved_snapshot.*?terminal_row_owner_label\(has_persistent_owner, is_remote\)' \
     'Session Rail can claim persistence without a matching external terminal Host snapshot'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'let pathless_workspaces = workspaces.*?workspace_path_list\(workspace, cx\)\.paths\(\)\.is_empty\(\).*?workspace::ProjectGroup.*?workspaces: pathless_workspaces.*?group_key\.path_list\(\)\.paths\(\)\.is_empty\(\) && terminals\.is_empty\(\)' \
+    'scratch terminals can disappear because Session Rail has no transient empty-workspace group'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_has_persistent_owner.*?TerminalHostConnection::try_global.*?TerminalHostSnapshotStore::try_global.*?snapshot\.host_id == host_id && snapshot\.session_id == session_id.*?terminal_ownership_label\(has_persistent_owner, session_unavailable\)' \
     'terminal tooltips can claim persistence without a matching external terminal Host snapshot'
+require_multiline_pattern crates/gpui/src/app.rs \
+    'pub const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs\(2\).*?block_with_timeout\(SHUTDOWN_TIMEOUT, futures\)' \
+    'normal session persistence can regress to the former 200 ms aggregate quit race'
 require_multiline_pattern crates/git_ui/src/git_panel.rs \
     'paths::APP_NAME == "Zed".*?"Changes".*?"Git Changes".*?paths::APP_NAME == "Zed".*?"History".*?"Git History"' \
     'Dez Git tabs can regress to labels that conflict with Agent History'
