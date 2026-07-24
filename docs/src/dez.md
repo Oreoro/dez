@@ -34,6 +34,9 @@ These are not four separate products.
 The Main Work Area is one pane grid. A file, terminal, diff, search result,
 settings page, or review can be tabbed, split, moved, and focused through the
 same rules. Workspace Tools and Agent are hideable regions around that grid.
+Each contextual region is capped at 22% of visible horizontal space, and Dez
+keeps at least 60% for the Main Work Area when both are open. The same budget
+applies after resizing, reopening, and restoring a saved layout.
 The Session Rail is a projection over the real owners: selecting a row focuses
 or reattaches its existing Surface instead of opening a duplicate.
 

@@ -1,6 +1,6 @@
 use crate::{
-    AnyActiveCall, AppState, CollaboratorId, FollowerState, Pane, ParticipantLocation, Workspace,
-    WorkspaceSettings,
+    AnyActiveCall, AppState, CollaboratorId, FollowerState, Pane, PaneKind, ParticipantLocation,
+    Workspace, WorkspaceSettings,
     notifications::DetachAndPromptErr,
     pane_group::element::pane_axis,
     workspace_card_gap,
@@ -276,6 +276,23 @@ impl PaneGroup {
         self.mark_positions(cx);
     }
 
+    pub(crate) fn constrain_auxiliary_horizontal_flexes(
+        &mut self,
+        maximum_auxiliary_fraction: f32,
+        minimum_main_fraction: f32,
+        cx: &App,
+    ) -> bool {
+        let changed = self.root.constrain_auxiliary_horizontal_flexes(
+            maximum_auxiliary_fraction,
+            minimum_main_fraction,
+            cx,
+        );
+        if changed {
+            self.root.clear_bounding_boxes();
+        }
+        changed
+    }
+
     pub fn swap(&mut self, from: &Entity<Pane>, to: &Entity<Pane>, cx: &mut App) {
         match &mut self.root {
             Member::Pane(_) => {}
@@ -488,6 +505,53 @@ pub enum Member {
 }
 
 impl Member {
+    fn visible_pane_kind_counts(&self, cx: &App) -> (usize, usize) {
+        match self {
+            Self::Pane(pane) => {
+                let pane = pane.read(cx);
+                if !pane.is_visible() {
+                    return (0, 0);
+                }
+                match pane.pane_kind() {
+                    PaneKind::Tabs => (1, 0),
+                    PaneKind::Project | PaneKind::Agent => (0, 1),
+                }
+            }
+            Self::Axis(axis) => axis
+                .members
+                .iter()
+                .map(|member| member.visible_pane_kind_counts(cx))
+                .fold((0, 0), |(tabs, auxiliary), counts| {
+                    (tabs + counts.0, auxiliary + counts.1)
+                }),
+        }
+    }
+
+    fn constrain_auxiliary_horizontal_flexes(
+        &mut self,
+        maximum_auxiliary_fraction: f32,
+        minimum_main_fraction: f32,
+        cx: &App,
+    ) -> bool {
+        match self {
+            Self::Pane(_) => false,
+            Self::Axis(axis) => axis.constrain_auxiliary_horizontal_flexes(
+                maximum_auxiliary_fraction,
+                minimum_main_fraction,
+                cx,
+            ),
+        }
+    }
+
+    fn clear_bounding_boxes(&self) {
+        if let Self::Axis(axis) = self {
+            *axis.bounding_boxes.lock() = vec![None; axis.members.len()];
+            for member in &axis.members {
+                member.clear_bounding_boxes();
+            }
+        }
+    }
+
     pub fn mark_positions(
         &mut self,
         in_center_group: bool,
@@ -931,6 +995,101 @@ impl PaneAxis {
         };
         axis.normalize_same_axis();
         axis
+    }
+
+    fn constrain_auxiliary_horizontal_flexes(
+        &mut self,
+        maximum_auxiliary_fraction: f32,
+        minimum_main_fraction: f32,
+        cx: &App,
+    ) -> bool {
+        let mut changed = self.members.iter_mut().fold(false, |changed, member| {
+            member.constrain_auxiliary_horizontal_flexes(
+                maximum_auxiliary_fraction,
+                minimum_main_fraction,
+                cx,
+            ) || changed
+        });
+
+        if self.axis != Axis::Horizontal {
+            return changed;
+        }
+
+        let counts = self
+            .members
+            .iter()
+            .map(|member| member.visible_pane_kind_counts(cx))
+            .collect::<Vec<_>>();
+        let auxiliary_indices = counts
+            .iter()
+            .enumerate()
+            .filter_map(|(ix, (tab_count, auxiliary_count))| {
+                (*tab_count == 0 && *auxiliary_count > 0).then_some(ix)
+            })
+            .collect::<Vec<_>>();
+        let main_indices = counts
+            .iter()
+            .enumerate()
+            .filter_map(|(ix, (tab_count, _))| (*tab_count > 0).then_some(ix))
+            .collect::<Vec<_>>();
+        if auxiliary_indices.is_empty() || main_indices.is_empty() {
+            return changed;
+        }
+
+        let mut flexes = normalize_flexes(self.members.len(), self.flexes.lock().clone());
+        let visible_indices = counts
+            .iter()
+            .enumerate()
+            .filter_map(|(ix, counts)| (counts.0 + counts.1 > 0).then_some(ix))
+            .collect::<Vec<_>>();
+        let visible_total = visible_indices.iter().map(|ix| flexes[*ix]).sum::<f32>();
+        if visible_total <= f32::EPSILON {
+            return changed;
+        }
+
+        let current_auxiliary_total = auxiliary_indices.iter().map(|ix| flexes[*ix]).sum::<f32>();
+        let maximum_auxiliary_total_fraction = (1. - minimum_main_fraction)
+            .min(auxiliary_indices.len() as f32 * maximum_auxiliary_fraction)
+            .clamp(0., 1.);
+        let mut target_auxiliary_fractions = auxiliary_indices
+            .iter()
+            .map(|ix| (flexes[*ix] / visible_total).min(maximum_auxiliary_fraction))
+            .collect::<Vec<_>>();
+        let target_fraction_sum = target_auxiliary_fractions.iter().sum::<f32>();
+        if target_fraction_sum > maximum_auxiliary_total_fraction {
+            let scale = maximum_auxiliary_total_fraction / target_fraction_sum;
+            for fraction in &mut target_auxiliary_fractions {
+                *fraction *= scale;
+            }
+        }
+
+        let target_auxiliary_total = target_auxiliary_fractions.iter().sum::<f32>() * visible_total;
+        if target_auxiliary_total + f32::EPSILON >= current_auxiliary_total {
+            return changed;
+        }
+
+        let current_main_total = main_indices.iter().map(|ix| flexes[*ix]).sum::<f32>();
+        if current_main_total <= f32::EPSILON {
+            return changed;
+        }
+        let target_main_total =
+            current_main_total + (current_auxiliary_total - target_auxiliary_total);
+        let main_scale = target_main_total / current_main_total;
+
+        for ix in main_indices {
+            flexes[ix] *= main_scale;
+        }
+        for (ix, target_fraction) in auxiliary_indices
+            .into_iter()
+            .zip(target_auxiliary_fractions)
+        {
+            flexes[ix] = target_fraction * visible_total;
+        }
+
+        *self.flexes.lock() = normalize_flexes(self.members.len(), flexes);
+        *self.bounding_boxes.lock() = vec![None; self.members.len()];
+        changed = true;
+        changed
     }
 
     fn split(
@@ -1899,9 +2058,13 @@ mod element {
             ) {
                 return;
             }
+            drop(flexes);
 
             workspace
-                .update(cx, |this, cx| this.serialize_workspace(window, cx))
+                .update(cx, |this, cx| {
+                    this.enforce_dez_main_work_area_width_budget(cx);
+                    this.serialize_workspace(window, cx);
+                })
                 .log_err();
             cx.stop_propagation();
             window.refresh();

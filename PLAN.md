@@ -2391,11 +2391,14 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   direct **Files**, **Review Changes**, and **Session Details** actions. Git
   state refreshes from structured Git-store events; arbitrary terminal text is
   never treated as evidence. Session Rail terminal rows expose the same review
-  and details vocabulary. Newly created Workspace Tools and Agent panes now
-  start at the smaller of 360 px or 22% of available width instead of splitting
-  the canvas equally; opening both preserves at least 60% for the Main Work
-  Area. Pure copy/sizing assertions and identity guards cover these contracts.
-  This remains source-only; no build or alternate binary was launched.
+  and details vocabulary. Workspace Tools and Agent panes now start at the
+  smaller of 360 px or 22% of available width instead of splitting the canvas
+  equally. Pointer and keyboard resizing, visibility changes, layout recipes,
+  and persisted restoration enforce a combined 40% contextual-region ceiling,
+  preserving at least 60% for the Main Work Area. Restored Agent panes also
+  retain Agent ownership instead of decoding as ordinary tabs. Focused
+  assertions and identity guards cover these contracts. This remains
+  source-only; no build or alternate binary was launched.
 - 2026-07-25: Made first-run guidance and terminal surface naming contextual.
   With no project, Welcome leads with **Open Workspace** and **Open Scratch
   Terminal**. Once a Workspace exists, it stops repeating that request and

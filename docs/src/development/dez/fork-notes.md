@@ -438,6 +438,14 @@ defer it.
   parity train. Dez will document the inherited state, retain confirmation and
   trust-boundary UX, and make no sandbox-protection claim until the withdrawal
   is understood and runtime enforcement is verified.
+- **2026-07-25: The Main Work Area owns the horizontal budget.** Workspace
+  Tools and Agent are contextual regions, not equal peers of the file,
+  terminal, and review canvas. Each starts at no more than 360 px or 22% of
+  visible horizontal space, and their combined width cannot silently reduce
+  the Main Work Area below 60%. This invariant applies after pointer or
+  keyboard resizing, visibility changes, layout recipes, and persisted-layout
+  restoration. Persistence must retain Agent, Workspace Tools, and Main Work
+  Area region identity.
 - **2026-07-23: Public source must explain the product and its evidence
   boundary.** The canonical repository front page names Dez, explains how the
   Session Rail, Workspace Tools, Main Work Area, Agent, and one

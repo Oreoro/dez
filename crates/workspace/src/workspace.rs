@@ -212,6 +212,7 @@ fn canvas_layout_modal_row_background(cx: &App) -> Hsla {
 
 const AUXILIARY_PANE_MAX_INITIAL_WIDTH: f32 = 360.;
 const AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0.22;
+const MAIN_WORK_AREA_MINIMUM_RATIO: f32 = 0.60;
 
 fn auxiliary_pane_initial_width(available_width: Pixels) -> Pixels {
     px(
@@ -6828,6 +6829,7 @@ impl Workspace {
             was_hidden
         });
         if was_hidden {
+            self.enforce_dez_main_work_area_width_budget(cx);
             self.center.mark_positions(cx);
         }
         if focus {
@@ -6853,6 +6855,7 @@ impl Workspace {
             was_hidden
         });
         if was_hidden {
+            self.enforce_dez_main_work_area_width_budget(cx);
             self.center.mark_positions(cx);
         }
         if focus {
@@ -7142,6 +7145,7 @@ impl Workspace {
         };
 
         pane.update(cx, |pane, cx| pane.set_visible(!visible, cx));
+        self.enforce_dez_main_work_area_width_budget(cx);
         self.center.mark_positions(cx);
 
         if visible {
@@ -8524,6 +8528,7 @@ impl Workspace {
             self.active_canvas_layout_recipe = Some(layout_recipe);
         }
 
+        self.enforce_dez_main_work_area_width_budget(cx);
         self.center.mark_positions(cx);
         self.serialize_workspace(window, cx);
         cx.notify();
@@ -8568,8 +8573,20 @@ impl Workspace {
             .or_else(|| Some(SplitSizeHint::inserted_size(preferred_width)));
         self.center
             .split_with_size_hint(&split_target, &pane, split_direction, size_hint, cx);
+        self.enforce_dez_main_work_area_width_budget(cx);
         cx.notify();
         pane
+    }
+
+    pub(crate) fn enforce_dez_main_work_area_width_budget(&mut self, cx: &mut App) -> bool {
+        if paths::APP_NAME == "Zed" {
+            return false;
+        }
+        self.center.constrain_auxiliary_horizontal_flexes(
+            AUXILIARY_PANE_MAX_INITIAL_RATIO,
+            MAIN_WORK_AREA_MINIMUM_RATIO,
+            cx,
+        )
     }
 
     fn add_panel_to_panel_pane<T: Panel>(
@@ -9807,6 +9824,7 @@ impl Workspace {
             self.mark_canvas_layout_custom();
             self.center
                 .resize(&self.active_pane, axis, amount, &self.bounds, cx);
+            self.enforce_dez_main_work_area_width_budget(cx);
         }
         self.serialize_workspace(window, cx);
         cx.notify();
@@ -12015,6 +12033,7 @@ impl Workspace {
                     // Swap workspace center group
                     workspace.center = PaneGroup::with_root(center_group);
                     workspace.center.set_is_center(true);
+                    workspace.enforce_dez_main_work_area_width_budget(cx);
                     workspace.center.mark_positions(cx);
 
                     if let Some(active_pane) = active_pane {
@@ -13797,6 +13816,7 @@ impl Render for Workspace {
                                                 this.reflow_active_canvas_layout_for_bounds_change(
                                                     window, cx,
                                                 );
+                                                this.enforce_dez_main_work_area_width_budget(cx);
                                             }
                                         })
                                     },
@@ -16225,6 +16245,52 @@ mod tests {
             pane_kinds,
             vec![PaneKind::Project, PaneKind::Tabs, PaneKind::Agent]
         );
+    }
+
+    #[gpui::test]
+    async fn test_auxiliary_pane_budget_repairs_restored_and_resized_flexes(
+        cx: &mut TestAppContext,
+    ) {
+        init_test(cx);
+
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            workspace.ensure_panel_pane(PanelPaneKind::Project, window, cx);
+            workspace.ensure_panel_pane(PanelPaneKind::Agent, window, cx);
+
+            let Member::Axis(axis) = &workspace.center.root else {
+                panic!("Project, Main Work Area, and Agent panes should share a horizontal axis");
+            };
+            *axis.flexes.lock() = vec![4., 1., 4.];
+
+            assert!(workspace.enforce_dez_main_work_area_width_budget(cx));
+
+            let Member::Axis(axis) = &workspace.center.root else {
+                unreachable!();
+            };
+            let flexes = axis.flexes.lock().clone();
+            let total = flexes.iter().sum::<f32>();
+            assert!(
+                flexes[0] / total <= AUXILIARY_PANE_MAX_INITIAL_RATIO + f32::EPSILON,
+                "Workspace Tools must not dominate the Main Work Area"
+            );
+            assert!(
+                flexes[2] / total <= AUXILIARY_PANE_MAX_INITIAL_RATIO + f32::EPSILON,
+                "Agent Control must not dominate the Main Work Area"
+            );
+            assert!(
+                flexes[1] / total >= MAIN_WORK_AREA_MINIMUM_RATIO - f32::EPSILON,
+                "the Main Work Area must retain at least 60% of the horizontal budget"
+            );
+            assert!(
+                !workspace.enforce_dez_main_work_area_width_budget(cx),
+                "an already-safe layout should remain stable"
+            );
+        });
     }
 
     #[gpui::test]

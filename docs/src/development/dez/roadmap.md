@@ -2978,3 +2978,17 @@ Completed for the Scratch Terminal folder-picker source slice:
 - updated the terminal and execution documentation;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the persistent Main Work Area budget source slice:
+
+- extended the 360 px/22% auxiliary-pane creation rule into a persistent
+  horizontal layout invariant;
+- capped Workspace Tools and Agent together at 40% so the Main Work Area keeps
+  at least 60% after pointer or keyboard resize, pane reveal, layout recipes,
+  window-bound reflow, and persisted-layout restoration;
+- corrected persisted Agent pane decoding so Agent restores as Agent instead of
+  an ordinary Main Work Area tab region;
+- added focused source assertions and identity guards for extreme restored
+  proportions and region ownership;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

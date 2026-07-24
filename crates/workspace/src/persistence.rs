@@ -113,6 +113,15 @@ impl sqlez::bindable::Column for SerializedAxis {
 
 impl StaticColumnCount for PaneKind {}
 
+fn pane_kind_from_storage(kind: &str) -> PaneKind {
+    match kind {
+        "tabs" => PaneKind::Tabs,
+        "project" => PaneKind::Project,
+        "agent" => PaneKind::Agent,
+        _ => PaneKind::Tabs,
+    }
+}
+
 impl Bind for PaneKind {
     fn bind(&self, statement: &Statement, start_index: i32) -> Result<i32> {
         let kind = match self {
@@ -126,17 +135,8 @@ impl Bind for PaneKind {
 
 impl Column for PaneKind {
     fn column(statement: &mut Statement, start_index: i32) -> Result<(Self, i32)> {
-        String::column(statement, start_index).and_then(|(kind, next_index)| {
-            Ok((
-                match kind.as_str() {
-                    "tabs" => Self::Tabs,
-                    "project" => Self::Project,
-                    "agent" => Self::Tabs,
-                    _ => Self::Tabs,
-                },
-                next_index,
-            ))
-        })
+        String::column(statement, start_index)
+            .map(|(kind, next_index)| (pane_kind_from_storage(&kind), next_index))
     }
 }
 
@@ -2928,6 +2928,14 @@ mod tests {
     use remote::SshConnectionOptions;
     use serde_json::json;
     use std::{thread, time::Duration};
+
+    #[test]
+    fn restored_pane_kinds_preserve_dez_region_ownership() {
+        assert_eq!(pane_kind_from_storage("tabs"), PaneKind::Tabs);
+        assert_eq!(pane_kind_from_storage("project"), PaneKind::Project);
+        assert_eq!(pane_kind_from_storage("agent"), PaneKind::Agent);
+        assert_eq!(pane_kind_from_storage("unknown"), PaneKind::Tabs);
+    }
 
     /// Creates a unique directory in a FakeFs, returning the path.
     /// Uses a UUID suffix to avoid collisions with other tests sharing the global DB.
