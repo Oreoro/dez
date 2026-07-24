@@ -2690,6 +2690,10 @@ Completed for the running Agent Session action-parity slice:
 - replaced the count-only toolbar with a named **Agent History · N** header,
   a compact full-count accessibility label, and an explicit, keyboard-focusable
   **Back to Sessions** control wired to the existing close lifecycle;
+- put the owning Session Rail footer's **Agent Tools**, **History**, and
+  **Workspaces** controls in the keyboard tab order; its two popover triggers
+  now report expanded state, and Agent Tools receives the same selected
+  treatment as Workspaces while open;
 - turned empty and no-results recovery into a named, vertically scrollable
   region with bottom breathing room so its action remains reachable in a short
   Session Rail;

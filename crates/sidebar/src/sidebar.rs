@@ -10999,6 +10999,7 @@ impl Sidebar {
             .unwrap_or_default();
 
         let popover_handle = self.recent_projects_popover_handle.clone();
+        let popover_open = popover_handle.is_deployed();
 
         PopoverMenu::new("sidebar-recent-projects-menu")
             .with_handle(popover_handle)
@@ -11021,7 +11022,9 @@ impl Sidebar {
                 .size(ButtonSize::Compact)
                 .label_size(LabelSize::Small)
                 .start_icon(Icon::new(IconName::FolderOpen).size(IconSize::Small))
+                .tab_index(0isize)
                 .aria_label("Open Recent Workspaces")
+                .aria_expanded(popover_open)
                 .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
                 |_window, cx| {
                     Tooltip::for_action("Open Recent Workspaces", &OpenRecent::default(), cx)
@@ -12446,6 +12449,7 @@ impl Sidebar {
         let project_agents_md_exists = self.active_project_agents_md_exists(cx);
         let focus_handle = self.focus_handle.clone();
         let sidebar = cx.weak_entity();
+        let menu_open = self.agent_options_menu_handle.is_deployed();
 
         PopoverMenu::new("agent-sidebar-options-menu")
             .trigger_with_tooltip(
@@ -12456,7 +12460,10 @@ impl Sidebar {
                 .size(ButtonSize::Compact)
                 .label_size(LabelSize::Small)
                 .start_icon(Icon::new(IconName::Settings).size(IconSize::Small))
-                .aria_label("Agent Tools and Settings"),
+                .tab_index(0isize)
+                .aria_label("Agent Tools and Settings")
+                .aria_expanded(menu_open)
+                .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
                 Tooltip::text("Agent Tools and Settings"),
             )
             .anchor(if on_right {
@@ -12647,6 +12654,7 @@ impl Sidebar {
                             .size(ButtonSize::Compact)
                             .label_size(LabelSize::Small)
                             .start_icon(Icon::new(IconName::Clock).size(IconSize::Small))
+                            .tab_index(0isize)
                             .toggle_state(is_archive)
                             .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                             .aria_label(history_label)
