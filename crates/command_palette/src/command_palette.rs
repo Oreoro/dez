@@ -945,7 +945,9 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
             return "session_rail::RemoveSelectedSession".to_owned();
         }
         "agent::RemoveSelectedThread" => return "agent::RemoveSelectedAgentSession".to_owned(),
-        "agent::RenameSelectedThread" => return "agent::RenameSelectedAgentSession".to_owned(),
+        "agent::RenameSelectedThread" => {
+            return "session_rail::RenameSelectedSession".to_owned();
+        }
         "agent::NewTerminalThread" => return "agent::NewTerminalSession".to_owned(),
         "sidebar::NewThreadInGroup" => {
             return "session_rail::NewAgentSessionInWorkspace".to_owned();
@@ -1150,7 +1152,7 @@ mod tests {
         );
         assert_eq!(
             humanize_action_name_for_product("agent::RenameSelectedThread", "Dez"),
-            "agent: rename selected agent session"
+            "session rail: rename selected session"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::NewThreadInGroup", "Dez"),

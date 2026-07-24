@@ -2292,10 +2292,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Session Rail terminal rows now respond to the selected-row rename command,
   expose a focusable pencil at normal widths, retain context-menu access at
   every width, and edit inline without replacing live shell or agent status
-  prefixes. The custom title updates Workspace- and Agent-owned terminal
-  Surfaces immediately and persists for detached Host-owned Sessions. Blank
-  input or the unchanged live title resets the override. Compact rows omit the
-  extra pencil so close, detach, review, and setup actions keep their space.
-  Focused behavior assertions and identity guards cover the contract. This is a
-  source-only slice; no build, test binary, alternate binary, or visual launch
-  was performed.
+  prefixes. The shared Command Palette entry now says **Session Rail: Rename
+  Selected Session** instead of describing only Agent Sessions. The custom title
+  updates Workspace- and Agent-owned terminal Surfaces immediately and persists
+  for detached Host-owned Sessions. Blank input or the unchanged live title
+  resets the override. Compact rows omit the extra pencil so close, detach,
+  review, and setup actions keep their space. Focused behavior assertions and
+  identity guards cover the contract. This is a source-only slice; no build,
+  test binary, alternate binary, or visual launch was performed.

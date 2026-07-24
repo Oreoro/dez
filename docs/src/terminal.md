@@ -50,11 +50,11 @@ and tooltips; tabs and rows shorten it only when space requires.
 Double-click a terminal tab, use its **Rename Terminal…** context action, or
 rename its Terminal Session from the Session Rail. A normal-width Session Rail
 row exposes a pencil when the row is hovered or keyboard-selected. Narrow rows
-retain rename in the context menu and selected-row keyboard action instead of
-crowding the lifecycle controls. Leading and trailing whitespace is removed.
-Clearing the custom name returns to the live shell title. A running-agent or
-shell status prefix continues to update around the custom name. Task terminals
-retain their task label.
+retain rename in the context menu and **Session Rail: Rename Selected Session**
+command instead of crowding the lifecycle controls. Leading and trailing
+whitespace is removed. Clearing the custom name returns to the live shell title.
+A running-agent or shell status prefix continues to update around the custom
+name. Task terminals retain their task label.
 
 Hover a terminal tab for its current status and ownership. When available, the
 tooltip distinguishes the **Working directory**, **Process ID**, and persistent
