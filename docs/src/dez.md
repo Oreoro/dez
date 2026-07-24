@@ -133,7 +133,10 @@ context, and Agent context.
 Sessions stay visible. Opening a folder therefore enables one coherent IDE
 scope. Files, Outline, Git, and Debug are views of the same Project, not
 separate roots. **Open Files** always reveals and focuses Files; repeating it
-does not close the destination.
+does not close the destination. The Agent region uses this exact recovery
+route when it needs Project context, so its **Open Workspace** control cannot
+quietly accept a loose file or move the work into another window. Its Open and
+Clone recovery actions are keyboard-reachable.
 
 ### 2. Work directly or delegate
 
@@ -143,7 +146,9 @@ an Agent Session in the Agent region.
 Agent edits land in ordinary buffers and Git changes. A terminal starts in the
 Workspace's working-directory context. Both sit beside files in the same pane
 grid, so direct and delegated work can be compared rather than hidden behind
-mode switches.
+mode switches. Agent Options and New Agent Session are explicit popovers: their
+triggers stay highlighted while open and announce that state to keyboard and
+assistive-technology users.
 
 ### 3. Supervise without polling every tab
 

@@ -657,6 +657,15 @@ require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'fn agent_panel_zoom_label.*?app_name == "Zed".*?"Disable Full Screen".*?"Enable Full Screen".*?"Restore Agent".*?"Expand Agent".*?let agent_menu_label =.*?"Toggle Agent Menu".*?"Agent Options".*?IconButton::new\("agent-options-menu".*?aria_label\(agent_menu_label\).*?let zoom_label = agent_panel_zoom_label\(paths::APP_NAME, is_full_screen\).*?let full_screen_button = IconButton::new.*?aria_label\(zoom_label\).*?let new_session_label =.*?"New Thread.*?"New Agent Session.*?IconButton::new\([[:space:]]*"new_thread_menu_btn".*?aria_label\(new_session_label\)' \
     'Agent toolbar icon controls can regress to tooltip-only buttons without accessible names'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'let menu_open = self\.agent_panel_menu_handle\.is_deployed\(\).*?IconButton::new\("agent-options-menu".*?aria_expanded\(menu_open\).*?selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\).*?let new_thread_menu_open = self\.new_thread_menu_handle\.is_deployed\(\).*?IconButton::new\([[:space:]]*"new_thread_menu_btn".*?aria_expanded\(new_thread_menu_open\).*?selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\)' \
+    'Agent toolbar popovers can regress to hiding their expanded state from keyboard and visual users'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'fn render_no_project_state.*?let open_workspace = workspace::OpenFolder \{[[:space:]]*create_new_window: Some\(false\),[[:space:]]*\}.*?KeyBinding::for_action_in\(&open_workspace.*?on_open_project\(move.*?window\.dispatch_action\(open_workspace\.boxed_clone\(\), cx\)' \
+    'the Agent no-Workspace recovery can regress to an ambiguous file picker or a second window'
+require_multiline_pattern crates/ui/src/components/project_empty_state.rs \
+    'let open_project_button = Button::new\("open_project".*?\.tab_index\(0isize\).*?let clone_repo_button = Button::new\("clone_repo".*?\.tab_index\(0isize\)' \
+    'shared Project recovery actions can regress out of the keyboard tab order'
 require_multiline_pattern crates/agent_ui/src/agent_ui.rs \
     'pub const DEFAULT_THREAD_TITLE.*?"New thread".*?pub fn default_agent_session_title.*?app_name == "Zed".*?DEFAULT_THREAD_TITLE.*?"New Agent Session".*?default_session_title_preserves_product_vocabulary' \
     'untitled Dez conversations can regress to the upstream New thread placeholder'

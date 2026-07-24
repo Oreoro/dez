@@ -2619,3 +2619,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   matching tooltips and expanded state. Static guards cover both the density
   and interaction contracts. This is source-only; no build or visual launch
   was performed.
+- 2026-07-25: Made Agent recovery match the product promise. The no-Workspace
+  Agent state now opens folders in the current Dez window instead of invoking
+  an inherited file-or-folder picker. Shared Open Workspace and Clone
+  Repository recovery buttons now enter the keyboard tab order. Agent Options
+  and New Agent Session triggers expose expanded state and keep selected
+  treatment while their popovers are open. Static guards cover routing,
+  keyboard reachability, and popup state. This is source-only; no build or
+  visual launch was performed.

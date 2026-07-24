@@ -86,6 +86,7 @@ impl RenderOnce for ProjectEmptyState {
         let has_title = self.title.is_some();
         let open_project_button = Button::new("open_project", self.open_project_label)
             .full_width()
+            .tab_index(0isize)
             .key_binding(self.open_project_key_binding)
             .when(has_title, |button| {
                 button
@@ -97,6 +98,7 @@ impl RenderOnce for ProjectEmptyState {
             });
         let clone_repo_button = Button::new("clone_repo", self.clone_repo_label)
             .full_width()
+            .tab_index(0isize)
             .when(has_title, |button| {
                 button
                     .style(ButtonStyle::Outlined)

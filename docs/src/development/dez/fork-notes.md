@@ -141,7 +141,16 @@ branches may retain upstream hover and icon behavior.
 Empty primary regions use compact, top-anchored recovery guidance rather than
 floating a small prompt in the middle of an empty pane. The heading names the
 missing prerequisite, the explanation is specific to Files, Git, or Agent, and
-the primary action says **Open Workspace**.
+the primary action says **Open Workspace**. That action always accepts folders
+and keeps the current Dez window: a file cannot accidentally satisfy a
+Workspace prerequisite, and recovery cannot strand the current Sessions in a
+different window. Shared Open Workspace and Clone Repository controls are
+keyboard tab stops.
+
+Popover triggers expose their current state as well as their destination.
+Agent Options and New Agent Session use selected treatment while open and
+report expanded state to assistive technology; closing the popover clears both
+signals.
 
 The everyday Canvas Layout menu is a workflow picker, not a diagnostics or
 storage dashboard. It exposes Full, Agent Control, Focus Editor,

@@ -6123,13 +6123,16 @@ impl AgentPanel {
         let workspace = self.workspace.clone();
         let agent_menu_label =
             agent_panel_session_label(paths::APP_NAME, "Toggle Agent Menu", "Agent Options");
+        let menu_open = self.agent_panel_menu_handle.is_deployed();
 
         PopoverMenu::new("agent-options-menu")
             .trigger_with_tooltip(
                 IconButton::new("agent-options-menu", IconName::Ellipsis)
                     .icon_size(IconSize::Small)
                     .tab_index(0isize)
-                    .aria_label(agent_menu_label),
+                    .aria_label(agent_menu_label)
+                    .aria_expanded(menu_open)
+                    .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
                 move |_window, cx| {
                     Tooltip::for_action_in(agent_menu_label, &ToggleOptionsMenu, &focus_handle, cx)
                 },
@@ -6324,11 +6327,14 @@ impl AgentPanel {
 
     fn render_no_project_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let focus_handle = self.focus_handle(cx);
+        let open_workspace = workspace::OpenFolder {
+            create_new_window: Some(false),
+        };
 
         let empty_state = ProjectEmptyState::new(
             agent_panel_session_label(paths::APP_NAME, "Agent Panel", "Agent"),
             focus_handle.clone(),
-            KeyBinding::for_action_in(&workspace::Open::default(), &focus_handle, cx),
+            KeyBinding::for_action_in(&open_workspace, &focus_handle, cx),
         );
         let empty_state = if paths::APP_NAME == "Zed" {
             empty_state
@@ -6344,9 +6350,9 @@ impl AgentPanel {
         };
 
         empty_state
-            .on_open_project(|_, window, cx| {
+            .on_open_project(move |_, window, cx| {
                 telemetry::event!("Agent Panel Add Project Clicked");
-                window.dispatch_action(workspace::Open::default().boxed_clone(), cx);
+                window.dispatch_action(open_workspace.boxed_clone(), cx);
             })
             .on_clone_repo(|_, window, cx| {
                 telemetry::event!("Agent Panel Clone Repo Clicked");
@@ -6674,6 +6680,7 @@ impl AgentPanel {
                 "New Thread\u{2026}",
                 "New Agent Session\u{2026}",
             );
+            let new_thread_menu_open = self.new_thread_menu_handle.is_deployed();
             let new_thread_menu = PopoverMenu::new("new_thread_menu")
                 .trigger_with_tooltip(
                     IconButton::new(
@@ -6682,7 +6689,9 @@ impl AgentPanel {
                     )
                     .icon_size(IconSize::Small)
                     .tab_index(0isize)
-                    .aria_label(new_session_label),
+                    .aria_label(new_session_label)
+                    .aria_expanded(new_thread_menu_open)
+                    .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
                     {
                         move |_window, cx| {
                             Tooltip::for_action_in(

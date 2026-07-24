@@ -3188,3 +3188,15 @@ Completed for the compact Git Changes interaction source slice:
   popup-state guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Agent recovery and toolbar-state source slice:
+
+- replaced the Agent no-Workspace file-or-folder picker with the folder-only,
+  same-window Open Workspace route used by the rest of Dez;
+- made shared Open Workspace and Clone Repository recovery actions explicit
+  keyboard tab stops;
+- made Agent Options and New Agent Session triggers announce expanded state and
+  retain selected treatment while their popovers are open;
+- added static routing, focus, and popup-state regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
