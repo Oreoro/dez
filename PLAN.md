@@ -524,6 +524,9 @@ with new labels.
       Shift+F for Files, and Shift+G for Agent or Git change review across the
       three default desktop keymaps. Files now uses a dedicated idempotent
       reveal/focus action, so repeating that route cannot close the destination.
+      When the selected Session owns a closed Workspace, Files reopens that
+      exact Workspace, restores the existing Session, and only then reveals the
+      project tree instead of failing silently.
       Broader Host/actor switching remains open.
 - [ ] Preserve selection and focus intentionally when filtering, switching
       scope, opening review, moving a Surface, or returning from an overlay.

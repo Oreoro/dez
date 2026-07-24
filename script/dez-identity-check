@@ -719,8 +719,11 @@ require_multiline_pattern assets/keymaps/default-windows.json \
     '"shift-enter": "sidebar::ReturnToSelectedSession".*?"shift-f": "sidebar::OpenSelectedSessionFiles".*?"shift-g": "sidebar::ReviewSelectedSessionChanges".*?"shift-v": "sidebar::OpenSelectedReviewBrief"' \
     'the Windows Session Rail lost its selected-session IDE handoff'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'ReturnToSelectedSession,.*?OpenSelectedSessionFiles,.*?ReviewSelectedSessionChanges,.*?fn selected_or_active_session.*?fn return_to_selected_session.*?fn open_selected_session_files.*?RevealFiles.*?fn review_selected_session_changes.*?OpenAgentDiff.*?ReviewGitChanges' \
+    'ReturnToSelectedSession,.*?OpenSelectedSessionFiles,.*?ReviewSelectedSessionChanges,.*?fn selected_or_active_session.*?fn return_to_selected_session.*?fn open_selected_session_files.*?ThreadEntryWorkspace::Closed.*?open_workspace_activate_thread_and_reveal_files.*?open_workspace_activate_terminal_and_reveal_files.*?fn review_selected_session_changes.*?OpenAgentDiff.*?ReviewGitChanges' \
     'selected Session Rail rows can regress to creating duplicate or disconnected IDE context'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn open_workspace_and_activate_thread_with_destination.*?this\.activate_thread\(metadata, &workspace, false, window, cx\);.*?if reveal_files \{.*?RevealFiles.*?fn open_workspace_and_activate_terminal_with_destination.*?this\.activate_terminal_in_workspace\(&workspace, metadata, false, window, cx\);.*?if reveal_files \{.*?RevealFiles' \
+    'Files can regress to dispatching before a closed Session Workspace has been restored'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
     '"sidebar::OpenSelectedReviewBrief".*?"session_rail::OpenSelectedSessionDetails".*?"sidebar::ReturnToSelectedSession".*?"session rail: return to selected session".*?"sidebar::OpenSelectedSessionFiles".*?"session rail: open selected session files".*?"sidebar::ReviewSelectedSessionChanges".*?"session rail: review selected session changes"' \
     'the Command Palette can regress to implementation-shaped selected-session actions'

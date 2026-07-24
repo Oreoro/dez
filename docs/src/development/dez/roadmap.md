@@ -2789,6 +2789,19 @@ Completed for the selected-session IDE handoff source slice:
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
 
+Completed for the closed-Workspace Files handoff source slice:
+
+- made the selected Session **Files** route restore a closed owning Workspace;
+- preserved the exact Agent or Terminal Session instead of creating a
+  replacement;
+- delayed the idempotent Files reveal until Workspace and Session activation
+  complete;
+- removed the previous silent no-op for saved Sessions whose Workspace was
+  closed;
+- guarded the ordering and documented the recovery behavior;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
 Completed for the terminal-to-diff source slice:
 
 - replaced the independent Git panel toggle/focus sequence with one

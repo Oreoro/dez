@@ -6830,27 +6830,45 @@ impl Sidebar {
         };
 
         match entry {
-            ListEntry::Thread(thread) => {
-                let ThreadEntryWorkspace::Open(workspace) = thread.workspace else {
-                    return;
-                };
-                self.activate_thread(thread.metadata, &workspace, true, window, cx);
-                window.dispatch_action(RevealFiles.boxed_clone(), cx);
-            }
-            ListEntry::Terminal(terminal) => {
-                if !matches!(&terminal.workspace, ThreadEntryWorkspace::Open(_)) {
-                    return;
+            ListEntry::Thread(thread) => match thread.workspace {
+                ThreadEntryWorkspace::Open(workspace) => {
+                    self.activate_thread(thread.metadata, &workspace, true, window, cx);
+                    window.dispatch_action(RevealFiles.boxed_clone(), cx);
                 }
-                self.activate_terminal_entry(
-                    terminal.metadata,
-                    terminal.workspace,
-                    terminal.source,
-                    true,
+                ThreadEntryWorkspace::Closed {
+                    folder_paths,
+                    project_group_key,
+                } => self.open_workspace_activate_thread_and_reveal_files(
+                    thread.metadata,
+                    folder_paths,
+                    &project_group_key,
                     window,
                     cx,
-                );
-                window.dispatch_action(RevealFiles.boxed_clone(), cx);
-            }
+                ),
+            },
+            ListEntry::Terminal(terminal) => match terminal.workspace {
+                workspace @ ThreadEntryWorkspace::Open(_) => {
+                    self.activate_terminal_entry(
+                        terminal.metadata,
+                        workspace,
+                        terminal.source,
+                        true,
+                        window,
+                        cx,
+                    );
+                    window.dispatch_action(RevealFiles.boxed_clone(), cx);
+                }
+                ThreadEntryWorkspace::Closed {
+                    folder_paths,
+                    project_group_key,
+                } => self.open_workspace_activate_terminal_and_reveal_files(
+                    terminal.metadata,
+                    folder_paths,
+                    &project_group_key,
+                    window,
+                    cx,
+                ),
+            },
             ListEntry::ProjectHeader { .. } => {}
         }
     }
@@ -7311,6 +7329,43 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.open_workspace_and_activate_thread_with_destination(
+            metadata,
+            folder_paths,
+            project_group_key,
+            false,
+            window,
+            cx,
+        );
+    }
+
+    fn open_workspace_activate_thread_and_reveal_files(
+        &mut self,
+        metadata: ThreadMetadata,
+        folder_paths: PathList,
+        project_group_key: &ProjectGroupKey,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.open_workspace_and_activate_thread_with_destination(
+            metadata,
+            folder_paths,
+            project_group_key,
+            true,
+            window,
+            cx,
+        );
+    }
+
+    fn open_workspace_and_activate_thread_with_destination(
+        &mut self,
+        metadata: ThreadMetadata,
+        folder_paths: PathList,
+        project_group_key: &ProjectGroupKey,
+        reveal_files: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let Some(multi_workspace) = self.multi_workspace.upgrade() else {
             return;
         };
@@ -7358,6 +7413,9 @@ impl Sidebar {
             let workspace = result?;
             this.update_in(cx, |this, window, cx| {
                 this.activate_thread(metadata, &workspace, false, window, cx);
+                if reveal_files {
+                    window.dispatch_action(RevealFiles.boxed_clone(), cx);
+                }
             })?;
             anyhow::Ok(())
         })
@@ -8173,6 +8231,43 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.open_workspace_and_activate_terminal_with_destination(
+            metadata,
+            folder_paths,
+            project_group_key,
+            false,
+            window,
+            cx,
+        );
+    }
+
+    fn open_workspace_activate_terminal_and_reveal_files(
+        &mut self,
+        metadata: TerminalThreadMetadata,
+        folder_paths: PathList,
+        project_group_key: &ProjectGroupKey,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.open_workspace_and_activate_terminal_with_destination(
+            metadata,
+            folder_paths,
+            project_group_key,
+            true,
+            window,
+            cx,
+        );
+    }
+
+    fn open_workspace_and_activate_terminal_with_destination(
+        &mut self,
+        metadata: TerminalThreadMetadata,
+        folder_paths: PathList,
+        project_group_key: &ProjectGroupKey,
+        reveal_files: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let Some(multi_workspace) = self.multi_workspace.upgrade() else {
             return;
         };
@@ -8202,6 +8297,9 @@ impl Sidebar {
             let workspace = result?;
             this.update_in(cx, |this, window, cx| {
                 this.activate_terminal_in_workspace(&workspace, metadata, false, window, cx);
+                if reveal_files {
+                    window.dispatch_action(RevealFiles.boxed_clone(), cx);
+                }
             })?;
             anyhow::Ok(())
         })
