@@ -2878,3 +2878,18 @@ Completed for the idempotent Files-handoff source slice:
 - added static guards that reject the old terminal/Session Rail toggle path;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Lumin region-hierarchy source slice:
+
+- separated rail/drawer, Main Work Area, tab strip, active tab, terminal, and
+  elevated-overlay layers across Lumin Blur, Lumin, and Lumin Light;
+- retained translucent dark/light shells while giving content surfaces
+  deliberate neutral fills;
+- strengthened neutral one-pixel structural boundaries without competing with
+  the accent focus ring;
+- measured panel/editor separation, panel/elevated separation, active-tab
+  separation, and a 1.5:1 structural-boundary floor after compositing;
+- retained the existing 3:1 focus and 4.5:1 text/syntax floors;
+- updated public and execution documentation plus the identity guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

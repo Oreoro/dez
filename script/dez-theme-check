@@ -97,6 +97,43 @@ function requireContrast(label, foreground, backgrounds, minimum) {
   }
 }
 
+function resolvedThemeSurface(style, token, backdrop) {
+  const shell = composite(style.background, backdrop);
+  return composite(style[token], shell);
+}
+
+function resolvedThemeSurfaces(theme, backdrops) {
+  const tokens = [
+    "surface.background",
+    "panel.background",
+    "editor.background",
+    "terminal.background",
+    "tab_bar.background",
+    "elevated_surface.background",
+  ];
+  return backdrops.flatMap((backdrop) => {
+    const shell = composite(theme.style.background, backdrop);
+    return [shell, ...tokens.map((token) => resolvedThemeSurface(theme.style, token, backdrop))];
+  });
+}
+
+function requireRegionHierarchy(theme, backdrops) {
+  const style = theme.style;
+  for (const backdrop of backdrops) {
+    const panel = resolvedThemeSurface(style, "panel.background", backdrop);
+    const editor = resolvedThemeSurface(style, "editor.background", backdrop);
+    const elevated = resolvedThemeSurface(style, "elevated_surface.background", backdrop);
+    const tabBar = resolvedThemeSurface(style, "tab_bar.background", backdrop);
+    const activeTab = composite(style["tab.active_background"], tabBar);
+    const boundary = composite(style.border, editor);
+
+    requireContrast(`${theme.name} panel/editor hierarchy`, panel, [editor], 1.03);
+    requireContrast(`${theme.name} panel/elevated hierarchy`, panel, [elevated], 1.11);
+    requireContrast(`${theme.name} active tab hierarchy`, activeTab, [tabBar], 1.12);
+    requireContrast(`${theme.name} structural boundary`, boundary, [editor], 1.5);
+  }
+}
+
 const themeDocument = JSON.parse(fs.readFileSync(themePath, "utf8"));
 const themeByName = new Map(themeDocument.themes.map((theme) => [theme.name, theme]));
 const luminBlur = themeByName.get("Lumin Blur");
@@ -205,14 +242,12 @@ function requireDarkThemeContrast(theme, surfaces) {
   }
 }
 
-const opaqueDarkSurfaces = ["#101010", "#161616"];
-const blurredDarkSurfaces = [
-  composite(luminBlur.style.background, "#000000"),
-  composite(luminBlur.style.background, "#303030"),
-  parseHex("#161616"),
-];
+const opaqueDarkSurfaces = resolvedThemeSurfaces(luminOpaque, ["#000000"]);
+const blurredDarkSurfaces = resolvedThemeSurfaces(luminBlur, ["#000000", "#303030"]);
 requireDarkThemeContrast(luminBlur, blurredDarkSurfaces);
 requireDarkThemeContrast(luminOpaque, opaqueDarkSurfaces);
+requireRegionHierarchy(luminBlur, ["#000000", "#303030"]);
+requireRegionHierarchy(luminOpaque, ["#000000"]);
 
 const light = luminLight.style;
 const lightSurfaces = ["#FFFFFF", "#F5F5F5"];
@@ -249,6 +284,7 @@ for (const [token, style] of Object.entries(light.syntax)) {
     requireContrast(`syntax.${token}`, style.color, lightSurfaces, 4.5);
   }
 }
+requireRegionHierarchy(luminLight, ["#FFFFFF"]);
 
 const defaultSettings = fs.readFileSync(defaultSettingsPath, "utf8");
 const initialSettings = fs.readFileSync(initialSettingsPath, "utf8");

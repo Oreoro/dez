@@ -497,7 +497,11 @@ with new labels.
       with Lumin Blur/Lumin Light, use JetBrains Mono for code and terminals,
       retain a readable sans-serif UI role, normalize the working typography to
       14 px, and restore low-contrast borders, focus, active-line, and
-      scrollbar hierarchy inside the translucent theme. Source, license,
+      scrollbar hierarchy inside the translucent theme. The Lumin variants now
+      also separate rail/drawer, Main Work Area, tab, terminal, and elevated
+      surfaces with restrained neutral layers. Static checks measure region
+      separation and a 1.5:1 structural-divider floor after transparency is
+      composited; focus retains the stronger 3:1 floor. Source, license,
       first-run, and font assets are guarded. Rendered density, material,
       contrast, and narrow-height proof remain open.
 
@@ -2452,3 +2456,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   already-visible destination. The Command Palette names the new action
   **files: open**, and guards reject the old toggle path. This is source-only;
   no build or visual launch was performed.
+- 2026-07-25: Rebuilt Lumin's region hierarchy instead of tweaking isolated
+  colors. Lumin Blur, its opaque fallback, and Lumin Light now distinguish the
+  rail/drawer, Main Work Area, tab strip and active tab, terminal, and elevated
+  overlay layers. Neutral structural dividers clear a measured 1.5:1 floor
+  after translucent compositing, while focus keeps the stronger 3:1 floor.
+  Theme checks now reject collapsed surfaces and faint boundaries. This is
+  source-only; no build or visual launch was performed.

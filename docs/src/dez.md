@@ -158,9 +158,11 @@ JetBrains Mono is bundled for editor, terminal, prompt, and code roles, while a
 bundled sans-serif face keeps interface labels readable.
 
 Blur belongs to the stable window shell. Focus borders, selected rows, active
-lines, pane boundaries, and scrollbars remain visible, while elevated menus
-stay solid enough to read. High-motion terminal and Agent content does not add
-independent nested blur layers.
+lines, pane boundaries, and scrollbars remain visible. Rail/drawer surfaces,
+the Main Work Area, tab strips, and elevated menus use distinct neutral layers
+instead of blending into one sheet. Structural dividers remain restrained;
+focus and selection carry the stronger accent. High-motion terminal and Agent
+content does not add independent nested blur layers.
 
 ## What Dez is not
 

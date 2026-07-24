@@ -81,7 +81,8 @@ Dez ships with an attributed adaptation of
 - **Lumin Light** in light mode;
 - **JetBrains Mono** for editor, terminal, prompts, and code;
 - a bundled sans-serif face for readable interface chrome;
-- restrained focus, selection, pane, active-line, and scrollbar contrast.
+- distinct rail/drawer, Main Work Area, tab, and elevated-overlay surfaces;
+- restrained structural boundaries, with stronger focus and selection signals.
 
 The application follows the operating system appearance by default. All theme
 and typography roles remain configurable through normal settings.
