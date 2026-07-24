@@ -3090,3 +3090,15 @@ Completed for the installed generated-visual-profile source slice:
 - added focused pure assertions and static regression guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Session Rail creation-priority source slice:
+
+- made an empty ready Workspace's only useful transition a filled **Start
+  Terminal Session** action;
+- included the target Workspace in accessibility output and retained explicit
+  destination wording in the tooltip;
+- demoted populated-overview **New Terminal** to an outlined utility so the
+  Session list remains primary;
+- added static hierarchy and copy regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

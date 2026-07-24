@@ -5316,19 +5316,19 @@ impl Sidebar {
                                 SharedString::from(format!(
                                     "{id_prefix}empty-project-new-terminal-{ix}"
                                 )),
-                                "New Terminal",
+                                "Start Terminal Session",
                             )
                             .full_width()
                             .size(ButtonSize::Medium)
-                            .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
+                            .style(ButtonStyle::Filled)
                             .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
                             .aria_label(SharedString::from(format!(
-                                "New Terminal in {}",
+                                "Start Terminal Session in {}",
                                 workspace_name.as_ref()
                             )))
                             .tooltip(move |_, cx| {
                                 Tooltip::for_action(
-                                    "New Terminal in This Workspace",
+                                    "Start Terminal Session in This Workspace",
                                     &NewCenterTerminal::default(),
                                     cx,
                                 )
@@ -12596,7 +12596,7 @@ impl Sidebar {
                             this.child(
                                 Button::new("new-session", "New Terminal")
                                     .size(ButtonSize::Medium)
-                                    .style(ButtonStyle::Filled)
+                                    .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
                                     .start_icon(
                                         Icon::new(IconName::Terminal).size(IconSize::XSmall),
                                     )

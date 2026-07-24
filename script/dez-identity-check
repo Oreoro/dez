@@ -352,7 +352,7 @@ reject_pattern crates/sidebar/src/sidebar.rs \
     '"(No running sessions|Start a terminal to begin|Open Folder…)"' \
     'the compact Session Rail start state has regained duplicate or folder-scoped copy'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn active_workspace_terminal_destination_label.*?"New Terminal in Main Work Area of Active Workspace".*?Button::new\("no-results-new-terminal", "Start Terminal Session"\).*?ButtonStyle::Filled.*?aria_label\(active_workspace_terminal_destination_label\(\)\).*?Button::new\("new-session", "New Terminal"\).*?aria_label\(active_workspace_terminal_destination_label\(\)\)' \
+    'fn active_workspace_terminal_destination_label.*?"New Terminal in Main Work Area of Active Workspace".*?Button::new\("no-results-new-terminal", "Start Terminal Session"\).*?ButtonStyle::Filled.*?aria_label\(active_workspace_terminal_destination_label\(\)\).*?Button::new\("new-session", "New Terminal"\).*?ButtonStyle::OutlinedCustom.*?aria_label\(active_workspace_terminal_destination_label\(\)\)' \
     'global Session Rail terminal actions can regress to an ambiguous Workspace or Agent destination'
 reject_pattern crates/sidebar/src/sidebar.rs \
     'when\(!is_focused, \|this\| this\.visible_on_hover\(&group_name\)\)' \
@@ -537,6 +537,9 @@ require_multiline_pattern crates/diagnostics/src/items.rs \
 require_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\("Ready for a session"\)' \
     'empty Workspace groups regress to repeated absence copy'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'Label::new\("Ready for a session"\).*?empty-project-new-terminal-\{ix\}.*?"Start Terminal Session".*?ButtonStyle::Filled.*?"Start Terminal Session in \{\}".*?"Start Terminal Session in This Workspace"' \
+    'an empty Workspace can regress to visually demoting or ambiguously naming its only useful action'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn default_new_session_target\(\) -> NewEntryTarget \{[[:space:]]*NewEntryTarget::Terminal' \
     'the Session Rail default creation path is no longer terminal-first'

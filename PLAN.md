@@ -2558,3 +2558,9 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   all unrelated settings. Official Zed and arbitrary custom profiles remain
   excluded. The local generated profile was aligned directly to JetBrains Mono
   and system-selected Lumin Light/Lumin Blur without a build or app launch.
+- 2026-07-25: Corrected Session Rail creation priority. A ready Workspace with
+  no Session now gets a filled, explicitly scoped **Start Terminal Session**
+  action. Once Sessions exist, the overview's **New Terminal** control remains
+  visible but becomes outlined so repeat creation does not compete with the
+  Session list, attention, and review. This is source-only; no build or visual
+  launch was performed.

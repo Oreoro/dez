@@ -94,6 +94,9 @@ edit/run/supervise/review loop, offers one filled **Open Workspace…** action,
 and keeps **Open Scratch Terminal** as the outlined pathless alternative. With
 an active Workspace but no Session, the primary recovery action is **Start
 Terminal Session**. All actions name their destination in accessibility output.
+Once one or more Sessions exist, the overview's **New Terminal** control
+becomes an outlined utility because the Session list—not repeat creation—is the
+primary content.
 
 Workspace Tools and Agent are ordinary pane-grid regions with stable placement
 and normal focus behavior. Hiding one keeps its items available, returns focus
@@ -509,6 +512,11 @@ defer it.
   generated comment promised Lumin system behavior. The migration recognizes
   that exact signature and upgrades UI font, appearance mode, and light theme
   together. Deliberate custom settings and official Zed remain untouched.
+- **2026-07-25: Session creation emphasis follows state.** A ready Workspace
+  with no Session gives **Start Terminal Session** the filled treatment and
+  names the target Workspace. After Sessions exist, the overview's **New
+  Terminal** remains visible but becomes an outlined utility so it does not
+  compete with supervision and review.
 - **2026-07-23: Public source must explain the product and its evidence
   boundary.** The canonical repository front page names Dez, explains how the
   Session Rail, Workspace Tools, Main Work Area, Agent, and one

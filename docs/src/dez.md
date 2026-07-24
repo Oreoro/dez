@@ -92,6 +92,11 @@ profile that pinned `.ZedSans`, One Light, and light-only appearance migrates
 to JetBrains Mono with system-selected Lumin Light/Lumin Blur. Custom font or
 theme choices are not treated as generated defaults.
 
+Creation emphasis also follows state. A ready Workspace without a Session
+shows a filled **Start Terminal Session** action. Once work exists, **New
+Terminal** remains available as an outlined utility while the Session list
+becomes the primary content.
+
 ## The core objects
 
 You only need four concepts for everyday use:
