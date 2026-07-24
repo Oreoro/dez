@@ -334,6 +334,15 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
 require_multiline_pattern crates/gpui/src/app.rs \
     'pub const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs\(2\).*?block_with_timeout\(SHUTDOWN_TIMEOUT, futures\)' \
     'normal session persistence can regress to the former 200 ms aggregate quit race'
+require_multiline_pattern crates/workspace/src/item.rs \
+    'pub struct SerializableItemUnavailable.*?pub fn new.*?impl std::error::Error for SerializableItemUnavailable' \
+    'stale saved tabs can regress to an untyped restore failure'
+require_multiline_pattern crates/agent_ui/src/agent_thread_item.rs \
+    'Ok\(None\).*?SerializableItemUnavailable::new\("Agent Session"\)' \
+    'missing Agent Session tab metadata can regress to an invisible generic restore error'
+require_multiline_pattern crates/workspace/src/workspace.rs \
+    'error\.downcast_ref::<SerializableItemUnavailable>.*?"\{\} skipped a stale \{item_kind\} tab during restore\. Open Agent History to recover any session that still has metadata\.".*?paths::APP_NAME' \
+    'stale Agent Session tabs can be omitted without an explicit recovery notice'
 require_multiline_pattern crates/git_ui/src/git_panel.rs \
     'paths::APP_NAME == "Zed".*?"Changes".*?"Git Changes".*?paths::APP_NAME == "Zed".*?"History".*?"Git History"' \
     'Dez Git tabs can regress to labels that conflict with Agent History'

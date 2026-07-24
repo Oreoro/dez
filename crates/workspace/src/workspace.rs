@@ -78,7 +78,8 @@ use gpui::{
 pub use history_manager::*;
 pub use item::{
     FollowableItem, FollowableItemHandle, Item, ItemCloseConfirmation, ItemHandle, ItemSettings,
-    PreviewTabsSettings, ProjectItem, SerializableItem, SerializableItemHandle, WeakItemHandle,
+    PreviewTabsSettings, ProjectItem, SerializableItem, SerializableItemHandle,
+    SerializableItemUnavailable, WeakItemHandle,
 };
 use itertools::Itertools;
 use language::{Buffer, LanguageRegistry, Rope, language_settings::all_language_settings};
@@ -7613,8 +7614,36 @@ impl Workspace {
                             }) else {
                                 continue;
                             };
-                            let Some(item_handle) = deserialize_task.await.log_err() else {
-                                continue;
+                            let item_handle = match deserialize_task.await {
+                                Ok(item_handle) => item_handle,
+                                Err(error) => {
+                                    if let Some(unavailable) =
+                                        error.downcast_ref::<SerializableItemUnavailable>()
+                                    {
+                                        let item_kind = unavailable.item_kind();
+                                        this.update_in(cx, |workspace, _window, cx| {
+                                            struct StaleSerializableItemRestoreToast;
+                                            workspace.show_toast(
+                                                Toast::new(
+                                                    NotificationId::unique::<
+                                                        StaleSerializableItemRestoreToast,
+                                                    >(),
+                                                    format!(
+                                                        "{} skipped a stale {item_kind} tab during restore. Open Agent History to recover any session that still has metadata.",
+                                                        paths::APP_NAME
+                                                    ),
+                                                ),
+                                                cx,
+                                            );
+                                        })
+                                        .ok();
+                                    } else {
+                                        log::error!(
+                                            "failed to restore saved {serialized_item_kind} tab: {error:#}"
+                                        );
+                                    }
+                                    continue;
+                                }
                             };
                             let restored_item_id = item_handle.item_id();
 

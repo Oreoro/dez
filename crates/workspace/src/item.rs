@@ -496,6 +496,38 @@ pub trait SerializableItem: Item {
     fn should_serialize(&self, event: &Self::Event) -> bool;
 }
 
+/// Signals that a saved tab references item metadata that no longer exists.
+///
+/// Restore callers treat this as recoverable stale state: omit the tab, explain
+/// the recovery path to the user, and allow the next Workspace serialization to
+/// heal the saved layout.
+#[derive(Debug)]
+pub struct SerializableItemUnavailable {
+    item_kind: &'static str,
+}
+
+impl SerializableItemUnavailable {
+    pub fn new(item_kind: &'static str) -> Self {
+        Self { item_kind }
+    }
+
+    pub fn item_kind(&self) -> &'static str {
+        self.item_kind
+    }
+}
+
+impl std::fmt::Display for SerializableItemUnavailable {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            formatter,
+            "saved {} metadata is unavailable",
+            self.item_kind
+        )
+    }
+}
+
+impl std::error::Error for SerializableItemUnavailable {}
+
 pub trait SerializableItemHandle: ItemHandle {
     fn serialized_item_kind(&self) -> &'static str;
     fn serialize(

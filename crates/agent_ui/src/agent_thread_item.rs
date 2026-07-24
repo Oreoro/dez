@@ -20,8 +20,8 @@ use language_model::LanguageModelRegistry;
 use project::{AgentId, Project, ProjectItem as _};
 use ui::{Color, Icon, IconName, IconSize, IntoElement, Label, LabelCommon, prelude::*};
 use workspace::{
-    ItemCloseConfirmation, ItemId, PathList, SaveIntent, SerializableItem, Workspace, WorkspaceId,
-    delete_unloaded_items,
+    ItemCloseConfirmation, ItemId, PathList, SaveIntent, SerializableItem,
+    SerializableItemUnavailable, Workspace, WorkspaceId, delete_unloaded_items,
     item::{Item, ItemEvent, TabContentParams},
 };
 
@@ -411,7 +411,9 @@ impl SerializableItem for AgentThreadItem {
         let db = AgentThreadItemDb::global(cx);
         let thread_id = match db.get_thread_id(item_id, workspace_id) {
             Ok(Some(thread_id)) => thread_id,
-            Ok(None) => return Task::ready(Err(anyhow!("missing serialized agent thread item"))),
+            Ok(None) => {
+                return Task::ready(Err(SerializableItemUnavailable::new("Agent Session").into()));
+            }
             Err(error) => return Task::ready(Err(error)),
         };
         let reload = ThreadMetadataStore::global(cx).read(cx).reload_task();

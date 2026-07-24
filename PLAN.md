@@ -2327,3 +2327,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   restoration reaches ready, avoiding duplicate computation during startup.
   Pure state-copy assertions and identity guards protect the contract. This is
   source-only and is not present in the installed artifact.
+- 2026-07-24: Replaced the opaque `missing serialized agent thread item`
+  startup error with typed stale-tab recovery. When an Agent Session tab points
+  to metadata that no longer exists, Dez omits only that tab and shows one
+  persistent notice directing the user to Agent History for any recoverable
+  Session. The next Workspace serialization heals the saved layout; unrelated
+  deserialization errors remain visible as errors. Identity guards cover the
+  typed boundary and notice. This is source-only pending a new artifact.
