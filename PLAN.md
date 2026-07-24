@@ -455,7 +455,10 @@ with new labels.
       Commit `a9b1a961c0` then removes that duplicate project/branch row from
       Dez's footer entirely because the Session Rail group hierarchy already
       owns it; essential Restricted Mode and embedded application-menu content
-      can still reopen the row.
+      can still reopen the row. The terminal context strip now clips its
+      shrinkable lifecycle/repository metadata before it can paint through the
+      fixed Files, Review Changes, and Session Details action group; full
+      values remain available in Session Details.
 - [ ] Avoid stacked utility chrome that steals space from supervised work.
       Commit `abc4f8bedb` removes Dez's dedicated Command Search footer row,
       keeps the action as a labeled icon in the existing utility bar, hides the
@@ -2472,3 +2475,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   editor line is never transparent. The theme guard measures each state on its
   actual composited panel/editor surface and checks the ordering as well as the
   floor. This is source-only; no build or visual launch was performed.
+- 2026-07-25: Hardened the terminal context strip for compact panes. Its
+  lifecycle/repository cluster is now explicitly overflow-hidden inside the
+  shrinkable region, while Files, Review Changes, Open Workspace, and Session
+  Details remain fixed-priority actions. Hidden metadata is still available in
+  Session Details and in the toolbar's accessible name. The identity guard
+  protects this layout order. This is source-only; no build or visual launch
+  was performed.

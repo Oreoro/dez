@@ -74,6 +74,8 @@ starts another terminal or creates a second project context.
 
 **Files** and **Review Changes** are idempotent destination actions. Repeating
 them keeps the requested tool visible and focused instead of toggling it closed.
+At narrow pane widths, lifecycle/repository metadata clips before the fixed
+action group, and its full values remain available in **Session Details**.
 
 Inside Session Details, **Evidence** explains the boundary behind those facts:
 lifecycle is observed from the Terminal and Host, Git counts belong to the

@@ -2361,6 +2361,7 @@ impl TerminalView {
                     h_flex()
                         .min_w_0()
                         .flex_1()
+                        .overflow_hidden()
                         .gap_2()
                         .child(
                             h_flex()

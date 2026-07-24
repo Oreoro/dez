@@ -2907,3 +2907,16 @@ Completed for the Lumin interaction-state source slice:
 - updated public and execution documentation;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the compact terminal-context source slice:
+
+- made lifecycle/repository metadata the explicitly shrinkable context-strip
+  region;
+- clipped that metadata before it can paint into the fixed action group;
+- preserved Files, Review Changes, Open Workspace, and Session Details as
+  higher-priority controls;
+- retained full hidden values in Session Details and the toolbar accessibility
+  label;
+- added a static layout-order guard and updated terminal/product plans;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
