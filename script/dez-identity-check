@@ -658,6 +658,21 @@ require_pattern assets/keymaps/default-linux.json \
 require_pattern assets/keymaps/default-windows.json \
     '"ctrl-n": "sidebar::NewSessionInGroup"' \
     'the Windows Session Rail creation shortcut is not terminal-first'
+require_multiline_pattern assets/keymaps/default-macos.json \
+    '"shift-enter": "sidebar::ReturnToSelectedSession".*?"shift-f": "sidebar::OpenSelectedSessionFiles".*?"shift-g": "sidebar::ReviewSelectedSessionChanges".*?"shift-v": "sidebar::OpenSelectedReviewBrief"' \
+    'the macOS Session Rail lost its selected-session IDE handoff'
+require_multiline_pattern assets/keymaps/default-linux.json \
+    '"shift-enter": "sidebar::ReturnToSelectedSession".*?"shift-f": "sidebar::OpenSelectedSessionFiles".*?"shift-g": "sidebar::ReviewSelectedSessionChanges".*?"shift-v": "sidebar::OpenSelectedReviewBrief"' \
+    'the Linux Session Rail lost its selected-session IDE handoff'
+require_multiline_pattern assets/keymaps/default-windows.json \
+    '"shift-enter": "sidebar::ReturnToSelectedSession".*?"shift-f": "sidebar::OpenSelectedSessionFiles".*?"shift-g": "sidebar::ReviewSelectedSessionChanges".*?"shift-v": "sidebar::OpenSelectedReviewBrief"' \
+    'the Windows Session Rail lost its selected-session IDE handoff'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'ReturnToSelectedSession,.*?OpenSelectedSessionFiles,.*?ReviewSelectedSessionChanges,.*?fn selected_or_active_session.*?fn return_to_selected_session.*?fn open_selected_session_files.*?ToggleFilesFocus.*?fn review_selected_session_changes.*?OpenAgentDiff.*?ToggleGitFocus.*?FocusChanges' \
+    'selected Session Rail rows can regress to creating duplicate or disconnected IDE context'
+require_multiline_pattern crates/command_palette/src/command_palette.rs \
+    '"sidebar::OpenSelectedReviewBrief".*?"session_rail::OpenSelectedSessionDetails".*?"sidebar::ReturnToSelectedSession".*?"session rail: return to selected session".*?"sidebar::OpenSelectedSessionFiles".*?"session rail: open selected session files".*?"sidebar::ReviewSelectedSessionChanges".*?"session rail: review selected session changes"' \
+    'the Command Palette can regress to implementation-shaped selected-session actions'
 require_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\("new-session", "New Terminal"\)' \
     'the primary Session Rail creation action is ambiguous'

@@ -501,8 +501,10 @@ with new labels.
       the selected Review Brief on every supported desktop keymap; tooltips
       expose both bindings. Commit `57290c27c3` makes the rail's platform and
       Vim creation bindings terminal-first through a dedicated New Session
-      action; the separate New Agent Thread command remains available. Broader
-      Host/actor switching remains open.
+      action; the separate New Agent Thread command remains available. The
+      selected-session handoff now also exposes Shift+Enter to return,
+      Shift+F for Files, and Shift+G for Agent or Git change review across the
+      three default desktop keymaps. Broader Host/actor switching remains open.
 - [ ] Preserve selection and focus intentionally when filtering, switching
       scope, opening review, moving a Surface, or returning from an overlay.
       Session Rail rebuilds now preserve keyboard selection by stable session
@@ -522,7 +524,9 @@ with new labels.
 - [ ] Ensure hover-only actions also exist in context menus or command palette
       and expose accurate accessibility names. Session Rail review, terminal
       lifecycle, attention, hook setup, and evidence-copy actions now have
-      pointer/context parity; the app-wide audit remains open.
+      pointer/context parity. Files, Review Changes, Session Details, and Return
+      are now named Session Rail actions with keyboard routes; the app-wide
+      audit remains open.
 - [ ] Keep destructive actions visually and spatially separate from focus,
       detach, close, acknowledge, archive, and ordinary navigation. Session
       Rail now renders detached/reconnecting termination as a red Stop action
@@ -2354,3 +2358,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   content; official Zed keeps its inherited titles. Focused assertions and
   identity guards protect both product branches. This is source-only; no build
   or visual launch was performed.
+- 2026-07-25: Unified the selected Session Rail handoff in source. Every
+  supported desktop keymap now exposes Shift+Enter to return to the existing
+  selected Session, Shift+F to open its Workspace files, Shift+G to open the
+  ownership-appropriate Agent or Git change review, and Shift+V to open Session
+  details. The Command Palette uses the same Session Rail vocabulary. The
+  implementation activates the existing Terminal or Agent Session and its
+  Workspace before opening IDE context, so the workflow creates no duplicate
+  terminal or project. This remains source-only; no build or visual launch was
+  performed.

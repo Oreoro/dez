@@ -2775,3 +2775,16 @@ Still required after the consolidated gate:
 
 The build gate has run, but the public release remains unverified until these
 remaining runtime, visual, accessibility, distribution, and partner gates pass.
+
+Completed for the selected-session IDE handoff source slice:
+
+- made Return, Files, Review Changes, and Session Details explicit Session Rail
+  actions instead of depending on normal-width hover controls;
+- added Shift+Enter, Shift+F, Shift+G, and Shift+V routes to all three default
+  desktop keymaps;
+- routed Agent Sessions to their Agent change review and Terminal Sessions to
+  Git Changes after activating the existing Session and owning Workspace;
+- exposed stable Session Rail vocabulary in the Command Palette;
+- documented the workflow in the public product and terminal guides;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

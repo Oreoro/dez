@@ -34,6 +34,29 @@ action opens a main-area terminal Surface in the active Workspace. You can:
 - select its Session Rail row to return to the existing Surface; or
 - reattach a Host-owned terminal Session when durable terminals are enabled.
 
+### Moving from a Session into the IDE
+
+The selected Session Rail row and the active standalone terminal expose one
+shared handoff:
+
+| Intent                         | Session Rail shortcut    |
+| ------------------------------ | ------------------------ |
+| Return to the existing Session | `Enter` or `Shift+Enter` |
+| Open its Workspace files       | `Shift+F`                |
+| Review its changes             | `Shift+G`                |
+| Open its Session details       | `Shift+V`                |
+
+The terminal context bar exposes **Files**, **Review Changes**, and **Session
+Details** directly. The Session Rail context menu retains the same actions when
+a compact row has no room for every control. The Command Palette names them
+under **Session Rail**.
+
+These actions first activate the selected Session and its owning Workspace.
+**Files** reveals the existing Workspace tree. **Review Changes** opens the
+Agent change review for an Agent Session and Git Changes for a Terminal
+Session. **Session Details** opens the evidence-backed run summary. None of
+these actions starts another terminal or creates a second project context.
+
 ## Working with Multiple Terminals
 
 Create additional terminals from **New Terminal**. Each terminal is an

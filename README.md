@@ -48,6 +48,12 @@ open a Workspace
 → resume without rebuilding context
 ```
 
+From a selected Session Rail row, `Enter` returns to the existing Session,
+`Shift+F` opens its Workspace files, `Shift+G` opens its change review, and
+`Shift+V` opens evidence-backed Session details. The same Files, Review Changes,
+and Session Details handoff appears on standalone terminals; it never creates a
+duplicate shell or project.
+
 Read [What is Dez?](./docs/src/dez.md) for the product model and a concrete
 workflow.
 

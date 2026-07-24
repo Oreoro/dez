@@ -129,6 +129,12 @@ gpui::actions!(
         ToggleThreadHistory,
         /// Shows only sessions and agents that currently need attention.
         ToggleAttentionFilter,
+        /// Returns focus to the selected terminal or Agent Session.
+        ReturnToSelectedSession,
+        /// Opens the Files surface for the selected session's Workspace.
+        OpenSelectedSessionFiles,
+        /// Opens the change review surface owned by the selected session.
+        ReviewSelectedSessionChanges,
         /// Opens a deterministic evidence-backed review brief for the selected Run.
         OpenSelectedReviewBrief,
     ]
@@ -6701,6 +6707,33 @@ impl Sidebar {
         }
     }
 
+    fn selected_or_active_session(&self) -> Option<ListEntry> {
+        if let Some(ix) = self.selection {
+            return self
+                .contents
+                .entries
+                .get(ix)
+                .filter(|entry| !matches!(entry, ListEntry::ProjectHeader { .. }))
+                .cloned();
+        }
+
+        self.contents.entries.iter().find_map(|entry| {
+            let is_active = match (entry, self.active_entry.as_ref()) {
+                (ListEntry::Thread(thread), Some(ActiveEntry::Thread { thread_id, .. })) => {
+                    thread.metadata.thread_id == *thread_id
+                }
+                (
+                    ListEntry::Terminal(terminal),
+                    Some(ActiveEntry::Terminal { terminal_id, .. }),
+                ) => terminal.metadata.terminal_id == *terminal_id,
+                (ListEntry::ProjectHeader { .. }, _)
+                | (ListEntry::Thread(_), _)
+                | (ListEntry::Terminal(_), _) => false,
+            };
+            is_active.then(|| entry.clone())
+        })
+    }
+
     fn confirm(&mut self, _: &Confirm, window: &mut Window, cx: &mut Context<Self>) {
         if self.finish_active_rename(window, cx) {
             return;
@@ -6745,6 +6778,117 @@ impl Sidebar {
                 let source = terminal.source.clone();
                 self.activate_terminal_entry(metadata, workspace, source, false, window, cx);
             }
+        }
+    }
+
+    fn return_to_selected_session(
+        &mut self,
+        _: &ReturnToSelectedSession,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(entry) = self.selected_or_active_session() else {
+            return;
+        };
+
+        match entry {
+            ListEntry::Thread(thread) => match &thread.workspace {
+                ThreadEntryWorkspace::Open(workspace) => {
+                    self.activate_thread(thread.metadata.clone(), workspace, false, window, cx);
+                }
+                ThreadEntryWorkspace::Closed {
+                    folder_paths,
+                    project_group_key,
+                } => self.open_workspace_and_activate_thread(
+                    thread.metadata,
+                    folder_paths.clone(),
+                    project_group_key,
+                    window,
+                    cx,
+                ),
+            },
+            ListEntry::Terminal(terminal) => self.activate_terminal_entry(
+                terminal.metadata,
+                terminal.workspace,
+                terminal.source,
+                false,
+                window,
+                cx,
+            ),
+            ListEntry::ProjectHeader { .. } => {}
+        }
+    }
+
+    fn open_selected_session_files(
+        &mut self,
+        _: &OpenSelectedSessionFiles,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(entry) = self.selected_or_active_session() else {
+            return;
+        };
+
+        match entry {
+            ListEntry::Thread(thread) => {
+                let ThreadEntryWorkspace::Open(workspace) = thread.workspace else {
+                    return;
+                };
+                self.activate_thread(thread.metadata, &workspace, true, window, cx);
+                window.dispatch_action(ToggleFilesFocus.boxed_clone(), cx);
+            }
+            ListEntry::Terminal(terminal) => {
+                if !matches!(&terminal.workspace, ThreadEntryWorkspace::Open(_)) {
+                    return;
+                }
+                self.activate_terminal_entry(
+                    terminal.metadata,
+                    terminal.workspace,
+                    terminal.source,
+                    true,
+                    window,
+                    cx,
+                );
+                window.dispatch_action(ToggleFilesFocus.boxed_clone(), cx);
+            }
+            ListEntry::ProjectHeader { .. } => {}
+        }
+    }
+
+    fn review_selected_session_changes(
+        &mut self,
+        _: &ReviewSelectedSessionChanges,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(entry) = self.selected_or_active_session() else {
+            return;
+        };
+
+        match entry {
+            ListEntry::Thread(thread) => {
+                let ThreadEntryWorkspace::Open(workspace) = thread.workspace else {
+                    return;
+                };
+                self.activate_thread(thread.metadata, &workspace, true, window, cx);
+                window.dispatch_action(OpenAgentDiff.boxed_clone(), cx);
+            }
+            ListEntry::Terminal(terminal) => {
+                if !matches!(&terminal.workspace, ThreadEntryWorkspace::Open(_)) {
+                    return;
+                }
+                self.activate_terminal_entry(
+                    terminal.metadata,
+                    terminal.workspace,
+                    terminal.source,
+                    true,
+                    window,
+                    cx,
+                );
+                window.dispatch_action(ToggleGitFocus.boxed_clone(), cx);
+                window.dispatch_action(FocusChanges.boxed_clone(), cx);
+            }
+            ListEntry::ProjectHeader { .. } => {}
         }
     }
 
@@ -9524,28 +9668,7 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let entry = self
-            .selection
-            .and_then(|ix| self.contents.entries.get(ix).cloned())
-            .or_else(|| {
-                self.contents.entries.iter().find_map(|entry| {
-                    let is_active = match (entry, self.active_entry.as_ref()) {
-                        (
-                            ListEntry::Thread(thread),
-                            Some(ActiveEntry::Thread { thread_id, .. }),
-                        ) => thread.metadata.thread_id == *thread_id,
-                        (
-                            ListEntry::Terminal(terminal),
-                            Some(ActiveEntry::Terminal { terminal_id, .. }),
-                        ) => terminal.metadata.terminal_id == *terminal_id,
-                        (ListEntry::ProjectHeader { .. }, _)
-                        | (ListEntry::Thread(_), _)
-                        | (ListEntry::Terminal(_), _) => false,
-                    };
-                    is_active.then(|| entry.clone())
-                })
-            });
-        let Some(entry) = entry else {
+        let Some(entry) = self.selected_or_active_session() else {
             return;
         };
         match entry {
@@ -10468,7 +10591,18 @@ impl Sidebar {
                                         .icon_size(IconSize::Small)
                                         .tab_index(0isize)
                                         .aria_label("Review Changes")
-                                        .tooltip(Tooltip::text("Review Changes"))
+                                        .aria_keyshortcuts("Shift+G")
+                                        .tooltip({
+                                            let focus_handle = focus_handle.clone();
+                                            move |_window, cx| {
+                                                Tooltip::for_action_in(
+                                                    "Review Changes",
+                                                    &ReviewSelectedSessionChanges,
+                                                    &focus_handle,
+                                                    cx,
+                                                )
+                                            }
+                                        })
                                         .on_click(cx.listener(move |this, _, window, cx| {
                                             if let ThreadEntryWorkspace::Open(workspace) =
                                                 &owner_workspace
@@ -11064,7 +11198,18 @@ impl Sidebar {
                                         "Review {changed_files} changed {}",
                                         if changed_files == 1 { "file" } else { "files" }
                                     ))
-                                    .tooltip(Tooltip::text("Review Changes"))
+                                    .aria_keyshortcuts("Shift+G")
+                                    .tooltip({
+                                        let focus_handle = focus_handle.clone();
+                                        move |_window, cx| {
+                                            Tooltip::for_action_in(
+                                                "Review Changes",
+                                                &ReviewSelectedSessionChanges,
+                                                &focus_handle,
+                                                cx,
+                                            )
+                                        }
+                                    })
                                     .on_click({
                                         let sidebar = sidebar.clone();
                                         move |_, window, cx| {
@@ -13597,6 +13742,9 @@ impl Render for Sidebar {
             .on_action(cx.listener(Self::new_terminal_thread))
             .on_action(cx.listener(Self::toggle_archive))
             .on_action(cx.listener(Self::toggle_attention_filter))
+            .on_action(cx.listener(Self::return_to_selected_session))
+            .on_action(cx.listener(Self::open_selected_session_files))
+            .on_action(cx.listener(Self::review_selected_session_changes))
             .on_action(cx.listener(Self::open_selected_review_brief))
             .on_action(cx.listener(Self::focus_sidebar_filter))
             .on_action(cx.listener(Self::on_toggle_thread_switcher))

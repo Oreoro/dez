@@ -954,6 +954,9 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
         }
         "sidebar::ToggleThreadSwitcher" => return "session_rail::SwitchSessions".to_owned(),
         "sidebar::ToggleThreadHistory" => return "session_rail::ToggleAgentHistory".to_owned(),
+        "sidebar::OpenSelectedReviewBrief" => {
+            return "session_rail::OpenSelectedSessionDetails".to_owned();
+        }
         "zed_actions::OpenProjectSettings" => return "workspace::OpenSettings".to_owned(),
         "zed::OpenProjectSettingsFile" => return "workspace::OpenSettingsFile".to_owned(),
         _ => {}
@@ -1165,6 +1168,26 @@ mod tests {
         assert_eq!(
             humanize_action_name_for_product("sidebar::ToggleThreadSwitcher", "Dez"),
             "session rail: switch sessions"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::ReturnToSelectedSession", "Dez"),
+            "session rail: return to selected session"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::OpenSelectedSessionFiles", "Dez"),
+            "session rail: open selected session files"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::ReviewSelectedSessionChanges", "Dez"),
+            "session rail: review selected session changes"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::OpenSelectedReviewBrief", "Dez"),
+            "session rail: open selected session details"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::OpenSelectedReviewBrief", "Zed"),
+            "sidebar: open selected review brief"
         );
         assert_eq!(
             humanize_action_name_for_product("agent::ArchiveSelectedThread", "Dez"),
