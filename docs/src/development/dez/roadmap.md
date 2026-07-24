@@ -2814,3 +2814,15 @@ Completed for the audited focus-root source slice:
 - added a static guard for every repaired source owner;
 - retained source-only evidence: the next rebuilt artifact must still prove a
   clean accessibility log through the keyboard workflow.
+
+Completed for the post-activation orientation source slice:
+
+- kept **Run → Supervise → Review** available after the welcome guide
+  disappears;
+- placed **How Dez Works** inside the existing **Session Details** disclosure
+  instead of adding another permanent row or control;
+- made the trigger describe both purposes to assistive-technology and pointer
+  users;
+- documented the product model and protected its copy with a static guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

@@ -680,6 +680,9 @@ with new labels.
       Terminal so zoom and longer copy do not crush the first-run actions.
       Dez also exposes its isolated Install CLI action instead of hiding it
       behind the official Zed product gate; install interaction remains open.
+      Once a terminal exists, the guide remains available inside **Session
+      Details** as **How Dez Works**, preserving **Run → Supervise → Review**
+      without adding another permanent help row.
 - [ ] Group Dez settings by Workspace, Sessions, Agents, Attention, Evidence,
       Appearance, Privacy, and Advanced compatibility; hide experimental
       internals from the default path. The settings shell now names Workspace
@@ -2402,3 +2405,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   guards protect every owner. This is source evidence only; the rebuilt
   artifact must still prove that its accessibility log remains clean through
   the keyboard workflow.
+- 2026-07-25: Preserved product orientation after first activation without
+  adding more shell chrome. The terminal's existing **Session Details**
+  disclosure now contains **How Dez Works**: run computation in the Terminal
+  Session, supervise live state and attention in Session Rail, then review the
+  same Workspace through Files and Git. The trigger names both purposes for
+  assistive technology and pointer users. This is source-only; no build or
+  visual launch was performed.

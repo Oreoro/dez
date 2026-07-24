@@ -51,6 +51,12 @@ Details** directly. The Session Rail context menu retains the same actions when
 a compact row has no room for every control. The Command Palette names them
 under **Session Rail**.
 
+After the welcome guide disappears, **Session Details** keeps a compact **How
+Dez Works** explanation available: run computation in this Terminal Session,
+supervise live state and attention in the Session Rail, then review the same
+Workspace through Files and Git. This keeps orientation one click away without
+adding a permanent help row.
+
 These actions first activate the selected Session and its owning Workspace.
 **Files** reveals the existing Workspace tree. **Review Changes** opens the
 Agent change review for an Agent Session. For a Terminal Session, it reveals

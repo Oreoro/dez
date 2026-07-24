@@ -2288,7 +2288,8 @@ impl TerminalView {
                 .style(ButtonStyle::Subtle)
                 .start_icon(Icon::new(IconName::Info).size(IconSize::XSmall))
                 .tab_index(0isize)
-                .aria_label("Open Terminal Session Details"),
+                .aria_label("Open Terminal Session Details and How Dez Works")
+                .tooltip(Tooltip::text("Session Details and How Dez Works")),
             )
             .menu(move |window, cx| {
                 let details_working_directory = details_working_directory.clone();
@@ -2314,6 +2315,11 @@ impl TerminalView {
                             details_session_id.clone(),
                         ));
                     })
+                    .separator()
+                    .header("How Dez Works")
+                    .label("Run · computation stays in this Terminal Session.")
+                    .label("Supervise · Session Rail shows live state and attention.")
+                    .label("Review · Files and Git inspect this same Workspace.")
                 }))
             })
             .anchor(Anchor::TopRight)
