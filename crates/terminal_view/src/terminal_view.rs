@@ -155,12 +155,41 @@ fn terminal_termination_available(session_unavailable: bool, process_exited: boo
     !session_unavailable && !process_exited
 }
 
-fn terminal_termination_confirmation(is_hosted: bool, title: &str) -> (String, String) {
+fn terminal_has_persistent_owner(terminal: &Terminal, cx: &App) -> bool {
+    if !terminal.is_hosted() {
+        return false;
+    }
+    let session_id = terminal.session_id();
+    let Some(host_id) =
+        TerminalHostConnection::try_global(cx).map(|connection| connection.host_id())
+    else {
+        return false;
+    };
+    TerminalHostSnapshotStore::try_global(cx).is_some_and(|store| {
+        store
+            .read(cx)
+            .snapshots()
+            .iter()
+            .any(|snapshot| snapshot.host_id == host_id && snapshot.session_id == session_id)
+    })
+}
+
+fn terminal_ownership_label(has_persistent_owner: bool, session_unavailable: bool) -> &'static str {
+    if has_persistent_owner {
+        "Persistent Terminal Session"
+    } else if session_unavailable {
+        "Saved Terminal Session"
+    } else {
+        "Workspace Terminal Session"
+    }
+}
+
+fn terminal_termination_confirmation(has_persistent_owner: bool, title: &str) -> (String, String) {
     let title = match title.trim() {
         "" => "Terminal",
         title => title,
     };
-    let detail = if is_hosted {
+    let detail = if has_persistent_owner {
         format!(
             "“{title}” will stop immediately, including its shell and any foreground process. This cannot be undone. Its Surface will close; closing the Surface alone only detaches the persistent Terminal Session."
         )
@@ -1267,16 +1296,19 @@ impl TerminalView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let (is_hosted, process_exited) = {
+        let (has_persistent_owner, process_exited) = {
             let terminal = self.terminal.read(cx);
-            (terminal.is_hosted(), terminal.process_exited())
+            (
+                terminal_has_persistent_owner(&terminal, cx),
+                terminal.process_exited(),
+            )
         };
         if !terminal_termination_available(self.session_unavailable, process_exited) {
             return;
         }
 
         let title = self.tab_content_text(1, cx);
-        let (message, detail) = terminal_termination_confirmation(is_hosted, &title);
+        let (message, detail) = terminal_termination_confirmation(has_persistent_owner, &title);
         let confirmation = window.prompt(
             PromptLevel::Critical,
             &message,
@@ -2361,18 +2393,13 @@ impl Item for TerminalView {
         let terminal = self.terminal().read(cx);
         let session_id = terminal.session_id();
         let is_hosted = terminal.is_hosted();
+        let has_persistent_owner = terminal_has_persistent_owner(&terminal, cx);
         let status = terminal_tab_status(
             session_unavailable,
             terminal.process_exited(),
             terminal.task().map(|task| &task.status),
         );
-        let ownership = if is_hosted {
-            "Persistent Terminal Session"
-        } else if session_unavailable {
-            "Saved Terminal Session"
-        } else {
-            "Workspace Terminal Session"
-        };
+        let ownership = terminal_ownership_label(has_persistent_owner, session_unavailable);
         let working_directory = terminal
             .working_directory()
             .map(|path| path.to_string_lossy().into_owned())
@@ -3379,6 +3406,18 @@ mod tests {
         assert_eq!(terminal_close_label(true), "Detach Terminal");
         assert_eq!(terminal_close_label(false), "Close Terminal Tab");
         assert_eq!(terminal_terminate_label(), "Terminate Terminal Session…");
+        assert_eq!(
+            terminal_ownership_label(true, false),
+            "Persistent Terminal Session"
+        );
+        assert_eq!(
+            terminal_ownership_label(false, true),
+            "Saved Terminal Session"
+        );
+        assert_eq!(
+            terminal_ownership_label(false, false),
+            "Workspace Terminal Session"
+        );
         assert!(terminal_termination_available(false, false));
         assert!(!terminal_termination_available(true, false));
         assert!(!terminal_termination_available(false, true));

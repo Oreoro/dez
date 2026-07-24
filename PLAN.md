@@ -2300,3 +2300,14 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   review, and setup actions keep their space. Focused behavior assertions and
   identity guards cover the contract. This is a source-only slice; no build,
   test binary, alternate binary, or visual launch was performed.
+- 2026-07-24: Started the installed-runtime UX recovery in source. The Dez
+  welcome screen now explains one release-defining loop—**Run**, **Supervise**,
+  then **Review**—with **Open Workspace** as the primary entry and **Open
+  Scratch Terminal** as the explicit projectless path. Git tabs now say **Git
+  Changes** and **Git History**, removing the collision with Agent History.
+  Terminal ownership wording is now evidence-based: **Persistent** appears only
+  when the active external terminal Host owns the exact saved snapshot;
+  GUI-owned computation is a **Workspace Terminal Session**. Official Zed keeps
+  its upstream presentation. Identity guards cover all three product
+  boundaries. This remains source-only and is not present in the installed
+  `91a1514` artifact.

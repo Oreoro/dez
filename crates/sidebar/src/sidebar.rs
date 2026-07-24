@@ -10794,12 +10794,21 @@ impl Sidebar {
         let show_detection_confidence = agent_ui_settings.show_detection_confidence;
         let needs_attention = terminal.needs_attention;
         let has_notification = terminal.has_notification;
+        let has_persistent_owner = terminal.metadata.session_ref.is_some_and(|session_ref| {
+            let owns_active_host = TerminalHostConnection::try_global(cx)
+                .is_some_and(|connection| connection.host_id() == session_ref.host_id);
+            let owns_saved_snapshot =
+                TerminalHostSnapshotStore::try_global(cx).is_some_and(|store| {
+                    store.read(cx).snapshots().iter().any(|snapshot| {
+                        snapshot.host_id == session_ref.host_id
+                            && snapshot.session_id == session_ref.session_id
+                    })
+                });
+            owns_active_host && owns_saved_snapshot
+        });
         let can_copy_codex_hook = terminal_agent_kind == Some(TerminalAgentKind::Codex)
             && terminal.agent.is_none()
-            && terminal.metadata.session_ref.is_some_and(|session_ref| {
-                TerminalHostConnection::try_global(cx)
-                    .is_some_and(|connection| connection.host_id() == session_ref.host_id)
-            });
+            && has_persistent_owner;
         let show_copy_codex_hook =
             session_row_setup_action_visible(rail_width, can_copy_codex_hook);
         let context_review_workspace = review_workspace.clone();
@@ -10823,8 +10832,7 @@ impl Sidebar {
             TerminalEntrySource::WorkspaceItem(terminal_view) => Some(terminal_view.clone()),
             TerminalEntrySource::AgentPanel | TerminalEntrySource::HostSession(_) => None,
         };
-        let host_label =
-            terminal_row_owner_label(terminal.metadata.session_ref.is_some(), is_remote);
+        let host_label = terminal_row_owner_label(has_persistent_owner, is_remote);
         let (icon_char, title, highlight_positions) =
             match split_leading_icon_char(&display_title, &terminal.highlight_positions) {
                 Some((icon_char, title, positions)) => (Some(icon_char), title, positions),

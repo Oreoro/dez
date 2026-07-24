@@ -169,11 +169,11 @@ fn welcome_summary(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Write. Delegate. Watch. Verify."
     } else {
-        "Start in a terminal. Track attention. Review evidence."
+        "Run in the terminal. Supervise in the rail. Review in the IDE."
     }
 }
 
-const CONTENT: (Section<5>, Section<3>) = (
+const ZED_CONTENT: (Section<5>, Section<3>) = (
     Section {
         title: "Start Working",
         entries: [
@@ -211,6 +211,70 @@ const CONTENT: (Section<5>, Section<3>) = (
     },
     Section {
         title: "Personalize",
+        entries: [
+            SectionEntry {
+                icon: IconName::Settings,
+                title: "Open Settings",
+                action: &OpenSettings,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
+                icon: IconName::Keyboard,
+                title: "Customize Keymaps",
+                action: &OpenKeymap,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
+                icon: IconName::Blocks,
+                title: "Explore Extensions",
+                action: &Extensions {
+                    category_filter: None,
+                    id: None,
+                },
+                visibility_guard: SectionVisibility::Always,
+            },
+        ],
+    },
+);
+
+const DEZ_CONTENT: (Section<5>, Section<3>) = (
+    Section {
+        title: "Start a Dez Workflow",
+        entries: [
+            SectionEntry {
+                icon: IconName::FolderOpen,
+                title: "Open Workspace",
+                action: &Open::DEFAULT,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
+                icon: IconName::Terminal,
+                title: "Open Scratch Terminal",
+                action: &NEW_CENTER_TERMINAL,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
+                icon: IconName::CloudDownload,
+                title: "Clone Repository",
+                action: &GitClone,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
+                icon: IconName::Plus,
+                title: "New File",
+                action: &NewFile,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
+                icon: IconName::ListCollapse,
+                title: "Open Command Palette",
+                action: &command_palette::Toggle,
+                visibility_guard: SectionVisibility::Always,
+            },
+        ],
+    },
+    Section {
+        title: "Configure Dez",
         entries: [
             SectionEntry {
                 icon: IconName::Settings,
@@ -383,7 +447,11 @@ impl WelcomePage {
 
 impl Render for WelcomePage {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let (first_section, second_section) = CONTENT;
+        let (first_section, second_section) = if APP_NAME == "Zed" {
+            ZED_CONTENT
+        } else {
+            DEZ_CONTENT
+        };
         let first_section_entries = first_section.entries.len();
         let next_tab_index = first_section_entries + second_section.entries.len();
 
@@ -420,6 +488,23 @@ impl Render for WelcomePage {
         } else {
             format!("Welcome to {APP_NAME}")
         };
+        let workflow_steps = [
+            (
+                "1",
+                "Run",
+                "Open a Workspace, then start a Terminal Session in its codebase.",
+            ),
+            (
+                "2",
+                "Supervise",
+                "The Session Rail keeps live state, attention, and recovery visible.",
+            ),
+            (
+                "3",
+                "Review",
+                "Use Files, Git, diffs, diagnostics, and Debug on the same Workspace.",
+            ),
+        ];
 
         h_flex()
             .id("welcome-page")
@@ -479,6 +564,56 @@ impl Render for WelcomePage {
                                     ),
                             ),
                     )
+                    .when(APP_NAME != "Zed", |this| {
+                        this.child(
+                            v_flex()
+                                .id("dez-workflow")
+                                .role(gpui::Role::Region)
+                                .aria_label("How Dez works: Run, Supervise, Review")
+                                .w_full()
+                                .gap_2()
+                                .child(SectionHeader::new("How Dez Works"))
+                                .children(workflow_steps.into_iter().map(
+                                    |(number, title, description)| {
+                                        h_flex()
+                                            .w_full()
+                                            .items_start()
+                                            .gap_3()
+                                            .p_2p5()
+                                            .rounded_md()
+                                            .border_1()
+                                            .border_color(cx.theme().colors().border_variant)
+                                            .bg(cx.theme().colors().panel_background)
+                                            .child(
+                                                h_flex()
+                                                    .flex_none()
+                                                    .size_6()
+                                                    .rounded_full()
+                                                    .bg(cx.theme().colors().element_selected)
+                                                    .items_center()
+                                                    .justify_center()
+                                                    .child(
+                                                        Label::new(number)
+                                                            .buffer_font(cx)
+                                                            .size(LabelSize::XSmall)
+                                                            .color(Color::Accent),
+                                                    ),
+                                            )
+                                            .child(
+                                                v_flex()
+                                                    .min_w_0()
+                                                    .gap_0p5()
+                                                    .child(Label::new(title).size(LabelSize::Small))
+                                                    .child(
+                                                        Label::new(description)
+                                                            .size(LabelSize::XSmall)
+                                                            .color(Color::Muted),
+                                                    ),
+                                            )
+                                    },
+                                )),
+                        )
+                    })
                     .child(first_section.render(Default::default(), &self.focus_handle))
                     .child(second_section)
                     .when(
@@ -692,8 +827,11 @@ mod tests {
     fn dez_welcome_summary_teaches_the_workflow_without_a_promotion_card() {
         assert_eq!(
             welcome_summary("Dez"),
-            "Start in a terminal. Track attention. Review evidence."
+            "Run in the terminal. Supervise in the rail. Review in the IDE."
         );
         assert_eq!(welcome_summary("Zed"), "Write. Delegate. Watch. Verify.");
+        assert_eq!(DEZ_CONTENT.0.entries[0].title, "Open Workspace");
+        assert_eq!(DEZ_CONTENT.0.entries[1].title, "Open Scratch Terminal");
+        assert_eq!(ZED_CONTENT.0.entries[0].title, "New Terminal");
     }
 }

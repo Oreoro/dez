@@ -6284,7 +6284,12 @@ impl GitPanel {
                 ElementId::Name("changes-tab".into()),
                 active_tab == GitPanelTab::Changes,
                 true,
-                "Changes".into(),
+                if paths::APP_NAME == "Zed" {
+                    "Changes"
+                } else {
+                    "Git Changes"
+                }
+                .into(),
                 GitPanelTab::Changes,
                 ActivateChangesTab.boxed_clone(),
             ))
@@ -6297,7 +6302,12 @@ impl GitPanel {
                 ElementId::Name("history-tab".into()),
                 active_tab != GitPanelTab::Changes,
                 false,
-                "History".into(),
+                if paths::APP_NAME == "Zed" {
+                    "History"
+                } else {
+                    "Git History"
+                }
+                .into(),
                 GitPanelTab::History,
                 ActivateHistoryTab.boxed_clone(),
             ))
