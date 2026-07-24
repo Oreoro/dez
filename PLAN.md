@@ -502,8 +502,11 @@ with new labels.
       surfaces with restrained neutral layers. Static checks measure region
       separation and a 1.5:1 structural-divider floor after transparency is
       composited; focus retains the stronger 3:1 floor. Source, license,
-      first-run, and font assets are guarded. Rendered density, material,
-      contrast, and narrow-height proof remain open.
+      first-run, and font assets are guarded. Hover, active, selection,
+      scrollbar, and active-line states now follow measured differentiation
+      floors across every Lumin variant; the opaque fallback no longer makes
+      active weaker than hover or hides the active editor line. Rendered
+      density, material, contrast, and narrow-height proof remain open.
 
 #### Interaction quality
 
@@ -2463,3 +2466,9 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   after translucent compositing, while focus keeps the stronger 3:1 floor.
   Theme checks now reject collapsed surfaces and faint boundaries. This is
   source-only; no build or visual launch was performed.
+- 2026-07-25: Normalized Lumin interaction feedback across blurred dark,
+  opaque dark, and light modes. Hover is visibly distinct; active and selected
+  are stronger; scrollbars progress from idle to hover to drag; and the active
+  editor line is never transparent. The theme guard measures each state on its
+  actual composited panel/editor surface and checks the ordering as well as the
+  floor. This is source-only; no build or visual launch was performed.

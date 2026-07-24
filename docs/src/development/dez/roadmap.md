@@ -2893,3 +2893,17 @@ Completed for the Lumin region-hierarchy source slice:
 - updated public and execution documentation plus the identity guard;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Lumin interaction-state source slice:
+
+- corrected the opaque fallback where active controls were weaker than hover
+  and the active editor line was transparent;
+- strengthened light selection so it cannot collapse onto hover;
+- normalized idle, hover, and drag scrollbar feedback across all variants;
+- measured hover, active, selected, ghost, scrollbar, and active-line states on
+  their actual composited surfaces;
+- enforced state ordering as well as minimum differentiation floors;
+- retained the existing text, syntax, focus, and region-hierarchy checks;
+- updated public and execution documentation;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

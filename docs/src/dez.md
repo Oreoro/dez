@@ -161,8 +161,9 @@ Blur belongs to the stable window shell. Focus borders, selected rows, active
 lines, pane boundaries, and scrollbars remain visible. Rail/drawer surfaces,
 the Main Work Area, tab strips, and elevated menus use distinct neutral layers
 instead of blending into one sheet. Structural dividers remain restrained;
-focus and selection carry the stronger accent. High-motion terminal and Agent
-content does not add independent nested blur layers.
+hover, active, selected, scrollbar, and focus states strengthen in a consistent
+order, and focus/selection carry the stronger accent. High-motion terminal and
+Agent content does not add independent nested blur layers.
 
 ## What Dez is not
 

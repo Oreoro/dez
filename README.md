@@ -82,7 +82,8 @@ Dez ships with an attributed adaptation of
 - **JetBrains Mono** for editor, terminal, prompts, and code;
 - a bundled sans-serif face for readable interface chrome;
 - distinct rail/drawer, Main Work Area, tab, and elevated-overlay surfaces;
-- restrained structural boundaries, with stronger focus and selection signals.
+- restrained structural boundaries, with ordered hover, active, selection,
+  scrollbar, and focus signals.
 
 The application follows the operating system appearance by default. All theme
 and typography roles remain configurable through normal settings.
