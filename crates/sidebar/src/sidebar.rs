@@ -9387,6 +9387,15 @@ impl Sidebar {
         metadata.interacted_at.unwrap_or(metadata.updated_at)
     }
 
+    fn thread_status(&self, thread_id: ThreadId) -> Option<AgentThreadStatus> {
+        self.contents.entries.iter().find_map(|entry| match entry {
+            ListEntry::Thread(thread) if thread.metadata.thread_id == thread_id => {
+                Some(thread.status)
+            }
+            _ => None,
+        })
+    }
+
     fn thread_creation_time(metadata: &ThreadMetadata) -> DateTime<Utc> {
         metadata.created_at.unwrap_or(metadata.updated_at)
     }
@@ -12857,12 +12866,19 @@ impl Sidebar {
         let project = active_workspace.read(cx).project().clone();
         let agent_server_store = project.read(cx).agent_server_store().downgrade();
         let agent_connection_store = connection_store_for_project(&project, cx).downgrade();
+        let sidebar = cx.weak_entity();
+        let thread_status = Rc::new(move |thread_id, cx: &App| {
+            sidebar
+                .upgrade()
+                .and_then(|sidebar| sidebar.read(cx).thread_status(thread_id))
+        });
 
         let archive_view = cx.new(|cx| {
             ThreadsArchiveView::new(
                 active_workspace.downgrade(),
                 agent_connection_store.clone(),
                 agent_server_store.clone(),
+                thread_status,
                 window,
                 cx,
             )

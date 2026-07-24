@@ -325,6 +325,12 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
     'let stop_label =.*?agent_session_label\(paths::APP_NAME, "Stop Generation", "Stop Agent Run"\).*?IconButton::new\("stop-generation".*?aria_label\(stop_label\).*?Tooltip::for_action\(stop_label, &editor::actions::Cancel' \
     'the in-session Agent Run stop control can regress to vague wording or lose its accessible name and shortcut'
+require_multiline_pattern crates/agent_ui/src/threads_archive_view.rs \
+    'fn agent_history_archive_available.*?!matches!.*?AgentThreadStatus::Running \| AgentThreadStatus::WaitingForConfirmation.*?archive_selected_thread.*?!agent_history_archive_available\(\(self\.thread_status\).*?let live_status = \(self\.thread_status\).*?let archive_available = agent_history_archive_available\(live_status\).*?when_some\(.*?!is_archived.*?live_status.*?else if archive_available \{.*?IconButton::new\("archive-thread".*?active_agent_runs_cannot_be_archived_from_history' \
+    'Agent History can regress to archiving a running or permission-blocked Agent Session'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn thread_status\(&self, thread_id: ThreadId\).*?ListEntry::Thread.*?Some\(thread\.status\).*?fn show_archive.*?let thread_status = Rc::new.*?sidebar\.read\(cx\)\.thread_status\(thread_id\).*?ThreadsArchiveView::new\(.*?thread_status' \
+    'Agent History can regress to losing the Session Rail live-status authority'
 require_pattern crates/ui/src/components/ai/thread_item.rs \
     '\.when\(self\.hovered \|\| self\.focused, \|this\|' \
     'the shared Session row can hide its supplied actions from keyboard selection'

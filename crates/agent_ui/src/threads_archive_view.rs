@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::agent_connection_store::AgentConnectionStore;
@@ -105,6 +106,13 @@ fn agent_history_empty_copy(
             "Start New Agent Session",
         )
     }
+}
+
+fn agent_history_archive_available(status: Option<AgentThreadStatus>) -> bool {
+    !matches!(
+        status,
+        Some(AgentThreadStatus::Running | AgentThreadStatus::WaitingForConfirmation)
+    )
 }
 
 fn thread_archive_background(cx: &App) -> Hsla {
@@ -368,6 +376,7 @@ pub struct ThreadsArchiveView {
     archived_branch_names: HashMap<ThreadId, HashMap<PathBuf, String>>,
     _load_branch_names_task: Task<()>,
     thread_filter: ThreadFilter,
+    thread_status: Rc<dyn Fn(ThreadId, &App) -> Option<AgentThreadStatus>>,
 }
 
 impl ThreadsArchiveView {
@@ -375,6 +384,7 @@ impl ThreadsArchiveView {
         workspace: WeakEntity<Workspace>,
         agent_connection_store: WeakEntity<AgentConnectionStore>,
         agent_server_store: WeakEntity<AgentServerStore>,
+        thread_status: Rc<dyn Fn(ThreadId, &App) -> Option<AgentThreadStatus>>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
@@ -450,6 +460,7 @@ impl ThreadsArchiveView {
             archived_branch_names: HashMap::default(),
             _load_branch_names_task: Task::ready(()),
             thread_filter: ThreadFilter::All,
+            thread_status,
         };
 
         this.update_items(cx);
@@ -650,7 +661,9 @@ impl ThreadsArchiveView {
             return;
         };
 
-        if thread.archived {
+        if thread.archived
+            || !agent_history_archive_available((self.thread_status)(thread.thread_id, cx))
+        {
             return;
         }
 
@@ -858,6 +871,8 @@ impl ThreadsArchiveView {
                 let is_restoring = self.restoring.contains(&thread.thread_id);
 
                 let is_archived = thread.archived;
+                let live_status = (self.thread_status)(thread.thread_id, cx);
+                let archive_available = agent_history_archive_available(live_status);
 
                 let branch_names_for_thread: HashMap<PathBuf, SharedString> = self
                     .archived_branch_names
@@ -883,6 +898,10 @@ impl ThreadsArchiveView {
                             .icon_color(archived_color)
                             .title_label_color(Color::Muted)
                     })
+                    .when_some(
+                        (!is_archived).then_some(live_status).flatten(),
+                        |this, status| this.status(status),
+                    )
                     .when_some(icon_from_external_svg, |this, svg| {
                         this.custom_icon_from_external_svg(svg)
                     })
@@ -966,7 +985,7 @@ impl ThreadsArchiveView {
                         })
                     })
                     .into_any_element()
-                } else {
+                } else if archive_available {
                     base.action_slot(
                         IconButton::new("archive-thread", IconName::Archive)
                             .icon_size(IconSize::Small)
@@ -1006,6 +1025,14 @@ impl ThreadsArchiveView {
                                 agent = thread.agent_id.as_ref(),
                                 side = crate::sidebar_side(cx)
                             );
+                            this.unarchive_thread(thread.clone(), window, cx);
+                        })
+                    })
+                    .into_any_element()
+                } else {
+                    base.on_click({
+                        let thread = thread.clone();
+                        cx.listener(move |this, _, window, cx| {
                             this.unarchive_thread(thread.clone(), window, cx);
                         })
                     })
@@ -1957,6 +1984,23 @@ mod tests {
             agent_history_label("Zed", "Archive Thread", "Archive Agent Session"),
             "Archive Thread"
         );
+    }
+
+    #[test]
+    fn active_agent_runs_cannot_be_archived_from_history() {
+        assert!(!agent_history_archive_available(Some(
+            AgentThreadStatus::Running
+        )));
+        assert!(!agent_history_archive_available(Some(
+            AgentThreadStatus::WaitingForConfirmation
+        )));
+        assert!(agent_history_archive_available(Some(
+            AgentThreadStatus::Completed
+        )));
+        assert!(agent_history_archive_available(Some(
+            AgentThreadStatus::Error
+        )));
+        assert!(agent_history_archive_available(None));
     }
 
     #[test]

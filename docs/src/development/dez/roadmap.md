@@ -2672,6 +2672,9 @@ Completed for the running Agent Session action-parity slice:
   run is active;
 - exposed **Stop Agent Run** in that context menu so pointer, focus, context
   menu, and selected-row keyboard paths share one lifecycle policy;
+- made Agent History consume the Session Rail's live status, show active and
+  permission-blocked state, and withhold both its archive icon and keyboard
+  archive path until the run reaches a terminal state;
 - retained immediate, reversible archive for completed and failed Agent
   Sessions;
 - added focused product-copy assertions and a static identity guard;
