@@ -134,6 +134,13 @@ shows a filled **Start Terminal Session** action. Once work exists, a compact
 **Start Terminal** utility remains available as an outlined action while the
 Session list becomes the primary content.
 
+The Sessions footer reserves text for destinations that would otherwise be
+ambiguous. Compact/default rails show the conventional Settings gear with its
+**Agent Tools and Settings** tooltip and accessible name, then label
+**History** and **Workspaces**. Detailed rails expand all three to **Agent
+Tools**, **Agent History**, and **Recent Workspaces**; genuinely narrow rails
+use named tooltip-backed icons.
+
 The bottom Workspace status strip is intentionally terse. Search and a healthy
 diagnostics state use familiar icons with complete tooltips and accessible
 names; actual errors, warnings, counts, and messages remain visible. Terminal

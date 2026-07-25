@@ -842,11 +842,13 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   prefixes are not sufficient for an inspectable terminal Surface.
 - **2026-07-23: Responsive breakpoints follow the control they govern.** The
   Session Rail footer does not inherit the wider breakpoint used for
-  supplemental row metadata. The default compact width must keep Agent Tools,
-  History, and Workspaces visible; only genuinely narrower rails collapse those
-  labels into named, tooltip-backed icons. At detailed widths, History expands
-  to Agent History and Workspaces expands to Recent Workspaces so neither
-  destination is confused with Git history or the active Workspace.
+  supplemental row metadata. At the default compact width, the conventional
+  Settings gear remains named by tooltip and accessibility output while
+  **History** and **Workspaces** keep visible labels because their destinations
+  are otherwise ambiguous. Only genuinely narrower rails collapse every
+  utility to a named, tooltip-backed icon. At detailed widths, the gear expands
+  to **Agent Tools**, History expands to **Agent History**, and Workspaces
+  expands to **Recent Workspaces**.
 - **2026-07-23: Responsive labels reserve space before they appear.** Controls
   made visible at a compact breakpoint use compact padding and typography. A
   breakpoint is incomplete if its newly revealed labels can only fit by

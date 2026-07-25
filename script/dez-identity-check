@@ -649,11 +649,14 @@ reject_pattern crates/sidebar/src/sidebar.rs \
     '\.actor_label\("Terminal Session"\)' \
     'plain terminal rows can regress to repeating their type as a fake actor label'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'const COMPACT_MAX_WIDTH: Pixels = px\(280\.0\).*?const UTILITY_LABELS_MIN_WIDTH: Pixels = px\(280\.0\).*?const DETAILED_MIN_WIDTH: Pixels = px\(380\.0\).*?fn session_rail_utility_labels_visible.*?width >= UTILITY_LABELS_MIN_WIDTH.*?fn session_rail_agent_history_utility_label.*?width >= DETAILED_MIN_WIDTH.*?"Agent History".*?"History".*?fn session_rail_recent_workspaces_utility_label.*?width >= DETAILED_MIN_WIDTH.*?"Recent Workspaces".*?"Workspaces"' \
-    'the default compact Session Rail footer can regress to unexplained icon-only utilities'
-require_pattern crates/sidebar/src/sidebar.rs \
-    'if labels_visible \{ "Agent Tools" \} else \{ "" \}' \
-    'the Session Rail settings utility can regress to an unexplained glyph'
+    'const COMPACT_MAX_WIDTH: Pixels = px\(280\.0\).*?const UTILITY_LABELS_MIN_WIDTH: Pixels = px\(280\.0\).*?const DETAILED_MIN_WIDTH: Pixels = px\(380\.0\).*?fn session_rail_utility_labels_visible.*?width >= UTILITY_LABELS_MIN_WIDTH.*?fn session_rail_agent_tools_utility_label.*?width >= DETAILED_MIN_WIDTH.*?"Agent Tools".*?fn session_rail_agent_history_utility_label.*?width >= DETAILED_MIN_WIDTH.*?"Agent History".*?"History".*?fn session_rail_recent_workspaces_utility_label.*?width >= DETAILED_MIN_WIDTH.*?"Recent Workspaces".*?"Workspaces"' \
+    'the Sessions footer can regress from prioritizing ambiguous destination labels at compact widths'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn render_agent_options_menu.*?visible_label: &'"'"'static str.*?Button::new\([[:space:]]*"agent-sidebar-options-menu",[[:space:]]*visible_label.*?IconName::Settings.*?aria_label\("Agent Tools and Settings"\)' \
+    'the compact Settings gear can regress to an unnamed Agent Tools destination'
+require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
+    'fn footer_reserves_compact_text_for_ambiguous_destinations.*?session_rail_agent_tools_utility_label\(COMPACT_MAX_WIDTH\).*?"".*?session_rail_agent_history_utility_label\(COMPACT_MAX_WIDTH\).*?"History".*?session_rail_recent_workspaces_utility_label\(COMPACT_MAX_WIDTH\).*?"Workspaces".*?session_rail_agent_tools_utility_label\(DETAILED_MIN_WIDTH\).*?"Agent Tools"' \
+    'Sessions footer label priority can regress across compact and detailed widths'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\([[:space:]]*"open-recent-workspaces",[[:space:]]*session_rail_recent_workspaces_utility_label\(rail_width\).*?aria_label\("Open Recent Workspaces"\)' \
     'the Session Rail recent-Workspace utility can regress to an unexplained or ambiguous destination'
@@ -1273,7 +1276,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\([[:space:]]*"open-recent-workspaces".*?session_rail_recent_workspaces_utility_label\(rail_width\).*?IconName::FolderOpen.*?aria_label\("Open Recent Workspaces"\).*?Tooltip::for_action\("Open Recent Workspaces"' \
     'the Session Rail footer can regress to an ambiguous Open Workspace utility'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'Button::new\([[:space:]]*"agent-sidebar-options-menu".*?if labels_visible \{ "Agent Tools" \} else \{ "" \}.*?IconName::Settings.*?aria_label\("Agent Tools and Settings"\).*?header\("Agent Context"\).*?"Hide Sessions"' \
+    'Button::new\([[:space:]]*"agent-sidebar-options-menu",[[:space:]]*visible_label.*?IconName::Settings.*?aria_label\("Agent Tools and Settings"\).*?header\("Agent Context"\).*?"Hide Sessions"' \
     'the Session Rail footer can regress to a Robot icon that does not open Agent'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let popover_open = popover_handle\.is_deployed\(\).*?Button::new\([[:space:]]*"open-recent-workspaces".*?tab_index\(0isize\).*?aria_label\("Open Recent Workspaces"\).*?aria_expanded\(popover_open\).*?let menu_open = self\.agent_options_menu_handle\.is_deployed\(\).*?Button::new\([[:space:]]*"agent-sidebar-options-menu".*?tab_index\(0isize\).*?aria_label\("Agent Tools and Settings"\).*?aria_expanded\(menu_open\).*?selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\).*?Button::new\("history".*?tab_index\(0isize\).*?toggle_state\(is_archive\)' \

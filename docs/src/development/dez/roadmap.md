@@ -3571,3 +3571,20 @@ Completed for the Workspace-header overlay cleanup source slice:
   contract;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Sessions-footer hierarchy source slice:
+
+- kept Agent Tools, Agent History, and Recent Workspaces as three distinct,
+  keyboard-focusable destinations rather than hiding them behind one overflow
+  menu;
+- made the conventional Settings gear icon-only at compact/default widths while
+  retaining its complete **Agent Tools and Settings** tooltip and accessible
+  name;
+- preserved visible **History** and **Workspaces** labels at compact/default
+  widths because those destinations are ambiguous without text;
+- restored **Agent Tools**, **Agent History**, and **Recent Workspaces** labels
+  together at detailed widths, while genuinely narrow rails keep named icons;
+- added pure breakpoint assertions and static guards for the asymmetric label
+  hierarchy;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

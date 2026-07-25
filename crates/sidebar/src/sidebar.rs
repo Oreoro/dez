@@ -312,6 +312,14 @@ fn session_rail_utility_labels_visible(width: Pixels) -> bool {
     width >= UTILITY_LABELS_MIN_WIDTH
 }
 
+fn session_rail_agent_tools_utility_label(width: Pixels) -> &'static str {
+    if width >= DETAILED_MIN_WIDTH {
+        "Agent Tools"
+    } else {
+        ""
+    }
+}
+
 fn session_rail_agent_history_utility_label(width: Pixels) -> &'static str {
     if width >= DETAILED_MIN_WIDTH {
         "Agent History"
@@ -1456,10 +1464,18 @@ mod session_row_action_tests {
     }
 
     #[test]
-    fn default_compact_rail_keeps_utility_labels() {
+    fn compact_footer_prioritizes_ambiguous_destination_labels() {
         assert!(session_rail_utility_labels_visible(COMPACT_MAX_WIDTH));
         assert!(session_rail_utility_labels_visible(px(280.0)));
         assert!(!session_rail_utility_labels_visible(px(279.0)));
+        assert_eq!(
+            session_rail_agent_tools_utility_label(COMPACT_MAX_WIDTH),
+            ""
+        );
+        assert_eq!(
+            session_rail_agent_tools_utility_label(DETAILED_MIN_WIDTH),
+            "Agent Tools"
+        );
         assert_eq!(
             session_rail_agent_history_utility_label(COMPACT_MAX_WIDTH),
             "History"
@@ -13220,7 +13236,7 @@ impl Sidebar {
 
     fn render_agent_options_menu(
         &self,
-        labels_visible: bool,
+        visible_label: &'static str,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let on_right = self.side(cx) == SidebarSide::Right;
@@ -13253,7 +13269,7 @@ impl Sidebar {
             .trigger_with_tooltip(
                 Button::new(
                     "agent-sidebar-options-menu",
-                    if labels_visible { "Agent Tools" } else { "" },
+                    visible_label,
                 )
                 .size(ButtonSize::Compact)
                 .label_size(LabelSize::Small)
@@ -13430,7 +13446,7 @@ impl Sidebar {
         };
         let on_right = self.side(cx) == SidebarSide::Right;
         let rail_width = SessionRailSettings::get_global(cx).width(self.width);
-        let labels_visible = session_rail_utility_labels_visible(rail_width);
+        let agent_tools_visible_label = session_rail_agent_tools_utility_label(rail_width);
         let history_visible_label = session_rail_agent_history_utility_label(rail_width);
 
         v_flex()
@@ -13447,7 +13463,7 @@ impl Sidebar {
                     .w_full()
                     .gap_1()
                     .when(on_right, |this| this.flex_row_reverse())
-                    .child(self.render_agent_options_menu(labels_visible, cx))
+                    .child(self.render_agent_options_menu(agent_tools_visible_label, cx))
                     .child(
                         Button::new("history", history_visible_label)
                             .size(ButtonSize::Compact)

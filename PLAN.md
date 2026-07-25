@@ -2839,3 +2839,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   action remains the sole visible body content. The identity guard now rejects
   the redundant caption. This is source-only; no build, test binary, alternate
   binary, or visual launch was performed.
+- 2026-07-26: Rebalanced the Sessions footer around information value. At
+  compact/default widths the familiar Settings gear remains icon-only with its
+  full **Agent Tools and Settings** tooltip and accessible name, freeing space
+  for the ambiguous **History** and **Workspaces** labels. Detailed widths
+  expand all three destinations; genuinely narrow rails keep named icons.
+  Pure assertions and identity guards cover the three width states. This is
+  source-only; no build, test binary, alternate binary, or visual launch was
+  performed.

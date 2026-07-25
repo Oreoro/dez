@@ -98,6 +98,27 @@ fn compact_session_rows_prioritize_actions_and_evidence_over_recency() {
 }
 
 #[test]
+fn footer_reserves_compact_text_for_ambiguous_destinations() {
+    assert_eq!(
+        session_rail_agent_tools_utility_label(COMPACT_MAX_WIDTH),
+        "",
+        "the conventional Settings gear should not crowd the compact footer"
+    );
+    assert_eq!(
+        session_rail_agent_history_utility_label(COMPACT_MAX_WIDTH),
+        "History"
+    );
+    assert_eq!(
+        session_rail_recent_workspaces_utility_label(COMPACT_MAX_WIDTH),
+        "Workspaces"
+    );
+    assert_eq!(
+        session_rail_agent_tools_utility_label(DETAILED_MIN_WIDTH),
+        "Agent Tools"
+    );
+}
+
+#[test]
 fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
     assert!(!session_scope_controls_visible(0));
     assert!(!session_search_visible(0, false));
