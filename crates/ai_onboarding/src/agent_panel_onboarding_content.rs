@@ -53,6 +53,9 @@ impl Render for AgentPanelOnboarding {
         AgentPanelOnboardingCard::new()
             .child(
                 v_flex()
+                    .id("agent-provider-onboarding")
+                    .role(gpui::Role::Region)
+                    .aria_label("Agent provider setup")
                     .relative()
                     .gap_2()
                     .child(Headline::new(if self.has_configured_providers {
@@ -62,9 +65,9 @@ impl Render for AgentPanelOnboarding {
                     }))
                     .child(
                         Label::new(if self.has_configured_providers {
-                            "Use your configured provider for a native agent thread."
+                            "Your configured provider is ready. Start an Agent Session."
                         } else {
-                            "Dez keeps provider choice explicit. Add a provider to start a native agent thread."
+                            "Dez keeps provider choice explicit. Add a provider to start an Agent Session."
                         })
                         .color(Color::Muted),
                     )
@@ -73,7 +76,9 @@ impl Render for AgentPanelOnboarding {
                     })
                     .when(self.has_configured_providers, |this| {
                         this.child(
-                            Button::new("continue-to-agent", "Start Agent")
+                            Button::new("continue-to-agent", "Start Agent Session")
+                                .tab_index(0isize)
+                                .aria_label("Start Agent Session")
                                 .full_width()
                                 .style(ButtonStyle::Filled)
                                 .on_click(move |_, window, cx| {

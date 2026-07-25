@@ -513,6 +513,21 @@ require_multiline_pattern crates/debugger_ui/src/debugger_panel.rs \
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     '\.id\("agent-panel"\).*?\.role\(gpui::Role::Region\).*?"Agent Panel".*?"Agent".*?\.track_focus\(&self\.focus_handle\)' \
     'the Agent region can regain a focus handle with no accessibility node'
+require_multiline_pattern crates/ai_onboarding/src/agent_panel_onboarding_content.rs \
+    'fn has_configured_providers.*?provider\.id\(\) != ZED_CLOUD_PROVIDER_ID.*?id\("agent-provider-onboarding"\).*?role\(gpui::Role::Region\).*?aria_label\("Agent provider setup"\).*?"Your configured provider is ready\. Start an Agent Session\.".*?"Dez keeps provider choice explicit\. Add a provider to start an Agent Session\.".*?Button::new\("continue-to-agent", "Start Agent Session"\).*?tab_index\(0isize\).*?aria_label\("Start Agent Session"\)' \
+    'reachable Dez Agent onboarding can regress to thread vocabulary, an unnamed region, or a pointer-only start action'
+require_multiline_pattern crates/ai_onboarding/src/agent_api_keys_onboarding.rs \
+    'Button::new\("configure-providers", "Configure Agent Providers"\).*?tab_index\(0isize\).*?aria_label\("Configure Agent Providers"\).*?OpenSettings' \
+    'Agent provider setup can regress to an ambiguous or pointer-only recovery action'
+reject_pattern crates/ai_onboarding/src/agent_panel_onboarding_content.rs \
+    'native agent thread|Button::new\("continue-to-agent", "Start Agent"\)' \
+    'reachable Dez Agent onboarding still exposes inherited thread or ambiguous start vocabulary'
+reject_pattern crates/agent_ui/src/agent_panel.rs \
+    'ZedAiOnboarding' \
+    'the Dez Agent entry path can regress to inherited Zed AI subscription onboarding'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'let onboarding = cx\.new\(.*?AgentPanelOnboarding::new' \
+    'the Dez Agent entry path no longer owns the explicit-provider onboarding'
 require_multiline_pattern crates/agent_ui/src/conversation_view.rs \
     '\.id\(\("agent-conversation", cx\.entity_id\(\)\)\).*?\.role\(gpui::Role::Region\).*?"Agent thread".*?"Agent Session".*?\.track_focus\(&self\.focus_handle\)' \
     'native Agent conversation focus can regress to announcing the whole window'

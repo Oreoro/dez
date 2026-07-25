@@ -3352,3 +3352,18 @@ Completed for the Welcome and empty-Main-Work-Area hierarchy source slice:
   guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Agent-provider onboarding identity source slice:
+
+- traced the Agent panel's reachable onboarding separately from the dormant
+  upstream Zed AI subscription component;
+- named the reachable setup card as an **Agent provider setup** accessibility
+  region;
+- replaced the last visible native-agent-thread copy with **Agent Session**;
+- renamed the ready action to **Start Agent Session** and the settings action
+  to **Configure Agent Providers**;
+- made both actions explicit keyboard tab stops with matching accessible names;
+- guarded the Agent entry path against importing inherited Zed AI
+  subscription onboarding;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

@@ -2710,3 +2710,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   terminal as durable. Static guards cover count, order, routing, wording, and
   ownership truth. This is source-only; no build, test binary, alternate
   binary, or visual launch was performed.
+- 2026-07-25: Separated reachable Dez Agent-provider onboarding from dormant
+  upstream Zed AI subscription components. The setup card is now a named
+  accessibility region, consistently says Agent Session, and exposes
+  **Configure Agent Providers** or **Start Agent Session** as specifically
+  named keyboard tab stops. A guard prevents the Agent entry path from
+  importing Zed AI trial/plan onboarding. This is source-only; no build, test
+  binary, alternate binary, or visual launch was performed.

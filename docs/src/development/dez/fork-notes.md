@@ -166,6 +166,13 @@ Agent Options and New Agent Session use selected treatment while open and
 report expanded state to assistive technology; closing the popover clears both
 signals.
 
+Dez Agent onboarding is provider setup, not Zed AI subscription onboarding.
+The reachable empty state is a named **Agent provider setup** region that says
+**Agent Session**, offers **Configure Agent Providers**, and exposes **Start
+Agent Session** only after a non-Zed-cloud provider is authenticated. Both
+actions are keyboard tab stops. Inherited Zed plan/trial components may remain
+for upstream compatibility, but the Dez Agent entry path must not render them.
+
 The Agent composer control row has one interaction contract. Expand or
 minimize, Add Context, Follow, Fast Mode, Thinking Mode, thinking effort,
 Send/Queue, Stop Agent Run, and Sandbox Settings are keyboard tab stops with

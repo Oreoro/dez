@@ -160,6 +160,12 @@ mode switches. Agent Options and New Agent Session are explicit popovers: their
 triggers stay highlighted while open and announce that state to keyboard and
 assistive-technology users.
 
+If no provider is configured, Agent shows a named provider-setup state rather
+than a Zed account or subscription pitch. **Configure Agent Providers** opens
+the relevant settings; after a non-Zed-cloud provider is ready, **Start Agent
+Session** becomes the primary action. Both actions are keyboard reachable, and
+the surface consistently names the resulting object an Agent Session.
+
 The Agent composer is the control point for the current conversation. Its
 context, follow, speed, thinking, effort, send/queue, stop, size, and sandbox
 controls are keyboard-reachable and announce their action or current state.
