@@ -499,8 +499,11 @@ require_multiline_pattern crates/workspace/src/workspace.rs \
     'fn auxiliary_panes_only_coexist_in_an_ultrawide_shell.*?1799\..*?1800\..*?1200\..*?1800\..*?1000\.' \
     'Workspace Tools and Agent can regress to competing full-height drawers on laptop-sized windows'
 require_multiline_pattern assets/settings/default.json \
-    '"active_pane_modifiers": \{.*?"border_size": 1\.0.*?"pane_grid": \{.*?"focus_indicator": "title"' \
+    '"active_pane_modifiers": \{.*?"border_size": 0\.0.*?"inactive_opacity": 1\.0.*?"pane_grid": \{.*?"focus_indicator": "title"' \
     'the default canvas can regress to drawing a strong full-pane focus rectangle over the active Surface'
+reject_multiline_pattern assets/settings/default.json \
+    '"active_pane_modifiers": \{.*?"border_size": [1-9]' \
+    'the default active pane modifier can regress to a visible full-surface border'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'pub fn reset_pane_sizes.*?center\.reset_pane_sizes\(cx\).*?enforce_dez_main_work_area_width_budget\(cx\).*?serialize_workspace' \
     'Reset Pane Sizes can bypass the Dez Main Work Area budget before persistence'

@@ -3059,8 +3059,8 @@ Completed for the single-work-area cleanup and focus-hierarchy source slice:
 - preserved every visible pane containing a file, terminal, diff, or other user
   Surface even when it exceeds the recipe's nominal pane count;
 - changed the default active-pane cue from a two-pixel full-surface rectangle to
-  the title and selected-tab state, while retaining a configurable one-pixel
-  border option;
+  the title and selected-tab state, while retaining configurable full-pane
+  border and inactive-pane dimming options that default off;
 - replaced the generic **Workspace ready** placeholder with one bounded **Run.
   Supervise. Review.** launch panel and the three immediate Workspace actions;
 - recorded the blue droplet/task pill as Codex desktop overlay and the **Bin**
@@ -3486,5 +3486,17 @@ Completed for the empty Sessions route-clarity source slice:
 - kept **Open Workspace…** as the primary zero-state action and **Open Scratch
   Terminal** as a clearly transient secondary action;
 - added source assertions and identity guards for the route copy and material;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the default focus quieting source slice:
+
+- changed Dez's default active pane modifiers to `border_size: 0.0` and
+  `inactive_opacity: 1.0`, matching the public settings reference and removing
+  the screenshot-class full-surface focus rectangle/dimmed-pane effect;
+- kept title/selected-tab focus as the default cue, with full-pane borders and
+  inactive-pane dimming still available as explicit user settings;
+- added static identity guards so the default cannot drift back to a visible
+  full-pane outline;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.

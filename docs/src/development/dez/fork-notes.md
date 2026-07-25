@@ -671,7 +671,8 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   containing a file, terminal, diff, or any other user Surface is never hidden
   by this cleanup. The default pane focus indicator lives in the title/selected
   tab rather than painting a saturated rectangle around the full work surface;
-  optional border focus remains user-configurable and defaults to one pixel.
+  full-pane border focus and inactive-pane dimming remain user-configurable
+  but default off.
   The remaining empty Main Work Area is one bounded launch panel headed **Run.
   Supervise. Review.**, with only the three immediate Workspace actions and a
   compact route row that names **Run -> Main Work Area**, **Supervise ->

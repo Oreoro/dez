@@ -84,11 +84,13 @@
   "unnecessary_code_fade": 0.3,
   // Active pane styling settings.
   "active_pane_modifiers": {
-    // Inset border size of the active pane, in pixels.
-    "border_size": 1.0,
+    // Inset border size of the active pane, in pixels. Dez keeps the default
+    // focus cue in the title and selected tab; set this above 0 to opt into a
+    // full-pane border.
+    "border_size": 0.0,
     // Opacity of the inactive panes. 0 means transparent, 1 means opaque.
     // Values are clamped to the [0.0, 1.0] range.
-    "inactive_opacity": 0.94
+    "inactive_opacity": 1.0
   },
   // The direction that you want to split panes horizontally. Defaults to "down"
   "pane_split_direction_horizontal": "down",

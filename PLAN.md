@@ -2767,3 +2767,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   guards and source assertions protect the copy and material. This is
   source-only; no build, test binary, alternate binary, or visual launch was
   performed.
+- 2026-07-25: Quieted the default focus chrome that matched the installed
+  screenshots' orange full-pane outlines. Dez now ships `active_pane_modifiers`
+  with `border_size: 0.0` and `inactive_opacity: 1.0`, so focus defaults to the
+  title/selected-tab cue without dimming sibling panes. Full-pane focus borders
+  and inactive-pane dimming remain opt-in user settings. Static guards pin this
+  default. This is source-only; no build, test binary, alternate binary, or
+  visual launch was performed.
