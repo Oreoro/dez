@@ -693,11 +693,11 @@ require_multiline_pattern crates/diagnostics/src/items.rs \
 reject_pattern crates/diagnostics/src/items.rs \
     'Label::new\("No diagnostics"\)' \
     'healthy terminal-focused status chrome can regress to a redundant visible diagnostics label'
-require_pattern crates/sidebar/src/sidebar.rs \
+reject_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\("Ready for a session"\)' \
-    'empty Workspace groups regress to repeated absence copy'
+    'empty Workspace groups can regress to repeating readiness already stated by the overview and accessible header'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'Label::new\("Ready for a session"\).*?empty-project-new-terminal-\{ix\}.*?"Start Terminal Session".*?ButtonStyle::Filled.*?"Start Terminal Session in \{\}".*?"Start Terminal Session in This Workspace"' \
+    'if labels_visible && !is_collapsed && !has_threads.*?empty-project-new-terminal-\{ix\}.*?"Start Terminal Session".*?ButtonStyle::Filled.*?"Start Terminal Session in \{\}".*?"Start Terminal Session in This Workspace"' \
     'an empty Workspace can regress to visually demoting or ambiguously naming its only useful action'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn default_new_session_target\(\) -> NewEntryTarget \{[[:space:]]*NewEntryTarget::Terminal' \

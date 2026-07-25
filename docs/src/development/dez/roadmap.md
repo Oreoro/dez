@@ -3562,6 +3562,9 @@ Completed for the Workspace-header overlay cleanup source slice:
 - removed the redundant header terminal control from expanded empty Workspaces,
   leaving the full labeled **Start Terminal Session** action as the single
   transition while retaining compact access for collapsed or populated groups;
+- removed the decorative **Ready for a session** dot-and-caption row because
+  the overview summary and accessible Workspace header already communicate that
+  state;
 - removed the now-unused window-appearance and gradient-fade dependencies from
   Sessions;
 - added a static no-gradient header guard and updated the permanent UI

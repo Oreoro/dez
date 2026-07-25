@@ -2832,3 +2832,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   in the header. Pure source assertions and identity guards protect each state.
   This is source-only; no build, test binary, alternate binary, or visual
   launch was performed.
+- 2026-07-26: Quieted the expanded empty Workspace body in Sessions. The
+  overview already reports ready Workspace count and the header's accessible
+  name reports readiness, so the decorative dot plus **Ready for a session**
+  caption no longer repeats that state. The scoped **Start Terminal Session**
+  action remains the sole visible body content. The identity guard now rejects
+  the redundant caption. This is source-only; no build, test binary, alternate
+  binary, or visual launch was performed.

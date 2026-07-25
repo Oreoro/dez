@@ -115,7 +115,9 @@ one bounded inline row: text truncates within its allocation, actions never
 overlap it, and no gradient mask is painted over either side of the header. An
 expanded Workspace with no Sessions shows one labeled **Start Terminal
 Session** action below the header; its compact terminal icon is suppressed
-until the Workspace is collapsed or contains Sessions.
+until the Workspace is collapsed or contains Sessions. Readiness remains in the
+overview summary and the Workspace header's accessible name instead of being
+repeated as a decorative dot-and-caption row.
 
 The Main Work Area follows the same rule. Back, Forward, Add, Switch Surface,
 Split, Zoom, and the Workspace Tools/Agent hide controls are keyboard-focusable

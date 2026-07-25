@@ -955,10 +955,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   layout. An expanded Workspace with no Sessions suppresses the compact header
   terminal control because the labeled **Start Terminal Session** action below
   it already owns that transition; collapsing the Workspace or adding a Session
-  restores the compact control. A Terminal Session offers one primary IDE
-  handoff—**Review** for a dirty Workspace, otherwise **Details**—plus its close
-  or terminate lifecycle control. An Agent Session offers exactly one state
-  action: **Stop**, **Discard**, **Review**, or **Brief**. Rename, Archive,
-  provider hook setup, and diagnostics remain available through
-  selected-Session commands or the Session context menu. Readable action labels
-  are preserved at rail widths of 280 px and above.
+  restores the compact control. The overview and accessible Workspace header
+  already report readiness, so the expanded body does not repeat a decorative
+  **Ready for a session** row above the action. A Terminal Session offers one
+  primary IDE handoff—**Review** for a dirty Workspace, otherwise
+  **Details**—plus its close or terminate lifecycle control. An Agent Session
+  offers exactly one state action: **Stop**, **Discard**, **Review**, or
+  **Brief**. Rename, Archive, provider hook setup, and diagnostics remain
+  available through selected-Session commands or the Session context menu.
+  Readable action labels are preserved at rail widths of 280 px and above.

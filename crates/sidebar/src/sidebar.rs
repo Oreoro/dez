@@ -5476,69 +5476,48 @@ impl Sidebar {
                 .w_full()
                 .child(header)
                 .child(
-                    v_flex()
-                        .px_2()
-                        .pt_1()
-                        .pb_2()
-                        .gap_1()
-                        .child(
-                            h_flex()
-                                .min_w_0()
-                                .gap_1p5()
-                                .child(Icon::new(IconName::Circle).size(IconSize::XSmall).color(
-                                    Color::Custom(
-                                        cx.theme().colors().icon_placeholder.opacity(0.2),
-                                    ),
-                                ))
-                                .child(
-                                    Label::new("Ready for a session")
-                                        .size(LabelSize::XSmall)
-                                        .color(Color::Placeholder)
-                                        .truncate(),
-                                ),
-                        )
-                        .child(
-                            Button::new(
-                                SharedString::from(format!(
-                                    "{id_prefix}empty-project-new-terminal-{ix}"
-                                )),
-                                "Start Terminal Session",
-                            )
-                            .full_width()
-                            .size(ButtonSize::Medium)
-                            .style(ButtonStyle::Filled)
-                            .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
-                            .tab_index(0isize)
-                            .aria_label(SharedString::from(format!(
-                                "Start Terminal Session in {}",
-                                workspace_name.as_ref()
-                            )))
-                            .tooltip(move |_, cx| {
-                                Tooltip::for_action(
-                                    "Start Terminal Session in This Workspace",
-                                    &NewCenterTerminal::default(),
-                                    cx,
-                                )
-                            })
-                            .on_click(cx.listener(
-                                move |this, _, window, cx| {
-                                    this.set_group_expanded(&key_for_empty_terminal, true, cx);
-                                    this.selection = None;
-                                    if let Some(workspace) =
-                                        this.workspace_for_group(&key_for_empty_terminal, cx)
-                                    {
-                                        this.create_new_terminal(&workspace, window, cx);
-                                    } else {
-                                        this.open_workspace_and_create_entry(
-                                            &key_for_empty_terminal,
-                                            NewEntryTarget::Terminal,
-                                            window,
-                                            cx,
-                                        );
-                                    }
-                                },
+                    v_flex().px_2().pt_1().pb_2().child(
+                        Button::new(
+                            SharedString::from(format!(
+                                "{id_prefix}empty-project-new-terminal-{ix}"
                             )),
-                        ),
+                            "Start Terminal Session",
+                        )
+                        .full_width()
+                        .size(ButtonSize::Medium)
+                        .style(ButtonStyle::Filled)
+                        .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                        .tab_index(0isize)
+                        .aria_label(SharedString::from(format!(
+                            "Start Terminal Session in {}",
+                            workspace_name.as_ref()
+                        )))
+                        .tooltip(move |_, cx| {
+                            Tooltip::for_action(
+                                "Start Terminal Session in This Workspace",
+                                &NewCenterTerminal::default(),
+                                cx,
+                            )
+                        })
+                        .on_click(cx.listener(
+                            move |this, _, window, cx| {
+                                this.set_group_expanded(&key_for_empty_terminal, true, cx);
+                                this.selection = None;
+                                if let Some(workspace) =
+                                    this.workspace_for_group(&key_for_empty_terminal, cx)
+                                {
+                                    this.create_new_terminal(&workspace, window, cx);
+                                } else {
+                                    this.open_workspace_and_create_entry(
+                                        &key_for_empty_terminal,
+                                        NewEntryTarget::Terminal,
+                                        window,
+                                        cx,
+                                    );
+                                }
+                            },
+                        )),
+                    ),
                 )
                 .into_any_element()
         } else {
