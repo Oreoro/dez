@@ -2931,3 +2931,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   A pure product-identity assertion and identity guards reject an
   unconditional overlay. This is source-only; no build, test binary, alternate
   binary, or visual launch was performed.
+- 2026-07-26: Repaired Agent title/action width ownership. Dez's visible title
+  pencil was still absolutely positioned as an inherited Zed hover overlay, so
+  it reserved no width and could cover a long Agent Session or terminal title.
+  The title now occupies a flexible, truncating slot and the pencil occupies a
+  fixed inline slot; the Dez path renders no gradient mask or absolute action
+  layer. The named keyboard action and edit routing remain, while official Zed
+  retains its upstream hover presentation. Product assertions and an identity
+  guard protect the split. This is source-only; no build, test binary,
+  alternate binary, or visual launch was performed.

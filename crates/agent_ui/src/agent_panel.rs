@@ -156,6 +156,10 @@ fn agent_panel_title_edit_label(app_name: &str, is_terminal: bool) -> &'static s
     }
 }
 
+fn agent_panel_title_edit_uses_overlay(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 fn agent_panel_zoom_label(app_name: &str, is_zoomed: bool) -> &'static str {
     if app_name == "Zed" {
         if is_zoomed {
@@ -6000,40 +6004,59 @@ impl AgentPanel {
             paths::APP_NAME,
             matches!(self.visible_surface(), VisibleSurface::Terminal(_)),
         );
+        let title_edit_uses_overlay = agent_panel_title_edit_uses_overlay(paths::APP_NAME);
+        let title_edit_control = || {
+            h_flex()
+                .id(if title_edit_uses_overlay {
+                    "agent-title-edit-overlay"
+                } else {
+                    "agent-title-edit-control"
+                })
+                .h_full()
+                .flex_shrink_0()
+                .when(title_edit_uses_overlay, |this| {
+                    this.visible_on_hover("title_editor")
+                        .absolute()
+                        .right_0()
+                        .bg(toolbar_bg)
+                })
+                .child(
+                    IconButton::new("edit_tile", IconName::Pencil)
+                        .icon_size(IconSize::Small)
+                        .tab_index(0isize)
+                        .aria_label(title_edit_label)
+                        .tooltip(Tooltip::text(title_edit_label))
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.edit_visible_title(window, cx);
+                        })),
+                )
+        };
 
-        h_flex()
+        let title_row = h_flex()
             .key_context("TitleEditor")
             .group("title_editor")
             .flex_grow_1()
             .w_full()
             .min_w_0()
             .max_w_full()
-            .overflow_x_hidden()
-            .child(content)
-            .when(self.should_show_title_edit(window, cx), |this| {
-                this.when(opaque_window, |this| this.child(gradient_overlay))
-                    .child(
-                        h_flex()
-                            .when(paths::APP_NAME == "Zed", |this| {
-                                this.visible_on_hover("title_editor")
-                            })
-                            .absolute()
-                            .right_0()
-                            .h_full()
-                            .bg(toolbar_bg)
-                            .child(
-                                IconButton::new("edit_tile", IconName::Pencil)
-                                    .icon_size(IconSize::Small)
-                                    .tab_index(0isize)
-                                    .aria_label(title_edit_label)
-                                    .tooltip(Tooltip::text(title_edit_label))
-                                    .on_click(cx.listener(|this, _, window, cx| {
-                                        this.edit_visible_title(window, cx);
-                                    })),
-                            ),
-                    )
-            })
-            .into_any()
+            .overflow_x_hidden();
+
+        if title_edit_uses_overlay {
+            title_row
+                .child(content)
+                .when(self.should_show_title_edit(window, cx), |this| {
+                    this.when(opaque_window, |this| this.child(gradient_overlay))
+                        .child(title_edit_control())
+                })
+                .into_any()
+        } else {
+            title_row
+                .child(div().min_w_0().flex_1().overflow_x_hidden().child(content))
+                .when(self.should_show_title_edit(window, cx), |this| {
+                    this.child(title_edit_control())
+                })
+                .into_any()
+        }
     }
 
     fn show_no_thread_summary_model_toast(workspace: Entity<Workspace>, cx: &mut App) {
@@ -7436,6 +7459,11 @@ mod tests {
             agent_panel_title_edit_label("Zed", true),
             "Edit Terminal Title"
         );
+        assert!(
+            !agent_panel_title_edit_uses_overlay("Dez"),
+            "the visible Dez title action should reserve inline header width"
+        );
+        assert!(agent_panel_title_edit_uses_overlay("Zed"));
     }
 
     #[test]

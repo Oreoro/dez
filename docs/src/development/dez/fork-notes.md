@@ -1004,3 +1004,11 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   split/move actions, ordinary Surface tab drag and drop, and Canvas layout
   recipes. Official Zed retains the upstream whole-pane handle for
   compatibility.
+- **2026-07-26: The Agent title action reserves real header width.** Dez keeps
+  the Agent Session or terminal title in a flexible, truncating allocation and
+  the always-visible edit action in a fixed inline allocation. The action does
+  not use the inherited absolute hover layer or gradient mask, so it cannot
+  cover title text or become an opaque patch on Lumin Blur. Official Zed
+  retains its upstream hover-overlay presentation. The action remains a named
+  keyboard tab stop and routes to the title editor for the active Agent
+  Surface.

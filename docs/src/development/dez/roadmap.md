@@ -3723,3 +3723,19 @@ Completed for the pane-header overlay source slice:
   proof;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Agent title-allocation source slice:
+
+- replaced Dez's always-visible but absolutely positioned title pencil with a
+  fixed inline header allocation;
+- gave the Agent Session or terminal title the remaining flexible width with
+  explicit minimum-width and overflow constraints;
+- removed the inherited gradient mask from the Dez title path so Lumin Blur
+  cannot show an opaque patch over title text;
+- preserved the named keyboard action, Agent Session and terminal edit routing,
+  and official Zed's upstream hover overlay;
+- added a pure product-identity assertion and a static geometry/action guard;
+- documented compact-width, long-title, keyboard, and Lumin Blur runtime
+  acceptance;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

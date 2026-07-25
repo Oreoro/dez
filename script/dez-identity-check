@@ -1093,8 +1093,11 @@ require_multiline_pattern crates/outline_panel/src/outline_panel.rs \
     '"clear_filter".*?tab_index\(0isize\).*?aria_label\("Clear Outline Filter"\).*?IconButton::new\(pin_button_id, icon\).*?tab_index\(0isize\).*?aria_label\(icon_tooltip\)' \
     'the Outline toolbar can regress to pointer-only or unnamed controls'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
-    'when\(paths::APP_NAME == "Zed".*?visible_on_hover\("title_editor"\).*?"edit_tile".*?tab_index\(0isize\).*?aria_label\(title_edit_label\).*?"agent-options-menu".*?tab_index\(0isize\).*?aria_label\(agent_menu_label\)' \
-    'the Dez Agent title and toolbar controls can regress to hover-only or unnamed actions'
+    'fn agent_panel_title_edit_uses_overlay.*?app_name == "Zed".*?let title_edit_uses_overlay = agent_panel_title_edit_uses_overlay\(paths::APP_NAME\).*?"agent-title-edit-overlay".*?"agent-title-edit-control".*?when\(title_edit_uses_overlay.*?visible_on_hover\("title_editor"\).*?absolute\(\).*?IconButton::new\("edit_tile".*?tab_index\(0isize\).*?aria_label\(title_edit_label\).*?if title_edit_uses_overlay.*?gradient_overlay.*?else \{.*?min_w_0\(\).*?flex_1\(\).*?overflow_x_hidden\(\).*?child\(title_edit_control\(\)\).*?!agent_panel_title_edit_uses_overlay\("Dez"\).*?agent_panel_title_edit_uses_overlay\("Zed"\)' \
+    'the Dez Agent title action can regress to an unnamed hover overlay that covers title content'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    '"agent-options-menu".*?tab_index\(0isize\).*?aria_label\(agent_menu_label\)' \
+    'the Dez Agent toolbar can regress to a pointer-only or unnamed options action'
 require_multiline_pattern crates/onboarding/src/basics_page.rs \
     'Label::new\(.*?Close hides a view.*?\.flex_wrap\(\).*?Button::new\("onboarding-copy-codex-hook"' \
     'the first-run safety copy can regress to competing horizontally with its actions'
