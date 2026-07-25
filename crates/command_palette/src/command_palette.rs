@@ -942,20 +942,20 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
         "agent::NewThread" => return "agent::NewAgentSession".to_owned(),
         "agent::NewExternalAgentThread" => return "agent::NewExternalAgentSession".to_owned(),
         "agent::ArchiveSelectedThread" => {
-            return "session_rail::RemoveSelectedSession".to_owned();
+            return "sessions::RemoveSelectedSession".to_owned();
         }
         "agent::RemoveSelectedThread" => return "agent::RemoveSelectedAgentSession".to_owned(),
         "agent::RenameSelectedThread" => {
-            return "session_rail::RenameSelectedSession".to_owned();
+            return "sessions::RenameSelectedSession".to_owned();
         }
         "agent::NewTerminalThread" => return "agent::NewTerminalSession".to_owned(),
         "sidebar::NewThreadInGroup" => {
-            return "session_rail::NewAgentSessionInWorkspace".to_owned();
+            return "sessions::NewAgentSessionInWorkspace".to_owned();
         }
-        "sidebar::ToggleThreadSwitcher" => return "session_rail::SwitchSessions".to_owned(),
-        "sidebar::ToggleThreadHistory" => return "session_rail::ToggleAgentHistory".to_owned(),
+        "sidebar::ToggleThreadSwitcher" => return "sessions::SwitchSessions".to_owned(),
+        "sidebar::ToggleThreadHistory" => return "sessions::ToggleAgentHistory".to_owned(),
         "sidebar::OpenSelectedReviewBrief" => {
-            return "session_rail::OpenSelectedSessionDetails".to_owned();
+            return "sessions::OpenSelectedSessionDetails".to_owned();
         }
         "workspace::RevealFiles" => return "files::Open".to_owned(),
         "zed_actions::OpenProjectSettings" => return "workspace::OpenSettings".to_owned(),
@@ -965,7 +965,7 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
 
     for (source, product) in [
         ("zed_actions::", "dez::"),
-        ("sidebar::", "session_rail::"),
+        ("sidebar::", "sessions::"),
         ("agent_panel::", "agent::"),
         ("debug_panel::", "debug::"),
         ("git_panel::", "git::"),
@@ -1152,7 +1152,7 @@ mod tests {
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::ToggleAttentionFilter", "Dez"),
-            "session rail: toggle attention filter"
+            "sessions: toggle attention filter"
         );
         assert_eq!(
             humanize_action_name_for_product("workspace::AddFolderToProject", "Dez"),
@@ -1164,35 +1164,35 @@ mod tests {
         );
         assert_eq!(
             humanize_action_name_for_product("agent::RenameSelectedThread", "Dez"),
-            "session rail: rename selected session"
+            "sessions: rename selected session"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::NewThreadInGroup", "Dez"),
-            "session rail: new agent session in workspace"
+            "sessions: new agent session in workspace"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::ToggleThreadHistory", "Dez"),
-            "session rail: toggle agent history"
+            "sessions: toggle agent history"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::ToggleThreadSwitcher", "Dez"),
-            "session rail: switch sessions"
+            "sessions: switch sessions"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::ReturnToSelectedSession", "Dez"),
-            "session rail: return to selected session"
+            "sessions: return to selected session"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::OpenSelectedSessionFiles", "Dez"),
-            "session rail: open selected session files"
+            "sessions: open selected session files"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::ReviewSelectedSessionChanges", "Dez"),
-            "session rail: review selected session changes"
+            "sessions: review selected session changes"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::OpenSelectedReviewBrief", "Dez"),
-            "session rail: open selected session details"
+            "sessions: open selected session details"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::OpenSelectedReviewBrief", "Zed"),
@@ -1200,7 +1200,7 @@ mod tests {
         );
         assert_eq!(
             humanize_action_name_for_product("agent::ArchiveSelectedThread", "Dez"),
-            "session rail: remove selected session"
+            "sessions: remove selected session"
         );
         assert_eq!(
             humanize_action_name_for_product("agent::RenameSelectedThread", "Zed"),

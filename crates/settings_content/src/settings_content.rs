@@ -180,7 +180,7 @@ pub struct SettingsContent {
     /// Settings for the Canvas workspace bar.
     pub workspace_bar: Option<WorkspaceBarSettingsContent>,
 
-    /// Settings for the Canvas session rail.
+    /// Settings for Sessions, the Dez supervision rail.
     pub session_rail: Option<SessionRailSettingsContent>,
 
     /// Settings for the Canvas pane grid.

@@ -74,7 +74,10 @@ Dez uses the same icon for the same object or transition everywhere:
 Icons support labels; they never replace them. A creation icon does not stand
 in for an object-specific Terminal or File icon, and review/details controls
 do not reuse each other's symbols. Dez does not reuse Zed-branded assistant
-marks for these controls.
+marks for these controls. Command Palette labels follow the same grammar: Dez
+exposes `sessions: ...`, `files: ...`, `git: ...`, and
+`workspace tools: ...` display names instead of inherited implementation
+namespaces.
 
 Hierarchy follows the next useful action. Welcome gives one filled,
 keyboard-focusable recommendation—**Open Workspace** when no codebase is open,

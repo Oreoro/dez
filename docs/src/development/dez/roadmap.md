@@ -3500,3 +3500,17 @@ Completed for the default focus quieting source slice:
   full-pane outline;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the public Sessions terminology source slice:
+
+- changed Dez Command Palette display namespaces for selected-session actions
+  from `session rail: ...` to `sessions: ...` while keeping internal action and
+  settings keys compatible;
+- renamed the Agent metadata debug buffer from **All Session Rail Agent Session
+  Metadata** to **All Sessions Agent Session Metadata**;
+- cleaned bundled settings/schema comments so users see **Sessions** rather
+  than architectural rail terminology;
+- updated Fork Notes, public docs, and identity guards for the public/internal
+  terminology boundary;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

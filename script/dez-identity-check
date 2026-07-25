@@ -79,6 +79,15 @@ require_pattern crates/zed/Cargo.toml \
 require_pattern assets/settings/default.json \
     '^  "auto_update": false,$' \
     'automatic binary updates are enabled by default'
+require_multiline_pattern assets/settings/default.json \
+    'Whether Sessions should start open in new windows\..*?Settings for Sessions, the Dez supervision rail\.' \
+    'bundled Settings comments can regress to public Session Rail terminology'
+require_multiline_pattern crates/settings_content/src/settings_content.rs \
+    'Settings for Sessions, the Dez supervision rail\.' \
+    'generated Settings schema comments can regress to public Session Rail terminology'
+require_multiline_pattern crates/settings_content/src/canvas.rs \
+    'Whether detected terminal agents should surface in Sessions\.' \
+    'Agent settings schema comments can regress to public Session Rail terminology'
 require_pattern assets/settings/default.json \
     '^  "auto_connect": false,$' \
     'upstream cloud auto-connect is enabled by default'
@@ -382,8 +391,11 @@ require_pattern crates/command_palette/src/command_palette.rs \
     'TypeId::of::<NewCenterTerminal>\(\)' \
     'the Dez Command Palette exposes a duplicate internal center-terminal command'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
-    'fn action_name_for_product.*?"workspace::ToggleProjectPane".*?"workspace_tools::Toggle".*?"zed_actions::", "dez::".*?"sidebar::", "session_rail::".*?"agent_panel::", "agent::".*?"debug_panel::", "debug::".*?"git_panel::", "git::".*?"outline_panel::", "outline::".*?"project_panel::", "files::".*?"project_search::", "workspace_search::"' \
+    'fn action_name_for_product.*?"workspace::ToggleProjectPane".*?"workspace_tools::Toggle".*?"zed_actions::", "dez::".*?"sidebar::", "sessions::".*?"agent_panel::", "agent::".*?"debug_panel::", "debug::".*?"git_panel::", "git::".*?"outline_panel::", "outline::".*?"project_panel::", "files::".*?"project_search::", "workspace_search::"' \
     'the Dez Command Palette can regress to internal sidebar, tool-panel, project-panel, or zed-actions namespaces'
+reject_pattern crates/command_palette/src/command_palette.rs \
+    'session rail:' \
+    'the Dez Command Palette can regress to exposing Session Rail as public command vocabulary'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
     'fn label\(self, app_name: &str\).*?Self::Project if app_name != "Zed" => "workspace"' \
     'the Dez Command Palette can regress to a Project category badge'
@@ -676,10 +688,10 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     '"Agent Profiles".*?agent_session_label\([[:space:]]*APP_NAME,[[:space:]]*"Open Settings",[[:space:]]*"Agent Settings".*?"Toggle Sidebar".*?"Hide Sessions"' \
     'the Session Rail Agent Tools menu can regress to ambiguous Settings or Sidebar destinations'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
-    '"agent::RenameSelectedThread".*?"session_rail::RenameSelectedSession".*?"sidebar::NewThreadInGroup".*?"session_rail::NewAgentSessionInWorkspace".*?"sidebar::ToggleThreadSwitcher".*?"session_rail::SwitchSessions".*?"sidebar::ToggleThreadHistory".*?"session_rail::ToggleAgentHistory"' \
+    '"agent::RenameSelectedThread".*?"sessions::RenameSelectedSession".*?"sidebar::NewThreadInGroup".*?"sessions::NewAgentSessionInWorkspace".*?"sidebar::ToggleThreadSwitcher".*?"sessions::SwitchSessions".*?"sidebar::ToggleThreadHistory".*?"sessions::ToggleAgentHistory"' \
     'the mixed Session Rail rename action can regress to Thread terminology or one Session type'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
-    '"agent::ArchiveSelectedThread".*?"session_rail::RemoveSelectedSession"' \
+    '"agent::ArchiveSelectedThread".*?"sessions::RemoveSelectedSession"' \
     'the mixed Session Rail removal action can regress to presenting every selected row as an Agent archive'
 require_multiline_pattern crates/agent_ui/src/draft_prompt_store.rs \
     'fn empty_draft_placeholder_for_product.*?app_name == "Zed".*?New \{agent_name\} Thread.*?New \{agent_name\} Session' \
@@ -805,8 +817,11 @@ require_multiline_pattern crates/agent_ui/src/thread_metadata_store.rs \
     'pub fn display_title.*?default_agent_session_title\(paths::APP_NAME\)' \
     'Session Rail metadata can regress to an upstream default Thread title'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
-    '"No active native thread to copy".*?"No active built-in Agent Session to copy".*?"Thread copied to clipboard \(base64 encoded\)".*?"Agent Session copied to clipboard \(base64 encoded\)".*?"Open a project to load a thread".*?"Open a Workspace to load an Agent Session".*?"Failed to parse thread data from clipboard".*?"Failed to parse Agent Session data from clipboard".*?"Thread loaded from clipboard".*?"Agent Session loaded from clipboard".*?"No active thread".*?"No active Agent Session".*?"All Sidebar Thread Metadata".*?"All Session Rail Agent Session Metadata"' \
+    '"No active native thread to copy".*?"No active built-in Agent Session to copy".*?"Thread copied to clipboard \(base64 encoded\)".*?"Agent Session copied to clipboard \(base64 encoded\)".*?"Open a project to load a thread".*?"Open a Workspace to load an Agent Session".*?"Failed to parse thread data from clipboard".*?"Failed to parse Agent Session data from clipboard".*?"Thread loaded from clipboard".*?"Agent Session loaded from clipboard".*?"No active thread".*?"No active Agent Session".*?"All Sidebar Thread Metadata".*?"All Sessions Agent Session Metadata"' \
     'Agent clipboard and metadata diagnostics can regress to upstream Thread/Sidebar terminology'
+reject_pattern crates/agent_ui/src/agent_panel.rs \
+    'All Session Rail Agent Session Metadata' \
+    'Agent metadata diagnostics can regress to exposing Session Rail as public Dez vocabulary'
 require_multiline_pattern crates/agent_ui/src/completion_provider.rs \
     'fn prompt_context_type_label.*?PromptContextType::Thread if app_name == "Zed".*?"Threads".*?PromptContextType::Thread => "Agent Sessions".*?Self::Thread => "thread".*?prompt_context_type_label\(paths::APP_NAME, \*self\)' \
     'the Dez Agent context picker can regress to visible Thread terminology or break the compatible @thread keyword'
@@ -982,7 +997,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn open_workspace_and_activate_thread_with_destination.*?this\.activate_thread\(metadata, &workspace, false, window, cx\);.*?if reveal_files \{.*?RevealFiles.*?fn open_workspace_and_activate_terminal_with_destination.*?this\.activate_terminal_in_workspace\(&workspace, metadata, false, window, cx\);.*?if reveal_files \{.*?RevealFiles' \
     'Files can regress to dispatching before a closed Session Workspace has been restored'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
-    '"sidebar::OpenSelectedReviewBrief".*?"session_rail::OpenSelectedSessionDetails".*?"sidebar::ReturnToSelectedSession".*?"session rail: return to selected session".*?"sidebar::OpenSelectedSessionFiles".*?"session rail: open selected session files".*?"sidebar::ReviewSelectedSessionChanges".*?"session rail: review selected session changes"' \
+    '"sidebar::OpenSelectedReviewBrief".*?"sessions::OpenSelectedSessionDetails".*?"sidebar::ReturnToSelectedSession".*?"sessions: return to selected session".*?"sidebar::OpenSelectedSessionFiles".*?"sessions: open selected session files".*?"sidebar::ReviewSelectedSessionChanges".*?"sessions: review selected session changes"' \
     'the Command Palette can regress to implementation-shaped selected-session actions'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
     '"workspace::RevealFiles".*?"files::Open".*?humanize_action_name_for_product\("workspace::RevealFiles", "Dez"\).*?"files: open"' \

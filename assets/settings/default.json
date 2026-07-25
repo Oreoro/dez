@@ -1047,7 +1047,7 @@
   "sidebar": {
     // Where to position the sidebar. Can be 'left' or 'right'.
     "side": "left",
-    // Whether the sidebar/session rail should start open in new windows.
+    // Whether Sessions should start open in new windows.
     "starts_open": false,
     // Whether to show the project pane toggle button in the sidebar header.
     "show_project_pane_button": true,
@@ -1091,7 +1091,7 @@
     "show_layout": true,
     "show_agent_attention": true
   },
-  // Settings for the Canvas session rail.
+  // Settings for Sessions, the Dez supervision rail.
   "session_rail": {
     "visibility": "auto",
     "mode": "compact",

@@ -883,8 +883,8 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   may retain upstream Thread, buffer, Panel, and status-bar copy.
 - **2026-07-23: Session switching complements Surface switching.** `Ctrl-Tab`
   retains conventional Surface/tab switching in the Main Work Area. While
-  Agent or the Session Rail has focus, the same chord cycles Sessions. The
-  global Command Palette exposes **Session Rail: Switch Sessions** so the
+  Agent or Sessions has focus, the same chord cycles Sessions. The
+  global Command Palette exposes **Sessions: Switch Sessions** so the
   supervision action remains keyboard-reachable without overriding editor
   muscle memory.
 - **2026-07-23: Session Switcher guidance follows its invocation mode.** When a
@@ -896,7 +896,7 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   assistive technology. The switcher previews work; hovering never does.
 - **2026-07-23: Public tool names describe regions, not compatibility types.**
   Command Palette namespaces, empty-state guidance, and cross-tool handoffs use
-  Files, Outline, Git, Debug, Agent, Workspace Tools, and Session Rail. Internal
+  Files, Outline, Git, Debug, Agent, Workspace Tools, and Sessions. Internal
   `*_panel` action namespaces, keys, persistence records, and upstream APIs may
   remain, but they do not define Dez's public shell. Official Zed retains its
   inherited Panel vocabulary.

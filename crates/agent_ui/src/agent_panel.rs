@@ -4382,7 +4382,7 @@ impl AgentPanel {
             agent_panel_session_label(
                 paths::APP_NAME,
                 "All Sidebar Thread Metadata",
-                "All Session Rail Agent Session Metadata",
+                "All Sessions Agent Session Metadata",
             )
             .to_string(),
             text,

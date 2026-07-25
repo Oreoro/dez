@@ -683,7 +683,7 @@ pub struct AgentUiSettingsContent {
     ///
     /// Default: true
     pub detect_terminal_agents: Option<bool>,
-    /// Whether detected terminal agents should surface in the Session Rail.
+    /// Whether detected terminal agents should surface in Sessions.
     ///
     /// Default: true
     pub show_terminal_agents_in_session_rail: Option<bool>,

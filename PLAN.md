@@ -2774,3 +2774,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   and inactive-pane dimming remain opt-in user settings. Static guards pin this
   default. This is source-only; no build, test binary, alternate binary, or
   visual launch was performed.
+- 2026-07-26: Removed more public **Session Rail** vocabulary from Dez-facing
+  UI paths. Command Palette selected-session actions now display under
+  `sessions: ...`, the Agent metadata debug buffer says **All Sessions Agent
+  Session Metadata**, and bundled settings/schema comments describe **Sessions**
+  while retaining compatible `session_rail` keys internally. Static guards pin
+  the public/internal boundary. This is source-only; no build, test binary,
+  alternate binary, or visual launch was performed.
