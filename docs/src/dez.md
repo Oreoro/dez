@@ -70,6 +70,12 @@ compact icons, but every control has a specific accessible name, tooltip, and
 place in the keyboard tab order. A critical action is never available only on
 pointer hover.
 
+Welcome keeps that first choice concrete. Without a Workspace, its three start
+actions are **Open Workspace**, **Clone Repository**, and **Open Scratch
+Terminal**. Inside a Workspace, they become **Start Terminal Session**, **Open
+Files**, and **New File**. The empty Main Work Area uses the same Session
+vocabulary and does not describe ordinary GUI-owned terminals as durable.
+
 The empty Session Rail follows the same activation loop. **Start with a
 Workspace** explains that the codebase supplies context to Terminal or Agent
 Sessions and that their changes return to the IDE for review. **Open

@@ -961,7 +961,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'render_agent_options_menu.*?IconName::Settings.*?Button::new\("history".*?IconName::Clock.*?render_recent_projects_button' \
     'the Session Rail can regress to inconsistent primary action icon roles'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'const DEZ_CONTENT:.*?IconName::FolderOpen,[[:space:]]*title: "Open Workspace".*?IconName::Terminal,[[:space:]]*title: "Open Scratch Terminal".*?IconName::File,[[:space:]]*title: "New File".*?const DEZ_WORKSPACE_CONTENT:.*?IconName::Terminal,[[:space:]]*title: "Start Terminal Session".*?IconName::FolderOpen,[[:space:]]*title: "Open Files".*?IconName::File,[[:space:]]*title: "New File".*?IconName::FolderOpen,[[:space:]]*title: "Open Another Workspace"' \
+    'const DEZ_CONTENT: \(Section<3>.*?IconName::FolderOpen,[[:space:]]*title: "Open Workspace".*?IconName::CloudDownload,[[:space:]]*title: "Clone Repository".*?IconName::Terminal,[[:space:]]*title: "Open Scratch Terminal".*?const DEZ_WORKSPACE_CONTENT: \(Section<3>.*?IconName::Terminal,[[:space:]]*title: "Start Terminal Session".*?IconName::FolderOpen,[[:space:]]*title: "Open Files".*?IconName::File,[[:space:]]*title: "New File"' \
     'the Dez welcome surface can regress to generic or contradictory action icons'
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'when\(self\.primary.*?ButtonStyle::Filled.*?aria_description\("Recommended first step"\).*?fn welcome_emphasizes_first_action.*?app_name != "Zed".*?first_section\.render\(.*?welcome_emphasizes_first_action\(APP_NAME\)' \
@@ -1204,11 +1204,14 @@ reject_pattern crates/workspace/src/pane.rs \
     '"(Project ready|Project tools unavailable|Project navigation did not attach to this pane\.)"' \
     'the Dez center surface mixes Project terminology into the Workspace hierarchy'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'Button::new\("empty-project-terminal", "New Terminal"\).*?NewCenterTerminal::default\(\).*?dispatch_action.*?NewCenterTerminal::default\(\)' \
+    'Button::new\("empty-project-terminal", "Start Terminal Session"\).*?NewCenterTerminal::default\(\).*?dispatch_action.*?NewCenterTerminal::default\(\)' \
     'the empty Workspace primary terminal action can regress to the legacy panel'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'Button::new\("empty-project-terminal", "New Terminal"\).*?aria_label\("New Terminal in Main Work Area"\).*?Tooltip::for_action.*?"New Terminal in Main Work Area".*?Button::new\("empty-project-open-file", "Find File"\).*?aria_label\("Find File in Workspace"\).*?Tooltip::for_action.*?"Find File in Workspace".*?Button::new\("empty-project-new-file", "New File"\).*?aria_label\("New File"\).*?Tooltip::for_action\("New File"' \
+    'Button::new\("empty-project-terminal", "Start Terminal Session"\).*?aria_label\("Start Terminal Session in Main Work Area"\).*?Tooltip::for_action.*?"Start Terminal Session in Main Work Area".*?Button::new\("empty-project-open-file", "Find File"\).*?aria_label\("Find File in Workspace"\).*?Tooltip::for_action.*?"Find File in Workspace".*?Button::new\("empty-project-new-file", "New File"\).*?aria_label\("New File"\).*?Tooltip::for_action\("New File"' \
     'empty Workspace launch actions can regress to clipped inline shortcut badges or unnamed controls'
+reject_multiline_pattern crates/workspace/src/pane.rs \
+    'fn render_empty_project_state.*?durable terminal' \
+    'the empty Workspace can overstate the default terminal ownership contract'
 require_multiline_pattern crates/workspace/src/pane.rs \
     'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?else \{.*?"New Terminal".*?NewCenterTerminal::default' \
     'the Dez New Item menu can regress from the single center-terminal model'
@@ -1438,10 +1441,10 @@ require_multiline_pattern crates/workspace/src/welcome.rs \
     'fn welcome_summary.*?"Run in this Workspace\. Supervise in the rail\. Review changes here\.".*?"Run in the terminal\. Supervise in the rail\. Review in the IDE\.".*?Label::new\(welcome_summary\(APP_NAME, has_workspace\)\)' \
     'the Dez welcome headline no longer explains the terminal, rail, and IDE loop'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'const OPEN_WORKSPACE: OpenFolder = OpenFolder \{.*?create_new_window: Some\(false\).*?const DEZ_CONTENT.*?title: "Start a Dez Workflow".*?title: "Open Workspace",[[:space:]]*action: &OPEN_WORKSPACE.*?title: "Open Scratch Terminal"' \
+    'const OPEN_WORKSPACE: OpenFolder = OpenFolder \{.*?create_new_window: Some\(false\).*?const DEZ_CONTENT: \(Section<3>.*?title: "Start a Dez Workflow".*?title: "Open Workspace",[[:space:]]*action: &OPEN_WORKSPACE.*?title: "Clone Repository".*?title: "Open Scratch Terminal"' \
     'the Dez welcome actions no longer make Workspace context primary'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'const REVEAL_FILES: RevealFiles = RevealFiles.*?const DEZ_WORKSPACE_CONTENT.*?title: "Start in This Workspace".*?title: "Start Terminal Session".*?title: "Open Files",[[:space:]]*action: &REVEAL_FILES.*?has_workspace.*?DEZ_WORKSPACE_CONTENT' \
+    'const REVEAL_FILES: RevealFiles = RevealFiles.*?const DEZ_WORKSPACE_CONTENT: \(Section<3>.*?title: "Start in This Workspace".*?title: "Start Terminal Session".*?title: "Open Files",[[:space:]]*action: &REVEAL_FILES.*?title: "New File".*?has_workspace.*?DEZ_WORKSPACE_CONTENT' \
     'the Dez welcome screen can regress to asking for a Workspace that is already open'
 reject_pattern crates/workspace/src/welcome.rs \
     'title: "Open Files",[[:space:]]*action: &TOGGLE_PROJECT_PANE' \
@@ -1483,7 +1486,7 @@ require_pattern crates/workspace/src/pane.rs \
     '"Search Workspace…"' \
     'the Dez pane creation menu still exposes Project Search'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'Button::new\("empty-project-terminal", "New Terminal"\).*?\.aria_label\("New Terminal in Main Work Area"\).*?Tooltip::for_action.*?"New Terminal in Main Work Area".*?Button::new\("empty-project-open-file", "Find File"\).*?\.aria_label\("Find File in Workspace"\).*?Tooltip::for_action.*?"Find File in Workspace".*?Button::new\("empty-project-new-file", "New File"\).*?\.aria_label\("New File"\).*?Tooltip::for_action\("New File"' \
+    'Button::new\("empty-project-terminal", "Start Terminal Session"\).*?\.aria_label\("Start Terminal Session in Main Work Area"\).*?Tooltip::for_action.*?"Start Terminal Session in Main Work Area".*?Button::new\("empty-project-open-file", "Find File"\).*?\.aria_label\("Find File in Workspace"\).*?Tooltip::for_action.*?"Find File in Workspace".*?Button::new\("empty-project-new-file", "New File"\).*?\.aria_label\("New File"\).*?Tooltip::for_action\("New File"' \
     'the Workspace-ready actions can regress to ambiguous or unnamed controls'
 require_pattern crates/settings_ui/src/page_data.rs \
     '"Trust All Workspaces By Default"' \

@@ -140,6 +140,18 @@ toolbar controls must be keyboard-focusable, expose a specific accessible
 name, and use the same wording in their tooltip. Official Zed compatibility
 branches may retain upstream hover and icon behavior.
 
+Welcome's primary section is deliberately limited to three transitions. With
+no Workspace it offers **Open Workspace**, **Clone Repository**, and **Open
+Scratch Terminal**. With a Workspace it offers **Start Terminal Session**,
+**Open Files**, and **New File**. Generic utilities such as the command palette
+and replacing the active Workspace remain available through normal chrome, but
+do not compete with the release-defining start loop.
+
+The empty Main Work Area uses the same **Start Terminal Session** vocabulary.
+It describes live terminal and Agent state without calling the default
+GUI-owned terminal durable; durability is shown only when an external Host
+actually owns the exact Session.
+
 Empty primary regions use compact, top-anchored recovery guidance rather than
 floating a small prompt in the middle of an empty pane. The heading names the
 missing prerequisite, the explanation is specific to Files, Git, or Agent, and

@@ -2700,3 +2700,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   their existing configured-font setup. Static guards protect the stable
   window versus shaped-popup distinction. This is source-only; no build, test
   binary, alternate binary, or visual launch was performed.
+- 2026-07-25: Tightened the first-work hierarchy at both Main Work Area entry
+  points. Welcome now exposes exactly three primary-section transitions per
+  state: Open Workspace, Clone Repository, and Open Scratch Terminal without a
+  codebase; Start Terminal Session, Open Files, and New File inside one.
+  Command-palette and Workspace-replacement utilities remain in normal chrome
+  instead of competing with startup. The empty Main Work Area now uses Start
+  Terminal Session consistently and no longer describes the default GUI-owned
+  terminal as durable. Static guards cover count, order, routing, wording, and
+  ownership truth. This is source-only; no build, test binary, alternate
+  binary, or visual launch was performed.

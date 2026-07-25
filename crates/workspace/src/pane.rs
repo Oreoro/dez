@@ -993,7 +993,7 @@ impl Pane {
                             )
                             .child(
                                 Label::new(
-                                    "Start in a durable terminal or open a file. Sessions stay in the rail; code, diffs, diagnostics, and review stay here.",
+                                    "Start a Terminal Session or find a file. The Session Rail supervises live terminal and Agent state; Files, Git, diffs, diagnostics, and Debug keep review in this Workspace.",
                                 )
                                 .size(LabelSize::Small)
                                 .color(Color::Muted),
@@ -1005,14 +1005,14 @@ impl Pane {
                             .flex_wrap()
                             .gap_2()
                             .child(
-                                Button::new("empty-project-terminal", "New Terminal")
+                                Button::new("empty-project-terminal", "Start Terminal Session")
                                     .tab_index(0isize)
                                     .style(ButtonStyle::Filled)
                                     .start_icon(Icon::new(IconName::Terminal))
-                                    .aria_label("New Terminal in Main Work Area")
+                                    .aria_label("Start Terminal Session in Main Work Area")
                                     .tooltip(|_, cx| {
                                         Tooltip::for_action(
-                                            "New Terminal in Main Work Area",
+                                            "Start Terminal Session in Main Work Area",
                                             &NewCenterTerminal::default(),
                                             cx,
                                         )

@@ -3334,3 +3334,21 @@ Completed for the secondary-window visual-identity source slice:
   deliberate popup exception;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Welcome and empty-Main-Work-Area hierarchy source slice:
+
+- reduced Dez Welcome's primary section from five competing entries to the
+  planned three transitions for each Workspace state;
+- retained Open Workspace, Clone Repository, and the explicit pathless Scratch
+  Terminal route when no codebase is open;
+- retained Start Terminal Session, Open Files, and New File when the current
+  Workspace already supplies codebase context;
+- removed command-palette and Workspace-replacement utilities from the primary
+  start list without removing those capabilities from normal application
+  chrome;
+- aligned the empty Main Work Area on **Start Terminal Session** and removed
+  the false implication that default GUI-owned terminals are durable;
+- added static count, order, routing, naming, and terminal-ownership truth
+  guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

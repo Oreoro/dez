@@ -261,7 +261,7 @@ const ZED_CONTENT: (Section<5>, Section<3>) = (
     },
 );
 
-const DEZ_CONTENT: (Section<5>, Section<3>) = (
+const DEZ_CONTENT: (Section<3>, Section<3>) = (
     Section {
         title: "Start a Dez Workflow",
         entries: [
@@ -272,27 +272,15 @@ const DEZ_CONTENT: (Section<5>, Section<3>) = (
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
-                icon: IconName::Terminal,
-                title: "Open Scratch Terminal",
-                action: &NEW_CENTER_TERMINAL,
-                visibility_guard: SectionVisibility::Always,
-            },
-            SectionEntry {
                 icon: IconName::CloudDownload,
                 title: "Clone Repository",
                 action: &GitClone,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
-                icon: IconName::File,
-                title: "New File",
-                action: &NewFile,
-                visibility_guard: SectionVisibility::Always,
-            },
-            SectionEntry {
-                icon: IconName::ListCollapse,
-                title: "Open Command Palette",
-                action: &command_palette::Toggle,
+                icon: IconName::Terminal,
+                title: "Open Scratch Terminal",
+                action: &NEW_CENTER_TERMINAL,
                 visibility_guard: SectionVisibility::Always,
             },
         ],
@@ -325,7 +313,7 @@ const DEZ_CONTENT: (Section<5>, Section<3>) = (
     },
 );
 
-const DEZ_WORKSPACE_CONTENT: (Section<5>, Section<3>) = (
+const DEZ_WORKSPACE_CONTENT: (Section<3>, Section<3>) = (
     Section {
         title: "Start in This Workspace",
         entries: [
@@ -345,18 +333,6 @@ const DEZ_WORKSPACE_CONTENT: (Section<5>, Section<3>) = (
                 icon: IconName::File,
                 title: "New File",
                 action: &NewFile,
-                visibility_guard: SectionVisibility::Always,
-            },
-            SectionEntry {
-                icon: IconName::ListCollapse,
-                title: "Open Command Palette",
-                action: &command_palette::Toggle,
-                visibility_guard: SectionVisibility::Always,
-            },
-            SectionEntry {
-                icon: IconName::FolderOpen,
-                title: "Open Another Workspace",
-                action: &OPEN_WORKSPACE,
                 visibility_guard: SectionVisibility::Always,
             },
         ],
@@ -951,12 +927,14 @@ mod tests {
             "Write. Delegate. Watch. Verify."
         );
         assert_eq!(DEZ_CONTENT.0.entries[0].title, "Open Workspace");
-        assert_eq!(DEZ_CONTENT.0.entries[1].title, "Open Scratch Terminal");
+        assert_eq!(DEZ_CONTENT.0.entries[1].title, "Clone Repository");
+        assert_eq!(DEZ_CONTENT.0.entries[2].title, "Open Scratch Terminal");
         assert_eq!(
             DEZ_WORKSPACE_CONTENT.0.entries[0].title,
             "Start Terminal Session"
         );
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[1].title, "Open Files");
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[2].title, "New File");
         assert_eq!(ZED_CONTENT.0.entries[0].title, "New Terminal");
         assert_eq!(OPEN_WORKSPACE.create_new_window, Some(false));
         assert!(welcome_emphasizes_first_action("Dez"));
