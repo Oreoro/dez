@@ -520,6 +520,9 @@ require_multiline_pattern crates/workspace/src/workspace.rs \
     'pub fn apply_canvas_layout.*?ensure_visible_tabbed_panes\(1, &\[\].*?pub fn apply_canvas_agent_control_layout.*?ensure_visible_tabbed_panes\(1, &\[\].*?pub fn apply_canvas_editor_focus_layout.*?ensure_visible_tabbed_panes\(1, &\[\].*?fn ensure_visible_tabbed_panes.*?selected_pane_ids.*?contains_user_work.*?!selected && visible && !contains_user_work.*?items_len\(\) > 0.*?selected_panes\.push\(pane\).*?test_single_work_area_cleanup_hides_only_surplus_empty_panes.*?!surplus_empty_pane\.read\(cx\)\.is_visible\(\).*?user_work_pane\.read\(cx\)\.is_visible\(\)' \
     'single-work-area recipes can regress to a duplicate empty Main Work Area or hide panes containing user work'
 require_multiline_pattern crates/workspace/src/workspace.rs \
+    'fn uses_single_tabbed_pane.*?Self::Full \| Self::AgentControl \| Self::EditorFocus.*?fn normalize_restored_dez_main_work_area.*?paths::APP_NAME == "Zed".*?active_canvas_layout_recipe.*?!recipe\.uses_single_tabbed_pane\(\).*?ensure_visible_tabbed_panes\(1, &\[\], window, cx\).*?workspace\.sync_panel_panes_from_docks\(window, cx\).*?workspace\.normalize_restored_dez_main_work_area\(window, cx\).*?fn test_restore_normalizes_only_single_work_area_layouts.*?active_canvas_layout_recipe = None.*?normalize_restored_dez_main_work_area.*?!surplus_empty_pane\.read\(cx\)\.is_visible\(\).*?CanvasLayoutRecipe::Review.*?!workspace\.normalize_restored_dez_main_work_area.*?surplus_empty_pane\.read\(cx\)\.is_visible\(\)' \
+    'Workspace restoration can regress to stale empty columns or collapse an explicit multi-pane recipe'
+require_multiline_pattern crates/workspace/src/workspace.rs \
     'fn auxiliary_panes_only_coexist_in_an_ultrawide_shell.*?1799\..*?1800\..*?1200\..*?1800\..*?1000\.' \
     'Workspace Tools and Agent can regress to competing full-height drawers on laptop-sized windows'
 require_multiline_pattern assets/settings/default.json \

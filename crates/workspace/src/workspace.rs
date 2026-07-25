@@ -413,6 +413,10 @@ impl CanvasLayoutRecipe {
         })
     }
 
+    fn uses_single_tabbed_pane(self) -> bool {
+        matches!(self, Self::Full | Self::AgentControl | Self::EditorFocus)
+    }
+
     fn root_axis_for_size(
         self,
         size: Size<Pixels>,
@@ -7078,6 +7082,46 @@ impl Workspace {
         cx.notify();
     }
 
+    fn normalize_restored_dez_main_work_area(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if paths::APP_NAME == "Zed"
+            || self
+                .active_canvas_layout_recipe
+                .is_some_and(|recipe| !recipe.uses_single_tabbed_pane())
+        {
+            return false;
+        }
+
+        let visible_tabbed_panes_before = self
+            .center
+            .panes()
+            .into_iter()
+            .filter(|pane| {
+                let pane = pane.read(cx);
+                pane.pane_kind() == PaneKind::Tabs && pane.is_visible()
+            })
+            .map(|pane| pane.entity_id())
+            .collect::<Vec<_>>();
+
+        self.ensure_visible_tabbed_panes(1, &[], window, cx);
+
+        let visible_tabbed_panes_after = self
+            .center
+            .panes()
+            .into_iter()
+            .filter(|pane| {
+                let pane = pane.read(cx);
+                pane.pane_kind() == PaneKind::Tabs && pane.is_visible()
+            })
+            .map(|pane| pane.entity_id())
+            .collect::<Vec<_>>();
+
+        visible_tabbed_panes_before != visible_tabbed_panes_after
+    }
+
     fn existing_tabbed_pane(
         &self,
         pane: Option<WeakEntity<Pane>>,
@@ -12263,6 +12307,7 @@ impl Workspace {
                 }
 
                 workspace.sync_panel_panes_from_docks(window, cx);
+                workspace.normalize_restored_dez_main_work_area(window, cx);
                 workspace.ensure_visible_center_pane(window, cx);
                 cx.notify();
             })?;
@@ -16517,6 +16562,37 @@ mod tests {
                 retained_panes.iter().any(|pane| pane == &user_work_pane),
                 "a pane containing user work must remain part of the visible recipe"
             );
+        });
+    }
+
+    #[gpui::test]
+    async fn test_restore_normalizes_only_single_work_area_layouts(cx: &mut TestAppContext) {
+        init_test(cx);
+
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            let primary_pane = workspace.active_pane().clone();
+            let surplus_empty_pane =
+                workspace.split_pane(primary_pane.clone(), SplitDirection::Right, window, cx);
+
+            workspace.active_canvas_layout_recipe = None;
+            assert!(workspace.normalize_restored_dez_main_work_area(window, cx));
+            assert!(primary_pane.read(cx).is_visible());
+            assert!(!surplus_empty_pane.read(cx).is_visible());
+
+            surplus_empty_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+            workspace.active_canvas_layout_recipe = Some(CanvasLayoutRecipe::Review);
+
+            assert!(
+                !workspace.normalize_restored_dez_main_work_area(window, cx),
+                "an explicit multi-pane recipe must keep its intentionally empty work areas"
+            );
+            assert!(primary_pane.read(cx).is_visible());
+            assert!(surplus_empty_pane.read(cx).is_visible());
         });
     }
 

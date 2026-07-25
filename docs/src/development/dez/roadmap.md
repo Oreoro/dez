@@ -3058,6 +3058,10 @@ Completed for the single-work-area cleanup and focus-hierarchy source slice:
   split;
 - made Full, Agent Control, and Editor Focus select one authoritative Main Work
   Area and hide only surplus empty tab panes;
+- applied the same cleanup after ordinary Workspace restoration when no
+  multi-pane recipe owns the layout, so stale empty splits cannot survive a
+  relaunch as giant blank columns;
+- preserved requested empty panes for explicit multi-pane recipes;
 - preserved every visible pane containing a file, terminal, diff, or other user
   Surface even when it exceeds the recipe's nominal pane count;
 - changed the default active-pane cue from a two-pixel full-surface rectangle to

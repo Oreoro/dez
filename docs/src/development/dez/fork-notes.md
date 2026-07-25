@@ -669,10 +669,13 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   Agent Control, and Editor Focus recipes select one authoritative Main Work
   Area and hide surplus empty tab panes left by earlier split recipes. A pane
   containing a file, terminal, diff, or any other user Surface is never hidden
-  by this cleanup. The default pane focus indicator lives in the title/selected
-  tab rather than painting a saturated rectangle around the full work surface;
-  full-pane border focus and inactive-pane dimming remain user-configurable
-  but default off.
+  by this cleanup. Restoration runs the same conservative cleanup for the
+  default layout and those single-work-area recipes, preventing stale empty
+  splits from reappearing as blank columns. An explicit multi-pane recipe keeps
+  its requested empty work areas. The default pane focus indicator lives in the
+  title/selected tab rather than painting a saturated rectangle around the full
+  work surface; full-pane border focus and inactive-pane dimming remain
+  user-configurable but default off.
   The remaining empty Main Work Area is one bounded launch panel headed **Run.
   Supervise. Review.**, with only the three immediate Workspace actions and a
   compact route row that names **Run -> Main Work Area**, **Supervise ->

@@ -40,6 +40,9 @@ of visible horizontal space and Dez keeps at least 60% for the Main Work Area.
 The same policy applies after resizing, reopening, and restoring a saved layout.
 Returning to a one-work-area recipe removes surplus empty split panes while
 preserving every pane that contains a file, terminal, or other user Surface.
+Workspace restoration applies that same cleanup to the default layout and
+saved one-work-area recipes, so stale empty splits cannot return as unexplained
+blank columns. Explicit multi-pane recipes retain their requested work areas.
 When that work area is empty, one restrained launch panel states the product
 loop—**Run. Supervise. Review.**—and offers only Start Terminal Session, Find
 File, and New File. A compact route row names where the loop happens: Run in

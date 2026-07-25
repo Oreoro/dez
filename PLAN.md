@@ -2809,3 +2809,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   identity guards pin the priority order and prevent the secondary icon cluster
   from returning. This is source-only; no build, test binary, alternate binary,
   or visual launch was performed.
+- 2026-07-26: Closed the stale-empty-split restoration gap. Dez now reapplies
+  its one-Main-Work-Area cleanup immediately after restoring the default layout
+  or a saved Full, Agent Control, or Editor Focus layout. Only surplus empty
+  tab panes are hidden; files, terminals, diffs, and other user Surfaces remain
+  visible, and explicit multi-pane recipes keep their requested empty work
+  areas. Source assertions and an identity guard pin the restoration boundary.
+  This is source-only; no build, test binary, alternate binary, or visual
+  launch was performed.
