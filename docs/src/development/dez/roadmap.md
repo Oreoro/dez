@@ -3658,3 +3658,19 @@ Completed for the native empty Main Work Area source slice:
   button-looking passive guidance;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the true-empty Sessions visual-grammar source slice:
+
+- replaced the three bordered Run/Supervise/Review rows with passive
+  icon-and-copy list items so the narrow rail no longer presents five elements
+  as competing actions;
+- aligned the destinations with the Main Work Area language: **Terminal in Main
+  Work Area**, **Live state in Sessions**, and **Files, Git, and diffs**;
+- gave every route item an explicit accessible name while keeping the list and
+  list-item semantics;
+- preserved **Open Workspace…** as the sole filled transition and **Open
+  Scratch Terminal** as the outlined pathless alternative;
+- added source assertions and a rejection guard preventing borders, rounded
+  tiles, or control backgrounds from returning to the passive route;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

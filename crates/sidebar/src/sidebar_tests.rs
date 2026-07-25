@@ -394,9 +394,9 @@ fn start_state_waits_for_restore_and_only_describes_a_true_empty_app() {
     assert_eq!(
         session_start_route_copy(),
         [
-            ("Run", "Main Work Area"),
-            ("Supervise", "Sessions"),
-            ("Review", "Files + Git")
+            ("Run", "Terminal in Main Work Area"),
+            ("Supervise", "Live state in Sessions"),
+            ("Review", "Files, Git, and diffs")
         ],
         "the empty Sessions state should name the concrete Dez route"
     );

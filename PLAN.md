@@ -2893,3 +2893,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   hierarchy and keyboard routes. Static guards reject both the floating card
   shell and button-like passive guidance. This is source-only; no build, test
   binary, alternate binary, or visual launch was performed.
+- 2026-07-26: Applied the same passive orientation grammar to the true-empty
+  Sessions rail. **Run**, **Supervise**, and **Review** are now individually
+  named icon-and-copy list items targeting **Terminal in Main Work Area**,
+  **Live state in Sessions**, and **Files, Git, and diffs**. Their old rounded
+  borders and control backgrounds are gone, so they no longer compete with the
+  actual **Open Workspace…** and **Open Scratch Terminal** buttons. Open
+  Workspace remains the only filled action. Source assertions and a rejection
+  guard protect the distinction between explanation and interaction. This is
+  source-only; no build, test binary, alternate binary, or visual launch was
+  performed.

@@ -1008,6 +1008,7 @@ impl Pane {
                             .children(workflow_route.into_iter().map(|(icon, label, target)| {
                                 h_flex()
                                     .role(gpui::Role::ListItem)
+                                    .aria_label(format!("{label}. {target}"))
                                     .min_w(px(172.))
                                     .flex_1()
                                     .items_center()

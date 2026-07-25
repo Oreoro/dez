@@ -648,9 +648,9 @@ fn session_start_state_copy() -> (&'static str, &'static str, &'static str, &'st
 
 fn session_start_route_copy() -> [(&'static str, &'static str); 3] {
     [
-        ("Run", "Main Work Area"),
-        ("Supervise", "Sessions"),
-        ("Review", "Files + Git"),
+        ("Run", "Terminal in Main Work Area"),
+        ("Supervise", "Live state in Sessions"),
+        ("Review", "Files, Git, and diffs"),
     ]
 }
 
@@ -1411,9 +1411,9 @@ mod session_start_state_tests {
         assert_eq!(
             session_start_route_copy(),
             [
-                ("Run", "Main Work Area"),
-                ("Supervise", "Sessions"),
-                ("Review", "Files + Git")
+                ("Run", "Terminal in Main Work Area"),
+                ("Supervise", "Live state in Sessions"),
+                ("Review", "Files, Git, and diffs")
             ],
             "the true-empty Sessions state should explain where work runs, is supervised, and is reviewed"
         );
@@ -12862,32 +12862,40 @@ impl Sidebar {
                             .aria_label("Dez workflow route")
                             .w_full()
                             .gap_1()
-                            .children(session_start_route_copy().into_iter().map(
-                                |(step, target)| {
-                                    h_flex()
-                                        .role(gpui::Role::ListItem)
-                                        .w_full()
-                                        .justify_between()
-                                        .gap_2()
-                                        .px_2()
-                                        .py_1()
-                                        .rounded_md()
-                                        .border_1()
-                                        .border_color(cx.theme().colors().border_variant)
-                                        .bg(cx.theme().colors().element_background)
-                                        .child(
-                                            Label::new(step)
-                                                .size(LabelSize::XSmall)
-                                                .color(Color::Default),
-                                        )
-                                        .child(
-                                            Label::new(target)
-                                                .size(LabelSize::XSmall)
-                                                .color(Color::Muted)
-                                                .truncate(),
-                                        )
-                                },
-                            )),
+                            .children(
+                                session_start_route_copy()
+                                    .into_iter()
+                                    .zip([IconName::Terminal, IconName::ListTree, IconName::Diff])
+                                    .map(|((step, target), icon)| {
+                                        h_flex()
+                                            .role(gpui::Role::ListItem)
+                                            .aria_label(format!("{step}. {target}"))
+                                            .w_full()
+                                            .items_start()
+                                            .gap_2()
+                                            .py_1p5()
+                                            .child(
+                                                Icon::new(icon)
+                                                    .size(IconSize::XSmall)
+                                                    .color(Color::Accent),
+                                            )
+                                            .child(
+                                                v_flex()
+                                                    .min_w_0()
+                                                    .gap_0p5()
+                                                    .child(
+                                                        Label::new(step)
+                                                            .size(LabelSize::XSmall)
+                                                            .color(Color::Default),
+                                                    )
+                                                    .child(
+                                                        Label::new(target)
+                                                            .size(LabelSize::XSmall)
+                                                            .color(Color::Muted),
+                                                    ),
+                                            )
+                                    }),
+                            ),
                     )
                     .child(
                         Button::new("start-open", open_workspace_label)

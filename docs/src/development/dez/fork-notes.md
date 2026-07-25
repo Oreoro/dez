@@ -94,11 +94,14 @@ At zero sessions, the overview owns the rail title and **No sessions yet**
 status. The compact start block uses one quiet **Start with a Workspace**
 heading rather than a decorative card. It explains that a codebase supplies
 context to Terminal and Agent Sessions and that their changes return to the IDE
-for review, offers one filled **Open Workspace…** action, and keeps **Open
-Scratch Terminal** as the outlined pathless alternative. With an active
-Workspace but no Session, the primary recovery action is **Start Terminal
-Session**. Start, search recovery, attention scope, and Session scope actions
-are keyboard tab stops and name their destination in accessibility output.
+for review. Its passive icon-and-copy route says **Terminal in Main Work
+Area**, **Live state in Sessions**, and **Files, Git, and diffs** without
+button-like borders or backgrounds. It offers one filled **Open Workspace…**
+action and keeps **Open Scratch Terminal** as the outlined pathless
+alternative. With an active Workspace but no Session, the primary recovery
+action is **Start Terminal Session**. Start, search recovery, attention scope,
+and Session scope actions are keyboard tab stops and name their destination in
+accessibility output.
 Once one or more Sessions exist, the overview remains status and scope only.
 Each Workspace header owns its exact terminal-creation destination, preventing
 the active Workspace from exposing the same launcher twice. Official Zed may
@@ -693,8 +696,10 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   removes the redundant visible **Terminal Session** actor title, and keeps the
   complete actor identity in its accessible name and details disclosure. The
   supervisor region is visibly titled and named **Sessions**, and its true-empty
-  state repeats the concrete route: **Run -> Main Work Area**, **Supervise ->
-  Sessions**, and **Review -> Files + Git**. **Session Rail**
+  state repeats the concrete route: **Run -> Terminal in Main Work Area**,
+  **Supervise -> Live state in Sessions**, and **Review -> Files, Git, and
+  diffs**. The route is a named passive list, not another action stack.
+  **Session Rail**
   remains an implementation and historical documentation term, not unexplained
   primary UI copy.
 - **2026-07-25: Transient feedback cannot become a fifth region.** Workspace
