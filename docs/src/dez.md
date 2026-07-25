@@ -42,8 +42,9 @@ Returning to a one-work-area recipe removes surplus empty split panes while
 preserving every pane that contains a file, terminal, or other user Surface.
 When that work area is empty, one restrained launch panel states the product
 loop—**Run. Supervise. Review.**—and offers only Start Terminal Session, Find
-File, and New File. It is onboarding for the current Workspace, not a second
-welcome screen.
+File, and New File. A compact route row names where the loop happens: Run in
+the Main Work Area, Supervise in Sessions, and Review in Files + Git. It is
+onboarding for the current Workspace, not a second welcome screen.
 Sessions is a projection over the real owners: selecting a row focuses or
 reattaches its existing Surface instead of opening a duplicate.
 Notifications and toasts are bounded transient shelves over the Main Work

@@ -3463,3 +3463,16 @@ Completed for the native shell and Lumin material source slice:
   guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the empty Main Work Area route-clarity source slice:
+
+- added a compact route row to the existing **Run. Supervise. Review.** launch
+  panel: **Run** targets the Main Work Area, **Supervise** targets Sessions, and
+  **Review** targets Files + Git;
+- kept the route row inside the bounded surface card so it cannot become another
+  floating overlay or fifth region;
+- made the route row a named list with item roles for assistive technology;
+- added a static guard so the empty work area cannot regress to a vague
+  placeholder that hides how terminals, Sessions, and review fit together;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

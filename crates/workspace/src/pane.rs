@@ -954,6 +954,11 @@ impl Pane {
         let open_file_focus = self.focus_handle.clone();
         let new_file_focus = self.focus_handle.clone();
         let terminal_focus = self.focus_handle.clone();
+        let workflow_route = [
+            (IconName::Terminal, "Run", "Main Work Area"),
+            (IconName::ListTree, "Supervise", "Sessions"),
+            (IconName::Diff, "Review", "Files + Git"),
+        ];
 
         v_flex()
             .id("empty-project-state")
@@ -994,6 +999,47 @@ impl Pane {
                                 .size(LabelSize::Small)
                                 .color(Color::Muted),
                             ),
+                    )
+                    .child(
+                        h_flex()
+                            .id("empty-project-route")
+                            .role(gpui::Role::List)
+                            .aria_label("Dez workflow route")
+                            .w_full()
+                            .flex_wrap()
+                            .gap_2()
+                            .children(workflow_route.into_iter().map(|(icon, label, target)| {
+                                h_flex()
+                                    .role(gpui::Role::ListItem)
+                                    .min_w(px(156.))
+                                    .flex_1()
+                                    .items_center()
+                                    .gap_2()
+                                    .px_2()
+                                    .py_1()
+                                    .rounded_md()
+                                    .border_1()
+                                    .border_color(cx.theme().colors().border_variant)
+                                    .bg(cx.theme().colors().element_background)
+                                    .child(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
+                                    .child(
+                                        v_flex()
+                                            .min_w_0()
+                                            .gap_0p5()
+                                            .child(
+                                                Label::new(label)
+                                                    .size(LabelSize::XSmall)
+                                                    .color(Color::Default)
+                                                    .truncate(),
+                                            )
+                                            .child(
+                                                Label::new(target)
+                                                    .size(LabelSize::XSmall)
+                                                    .color(Color::Muted)
+                                                    .truncate(),
+                                            ),
+                                    )
+                            })),
                     )
                     .child(
                         h_flex()

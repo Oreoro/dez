@@ -673,7 +673,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   tab rather than painting a saturated rectangle around the full work surface;
   optional border focus remains user-configurable and defaults to one pixel.
   The remaining empty Main Work Area is one bounded launch panel headed **Run.
-  Supervise. Review.**, with only the three immediate Workspace actions.
+  Supervise. Review.**, with only the three immediate Workspace actions and a
+  compact route row that names **Run -> Main Work Area**, **Supervise ->
+  Sessions**, and **Review -> Files + Git**.
 - **2026-07-25: Terminal context is chrome, not another panel.** The standalone
   terminal handoff is one 32 px tab-aligned header with lifecycle, repository,
   Files, Review Changes, and Session Details. It uses the tab-bar surface,

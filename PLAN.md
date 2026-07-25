@@ -2752,3 +2752,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   compatibility branches. Static identity and theme guards cover the contract.
   This is source-only; no build, test binary, alternate binary, or visual launch
   was performed.
+- 2026-07-25: Made the empty Main Work Area explain the Dez route without adding
+  another overlay. The existing **Run. Supervise. Review.** launch panel now has
+  compact chips for **Run -> Main Work Area**, **Supervise -> Sessions**, and
+  **Review -> Files + Git**. The row is a named accessibility list, uses
+  ordinary element material, and remains inside the bounded surface card. Static
+  guards protect the route. This is source-only; no build, test binary,
+  alternate binary, or visual launch was performed.
