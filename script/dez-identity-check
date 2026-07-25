@@ -490,8 +490,17 @@ require_multiline_pattern crates/zed/src/zed.rs \
     'action: &workspace::OpenFolder.*?PathPromptOptions \{.*?files: false.*?directories: true.*?multiple: true.*?prompt: Some\("Open Workspace"\.into\(\)\).*?action\.create_new_window' \
     'Open Workspace can regress to a picker that accepts files or ignores same-window placement'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn workspace_git_change_count.*?status_summary\(\)\.count.*?IconButton::new\("review-terminal-changes", IconName::Diff\).*?ReviewGitChanges.*?"Open Terminal Session Details"' \
-    'Session Rail terminal rows can regress behind the active terminal review workflow'
+    'PRIMARY_ACTION_LABELS_MIN_WIDTH: Pixels = px\(280\.0\).*?fn session_row_primary_action_labels_visible.*?fn open_terminal_changes.*?ReviewGitChanges.*?Button::new\("review-terminal-changes", "Review"\).*?Button::new\("review-terminal-run", "Details"\).*?IconButton::new\("close-terminal".*?"Copy Codex Hook Setup"' \
+    'Sessions terminal rows can regress to an icon cluster without one readable IDE handoff'
+reject_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'IconButton::new\(\("rename-terminal"|IconButton::new\("copy-codex-hook-setup"' \
+    'secondary terminal setup actions can regress into the primary Sessions row'
+require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
+    'Label::new\(title\).*?\.truncate\(\).*?HighlightedLabel::new\(title, highlight_positions\).*?\.truncate\(\).*?when\(self\.hovered \|\| self\.focused.*?\.flex_none\(\).*?\.pr_1p5\(\).*?\.child\(slot\)' \
+    'Sessions rows can regress to painting action overlays over untruncated titles'
+reject_pattern crates/ui/src/components/ai/thread_item.rs \
+    'GradientFade' \
+    'Sessions rows can regress to gradient layers that paint over titles and actions'
 require_multiline_pattern crates/git_ui/src/git_panel.rs \
     'fn review_repository_position.*?active_repository.*?filter.*?changed_file_counts.*?position.*?fn review_repository_with_changes.*?repositories\(\).*?sort_by.*?review_repository_position.*?fn first_review_change.*?cached_status.*?min_by.*?fn review_prefers_the_active_dirty_repository_then_the_first_dirty_repository.*?ReviewChanges,.*?register\(workspace: &mut Workspace\).*?_: &ReviewChanges.*?review_repository_with_changes.*?repository_changed.*?set_as_active_repository.*?reveal_panel::<GitPanel>.*?GitPanelTab::Changes.*?schedule_update.*?select_first_entry_if_none.*?first_review_change.*?ProjectDiff::deploy_at' \
     'Review Changes can regress to revealing an oversized tool column without an actual Main Work Area diff'
@@ -1471,8 +1480,8 @@ require_multiline_pattern crates/workspace/src/notifications.rs \
     'impl Render for LanguageServerPrompt.*?WindowBackgroundAppearance::Opaque.*?elevation_2\(cx\).*?shadow_none.*?impl Render for MessageNotification.*?WindowBackgroundAppearance::Opaque.*?elevation_2\(cx\).*?shadow_none' \
     'nonblocking Workspace notifications can regress to modal-grade shadows on glass'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_row_setup_action_visible.*?setup_available && session_rail_supplemental_metadata_visible\(width\).*?let show_copy_codex_hook =.*?session_row_setup_action_visible\(rail_width, can_copy_codex_hook\).*?\.when\(show_copy_codex_hook' \
-    'compact Session rows can regress to crowding their title with a third inline setup action'
+    'if can_copy_codex_hook \{.*?menu = menu\.entry\("Copy Codex Hook Setup"' \
+    'Codex hook setup can disappear instead of remaining in the Terminal Session context menu'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn terminal_host_status_presentation.*?"Preparing Terminal Sessions".*?has not started a shell.*?"Terminal Sessions are reconnecting".*?processes remain untouched.*?"Terminal Sessions are unavailable".*?No fallback shell or replacement computation.*?fn render_terminal_host_status.*?terminal_host_status_presentation.*?"Copy Error".*?"Copy Details".*?Button::new\("open-terminal-host-log", "Open Local Log"\).*?tab_index\(0isize\).*?OpenLog\.boxed_clone.*?Button::new\("copy-terminal-host-details", copy_label\).*?tab_index\(0isize\).*?aria_label\(copy_label\).*?tooltip\(Tooltip::text\(copy_label\)\)' \
     'Terminal Session startup recovery can regress to raw transport copy or lose its diagnostic actions'
@@ -1666,11 +1675,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Some\(ListEntry::Terminal\(terminal\)\).*?start_renaming_terminal\(ix, &terminal' \
     'selected Terminal Sessions no longer enter the shared keyboard rename flow'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'when\(!compact_row.*?IconName::Pencil.*?tab_index\(0isize\).*?aria_label\(rename_label\)' \
-    'normal-width terminal rows lost their keyboard-focusable rename affordance'
-require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'menu = menu\.entry\(rename_label.*?start_renaming_terminal\(ix, &rename_terminal' \
-    'compact terminal rows no longer retain context-menu rename'
+    'Terminal Session rows no longer retain context-menu rename'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn apply_terminal_rename\(.*?set_custom_title\(custom_title_string\.clone\(\), cx\).*?set_terminal_custom_title\(.*?metadata\.custom_title = custom_title;.*?store\.save\(metadata, cx\)' \
     'terminal rename no longer updates live surfaces and durable Session metadata together'

@@ -2788,3 +2788,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Surface instead of a raw shell with mystery icons. Static guards pin the
   threshold. This is source-only; no build, test binary, alternate binary, or
   visual launch was performed.
+- 2026-07-26: Removed the Sessions-row action mask and terminal icon cluster.
+  Shared Session rows now truncate titles within layout instead of painting
+  gradient fades over their content. A normal-width Terminal Session exposes
+  one readable handoff: **Review** when its Workspace has changes, otherwise
+  **Details**. Rename, Codex hook setup, and other secondary utilities remain
+  in the existing Terminal Session context menu; terminate/close remains the
+  only adjacent lifecycle control. Static guards pin the 280 px label
+  threshold, the single-handoff priority, and the no-gradient row contract.
+  This is source-only; no build, test binary, alternate binary, or visual
+  launch was performed.

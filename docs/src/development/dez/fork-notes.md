@@ -944,3 +944,10 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   exact failure, and confirms that no replacement shell started. **Start Fresh
   Terminal** creates separate computation in the Main Work Area; it is not a
   reconnect or replay action.
+- **2026-07-26: Sessions rows do not use action overlays.** Session titles
+  truncate inside their allocated width; hover and keyboard actions remain
+  inline and never paint gradient masks over the title. A Terminal Session
+  offers one primary IDE handoff—**Review** for a dirty Workspace, otherwise
+  **Details**—plus its close or terminate lifecycle control. Rename, provider
+  hook setup, and diagnostics remain available in the Session context menu.
+  Readable handoff labels are preserved at rail widths of 280 px and above.

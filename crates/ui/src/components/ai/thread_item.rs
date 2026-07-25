@@ -1,8 +1,7 @@
-use crate::{CommonAnimationExt, DiffStat, GradientFade, HighlightedLabel, Tooltip, prelude::*};
+use crate::{CommonAnimationExt, DiffStat, HighlightedLabel, Tooltip, prelude::*};
 
 use gpui::{
-    Animation, AnimationExt, ClickEvent, Hsla, MouseButton, SharedString,
-    WindowBackgroundAppearance, pulsating_between,
+    Animation, AnimationExt, ClickEvent, Hsla, MouseButton, SharedString, pulsating_between,
 };
 use itertools::Itertools as _;
 use std::{path::PathBuf, sync::Arc, time::Duration};
@@ -380,11 +379,6 @@ impl ThreadItem {
 impl RenderOnce for ThreadItem {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let color = cx.theme().colors();
-        // The fade gradient paints a solid color over the title to blend it into
-        // the row background, but a transparent window has no opaque surface to
-        // fade into, so it renders as a visible patch; truncate the title instead.
-        let opaque_window =
-            cx.theme().window_background_appearance() == WindowBackgroundAppearance::Opaque;
         let sidebar_base_bg = color
             .title_bar_background
             .blend(color.panel_background.opacity(0.25));
@@ -399,12 +393,6 @@ impl RenderOnce for ThreadItem {
                 .blend(color.border_focused.opacity(0.16)),
         };
 
-        let base_bg = if self.selected {
-            apparent_bg.blend(selected_color)
-        } else {
-            apparent_bg
-        };
-
         let hover_color = match self.contrast {
             ThreadItemContrast::Low => color
                 .element_active
@@ -416,7 +404,6 @@ impl RenderOnce for ThreadItem {
                 .element_active
                 .blend(color.border_focused.opacity(0.12)),
         };
-        let hover_bg = apparent_bg.blend(hover_color);
         let focused_border_color = match self.contrast {
             ThreadItemContrast::Low => color.border_variant,
             ThreadItemContrast::Standard | ThreadItemContrast::High => color.border_focused,
@@ -457,12 +444,6 @@ impl RenderOnce for ThreadItem {
             ThreadItemDensity::Compact => IconSize::XSmall,
             ThreadItemDensity::Balanced | ThreadItemDensity::Spacious => IconSize::Small,
         };
-
-        let gradient_overlay = GradientFade::new(base_bg, hover_bg, hover_bg)
-            .width(px(64.0))
-            .right(px(-10.0))
-            .gradient_stop(0.7)
-            .group_name("thread-item");
 
         let separator_color = Color::Custom(color.text_muted.opacity(0.4));
         let icon_id = format!("icon-{}", self.id);
@@ -633,13 +614,13 @@ impl RenderOnce for ThreadItem {
             Label::new(title)
                 .size(label_size)
                 .when_some(self.title_label_color, |label, color| label.color(color))
-                .when(!opaque_window, |label| label.truncate())
+                .truncate()
                 .into_any_element()
         } else {
             HighlightedLabel::new(title, highlight_positions)
                 .size(label_size)
                 .when_some(self.title_label_color, |label, color| label.color(color))
-                .when(!opaque_window, |label| label.truncate())
+                .truncate()
                 .into_any_element()
         };
 
@@ -744,25 +725,13 @@ impl RenderOnce for ThreadItem {
                             .child(icon)
                             .when(labels_visible, |this| this.child(title_label)),
                     )
-                    .when(
-                        labels_visible && self.is_truncated && opaque_window,
-                        |this| this.child(gradient_overlay),
-                    )
                     .when(self.hovered || self.focused, |this| {
                         this.when_some(self.action_slot, |this, slot| {
                             this.child(
                                 h_flex()
                                     .relative()
+                                    .flex_none()
                                     .pr_1p5()
-                                    .when(opaque_window, |this| {
-                                        this.child(
-                                            GradientFade::new(base_bg, hover_bg, hover_bg)
-                                                .width(px(120.0))
-                                                .right(px(8.))
-                                                .gradient_stop(0.90)
-                                                .group_name("thread-item"),
-                                        )
-                                    })
                                     .child(slot)
                                     .on_mouse_down(MouseButton::Left, |_, _, cx| {
                                         cx.stop_propagation()

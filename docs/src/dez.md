@@ -234,15 +234,17 @@ Workspace files with their earlier content, Dez names that scope and requires
 confirmation before **Restore Files** runs.
 
 You do not need to hunt for the matching project after supervising a terminal.
-Its context bar and selected Sessions row provide the same direct handoff:
-**Files** opens the owning Workspace tree, **Review Changes** opens Agent review
-or Git Changes as appropriate, and **Session Details** opens the observed run
-summary. Terminal handoff labels stay visible in ordinary split panes before
-collapsing to named icons on very narrow surfaces. Returning to the row focuses
-the existing Session rather than starting another shell. A Git review
-destination identifies itself in the Main Work Area as **Diff · filename**; its
-tooltip retains the diff base and relative path, so switching between terminal,
-file, and review never leaves a generic “Uncommitted Diff” surface.
+Its context bar provides direct **Files**, **Review Changes**, and **Session
+Details** destinations. The selected Sessions row keeps one contextual handoff
+readable without becoming a toolbar: **Review** when the owning Workspace has
+changes, otherwise **Details**. Rename, hook setup, Files, and the complete
+action set remain in the Session context menu. Terminal handoff labels stay
+visible in ordinary split panes and rail widths before collapsing to named
+icons on very narrow surfaces. Returning to the row focuses the existing
+Session rather than starting another shell. A Git review destination identifies
+itself in the Main Work Area as **Diff · filename**; its tooltip retains the
+diff base and relative path, so switching between terminal, file, and review
+never leaves a generic “Uncommitted Diff” surface.
 
 These are destination actions, not visibility toggles. Repeating **Files**
 keeps Files open and focused; repeating **Review Changes** keeps Git Changes

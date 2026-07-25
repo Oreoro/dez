@@ -150,6 +150,7 @@ gpui::actions!(
 const DEFAULT_WIDTH: Pixels = px(300.0);
 const COMPACT_MAX_WIDTH: Pixels = px(280.0);
 const UTILITY_LABELS_MIN_WIDTH: Pixels = px(280.0);
+const PRIMARY_ACTION_LABELS_MIN_WIDTH: Pixels = px(280.0);
 const DETAILED_MIN_WIDTH: Pixels = px(380.0);
 const SUPPLEMENTAL_METADATA_MIN_WIDTH: Pixels = px(440.0);
 const MIN_WIDTH: Pixels = px(240.0);
@@ -336,8 +337,8 @@ fn session_row_actions_visible(is_hovered: bool, is_focused: bool, is_renaming: 
     (is_hovered || is_focused) && !is_renaming
 }
 
-fn session_row_setup_action_visible(width: Pixels, setup_available: bool) -> bool {
-    setup_available && session_rail_supplemental_metadata_visible(width)
+fn session_row_primary_action_labels_visible(width: Pixels) -> bool {
+    width >= PRIMARY_ACTION_LABELS_MIN_WIDTH
 }
 
 fn terminal_title_for_editing(metadata: &TerminalThreadMetadata) -> SharedString {
@@ -1401,16 +1402,12 @@ mod session_row_action_tests {
     }
 
     #[test]
-    fn setup_copy_stays_in_the_context_menu_until_the_row_has_room() {
-        assert!(!session_row_setup_action_visible(DEFAULT_WIDTH, true));
-        assert!(!session_row_setup_action_visible(
-            SUPPLEMENTAL_METADATA_MIN_WIDTH,
-            false
+    fn normal_session_rows_keep_the_primary_handoff_readable() {
+        assert!(session_row_primary_action_labels_visible(DEFAULT_WIDTH));
+        assert!(session_row_primary_action_labels_visible(
+            PRIMARY_ACTION_LABELS_MIN_WIDTH
         ));
-        assert!(session_row_setup_action_visible(
-            SUPPLEMENTAL_METADATA_MIN_WIDTH,
-            true
-        ));
+        assert!(!session_row_primary_action_labels_visible(px(279.0)));
     }
 
     #[test]
@@ -7143,6 +7140,29 @@ impl Sidebar {
         .detach_and_log_err(cx);
     }
 
+    fn open_terminal_changes(
+        sidebar: WeakEntity<Self>,
+        metadata: TerminalThreadMetadata,
+        owner_workspace: ThreadEntryWorkspace,
+        source: TerminalEntrySource,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        sidebar
+            .update(cx, |sidebar, cx| {
+                sidebar.activate_terminal_entry(
+                    metadata,
+                    owner_workspace,
+                    source,
+                    false,
+                    window,
+                    cx,
+                );
+            })
+            .ok();
+        window.dispatch_action(ReviewGitChanges.boxed_clone(), cx);
+    }
+
     fn open_terminal_run_review(
         sidebar: WeakEntity<Self>,
         metadata: TerminalThreadMetadata,
@@ -11183,7 +11203,7 @@ impl Sidebar {
         let focus_handle = self.focus_handle.clone();
         let session_rail_settings = SessionRailSettings::get_global(cx);
         let rail_width = session_rail_settings.width(self.width);
-        let compact_row = session_rail_row_is_compact(rail_width);
+        let primary_action_labels_visible = session_row_primary_action_labels_visible(rail_width);
         let supplemental_metadata_visible = session_rail_supplemental_metadata_visible(rail_width);
         let has_evidence = evidence_label.is_some();
         let worktrees =
@@ -11204,7 +11224,6 @@ impl Sidebar {
             .is_some_and(|entry| entry.metadata.terminal_id == terminal.metadata.terminal_id);
         let show_row_actions = session_row_actions_visible(is_hovered, is_focused, is_renaming);
         let title_editor = self.thread_rename_editor.clone();
-        let rename_terminal = terminal.clone();
         let context_rename_terminal = terminal.clone();
         let rename_label = "Rename Terminal Session";
         let agent_ui_settings = CanvasAgentUiSettings::get_global(cx);
@@ -11246,8 +11265,6 @@ impl Sidebar {
         let can_copy_codex_hook = terminal_agent_kind == Some(TerminalAgentKind::Codex)
             && terminal.agent.is_none()
             && has_persistent_owner;
-        let show_copy_codex_hook =
-            session_row_setup_action_visible(rail_width, can_copy_codex_hook);
         let context_review_workspace = review_workspace.clone();
         let context_review_brief = review_brief.clone();
         let context_files_workspace = match &terminal.workspace {
@@ -11370,137 +11387,121 @@ impl Sidebar {
                 this.action_slot(
                     h_flex()
                         .gap_0p5()
-                        .when(!compact_row, |this| {
-                            this.child(
-                                IconButton::new(("rename-terminal", ix), IconName::Pencil)
+                        .when(has_changes, |this| {
+                            let accessibility_label = format!(
+                                "Review {changed_files} changed {}",
+                                if changed_files == 1 { "file" } else { "files" }
+                            );
+                            let tooltip = {
+                                let focus_handle = focus_handle.clone();
+                                move |_window: &mut Window, cx: &mut App| {
+                                    Tooltip::for_action_in(
+                                        "Review Changes",
+                                        &ReviewSelectedSessionChanges,
+                                        &focus_handle,
+                                        cx,
+                                    )
+                                }
+                            };
+                            let on_click = {
+                                let sidebar = sidebar.clone();
+                                let metadata = changes_action_metadata.clone();
+                                let workspace = changes_action_workspace.clone();
+                                let source = changes_action_source.clone();
+                                move |_: &ClickEvent, window: &mut Window, cx: &mut App| {
+                                    Self::open_terminal_changes(
+                                        sidebar.clone(),
+                                        metadata.clone(),
+                                        workspace.clone(),
+                                        source.clone(),
+                                        window,
+                                        cx,
+                                    );
+                                }
+                            };
+
+                            let action = if primary_action_labels_visible {
+                                Button::new("review-terminal-changes", "Review")
+                                    .start_icon(Icon::new(IconName::Diff).size(IconSize::Small))
                                     .size(ButtonSize::Medium)
-                                    .icon_size(IconSize::Small)
+                                    .style(ButtonStyle::Tinted(TintColor::Accent))
                                     .tab_index(0isize)
-                                    .icon_color(Color::Muted)
-                                    .aria_label(rename_label)
-                                    .tooltip({
-                                        let focus_handle = focus_handle.clone();
-                                        move |_window, cx| {
-                                            Tooltip::for_action_in(
-                                                rename_label,
-                                                &RenameSelectedThread,
-                                                &focus_handle,
-                                                cx,
-                                            )
-                                        }
-                                    })
-                                    .on_click(cx.listener(move |this, _, window, cx| {
-                                        this.start_renaming_terminal(
-                                            ix,
-                                            &rename_terminal,
-                                            window,
-                                            cx,
-                                        );
-                                    })),
-                            )
-                        })
-                        .when(show_copy_codex_hook, |this| {
-                            this.child(
-                                IconButton::new("copy-codex-hook-setup", IconName::Copy)
-                                    .size(ButtonSize::Medium)
-                                    .icon_size(IconSize::Small)
-                                    .tab_index(0isize)
-                                    .icon_color(Color::Muted)
-                                    .aria_label("Copy Codex Hook Setup")
-                                    .tooltip(Tooltip::text("Copy Codex Hook Setup"))
-                                    .on_click(|_, _window, cx| {
-                                        cx.write_to_clipboard(ClipboardItem::new_string(
-                                            CODEX_HOOK_SETUP.to_owned(),
-                                        ));
-                                    }),
-                            )
-                        })
-                        .when(!compact_row && has_changes, |this| {
-                            this.child(
+                                    .aria_label(accessibility_label)
+                                    .aria_keyshortcuts("Shift+G")
+                                    .tooltip(tooltip)
+                                    .on_click(on_click)
+                                    .into_any_element()
+                            } else {
                                 IconButton::new("review-terminal-changes", IconName::Diff)
                                     .size(ButtonSize::Medium)
                                     .icon_size(IconSize::Small)
                                     .tab_index(0isize)
                                     .icon_color(Color::Accent)
-                                    .aria_label(format!(
-                                        "Review {changed_files} changed {}",
-                                        if changed_files == 1 { "file" } else { "files" }
-                                    ))
+                                    .aria_label(accessibility_label)
                                     .aria_keyshortcuts("Shift+G")
-                                    .tooltip({
-                                        let focus_handle = focus_handle.clone();
-                                        move |_window, cx| {
-                                            Tooltip::for_action_in(
-                                                "Review Changes",
-                                                &ReviewSelectedSessionChanges,
-                                                &focus_handle,
-                                                cx,
-                                            )
-                                        }
-                                    })
-                                    .on_click({
-                                        let sidebar = sidebar.clone();
-                                        move |_, window, cx| {
-                                            sidebar
-                                                .update(cx, |sidebar, cx| {
-                                                    sidebar.activate_terminal_entry(
-                                                        changes_action_metadata.clone(),
-                                                        changes_action_workspace.clone(),
-                                                        changes_action_source.clone(),
-                                                        false,
-                                                        window,
-                                                        cx,
-                                                    );
-                                                })
-                                                .ok();
-                                            window.dispatch_action(
-                                                ReviewGitChanges.boxed_clone(),
-                                                cx,
-                                            );
-                                        }
-                                    }),
-                            )
+                                    .tooltip(tooltip)
+                                    .on_click(on_click)
+                                    .into_any_element()
+                            };
+                            this.child(action)
                         })
-                        .when_some(review_workspace, |this, review_workspace| {
-                            this.child(
-                                IconButton::new("review-terminal-run", IconName::Info)
-                                    .size(ButtonSize::Medium)
-                                    .icon_size(IconSize::Small)
-                                    .tab_index(0isize)
-                                    .icon_color(Color::Muted)
-                                    .aria_label("Open Terminal Session Details")
-                                    .aria_keyshortcuts("Shift+V")
-                                    .tooltip({
-                                        let focus_handle = focus_handle.clone();
-                                        move |_window, cx| {
-                                            Tooltip::for_action_in(
-                                                "Open Terminal Session Details",
-                                                &OpenSelectedReviewBrief,
-                                                &focus_handle,
-                                                cx,
-                                            )
-                                        }
-                                    })
-                                    .on_click({
-                                        let review_brief = review_brief.clone();
-                                        let sidebar = sidebar.clone();
-                                        let metadata = review_action_metadata.clone();
-                                        let workspace = review_action_workspace.clone();
-                                        let source = review_action_source.clone();
-                                        move |_, window, cx| {
-                                            Self::open_terminal_run_review(
-                                                sidebar.clone(),
-                                                metadata.clone(),
-                                                workspace.clone(),
-                                                source.clone(),
-                                                review_brief.clone(),
-                                                review_workspace.clone(),
-                                                window,
-                                                cx,
-                                            );
-                                        }
-                                    }),
-                            )
+                        .when(!has_changes, |this| {
+                            this.when_some(review_workspace, |this, review_workspace| {
+                                let tooltip = {
+                                    let focus_handle = focus_handle.clone();
+                                    move |_window: &mut Window, cx: &mut App| {
+                                        Tooltip::for_action_in(
+                                            "Open Terminal Session Details",
+                                            &OpenSelectedReviewBrief,
+                                            &focus_handle,
+                                            cx,
+                                        )
+                                    }
+                                };
+                                let on_click = {
+                                    let review_brief = review_brief.clone();
+                                    let sidebar = sidebar.clone();
+                                    let metadata = review_action_metadata.clone();
+                                    let workspace = review_action_workspace.clone();
+                                    let source = review_action_source.clone();
+                                    move |_: &ClickEvent, window: &mut Window, cx: &mut App| {
+                                        Self::open_terminal_run_review(
+                                            sidebar.clone(),
+                                            metadata.clone(),
+                                            workspace.clone(),
+                                            source.clone(),
+                                            review_brief.clone(),
+                                            review_workspace.clone(),
+                                            window,
+                                            cx,
+                                        );
+                                    }
+                                };
+
+                                let action = if primary_action_labels_visible {
+                                    Button::new("review-terminal-run", "Details")
+                                        .start_icon(Icon::new(IconName::Info).size(IconSize::Small))
+                                        .size(ButtonSize::Medium)
+                                        .tab_index(0isize)
+                                        .aria_label("Open Terminal Session Details")
+                                        .aria_keyshortcuts("Shift+V")
+                                        .tooltip(tooltip)
+                                        .on_click(on_click)
+                                        .into_any_element()
+                                } else {
+                                    IconButton::new("review-terminal-run", IconName::Info)
+                                        .size(ButtonSize::Medium)
+                                        .icon_size(IconSize::Small)
+                                        .tab_index(0isize)
+                                        .icon_color(Color::Muted)
+                                        .aria_label("Open Terminal Session Details")
+                                        .aria_keyshortcuts("Shift+V")
+                                        .tooltip(tooltip)
+                                        .on_click(on_click)
+                                        .into_any_element()
+                                };
+                                this.child(action)
+                            })
                         })
                         .child(
                             IconButton::new("close-terminal", close_icon)
@@ -11597,19 +11598,14 @@ impl Sidebar {
                             let workspace = close_workspace.clone();
                             let source = close_source.clone();
                             move |window, cx| {
-                                sidebar
-                                    .update(cx, |sidebar, cx| {
-                                        sidebar.activate_terminal_entry(
-                                            metadata.clone(),
-                                            workspace.clone(),
-                                            source.clone(),
-                                            false,
-                                            window,
-                                            cx,
-                                        );
-                                    })
-                                    .ok();
-                                window.dispatch_action(ReviewGitChanges.boxed_clone(), cx);
+                                Self::open_terminal_changes(
+                                    sidebar.clone(),
+                                    metadata.clone(),
+                                    workspace.clone(),
+                                    source.clone(),
+                                    window,
+                                    cx,
+                                );
                             }
                         });
                     }
