@@ -90,7 +90,7 @@ fn viewport_line_for_point(point: Point, display_offset: usize) -> Option<usize>
 const CURSOR_BLINK_INTERVAL: Duration = Duration::from_millis(500);
 const TERMINAL_HOST_RESTORE_ATTEMPTS: usize = 40;
 const TERMINAL_HOST_RESTORE_INTERVAL: Duration = Duration::from_millis(50);
-const TERMINAL_CONTEXT_ACTION_LABELS_MIN_WIDTH: Pixels = px(700.);
+const TERMINAL_CONTEXT_ACTION_LABELS_MIN_WIDTH: Pixels = px(560.);
 
 fn terminal_tab_status(
     session_unavailable: bool,
@@ -3760,8 +3760,8 @@ mod tests {
             terminal_surface_tab_label("Zed", "Codex"),
             SharedString::from("Codex")
         );
-        assert!(!terminal_context_action_labels_visible(px(699.)));
-        assert!(terminal_context_action_labels_visible(px(700.)));
+        assert!(!terminal_context_action_labels_visible(px(559.)));
+        assert!(terminal_context_action_labels_visible(px(560.)));
     }
 
     #[test]

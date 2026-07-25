@@ -2781,3 +2781,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   while retaining compatible `session_rail` keys internally. Static guards pin
   the public/internal boundary. This is source-only; no build, test binary,
   alternate binary, or visual launch was performed.
+- 2026-07-26: Made Terminal Session handoff labels survive normal split-pane
+  widths. The terminal context strip now keeps **Files**, **Review Changes**,
+  **Open Workspace**, and **Session Details** labels visible down to 560 px
+  instead of collapsing at 700 px, so the terminal reads as an IDE-integrated
+  Surface instead of a raw shell with mystery icons. Static guards pin the
+  threshold. This is source-only; no build, test binary, alternate binary, or
+  visual launch was performed.

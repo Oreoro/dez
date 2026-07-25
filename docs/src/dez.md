@@ -237,11 +237,12 @@ You do not need to hunt for the matching project after supervising a terminal.
 Its context bar and selected Sessions row provide the same direct handoff:
 **Files** opens the owning Workspace tree, **Review Changes** opens Agent review
 or Git Changes as appropriate, and **Session Details** opens the observed run
-summary. Returning to the row focuses the existing Session rather than starting
-another shell. A Git review destination identifies itself in the Main Work Area
-as **Diff · filename**; its tooltip retains the diff base and relative path, so
-switching between terminal, file, and review never leaves a generic
-“Uncommitted Diff” surface.
+summary. Terminal handoff labels stay visible in ordinary split panes before
+collapsing to named icons on very narrow surfaces. Returning to the row focuses
+the existing Session rather than starting another shell. A Git review
+destination identifies itself in the Main Work Area as **Diff · filename**; its
+tooltip retains the diff base and relative path, so switching between terminal,
+file, and review never leaves a generic “Uncommitted Diff” surface.
 
 These are destination actions, not visibility toggles. Repeating **Files**
 keeps Files open and focused; repeating **Review Changes** keeps Git Changes

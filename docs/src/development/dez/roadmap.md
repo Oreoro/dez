@@ -2983,6 +2983,8 @@ Completed for the compact terminal-context source slice:
 - clipped that metadata before it can paint into the fixed action group;
 - preserved Files, Review Changes, Open Workspace, and Session Details as
   higher-priority controls;
+- kept those action labels visible down to 560 px of terminal content width so
+  common split-pane terminals do not become icon-only handoffs;
 - retained full hidden values in Session Details and the toolbar accessibility
   label;
 - added a static layout-order guard and updated terminal/product plans;
@@ -3512,5 +3514,17 @@ Completed for the public Sessions terminology source slice:
   than architectural rail terminology;
 - updated Fork Notes, public docs, and identity guards for the public/internal
   terminology boundary;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the terminal handoff label source slice:
+
+- lowered the Terminal Session context label threshold from 700 px to 560 px so
+  **Files**, **Review Changes**, **Open Workspace**, and **Session Details**
+  remain labeled in ordinary split-pane widths;
+- kept icon-only mode for genuinely narrow terminals while retaining tooltips,
+  accessibility labels, and Session Details as the full evidence disclosure;
+- updated public docs, the runtime UX recovery plan, tests, and identity guards
+  for the threshold;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
