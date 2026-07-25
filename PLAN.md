@@ -2651,3 +2651,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   exact checkpoint. Message-edit cancel/restart controls are named tab stops.
   Static guards cover visibility, ownership, focus, and confirmation. This is
   source-only; no build or visual launch was performed.
+- 2026-07-25: Unified Agent errors and recovery around explicit actions.
+  Provider retry copy now identifies Dez instead of Zed. Retry,
+  authentication, configuration, model selection, plan clearing, security
+  settings, skill files, environment recovery, updates, dismissals, and the
+  shared Copy control are named keyboard tab stops. Skill rows name their file.
+  Provider data-retention Accept now requires a warning that discloses the
+  persistent setting, Anthropic log retention, and request retry before
+  **Accept and Retry** can run. Static guards cover identity, focus, naming,
+  and consent sequencing. This is source-only; no build or visual launch was
+  performed.

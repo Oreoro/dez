@@ -234,6 +234,17 @@ check succeeded.
 Dez does not treat an agent saying “tests passed” as equivalent to an observed
 command with an exit status.
 
+Agent recovery controls name what they actually do. Retry, Authenticate,
+Configure Provider, Select Model, Open Skill, environment recovery, updates,
+Copy Error, and dismiss actions are keyboard-reachable. Dismissing a warning
+only hides that notice; it does not pretend to repair the condition. Automatic
+provider retry messages identify Dez rather than inherited Zed.
+
+Provider data-retention consent requires a separate warning confirmation. The
+dialog states that consent is saved in Dez settings, Anthropic may retain
+inference logs, and the current request will be retried. **Cancel** changes
+nothing; **Accept and Retry** performs the disclosed setting update and retry.
+
 ### 5. Resume honestly
 
 Workspace composition and session metadata are restored where the source owns

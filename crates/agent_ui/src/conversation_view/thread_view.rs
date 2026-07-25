@@ -3022,7 +3022,9 @@ impl ThreadView {
                     .dismiss_action(
                         IconButton::new("dismiss-refusal-fallback", IconName::Close)
                             .icon_size(IconSize::Small)
-                            .tooltip(Tooltip::text("Dismiss"))
+                            .tab_index(0isize)
+                            .aria_label("Dismiss Retry Notice")
+                            .tooltip(Tooltip::text("Dismiss Retry Notice"))
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.thread_retry_status = None;
                                 cx.notify();
@@ -3776,7 +3778,9 @@ impl ThreadView {
                 IconButton::new("dismiss-plan", IconName::Close)
                     .icon_size(IconSize::XSmall)
                     .shape(ui::IconButtonShape::Square)
-                    .tooltip(Tooltip::text("Clear Plan"))
+                    .tab_index(0isize)
+                    .aria_label("Clear Agent Plan")
+                    .tooltip(Tooltip::text("Clear Agent Plan"))
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.thread.update(cx, |thread, cx| thread.clear_plan(cx));
                         cx.stop_propagation();
@@ -9627,7 +9631,9 @@ impl ThreadView {
                         IconButton::new("configure-confusable-warning", IconName::Settings)
                             .icon_size(IconSize::Small)
                             .icon_color(Color::Muted)
-                            .tooltip(Tooltip::text("Configure unicode confusables warning"))
+                            .tab_index(0isize)
+                            .aria_label("Configure Unicode Confusables Warning")
+                            .tooltip(Tooltip::text("Configure Unicode Confusables Warning"))
                             .on_click(|_, window, cx| {
                                 window.dispatch_action(
                                     Box::new(zed_actions::OpenSettingsAt {
@@ -11477,8 +11483,9 @@ impl ThreadView {
             ThreadError::RateLimitExceeded { provider } => self.render_error_callout(
                 "Rate Limit Reached",
                 format!(
-                    "{provider}'s rate limit was reached. Zed will retry automatically. \
-                    You can also wait a moment and try again."
+                    "{provider}'s rate limit was reached. {} will retry automatically. \
+                    You can also wait a moment and try again.",
+                    paths::APP_NAME
                 )
                 .into(),
                 true,
@@ -11488,8 +11495,9 @@ impl ThreadView {
             ThreadError::ServerOverloaded { provider } => self.render_error_callout(
                 "Provider Unavailable",
                 format!(
-                    "{provider}'s servers are temporarily unavailable. Zed will retry \
-                    automatically. If the problem persists, check the provider's status page."
+                    "{provider}'s servers are temporarily unavailable. {} will retry \
+                    automatically. If the problem persists, check the provider's status page.",
+                    paths::APP_NAME
                 )
                 .into(),
                 true,
@@ -11508,8 +11516,9 @@ impl ThreadView {
             ThreadError::StreamError { provider } => self.render_error_callout(
                 "Connection Interrupted",
                 format!(
-                    "The connection to {provider}'s API was interrupted. Zed will retry \
-                    automatically. If the problem persists, check your network connection."
+                    "The connection to {provider}'s API was interrupted. {} will retry \
+                    automatically. If the problem persists, check your network connection.",
+                    paths::APP_NAME
                 )
                 .into(),
                 true,
@@ -11729,6 +11738,7 @@ impl ThreadView {
         Button::new("configure-llm-provider", "Configure Provider")
             .label_size(LabelSize::Small)
             .style(ButtonStyle::Filled)
+            .tab_index(0isize)
             .on_click(cx.listener(|this, _, window, cx| {
                 this.clear_thread_error(cx);
                 window.dispatch_action(
@@ -11745,6 +11755,7 @@ impl ThreadView {
         Button::new("open-model-selector", "Select Model")
             .label_size(LabelSize::Small)
             .style(ButtonStyle::Filled)
+            .tab_index(0isize)
             .key_binding(KeyBinding::for_action(&ToggleModelSelector, cx))
             .on_click(cx.listener(|this, _, window, cx| {
                 this.clear_thread_error(cx);
@@ -11777,6 +11788,7 @@ impl ThreadView {
         Button::new("retry", "Retry")
             .label_size(LabelSize::Small)
             .style(ButtonStyle::Filled)
+            .tab_index(0isize)
             .on_click(cx.listener(|this, _, _, cx| {
                 this.retry_generation(cx);
             }))
@@ -11789,6 +11801,7 @@ impl ThreadView {
         )
         .label_size(LabelSize::Small)
         .style(ButtonStyle::Filled)
+        .tab_index(0isize)
         .on_click(cx.listener(|this, _, window, cx| {
             this.clear_thread_error(cx);
             window.dispatch_action(NewThread.boxed_clone(), cx);
@@ -11799,6 +11812,7 @@ impl ThreadView {
         Button::new("authenticate", "Authenticate")
             .label_size(LabelSize::Small)
             .style(ButtonStyle::Filled)
+            .tab_index(0isize)
             .on_click(cx.listener({
                 move |this, _, window, cx| {
                     let server_view = this.server_view.clone();
@@ -11873,7 +11887,9 @@ impl ThreadView {
                         this.child(
                             IconButton::new("retry", IconName::RotateCw)
                                 .icon_size(IconSize::Small)
-                                .tooltip(Tooltip::text("Retry Generation"))
+                                .tab_index(0isize)
+                                .aria_label("Retry Agent Generation")
+                                .tooltip(Tooltip::text("Retry Agent Generation"))
                                 .on_click(cx.listener(|this, _, _window, cx| {
                                     this.retry_generation(cx);
                                 })),
@@ -11906,9 +11922,11 @@ impl ThreadView {
     }
 
     fn dismiss_error_button(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        IconButton::new("dismiss", IconName::Close)
+        IconButton::new("dismiss-agent-error", IconName::Close)
             .icon_size(IconSize::Small)
-            .tooltip(Tooltip::text("Dismiss"))
+            .tab_index(0isize)
+            .aria_label("Dismiss Agent Error")
+            .tooltip(Tooltip::text("Dismiss Agent Error"))
             .on_click(cx.listener({
                 move |this, _, _, cx| {
                     this.clear_thread_error(cx);
@@ -11937,22 +11955,26 @@ impl ThreadView {
             .title("Codex on Windows")
             .description("For best performance, run Codex in Windows Subsystem for Linux (WSL2)")
             .actions_slot(
-                Button::new("open-wsl-modal", "Open in WSL").on_click(cx.listener({
-                    move |_, _, _window, cx| {
-                        #[cfg(windows)]
-                        _window.dispatch_action(
-                            zed_actions::wsl_actions::OpenWsl::default().boxed_clone(),
-                            cx,
-                        );
-                        cx.notify();
-                    }
-                })),
+                Button::new("open-wsl-modal", "Open in WSL")
+                    .tab_index(0isize)
+                    .on_click(cx.listener({
+                        move |_, _, _window, cx| {
+                            #[cfg(windows)]
+                            _window.dispatch_action(
+                                zed_actions::wsl_actions::OpenWsl::default().boxed_clone(),
+                                cx,
+                            );
+                            cx.notify();
+                        }
+                    })),
             )
             .dismiss_action(
-                IconButton::new("dismiss", IconName::Close)
+                IconButton::new("dismiss-codex-windows-warning", IconName::Close)
                     .icon_size(IconSize::Small)
                     .icon_color(Color::Muted)
-                    .tooltip(Tooltip::text("Dismiss Warning"))
+                    .tab_index(0isize)
+                    .aria_label("Dismiss Codex on Windows Warning")
+                    .tooltip(Tooltip::text("Dismiss Codex on Windows Warning"))
                     .on_click(cx.listener({
                         move |this, _, _, cx| {
                             this.show_codex_windows_warning = false;
@@ -12003,6 +12025,7 @@ impl ThreadView {
                         Button::new(("open-skill-file", index), "Open Skill")
                             .style(ButtonStyle::Outlined)
                             .label_size(LabelSize::Small)
+                            .tab_index(0isize)
                             .on_click(cx.listener(move |_, _, window, cx| {
                                 let abs_path = abs_path.clone();
                                 workspace
@@ -12022,7 +12045,9 @@ impl ThreadView {
                     .dismiss_action(
                         IconButton::new(("dismiss-skill-issue", index), IconName::Close)
                             .icon_size(IconSize::Small)
-                            .tooltip(Tooltip::text("Dismiss"))
+                            .tab_index(0isize)
+                            .aria_label("Dismiss Skill Loading Issue")
+                            .tooltip(Tooltip::text("Dismiss Skill Loading Issue"))
                             .on_click(cx.listener(move |this, _, _, cx| {
                                 this.skill_loading_issues.retain(|issue| *issue != target);
                                 this.dismissed_skill_loading_issues.insert(target.clone());
@@ -12063,9 +12088,12 @@ impl ThreadView {
                 let workspace = self.workspace.clone();
                 let full_path = issue.path.display().to_string();
                 let file_label = skill_issue_file_label(&issue.path);
+                let accessibility_label = format!("Open Skill {file_label}");
 
                 ButtonLike::new(("skill-description-warning-file", index))
                     .full_width()
+                    .tab_index(0isize)
+                    .aria_label(accessibility_label)
                     .child(
                         h_flex()
                             .w_full()
@@ -12122,7 +12150,9 @@ impl ThreadView {
             callout.dismiss_action(
                 IconButton::new("dismiss-skill-description-warnings", IconName::Close)
                     .icon_size(IconSize::Small)
-                    .tooltip(Tooltip::text("Dismiss"))
+                    .tab_index(0isize)
+                    .aria_label("Dismiss Skill Description Warnings")
+                    .tooltip(Tooltip::text("Dismiss Skill Description Warnings"))
                     .on_click(cx.listener(move |this, _, _, cx| {
                         this.skill_loading_issues
                             .retain(|issue| !targets.contains(issue));
@@ -12145,7 +12175,9 @@ impl ThreadView {
             .dismiss_action(
                 IconButton::new("dismiss-external-source-prompt-warning", IconName::Close)
                     .icon_size(IconSize::Small)
-                    .tooltip(Tooltip::text("Dismiss Warning"))
+                    .tab_index(0isize)
+                    .aria_label("Dismiss External Prompt Warning")
+                    .tooltip(Tooltip::text("Dismiss External Prompt Warning"))
                     .on_click(cx.listener({
                         move |this, _, _, cx| {
                             this.show_external_source_prompt_warning = false;
@@ -12200,7 +12232,9 @@ impl ThreadView {
                 .dismiss_action(
                     IconButton::new("dismiss-multi-root-callout", IconName::Close)
                         .icon_size(IconSize::Small)
-                        .tooltip(Tooltip::text("Dismiss"))
+                        .tab_index(0isize)
+                        .aria_label("Dismiss Multi-root Workspace Warning")
+                        .tooltip(Tooltip::text("Dismiss Multi-root Workspace Warning"))
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.multi_root_callout_dismissed = true;
                             cx.notify();
@@ -12247,6 +12281,7 @@ impl ThreadView {
                     Button::new("update-button", button_label)
                         .label_size(LabelSize::Small)
                         .style(ButtonStyle::Tinted(TintColor::Accent))
+                        .tab_index(0isize)
                         .on_click(move |_, window, cx| {
                             server_view
                                 .update(cx, |view, cx| view.reset(window, cx))
@@ -12320,6 +12355,7 @@ impl ThreadView {
                             ),
                         )
                         .label_size(LabelSize::Small)
+                        .tab_index(0isize)
                         .on_click(cx.listener(|this, _, window, cx| {
                             let session_id = this.thread.read(cx).session_id().clone();
                             window.dispatch_action(
@@ -12371,6 +12407,7 @@ impl ThreadView {
                     .child(
                         Button::new("data-retention-learn-more", "Learn More")
                             .label_size(LabelSize::Small)
+                            .tab_index(0isize)
                             .on_click(|_, _, cx| {
                                 cx.open_url(DATA_RETENTION_LEARN_MORE_URL);
                             }),
@@ -12386,6 +12423,7 @@ impl ThreadView {
                                 format!("Switch to {}", fallback.name().0),
                             )
                             .label_size(LabelSize::Small)
+                            .tab_index(0isize)
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.switch_to_data_retention_fallback_and_resend(cx);
                             })),
@@ -12395,8 +12433,34 @@ impl ThreadView {
                         Button::new("accept-data-retention", "Accept")
                             .label_size(LabelSize::Small)
                             .style(ButtonStyle::Tinted(TintColor::Warning))
-                            .on_click(cx.listener(|this, _, _, cx| {
-                                this.accept_data_retention_and_resend(cx);
+                            .tab_index(0isize)
+                            .on_click(cx.listener(|_this, _, window, cx| {
+                                let detail = format!(
+                                    "This saves consent in {} settings, allows Anthropic to retain inference logs, and retries the current Agent request.",
+                                    paths::APP_NAME
+                                );
+                                let prompt = window.prompt(
+                                    gpui::PromptLevel::Warning,
+                                    "Allow provider data retention?",
+                                    Some(&detail),
+                                    &["Accept and Retry", "Cancel"],
+                                    cx,
+                                );
+
+                                cx.spawn_in(
+                                    window,
+                                    async move |this, cx| -> anyhow::Result<()> {
+                                        if prompt.await.log_err() != Some(0) {
+                                            return Ok(());
+                                        }
+
+                                        this.update(cx, |this, cx| {
+                                            this.accept_data_retention_and_resend(cx);
+                                        })?;
+                                        Ok(())
+                                    },
+                                )
+                                .detach_and_log_err(cx);
                             })),
                     ),
             )

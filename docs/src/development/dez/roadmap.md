@@ -3251,3 +3251,23 @@ Completed for the Agent Review and checkpoint-safety source slice:
   confirmation regression guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Agent error, warning, and trust-recovery source slice:
+
+- replaced inherited **Zed will retry** provider copy with the active product
+  identity;
+- made Retry, Authenticate, Configure Provider, Select Model, plan clearing,
+  Unicode warning configuration, WSL recovery, skill-file recovery, updates,
+  and every audited dismiss action named keyboard tab stops;
+- made the shared Copy control keyboard-reachable with a matching accessible
+  name across all consumers;
+- gave long-description skill rows file-specific accessible names;
+- separated dismissing a notice from retrying or repairing its condition;
+- added a warning confirmation before data-retention consent can persist a Dez
+  setting and retry the current request;
+- retained Learn More, the retention-safe fallback, and a no-change Cancel
+  path;
+- added static product-identity, focus, naming, exact-file, and privacy-consent
+  regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

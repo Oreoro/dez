@@ -195,6 +195,23 @@ replacement. Dez names the scope, requires a warning confirmation with
 after confirmation. Cancelling or restarting an edited message is separately
 named and keyboard-reachable.
 
+Agent errors and warnings separate state from recovery. Retry, Authenticate,
+Configure Provider, Select Model, Open Skill, environment recovery, updates,
+and dismiss controls are keyboard tab stops with specific names. Dismiss only
+hides the named notice; it never claims to retry, repair, configure, or clear
+the underlying condition. Provider retry copy names the running product, never
+inherited Zed.
+
+The shared Copy control is keyboard-addressable when rendered and exposes the
+same name as its tooltip, including its temporary copied state. Skill-warning
+rows name the exact file they open rather than presenting an anonymous row.
+
+Provider data-retention consent is a trust boundary. Learn More and the
+retention-safe fallback remain available; **Accept** opens a warning that names
+the persistent Dez setting, Anthropic log retention, and the current-request
+retry. Only **Accept and Retry** changes the setting and resends; **Cancel**
+leaves both untouched.
+
 The everyday Canvas Layout menu is a workflow picker, not a diagnostics or
 storage dashboard. It exposes Full, Agent Control, Focus Editor,
 Code/Run/Observe, Review, and Debug; saved-layout detail belongs in **Manage
