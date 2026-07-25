@@ -658,6 +658,10 @@ fn workspace_new_terminal_action_persistent(
     is_active || is_focused || is_menu_open
 }
 
+fn workspace_header_terminal_action_visible(has_sessions: bool, is_collapsed: bool) -> bool {
+    has_sessions || is_collapsed
+}
+
 fn workspace_options_action_persistent(
     is_active: bool,
     is_focused: bool,
@@ -5414,16 +5418,22 @@ impl Sidebar {
                 h_flex()
                     .flex_none()
                     .gap(px(1.0))
-                    .child(self.render_new_session_button(
-                        ix,
-                        id_prefix,
-                        key,
-                        &group_name,
-                        &workspace_name,
-                        is_active,
-                        is_focused,
-                        cx,
-                    ))
+                    .children(
+                        workspace_header_terminal_action_visible(has_threads, is_collapsed).then(
+                            || {
+                                self.render_new_session_button(
+                                    ix,
+                                    id_prefix,
+                                    key,
+                                    &group_name,
+                                    &workspace_name,
+                                    is_active,
+                                    is_focused,
+                                    cx,
+                                )
+                            },
+                        ),
+                    )
                     .child(self.render_project_header_ellipsis_menu(
                         ix,
                         id_prefix,

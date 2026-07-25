@@ -2825,3 +2825,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   non-overlapping geometry. A source guard prevents gradient header layers from
   returning. This is source-only; no build, test binary, alternate binary, or
   visual launch was performed.
+- 2026-07-26: Removed the duplicated terminal launcher inside an expanded empty
+  Workspace group. Its full labeled **Start Terminal Session** action now owns
+  the transition; the compact header terminal control appears only when the
+  group is collapsed or already contains Sessions. Options remains available
+  in the header. Pure source assertions and identity guards protect each state.
+  This is source-only; no build, test binary, alternate binary, or visual
+  launch was performed.

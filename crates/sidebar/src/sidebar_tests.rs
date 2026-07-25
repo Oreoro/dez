@@ -132,6 +132,22 @@ fn active_or_focused_workspace_keeps_its_new_terminal_action_discoverable() {
 }
 
 #[test]
+fn empty_expanded_workspace_uses_only_the_labeled_terminal_action() {
+    assert!(
+        !workspace_header_terminal_action_visible(false, false),
+        "the expanded empty Workspace already renders a full-width Start Terminal Session action"
+    );
+    assert!(
+        workspace_header_terminal_action_visible(false, true),
+        "a collapsed empty Workspace still needs a compact terminal action in its header"
+    );
+    assert!(
+        workspace_header_terminal_action_visible(true, false),
+        "a populated Workspace keeps terminal creation available in its compact header"
+    );
+}
+
+#[test]
 fn active_or_focused_workspace_keeps_its_options_action_discoverable() {
     assert!(workspace_options_action_persistent(true, false, false));
     assert!(workspace_options_action_persistent(false, true, false));

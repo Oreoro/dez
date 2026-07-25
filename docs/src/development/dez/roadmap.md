@@ -3559,6 +3559,9 @@ Completed for the Workspace-header overlay cleanup source slice:
   use one bounded flexible allocation with unconditional truncation;
 - made the action cluster a fixed inline sibling and removed its duplicate
   right padding, preventing overlap and theme-dependent header geometry;
+- removed the redundant header terminal control from expanded empty Workspaces,
+  leaving the full labeled **Start Terminal Session** action as the single
+  transition while retaining compact access for collapsed or populated groups;
 - removed the now-unused window-appearance and gradient-fade dependencies from
   Sessions;
 - added a static no-gradient header guard and updated the permanent UI

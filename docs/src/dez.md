@@ -112,7 +112,10 @@ Options menu keeps its scoped close controls visible as well. Search clearing
 and banner dismissal are keyboard-focusable, so pointer hover is never the only
 route to a visible shell action. Workspace names and their action cluster share
 one bounded inline row: text truncates within its allocation, actions never
-overlap it, and no gradient mask is painted over either side of the header.
+overlap it, and no gradient mask is painted over either side of the header. An
+expanded Workspace with no Sessions shows one labeled **Start Terminal
+Session** action below the header; its compact terminal icon is suppressed
+until the Workspace is collapsed or contains Sessions.
 
 The Main Work Area follows the same rule. Back, Forward, Add, Switch Surface,
 Split, Zoom, and the Workspace Tools/Agent hide controls are keyboard-focusable

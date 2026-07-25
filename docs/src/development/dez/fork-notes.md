@@ -952,10 +952,13 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   keyboard actions remain in a fixed inline cluster and never paint gradient
   masks over content. Workspace headers follow the same rule in opaque and
   glass windows, so theme appearance cannot switch them back to an overlay
-  layout. A Terminal Session offers one primary IDE handoff—**Review** for a
-  dirty Workspace, otherwise **Details**—plus its close or terminate lifecycle
-  control. An Agent Session offers exactly one state action: **Stop**,
-  **Discard**, **Review**, or **Brief**. Rename, Archive, provider hook setup,
-  and diagnostics remain available through selected-Session commands or the
-  Session context menu. Readable action labels are preserved at rail widths of
-  280 px and above.
+  layout. An expanded Workspace with no Sessions suppresses the compact header
+  terminal control because the labeled **Start Terminal Session** action below
+  it already owns that transition; collapsing the Workspace or adding a Session
+  restores the compact control. A Terminal Session offers one primary IDE
+  handoff—**Review** for a dirty Workspace, otherwise **Details**—plus its close
+  or terminate lifecycle control. An Agent Session offers exactly one state
+  action: **Stop**, **Discard**, **Review**, or **Brief**. Rename, Archive,
+  provider hook setup, and diagnostics remain available through
+  selected-Session commands or the Session context menu. Readable action labels
+  are preserved at rail widths of 280 px and above.
