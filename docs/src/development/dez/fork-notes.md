@@ -681,7 +681,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   Files, Review Changes, and Session Details. It uses the tab-bar surface,
   removes the redundant visible **Terminal Session** actor title, and keeps the
   complete actor identity in its accessible name and details disclosure. The
-  supervisor region is visibly titled and named **Sessions**. **Session Rail**
+  supervisor region is visibly titled and named **Sessions**, and its true-empty
+  state repeats the concrete route: **Run -> Main Work Area**, **Supervise ->
+  Sessions**, and **Review -> Files + Git**. **Session Rail**
   remains an implementation and historical documentation term, not unexplained
   primary UI copy.
 - **2026-07-25: Transient feedback cannot become a fifth region.** Workspace

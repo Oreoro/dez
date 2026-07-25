@@ -562,6 +562,14 @@ fn session_start_state_copy() -> (&'static str, &'static str, &'static str, &'st
     )
 }
 
+fn session_start_route_copy() -> [(&'static str, &'static str); 3] {
+    [
+        ("Run", "Main Work Area"),
+        ("Supervise", "Sessions"),
+        ("Review", "Files + Git"),
+    ]
+}
+
 fn active_workspace_terminal_destination_label() -> &'static str {
     "Start Terminal Session in Main Work Area of Active Workspace"
 }
@@ -1310,6 +1318,15 @@ mod session_start_state_tests {
                 "Open Scratch Terminal"
             ),
             "the true-empty Session Rail should explain Workspace context and the complete Dez loop"
+        );
+        assert_eq!(
+            session_start_route_copy(),
+            [
+                ("Run", "Main Work Area"),
+                ("Supervise", "Sessions"),
+                ("Review", "Files + Git")
+            ],
+            "the true-empty Sessions state should explain where work runs, is supervised, and is reviewed"
         );
         assert_eq!(
             active_workspace_terminal_destination_label(),
@@ -12833,6 +12850,40 @@ impl Sidebar {
                         Label::new(description)
                             .size(LabelSize::XSmall)
                             .color(Color::Muted),
+                    )
+                    .child(
+                        v_flex()
+                            .id("sidebar-start-route")
+                            .role(gpui::Role::List)
+                            .aria_label("Dez workflow route")
+                            .w_full()
+                            .gap_1()
+                            .children(session_start_route_copy().into_iter().map(
+                                |(step, target)| {
+                                    h_flex()
+                                        .role(gpui::Role::ListItem)
+                                        .w_full()
+                                        .justify_between()
+                                        .gap_2()
+                                        .px_2()
+                                        .py_1()
+                                        .rounded_md()
+                                        .border_1()
+                                        .border_color(cx.theme().colors().border_variant)
+                                        .bg(cx.theme().colors().element_background)
+                                        .child(
+                                            Label::new(step)
+                                                .size(LabelSize::XSmall)
+                                                .color(Color::Default),
+                                        )
+                                        .child(
+                                            Label::new(target)
+                                                .size(LabelSize::XSmall)
+                                                .color(Color::Muted)
+                                                .truncate(),
+                                        )
+                                },
+                            )),
                     )
                     .child(
                         Button::new("start-open", open_workspace_label)

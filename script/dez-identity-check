@@ -408,6 +408,9 @@ require_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_start_state_visible.*?!has_open_projects.*?session_count == 0.*?!has_query.*?!attention_only.*?!is_restoring.*?fn session_start_state_copy.*?"Start with a Workspace".*?"Open a codebase, start a Terminal or Agent Session, then review its changes with the IDE\.".*?"Open Workspace…".*?"Open Scratch Terminal".*?fn render_empty_state.*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?Label::new\(title\).*?Button::new\("start-open", open_workspace_label\).*?ButtonStyle::Filled.*?tab_index\(0isize\).*?OpenFolder \{.*?create_new_window: Some\(false\).*?Button::new\("start-terminal", scratch_terminal_label\).*?ButtonStyle::OutlinedCustom.*?tab_index\(0isize\).*?aria_label\("Open Scratch Terminal in Main Work Area"\)' \
     'the empty Session Rail can regress to a duplicated card, ambiguous actions, or the wrong terminal destination'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn session_start_route_copy.*?"Run", "Main Work Area".*?"Supervise", "Sessions".*?"Review", "Files \+ Git".*?\.id\("sidebar-start-route"\).*?\.role\(gpui::Role::List\).*?\.aria_label\("Dez workflow route"\).*?\.role\(gpui::Role::ListItem\).*?\.bg\(cx\.theme\(\)\.colors\(\)\.element_background\)' \
+    'the empty Sessions state can regress to hiding the concrete Run/Sessions/Review route'
 reject_pattern crates/sidebar/src/sidebar.rs \
     '"(No running sessions|Start a terminal to begin|Open Folder…)"' \
     'the compact Session Rail start state has regained duplicate or folder-scoped copy'

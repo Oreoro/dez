@@ -3476,3 +3476,15 @@ Completed for the empty Main Work Area route-clarity source slice:
   placeholder that hides how terminals, Sessions, and review fit together;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the empty Sessions route-clarity source slice:
+
+- added the same **Run -> Main Work Area**, **Supervise -> Sessions**, and
+  **Review -> Files + Git** route to the true-empty Sessions rail;
+- rendered the route vertically as a named list so it fits narrow rail widths
+  without clipping or becoming an overlay;
+- kept **Open Workspace…** as the primary zero-state action and **Open Scratch
+  Terminal** as a clearly transient secondary action;
+- added source assertions and identity guards for the route copy and material;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

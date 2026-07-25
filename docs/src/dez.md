@@ -46,7 +46,10 @@ File, and New File. A compact route row names where the loop happens: Run in
 the Main Work Area, Supervise in Sessions, and Review in Files + Git. It is
 onboarding for the current Workspace, not a second welcome screen.
 Sessions is a projection over the real owners: selecting a row focuses or
-reattaches its existing Surface instead of opening a duplicate.
+reattaches its existing Surface instead of opening a duplicate. Its true-empty
+state uses the same route language—Run in the Main Work Area, Supervise in
+Sessions, Review in Files + Git—so the rail explains its job before any
+Terminal or Agent Session exists.
 Notifications and toasts are bounded transient shelves over the Main Work
 Area. They never become another full-height column, and overflowing alerts
 scroll inside their shelf instead of covering the editor or terminal.

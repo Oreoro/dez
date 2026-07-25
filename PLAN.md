@@ -2759,3 +2759,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   ordinary element material, and remains inside the bounded surface card. Static
   guards protect the route. This is source-only; no build, test binary,
   alternate binary, or visual launch was performed.
+- 2026-07-25: Gave the true-empty Sessions rail the same concrete route in a
+  narrow vertical list: **Run -> Main Work Area**, **Supervise -> Sessions**,
+  and **Review -> Files + Git**. This keeps the rail honest about its job before
+  any Terminal or Agent Session exists, preserves **Open Workspace…** as the
+  primary action, and keeps **Open Scratch Terminal** visibly transient. Static
+  guards and source assertions protect the copy and material. This is
+  source-only; no build, test binary, alternate binary, or visual launch was
+  performed.
