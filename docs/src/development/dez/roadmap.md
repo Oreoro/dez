@@ -3623,3 +3623,19 @@ Completed for the Agent attention overlay source slice:
   compatibility states;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the terminal handoff priority source slice:
+
+- replaced the single 560 px all-label breakpoint with a progressive action
+  hierarchy;
+- kept every action as a named, tooltip-backed icon below 480 px;
+- labeled exactly one primary transition from 480 px: **Review Changes** when
+  Git reports changes, otherwise **Files** or **Open Workspace**;
+- added the secondary Workspace label at 720 px and the long **Session
+  Details** label at 920 px;
+- preserved the 32 px strip, shrinkable lifecycle/repository context, action
+  destinations, keyboard focus, tooltips, and accessibility names;
+- added state-aware breakpoint assertions, permanent product documentation,
+  and an identity guard that rejects the previous all-at-once cluster;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

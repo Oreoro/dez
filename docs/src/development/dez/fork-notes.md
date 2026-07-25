@@ -880,11 +880,15 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   prompt status, clocks, or artwork. Terminal Session identity and lifecycle
   remain visible outside the PTY grid through the Surface tab header, even when
   the general single-tab auto-hide preference is enabled.
-- **2026-07-25: Terminal context actions yield before they clip.** At normal
-  Main Work Area widths, Files/Open Workspace, Review Changes, and Session
-  Details retain their visible labels. In narrow panes they become the same
-  icon-backed controls with complete accessible names and matching tooltips;
-  lifecycle and Workspace metadata remain available through Session Details.
+- **2026-07-26: Terminal context actions disclose by priority, not all at
+  once.** Below 480 px, Files/Open Workspace, Review Changes, and Session
+  Details remain named, tooltip-backed icon controls. From 480 px, the strip
+  labels exactly one primary handoff: **Review Changes** when Git reports
+  changes, otherwise **Files** or **Open Workspace**. At 720 px the Workspace
+  action can join Review; **Session Details** gains its long label only at
+  920 px. This progressive hierarchy prevents the action group from jumping
+  into lifecycle and repository context at ordinary split widths while keeping
+  the full evidence disclosure available at every width.
 - **2026-07-23: Settings disclose consequential Agent behavior where it is
   configured.** Agent settings use Agent Session, Surface, Agent card, and
   Workspace status vocabulary. A feedback toggle names its upstream

@@ -461,7 +461,12 @@ with new labels.
       can still reopen the row. The terminal context strip now clips its
       shrinkable lifecycle/repository metadata before it can paint through the
       fixed Files, Review Changes, and Session Details action group; full
-      values remain available in Session Details.
+      values remain available in Session Details. The action group now
+      discloses labels by priority instead of turning three long labels on at
+      one breakpoint: below 480 px every action is a named icon; ordinary split
+      widths label Review when changes exist, otherwise Files/Open Workspace;
+      Files joins Review at 720 px, and the long Session Details label appears
+      only at 920 px.
 - [ ] Avoid stacked utility chrome that steals space from supervised work.
       Commit `abc4f8bedb` removes Dez's dedicated Command Search footer row,
       keeps the action as a labeled icon in the existing utility bar, hides the
@@ -2868,3 +2873,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   configured UI font. Source assertions and identity guards cover each branch.
   This is source-only; no build, test binary, alternate binary, or visual
   launch was performed.
+- 2026-07-26: Replaced the terminal context strip's single all-label breakpoint
+  with a progressive handoff hierarchy. Below 480 px, every action remains a
+  named, tooltip-backed icon. At ordinary split widths, one primary transition
+  is readable: **Review Changes** when Git reports changes, otherwise **Files**
+  or **Open Workspace**. Files can join Review at 720 px; the long **Session
+  Details** label appears at 920 px. This avoids the previous three-label width
+  jump while preserving every destination, the 32 px chrome boundary, and the
+  full evidence disclosure. Pure source assertions and identity guards cover
+  each state. This is source-only; no build, test binary, alternate binary, or
+  visual launch was performed.

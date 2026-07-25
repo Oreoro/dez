@@ -90,7 +90,16 @@ fn viewport_line_for_point(point: Point, display_offset: usize) -> Option<usize>
 const CURSOR_BLINK_INTERVAL: Duration = Duration::from_millis(500);
 const TERMINAL_HOST_RESTORE_ATTEMPTS: usize = 40;
 const TERMINAL_HOST_RESTORE_INTERVAL: Duration = Duration::from_millis(50);
-const TERMINAL_CONTEXT_ACTION_LABELS_MIN_WIDTH: Pixels = px(560.);
+const TERMINAL_CONTEXT_PRIMARY_ACTION_LABEL_MIN_WIDTH: Pixels = px(480.);
+const TERMINAL_CONTEXT_SECONDARY_ACTION_LABEL_MIN_WIDTH: Pixels = px(720.);
+const TERMINAL_CONTEXT_DETAILS_LABEL_MIN_WIDTH: Pixels = px(920.);
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+struct TerminalContextActionLabelVisibility {
+    workspace: bool,
+    review: bool,
+    details: bool,
+}
 
 fn terminal_tab_status(
     session_unavailable: bool,
@@ -134,8 +143,20 @@ fn terminal_surface_accessibility_label(title: &str, status: &str) -> String {
     format!("Terminal Session: {title}. Status: {status}")
 }
 
-fn terminal_context_action_labels_visible(width: Pixels) -> bool {
-    width >= TERMINAL_CONTEXT_ACTION_LABELS_MIN_WIDTH
+fn terminal_context_action_label_visibility(
+    width: Pixels,
+    has_workspace_files: bool,
+    changed_files: usize,
+) -> TerminalContextActionLabelVisibility {
+    let primary_visible = width >= TERMINAL_CONTEXT_PRIMARY_ACTION_LABEL_MIN_WIDTH;
+    let secondary_visible = width >= TERMINAL_CONTEXT_SECONDARY_ACTION_LABEL_MIN_WIDTH;
+
+    TerminalContextActionLabelVisibility {
+        workspace: primary_visible
+            && (!has_workspace_files || changed_files == 0 || secondary_visible),
+        review: primary_visible && changed_files > 0,
+        details: width >= TERMINAL_CONTEXT_DETAILS_LABEL_MIN_WIDTH,
+    }
 }
 
 fn terminal_surface_tab_label(app_name: &str, title: &str) -> SharedString {
@@ -2257,7 +2278,6 @@ impl TerminalView {
         let terminal = self.terminal.read(cx);
         let terminal_entity_id = self.terminal.entity_id();
         let context_width = terminal.last_content().terminal_bounds.bounds.size.width;
-        let action_labels_visible = terminal_context_action_labels_visible(context_width);
         let status = terminal_tab_status(
             false,
             terminal.process_exited(),
@@ -2286,6 +2306,11 @@ impl TerminalView {
         let changed_files = workspace_context.changed_files;
         let changes_label = changed_files_label(changed_files);
         let has_workspace_files = workspace_context.workspace_label.is_some();
+        let action_label_visibility = terminal_context_action_label_visibility(
+            context_width,
+            has_workspace_files,
+            changed_files,
+        );
 
         let details_status = format!("{status} · {ownership}");
         let details_repository = repository_label.clone();
@@ -2293,18 +2318,22 @@ impl TerminalView {
         let details_working_directory = working_directory.clone();
         let details_session_id = session_id.clone();
         let details_has_workspace_files = has_workspace_files;
-        let details_visible_label = if action_labels_visible {
+        let details_visible_label = if action_label_visibility.details {
             "Session Details"
         } else {
             ""
         };
-        let files_visible_label = if action_labels_visible { "Files" } else { "" };
-        let open_workspace_visible_label = if action_labels_visible {
+        let files_visible_label = if action_label_visibility.workspace {
+            "Files"
+        } else {
+            ""
+        };
+        let open_workspace_visible_label = if action_label_visibility.workspace {
             "Open Workspace"
         } else {
             ""
         };
-        let review_visible_label = if action_labels_visible {
+        let review_visible_label = if action_label_visibility.review {
             "Review Changes"
         } else {
             ""
@@ -3760,8 +3789,66 @@ mod tests {
             terminal_surface_tab_label("Zed", "Codex"),
             SharedString::from("Codex")
         );
-        assert!(!terminal_context_action_labels_visible(px(559.)));
-        assert!(terminal_context_action_labels_visible(px(560.)));
+        assert_eq!(
+            terminal_context_action_label_visibility(px(479.), true, 5),
+            TerminalContextActionLabelVisibility::default()
+        );
+        assert_eq!(
+            terminal_context_action_label_visibility(px(480.), true, 5),
+            TerminalContextActionLabelVisibility {
+                workspace: false,
+                review: true,
+                details: false,
+            }
+        );
+        assert_eq!(
+            terminal_context_action_label_visibility(px(480.), true, 0),
+            TerminalContextActionLabelVisibility {
+                workspace: true,
+                review: false,
+                details: false,
+            }
+        );
+        assert_eq!(
+            terminal_context_action_label_visibility(px(480.), false, 0),
+            TerminalContextActionLabelVisibility {
+                workspace: true,
+                review: false,
+                details: false,
+            }
+        );
+        assert_eq!(
+            terminal_context_action_label_visibility(px(719.), true, 5),
+            TerminalContextActionLabelVisibility {
+                workspace: false,
+                review: true,
+                details: false,
+            }
+        );
+        assert_eq!(
+            terminal_context_action_label_visibility(px(720.), true, 5),
+            TerminalContextActionLabelVisibility {
+                workspace: true,
+                review: true,
+                details: false,
+            }
+        );
+        assert_eq!(
+            terminal_context_action_label_visibility(px(919.), true, 5),
+            TerminalContextActionLabelVisibility {
+                workspace: true,
+                review: true,
+                details: false,
+            }
+        );
+        assert_eq!(
+            terminal_context_action_label_visibility(px(920.), true, 5),
+            TerminalContextActionLabelVisibility {
+                workspace: true,
+                review: true,
+                details: true,
+            }
+        );
     }
 
     #[test]
