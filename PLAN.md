@@ -2798,3 +2798,14 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   threshold, the single-handoff priority, and the no-gradient row contract.
   This is source-only; no build, test binary, alternate binary, or visual
   launch was performed.
+- 2026-07-26: Reduced Agent Session rows to the same one-action hierarchy.
+  Runtime state now decides the only inline action: **Stop** for a running or
+  permission-blocked run, **Discard** for a nonempty draft, **Review** for
+  reviewable Workspace changes, or **Brief** for observed evidence. Running and
+  destructive decisions take priority over navigation. Rename and Archive stay
+  available through selected-Session commands and the context menu rather than
+  returning as hover icons. Labels remain visible at 280 px and above; narrower
+  rails retain named, tooltip-backed icons. Focused source assertions and
+  identity guards pin the priority order and prevent the secondary icon cluster
+  from returning. This is source-only; no build, test binary, alternate binary,
+  or visual launch was performed.

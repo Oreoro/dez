@@ -215,6 +215,13 @@ Sessions groups work by Workspace and projects:
 Sessions does not own the terminal process or Agent conversation. It routes
 back to the Surface or Host Session that does.
 
+Each Agent Session row presents one state-appropriate next action instead of a
+toolbar. A running Session shows **Stop**; a nonempty draft shows **Discard**;
+a completed Session with reviewable changes shows **Review**; otherwise it
+shows **Brief** when observed evidence is available. Rename, archive, and the
+complete action set remain available through the selected-Session commands and
+context menu.
+
 ### 4. Review with the IDE
 
 Use Files and Outline to understand structure, diagnostics and Debug to inspect

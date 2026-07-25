@@ -3528,3 +3528,21 @@ Completed for the terminal handoff label source slice:
   for the threshold;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Sessions row hierarchy source slices:
+
+- removed shared gradient masks from Session titles and action slots, relying
+  on bounded truncation and inline flex layout instead;
+- reduced Terminal Session rows to **Review** or **Details** plus their distinct
+  close/terminate lifecycle control;
+- reduced Agent Session rows to one state-derived action: **Stop**, **Discard**,
+  **Review**, or **Brief**;
+- kept normal/default rail labels visible at 280 px and above, with named
+  tooltip-backed icons reserved for narrower widths;
+- kept Rename, Archive, hook setup, and diagnostics in selected-Session
+  commands or existing context menus rather than secondary hover clusters;
+- prevented closed-Workspace Agent Sessions from presenting an inert Review
+  action;
+- updated source assertions, product docs, Fork Notes, and identity guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

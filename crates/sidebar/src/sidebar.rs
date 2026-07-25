@@ -36,9 +36,9 @@ use feature_flags::{
     AgentThreadWorktreeLabel, AgentThreadWorktreeLabelFlag, FeatureFlag, FeatureFlagAppExt as _,
 };
 use gpui::{
-    Action as _, AnyElement, App, ClickEvent, ClipboardItem, Context, Decorations, DismissEvent,
-    Entity, EntityId, FocusHandle, Focusable, KeyContext, ListState, Modifiers, Pixels,
-    PromptLevel, Render, SharedString, Task, TaskExt, WeakEntity, Window,
+    Action as _, AnyElement, AnyView, App, ClickEvent, ClipboardItem, Context, Decorations,
+    DismissEvent, Entity, EntityId, FocusHandle, Focusable, KeyContext, ListState, Modifiers,
+    Pixels, PromptLevel, Render, SharedString, Task, TaskExt, WeakEntity, Window,
     WindowBackgroundAppearance, WindowHandle, linear_color_stop, linear_gradient, list, prelude::*,
     px,
 };
@@ -339,6 +339,82 @@ fn session_row_actions_visible(is_hovered: bool, is_focused: bool, is_renaming: 
 
 fn session_row_primary_action_labels_visible(width: Pixels) -> bool {
     width >= PRIMARY_ACTION_LABELS_MIN_WIDTH
+}
+
+#[allow(clippy::too_many_arguments)]
+fn session_row_primary_action_button(
+    id: impl Into<ElementId>,
+    visible_label: impl Into<SharedString>,
+    icon: IconName,
+    labels_visible: bool,
+    style: Option<ButtonStyle>,
+    icon_color: Option<Color>,
+    aria_label: impl Into<SharedString>,
+    aria_keyshortcuts: Option<&'static str>,
+    tooltip: impl Fn(&mut Window, &mut App) -> AnyView + 'static,
+    on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+) -> AnyElement {
+    let id = id.into();
+    let visible_label = visible_label.into();
+    let aria_label = aria_label.into();
+
+    if labels_visible {
+        Button::new(id, visible_label)
+            .start_icon(Icon::new(icon).size(IconSize::Small))
+            .size(ButtonSize::Medium)
+            .when_some(style, |this, style| this.style(style))
+            .tab_index(0isize)
+            .aria_label(aria_label)
+            .when_some(aria_keyshortcuts, |this, shortcut| {
+                this.aria_keyshortcuts(shortcut)
+            })
+            .tooltip(tooltip)
+            .on_click(on_click)
+            .into_any_element()
+    } else {
+        IconButton::new(id, icon)
+            .size(ButtonSize::Medium)
+            .icon_size(IconSize::Small)
+            .when_some(style, |this, style| this.style(style))
+            .when_some(icon_color, |this, color| this.icon_color(color))
+            .tab_index(0isize)
+            .aria_label(aria_label)
+            .when_some(aria_keyshortcuts, |this, shortcut| {
+                this.aria_keyshortcuts(shortcut)
+            })
+            .tooltip(tooltip)
+            .on_click(on_click)
+            .into_any_element()
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum AgentSessionRowPrimaryAction {
+    StopRun,
+    DiscardDraft,
+    ReviewChanges,
+    OpenReviewBrief,
+}
+
+fn agent_session_row_primary_action(
+    is_running: bool,
+    draft: Option<DraftKind>,
+    has_reviewable_changes: bool,
+    can_open_review_brief: bool,
+) -> Option<AgentSessionRowPrimaryAction> {
+    if is_running {
+        Some(AgentSessionRowPrimaryAction::StopRun)
+    } else if draft == Some(DraftKind::WithContent) {
+        Some(AgentSessionRowPrimaryAction::DiscardDraft)
+    } else if draft.is_some() {
+        None
+    } else if has_reviewable_changes {
+        Some(AgentSessionRowPrimaryAction::ReviewChanges)
+    } else if can_open_review_brief {
+        Some(AgentSessionRowPrimaryAction::OpenReviewBrief)
+    } else {
+        None
+    }
 }
 
 fn terminal_title_for_editing(metadata: &TerminalThreadMetadata) -> SharedString {
@@ -1408,6 +1484,36 @@ mod session_row_action_tests {
             PRIMARY_ACTION_LABELS_MIN_WIDTH
         ));
         assert!(!session_row_primary_action_labels_visible(px(279.0)));
+    }
+
+    #[test]
+    fn agent_session_rows_expose_one_state_appropriate_primary_action() {
+        use AgentSessionRowPrimaryAction::*;
+
+        assert_eq!(
+            agent_session_row_primary_action(true, None, true, true),
+            Some(StopRun)
+        );
+        assert_eq!(
+            agent_session_row_primary_action(false, Some(DraftKind::WithContent), true, true),
+            Some(DiscardDraft)
+        );
+        assert_eq!(
+            agent_session_row_primary_action(false, Some(DraftKind::Empty), true, true),
+            None
+        );
+        assert_eq!(
+            agent_session_row_primary_action(false, None, true, true),
+            Some(ReviewChanges)
+        );
+        assert_eq!(
+            agent_session_row_primary_action(false, None, false, true),
+            Some(OpenReviewBrief)
+        );
+        assert_eq!(
+            agent_session_row_primary_action(false, None, false, false),
+            None
+        );
     }
 
     #[test]
@@ -10573,14 +10679,20 @@ impl Sidebar {
             AgentThreadStatus::Running | AgentThreadStatus::WaitingForConfirmation
         );
         let has_changes = thread.diff_stats.lines_added > 0 || thread.diff_stats.lines_removed > 0;
+        let has_reviewable_changes =
+            has_changes && matches!(&thread.workspace, ThreadEntryWorkspace::Open(_));
+        let primary_action = agent_session_row_primary_action(
+            is_running,
+            thread.draft,
+            has_reviewable_changes,
+            !is_draft && hover_review_workspace.is_some(),
+        );
         let is_renaming = self.renaming_thread_id == Some(thread.metadata.thread_id);
         let show_row_actions = session_row_actions_visible(is_hovered, is_focused, is_renaming);
 
         let thread_id_for_actions = thread.metadata.thread_id;
-        let session_id_for_delete = thread.metadata.session_id.clone();
         let focus_handle = self.focus_handle.clone();
         let title_editor = self.thread_rename_editor.clone();
-        let rename_label = agent_session_label(APP_NAME, "Rename Thread", "Rename Agent Session");
         let rename_title_label =
             agent_session_label(APP_NAME, "Rename Title", "Rename Agent Session");
         let archive_label =
@@ -10603,7 +10715,7 @@ impl Sidebar {
         let sidebar_bg = color.panel_background;
         let session_rail_settings = SessionRailSettings::get_global(cx);
         let rail_width = session_rail_settings.width(self.width);
-        let compact_row = session_rail_row_is_compact(rail_width);
+        let primary_action_labels_visible = session_row_primary_action_labels_visible(rail_width);
         let supplemental_metadata_visible = session_rail_supplemental_metadata_visible(rail_width);
         let design_system = DesignSystemSettings::get_global(cx);
         let labels_visible = session_rail_labels_visible(&design_system);
@@ -10729,62 +10841,41 @@ impl Sidebar {
                     )
                 })
                 .when(show_row_actions, |this| {
-                    let rename_button = IconButton::new(("rename-thread", ix), IconName::Pencil)
-                        .size(ButtonSize::Medium)
-                        .icon_size(IconSize::Small)
-                        .tab_index(0isize)
-                        .aria_label(rename_label)
-                        .tooltip({
-                            let focus_handle = focus_handle.clone();
-                            move |_window, cx| {
-                                Tooltip::for_action_in(
-                                    rename_label,
-                                    &RenameSelectedThread,
-                                    &focus_handle,
-                                    cx,
-                                )
-                            }
-                        })
-                        .on_click({
-                            let title = title.clone();
-                            cx.listener(move |this, _, window, cx| {
-                                this.start_renaming_thread(
-                                    ix,
-                                    thread_id_for_actions,
-                                    title.clone(),
-                                    window,
-                                    cx,
-                                );
-                            })
-                        });
-
-                    let contextual_action: Option<AnyElement> = if is_running {
-                        Some(
-                            IconButton::new("stop-thread", IconName::Stop)
-                                .size(ButtonSize::Medium)
-                                .icon_size(IconSize::Small)
-                                .tab_index(0isize)
-                                .icon_color(Color::Error)
-                                .style(ButtonStyle::Tinted(TintColor::Error))
-                                .aria_label(stop_label)
-                                .tooltip(Tooltip::text(stop_label))
-                                .on_click(cx.listener(move |this, _, _window, cx| {
-                                    this.stop_thread(&thread_id_for_actions, cx);
-                                }))
-                                .into_any_element(),
-                        )
-                    } else {
-                        match thread.draft {
-                            Some(DraftKind::Empty) => None,
-                            Some(DraftKind::WithContent) => Some(
-                                IconButton::new("discard_thread", IconName::Close)
-                                    .size(ButtonSize::Medium)
-                                    .icon_size(IconSize::Small)
-                                    .tab_index(0isize)
-                                    .aria_label("Discard Draft")
-                                    .tooltip(Tooltip::text("Discard Draft"))
-                                    .on_click({
-                                        let thread_workspace = thread_workspace.clone();
+                    this.action_slot(
+                        h_flex()
+                            .when(
+                                primary_action == Some(AgentSessionRowPrimaryAction::StopRun),
+                                |this| {
+                                    this.child(session_row_primary_action_button(
+                                        "stop-thread",
+                                        "Stop",
+                                        IconName::Stop,
+                                        primary_action_labels_visible,
+                                        Some(ButtonStyle::Tinted(TintColor::Error)),
+                                        Some(Color::Error),
+                                        stop_label,
+                                        None,
+                                        Tooltip::text(stop_label),
+                                        cx.listener(move |this, _, _window, cx| {
+                                            this.stop_thread(&thread_id_for_actions, cx);
+                                        }),
+                                    ))
+                                },
+                            )
+                            .when(
+                                primary_action == Some(AgentSessionRowPrimaryAction::DiscardDraft),
+                                |this| {
+                                    let thread_workspace = thread_workspace.clone();
+                                    this.child(session_row_primary_action_button(
+                                        "discard_thread",
+                                        "Discard",
+                                        IconName::Close,
+                                        primary_action_labels_visible,
+                                        Some(ButtonStyle::Tinted(TintColor::Error)),
+                                        Some(Color::Error),
+                                        "Discard Draft",
+                                        None,
+                                        Tooltip::text("Discard Draft"),
                                         cx.listener(move |this, _, window, cx| {
                                             this.remove_draft_with_confirmation(
                                                 thread_id_for_actions,
@@ -10792,66 +10883,34 @@ impl Sidebar {
                                                 window,
                                                 cx,
                                             );
-                                        })
-                                    })
-                                    .into_any_element(),
-                            ),
-                            None => Some(
-                                IconButton::new("archive-thread", IconName::Archive)
-                                    .size(ButtonSize::Medium)
-                                    .icon_size(IconSize::Small)
-                                    .tab_index(0isize)
-                                    .aria_label(archive_label)
-                                    .tooltip({
-                                        let focus_handle = focus_handle.clone();
+                                        }),
+                                    ))
+                                },
+                            )
+                            .when(
+                                primary_action == Some(AgentSessionRowPrimaryAction::ReviewChanges),
+                                |this| {
+                                    let metadata = thread.metadata.clone();
+                                    let owner_workspace = thread.workspace.clone();
+                                    let focus_handle = focus_handle.clone();
+                                    this.child(session_row_primary_action_button(
+                                        ("review-thread-changes", ix),
+                                        "Review",
+                                        IconName::Diff,
+                                        primary_action_labels_visible,
+                                        Some(ButtonStyle::Tinted(TintColor::Accent)),
+                                        Some(Color::Accent),
+                                        "Review Changes",
+                                        Some("Shift+G"),
                                         move |_window, cx| {
                                             Tooltip::for_action_in(
-                                                archive_label,
-                                                &ArchiveSelectedThread,
+                                                "Review Changes",
+                                                &ReviewSelectedSessionChanges,
                                                 &focus_handle,
                                                 cx,
                                             )
-                                        }
-                                    })
-                                    .on_click({
-                                        let session_id = session_id_for_delete.clone();
+                                        },
                                         cx.listener(move |this, _, window, cx| {
-                                            if let Some(ref session_id) = session_id {
-                                                this.archive_thread(session_id, window, cx);
-                                            }
-                                        })
-                                    })
-                                    .into_any_element(),
-                            ),
-                        }
-                    };
-
-                    this.action_slot(
-                        h_flex()
-                            .gap_0p5()
-                            .when(!compact_row, |this| this.child(rename_button))
-                            .when(!compact_row && has_changes, |this| {
-                                let metadata = thread.metadata.clone();
-                                let owner_workspace = thread.workspace.clone();
-                                this.child(
-                                    IconButton::new(("review-thread-changes", ix), IconName::Diff)
-                                        .size(ButtonSize::Medium)
-                                        .icon_size(IconSize::Small)
-                                        .tab_index(0isize)
-                                        .aria_label("Review Changes")
-                                        .aria_keyshortcuts("Shift+G")
-                                        .tooltip({
-                                            let focus_handle = focus_handle.clone();
-                                            move |_window, cx| {
-                                                Tooltip::for_action_in(
-                                                    "Review Changes",
-                                                    &ReviewSelectedSessionChanges,
-                                                    &focus_handle,
-                                                    cx,
-                                                )
-                                            }
-                                        })
-                                        .on_click(cx.listener(move |this, _, window, cx| {
                                             if let ThreadEntryWorkspace::Open(workspace) =
                                                 &owner_workspace
                                             {
@@ -10867,56 +10926,52 @@ impl Sidebar {
                                                     cx,
                                                 );
                                             }
-                                        })),
-                                )
-                            })
-                            .when_some(
-                                (!is_draft)
-                                    .then_some(hover_review_workspace.clone())
-                                    .flatten(),
-                                |this, review_workspace| {
-                                    this.child(
-                                        IconButton::new(
-                                            ("review-thread-run", ix),
-                                            IconName::ListTodo,
-                                        )
-                                        .size(ButtonSize::Medium)
-                                        .icon_size(IconSize::Small)
-                                        .tab_index(0isize)
-                                        .aria_label("Open Review Brief")
-                                        .aria_keyshortcuts("Shift+V")
-                                        .tooltip({
-                                            let focus_handle = focus_handle.clone();
-                                            move |_window, cx| {
-                                                Tooltip::for_action_in(
-                                                    "Open Review Brief",
-                                                    &OpenSelectedReviewBrief,
-                                                    &focus_handle,
-                                                    cx,
-                                                )
-                                            }
-                                        })
-                                        .on_click({
-                                            let review_brief = hover_review_brief.clone();
-                                            let sidebar = sidebar.clone();
-                                            let metadata = thread.metadata.clone();
-                                            let owner_workspace = thread.workspace.clone();
-                                            move |_, window, cx| {
-                                                Self::open_thread_run_review(
-                                                    sidebar.clone(),
-                                                    metadata.clone(),
-                                                    owner_workspace.clone(),
-                                                    review_brief.clone(),
-                                                    review_workspace.clone(),
-                                                    window,
-                                                    cx,
-                                                );
-                                            }
                                         }),
-                                    )
+                                    ))
                                 },
                             )
-                            .when_some(contextual_action, |this, action| this.child(action)),
+                            .when_some(
+                                (primary_action
+                                    == Some(AgentSessionRowPrimaryAction::OpenReviewBrief))
+                                .then_some(hover_review_workspace.clone())
+                                .flatten(),
+                                |this, review_workspace| {
+                                    let review_brief = hover_review_brief.clone();
+                                    let sidebar = sidebar.clone();
+                                    let metadata = thread.metadata.clone();
+                                    let owner_workspace = thread.workspace.clone();
+                                    let focus_handle = focus_handle.clone();
+                                    this.child(session_row_primary_action_button(
+                                        ("review-thread-run", ix),
+                                        "Brief",
+                                        IconName::ListTodo,
+                                        primary_action_labels_visible,
+                                        None,
+                                        Some(Color::Muted),
+                                        "Open Review Brief",
+                                        Some("Shift+V"),
+                                        move |_window, cx| {
+                                            Tooltip::for_action_in(
+                                                "Open Review Brief",
+                                                &OpenSelectedReviewBrief,
+                                                &focus_handle,
+                                                cx,
+                                            )
+                                        },
+                                        move |_, window, cx| {
+                                            Self::open_thread_run_review(
+                                                sidebar.clone(),
+                                                metadata.clone(),
+                                                owner_workspace.clone(),
+                                                review_brief.clone(),
+                                                review_workspace.clone(),
+                                                window,
+                                                cx,
+                                            );
+                                        },
+                                    ))
+                                },
+                            ),
                     )
                 })
                 .on_click({
@@ -11392,23 +11447,29 @@ impl Sidebar {
                                 "Review {changed_files} changed {}",
                                 if changed_files == 1 { "file" } else { "files" }
                             );
-                            let tooltip = {
-                                let focus_handle = focus_handle.clone();
-                                move |_window: &mut Window, cx: &mut App| {
+                            let focus_handle = focus_handle.clone();
+                            let sidebar = sidebar.clone();
+                            let metadata = changes_action_metadata.clone();
+                            let workspace = changes_action_workspace.clone();
+                            let source = changes_action_source.clone();
+                            this.child(session_row_primary_action_button(
+                                "review-terminal-changes",
+                                "Review",
+                                IconName::Diff,
+                                primary_action_labels_visible,
+                                Some(ButtonStyle::Tinted(TintColor::Accent)),
+                                Some(Color::Accent),
+                                accessibility_label,
+                                Some("Shift+G"),
+                                move |_window, cx| {
                                     Tooltip::for_action_in(
                                         "Review Changes",
                                         &ReviewSelectedSessionChanges,
                                         &focus_handle,
                                         cx,
                                     )
-                                }
-                            };
-                            let on_click = {
-                                let sidebar = sidebar.clone();
-                                let metadata = changes_action_metadata.clone();
-                                let workspace = changes_action_workspace.clone();
-                                let source = changes_action_source.clone();
-                                move |_: &ClickEvent, window: &mut Window, cx: &mut App| {
+                                },
+                                move |_, window, cx| {
                                     Self::open_terminal_changes(
                                         sidebar.clone(),
                                         metadata.clone(),
@@ -11417,54 +11478,35 @@ impl Sidebar {
                                         window,
                                         cx,
                                     );
-                                }
-                            };
-
-                            let action = if primary_action_labels_visible {
-                                Button::new("review-terminal-changes", "Review")
-                                    .start_icon(Icon::new(IconName::Diff).size(IconSize::Small))
-                                    .size(ButtonSize::Medium)
-                                    .style(ButtonStyle::Tinted(TintColor::Accent))
-                                    .tab_index(0isize)
-                                    .aria_label(accessibility_label)
-                                    .aria_keyshortcuts("Shift+G")
-                                    .tooltip(tooltip)
-                                    .on_click(on_click)
-                                    .into_any_element()
-                            } else {
-                                IconButton::new("review-terminal-changes", IconName::Diff)
-                                    .size(ButtonSize::Medium)
-                                    .icon_size(IconSize::Small)
-                                    .tab_index(0isize)
-                                    .icon_color(Color::Accent)
-                                    .aria_label(accessibility_label)
-                                    .aria_keyshortcuts("Shift+G")
-                                    .tooltip(tooltip)
-                                    .on_click(on_click)
-                                    .into_any_element()
-                            };
-                            this.child(action)
+                                },
+                            ))
                         })
                         .when(!has_changes, |this| {
                             this.when_some(review_workspace, |this, review_workspace| {
-                                let tooltip = {
-                                    let focus_handle = focus_handle.clone();
-                                    move |_window: &mut Window, cx: &mut App| {
+                                let focus_handle = focus_handle.clone();
+                                let review_brief = review_brief.clone();
+                                let sidebar = sidebar.clone();
+                                let metadata = review_action_metadata.clone();
+                                let workspace = review_action_workspace.clone();
+                                let source = review_action_source.clone();
+                                this.child(session_row_primary_action_button(
+                                    "review-terminal-run",
+                                    "Details",
+                                    IconName::Info,
+                                    primary_action_labels_visible,
+                                    None,
+                                    Some(Color::Muted),
+                                    "Open Terminal Session Details",
+                                    Some("Shift+V"),
+                                    move |_window, cx| {
                                         Tooltip::for_action_in(
                                             "Open Terminal Session Details",
                                             &OpenSelectedReviewBrief,
                                             &focus_handle,
                                             cx,
                                         )
-                                    }
-                                };
-                                let on_click = {
-                                    let review_brief = review_brief.clone();
-                                    let sidebar = sidebar.clone();
-                                    let metadata = review_action_metadata.clone();
-                                    let workspace = review_action_workspace.clone();
-                                    let source = review_action_source.clone();
-                                    move |_: &ClickEvent, window: &mut Window, cx: &mut App| {
+                                    },
+                                    move |_, window, cx| {
                                         Self::open_terminal_run_review(
                                             sidebar.clone(),
                                             metadata.clone(),
@@ -11475,32 +11517,8 @@ impl Sidebar {
                                             window,
                                             cx,
                                         );
-                                    }
-                                };
-
-                                let action = if primary_action_labels_visible {
-                                    Button::new("review-terminal-run", "Details")
-                                        .start_icon(Icon::new(IconName::Info).size(IconSize::Small))
-                                        .size(ButtonSize::Medium)
-                                        .tab_index(0isize)
-                                        .aria_label("Open Terminal Session Details")
-                                        .aria_keyshortcuts("Shift+V")
-                                        .tooltip(tooltip)
-                                        .on_click(on_click)
-                                        .into_any_element()
-                                } else {
-                                    IconButton::new("review-terminal-run", IconName::Info)
-                                        .size(ButtonSize::Medium)
-                                        .icon_size(IconSize::Small)
-                                        .tab_index(0isize)
-                                        .icon_color(Color::Muted)
-                                        .aria_label("Open Terminal Session Details")
-                                        .aria_keyshortcuts("Shift+V")
-                                        .tooltip(tooltip)
-                                        .on_click(on_click)
-                                        .into_any_element()
-                                };
-                                this.child(action)
+                                    },
+                                ))
                             })
                         })
                         .child(

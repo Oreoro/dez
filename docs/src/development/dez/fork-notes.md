@@ -948,6 +948,8 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   truncate inside their allocated width; hover and keyboard actions remain
   inline and never paint gradient masks over the title. A Terminal Session
   offers one primary IDE handoff—**Review** for a dirty Workspace, otherwise
-  **Details**—plus its close or terminate lifecycle control. Rename, provider
-  hook setup, and diagnostics remain available in the Session context menu.
-  Readable handoff labels are preserved at rail widths of 280 px and above.
+  **Details**—plus its close or terminate lifecycle control. An Agent Session
+  offers exactly one state action: **Stop**, **Discard**, **Review**, or
+  **Brief**. Rename, Archive, provider hook setup, and diagnostics remain
+  available through selected-Session commands or the Session context menu.
+  Readable action labels are preserved at rail widths of 280 px and above.

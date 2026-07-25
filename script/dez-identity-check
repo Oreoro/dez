@@ -490,7 +490,7 @@ require_multiline_pattern crates/zed/src/zed.rs \
     'action: &workspace::OpenFolder.*?PathPromptOptions \{.*?files: false.*?directories: true.*?multiple: true.*?prompt: Some\("Open Workspace"\.into\(\)\).*?action\.create_new_window' \
     'Open Workspace can regress to a picker that accepts files or ignores same-window placement'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'PRIMARY_ACTION_LABELS_MIN_WIDTH: Pixels = px\(280\.0\).*?fn session_row_primary_action_labels_visible.*?fn open_terminal_changes.*?ReviewGitChanges.*?Button::new\("review-terminal-changes", "Review"\).*?Button::new\("review-terminal-run", "Details"\).*?IconButton::new\("close-terminal".*?"Copy Codex Hook Setup"' \
+    'PRIMARY_ACTION_LABELS_MIN_WIDTH: Pixels = px\(280\.0\).*?fn session_row_primary_action_labels_visible.*?fn session_row_primary_action_button.*?Button::new\(id, visible_label\).*?IconButton::new\(id, icon\).*?fn open_terminal_changes.*?ReviewGitChanges.*?session_row_primary_action_button\([[:space:]]*"review-terminal-changes",[[:space:]]*"Review".*?session_row_primary_action_button\([[:space:]]*"review-terminal-run",[[:space:]]*"Details".*?IconButton::new\("close-terminal".*?"Copy Codex Hook Setup"' \
     'Sessions terminal rows can regress to an icon cluster without one readable IDE handoff'
 reject_multiline_pattern crates/sidebar/src/sidebar.rs \
     'IconButton::new\(\("rename-terminal"|IconButton::new\("copy-codex-hook-setup"' \
@@ -610,7 +610,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_row_actions_visible.*?\(is_hovered \|\| is_focused\) && !is_renaming.*?pointer_and_keyboard_selection_reveal_the_same_row_actions' \
     'Session Rail row controls can regress to pointer-hover-only discovery'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn agent_session_stop_label.*?"Stop Generation".*?"Stop Agent Run".*?IconButton::new\("stop-thread".*?aria_label\(stop_label\).*?tooltip\(Tooltip::text\(stop_label\)\).*?if is_running \{[[:space:]]*menu\.separator\(\)\.entry\(stop_label.*?sidebar\.stop_thread\(&thread_id.*?\} else \{[[:space:]]*menu\.separator\(\)\.entry\(archive_label.*?sidebar\.archive_thread' \
+    'fn agent_session_stop_label.*?"Stop Generation".*?"Stop Agent Run".*?session_row_primary_action_button\([[:space:]]*"stop-thread",[[:space:]]*"Stop".*?stop_label,[[:space:]]*None,[[:space:]]*Tooltip::text\(stop_label\).*?if is_running \{[[:space:]]*menu\.separator\(\)\.entry\(stop_label.*?sidebar\.stop_thread\(&thread_id.*?\} else \{[[:space:]]*menu\.separator\(\)\.entry\(archive_label.*?sidebar\.archive_thread' \
     'a running Agent Session can regress to vague stop language or expose archive through its context menu'
 require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
     'let stop_label =.*?agent_session_label\(paths::APP_NAME, "Stop Generation", "Stop Agent Run"\).*?IconButton::new\("stop-generation".*?aria_label\(stop_label\).*?Tooltip::for_action\(stop_label, &editor::actions::Cancel' \
@@ -625,8 +625,11 @@ require_pattern crates/ui/src/components/ai/thread_item.rs \
     '\.when\(self\.hovered \|\| self\.focused, \|this\|' \
     'the shared Session row can hide its supplied actions from keyboard selection'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'IconButton::new\(\("rename-thread".*?\.tab_index\(0isize\).*?IconButton::new\("stop-thread".*?\.tab_index\(0isize\).*?IconButton::new\("archive-thread".*?\.tab_index\(0isize\).*?IconButton::new\("close-terminal".*?\.tab_index\(0isize\)' \
-    'visible Session Rail row actions can regress out of the keyboard tab order'
+    'enum AgentSessionRowPrimaryAction.*?StopRun.*?DiscardDraft.*?ReviewChanges.*?OpenReviewBrief.*?fn agent_session_row_primary_action.*?if is_running.*?DraftKind::WithContent.*?has_reviewable_changes.*?can_open_review_brief.*?fn agent_session_rows_expose_one_state_appropriate_primary_action.*?session_row_primary_action_button\([[:space:]]*"stop-thread",[[:space:]]*"Stop".*?session_row_primary_action_button\([[:space:]]*"discard_thread",[[:space:]]*"Discard".*?session_row_primary_action_button\([[:space:]]*\("review-thread-changes", ix\),[[:space:]]*"Review".*?session_row_primary_action_button\([[:space:]]*\("review-thread-run", ix\),[[:space:]]*"Brief".*?IconButton::new\("close-terminal".*?\.tab_index\(0isize\)' \
+    'Sessions rows can regress to an unlabeled action cluster or lose state-aware keyboard actions'
+reject_pattern crates/sidebar/src/sidebar.rs \
+    'IconButton::new\(\("rename-thread"|IconButton::new\("archive-thread"' \
+    'secondary Agent Session actions can regress into the primary row handoff'
 reject_pattern crates/sidebar/src/sidebar.rs \
     '\.actor_label\("Terminal Session"\)' \
     'plain terminal rows can regress to repeating their type as a fake actor label'
@@ -694,8 +697,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn agent_session_label.*?app_name == "Zed".*?upstream_thread_label.*?dez_session_label' \
     'Dez can regress to exposing Agent records as ambiguous Threads'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    '"Rename Thread", "Rename Agent Session".*?"Archive Thread", "Archive Agent Session".*?"Regenerate Thread Title".*?"Regenerate Agent Session Title".*?"Open Thread as Markdown".*?"Open Agent Session as Markdown"' \
-    'Session Rail Agent Session actions can regress to mixed Thread terminology'
+    '"Rename Title", "Rename Agent Session".*?"Archive Thread", "Archive Agent Session".*?"Regenerate Thread Title".*?"Regenerate Agent Session Title".*?"Open Thread as Markdown".*?"Open Agent Session as Markdown"' \
+    'Sessions Agent Session context actions can regress to mixed Thread terminology'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     '"Agent Profiles".*?agent_session_label\([[:space:]]*APP_NAME,[[:space:]]*"Open Settings",[[:space:]]*"Agent Settings".*?"Toggle Sidebar".*?"Hide Sessions"' \
     'the Session Rail Agent Tools menu can regress to ambiguous Settings or Sidebar destinations'
@@ -946,7 +949,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\("all-session-scope".*?\.aria_keyshortcuts\("Shift\+A"\)' \
     'the visible Attention-scope shortcut is absent from accessibility output'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'aria_label\("Open Review Brief"\).*?\.aria_keyshortcuts\("Shift\+V"\)' \
+    'session_row_primary_action_button\([[:space:]]*\("review-thread-run", ix\),[[:space:]]*"Brief".*?"Open Review Brief",[[:space:]]*Some\("Shift\+V"\)' \
     'the visible Review Brief shortcut is absent from accessibility output'
 require_pattern crates/sidebar/src/sidebar.rs \
     'format!\("\{transport_state\} · Needs attention"\)' \
@@ -1021,7 +1024,7 @@ require_multiline_pattern crates/onboarding/src/basics_page.rs \
     'IconName::Terminal,[[:space:]]*"Run".*?IconName::ListTree,[[:space:]]*"Supervise".*?IconName::Diff,[[:space:]]*"Review".*?\.role\(gpui::Role::Region\).*?\.aria_label\("Terminal-first workflow"\)' \
     'the Dez first-run workflow is not exposed as a named accessibility region'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'IconButton::new\("review-terminal-changes", IconName::Diff\).*?IconButton::new\("review-terminal-run", IconName::Info\)' \
+    'session_row_primary_action_button\([[:space:]]*"review-terminal-changes",[[:space:]]*"Review",[[:space:]]*IconName::Diff.*?session_row_primary_action_button\([[:space:]]*"review-terminal-run",[[:space:]]*"Details",[[:space:]]*IconName::Info' \
     'Terminal Session review actions can regress to contradictory icon roles'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\("new-session", "Start Terminal"\).*?IconName::Terminal' \
@@ -1156,8 +1159,8 @@ require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
     'actor_label_visible: bool.*?host_label_visible: bool.*?pub fn actor_label_visible.*?pub fn host_label_visible.*?has_visible_actor_label.*?has_visible_host_label.*?when\(self\.actor_label_visible.*?when\(self\.host_label_visible' \
     'hidden Session ownership context can regress to disappearing from accessibility and tooltips'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    '\.when\(!compact_row.*?rename_button.*?\.when\(!compact_row && has_changes' \
-    'compact native-agent rows can regress to covering titles with secondary actions'
+    'let has_reviewable_changes =.*?has_changes && matches!\(&thread\.workspace, ThreadEntryWorkspace::Open\(_\)\).*?agent_session_row_primary_action\([[:space:]]*is_running,[[:space:]]*thread\.draft,[[:space:]]*has_reviewable_changes' \
+    'Agent Session rows can regress to exposing an inert Review action for a closed Workspace'
 require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
     'tooltip_title = self\.title\.clone.*?tooltip_metadata.*?show_tooltip = self\.is_truncated.*?whitespace_normal' \
     'truncated Session rows can hide their full identity and state'
