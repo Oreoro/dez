@@ -3693,3 +3693,18 @@ Completed for the Welcome visual-grammar source slice:
 - added static guards rejecting the old card and numbered-pill treatment;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the auxiliary-drawer recovery geometry source slice:
+
+- made empty Workspace Tools and Agent recovery regions own the full drawer
+  height instead of inheriting centered placement from the pane placeholder;
+- top-anchored the compact explanation and single **Return to Main Work Area**
+  action with deliberate drawer padding;
+- added internal vertical scrolling and a zero minimum height so recovery
+  remains reachable in short windows;
+- preserved the bounded content measure, named region semantics, inward
+  directional icons, keyboard focus, and one-action hierarchy;
+- added a static layout guard preventing centered or clipping recovery
+  regressions;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

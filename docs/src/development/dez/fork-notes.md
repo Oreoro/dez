@@ -734,10 +734,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
 - **2026-07-25: Recovery surfaces name their real destination.** Empty
   Workspace Tools and Agent drawers are named regions whose single recovery
   closes the drawer and returns to the **Main Work Area**, not generically to
-  an editor. Directional arrows point inward. New File consistently uses the
-  File object icon. Welcome explains Run, Supervise, and Review as one native,
-  accessible icon list rather than three competing cards or another bordered
-  panel.
+  an editor. Each recovery surface owns the full drawer height, anchors its
+  compact content at the top, and scrolls internally at short heights; it
+  cannot inherit parent centering and appear as a floating prompt. Directional
+  arrows point inward. New File consistently uses the File object icon. Welcome
+  explains Run, Supervise, and Review as one native, accessible icon list
+  rather than three competing cards or another bordered panel.
 - **2026-07-25: Destination labels imply idempotent navigation.** **Open
   Workspace** accepts folders, not standalone files, and keeps the current
   window when the flow promises to preserve Sessions. **Open Files** reveals

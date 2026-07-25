@@ -1662,6 +1662,9 @@ require_multiline_pattern crates/workspace/src/pane.rs \
 require_multiline_pattern crates/workspace/src/pane.rs \
     'Button::new\("empty-project-new-file", "New File"\).*?start_icon\(Icon::new\(IconName::File\)\).*?fn render_empty_panel_state.*?"Workspace Tools unavailable".*?IconName::ArrowRight.*?"Agent unavailable".*?IconName::ArrowLeft.*?role\(gpui::Role::Region\).*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?"Return to Main Work Area"' \
     'empty drawers can regress to ambiguous editor-only recovery or directionally incorrect controls'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    'fn render_empty_panel_state.*?\.h_full\(\).*?\.min_h_0\(\).*?\.overflow_y_scroll\(\).*?\.max_w_96\(\).*?\.w_full\(\).*?\.items_start\(\).*?\.justify_start\(\).*?\.px_6\(\).*?\.pt_8\(\).*?\.pb_6\(\)' \
+    'empty auxiliary drawers can regress to a centered floating prompt or clip recovery in a short window'
 require_pattern crates/settings_ui/src/page_data.rs \
     '"Trust All Workspaces By Default"' \
     'the Dez trust setting still presents a Project boundary'

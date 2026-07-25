@@ -2913,3 +2913,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Static guards reject the old card treatment and protect the accessible list
   structure. This is source-only; no build, test binary, alternate binary, or
   visual launch was performed.
+- 2026-07-26: Anchored empty Workspace Tools and Agent recovery to the top of
+  their drawers. The recovery region now owns the full available height, uses
+  a zero minimum height plus internal vertical scrolling, and keeps deliberate
+  top/bottom padding. It can no longer inherit the pane placeholder's centered
+  alignment and resemble a floating prompt in a blank column. The bounded
+  measure, named region, inward arrow, keyboard route, and single **Return to
+  Main Work Area** action remain. A static geometry guard protects the
+  contract. This is source-only; no build, test binary, alternate binary, or
+  visual launch was performed.
