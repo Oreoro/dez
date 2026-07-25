@@ -214,7 +214,12 @@ impl RenderOnce for TerminalToolHeader {
                 Disclosure::new(child_id("disclosure"), is_expanded)
                     .opened_icon(IconName::ChevronUp)
                     .closed_icon(IconName::ChevronDown)
-                    .visible_on_hover(&hover_group)
+                    .tab_index(0isize)
+                    .aria_label(if is_expanded {
+                        "Collapse Command Output"
+                    } else {
+                        "Expand Command Output"
+                    })
                     .when_some(on_toggle_expand, |this, handler| this.on_click(handler)),
             )
             .when(show_elapsed, |header| {
@@ -242,6 +247,8 @@ impl RenderOnce for TerminalToolHeader {
                         IconButton::new(child_id("stop"), IconName::Stop)
                             .icon_size(IconSize::Small)
                             .icon_color(Color::Error)
+                            .tab_index(0isize)
+                            .aria_label("Stop This Command")
                             .tooltip(move |_window, cx| {
                                 Tooltip::with_meta(
                                     "Stop This Command",
@@ -256,24 +263,35 @@ impl RenderOnce for TerminalToolHeader {
             })
             .when_some(truncated_tooltip, |header, tooltip| {
                 header.child(
-                    IconButton::new(child_id("truncated"), IconName::Info)
+                    div()
+                        .id(child_id("truncated"))
+                        .role(gpui::Role::Status)
+                        .aria_label("Agent received truncated command output")
                         .cursor_style(CursorStyle::Arrow)
-                        .style(ButtonStyle::Transparent)
-                        .icon_size(IconSize::Small)
-                        .icon_color(Color::Muted)
-                        .tooltip(Tooltip::text(tooltip)),
+                        .tooltip(Tooltip::text(tooltip))
+                        .child(
+                            Icon::new(IconName::Info)
+                                .size(IconSize::Small)
+                                .color(Color::Muted),
+                        ),
                 )
             })
             .when(failed, |header| {
+                let failure_label = exit_code
+                    .map(|code| format!("Command exited with code {code}"))
+                    .unwrap_or_else(|| "Command failed".to_string());
                 header.child(
-                    IconButton::new(child_id("failed"), IconName::Close)
+                    div()
+                        .id(child_id("failed"))
+                        .role(gpui::Role::Status)
+                        .aria_label(failure_label.clone())
                         .cursor_style(CursorStyle::Arrow)
-                        .style(ButtonStyle::Transparent)
-                        .icon_size(IconSize::Small)
-                        .icon_color(Color::Error)
-                        .when_some(exit_code, |this, code| {
-                            this.tooltip(Tooltip::text(format!("Exited with code {code}")))
-                        }),
+                        .tooltip(Tooltip::text(failure_label))
+                        .child(
+                            Icon::new(IconName::Close)
+                                .size(IconSize::Small)
+                                .color(Color::Error),
+                        ),
                 )
             })
             .when_some(sandbox_warning, |header, warning| {
@@ -285,6 +303,8 @@ impl RenderOnce for TerminalToolHeader {
                 header.child(
                     IconButton::new(child_id("sandbox-not-applied"), IconName::LockOff)
                         .icon_size(IconSize::Small)
+                        .tab_index(0isize)
+                        .aria_label("Open Agent Sandbox Documentation")
                         .tooltip(move |_window, cx| {
                             Tooltip::with_meta(
                                 title.clone(),

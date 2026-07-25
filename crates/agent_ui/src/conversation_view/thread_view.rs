@@ -430,7 +430,6 @@ fn render_cat_numbered_code_block(
                 .top_0()
                 .right_0()
                 .justify_end()
-                .visible_on_hover("read-file-code-block")
                 .child(CopyButton::new(copy_button_id, code).tooltip_label("Copy Code")),
         )
         .into_any_element()
@@ -7995,7 +7994,12 @@ impl ThreadView {
                         Disclosure::new(("expand", entry_ix), is_open)
                             .opened_icon(IconName::ChevronUp)
                             .closed_icon(IconName::ChevronDown)
-                            .visible_on_hover(&card_header_id)
+                            .tab_index(0isize)
+                            .aria_label(if is_open {
+                                "Collapse Agent Thinking"
+                            } else {
+                                "Expand Agent Thinking"
+                            })
                             .on_click(cx.listener(move |this, _event: &ClickEvent, window, cx| {
                                 this.toggle_thinking_block_expansion(key, window, cx);
                             })),
@@ -8313,9 +8317,8 @@ impl ThreadView {
                 border: false,
             });
         let copy_button_id = SharedString::from(format!("{group}-copy-command"));
-        let copy_button = CopyButton::new(copy_button_id, command_text)
-            .tooltip_label("Copy Command")
-            .visible_on_hover(group.clone());
+        let copy_button =
+            CopyButton::new(copy_button_id, command_text).tooltip_label("Copy Command");
 
         v_flex()
             .group(group)
@@ -9046,7 +9049,12 @@ impl ThreadView {
                                                         )
                                                         .opened_icon(IconName::ChevronUp)
                                                         .closed_icon(IconName::ChevronDown)
-                                                        .visible_on_hover(&card_header_id)
+                                                        .tab_index(0isize)
+                                                        .aria_label(if is_open {
+                                                            "Collapse Tool Output"
+                                                        } else {
+                                                            "Expand Tool Output"
+                                                        })
                                                         .on_click(cx.listener({
                                                             let id = tool_call.id.clone();
                                                             move |this: &mut Self,
@@ -9105,6 +9113,10 @@ impl ThreadView {
                                                                 IconName::Undo,
                                                             )
                                                             .icon_size(IconSize::Small)
+                                                            .tab_index(0isize)
+                                                            .aria_label(
+                                                                "Discard Interrupted Edit",
+                                                            )
                                                             .tooltip(move |_, cx| {
                                                                 Tooltip::with_meta(
                                                                     "Discard Interrupted Edit",
@@ -9149,6 +9161,7 @@ impl ThreadView {
                                             Button::new("open-file-button", "Open File")
                                                 .style(ButtonStyle::Outlined)
                                                 .label_size(LabelSize::Small)
+                                                .tab_index(0isize)
                                                 .key_binding(
                                                     KeyBinding::for_action_in(&OpenExcerpts, &tool_call_output_focus_handle, cx)
                                                         .map(|s| s.size(rems_from_px(12.))),
@@ -11198,14 +11211,44 @@ impl ThreadView {
                                 this.cursor_pointer()
                                     .hover(|s| s.bg(cx.theme().colors().element_hover))
                                     .child(
-                                        div().visible_on_hover(card_header_id).child(
-                                            Icon::new(if is_expanded {
-                                                IconName::ChevronUp
-                                            } else {
-                                                IconName::ChevronDown
-                                            })
-                                            .color(Color::Muted)
-                                            .size(IconSize::Small),
+                                        Disclosure::new(
+                                            ("toggle-subagent-preview", entry_ix),
+                                            is_expanded,
+                                        )
+                                        .opened_icon(IconName::ChevronUp)
+                                        .closed_icon(IconName::ChevronDown)
+                                        .tab_index(0isize)
+                                        .aria_label(if is_expanded {
+                                            "Collapse Subagent Preview"
+                                        } else {
+                                            "Expand Subagent Preview"
+                                        })
+                                        .tooltip(Tooltip::text(if is_expanded {
+                                            "Collapse Subagent Preview"
+                                        } else {
+                                            "Expand Subagent Preview"
+                                        }))
+                                        .on_click(
+                                            cx.listener({
+                                                let tool_call_id = tool_call.id.clone();
+                                                move |this, _, window, cx| {
+                                                    cx.stop_propagation();
+                                                    let expanded = this.entry_view_state.update(
+                                                        cx,
+                                                        |state, _cx| {
+                                                            state.toggle_tool_call_expansion(
+                                                                &tool_call_id,
+                                                            );
+                                                            state.is_tool_call_expanded(
+                                                                &tool_call_id,
+                                                            )
+                                                        },
+                                                    );
+                                                    this.refresh_thread_search(window, cx);
+                                                    telemetry::event!("Subagent Toggled", expanded);
+                                                    cx.notify();
+                                                }
+                                            }),
                                         ),
                                     )
                                     .on_click(cx.listener({
@@ -11228,6 +11271,8 @@ impl ThreadView {
                             IconButton::new(format!("stop-subagent-{}", entry_ix), IconName::Stop)
                                 .icon_size(IconSize::Small)
                                 .icon_color(Color::Error)
+                                .tab_index(0isize)
+                                .aria_label("Stop Subagent")
                                 .tooltip(Tooltip::text("Stop Subagent"))
                                 .when_some(
                                     thread_view
@@ -11257,30 +11302,41 @@ impl ThreadView {
 
                 let nav_session_id = tv_session_id.clone();
 
-                let fullscreen_toggle = h_flex()
-                    .id(entry_ix)
-                    .py_1()
+                let fullscreen_toggle = div()
+                    .id(("open-subagent-session", entry_ix))
+                    .p_1()
                     .w_full()
-                    .justify_center()
                     .border_t_1()
                     .when(is_failed, |this| this.border_dashed())
                     .border_color(self.tool_card_border_color(cx))
-                    .cursor_pointer()
-                    .hover(|s| s.bg(cx.theme().colors().element_hover))
                     .child(
-                        Icon::new(IconName::Maximize)
-                            .color(Color::Muted)
-                            .size(IconSize::Small),
-                    )
-                    .tooltip(Tooltip::text("Make Subagent Full Screen"))
-                    .on_click(cx.listener(move |this, _event, window, cx| {
-                        telemetry::event!("Subagent Maximized");
-                        this.server_view
-                            .update(cx, |this, cx| {
-                                this.navigate_to_thread(nav_session_id.clone(), window, cx);
-                            })
-                            .ok();
-                    }));
+                        Button::new(
+                            ("open-subagent-session-button", entry_ix),
+                            "Open Subagent Session",
+                        )
+                        .full_width()
+                        .style(ButtonStyle::Subtle)
+                        .label_size(LabelSize::Small)
+                        .start_icon(
+                            Icon::new(IconName::Maximize)
+                                .color(Color::Muted)
+                                .size(IconSize::Small),
+                        )
+                        .tab_index(0isize)
+                        .tooltip(Tooltip::text(
+                            "Open this exact Subagent Session in the Agent work area",
+                        ))
+                        .on_click(cx.listener(
+                            move |this, _event, window, cx| {
+                                telemetry::event!("Subagent Maximized");
+                                this.server_view
+                                    .update(cx, |this, cx| {
+                                        this.navigate_to_thread(nav_session_id.clone(), window, cx);
+                                    })
+                                    .ok();
+                            },
+                        )),
+                    );
 
                 if is_running && let Some((_, subagent_tool_call_id, _)) = pending_tool_call {
                     if let Some((entry_ix, tool_call)) =

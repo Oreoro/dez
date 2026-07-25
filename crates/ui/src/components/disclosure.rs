@@ -15,6 +15,8 @@ pub struct Disclosure {
     shape: Option<IconButtonShape>,
     visible_on_hover: Option<SharedString>,
     tooltip: Option<Box<dyn Fn(&mut Window, &mut App) -> AnyView + 'static>>,
+    aria_label: Option<SharedString>,
+    tab_index: Option<isize>,
     on_toggle_expanded: Option<Arc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>>,
     opened_icon: IconName,
 }
@@ -32,11 +34,27 @@ impl Disclosure {
             shape: None,
             visible_on_hover: None,
             tooltip: None,
+            aria_label: None,
+            tab_index: None,
         }
     }
 
     pub fn tooltip(mut self, tooltip: impl Fn(&mut Window, &mut App) -> AnyView + 'static) -> Self {
         self.tooltip = Some(Box::new(tooltip));
+        self
+    }
+
+    /// Adds the disclosure trigger to an explicit keyboard tab order.
+    pub fn tab_index(mut self, tab_index: impl Into<isize>) -> Self {
+        self.tab_index = Some(tab_index.into());
+        self
+    }
+
+    /// Sets a context-specific label for the disclosure trigger.
+    ///
+    /// When omitted, the trigger is announced as "Expand" or "Collapse".
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 
@@ -100,7 +118,14 @@ impl RenderOnce for Disclosure {
         )
         .icon_color(Color::Muted)
         .icon_size(IconSize::Small)
-        .aria_label(if self.is_open { "Collapse" } else { "Expand" })
+        .when_some(self.tab_index, |this, tab_index| this.tab_index(tab_index))
+        .aria_label(self.aria_label.unwrap_or_else(|| {
+            if self.is_open {
+                "Collapse".into()
+            } else {
+                "Expand".into()
+            }
+        }))
         .aria_expanded(self.is_open)
         .disabled(self.disabled)
         .when_some(self.shape, |this, shape| this.shape(shape))

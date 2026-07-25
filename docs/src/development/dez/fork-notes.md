@@ -212,6 +212,16 @@ the persistent Dez setting, Anthropic log retention, and the current-request
 retry. Only **Accept and Retry** changes the setting and resends; **Cancel**
 leaves both untouched.
 
+Agent tool cards teach their behavior without requiring pointer discovery.
+Copy Code, Copy Command, and expandable-output controls remain visible at
+rest. Disclosure controls are keyboard tab stops, announce the exact content
+they expand, and expose expanded state. **Stop This Command** acts on the exact
+running terminal tool call; truncation and exit icons are status, not fake
+buttons. **Discard Interrupted Edit** targets only that partial edit.
+Subagents expose distinct **Stop Subagent**, **Expand Subagent Preview**, and
+**Open Subagent Session** actions; opening a Session navigates to that existing
+conversation and does not create or restart work.
+
 The everyday Canvas Layout menu is a workflow picker, not a diagnostics or
 storage dashboard. It exposes Full, Agent Control, Focus Editor,
 Code/Run/Observe, Review, and Debug; saved-layout detail belongs in **Manage

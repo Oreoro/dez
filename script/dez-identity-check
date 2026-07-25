@@ -699,6 +699,21 @@ require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
 require_multiline_pattern crates/ui/src/components/button/copy_button.rs \
     'let button = IconButton::new\(id, icon\).*?tab_index\(0isize\).*?aria_label\(tooltip\.clone\(\)\).*?tooltip\(Tooltip::text\(tooltip\)\)' \
     'shared Copy controls can regress to pointer-only icons without accessible names'
+require_multiline_pattern crates/ui/src/components/disclosure.rs \
+    'pub fn tab_index\(.*?self\.tab_index = Some\(tab_index\.into\(\)\).*?pub fn aria_label\(.*?self\.aria_label = Some\(label\.into\(\)\).*?IconButton::new\(.*?when_some\(self\.tab_index,.*?this\.tab_index\(tab_index\).*?aria_label\(self\.aria_label\.unwrap_or_else.*?aria_expanded\(self\.is_open\)' \
+    'shared disclosure controls can regress outside the keyboard, naming, or expanded-state contract'
+require_multiline_pattern crates/agent_ui/src/ui/terminal_tool_header.rs \
+    'Disclosure::new\(child_id\("disclosure"\), is_expanded\).*?tab_index\(0isize\).*?"Collapse Command Output".*?"Expand Command Output".*?IconButton::new\(child_id\("stop"\), IconName::Stop\).*?tab_index\(0isize\).*?aria_label\("Stop This Command"\).*?role\(gpui::Role::Status\).*?aria_label\("Agent received truncated command output"\).*?role\(gpui::Role::Status\).*?aria_label\(failure_label\.clone\(\)\).*?IconButton::new\(child_id\("sandbox-not-applied"\).*?tab_index\(0isize\).*?aria_label\("Open Agent Sandbox Documentation"\)' \
+    'terminal tool cards can regress to hidden, unnamed, or button-shaped status controls'
+reject_pattern crates/agent_ui/src/ui/terminal_tool_header.rs \
+    'visible_on_hover' \
+    'terminal tool-card disclosure can regress to pointer-hover-only discovery'
+require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
+    'tooltip_label\("Copy Code"\).*?tab_index\(0isize\).*?aria_label\(if is_open.*?"Collapse Agent Thinking".*?"Expand Agent Thinking".*?tooltip_label\("Copy Command"\).*?tab_index\(0isize\).*?aria_label\(if is_open.*?"Collapse Tool Output".*?"Expand Tool Output".*?IconButton::new\([[:space:]]*\("discard-partial-edit".*?tab_index\(0isize\).*?aria_label\([[:space:]]*"Discard Interrupted Edit".*?Button::new\("open-file-button", "Open File"\).*?tab_index\(0isize\).*?Disclosure::new\([[:space:]]*\("toggle-subagent-preview".*?tab_index\(0isize\).*?"Collapse Subagent Preview".*?"Expand Subagent Preview".*?IconButton::new\(format!\("stop-subagent-.*?tab_index\(0isize\).*?aria_label\("Stop Subagent"\).*?Button::new\([[:space:]]*\("open-subagent-session-button".*?"Open Subagent Session".*?tab_index\(0isize\)' \
+    'Agent tool cards can regress to hover-only, unnamed, or ambiguous exact-tool actions'
+reject_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
+    'visible_on_hover\("read-file-code-block"\)|visible_on_hover\(&card_header_id\)|visible_on_hover\(card_header_id\)|visible_on_hover\(group\.clone\(\)\)' \
+    'Agent code copy or tool disclosures can regress to pointer-hover-only discovery'
 reject_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
     'Zed will retry' \
     'Dez Agent provider recovery can regress to inherited Zed identity'

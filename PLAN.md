@@ -2661,3 +2661,15 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   **Accept and Retry** can run. Static guards cover identity, focus, naming,
   and consent sequencing. This is source-only; no build or visual launch was
   performed.
+- 2026-07-25: Made Agent tool cards self-explanatory without hover discovery.
+  Tool-card disclosures are explicit keyboard tab stops with
+  context-specific names and expanded state. The shared Disclosure component
+  now supports that opt-in contract without turning inherited hover-only
+  disclosures into invisible tab stops. Copy Code, Copy Command, thinking,
+  terminal-output, and general tool-output controls remain visible at rest.
+  Running-command Stop, sandbox help, interrupted-edit discard, and Open File
+  are named keyboard actions. Truncation and command failure are status rather
+  than inert IconButtons. Subagent preview, Stop, and the labeled Open Subagent
+  Session action retain distinct exact-Session semantics. Static guards cover
+  visibility, roles, naming, focus, and ownership. This is source-only; no
+  build or visual launch was performed.

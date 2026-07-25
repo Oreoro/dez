@@ -3271,3 +3271,22 @@ Completed for the Agent error, warning, and trust-recovery source slice:
   regression guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Agent tool-card interaction source slice:
+
+- extended the shared Disclosure control with opt-in keyboard ordering and
+  context-specific accessible naming while preserving expanded state;
+- applied that explicit keyboard contract to every audited Agent tool-card
+  disclosure without creating invisible tab stops for inherited hover-only
+  consumers;
+- kept Copy Code, Copy Command, thinking, terminal-output, and general
+  tool-output controls visible without pointer hover;
+- named and keyboard-enabled running-command Stop, sandbox documentation,
+  interrupted-edit discard, and Open File;
+- represented output truncation and command failure as accessibility status
+  instead of non-actionable buttons;
+- separated Subagent preview, Stop, and the labeled Open Subagent Session
+  navigation action while retaining exact Session ownership;
+- added static visibility, role, naming, focus, and ownership guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

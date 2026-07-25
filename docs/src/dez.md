@@ -245,6 +245,13 @@ dialog states that consent is saved in Dez settings, Anthropic may retain
 inference logs, and the current request will be retried. **Cancel** changes
 nothing; **Accept and Retry** performs the disclosed setting update and retry.
 
+Tool cards are compact controls over real work, not opaque chat decoration.
+Their expand/collapse and copy actions remain visible and keyboard reachable.
+A running command has one exact **Stop This Command** action. Truncation and
+failure marks report status without pretending to be buttons. A subagent card
+separates previewing its work, stopping it, and opening that existing Subagent
+Session in the Agent work area.
+
 ### 5. Resume honestly
 
 Workspace composition and session metadata are restored where the source owns
