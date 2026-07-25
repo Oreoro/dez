@@ -364,6 +364,14 @@ controls legible. Elevated menus and overlays remain visually solid enough for
 text. Editor and terminal regions reuse the single shell material instead of
 stacking independent blur effects over continuously updating content.
 
+That contract applies to stable secondary windows as well as the main
+Workspace. About, sign-in/verification, Settings, Audio Test, and profiling
+windows must request the active theme's native window material and initialize
+the configured UI font before rendering. Intentionally shaped notification
+popups remain transparent so their rounded shell is preserved, but still
+initialize the same UI font. A secondary window must never silently fall back
+to an opaque native background or GPUI's default text face.
+
 Typography uses one explicit Dez identity:
 
 - **JetBrains Mono** is bundled under the SIL Open Font License and is the

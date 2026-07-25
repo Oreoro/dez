@@ -3318,3 +3318,19 @@ Completed for the Session Rail recovery-notice source slice:
   and removal-scope guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the secondary-window visual-identity source slice:
+
+- traced every production `WindowOptions` consumer rather than assuming the
+  main Workspace window propagated its material and typography;
+- made About and Copilot verification request the active Lumin native window
+  appearance instead of GPUI's opaque default;
+- initialized the configured JetBrains UI role in About, Copilot verification,
+  and Audio Test before rendering their root surfaces;
+- preserved transparent window shells for intentionally shaped Agent and
+  collaboration notification popups, which already initialize the configured
+  UI font;
+- added static guards for stable-window material/font inheritance and the
+  deliberate popup exception;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

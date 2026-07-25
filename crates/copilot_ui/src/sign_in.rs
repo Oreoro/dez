@@ -74,6 +74,7 @@ fn open_copilot_code_verification_window(copilot: &Entity<Copilot>, window: &Win
                 appears_transparent: true,
                 ..Default::default()
             }),
+            window_background: cx.theme().window_background_appearance(),
             app_id: Some(app_id.to_owned()),
             ..Default::default()
         },
@@ -416,7 +417,8 @@ impl CopilotCodeVerification {
 }
 
 impl Render for CopilotCodeVerification {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let ui_font = theme_settings::setup_ui_font(window, cx);
         let prompt = match &self.status {
             Status::SigningIn { prompt: None } => Icon::new(IconName::ArrowCircle)
                 .color(Color::Muted)
@@ -444,6 +446,7 @@ impl Render for CopilotCodeVerification {
 
         v_flex()
             .id("copilot_code_verification")
+            .font(ui_font)
             .track_focus(&self.focus_handle(cx))
             .size_full()
             .px_4()

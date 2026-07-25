@@ -1560,12 +1560,14 @@ fn open_about_window(cx: &mut App) {
 
     impl Render for AboutWindow {
         fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+            let ui_font = theme_settings::setup_ui_font(window, cx);
             let ok_is_focused = self.ok_entry.focus_handle.contains_focused(window, cx);
             let copy_is_focused = self.copy_entry.focus_handle.contains_focused(window, cx);
 
             Navigable::new(
                 v_flex()
                     .id("about-window")
+                    .font(ui_font)
                     .track_focus(&self.focus_handle)
                     .on_action(cx.listener(|_, _: &menu::Cancel, window, _cx| {
                         window.remove_window();
@@ -1688,6 +1690,7 @@ fn open_about_window(cx: &mut App) {
             is_resizable: false,
             is_minimizable: false,
             kind: WindowKind::Floating,
+            window_background: cx.theme().window_background_appearance(),
             app_id: Some(ReleaseChannel::global(cx).app_id().to_owned()),
             ..Default::default()
         },

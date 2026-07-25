@@ -312,6 +312,12 @@ hover, active, selected, scrollbar, and focus states strengthen in a consistent
 order, and focus/selection carry the stronger accent. High-motion terminal and
 Agent content does not add independent nested blur layers.
 
+Stable secondary windows—including About, account verification, Settings,
+Audio Test, and profiling—inherit the same active Lumin window material and UI
+font instead of becoming opaque or reverting to a platform-default typeface.
+Small shaped notification popups stay transparent around their own surface,
+while their text still uses the configured Dez UI font.
+
 ## What Dez is not
 
 Dez is not:

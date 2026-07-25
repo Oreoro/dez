@@ -169,6 +169,30 @@ require_multiline_pattern crates/settings/src/settings_store.rs \
 require_multiline_pattern crates/settings/src/settings_store.rs \
     'fn migrates_only_known_generated_dez_visual_profiles.*?migrate_dez_generated_visual_profile\("Dez", generated\).*?migrate_dez_generated_visual_profile\("Zed", generated\), None.*?one_light_generated.*?"mode": "light".*?"light": "One Light".*?migrate_dez_generated_visual_profile\("Dez", one_light_generated\).*?system.*?Lumin Light.*?diff_view_style.*?migrate_dez_generated_visual_profile\([[:space:]]*"Dez".*?\.ZedSans.*?None' \
     'the Dez visual-profile migration is not covered or protected against official Zed and custom settings'
+require_multiline_pattern crates/zed/src/zed.rs \
+    'impl Render for AboutWindow.*?setup_ui_font\(window, cx\).*?id\("about-window"\).*?font\(ui_font\).*?title: Some\(format!\("About \{APP_NAME\}"\).*?kind: WindowKind::Floating.*?window_background: cx\.theme\(\)\.window_background_appearance\(\)' \
+    'the About window can bypass the active Lumin material or JetBrains UI role'
+require_pattern crates/copilot_ui/Cargo.toml \
+    '^theme_settings\.workspace = true$' \
+    'the Copilot verification window cannot apply the active Dez UI font'
+require_multiline_pattern crates/copilot_ui/src/sign_in.rs \
+    'fn open_copilot_code_verification_window.*?title: Some\("Use GitHub Copilot in Dez".*?window_background: cx\.theme\(\)\.window_background_appearance\(\).*?impl Render for CopilotCodeVerification.*?setup_ui_font\(window, cx\).*?id\("copilot_code_verification"\).*?font\(ui_font\)' \
+    'the Copilot verification window can bypass the active Lumin material or JetBrains UI role'
+require_multiline_pattern crates/settings_ui/src/pages/audio_test_window.rs \
+    'impl Render for AudioTestWindow.*?setup_ui_font\(window, cx\).*?id\("audio-test-window"\).*?font\(ui_font\).*?fn open_audio_test_window.*?window_background: cx\.theme\(\)\.window_background_appearance\(\)' \
+    'the Audio Test window can bypass the active Lumin material or JetBrains UI role'
+require_multiline_pattern crates/agent_ui/src/ui/agent_notification.rs \
+    'WindowOptions.*?WindowBackgroundAppearance::Transparent.*?impl Render for AgentNotification.*?setup_ui_font\(window, cx\).*?font\(ui_font\)' \
+    'the shaped Agent notification can lose its intentional transparency or active Dez UI font'
+require_multiline_pattern crates/collab_ui/src/collab_ui.rs \
+    'kind: WindowKind::PopUp.*?window_background: WindowBackgroundAppearance::Transparent' \
+    'the shaped collaboration notifications can lose their intentional transparent shell'
+require_pattern crates/collab_ui/src/notifications/incoming_call_notification.rs \
+    'theme_settings::setup_ui_font\(window, cx\)' \
+    'incoming-call notifications can bypass the active Dez UI font'
+require_pattern crates/collab_ui/src/notifications/project_shared_notification.rs \
+    'theme_settings::setup_ui_font\(window, cx\)' \
+    'project-sharing notifications can bypass the active Dez UI font'
 require_file assets/themes/lumin/lumin.json \
     'the bundled Lumin theme asset is missing'
 require_file assets/themes/lumin/LICENSE \

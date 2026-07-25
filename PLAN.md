@@ -2692,3 +2692,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   record is removed while recent Workspace data remains. Static guards cover
   wording, focus, diagnostics, and exact removal scope. This is source-only; no
   build, test binary, or visual launch was performed.
+- 2026-07-25: Closed the remaining secondary-window visual-identity bypasses.
+  About and Copilot verification now request the active Lumin native window
+  material instead of GPUI's opaque default; both also initialize the
+  configured UI font, as Audio Test now does. Intentionally shaped Agent and
+  collaboration notification popups retain transparent outer windows and
+  their existing configured-font setup. Static guards protect the stable
+  window versus shaped-popup distinction. This is source-only; no build, test
+  binary, alternate binary, or visual launch was performed.

@@ -131,6 +131,7 @@ fn open_test_microphone(
 
 impl Render for AudioTestWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let ui_font = theme_settings::setup_ui_font(window, cx);
         let is_testing = self._stop_playback.is_some();
         let button_text = if is_testing {
             "Stop Testing"
@@ -210,6 +211,7 @@ impl Render for AudioTestWindow {
 
         let content = v_flex()
             .id("audio-test-window")
+            .font(ui_font)
             .track_focus(&self.focus_handle)
             .size_full()
             .p_4()
