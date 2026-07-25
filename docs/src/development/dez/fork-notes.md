@@ -1012,3 +1012,10 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   retains its upstream hover-overlay presentation. The action remains a named
   keyboard tab stop and routes to the title editor for the active Agent
   Surface.
+- **2026-07-26: Agent plan metadata never paints over task text.** In Dez, the
+  collapsed current task owns a flexible, one-line allocation while its
+  remaining-task count owns a fixed inline allocation. Expanded plan rows use
+  ordinary overflow clipping and retain a full-text tooltip. Neither state
+  renders the inherited right-edge gradient mask, preventing opaque patches on
+  Lumin Blur and false overlap at compact Agent widths. Official Zed retains
+  its upstream gradient presentation.

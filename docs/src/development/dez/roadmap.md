@@ -3739,3 +3739,20 @@ Completed for the Agent title-allocation source slice:
   acceptance;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Agent plan-allocation source slice:
+
+- replaced Dez's collapsed-plan count overlay with separate flexible task-text
+  and fixed remaining-count allocations;
+- removed the unconditional right-edge gradient mask from Dez plan rows and
+  used ordinary constrained overflow instead;
+- retained each row's full-text tooltip, status icon, plan disclosure, and
+  keyboard-focusable clear action;
+- preserved official Zed's inherited gradient presentation through an explicit
+  product branch;
+- added a pure product-identity assertion and a static summary/row geometry
+  guard;
+- documented compact-width, pending-count, tooltip, keyboard, disclosure, and
+  Lumin runtime acceptance;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

@@ -56,6 +56,10 @@ use super::*;
 
 const DATA_RETENTION_LEARN_MORE_URL: &str = "https://support.claude.com/en/articles/15425996-data-retention-practices-for-mythos-class-models";
 
+fn agent_plan_uses_gradient_overlays(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 #[derive(Default)]
 struct ThreadFeedbackState {
     feedback: Option<ThreadFeedback>,
@@ -3691,52 +3695,79 @@ impl ThreadView {
     ) -> impl IntoElement {
         let plan_expanded = self.plan_expanded;
         let stats = plan.stats();
+        let uses_gradient_overlays = agent_plan_uses_gradient_overlays(paths::APP_NAME);
 
         let title = if let Some(entry) = stats.in_progress_entry
             && !plan_expanded
         {
-            h_flex()
-                .cursor_default()
-                .relative()
-                .w_full()
-                .gap_1()
-                .truncate()
-                .child(
-                    Label::new("Current:")
-                        .size(LabelSize::Small)
-                        .color(Color::Muted),
-                )
-                .child(
-                    div()
-                        .text_xs()
-                        .text_color(cx.theme().colors().text_muted)
-                        .line_clamp(1)
-                        .child(MarkdownElement::new(
-                            entry.content.clone(),
-                            plan_label_markdown_style(&entry.status, window, cx),
-                        )),
-                )
-                .when(stats.pending > 0, |this| {
-                    this.child(
-                        h_flex()
-                            .absolute()
-                            .top_0()
-                            .right_0()
-                            .h_full()
-                            .child(div().min_w_8().h_full().bg(linear_gradient(
-                                90.,
-                                linear_color_stop(self.activity_bar_bg(cx), 1.),
-                                linear_color_stop(self.activity_bar_bg(cx).opacity(0.2), 0.),
-                            )))
-                            .child(
-                                div().pr_0p5().bg(self.activity_bar_bg(cx)).child(
-                                    Label::new(format!("{} left", stats.pending))
-                                        .size(LabelSize::Small)
-                                        .color(Color::Muted),
-                                ),
-                            ),
+            let current_entry = div()
+                .min_w_0()
+                .text_xs()
+                .text_color(cx.theme().colors().text_muted)
+                .line_clamp(1)
+                .child(MarkdownElement::new(
+                    entry.content.clone(),
+                    plan_label_markdown_style(&entry.status, window, cx),
+                ));
+
+            if uses_gradient_overlays {
+                h_flex()
+                    .cursor_default()
+                    .relative()
+                    .w_full()
+                    .gap_1()
+                    .truncate()
+                    .child(
+                        Label::new("Current:")
+                            .size(LabelSize::Small)
+                            .color(Color::Muted),
                     )
-                })
+                    .child(current_entry)
+                    .when(stats.pending > 0, |this| {
+                        this.child(
+                            h_flex()
+                                .absolute()
+                                .top_0()
+                                .right_0()
+                                .h_full()
+                                .child(div().min_w_8().h_full().bg(linear_gradient(
+                                    90.,
+                                    linear_color_stop(self.activity_bar_bg(cx), 1.),
+                                    linear_color_stop(self.activity_bar_bg(cx).opacity(0.2), 0.),
+                                )))
+                                .child(
+                                    div().pr_0p5().bg(self.activity_bar_bg(cx)).child(
+                                        Label::new(format!("{} left", stats.pending))
+                                            .size(LabelSize::Small)
+                                            .color(Color::Muted),
+                                    ),
+                                ),
+                        )
+                    })
+            } else {
+                h_flex()
+                    .cursor_default()
+                    .w_full()
+                    .min_w_0()
+                    .gap_1()
+                    .child(
+                        h_flex().flex_shrink_0().child(
+                            Label::new("Current:")
+                                .size(LabelSize::Small)
+                                .color(Color::Muted),
+                        ),
+                    )
+                    .child(current_entry.flex_1().overflow_x_hidden())
+                    .when(stats.pending > 0, |this| {
+                        this.child(
+                            h_flex().flex_shrink_0().pr_0p5().child(
+                                Label::new(format!("{} left", stats.pending))
+                                    .size(LabelSize::Small)
+                                    .color(Color::Muted),
+                            ),
+                        )
+                    })
+            }
         } else {
             let status_label = if stats.pending == 0 {
                 "All Done".to_string()
@@ -3798,6 +3829,8 @@ impl ThreadView {
         window: &mut Window,
         cx: &Context<Self>,
     ) -> impl IntoElement {
+        let uses_gradient_overlays = agent_plan_uses_gradient_overlays(paths::APP_NAME);
+
         v_flex()
             .id("plan_items_list")
             .max_h_40()
@@ -3826,6 +3859,9 @@ impl ThreadView {
                                     .id(("plan_entry", index))
                                     .gap_1p5()
                                     .min_w_0()
+                                    .when(!uses_gradient_overlays, |this| {
+                                        this.flex_1().overflow_hidden()
+                                    })
                                     .text_xs()
                                     .text_color(cx.theme().colors().text_muted)
                                     .child(match entry.status {
@@ -3854,13 +3890,15 @@ impl ThreadView {
                                         plan_label_markdown_style(&entry.status, window, cx),
                                     )),
                             )
-                            .child(div().absolute().top_0().right_0().h_full().w_8().bg(
-                                linear_gradient(
-                                    90.,
-                                    linear_color_stop(entry_bg, 1.),
-                                    linear_color_stop(entry_bg.opacity(0.), 0.),
-                                ),
-                            ))
+                            .when(uses_gradient_overlays, |this| {
+                                this.child(div().absolute().top_0().right_0().h_full().w_8().bg(
+                                    linear_gradient(
+                                        90.,
+                                        linear_color_stop(entry_bg, 1.),
+                                        linear_color_stop(entry_bg.opacity(0.), 0.),
+                                    ),
+                                ))
+                            })
                             .tooltip(Tooltip::text(tooltip_text)),
                     )
                 })),
@@ -13256,6 +13294,12 @@ mod tests {
         acp::AvailableCommand::new(name, "").meta(acp_thread::meta_with_command_category(
             acp_thread::CommandCategory::Native,
         ))
+    }
+
+    #[test]
+    fn dez_agent_plan_rows_use_real_width_allocations_instead_of_gradient_masks() {
+        assert!(!agent_plan_uses_gradient_overlays("Dez"));
+        assert!(agent_plan_uses_gradient_overlays("Zed"));
     }
 
     fn mcp_command(name: &str) -> acp::AvailableCommand {

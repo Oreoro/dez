@@ -2940,3 +2940,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   retains its upstream hover presentation. Product assertions and an identity
   guard protect the split. This is source-only; no build, test binary,
   alternate binary, or visual launch was performed.
+- 2026-07-26: Removed inherited gradient overlays from Dez Agent plans. The
+  collapsed current task now owns flexible one-line space while its remaining
+  count owns a fixed inline slot; expanded rows use constrained overflow and
+  preserve their full-text tooltips. Counts and row fades can no longer paint
+  over task text or create opaque Lumin Blur patches. Official Zed retains the
+  upstream masks. A pure product assertion and static summary/row guard protect
+  the split. This is source-only; no build, test binary, alternate binary, or
+  visual launch was performed.
