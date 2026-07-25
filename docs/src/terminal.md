@@ -6,8 +6,8 @@ description: Dez's integrated terminal with main-area tabs, splits, durable sess
 # Terminal
 
 Dez treats terminals as first-class Surfaces beside files, search, diagnostics,
-and review. A terminal opens in the main work area as a normal tab or split;
-the Session Rail only projects its live state and attention.
+and review. A terminal opens in the Main Work Area as a normal tab or split; the
+Sessions region only projects its live state and attention.
 
 ## Opening Terminals
 
@@ -17,29 +17,32 @@ the Session Rail only projects its live state and attention.
 | Command palette   | `Cmd+Shift+P` | `Ctrl+Shift+P` |
 | Split terminal    | `Cmd+D`       | `Ctrl+Shift+5` |
 
-You can also choose **New Terminal** from the Session Rail, an empty Workspace,
-the persistent **Add to Main Work Area** menu, or the command palette. The add
-control stays available when focus moves to Workspace Tools or Agent; those
-auxiliary regions have their own hide controls and never present a second
-terminal destination.
+You can also choose **Start Terminal Session** from Sessions, an empty
+Workspace, the persistent **Add to Main Work Area** menu, or the command
+palette. A compact Sessions toolbar may shorten the visible label to **Start
+Terminal**, while its tooltip and accessible name keep the full Main Work Area
+destination. The add control stays available when focus moves to Workspace Tools
+or Agent; those auxiliary regions have their own hide controls and never present
+a second terminal destination.
 
 ### One Terminal Model
 
-Dez has no separate Terminal Panel destination. Every ordinary **New Terminal**
-action opens a main-area terminal Surface in the active Workspace. You can:
+Dez has no separate Terminal Panel destination. Every ordinary **Start Terminal
+Session** action opens a main-area terminal Surface in the active Workspace. You
+can:
 
 - keep it as a tab beside files;
 - split it into the same pane grid;
 - move it with other Surfaces;
-- select its Session Rail row to return to the existing Surface; or
+- select its Sessions row to return to the existing Surface; or
 - reattach a Host-owned terminal Session when durable terminals are enabled.
 
 ### Moving from a Session into the IDE
 
-The selected Session Rail row and the active standalone terminal expose one
-shared handoff:
+The selected Sessions row and the active standalone terminal expose one shared
+handoff:
 
-| Intent                         | Session Rail shortcut    |
+| Intent                         | Sessions shortcut        |
 | ------------------------------ | ------------------------ |
 | Return to the existing Session | `Enter` or `Shift+Enter` |
 | Open its Workspace files       | `Shift+F`                |
@@ -47,15 +50,16 @@ shared handoff:
 | Open its Session details       | `Shift+V`                |
 
 The terminal context bar exposes **Files**, **Review Changes**, and **Session
-Details** directly. The Session Rail context menu retains the same actions when
-a compact row has no room for every control. The Command Palette names them
-under **Session Rail**.
+Details** directly. The Sessions context menu retains the same actions when a
+compact row has no room for every control. Compatibility command identifiers may
+still include the inherited Session Rail name, but visible Dez chrome uses
+**Sessions**.
 
 After the welcome guide disappears, **Session Details** keeps a compact **How
 Dez Works** explanation available: run computation in this Terminal Session,
-supervise live state and attention in the Session Rail, then review the same
-Workspace through Files and Git. This keeps orientation one click away without
-adding a permanent help row.
+supervise live state and attention in Sessions, then review the same Workspace
+through Files and Git. This keeps orientation one click away without adding a
+permanent help row.
 
 An **Open Scratch Terminal** begins without a project tree by design. Its
 context strip shows **Open Workspace** instead of pretending that Files or Git
@@ -93,7 +97,7 @@ content, not proof.
 
 ## Working with Multiple Terminals
 
-Create additional terminals from **New Terminal**. Each terminal is an
+Create additional terminals from **Start Terminal Session**. Each terminal is an
 independent main-area tab and keeps the active Workspace's directory context.
 
 Split terminals horizontally with `Cmd+D` (macOS) or `Ctrl+Shift+5` (Linux/Windows).
@@ -101,11 +105,11 @@ Split terminals horizontally with `Cmd+D` (macOS) or `Ctrl+Shift+5` (Linux/Windo
 ### Naming Terminals
 
 An ordinary shell terminal follows the title supplied by its shell. Dez retains
-that full title for the Session Rail, Session Switcher, durable Host metadata,
-and tooltips; tabs and rows shorten it only when space requires.
+that full title for Sessions, Session Switcher, durable Host metadata, and
+tooltips; tabs and rows shorten it only when space requires.
 
 Double-click a terminal tab, use its **Rename Terminal…** context action, or
-rename its Terminal Session from the Session Rail. A normal-width Session Rail
+rename its Terminal Session from Sessions. A normal-width Sessions
 row exposes a pencil when the row is hovered or keyboard-selected. Narrow rows
 retain rename in the context menu and **Session Rail: Rename Selected Session**
 command instead of crowding the lifecycle controls. Leading and trailing
@@ -125,8 +129,7 @@ These actions have deliberately different meanings:
   shell is still running, Dez uses the normal dirty-item protection before
   discarding it.
 - **Detach Terminal** closes a Host-owned terminal Surface without stopping
-  its persistent computation. Its Session remains available from the Session
-  Rail.
+  its persistent computation. Its Session remains available from Sessions.
 - **Terminate Terminal Session…** is destructive. It is separated from
   close/detach in the terminal context menu and opens a critical confirmation
   explaining that the shell and any foreground process will stop. It is not

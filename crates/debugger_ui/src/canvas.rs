@@ -6,8 +6,8 @@ use workspace::DesignSystemSettings;
 pub(crate) fn debugger_background(cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match DesignSystemSettings::get_global(cx).contrast {
-        settings::CanvasContrast::Low => colors.editor_background,
-        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::Low => colors.panel_background.opacity(0.9),
+        settings::CanvasContrast::Standard => colors.panel_background,
         settings::CanvasContrast::High => colors.element_background,
     }
 }
@@ -29,8 +29,8 @@ pub(crate) fn debugger_row_background(selected: bool, cx: &App) -> Hsla {
         (true, settings::CanvasContrast::High) => colors
             .element_selected
             .blend(colors.border_focused.opacity(0.16)),
-        (false, settings::CanvasContrast::Low) => colors.editor_background,
-        (false, settings::CanvasContrast::Standard) => colors.editor_background,
+        (false, settings::CanvasContrast::Low) => colors.panel_background.opacity(0.9),
+        (false, settings::CanvasContrast::Standard) => colors.panel_background,
         (false, settings::CanvasContrast::High) => colors.element_background.opacity(0.66),
     }
 }

@@ -667,8 +667,8 @@ fn get_item_color(is_sticky: bool, cx: &App) -> ItemColors {
 fn canvas_project_panel_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match contrast {
-        settings::CanvasContrast::Low => colors.editor_background,
-        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::Low => colors.panel_background.opacity(0.9),
+        settings::CanvasContrast::Standard => colors.panel_background,
         settings::CanvasContrast::High => colors.element_background,
     }
 }
@@ -7604,7 +7604,7 @@ impl Render for ProjectPanel {
                         if horizontal_scroll {
                             scrollbars = scrollbars.with_track_along(
                                 ScrollAxes::Horizontal,
-                                cx.theme().colors().editor_background,
+                                canvas_project_panel_background(canvas_contrast, cx),
                             );
                         }
                         scrollbars.notify_content()
@@ -7657,7 +7657,7 @@ impl Render for ProjectPanel {
                 })
                 .track_focus(&self.focus_handle(cx))
                 .size_full()
-                .bg(cx.theme().colors().editor_background)
+                .bg(canvas_project_panel_background(canvas_contrast, cx))
                 .child(
                     empty_state
                         .on_open_project(move |_, window, cx| {

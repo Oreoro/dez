@@ -159,6 +159,14 @@ fn terminal_unavailable_description(reason: Option<&str>) -> String {
     )
 }
 
+fn terminal_failed_to_start_guidance(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "No terminal process was started. Review terminal settings, then use New Terminal to try again."
+    } else {
+        "No terminal process was started. Review terminal settings, then start a new Terminal Session."
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct TerminalWorkspaceContext {
     workspace_label: Option<String>,
@@ -773,12 +781,13 @@ impl Render for FailedToSpawnTerminal {
                     .child(Label::new("Terminal did not start"))
                     .child(
                         Label::new(format!(
-                            "{}\n\nNo terminal process was started. Review terminal settings, then use New Terminal to try again.",
-                            self.error
+                            "{}\n\n{}",
+                            self.error,
+                            terminal_failed_to_start_guidance(paths::APP_NAME),
                         ))
-                            .size(LabelSize::Small)
-                            .color(Color::Muted)
-                            .mb_4(),
+                        .size(LabelSize::Small)
+                        .color(Color::Muted)
+                        .mb_4(),
                     )
                     .child(SplitButton::new(
                         ButtonLike::new("open-settings-ui")
@@ -1265,8 +1274,11 @@ impl TerminalView {
                             )
                             .separator()
                     } else {
-                        menu.action("New Terminal", Box::new(NewCenterTerminal::default()))
-                            .separator()
+                        menu.action(
+                            "Start Terminal Session",
+                            Box::new(NewCenterTerminal::default()),
+                        )
+                        .separator()
                     }
                 })
                 .when(has_selection, |menu| {

@@ -187,9 +187,9 @@ fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Write. Delegate. Watch. Verify."
     } else if has_workspace {
-        "Run in this Workspace. Supervise in the rail. Review changes here."
+        "Run in this Workspace. Supervise in Sessions. Review changes here."
     } else {
-        "Run in the terminal. Supervise in the rail. Review in the IDE."
+        "Run in the terminal. Supervise in Sessions. Review in the IDE."
     }
 }
 
@@ -922,11 +922,11 @@ mod tests {
     fn dez_welcome_summary_teaches_the_workflow_without_a_promotion_card() {
         assert_eq!(
             welcome_summary("Dez", false),
-            "Run in the terminal. Supervise in the rail. Review in the IDE."
+            "Run in the terminal. Supervise in Sessions. Review in the IDE."
         );
         assert_eq!(
             welcome_summary("Dez", true),
-            "Run in this Workspace. Supervise in the rail. Review changes here."
+            "Run in this Workspace. Supervise in Sessions. Review changes here."
         );
         assert_eq!(
             welcome_summary("Zed", true),

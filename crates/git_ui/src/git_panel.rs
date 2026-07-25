@@ -217,8 +217,8 @@ fn dez_git_unsafe_repository_copy() -> (&'static str, &'static str) {
 fn canvas_git_panel_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match contrast {
-        settings::CanvasContrast::Low => colors.editor_background,
-        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::Low => colors.panel_background.opacity(0.9),
+        settings::CanvasContrast::Standard => colors.panel_background,
         settings::CanvasContrast::High => colors.element_background,
     }
 }
@@ -6413,7 +6413,7 @@ impl GitPanel {
                 .hover(|s| s.bg(cx.theme().colors().element_hover))
                 .border_b_1()
                 .when(!active, |s| {
-                    s.bg(cx.theme().colors().editor_background.opacity(0.6))
+                    s.bg(cx.theme().colors().tab_inactive_background)
                         .border_color(cx.theme().colors().border.opacity(0.6))
                 })
                 .child(Label::new(label.clone()).when(!active, |this| this.color(Color::Muted)))

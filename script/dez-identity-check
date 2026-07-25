@@ -208,8 +208,14 @@ require_file assets/fonts/jetbrains-mono/JetBrainsMono-BoldItalic.ttf \
 require_file assets/fonts/jetbrains-mono/OFL.txt \
     'the bundled JetBrains Mono license is missing'
 require_multiline_pattern assets/themes/lumin/lumin.json \
-    '"author": "Daksh Sharma".*?"name": "Lumin Blur".*?"background\.appearance": "blurred".*?"background": "#101010A6".*?"tab_bar\.background": "#0909098F".*?"panel\.background": "#08080880".*?"editor\.background": "#1818184D".*?"terminal\.background": "#10101059".*?"pane\.focused_border": "#FFC79970".*?"name": "Lumin Light".*?"background\.appearance": "blurred".*?"background": "#F2F0EDB8".*?"tab_bar\.background": "#E4DED68F".*?"panel\.background": "#E6DED580".*?"editor\.background": "#FFFEFC59".*?"terminal\.background": "#FFFEFC59"' \
+    '"author": "Daksh Sharma".*?"name": "Lumin Blur".*?"background\.appearance": "blurred".*?"background": "#101010A6".*?"element\.background": "#FFFFFF0D".*?"element\.hover": "#FFFFFF16".*?"element\.active": "#FFFFFF1F".*?"tab_bar\.background": "#0909098F".*?"panel\.background": "#08080880".*?"editor\.background": "#1818184D".*?"terminal\.background": "#10101059".*?"pane\.focused_border": "#FFC79970".*?"name": "Lumin Light".*?"background\.appearance": "blurred".*?"background": "#F2F0EDB8".*?"element\.background": "#0000000D".*?"element\.hover": "#00000018".*?"element\.active": "#00000024".*?"tab_bar\.background": "#E4DED68F".*?"panel\.background": "#E6DED580".*?"editor\.background": "#FFFEFC59".*?"terminal\.background": "#FFFEFC59"' \
     'the attributed Lumin variants or their blur-safe focus hierarchy are missing'
+require_multiline_pattern crates/gpui_macos/src/window.rs \
+    'fn blurred_view_init_with_frame.*?NSVisualEffectMaterial::UnderWindowBackground.*?NSVisualEffectBlendingMode::BehindWindow.*?NSVisualEffectState::FollowsWindowActiveState' \
+    'the macOS Lumin backdrop can regress to a selected-control material or ignore window activation'
+reject_multiline_pattern crates/gpui_macos/src/window.rs \
+    'fn blurred_view_init_with_frame.*?NSVisualEffectMaterial::Selection|fn blurred_view_init_with_frame.*?NSVisualEffectState::Active' \
+    'the macOS whole-window backdrop still uses an always-active selection material'
 require_pattern assets/themes/lumin/LICENSE \
     '^Copyright \(c\) 2026 Daksh Sharma$' \
     'the Lumin source attribution is incomplete'
@@ -217,7 +223,7 @@ require_pattern assets/fonts/jetbrains-mono/OFL.txt \
     '^Copyright 2020 The JetBrains Mono Project Authors' \
     'the JetBrains Mono source attribution is incomplete'
 require_multiline_pattern README.md \
-    '^# Dez.*?v0\.0\.2 source candidate.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Session Rail\*\*.*?\*\*Workspace Tools\*\*.*?\*\*Agent\*\*.*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?Before a public binary release' \
+    '^# Dez.*?v0\.0\.2 source candidate.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Sessions\*\*.*?\*\*Workspace Tools\*\*.*?\*\*Agent\*\*.*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?Before a public binary release' \
     'the repository front page can regress to upstream branding, omit the Dez product model, or overstate release readiness'
 require_multiline_pattern README.md \
     '## Visual baseline.*?Lumin Blur.*?Lumin Light.*?JetBrains Mono.*?## Upstream relationship.*?deliberate fork.*?## License and attribution.*?independent fork' \
@@ -226,7 +232,7 @@ reject_pattern README.md \
     '^# Zed$|download Zed directly|we.re hiring|Sponsorships go directly to Zed Industries' \
     'the repository front page still presents Dez as the official upstream Zed product'
 require_multiline_pattern docs/src/dez.md \
-    '^# What is Dez\?.*?## The screen model.*?\*\*Session Rail\*\*.*?\*\*Workspace Tools\*\*.*?\*\*Main Work Area\*\*.*?\*\*Agent\*\*.*?## How coding work flows.*?## Terminal and Agent integration.*?The v0\.0\.2 source.*?The v0\.0\.2 goal.*?## Source-preview limits' \
+    '^# What is Dez\?.*?## The screen model.*?\*\*Sessions\*\*.*?\*\*Workspace Tools\*\*.*?\*\*Main Work Area\*\*.*?\*\*Agent\*\*.*?## How coding work flows.*?## Terminal and Agent integration.*?The v0\.0\.2 source.*?The v0\.0\.2 goal.*?## Source-preview limits' \
     'the public product guide can lose the screen model, IDE integration, or honest source-preview boundary'
 require_pattern docs/src/SUMMARY.md \
     '^- \[What is Dez\?\]\(\./dez\.md\)$' \
@@ -403,7 +409,7 @@ reject_pattern crates/sidebar/src/sidebar.rs \
     '"(No running sessions|Start a terminal to begin|Open Folder…)"' \
     'the compact Session Rail start state has regained duplicate or folder-scoped copy'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn active_workspace_terminal_destination_label.*?"New Terminal in Main Work Area of Active Workspace".*?Button::new\("no-results-new-terminal", "Start Terminal Session"\).*?ButtonStyle::Filled.*?tab_index\(0isize\).*?aria_label\(active_workspace_terminal_destination_label\(\)\).*?Button::new\("new-session", "New Terminal"\).*?ButtonStyle::OutlinedCustom.*?tab_index\(0isize\).*?aria_label\(active_workspace_terminal_destination_label\(\)\)' \
+    'fn active_workspace_terminal_destination_label.*?"Start Terminal Session in Main Work Area of Active Workspace".*?Button::new\("no-results-new-terminal", "Start Terminal Session"\).*?ButtonStyle::Filled.*?tab_index\(0isize\).*?aria_label\(active_workspace_terminal_destination_label\(\)\).*?Button::new\("new-session", "Start Terminal"\).*?ButtonStyle::OutlinedCustom.*?tab_index\(0isize\).*?aria_label\(active_workspace_terminal_destination_label\(\)\)' \
     'global Session Rail terminal actions can regress to an ambiguous Workspace or Agent destination'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\([[:space:]]*SharedString::from\(format!\([[:space:]]*"\{id_prefix\}empty-project-new-terminal-\{ix\}".*?tab_index\(0isize\).*?Button::new\("no-results-clear-search", "Clear Search"\).*?tab_index\(0isize\).*?Button::new\("show-all-sessions", "Show All Sessions"\).*?tab_index\(0isize\).*?aria_label\("Show All Sessions"\).*?Button::new\("all-session-scope".*?tab_index\(0isize\).*?Button::new\("attention-session-scope".*?tab_index\(0isize\)' \
@@ -646,7 +652,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn default_new_session_target\(\) -> NewEntryTarget \{[[:space:]]*NewEntryTarget::Terminal' \
     'the Session Rail default creation path is no longer terminal-first'
 require_pattern crates/sidebar/src/sidebar.rs \
-    'menu = menu\.header\("New Terminal In…"\)' \
+    'menu = menu\.header\("Start Terminal Session In…"\)' \
     'the Workspace creation picker has regressed to an ambiguous thread action'
 require_pattern crates/sidebar/src/sidebar.rs \
     '"New Agent Thread",' \
@@ -697,7 +703,7 @@ require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'fn agent_panel_title_edit_label.*?is_terminal.*?"Edit Terminal Title".*?app_name == "Zed".*?"Edit Thread Title".*?"Edit Agent Session Title".*?fn edit_visible_title.*?BaseView::AgentThread.*?title_editor\.focus_handle.*?BaseView::Terminal.*?edit_terminal_title.*?aria_label\(title_edit_label\).*?Tooltip::text\(title_edit_label\).*?edit_visible_title\(window, cx\)' \
     'the Agent title edit affordance can regress to an unnamed, inert, or incorrectly routed control'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
-    'fn agent_panel_session_label.*?app_name == "Zed".*?upstream_thread_label.*?dez_session_label.*?"Current Thread".*?"Current Agent Session".*?"Regenerate Thread Title".*?"Regenerate Agent Session Title".*?"Open Thread as Markdown".*?"Open Agent Session as Markdown".*?"Settings".*?"Agent Settings".*?"Toggle Sidebar".*?"Toggle Session Rail".*?"New Thread\\u\{2026\}".*?"New Agent Session\\u\{2026\}"' \
+    'fn agent_panel_session_label.*?app_name == "Zed".*?upstream_thread_label.*?dez_session_label.*?"Current Thread".*?"Current Agent Session".*?"Regenerate Thread Title".*?"Regenerate Agent Session Title".*?"Open Thread as Markdown".*?"Open Agent Session as Markdown".*?"Settings".*?"Agent Settings".*?"Toggle Sidebar".*?"Toggle Sessions".*?"New Thread\\u\{2026\}".*?"New Agent Session\\u\{2026\}"' \
     'the Dez Agent pane toolbar and menu can regress to mixed vocabulary or ambiguous destinations'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'fn icon_tooltip.*?agent_panel_session_label\([[:space:]]*paths::APP_NAME,[[:space:]]*"Agent Panel",[[:space:]]*"Agent"' \
@@ -973,7 +979,7 @@ require_multiline_pattern crates/command_palette/src/command_palette.rs \
     '"workspace::RevealFiles".*?"files::Open".*?humanize_action_name_for_product\("workspace::RevealFiles", "Dez"\).*?"files: open"' \
     'the idempotent Files action can regress to implementation-shaped Command Palette copy'
 require_pattern crates/sidebar/src/sidebar.rs \
-    'Button::new\("new-session", "New Terminal"\)' \
+    'Button::new\("new-session", "Start Terminal"\)' \
     'the primary Session Rail creation action is ambiguous'
 require_multiline_pattern crates/onboarding/src/basics_page.rs \
     'IconName::Terminal,[[:space:]]*"Run".*?IconName::ListTree,[[:space:]]*"Supervise".*?IconName::Diff,[[:space:]]*"Review".*?\.role\(gpui::Role::Region\).*?\.aria_label\("Terminal-first workflow"\)' \
@@ -982,7 +988,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'IconButton::new\("review-terminal-changes", IconName::Diff\).*?IconButton::new\("review-terminal-run", IconName::Info\)' \
     'Terminal Session review actions can regress to contradictory icon roles'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'Button::new\("new-session", "New Terminal"\).*?IconName::Terminal' \
+    'Button::new\("new-session", "Start Terminal"\).*?IconName::Terminal' \
     'the Session Rail primary creation action can regress to a generic icon'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'render_agent_options_menu.*?IconName::Settings.*?Button::new\("history".*?IconName::Clock.*?render_recent_projects_button' \
@@ -1060,7 +1066,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn create_new_terminal.*?multi_workspace\.activate\(workspace\.clone\(\).*?workspace_focus\.dispatch_action\(&NewCenterTerminal::default\(\)' \
     'Workspace-scoped Session Rail actions can regress to opening inherited Agent terminal threads instead of main-area terminals'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn workspace_new_terminal_action_persistent.*?is_active \|\| is_focused \|\| is_menu_open.*?fn workspace_options_action_persistent.*?is_active \|\| is_focused \|\| is_menu_open.*?fn workspace_new_terminal_control_label.*?"New Terminal in \{workspace_name\}".*?fn workspace_options_control_label.*?"Workspace Options for \{workspace_name\}".*?render_new_session_button.*?workspace_name.*?tab_index\(0isize\).*?aria_label\(new_terminal_label\.clone\(\)\).*?!workspace_new_terminal_action_persistent\(is_active, is_focused, is_menu_open\).*?render_project_header_ellipsis_menu.*?workspace_name.*?tab_index\(0isize\).*?aria_label\(workspace_options_label\.clone\(\)\).*?!workspace_options_action_persistent\(is_active, is_focused, is_menu_open\)' \
+    'fn workspace_new_terminal_action_persistent.*?is_active \|\| is_focused \|\| is_menu_open.*?fn workspace_options_action_persistent.*?is_active \|\| is_focused \|\| is_menu_open.*?fn workspace_new_terminal_control_label.*?"Start Terminal Session in \{workspace_name\}".*?fn workspace_options_control_label.*?"Workspace Options for \{workspace_name\}".*?render_new_session_button.*?workspace_name.*?tab_index\(0isize\).*?aria_label\(new_terminal_label\.clone\(\)\).*?!workspace_new_terminal_action_persistent\(is_active, is_focused, is_menu_open\).*?render_project_header_ellipsis_menu.*?workspace_name.*?tab_index\(0isize\).*?aria_label\(workspace_options_label\.clone\(\)\).*?!workspace_options_action_persistent\(is_active, is_focused, is_menu_open\)' \
     'Workspace header controls can regress to internal IDs, ambiguous labels, or hover-only access'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'IconButton::new\("clear-session-search", IconName::Close\).*?tab_index\(0isize\).*?aria_label\("Clear Session Search"\).*?fn render_import_onboarding_banner.*?IconButton::new\(.*?IconName::Close.*?tab_index\(0isize\).*?aria_label\(dismiss_label\.clone\(\)' \
@@ -1243,7 +1249,7 @@ reject_multiline_pattern crates/workspace/src/pane.rs \
     'fn render_empty_project_state.*?durable terminal' \
     'the empty Workspace can overstate the default terminal ownership contract'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?else \{.*?"New Terminal".*?NewCenterTerminal::default' \
+    'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?else \{.*?"Start Terminal Session".*?NewCenterTerminal::default' \
     'the Dez New Item menu can regress from the single center-terminal model'
 require_multiline_pattern crates/workspace/src/pane.rs \
     'fn render_new_surface_control.*?pane_new_surface_control_copy\(paths::APP_NAME\).*?IconButton::new\("plus", IconName::Plus\).*?tab_index\(0isize\).*?aria_label\(aria_label\).*?Tooltip::text\(tooltip\).*?fn pane_new_surface_control_copy.*?"New Item".*?"New…".*?"Add to Main Work Area".*?"Add a file, search, or terminal"' \
@@ -1357,13 +1363,13 @@ reject_pattern crates/terminal_view/src/terminal_view.rs \
     'terminal\.pid_getter\(\)\?' \
     'durable terminal tab tooltips still disappear when no local PID exists'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?else \{.*?"New Terminal".*?NewCenterTerminal::default' \
+    'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?else \{.*?"Start Terminal Session".*?NewCenterTerminal::default' \
     'the terminal context menu can regress from the single center-terminal model'
 reject_pattern crates/terminal_view/src/terminal_view.rs \
     '"New Terminal Panel"' \
     'the terminal context menu advertises a second terminal model'
 require_multiline_pattern docs/src/terminal.md \
-    'Dez has no separate Terminal Panel destination.*?Every ordinary \*\*New Terminal\*\*.*?main-area terminal Surface.*?\*\*Detach Terminal\*\*.*?\*\*Terminate Terminal Session…\*\*.*?selected terminal.s own controller' \
+    'Dez has no separate Terminal Panel destination.*?Every ordinary \*\*Start[[:space:]]+Terminal[[:space:]]+Session\*\*.*?main-area terminal Surface.*?\*\*Detach Terminal\*\*.*?\*\*Terminate Terminal Session…\*\*.*?selected terminal.s own controller' \
     'the public terminal guide can regress to the removed Terminal Panel model or ambiguous lifecycle ownership'
 require_multiline_pattern docs/src/terminal.md \
     '## Unavailable Sessions.*?preserves the original.*?Terminal Session unavailable.*?no synthetic output.*?fake cursor' \
@@ -1390,26 +1396,50 @@ require_multiline_pattern crates/workspace/src/pane.rs \
     '\.id\("empty-project-state"\).*?\.size_full\(\).*?\.min_h_0\(\).*?\.overflow_y_scroll\(\).*?\.pt_10\(\).*?\.pb_8\(\)' \
     'the empty Main Work Area can clip its primary actions in a short window'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'fn render_empty_project_state.*?max_w\(px\(620\.\)\).*?\.p_5\(\).*?\.rounded_lg\(\).*?\.border_1\(\).*?\.bg\(cx\.theme\(\)\.colors\(\)\.panel_background\).*?Headline::new\("Run\. Supervise\. Review\."\).*?keeps Terminal and Agent Sessions visible in Sessions.*?Git changes, diagnostics, and diffs here for review' \
+    'fn render_empty_project_state.*?max_w\(px\(620\.\)\).*?\.p_5\(\).*?\.rounded_lg\(\).*?\.border_1\(\).*?\.bg\(cx\.theme\(\)\.colors\(\)\.surface_background\).*?Headline::new\("Run\. Supervise\. Review\."\).*?keeps Terminal and Agent Sessions visible in Sessions.*?Git changes, diagnostics, and diffs here for review' \
     'the empty Main Work Area can regress to an unfinished placeholder that does not explain the Dez product loop'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'const SESSION_NOTICES_MAX_VIEWPORT_FRACTION: f32 = 0\.42;.*?fn render_session_notices.*?\.id\("session-rail-notices"\).*?\.role\(gpui::Role::Region\).*?\.aria_label\("Session Rail notices"\).*?\.max_h\(vh\(SESSION_NOTICES_MAX_VIEWPORT_FRACTION, window\)\).*?\.overflow_y_scroll\(\)' \
+    'let base_bg = color\.panel_background.*?let background = color\.panel_background.*?let sidebar_bg = color\.panel_background.*?let sidebar_bg = color\.panel_background.*?let bg = color\.panel_background.*?\.aria_label\("Sessions"\)' \
+    'the Sessions rail can regress to painting the Main Work Area editor material'
+require_multiline_pattern crates/project_panel/src/project_panel.rs \
+    'fn canvas_project_panel_background.*?CanvasContrast::Low => colors\.panel_background\.opacity\(0\.9\).*?CanvasContrast::Standard => colors\.panel_background.*?\.bg\(canvas_project_panel_background\(canvas_contrast, cx\)\)' \
+    'Files can regress to the Main Work Area editor material'
+require_multiline_pattern crates/outline_panel/src/outline_panel.rs \
+    'fn canvas_outline_panel_background.*?CanvasContrast::Low => colors\.panel_background\.opacity\(0\.9\).*?CanvasContrast::Standard => colors\.panel_background' \
+    'Outline can regress to the Main Work Area editor material'
+require_multiline_pattern crates/git_ui/src/git_panel.rs \
+    'fn canvas_git_panel_background.*?CanvasContrast::Low => colors\.panel_background\.opacity\(0\.9\).*?CanvasContrast::Standard => colors\.panel_background.*?tab_inactive_background' \
+    'Git can regress to the Main Work Area editor material'
+require_multiline_pattern crates/debugger_ui/src/canvas.rs \
+    'fn debugger_background.*?CanvasContrast::Low => colors\.panel_background\.opacity\(0\.9\).*?CanvasContrast::Standard => colors\.panel_background.*?fn debugger_row_background.*?false, settings::CanvasContrast::Low.*?colors\.panel_background\.opacity\(0\.9\).*?false, settings::CanvasContrast::Standard.*?colors\.panel_background' \
+    'Debug can regress to the Main Work Area editor material'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'const SESSION_NOTICES_MAX_VIEWPORT_FRACTION: f32 = 0\.42;.*?fn render_session_notices.*?\.id\("session-rail-notices"\).*?\.role\(gpui::Role::Region\).*?\.aria_label\("Session notices"\).*?\.max_h\(vh\(SESSION_NOTICES_MAX_VIEWPORT_FRACTION, window\)\).*?\.overflow_y_scroll\(\)' \
     'simultaneous recovery notices can consume the Session Rail instead of yielding to its primary list'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_session_notices.*?impl Render for Sidebar.*?self\.render_session_notices\(window, cx\).*?self\.render_session_notices\(window, cx\)' \
     'the Session Rail can regress to unbounded notices in its start or populated state'
 require_multiline_pattern crates/workspace/src/workspace.rs \
-    'WORKSPACE_NOTIFICATION_SHELF_MAX_WIDTH: f32 = 420\..*?WORKSPACE_NOTIFICATION_SHELF_MIN_WIDTH: f32 = 280\..*?WORKSPACE_NOTIFICATION_SHELF_WIDTH_FRACTION: f32 = 0\.34.*?WORKSPACE_NOTIFICATION_SHELF_MAX_VIEWPORT_FRACTION: f32 = 0\.42.*?fn workspace_notification_shelf_width.*?fn render_notifications.*?self\.bounds\.size\.width.*?self\.bounds\.size\.height.*?id\("workspace-notification-shelf"\).*?role\(gpui::Role::Region\).*?aria_label\("Workspace notifications"\).*?workspace_notification_shelf_width\(surface_width\).*?max_h\(surface_height \* WORKSPACE_NOTIFICATION_SHELF_MAX_VIEWPORT_FRACTION\).*?overflow_y_scroll\(\)' \
+    'WORKSPACE_NOTIFICATION_SHELF_MAX_WIDTH: f32 = 400\..*?WORKSPACE_NOTIFICATION_SHELF_MIN_WIDTH: f32 = 280\..*?WORKSPACE_NOTIFICATION_SHELF_WIDTH_FRACTION: f32 = 0\.32.*?WORKSPACE_NOTIFICATION_SHELF_MAX_VIEWPORT_FRACTION: f32 = 0\.36.*?fn workspace_notification_shelf_width.*?fn workspace_notification_shelf_top.*?fn render_notifications.*?self\.bounds\.size\.width.*?self\.bounds\.size\.height.*?id\("workspace-notification-shelf"\).*?role\(gpui::Role::Region\).*?aria_label\("Workspace notifications"\).*?right_3\(\).*?top\(workspace_notification_shelf_top\(cx\)\).*?workspace_notification_shelf_width\(surface_width\).*?max_h\(surface_height \* WORKSPACE_NOTIFICATION_SHELF_MAX_VIEWPORT_FRACTION\).*?overflow_y_scroll\(\)' \
     'Workspace notifications can regress to a fixed full-height overlay over the Main Work Area'
 require_multiline_pattern crates/workspace/src/workspace.rs \
-    'fn workspace_notification_shelf_stays_bounded_to_the_viewport.*?2000\..*?420\..*?1000\..*?340\..*?600\..*?280\..*?240\..*?216\.' \
+    'fn workspace_notification_shelf_stays_bounded_to_the_viewport.*?2000\..*?400\..*?1000\..*?320\..*?600\..*?280\..*?240\..*?216\.' \
     'Workspace notification width can regress beyond narrow Main Work Area bounds'
 require_multiline_pattern crates/workspace/src/toast_layer.rs \
-    'TOAST_MAX_VIEWPORT_WIDTH_FRACTION: f32 = 0\.90.*?TOAST_MAX_VIEWPORT_HEIGHT_FRACTION: f32 = 0\.42.*?impl Render for ToastLayer.*?left_0\(\).*?right_0\(\).*?max_w\(vw\(TOAST_MAX_VIEWPORT_WIDTH_FRACTION, window\)\).*?max_h\(vh\(TOAST_MAX_VIEWPORT_HEIGHT_FRACTION, window\)\).*?overflow_y_scroll\(\).*?occlude\(\)' \
+    'TOAST_MAX_WIDTH: Pixels = px\(560\.\).*?TOAST_MAX_VIEWPORT_WIDTH_FRACTION: f32 = 0\.90.*?TOAST_MAX_VIEWPORT_HEIGHT_FRACTION: f32 = 0\.30.*?fn canvas_toast_layer_bottom.*?Compact => px\(32\.\).*?Balanced => px\(36\.\).*?Spacious => px\(44\.\).*?impl Render for ToastLayer.*?left_0\(\).*?right_0\(\).*?bottom\(canvas_toast_layer_bottom\(cx\)\).*?id\("active-toast-container"\).*?role\(gpui::Role::Status\).*?aria_label\("Workspace status"\).*?vw\(TOAST_MAX_VIEWPORT_WIDTH_FRACTION, window\).*?min\(TOAST_MAX_WIDTH\).*?max_h\(vh\(TOAST_MAX_VIEWPORT_HEIGHT_FRACTION, window\)\).*?overflow_y_scroll\(\).*?occlude\(\)' \
     'transient toasts can regress to an unbounded full-screen overlay'
 reject_multiline_pattern crates/workspace/src/toast_layer.rs \
     'impl Render for ToastLayer.*?absolute\(\)\.size_full\(\)' \
     'the toast layer can regress to reserving an invisible full-screen interaction surface'
+require_multiline_pattern crates/notifications/src/status_toast.rs \
+    'fn status_toast_background.*?elevated_surface_background.*?impl Render for StatusToast.*?WindowBackgroundAppearance::Opaque.*?elevation_2\(cx\).*?when\(!opaque_window, \|this\| this\.shadow_none\(\)\)' \
+    'status feedback can regress to a modal shadow or an unlayered glass pill'
+reject_pattern crates/notifications/src/status_toast.rs \
+    'elevation_3|shadow_lg' \
+    'status feedback can regress to modal-grade elevation'
+require_multiline_pattern crates/workspace/src/notifications.rs \
+    'impl Render for LanguageServerPrompt.*?WindowBackgroundAppearance::Opaque.*?elevation_2\(cx\).*?shadow_none.*?impl Render for MessageNotification.*?WindowBackgroundAppearance::Opaque.*?elevation_2\(cx\).*?shadow_none' \
+    'nonblocking Workspace notifications can regress to modal-grade shadows on glass'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_row_setup_action_visible.*?setup_available && session_rail_supplemental_metadata_visible\(width\).*?let show_copy_codex_hook =.*?session_row_setup_action_visible\(rail_width, can_copy_codex_hook\).*?\.when\(show_copy_codex_hook' \
     'compact Session rows can regress to crowding their title with a third inline setup action'
@@ -1437,6 +1467,9 @@ require_multiline_pattern crates/zed/src/zed/app_menus.rs \
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'fn product_menu_label.*?if app_name == "Zed".*?zed_label.*?dez_label.*?"Open Workspace Settings".*?"Add Folder to Workspace…".*?"Close Workspace".*?"Find in Workspace"' \
     'top-level Dez menus can regress to upstream Project vocabulary'
+require_multiline_pattern crates/zed/src/zed/app_menus.rs \
+    'product_menu_label\(APP_NAME, "Sessions", "Session Rail"\).*?product_menu_label\(APP_NAME, "Start Terminal Session", "New Terminal"\)' \
+    'top-level Dez menus can regress to architectural rail jargon or ambiguous terminal creation copy'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     '"Open Local Diagnostics Log".*?"Open Source Licenses".*?Menu::new\("Upstream Zed"\).*?"Documentation".*?"Repository"' \
     'the Dez Help menu can regress to telemetry jargon and loose upstream links'
@@ -1483,8 +1516,8 @@ require_pattern crates/workspace/src/welcome.rs \
     '\.aria_label\(self\.label\.clone\(\)\)' \
     'the Dez welcome actions are not named for assistive technology'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'fn welcome_summary.*?"Run in this Workspace\. Supervise in the rail\. Review changes here\.".*?"Run in the terminal\. Supervise in the rail\. Review in the IDE\.".*?Label::new\(welcome_summary\(APP_NAME, has_workspace\)\)' \
-    'the Dez welcome headline no longer explains the terminal, rail, and IDE loop'
+    'fn welcome_summary.*?"Run in this Workspace\. Supervise in Sessions\. Review changes here\.".*?"Run in the terminal\. Supervise in Sessions\. Review in the IDE\.".*?Label::new\(welcome_summary\(APP_NAME, has_workspace\)\)' \
+    'the Dez welcome headline no longer explains the terminal, Sessions, and IDE loop'
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'const OPEN_WORKSPACE: OpenFolder = OpenFolder \{.*?create_new_window: Some\(false\).*?const DEZ_CONTENT: \(Section<3>.*?title: "Start a Dez Workflow".*?title: "Open Workspace",[[:space:]]*action: &OPEN_WORKSPACE.*?title: "Clone Repository".*?title: "Open Scratch Terminal"' \
     'the Dez welcome actions no longer make Workspace context primary'

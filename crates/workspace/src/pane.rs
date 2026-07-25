@@ -977,7 +977,7 @@ impl Pane {
                     .rounded_lg()
                     .border_1()
                     .border_color(cx.theme().colors().border_variant)
-                    .bg(cx.theme().colors().panel_background)
+                    .bg(cx.theme().colors().surface_background)
                     .child(
                         v_flex()
                             .gap_2()
@@ -5490,7 +5490,10 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                             NewCenterTerminal::default().boxed_clone(),
                         )
                 } else {
-                    menu.action("New Terminal", NewCenterTerminal::default().boxed_clone())
+                    menu.action(
+                        "Start Terminal Session",
+                        NewCenterTerminal::default().boxed_clone(),
+                    )
                 }
             }))
         })

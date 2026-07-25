@@ -99,7 +99,10 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             zed_actions::ResetAllZoom { persist: false },
         ),
         MenuItem::separator(),
-        MenuItem::action("Session Rail", workspace::ToggleSidebar),
+        MenuItem::action(
+            product_menu_label(APP_NAME, "Sessions", "Session Rail"),
+            workspace::ToggleSidebar,
+        ),
         MenuItem::action(project_pane_label, workspace::ToggleProjectPane),
         MenuItem::submenu(Menu {
             name: "Editor Layout".into(),
@@ -273,7 +276,10 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             name: "File".into(),
             disabled: false,
             items: vec![
-                MenuItem::action("New Terminal", workspace::NewTerminal::default()),
+                MenuItem::action(
+                    product_menu_label(APP_NAME, "Start Terminal Session", "New Terminal"),
+                    workspace::NewTerminal::default(),
+                ),
                 MenuItem::action("New File", workspace::NewFile),
                 MenuItem::action("New Window", workspace::NewWindow),
                 MenuItem::separator(),

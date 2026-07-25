@@ -7,6 +7,7 @@ use gpui::{
     AnyEntity, AnyView, App, AppContext as _, AsyncApp, AsyncWindowContext, ClickEvent, Context,
     DismissEvent, Div, Entity, EventEmitter, FocusHandle, Focusable, Hsla, Pixels, PromptLevel,
     Render, ScrollHandle, Stateful, Task, TextStyleRefinement, UnderlineStyle, WeakEntity,
+    WindowBackgroundAppearance,
 };
 use markdown::{CopyButtonVisibility, Markdown, MarkdownElement, MarkdownStyle};
 use parking_lot::Mutex;
@@ -367,6 +368,8 @@ impl Render for LanguageServerPrompt {
         let Some(request) = &self.request else {
             return div().id("language_server_prompt_notification");
         };
+        let opaque_window =
+            cx.theme().window_background_appearance() == WindowBackgroundAppearance::Opaque;
 
         let (icon, color) = match request.level {
             PromptLevel::Info => (IconName::Info, Color::Muted),
@@ -387,7 +390,8 @@ impl Render for LanguageServerPrompt {
             .occlude()
             .w_full()
             .max_h(vh(0.8, window))
-            .elevation_3(cx)
+            .elevation_2(cx)
+            .when(!opaque_window, |this| this.shadow_none())
             .bg(canvas_notification_background(cx))
             .border_1()
             .border_color(canvas_notification_border(cx))
@@ -1037,6 +1041,8 @@ pub mod simple_message_notification {
 
             let opacity = self.opacity();
             let has_auto_hide = self.auto_hide.is_some();
+            let opaque_window =
+                cx.theme().window_background_appearance() == WindowBackgroundAppearance::Opaque;
             let entity = window.current_view();
             let show_suppress_button = self.show_suppress_button;
             let show_close_button = self.show_close_button;
@@ -1225,7 +1231,8 @@ pub mod simple_message_notification {
                         })
                         .p(canvas_notification_padding(cx))
                         .gap(canvas_notification_gap(cx))
-                        .elevation_3(cx)
+                        .elevation_2(cx)
+                        .when(!opaque_window, |this| this.shadow_none())
                         .bg(canvas_notification_background(cx))
                         .border_1()
                         .border_color(canvas_notification_border(cx))

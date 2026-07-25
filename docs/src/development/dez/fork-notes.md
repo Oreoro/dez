@@ -64,23 +64,26 @@ describe purpose, not the inherited dock or panel implementation:
 
 | Region              | Owns                                                               | Does not own                                                        |
 | ------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| **Session Rail**    | Search, attention scope, Workspace grouping, and navigation        | Terminal processes, Agent Sessions, editor state, or duplicate tabs |
+| **Sessions**        | Search, attention scope, Workspace grouping, and navigation        | Terminal processes, Agent Sessions, editor state, or duplicate tabs |
 | **Workspace Tools** | Files, Outline, Git, and Debug tabs in a hideable left tool pane   | A second Workspace, root selection, or terminal placement           |
 | **Main work area**  | File, terminal, search, diagnostics, settings, and review Surfaces | Global project scope or sidebar-only copies of active work          |
 | **Agent**           | Native and ACP conversation Surfaces in a hideable right tool pane | Terminal-agent process ownership                                    |
 
-Every visible **New Terminal** action creates a normal main-area Surface. It can
-be tabbed, split, moved, detached from a durable Host Session, or reattached
-without introducing a separate Terminal Panel model.
+Every visible **Start Terminal Session** action creates a normal main-area
+Surface. It can be tabbed, split, moved, detached from a durable Host Session,
+or reattached without introducing a separate Terminal Panel model. Compact
+toolbar affordances may use **Start Terminal** beside the **Sessions** title,
+but their tooltip and accessible name must keep the full Main Work Area
+destination.
 
-Session Rail rows are projections. Selecting a terminal row focuses its
+Sessions rows are projections. Selecting a terminal row focuses its
 attached terminal Surface or reattaches the Host-owned Session. Selecting an
 Agent Session row focuses its existing conversation Surface. A row may compose
 actor, lifecycle, attention, evidence, changes, and recency, but it never
 becomes a second owner of those facts.
 
 Terminal title data remains full through local, durable Host, retained-Agent,
-Session Rail, and Session Switcher metadata paths. Visual tabs and rows own
+Sessions, and Session Switcher metadata paths. Visual tabs and rows own
 space-based truncation so tooltips and restored projections retain useful
 identity. Explicit custom names are trimmed, persist across restoration, and
 override the live shell title without discarding decorative agent-state
@@ -96,9 +99,9 @@ Scratch Terminal** as the outlined pathless alternative. With an active
 Workspace but no Session, the primary recovery action is **Start Terminal
 Session**. Start, search recovery, attention scope, and Session scope actions
 are keyboard tab stops and name their destination in accessibility output.
-Once one or more Sessions exist, the overview's **New Terminal** control becomes
-an outlined utility because the Session list—not repeat creation—is the primary
-content.
+Once one or more Sessions exist, the overview's compact **Start Terminal**
+control becomes an outlined utility because the Session list, not repeat
+creation, is the primary content.
 
 Workspace Tools and Agent are ordinary pane-grid regions with stable placement
 and normal focus behavior. Hiding one keeps its items available, returns focus
@@ -112,14 +115,14 @@ terminology:
 
 | Intent                                        | Result                                                                 |
 | --------------------------------------------- | ---------------------------------------------------------------------- |
-| **New Terminal**                              | Opens a terminal tab in the active Workspace's main work area          |
+| **Start Terminal Session**                    | Opens a terminal tab in the active Workspace's main work area          |
 | **New Agent Session**                         | Opens or focuses a conversation in the right Agent pane                |
 | **Files**, **Outline**, **Git**, or **Debug** | Opens the named tab in left-side Workspace Tools                       |
-| Select a Session Rail row                     | Activates its Workspace and focuses or reattaches the existing Surface |
+| Select a Sessions row                         | Activates its Workspace and focuses or reattaches the existing Surface |
 | Hide Workspace Tools or Agent                 | Hides that region and returns focus to an editor or terminal           |
 | Split or move a Surface                       | Rearranges the same Workspace; it does not create a second project     |
 
-The active or keyboard-focused Workspace keeps **New Terminal** and
+The active or keyboard-focused Workspace keeps **Start Terminal Session** and
 **Workspace Options** visible. Other inactive Workspace actions may reveal on
 hover because selecting or focusing the Workspace first makes the same controls
 persistent. Every icon-only control must retain an accessible name, tooltip,
@@ -233,7 +236,7 @@ the persistent Dez setting, Anthropic log retention, and the current-request
 retry. Only **Accept and Retry** changes the setting and resends; **Cancel**
 leaves both untouched.
 
-Session Rail recovery notices preserve ownership truth. Terminal Session
+Sessions recovery notices preserve ownership truth. Terminal Session
 startup and reconnection copy states whether a shell was started and whether
 running processes were touched; raw transport details stay behind
 keyboard-reachable **Open Local Log** and **Copy Details/Error** actions.
@@ -255,7 +258,7 @@ The everyday Canvas Layout menu is a workflow picker, not a diagnostics or
 storage dashboard. It exposes Full, Agent Control, Focus Editor,
 Code/Run/Observe, Review, and Debug; saved-layout detail belongs in **Manage
 Saved Layouts…**. The active Workspace exposes this submenu through its
-persistent **Workspace Options** control in the Session Rail. Official Zed's
+persistent **Workspace Options** control in Sessions. Official Zed's
 account and organization chrome remains unchanged compatibility code.
 
 The main-area tab-bar plus control is named **Add to Main Work Area** in Dez.
@@ -283,9 +286,9 @@ one conventional icon with the accessible name **Search Workspace Files**;
 zero diagnostics uses a check icon announced as **Workspace diagnostics: no
 problems**. Errors, warnings, counts, and diagnostic messages remain visible.
 The strip does not spell out healthy utility labels merely because a terminal
-has focus; orientation belongs to Session Rail and the terminal context strip.
+has focus; orientation belongs to Sessions and the terminal context strip.
 
-Discarding an Agent Session draft from either its Session Rail row or its
+Discarding an Agent Session draft from either its Sessions row or its
 main-area tab requires confirmation because unsent prompt text is permanently
 removed. Archiving a saved Agent Session remains immediate and reversible from
 Agent History.
@@ -294,7 +297,7 @@ Visible conversation scope is **Agent Session** throughout the Agent pane,
 context picker, search, sandbox status, and Session Switcher. Internal action,
 protocol, database, and mention identifiers may retain `thread`; the compatible
 mention keyword remains `@thread`. The Agent menu names its destinations as
-**Agent Settings** and **Toggle Session Rail**.
+**Agent Settings** and **Toggle Sessions**.
 
 Untitled conversation storage retains the upstream `New thread` sentinel for
 database compatibility, but every visible Dez fallback is **New Agent
@@ -321,9 +324,9 @@ compatibility settings still use a dock-backed implementation.
 
 There is no Dez **Terminal Thread** destination. The inherited action remains
 only as an official-Zed compatibility implementation. Dez hides it from Agent
-menus and the command palette, redirects compatibility dispatches to **New
-Terminal**, and does not restore the inherited Agent-terminal surface after a
-restart.
+menus and the command palette, redirects compatibility dispatches to **Start
+Terminal Session**, and does not restore the inherited Agent-terminal surface
+after a restart.
 
 ### How IDE features integrate {#interface-ide-integration}
 
@@ -336,7 +339,7 @@ context all resolve through that same Workspace and Project:
 - A terminal opens beside files in the same pane grid and starts with that
   Workspace's working-directory context.
 - Files, Outline, Git, and Debug are alternate views of the same Project. They
-  do not create a second root or copy state into the Session Rail.
+  do not create a second root or copy state into Sessions.
 - The Agent pane uses the active Workspace's Project context. Agent edits land
   in ordinary buffers and Git changes, so they remain reviewable with the same
   editor, diagnostics, and Git tools. **Agent Review** is the interactive
@@ -344,11 +347,11 @@ context all resolve through that same Workspace and Project:
   evidence summary for a Run.
 - Search, settings, diagnostics, and review briefs open as normal main-area
   Surfaces. They can be tabbed or split without becoming permanent sidebars.
-- The Session Rail observes these surfaces and durable sessions. It adds
+- Sessions observes these surfaces and durable sessions. It adds
   navigation, attention, evidence, and recency, but never becomes the editor,
   terminal, Agent, or process owner.
 - Empty and recovery states must state this ownership boundary in their visible
-  copy. A Session Rail action may open a terminal in the main work area, but it
+  copy. A Sessions action may open a terminal in the main work area, but it
   must never imply that the terminal runs inside the rail.
 - Workspace change counts and **Review Changes** share the same repository
   scope. In a multi-repository Workspace, review keeps the active repository
@@ -426,7 +429,7 @@ means change review, Info means Session details, List Tree means supervision,
 Clock means Agent History, and Settings means configuration. Visible labels
 remain authoritative; icons reinforce them instead of replacing them.
 Recognized terminal-agent providers use their bundled provider icon in both the
-Session Rail and session switcher; only providers without a specific bundled
+Sessions list and session switcher; only providers without a specific bundled
 mark fall back to the neutral Robot icon. One shared mapping owns both surfaces.
 The selector exposes the built-in file/folder set as **Dez (Default)**.
 **Zed (Default)** remains registered only as a compatibility alias for
@@ -559,7 +562,7 @@ session, surfaces, Git state, and observed evidence.
 Terminal attention persists a typed record: active or resolved condition,
 unread or acknowledged presentation, normal or urgent priority, optional mute
 deadline, explicit resolution/update timestamps, and optional stale expiry.
-Opening the owner changes presentation only. Session Rail actions acknowledge,
+Opening the owner changes presentation only. Sessions actions acknowledge,
 snooze for one hour, resume, or resolve deliberately. Observed bell events
 expire after seven days; structured permission and failure conditions remain
 owned and resolved by their adapter. The old SQLite bit remains solely as an
@@ -591,6 +594,50 @@ mobile editing, or unlimited terminal replay.
 A proposed feature must reduce lost context, attention cost, review risk, or
 session loss, or strengthen the upstream-compatible architecture. Otherwise,
 defer it.
+
+## Reference lessons: Synara {#reference-lessons-synara}
+
+Synara is a useful reference, not a blueprint. Its
+[README](https://github.com/Emanuele-web04/synara/blob/main/README.md)
+describes a local-first desktop app that brings chats, terminals, browser
+previews, diffs, branches, provider sessions, and handoffs into one workspace.
+Its
+[External MCP document](https://github.com/Emanuele-web04/synara/blob/main/docs/external-mcp.md)
+describes a user-approved bridge that lets local MCP clients create, wait for,
+and read scoped tasks through narrow permissions.
+
+Dez should learn these specific lessons:
+
+- The first-run surface should make the next action obvious and state current
+  context. Synara's centered composer shows project, runtime, branch, access
+  level, model, and temporary-worktree state in one place. Dez should apply that
+  clarity to Welcome, empty Main Work Area, terminal context, and Agent
+  composer chrome, while keeping files and terminals as the primary work
+  surfaces once a Workspace exists.
+- Handoff is a first-class action. A provider or Agent Session should be able to
+  hand work to another provider only through an explicit transition that carries
+  evidence and review context. Handoff must not create hidden terminal or
+  Workspace ownership.
+- External automation needs a scoped local integration, not ambient access. A
+  future Dez MCP bridge should expose overview, capabilities, allowed
+  Workspaces, create Run, wait for Run, and read owned Run tools before any
+  broad read-project capability.
+- Safe defaults matter more than broad power. External integrations should
+  default to managed worktrees, approval-required execution, task ownership, rate
+  limits, revocation, audit rows, and idempotent request IDs. Full-access and
+  local-checkout execution require separate explicit scopes.
+- Setup should not ask the user for internal IDs. A generated setup prompt or
+  copy-ready MCP configuration must use the exact running executable, data
+  directory, and integration identity; if multiple identities exist, Dez should
+  fail clearly instead of guessing.
+- Local-first privacy must be stated at the boundary. Dez can coordinate
+  provider sessions locally, but prompts, snippets, diffs, terminal output, and
+  tool results still go to the selected provider when required for a Session.
+
+Dez should not copy Synara's model wholesale. Dez remains a complete native IDE:
+files, terminals, Git, diagnostics, debugger, search, and review stay
+first-class. Kanban, broad automations, and a permanent centered chat composer
+are future options only if they strengthen the terminal-to-IDE review loop.
 
 ## Permanent decisions {#permanent-decisions}
 
@@ -632,16 +679,28 @@ defer it.
   Files, Review Changes, and Session Details. It uses the tab-bar surface,
   removes the redundant visible **Terminal Session** actor title, and keeps the
   complete actor identity in its accessible name and details disclosure. The
-  supervisor region is visibly titled **Sessions**; **Session Rail** remains an
-  architectural and accessibility name, not unexplained primary UI copy.
+  supervisor region is visibly titled and named **Sessions**. **Session Rail**
+  remains an implementation and historical documentation term, not unexplained
+  primary UI copy.
 - **2026-07-25: Transient feedback cannot become a fifth region.** Workspace
   notifications are one named shelf bounded to the actual Main Work Area,
-  between 280 and 420 px when space permits, never wider than the available
-  surface, and capped at 42% of its height with internal scrolling. Toasts no
-  longer allocate an invisible full-screen layer; only their visible content
-  occludes input, within 90% of viewport width and 42% of viewport height.
-  Modal scrims remain full-screen only when they intentionally block the
-  application.
+  between 280 and 400 px when space permits, never wider than the available
+  surface, and capped at 36% of its height with internal scrolling. The shelf is
+  top anchored below the toolbar/tab area. Toasts no longer allocate an invisible
+  full-screen layer; only their visible content occludes input, within 90% of
+  viewport width, 560 px, and 30% of viewport height, with bottom clearance for
+  the status bar. Modal scrims remain full-screen only when they intentionally
+  block the application.
+- **2026-07-25: Lumin glass is a native material hierarchy.** On macOS the stable
+  Dez window uses the native under-window material, blends behind the window, and
+  follows active/inactive system state. Lumin then layers semantic surfaces in
+  this order: OS backdrop, root background, Sessions and auxiliary drawers, Main
+  Work Area editor or terminal, bounded surface cards, then elevated feedback.
+  Workspace Tools, Git, Outline, Debug, and Sessions use panel material; the Main
+  Work Area uses editor/terminal material; empty work cards use surface material.
+  Lumin Light controls are translucent interaction layers, not opaque beige
+  blocks. Nonblocking feedback on glass uses lighter elevation and no modal
+  shadow.
 - **2026-07-25: Recovery surfaces name their real destination.** Empty
   Workspace Tools and Agent drawers are named regions whose single recovery
   closes the drawer and returns to the **Main Work Area**, not generically to
@@ -667,15 +726,15 @@ defer it.
   The Agent title-edit control remains visible in Dez instead of existing only
   inside a pointer-hover group. Official Zed retains its upstream presentation.
 - **2026-07-25: Establish IDE context before pathless computation.** In a truly
-  empty app, both Welcome and Session Rail make **Open Workspace** the primary
+  empty app, both Welcome and Sessions make **Open Workspace** the primary
   transition. **Open Scratch Terminal** remains available but secondary because
   it has no Files or Git context. Once a Workspace exists, **Start Terminal
   Session** becomes the primary zero-session recovery. Restoration status takes
   precedence over stale attention styling so **Loading sessions** cannot show
   a contradictory warning icon.
 - **2026-07-25: Keyboard focus reveals the same Workspace controls as
-  pointer hover.** A focused Session Rail Workspace keeps its named New
-  Terminal and Options controls visible and keyboard-focusable. Inside an
+  pointer hover.** A focused Sessions Workspace keeps its named **Start Terminal
+  Session** and Options controls visible and keyboard-focusable. Inside an
   already-open Workspace menu, per-worktree close controls remain visible and
   enter the tab order rather than requiring a second pointer hover. Search
   clearing and import-banner dismissal follow the same rule.
@@ -691,9 +750,9 @@ defer it.
   together. Deliberate custom settings and official Zed remain untouched.
 - **2026-07-25: Session creation emphasis follows state.** A ready Workspace
   with no Session gives **Start Terminal Session** the filled treatment and
-  names the target Workspace. After Sessions exist, the overview's **New
-  Terminal** remains visible but becomes an outlined utility so it does not
-  compete with supervision and review.
+  names the target Workspace. After Sessions exist, the overview's compact
+  **Start Terminal** remains visible but becomes an outlined utility so it does
+  not compete with supervision and review.
 - **2026-07-25: Healthy Workspace status is compact.** Terminal focus no longer
   expands Search and zero-diagnostics into persistent text labels. Their
   keyboard stops, tooltips, and complete accessible names remain, while real
@@ -705,7 +764,7 @@ defer it.
   settings write succeeds.
 - **2026-07-23: Public source must explain the product and its evidence
   boundary.** The canonical repository front page names Dez, explains how the
-  Session Rail, Workspace Tools, Main Work Area, Agent, and one
+  Sessions, Workspace Tools, Main Work Area, Agent, and one
   Workspace-scoped Project fit together, credits Zed and third-party assets,
   and distinguishes the current source candidate from a signed binary release.
   Historical artifact hashes remain evidence after generated targets are

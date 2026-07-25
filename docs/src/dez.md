@@ -24,7 +24,7 @@ The default interface has four named regions:
 
 | Region              | What it is for                                                                   |
 | ------------------- | -------------------------------------------------------------------------------- |
-| **Session Rail**    | Navigate Workspaces and Sessions; see lifecycle, attention, and recent activity  |
+| **Sessions**        | Navigate Workspaces and Sessions; see lifecycle, attention, and recent activity  |
 | **Workspace Tools** | Inspect Files, Outline, Git, and Debug for the active Workspace                  |
 | **Main Work Area**  | Edit files and open terminal, search, settings, diagnostics, and review Surfaces |
 | **Agent**           | Work with native or external coding-agent conversations                          |
@@ -44,8 +44,8 @@ When that work area is empty, one restrained launch panel states the product
 loop—**Run. Supervise. Review.**—and offers only Start Terminal Session, Find
 File, and New File. It is onboarding for the current Workspace, not a second
 welcome screen.
-The Session Rail is a projection over the real owners: selecting a row focuses
-or reattaches its existing Surface instead of opening a duplicate.
+Sessions is a projection over the real owners: selecting a row focuses or
+reattaches its existing Surface instead of opening a duplicate.
 Notifications and toasts are bounded transient shelves over the Main Work
 Area. They never become another full-height column, and overflowing alerts
 scroll inside their shelf instead of covering the editor or terminal.
@@ -86,7 +86,7 @@ Terminal**. Inside a Workspace, they become **Start Terminal Session**, **Open
 Files**, and **New File**. The empty Main Work Area uses the same Session
 vocabulary and does not describe ordinary GUI-owned terminals as durable.
 
-The empty Session Rail follows the same activation loop. **Start with a
+The empty Sessions region follows the same activation loop. **Start with a
 Workspace** explains that the codebase supplies context to Terminal or Agent
 Sessions and that their changes return to the IDE for review. **Open
 Workspace** remains the primary same-window action, **Open Scratch Terminal**
@@ -97,10 +97,10 @@ is not. Start, recovery, and All/Attention scope actions remain keyboard
 reachable as the rail changes state.
 
 Workspace controls follow focus. Selecting or keyboard-focusing a Workspace
-keeps its New Terminal and Options actions visible; opening the Options menu
-keeps its scoped close controls visible as well. Search clearing and banner
-dismissal are keyboard-focusable, so pointer hover is never the only route to a
-visible shell action.
+keeps its Start Terminal Session and Options actions visible; opening the
+Options menu keeps its scoped close controls visible as well. Search clearing
+and banner dismissal are keyboard-focusable, so pointer hover is never the only
+route to a visible shell action.
 
 The Main Work Area follows the same rule. Back, Forward, Add, Switch Surface,
 Split, Zoom, and the Workspace Tools/Agent hide controls are keyboard-focusable
@@ -113,9 +113,9 @@ to JetBrains Mono with system-selected Lumin Light/Lumin Blur. Custom font or
 theme choices are not treated as generated defaults.
 
 Creation emphasis also follows state. A ready Workspace without a Session
-shows a filled **Start Terminal Session** action. Once work exists, **New
-Terminal** remains available as an outlined utility while the Session list
-becomes the primary content.
+shows a filled **Start Terminal Session** action. Once work exists, a compact
+**Start Terminal** utility remains available as an outlined action while the
+Session list becomes the primary content.
 
 The bottom Workspace status strip is intentionally terse. Search and a healthy
 diagnostics state use familiar icons with complete tooltips and accessible
@@ -197,7 +197,7 @@ says so.
 
 ### 3. Supervise without polling every tab
 
-The Session Rail groups work by Workspace and projects:
+Sessions groups work by Workspace and projects:
 
 - which Agent and Terminal Sessions exist;
 - whether they are running, waiting, failed, exited, saved, or unavailable;
@@ -205,7 +205,7 @@ The Session Rail groups work by Workspace and projects:
 - when meaningful activity last occurred; and
 - what evidence is available for review.
 
-The rail does not own the terminal process or Agent conversation. It routes
+Sessions does not own the terminal process or Agent conversation. It routes
 back to the Surface or Host Session that does.
 
 ### 4. Review with the IDE
@@ -227,7 +227,7 @@ Workspace files with their earlier content, Dez names that scope and requires
 confirmation before **Restore Files** runs.
 
 You do not need to hunt for the matching project after supervising a terminal.
-Its context bar and selected Session Rail row provide the same direct handoff:
+Its context bar and selected Sessions row provide the same direct handoff:
 **Files** opens the owning Workspace tree, **Review Changes** opens Agent review
 or Git Changes as appropriate, and **Session Details** opens the observed run
 summary. Returning to the row focuses the existing Session rather than starting
@@ -290,7 +290,7 @@ terminal grid.
 does not claim to reconnect, replay, or replace the unavailable Session.
 
 If the terminal session service itself is connecting, reconnecting, or failed,
-the Session Rail states whether any shell started and whether running processes
+Sessions states whether any shell started and whether running processes
 were touched. **Open Local Log** and **Copy Details/Error** expose diagnostics
 without putting transport jargon in the main notice. If a Workspace cannot
 reopen, **Open Recent Workspaces** retries through the normal picker; **Remove
@@ -326,16 +326,25 @@ If imported settings hide that identity, **Dez → Settings → Restore Dez Visu
 Profile** restores only Lumin, JetBrains Mono, and the built-in Dez icons while
 preserving font sizes and non-visual preferences.
 
-Blur belongs to the stable window shell. Focus borders, selected rows, active
-lines, pane boundaries, and scrollbars remain visible. Rail/drawer surfaces,
-the Main Work Area, tab strips, and elevated menus use distinct neutral layers
-instead of blending into one sheet. Structural dividers remain restrained;
-hover, active, selected, scrollbar, and focus states strengthen in a consistent
-order, and focus/selection carry the stronger accent. The active Main Work Area
-is identified by its title and selected tab instead of a saturated rectangle
-around the entire pane; users who prefer a pane border can restore it through
-the normal `pane_grid.focus_indicator` setting. High-motion terminal and Agent
-content does not add independent nested blur layers.
+Blur belongs to the stable window shell. On macOS the window uses the native
+under-window backdrop and follows active/inactive system state; Lumin layers sit
+on top of that material rather than simulating blur with opaque panels. Focus
+borders, selected rows, active lines, pane boundaries, and scrollbars remain
+visible. Sessions, Workspace Tools, Agent, the Main Work Area, tab strips, and
+elevated menus use distinct semantic layers instead of blending into one sheet.
+Controls in Lumin Light are translucent glass layers, not beige blocks.
+Structural dividers remain restrained; hover, active, selected, scrollbar, and
+focus states strengthen in a consistent order, and focus/selection carry the
+stronger accent. The active Main Work Area is identified by its title and
+selected tab instead of a saturated rectangle around the entire pane; users who
+prefer a pane border can restore it through the normal
+`pane_grid.focus_indicator` setting. High-motion terminal and Agent content
+does not add independent nested blur layers.
+
+Transient feedback follows the same ownership model. Workspace notifications are
+a small top shelf inside the Main Work Area, and toasts sit above the status bar
+without reserving an invisible full-screen interaction layer. On glass windows,
+nonblocking feedback uses lighter elevation and no modal shadow.
 
 Stable secondary windows—including About, account verification, Settings,
 Audio Test, and profiling—inherit the same active Lumin window material and UI
@@ -351,7 +360,7 @@ Dez is not:
 - an agent chat product with a terminal attachment;
 - a replacement Git database;
 - a process-name guesser presented as reliable agent state;
-- a second project tree hidden in the Session Rail; or
+- a second project tree hidden in Sessions; or
 - a claim that every session already survives every crash.
 
 The v0.0.2 goal is a complete native IDE with one sharp wedge: trustworthy

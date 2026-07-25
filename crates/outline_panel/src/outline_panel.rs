@@ -147,8 +147,8 @@ const UPDATE_DEBOUNCE: Duration = Duration::from_millis(50);
 fn canvas_outline_panel_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match contrast {
-        settings::CanvasContrast::Low => colors.editor_background,
-        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::Low => colors.panel_background.opacity(0.9),
+        settings::CanvasContrast::Standard => colors.panel_background,
         settings::CanvasContrast::High => colors.element_background,
     }
 }

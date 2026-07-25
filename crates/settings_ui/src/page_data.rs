@@ -4253,10 +4253,40 @@ fn window_and_layout_page() -> SettingsPage {
         let project_pane_description = if paths::APP_NAME == "Zed" {
             "Show the project pane toggle button in the Session Rail header."
         } else {
-            "Show the Workspace tools toggle button in the Session Rail header."
+            "Show the Workspace tools toggle button in the Sessions header."
+        };
+        let sessions_chrome_header = if paths::APP_NAME == "Zed" {
+            "Session Rail Chrome"
+        } else {
+            "Sessions Chrome"
+        };
+        let branch_status_description = if paths::APP_NAME == "Zed" {
+            "Show Git status indicators on the branch icon in the Session Rail."
+        } else {
+            "Show Git status indicators on the branch icon in Sessions."
+        };
+        let branch_name_description = if paths::APP_NAME == "Zed" {
+            "Show the branch name button in the Session Rail."
+        } else {
+            "Show the branch name button in Sessions."
+        };
+        let onboarding_description = if paths::APP_NAME == "Zed" {
+            "Show relevant feature guidance in the Session Rail."
+        } else {
+            "Show relevant feature guidance in Sessions."
+        };
+        let menus_description = if paths::APP_NAME == "Zed" {
+            "Show application menus in the Session Rail header."
+        } else {
+            "Show application menus in the Sessions header."
+        };
+        let button_layout_description = if paths::APP_NAME == "Zed" {
+            "(Linux only) choose how window control buttons are laid out in the Session Rail."
+        } else {
+            "(Linux only) choose how window control buttons are laid out in Sessions."
         };
         [
-            SettingsPageItem::SectionHeader("Session Rail Chrome"),
+            SettingsPageItem::SectionHeader(sessions_chrome_header),
             SettingsPageItem::SettingItem(SettingItem {
                 title: project_pane_title,
                 description: project_pane_description,
@@ -4282,7 +4312,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Branch Status Icon",
-                description: "Show Git status indicators on the branch icon in the Session Rail.",
+                description: branch_status_description,
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_branch_status_icon"),
@@ -4305,7 +4335,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Branch Name",
-                description: "Show the branch name button in the Session Rail.",
+                description: branch_name_description,
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_branch_name"),
@@ -4358,7 +4388,7 @@ fn window_and_layout_page() -> SettingsPage {
                 description: if paths::APP_NAME == "Zed" {
                     "Show the Workspace host and project name in the Session Rail."
                 } else {
-                    "Show Workspace identity in the Session Rail."
+                    "Show Workspace identity in Sessions."
                 },
                 field: Box::new(SettingField {
                     organization_override: None,
@@ -4382,7 +4412,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Onboarding Banner",
-                description: "Show relevant feature guidance in the Session Rail.",
+                description: onboarding_description,
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_onboarding_banner"),
@@ -4405,7 +4435,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Menus",
-                description: "Show application menus in the Session Rail header.",
+                description: menus_description,
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_menus"),
@@ -4426,8 +4456,7 @@ fn window_and_layout_page() -> SettingsPage {
                 discriminant: SettingItem {
                     files: USER,
                     title: "Button Layout",
-                    description:
-                        "(Linux only) choose how window control buttons are laid out in the Session Rail.",
+                    description: button_layout_description,
                     field: Box::new(SettingField {
                         organization_override: None,
                         json_path: Some("sidebar.button_layout$"),
@@ -9050,7 +9079,7 @@ fn attention_page() -> SettingsPage {
     let attention_status_description = if paths::APP_NAME == "Zed" {
         "Show the action-needed summary in the workspace bar and Session Rail."
     } else {
-        "Show the action-needed summary in the Session Rail."
+        "Show the action-needed summary in Sessions."
     };
     let items = vec![
         SettingsPageItem::SectionHeader("Attention"),
@@ -9221,7 +9250,11 @@ fn evidence_page() -> SettingsPage {
         }),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Reopen Last Terminal",
-            description: "Reopen the last active terminal surface when its locally stored identity still resolves. Session Rail identity and attention metadata load independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database.",
+            description: if paths::APP_NAME == "Zed" {
+                "Reopen the last active terminal surface when its locally stored identity still resolves. Session Rail identity and attention metadata load independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database."
+            } else {
+                "Reopen the last active terminal surface when its locally stored identity still resolves. Sessions identity and attention metadata load independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database."
+            },
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("agent_ui.resume_sessions_on_restart"),

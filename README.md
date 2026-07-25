@@ -21,7 +21,7 @@ Workspace instead of separate applications or hidden panel modes.
 
 - **Main Work Area** — files, terminals, search results, settings, diagnostics,
   previews, and reviews are ordinary movable and splittable Surfaces.
-- **Session Rail** — a compact supervision view of Workspaces, Agent Sessions,
+- **Sessions** — a compact supervision view of Workspaces, Agent Sessions,
   Terminal Sessions, attention, lifecycle, and recent activity. It navigates
   real work; it does not own duplicate tabs or processes.
 - **Workspace Tools** — Files, Outline, Git, and Debug are different views of
@@ -48,7 +48,7 @@ open a Workspace
 → resume without rebuilding context
 ```
 
-From a selected Session Rail row, `Enter` returns to the existing Session,
+From a selected Sessions row, `Enter` returns to the existing Session,
 `Shift+F` opens its Workspace files, `Shift+G` opens its change review, and
 `Shift+V` opens evidence-backed Session details. The same Files, Review Changes,
 and Session Details handoff appears on standalone terminals; it never creates a
@@ -68,7 +68,7 @@ one Zed-compatible Project:
 - Files, Outline, Search, Git, tasks, and Debug inspect the same Project;
 - Agent context comes from the active Workspace;
 - Agent edits become normal buffers and Git changes;
-- the Session Rail observes and routes to those owners without copying them.
+- Sessions observes and routes to those owners without copying them.
 
 A terminal is therefore not embedded in chat, and the editor is not a separate
 mode. They are peer Surfaces in one native pane grid.
@@ -92,7 +92,7 @@ and typography roles remain configurable through normal settings.
 ## Current status
 
 The v0.0.2 source candidate already contains the opinionated Dez shell,
-identity isolation, Workspace composition, Session Rail, session vocabulary,
+identity isolation, Workspace composition, Sessions, session vocabulary,
 terminal lifecycle safeguards, first-run experience, Lumin/JetBrains visual
 defaults, and a large set of static product-contract checks.
 

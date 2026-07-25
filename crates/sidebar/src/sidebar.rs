@@ -563,7 +563,7 @@ fn session_start_state_copy() -> (&'static str, &'static str, &'static str, &'st
 }
 
 fn active_workspace_terminal_destination_label() -> &'static str {
-    "New Terminal in Main Work Area of Active Workspace"
+    "Start Terminal Session in Main Work Area of Active Workspace"
 }
 
 fn workspace_new_terminal_action_persistent(
@@ -604,7 +604,7 @@ fn workspace_header_accessibility_label(
 }
 
 fn workspace_new_terminal_control_label(workspace_name: &str) -> String {
-    format!("New Terminal in {workspace_name}")
+    format!("Start Terminal Session in {workspace_name}")
 }
 
 fn workspace_options_control_label(workspace_name: &str) -> String {
@@ -1282,7 +1282,7 @@ mod workspace_header_label_tests {
     fn workspace_controls_name_their_actual_workspace() {
         assert_eq!(
             workspace_new_terminal_control_label("compiler"),
-            "New Terminal in compiler"
+            "Start Terminal Session in compiler"
         );
         assert_eq!(
             workspace_options_control_label("compiler"),
@@ -1313,7 +1313,7 @@ mod session_start_state_tests {
         );
         assert_eq!(
             active_workspace_terminal_destination_label(),
-            "New Terminal in Main Work Area of Active Workspace"
+            "Start Terminal Session in Main Work Area of Active Workspace"
         );
     }
 }
@@ -5148,7 +5148,7 @@ impl Sidebar {
         };
 
         let color = cx.theme().colors();
-        let base_bg = color.editor_background;
+        let base_bg = color.panel_background;
 
         let hover_base = match design_system.contrast {
             settings::CanvasContrast::Low => color
@@ -5551,7 +5551,7 @@ impl Sidebar {
                 window,
                 cx,
                 move |mut menu, _window, cx| {
-                    menu = menu.header("New Terminal In…");
+                    menu = menu.header("Start Terminal Session In…");
 
                     for (workspace, labels) in open_workspaces
                         .iter()
@@ -6308,7 +6308,7 @@ impl Sidebar {
             .unwrap_or(px(0.));
 
         let color = cx.theme().colors();
-        let background = color.editor_background;
+        let background = color.panel_background;
 
         let element = v_flex()
             .absolute()
@@ -10563,7 +10563,7 @@ impl Sidebar {
         let id = SharedString::from(format!("thread-entry-{}", ix));
 
         let color = cx.theme().colors();
-        let sidebar_bg = color.editor_background;
+        let sidebar_bg = color.panel_background;
         let session_rail_settings = SessionRailSettings::get_global(cx);
         let rail_width = session_rail_settings.width(self.width);
         let compact_row = session_rail_row_is_compact(rail_width);
@@ -11134,7 +11134,7 @@ impl Sidebar {
         );
         let is_hovered = self.hovered_thread_index == Some(ix);
         let color = cx.theme().colors();
-        let sidebar_bg = color.editor_background;
+        let sidebar_bg = color.panel_background;
         let metadata = terminal.metadata.clone();
         let workspace = terminal.workspace.clone();
         let source = terminal.source.clone();
@@ -12674,7 +12674,7 @@ impl Sidebar {
                         session_overview_create_action_visible(self.contents.session_count),
                         |this| {
                             this.child(
-                                Button::new("new-session", "New Terminal")
+                                Button::new("new-session", "Start Terminal")
                                     .size(ButtonSize::Medium)
                                     .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
                                     .start_icon(
@@ -13048,7 +13048,7 @@ impl Sidebar {
             v_flex()
                 .id("session-rail-notices")
                 .role(gpui::Role::Region)
-                .aria_label("Session Rail notices")
+                .aria_label("Session notices")
                 .flex_none()
                 .min_h_0()
                 .max_h(vh(SESSION_NOTICES_MAX_VIEWPORT_FRACTION, window))
@@ -13408,7 +13408,7 @@ impl Sidebar {
                 h_flex()
                     .id("session-rail-utilities")
                     .role(gpui::Role::Group)
-                    .aria_label("Session Rail utilities")
+                    .aria_label("Session utilities")
                     .w_full()
                     .gap_1()
                     .when(on_right, |this| this.flex_row_reverse())
@@ -13921,7 +13921,7 @@ impl Render for Sidebar {
         let sticky_header = self.render_sticky_header(window, cx);
 
         let color = cx.theme().colors();
-        let bg = color.editor_background;
+        let bg = color.panel_background;
 
         let no_search_results = self.contents.entries.is_empty();
         let has_query = self.has_filter_query(cx);
@@ -13937,7 +13937,7 @@ impl Render for Sidebar {
         v_flex()
             .id("workspace-sidebar")
             .role(gpui::Role::Complementary)
-            .aria_label("Session Rail")
+            .aria_label("Sessions")
             .key_context(self.dispatch_context(window, cx))
             .track_focus(&self.focus_handle)
             .on_action(cx.listener(Self::select_next))

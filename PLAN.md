@@ -2739,3 +2739,16 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   named keyboard tab stops. A guard prevents the Agent entry path from
   importing Zed AI trial/plan onboarding. This is source-only; no build, test
   binary, alternate binary, or visual launch was performed.
+- 2026-07-25: Rebuilt the native Dez shell material hierarchy around Lumin
+  glass. The macOS stable window now uses the native under-window backdrop,
+  behind-window blending, and active/inactive system-state tracking. Lumin Light
+  controls are translucent interaction layers guarded after compositing. Sessions
+  and Workspace Tools use panel material; the Main Work Area keeps
+  editor/terminal material; empty work cards use surface material; feedback uses
+  elevated surface material. Workspace notifications are bounded to a top Main
+  Work Area shelf, toasts clear the status bar without a full-screen invisible
+  layer, and glass feedback drops modal-grade shadows. Public copy now centers
+  **Sessions** and **Start Terminal Session** while preserving official-Zed
+  compatibility branches. Static identity and theme guards cover the contract.
+  This is source-only; no build, test binary, alternate binary, or visual launch
+  was performed.

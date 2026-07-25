@@ -15,14 +15,15 @@ use crate::{DesignSystemSettings, Workspace};
 
 const DEFAULT_TOAST_DURATION: Duration = Duration::from_secs(10);
 const MINIMUM_RESUME_DURATION: Duration = Duration::from_millis(800);
+const TOAST_MAX_WIDTH: Pixels = px(560.);
 const TOAST_MAX_VIEWPORT_WIDTH_FRACTION: f32 = 0.90;
-const TOAST_MAX_VIEWPORT_HEIGHT_FRACTION: f32 = 0.42;
+const TOAST_MAX_VIEWPORT_HEIGHT_FRACTION: f32 = 0.30;
 
 fn canvas_toast_layer_bottom(cx: &App) -> Pixels {
     match DesignSystemSettings::get_global(cx).density {
-        settings::CanvasDensity::Compact => px(8.),
-        settings::CanvasDensity::Balanced => px(12.),
-        settings::CanvasDensity::Spacious => px(16.),
+        settings::CanvasDensity::Compact => px(32.),
+        settings::CanvasDensity::Balanced => px(36.),
+        settings::CanvasDensity::Spacious => px(44.),
     }
 }
 
@@ -261,8 +262,10 @@ impl Render for ToastLayer {
             .child(
                 h_flex()
                     .id("active-toast-container")
+                    .role(gpui::Role::Status)
+                    .aria_label("Workspace status")
                     .track_focus(&active_toast.focus_handle)
-                    .max_w(vw(TOAST_MAX_VIEWPORT_WIDTH_FRACTION, window))
+                    .max_w(vw(TOAST_MAX_VIEWPORT_WIDTH_FRACTION, window).min(TOAST_MAX_WIDTH))
                     .max_h(vh(TOAST_MAX_VIEWPORT_HEIGHT_FRACTION, window))
                     .overflow_y_scroll()
                     .occlude()

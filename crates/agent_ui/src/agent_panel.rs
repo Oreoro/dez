@@ -6304,7 +6304,7 @@ impl AgentPanel {
                                 agent_panel_session_label(
                                     paths::APP_NAME,
                                     "Toggle Sidebar",
-                                    "Toggle Session Rail",
+                                    "Toggle Sessions",
                                 ),
                                 Box::new(ToggleSidebar),
                             );
@@ -7446,8 +7446,8 @@ mod tests {
             "New Agent Session…"
         );
         assert_eq!(
-            agent_panel_session_label("Dez", "Toggle Sidebar", "Toggle Session Rail"),
-            "Toggle Session Rail"
+            agent_panel_session_label("Dez", "Toggle Sidebar", "Toggle Sessions"),
+            "Toggle Sessions"
         );
         assert_eq!(
             agent_panel_session_label("Dez", "Settings", "Agent Settings"),

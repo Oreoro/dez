@@ -253,7 +253,7 @@ fn render_dez_workflow_section(tab_index: &mut isize, cx: &mut App) -> impl Into
         (
             IconName::ListTree,
             "Supervise",
-            "Use the Session Rail to scan activity and attention without changing context.",
+            "Use Sessions to scan activity and attention without changing context.",
         ),
         (
             IconName::Diff,
@@ -362,7 +362,10 @@ fn render_dez_workflow_section(tab_index: &mut isize, cx: &mut App) -> impl Into
                                 }),
                         )
                         .child(
-                            Button::new("onboarding-new-terminal", "New Terminal")
+                            Button::new(
+                                "onboarding-new-terminal",
+                                "Start Terminal Session",
+                            )
                                 .tab_index(new_terminal_tab_index)
                                 .size(ButtonSize::Medium)
                                 .style(ButtonStyle::Filled)
@@ -779,7 +782,7 @@ fn render_ai_section(cx: &mut App) -> impl IntoElement {
         .child(Label::new("Optional ACP Agents"))
         .child(
             Label::new(
-                "Connect pane-native agents here. Terminal agents such as Codex remain ordinary terminal sessions and appear in the Session Rail.",
+                "Connect pane-native agents here. Terminal agents such as Codex remain ordinary terminal sessions and appear in Sessions.",
             )
             .color(Color::Muted),
         )

@@ -50,6 +50,29 @@ Change Set storage, Environment orchestration, browser automation, provider
 platforms, relay, mobile, and team policy do not enter the critical path merely
 because the consolidated plan describes them.
 
+## Synara reference intake {#synara-reference-intake}
+
+[Synara](https://github.com/Emanuele-web04/synara) is useful as a reference for
+agent-work coordination, not as a product template. Its current public docs
+emphasize a local-first desktop workspace, explicit provider handoff, parallel
+work across isolated worktrees, integrated diffs/branches, and a scoped
+[External MCP bridge](https://github.com/Emanuele-web04/synara/blob/main/docs/external-mcp.md).
+
+Adopt these lessons after the v0.0.2 native loop is stable:
+
+- add a generated setup flow for external MCP clients that uses the exact
+  running Dez executable, data directory, and integration identity;
+- expose narrow tools first: overview, capabilities, allowed Workspaces, create
+  Run, wait for owned Run, and read owned Run;
+- require stable request IDs, managed-worktree defaults, approval-required
+  execution, rate limits, revocation, and audit rows;
+- make provider handoff an explicit action that carries evidence and review
+  context without changing terminal or Workspace ownership.
+
+Do not adopt a permanent chat-first center composer, Kanban, broad automations,
+or another task system until the terminal-to-IDE review loop has runtime
+evidence.
+
 ## Milestone 0: Upstream and identity gate {#milestone-0}
 
 This milestone repeats before major work and every release.
@@ -2096,8 +2119,8 @@ code, all launch gates pass, and known limitations are documented.
 Completed for the responsive recovery-surface slice:
 
 - simultaneous Workspace and terminal-service failures render inside one
-  labeled **Session Rail notices** region;
-- the notice region scrolls and is capped at 42% of the viewport, leaving most
+  labeled **Session notices** region;
+- the notice region scrolls and is capped below half the viewport, leaving most
   of the window for the session list and Main Work Area;
 - empty Main Work Area and unavailable-terminal recovery surfaces scroll
   vertically and retain bottom spacing at short heights;
@@ -3012,10 +3035,11 @@ Completed for the transient-layer and recovery-surface source slice:
 
 - replaced the fixed 448 px, full-height Workspace notification column with a
   named shelf measured from the actual Main Work Area;
-- bounded the shelf to 280–420 px when space permits, never wider than the
-  available surface, and 42% of surface height with internal scrolling;
+- bounded the shelf to 280-400 px when space permits, never wider than the
+  available surface, and 36% of surface height with internal scrolling;
 - removed the toast layer's invisible full-screen container and bounded visible
-  toast content to 90% of viewport width and 42% of viewport height;
+  toast content to 90% of viewport width, 560 px, and 30% of viewport height
+  with status-bar clearance;
 - kept full-screen occlusion only for intentional modal and switcher scrims;
 - consolidated the Run, Supervise, and Review explanation into one Welcome
   panel instead of three competing cards;
@@ -3416,5 +3440,26 @@ Completed for the Agent-provider onboarding identity source slice:
 - made both actions explicit keyboard tab stops with matching accessible names;
 - guarded the Agent entry path against importing inherited Zed AI
   subscription onboarding;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the native shell and Lumin material source slice:
+
+- moved the stable macOS Dez window to the native under-window backdrop with
+  behind-window blending and active/inactive system-state tracking;
+- made Lumin Light controls translucent glass interaction layers and guarded
+  their composited contrast;
+- assigned semantic materials by region: Sessions and Workspace Tools use panel
+  material, the Main Work Area keeps editor/terminal material, empty work cards
+  use surface material, and feedback uses elevated surface material;
+- bounded Workspace notifications to a top Main Work Area shelf and kept toasts
+  above the status bar without a full-screen invisible interaction layer;
+- lowered nonblocking feedback elevation on glass and removed modal-grade
+  shadows;
+- aligned product copy around **Sessions**, **Start Terminal Session**, and one
+  Main Work Area terminal destination while preserving official-Zed compatibility
+  branches;
+- updated Fork Notes, the active plan, public docs, and static identity/theme
+  guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.

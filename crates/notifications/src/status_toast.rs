@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     DismissEvent, Div, Entity, EventEmitter, FocusHandle, Focusable, Hsla, IntoElement, Pixels,
-    Stateful,
+    Stateful, WindowBackgroundAppearance,
 };
 use settings::Settings;
 use ui::{Tooltip, prelude::*};
@@ -12,8 +12,8 @@ use zed_actions::toast;
 fn status_toast_background(cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match DesignSystemSettings::get_global(cx).contrast {
-        settings::CanvasContrast::Low => colors.surface_background.opacity(0.94),
-        settings::CanvasContrast::Standard => colors.surface_background,
+        settings::CanvasContrast::Low => colors.elevated_surface_background.opacity(0.88),
+        settings::CanvasContrast::Standard => colors.elevated_surface_background,
         settings::CanvasContrast::High => colors
             .elevated_surface_background
             .blend(colors.border_focused.opacity(0.08)),
@@ -147,10 +147,13 @@ impl StatusToast {
 impl Render for StatusToast {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let has_action_or_dismiss = self.action.is_some() || self.show_dismiss;
+        let opaque_window =
+            cx.theme().window_background_appearance() == WindowBackgroundAppearance::Opaque;
 
         h_flex()
             .id("status-toast")
-            .elevation_3(cx)
+            .elevation_2(cx)
+            .when(!opaque_window, |this| this.shadow_none())
             .gap(status_toast_gap(cx))
             .py(status_toast_padding_y(cx))
             .pl(status_toast_padding_x(cx))
@@ -160,7 +163,6 @@ impl Render for StatusToast {
             .border_1()
             .border_color(status_toast_border(cx))
             .map(|this| status_toast_radius(this, cx))
-            .shadow_lg()
             .when_some(self.icon.clone(), |this, icon| this.child(icon))
             .child(Label::new(self.text.clone()).color(Color::Default))
             .when_some(self.action.as_ref(), |this, action| {

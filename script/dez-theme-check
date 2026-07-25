@@ -116,6 +116,19 @@ function requireGlassMaterial(theme) {
   }
 }
 
+function requireGlassInteractionLayers(theme) {
+  for (const [token, minimum, maximum] of [
+    ["element.background", 0.03, 0.1],
+    ["element.hover", 0.06, 0.15],
+    ["element.active", 0.09, 0.2],
+    ["element.selected", 0.12, 0.28],
+    ["element.disabled", 0.01, 0.08],
+    ["editor.active_line.background", 0.03, 0.1],
+  ]) {
+    requireAlphaRange(theme, token, minimum, maximum);
+  }
+}
+
 function requireContrast(label, foreground, backgrounds, minimum) {
   for (const background of backgrounds) {
     const ratio = contrast(foreground, background);
@@ -224,6 +237,8 @@ requireValue(
 );
 requireGlassMaterial(luminBlur);
 requireGlassMaterial(luminLight);
+requireGlassInteractionLayers(luminBlur);
+requireGlassInteractionLayers(luminLight);
 
 const darkTextTokens = [
   "text",
@@ -332,7 +347,11 @@ const lightEditorSurfaces = blurredLightBackdrops.map((backdrop) =>
   resolvedThemeSurface(luminLight.style, "editor.background", backdrop),
 );
 
-requireContrast("active control text", light.text, [light["element.active"]], 4.5);
+const lightActiveControlSurfaces = blurredLightBackdrops.map((backdrop) => {
+  const panel = resolvedThemeSurface(luminLight.style, "panel.background", backdrop);
+  return composite(light["element.active"], panel);
+});
+requireContrast("active control text", light.text, lightActiveControlSurfaces, 4.5);
 requireContrast("accent text", light["text.accent"], lightSurfaces, 4.5);
 requireContrast("focused border", light["border.focused"], lightSurfaces, 3);
 requireContrast("placeholder text", light["text.placeholder"], lightSurfaces, 4.5);

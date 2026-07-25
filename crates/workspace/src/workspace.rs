@@ -215,10 +215,10 @@ const AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0.22;
 const MAIN_WORK_AREA_MINIMUM_RATIO: f32 = 0.60;
 const AUXILIARY_PANES_MIN_COEXIST_WIDTH: f32 = 1800.;
 const AUXILIARY_PANES_MIN_COEXIST_ASPECT_RATIO: f32 = 1.60;
-const WORKSPACE_NOTIFICATION_SHELF_MAX_WIDTH: f32 = 420.;
+const WORKSPACE_NOTIFICATION_SHELF_MAX_WIDTH: f32 = 400.;
 const WORKSPACE_NOTIFICATION_SHELF_MIN_WIDTH: f32 = 280.;
-const WORKSPACE_NOTIFICATION_SHELF_WIDTH_FRACTION: f32 = 0.34;
-const WORKSPACE_NOTIFICATION_SHELF_MAX_VIEWPORT_FRACTION: f32 = 0.42;
+const WORKSPACE_NOTIFICATION_SHELF_WIDTH_FRACTION: f32 = 0.32;
+const WORKSPACE_NOTIFICATION_SHELF_MAX_VIEWPORT_FRACTION: f32 = 0.36;
 const WORKSPACE_NOTIFICATION_SHELF_EDGE_INSET: f32 = 12.;
 
 fn auxiliary_pane_initial_width(available_width: Pixels) -> Pixels {
@@ -247,6 +247,14 @@ fn workspace_notification_shelf_width(viewport_width: Pixels) -> Pixels {
             WORKSPACE_NOTIFICATION_SHELF_MAX_WIDTH,
         ));
     preferred_width.min(available_width)
+}
+
+fn workspace_notification_shelf_top(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(40.),
+        settings::CanvasDensity::Balanced => px(44.),
+        settings::CanvasDensity::Spacious => px(48.),
+    }
 }
 
 fn canvas_layout_modal_row_border(cx: &App) -> Hsla {
@@ -10924,7 +10932,7 @@ impl Workspace {
         self.update_window_edited(window, cx);
     }
 
-    fn render_notifications(&self, window: &mut Window, _cx: &mut Context<Self>) -> Option<Div> {
+    fn render_notifications(&self, window: &mut Window, cx: &mut Context<Self>) -> Option<Div> {
         if self.notifications.is_empty() {
             None
         } else {
@@ -10945,7 +10953,7 @@ impl Workspace {
                     .aria_label("Workspace notifications")
                     .absolute()
                     .right_3()
-                    .bottom_3()
+                    .top(workspace_notification_shelf_top(cx))
                     .w(workspace_notification_shelf_width(surface_width))
                     .min_h_0()
                     .max_h(surface_height * WORKSPACE_NOTIFICATION_SHELF_MAX_VIEWPORT_FRACTION)
@@ -16414,8 +16422,8 @@ mod tests {
 
     #[test]
     fn workspace_notification_shelf_stays_bounded_to_the_viewport() {
-        assert_eq!(workspace_notification_shelf_width(px(2000.)), px(420.));
-        assert_eq!(workspace_notification_shelf_width(px(1000.)), px(340.));
+        assert_eq!(workspace_notification_shelf_width(px(2000.)), px(400.));
+        assert_eq!(workspace_notification_shelf_width(px(1000.)), px(320.));
         assert_eq!(workspace_notification_shelf_width(px(600.)), px(280.));
         assert_eq!(workspace_notification_shelf_width(px(240.)), px(216.));
     }
