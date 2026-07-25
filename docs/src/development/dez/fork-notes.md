@@ -99,9 +99,10 @@ Scratch Terminal** as the outlined pathless alternative. With an active
 Workspace but no Session, the primary recovery action is **Start Terminal
 Session**. Start, search recovery, attention scope, and Session scope actions
 are keyboard tab stops and name their destination in accessibility output.
-Once one or more Sessions exist, the overview's compact **Start Terminal**
-control becomes an outlined utility because the Session list, not repeat
-creation, is the primary content.
+Once one or more Sessions exist, the overview remains status and scope only.
+Each Workspace header owns its exact terminal-creation destination, preventing
+the active Workspace from exposing the same launcher twice. Official Zed may
+retain its compatibility overview control.
 
 Workspace Tools and Agent are ordinary pane-grid regions with stable placement
 and normal focus behavior. Hiding one keeps its items available, returns focus
@@ -758,9 +759,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   together. Deliberate custom settings and official Zed remain untouched.
 - **2026-07-25: Session creation emphasis follows state.** A ready Workspace
   with no Session gives **Start Terminal Session** the filled treatment and
-  names the target Workspace. After Sessions exist, the overview's compact
-  **Start Terminal** remains visible but becomes an outlined utility so it does
-  not compete with supervision and review.
+  names the target Workspace. After Sessions exist, creation remains in the
+  Workspace header rather than returning as a second global overview action;
+  the overview stays dedicated to status and All/Attention scope.
 - **2026-07-25: Healthy Workspace status is compact.** Terminal focus no longer
   expands Search and zero-diagnostics into persistent text labels. Their
   keyboard stops, tooltips, and complete accessible names remain, while real

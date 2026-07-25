@@ -1259,7 +1259,9 @@ code, all launch gates pass, and known limitations are documented.
       no-Workspace activation surface is unchanged. An authored model
       assertion and identity guard cover the transition. Formatting, diff, and
       identity checks pass; compile and rendered proof remain in the
-      consolidated gate.
+      consolidated gate. The 2026-07-26 populated-state ownership slice
+      supersedes the shortcut-return behavior for Dez while preserving
+      official Zed.
 - [x] 2026-07-23: Clarify the remaining Session Rail utilities. Commit
       `8bcd11f4b6` calls the clock Agent History, uses Command Palette
       consistently, and adds explicit accessible labels plus action-aware
@@ -3178,8 +3180,9 @@ Completed for the Session Rail creation-priority source slice:
   Terminal Session** action;
 - included the target Workspace in accessibility output and retained explicit
   destination wording in the tooltip;
-- demoted populated-overview **New Terminal** to an outlined utility so the
-  Session list remains primary;
+- kept populated terminal creation in the exact Workspace header and reserved
+  the Dez overview for status and All/Attention scope;
+- retained the overview launcher only for official Zed compatibility;
 - added static hierarchy and copy regression guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
@@ -3380,7 +3383,8 @@ Completed for the Session Rail first-workflow clarity source slice:
 - retained one filled, folder-only, same-window **Open Workspace…** action and
   the secondary pathless **Open Scratch Terminal** route;
 - made Workspace-ready start, empty-search recovery, caught-up recovery,
-  overview creation, and All/Attention scope actions explicit tab stops;
+  Workspace-scoped creation, and All/Attention scope actions explicit tab
+  stops;
 - aligned an embedded pure assertion with the canonical Workspace-first copy;
 - added static hierarchy, routing, focus, and destination regression guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
@@ -3586,5 +3590,20 @@ Completed for the Sessions-footer hierarchy source slice:
   together at detailed widths, while genuinely narrow rails keep named icons;
 - added pure breakpoint assertions and static guards for the asymmetric label
   hierarchy;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the populated Sessions creation-ownership source slice:
+
+- removed Dez's global **Start Terminal** overview launcher after Sessions
+  exist, eliminating the duplicate beside the active Workspace's scoped
+  terminal action;
+- retained terminal creation in collapsed, expanded, empty, and populated
+  Workspace states with the exact Workspace as the destination;
+- preserved keyboard shortcuts and command-palette creation through the same
+  Main Work Area terminal action;
+- retained the overview launcher for official Zed compatibility through an
+  explicit product branch;
+- added focused source assertions and a static identity guard for both products;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.

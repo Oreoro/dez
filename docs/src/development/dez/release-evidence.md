@@ -403,7 +403,10 @@ New Terminal action and the global overview omits its competing copy. After a
 session exists, the overview creation shortcut returns. The full no-Workspace
 activation surface remains unchanged. An authored model assertion and identity
 guard cover the count transition. Formatting, diff, and identity checks pass;
-compile and rendered proof remain deferred.
+compile and rendered proof remain deferred. This paragraph records that
+commit's exact behavior; the later 2026-07-26 populated-state ownership slice
+supersedes the shortcut return for Dez while retaining official Zed
+compatibility.
 
 Commit `8bcd11f4b6` aligns the remaining rail utilities with their actual scope.
 The clock is Agent History rather than generic Thread History, the command icon

@@ -127,14 +127,21 @@ fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
         "the rail keeps its identity and zero-session status visible above onboarding"
     );
     assert!(
-        !session_overview_create_action_visible(0),
+        !session_overview_create_action_visible("Dez", 0),
         "an empty Workspace group owns its scoped creation action"
     );
 
     assert!(session_scope_controls_visible(1));
     assert!(session_search_visible(1, false));
     assert!(session_overview_visible(false));
-    assert!(session_overview_create_action_visible(1));
+    assert!(
+        !session_overview_create_action_visible("Dez", 1),
+        "populated Dez keeps creation scoped to Workspace groups"
+    );
+    assert!(
+        session_overview_create_action_visible("Zed", 1),
+        "official Zed retains its compatibility overview action"
+    );
     assert!(
         session_search_visible(0, true),
         "an existing query must remain visible so it can be cleared"

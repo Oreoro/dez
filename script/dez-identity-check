@@ -1165,8 +1165,11 @@ require_multiline_pattern crates/agent_ui/src/agent_ui.rs \
     'fn terminal_thread_command_visible.*?app_name == "Zed".*?!disable_ai.*?agent_enabled' \
     'the inherited Agent terminal-thread action can regress into the Dez command palette'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_overview_create_action_visible\(session_count: usize\) -> bool \{[[:space:]]*session_count > 0.*?session_overview_create_action_visible\(self\.contents\.session_count\)' \
-    'the zero-session Workspace state can regress to duplicating its creation action'
+    'fn session_overview_create_action_visible\(app_name: &str, session_count: usize\) -> bool \{[[:space:]]*app_name == "Zed" && session_count > 0[[:space:]]*\}.*?session_overview_create_action_visible\([[:space:]]*paths::APP_NAME,[[:space:]]*self\.contents\.session_count' \
+    'the populated Dez Sessions overview can regress to duplicating Workspace-owned terminal creation'
+require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
+    'fn zero_session_rail_keeps_identity_but_hides_inert_controls.*?!session_overview_create_action_visible\("Dez", 0\).*?!session_overview_create_action_visible\("Dez", 1\).*?session_overview_create_action_visible\("Zed", 1\)' \
+    'the Sessions creation-ownership assertions no longer cover empty Dez, populated Dez, and official Zed'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_rail_row_is_compact.*?width < DETAILED_MIN_WIDTH.*?fn session_rail_recency_visible' \
     'compact Session rows do not have an explicit metadata hierarchy'

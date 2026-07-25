@@ -623,8 +623,8 @@ fn session_overview_visible(_show_start_state: bool) -> bool {
     true
 }
 
-fn session_overview_create_action_visible(session_count: usize) -> bool {
-    session_count > 0
+fn session_overview_create_action_visible(app_name: &str, session_count: usize) -> bool {
+    app_name == "Zed" && session_count > 0
 }
 
 fn session_start_state_visible(
@@ -1395,8 +1395,9 @@ mod session_start_state_tests {
 
     #[test]
     fn start_state_has_one_primary_action_and_workspace_copy() {
-        assert!(!session_overview_create_action_visible(0));
-        assert!(session_overview_create_action_visible(1));
+        assert!(!session_overview_create_action_visible("Dez", 0));
+        assert!(!session_overview_create_action_visible("Dez", 1));
+        assert!(session_overview_create_action_visible("Zed", 1));
         assert_eq!(
             session_start_state_copy(),
             (
@@ -12688,7 +12689,10 @@ impl Sidebar {
                             ),
                     )
                     .when(
-                        session_overview_create_action_visible(self.contents.session_count),
+                        session_overview_create_action_visible(
+                            paths::APP_NAME,
+                            self.contents.session_count,
+                        ),
                         |this| {
                             this.child(
                                 Button::new("new-session", "Start Terminal")

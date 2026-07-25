@@ -1303,7 +1303,8 @@ Notes decision:
   returns after a session exists. The no-Workspace activation surface is
   unchanged. An authored model assertion and identity guard cover the
   transition. Formatting, diff, and identity checks pass; no bundle was built
-  or launched.
+  or launched. The 2026-07-26 populated-state ownership slice below supersedes
+  the shortcut-return behavior for Dez while preserving official Zed.
 - 2026-07-23: Clarified the remaining Session Rail utility actions in
   `8bcd11f4b6`. The clock now says Agent History, the command icon consistently
   says Command Palette, and New File/Open expose explicit accessible labels and
@@ -2586,7 +2587,8 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   action. Once Sessions exist, the overview's **New Terminal** control remains
   visible but becomes outlined so repeat creation does not compete with the
   Session list, attention, and review. This is source-only; no build or visual
-  launch was performed.
+  launch was performed. The 2026-07-26 populated-state ownership slice below
+  removes that remaining duplicate from Dez.
 - 2026-07-25: Removed two persistent healthy-state labels from terminal-focused
   Workspace status. Search remains a keyboard-focusable icon named **Search
   Workspace Files**; zero diagnostics remains a check icon announced as
@@ -2847,3 +2849,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Pure assertions and identity guards cover the three width states. This is
   source-only; no build, test binary, alternate binary, or visual launch was
   performed.
+- 2026-07-26: Removed the populated-state terminal creation duplicate. In Dez,
+  the Sessions overview now stays focused on status and All/Attention scope,
+  while each Workspace header owns the launcher for its exact destination.
+  Keyboard shortcuts and command-palette routes continue to create a Main Work
+  Area terminal, and official Zed retains its compatibility overview action.
+  Focused source assertions and an identity guard pin both product branches.
+  This is source-only; no build, test binary, alternate binary, or visual
+  launch was performed.

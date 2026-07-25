@@ -131,8 +131,9 @@ theme choices are not treated as generated defaults.
 
 Creation emphasis also follows state. A ready Workspace without a Session
 shows a filled **Start Terminal Session** action. Once work exists, a compact
-**Start Terminal** utility remains available as an outlined action while the
-Session list becomes the primary content.
+terminal action remains in each Workspace header while the Sessions overview
+stays focused on status and All/Attention scope. Dez does not repeat a global
+launcher for the already-active Workspace.
 
 The Sessions footer reserves text for destinations that would otherwise be
 ambiguous. Compact/default rails show the conventional Settings gear with its
