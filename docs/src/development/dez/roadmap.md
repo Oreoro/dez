@@ -3639,3 +3639,22 @@ Completed for the terminal handoff priority source slice:
   and an identity guard that rejects the previous all-at-once cluster;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the native empty Main Work Area source slice:
+
+- removed the bordered surface card from the already-empty Main Work Area so
+  orientation reads as part of the Workspace rather than another floating
+  panel;
+- replaced the slogan-like heading with **Run, supervise, and review in this
+  Workspace** and made the description name the Terminal/Agent, Sessions, and
+  IDE review relationship directly;
+- replaced the three bordered route tiles with passive icon-and-copy groups:
+  **Terminal in Main Work Area**, **Live state in Sessions**, and **Files, Git,
+  and diffs**;
+- preserved the named list semantics while reserving filled, outlined, and
+  subtle control treatments for the actual Start Terminal Session, Find File,
+  and New File actions;
+- added static rejection guards for both the floating card shell and
+  button-looking passive guidance;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

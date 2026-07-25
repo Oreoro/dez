@@ -955,9 +955,9 @@ impl Pane {
         let new_file_focus = self.focus_handle.clone();
         let terminal_focus = self.focus_handle.clone();
         let workflow_route = [
-            (IconName::Terminal, "Run", "Main Work Area"),
-            (IconName::ListTree, "Supervise", "Sessions"),
-            (IconName::Diff, "Review", "Files + Git"),
+            (IconName::Terminal, "Run", "Terminal in Main Work Area"),
+            (IconName::ListTree, "Supervise", "Live state in Sessions"),
+            (IconName::Diff, "Review", "Files, Git, and diffs"),
         ];
 
         v_flex()
@@ -975,26 +975,22 @@ impl Pane {
             .pb_8()
             .child(
                 v_flex()
-                    .max_w(px(620.))
+                    .max_w(px(640.))
                     .w_full()
-                    .gap_4()
-                    .p_5()
-                    .rounded_lg()
-                    .border_1()
-                    .border_color(cx.theme().colors().border_variant)
-                    .bg(cx.theme().colors().surface_background)
+                    .gap_5()
                     .child(
                         v_flex()
+                            .max_w(px(580.))
                             .gap_2()
                             .child(
                                 Label::new("MAIN WORK AREA")
                                     .size(LabelSize::XSmall)
                                     .color(Color::Muted),
                             )
-                            .child(Headline::new("Run. Supervise. Review."))
+                            .child(Headline::new("Run, supervise, and review in this Workspace"))
                             .child(
                                 Label::new(
-                                    "Start a Terminal Session or open a file. Dez keeps Terminal and Agent Sessions visible in Sessions, then brings files, Git changes, diagnostics, and diffs here for review.",
+                                    "Start a Terminal Session or open a file. Sessions tracks live Terminal and Agent work; files, Git changes, diagnostics, and diffs return here for review.",
                                 )
                                 .size(LabelSize::Small)
                                 .color(Color::Muted),
@@ -1007,21 +1003,21 @@ impl Pane {
                             .aria_label("Dez workflow route")
                             .w_full()
                             .flex_wrap()
-                            .gap_2()
+                            .gap_x_5()
+                            .gap_y_2()
                             .children(workflow_route.into_iter().map(|(icon, label, target)| {
                                 h_flex()
                                     .role(gpui::Role::ListItem)
-                                    .min_w(px(156.))
+                                    .min_w(px(172.))
                                     .flex_1()
                                     .items_center()
                                     .gap_2()
-                                    .px_2()
-                                    .py_1()
-                                    .rounded_md()
-                                    .border_1()
-                                    .border_color(cx.theme().colors().border_variant)
-                                    .bg(cx.theme().colors().element_background)
-                                    .child(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
+                                    .py_1p5()
+                                    .child(
+                                        Icon::new(icon)
+                                            .size(IconSize::XSmall)
+                                            .color(Color::Accent),
+                                    )
                                     .child(
                                         v_flex()
                                             .min_w_0()

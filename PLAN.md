@@ -2883,3 +2883,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   full evidence disclosure. Pure source assertions and identity guards cover
   each state. This is source-only; no build, test binary, alternate binary, or
   visual launch was performed.
+- 2026-07-26: Made the empty Main Work Area a native Workspace surface instead
+  of a bordered card floating over an already-empty canvas. Its heading now
+  says **Run, supervise, and review in this Workspace**; the passive route
+  names **Terminal in Main Work Area**, **Live state in Sessions**, and
+  **Files, Git, and diffs**. Those route items no longer use borders or element
+  backgrounds that make them resemble clickable controls, while the actual
+  Start Terminal Session, Find File, and New File actions retain their clear
+  hierarchy and keyboard routes. Static guards reject both the floating card
+  shell and button-like passive guidance. This is source-only; no build, test
+  binary, alternate binary, or visual launch was performed.

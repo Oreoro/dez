@@ -1474,11 +1474,17 @@ require_multiline_pattern crates/workspace/src/pane.rs \
     '\.id\("empty-project-state"\).*?\.size_full\(\).*?\.min_h_0\(\).*?\.overflow_y_scroll\(\).*?\.pt_10\(\).*?\.pb_8\(\)' \
     'the empty Main Work Area can clip its primary actions in a short window'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'fn render_empty_project_state.*?max_w\(px\(620\.\)\).*?\.p_5\(\).*?\.rounded_lg\(\).*?\.border_1\(\).*?\.bg\(cx\.theme\(\)\.colors\(\)\.surface_background\).*?Headline::new\("Run\. Supervise\. Review\."\).*?keeps Terminal and Agent Sessions visible in Sessions.*?Git changes, diagnostics, and diffs here for review' \
+    'fn render_empty_project_state.*?max_w\(px\(640\.\)\).*?\.gap_5\(\).*?max_w\(px\(580\.\)\).*?Headline::new\("Run, supervise, and review in this Workspace"\).*?Sessions tracks live Terminal and Agent work.*?Git changes, diagnostics, and diffs return here for review' \
     'the empty Main Work Area can regress to an unfinished placeholder that does not explain the Dez product loop'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'let workflow_route = \[.*?IconName::Terminal, "Run", "Main Work Area".*?IconName::ListTree, "Supervise", "Sessions".*?IconName::Diff, "Review", "Files \+ Git".*?\.id\("empty-project-route"\).*?\.role\(gpui::Role::List\).*?\.aria_label\("Dez workflow route"\).*?\.role\(gpui::Role::ListItem\).*?\.bg\(cx\.theme\(\)\.colors\(\)\.element_background\)' \
-    'the empty Main Work Area can regress to a vague launch card without the concrete Run/Sessions/Review route'
+    'let workflow_route = \[.*?IconName::Terminal.*?"Run".*?"Terminal in Main Work Area".*?IconName::ListTree.*?"Supervise".*?"Live state in Sessions".*?IconName::Diff, "Review", "Files, Git, and diffs".*?\.id\("empty-project-route"\).*?\.role\(gpui::Role::List\).*?\.aria_label\("Dez workflow route"\).*?\.role\(gpui::Role::ListItem\).*?\.py_1p5\(\).*?Color::Accent' \
+    'the empty Main Work Area can regress to a vague launch surface without the concrete Run/Sessions/Review route'
+reject_multiline_pattern crates/workspace/src/pane.rs \
+    'fn render_empty_project_state.*?\.id\("empty-project-route"\).*?\.role\(gpui::Role::ListItem\).*?(\.rounded_md\(\)|\.border_1\(\)|\.bg\(cx\.theme\(\)\.colors\(\)\.element_background\)).*?Button::new\("empty-project-terminal"' \
+    'the passive Main Work Area workflow route can regress to a row of controls that look clickable'
+reject_multiline_pattern crates/workspace/src/pane.rs \
+    'fn render_empty_project_state.*?(\.p_5\(\).*?\.rounded_lg\(\).*?\.border_1\(\)|\.bg\(cx\.theme\(\)\.colors\(\)\.surface_background\)).*?fn render_empty_panel_state' \
+    'the empty Main Work Area can regress to a floating card over its own native surface'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let base_bg = color\.panel_background.*?let background = color\.panel_background.*?let sidebar_bg = color\.panel_background.*?let sidebar_bg = color\.panel_background.*?let bg = color\.panel_background.*?\.aria_label\("Sessions"\)' \
     'the Sessions rail can regress to painting the Main Work Area editor material'

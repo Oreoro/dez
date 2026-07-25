@@ -152,7 +152,12 @@ and replacing the active Workspace remain available through normal chrome, but
 do not compete with the release-defining start loop.
 
 The empty Main Work Area uses the same **Start Terminal Session** vocabulary.
-It describes live terminal and Agent state without calling the default
+Its orientation is part of the native work surface, not a bordered card
+floating over it. One concrete heading explains that this Workspace is where
+users run, supervise, and review; the passive route says **Terminal in Main
+Work Area**, **Live state in Sessions**, and **Files, Git, and diffs** without
+using button-like containers. The action row owns all interactive styling.
+Copy describes live terminal and Agent state without calling the default
 GUI-owned terminal durable; durability is shown only when an external Host
 actually owns the exact Session.
 
@@ -677,10 +682,11 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   title/selected tab rather than painting a saturated rectangle around the full
   work surface; full-pane border focus and inactive-pane dimming remain
   user-configurable but default off.
-  The remaining empty Main Work Area is one bounded launch panel headed **Run.
-  Supervise. Review.**, with only the three immediate Workspace actions and a
-  compact route row that names **Run -> Main Work Area**, **Supervise ->
-  Sessions**, and **Review -> Files + Git**.
+  The remaining empty Main Work Area is one top-anchored native launch region
+  headed **Run, supervise, and review in this Workspace**, with only the three
+  immediate Workspace actions. Its passive route names **Run -> Terminal in
+  Main Work Area**, **Supervise -> Live state in Sessions**, and **Review ->
+  Files, Git, and diffs**. It has no enclosing card or button-like route tiles.
 - **2026-07-25: Terminal context is chrome, not another panel.** The standalone
   terminal handoff is one 32 px tab-aligned header with lifecycle, repository,
   Files, Review Changes, and Session Details. It uses the tab-bar surface,
