@@ -373,14 +373,17 @@ require_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\("Session Rail"\)' \
     'the supervision region has regressed to an ambiguous Sessions heading'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_start_state_visible.*?!has_open_projects.*?session_count == 0.*?!has_query.*?!attention_only.*?!is_restoring.*?fn session_start_state_copy.*?"Open a Workspace to edit, run, supervise, and review in one place\.".*?"Open Workspace…".*?"Open Scratch Terminal".*?fn render_empty_state.*?aria_label\("Start working in Dez"\).*?\.px_2\(\).*?\.py_2\(\).*?Button::new\("start-open", open_workspace_label\).*?ButtonStyle::Filled.*?OpenFolder \{.*?create_new_window: Some\(false\).*?Button::new\("start-terminal", scratch_terminal_label\).*?ButtonStyle::OutlinedCustom.*?aria_label\("Open Scratch Terminal in Main Work Area"\)' \
+    'fn session_start_state_visible.*?!has_open_projects.*?session_count == 0.*?!has_query.*?!attention_only.*?!is_restoring.*?fn session_start_state_copy.*?"Start with a Workspace".*?"Open a codebase, start a Terminal or Agent Session, then review its changes with the IDE\.".*?"Open Workspace…".*?"Open Scratch Terminal".*?fn render_empty_state.*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?Label::new\(title\).*?Button::new\("start-open", open_workspace_label\).*?ButtonStyle::Filled.*?tab_index\(0isize\).*?OpenFolder \{.*?create_new_window: Some\(false\).*?Button::new\("start-terminal", scratch_terminal_label\).*?ButtonStyle::OutlinedCustom.*?tab_index\(0isize\).*?aria_label\("Open Scratch Terminal in Main Work Area"\)' \
     'the empty Session Rail can regress to a duplicated card, ambiguous actions, or the wrong terminal destination'
 reject_pattern crates/sidebar/src/sidebar.rs \
     '"(No running sessions|Start a terminal to begin|Open Folder…)"' \
     'the compact Session Rail start state has regained duplicate or folder-scoped copy'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn active_workspace_terminal_destination_label.*?"New Terminal in Main Work Area of Active Workspace".*?Button::new\("no-results-new-terminal", "Start Terminal Session"\).*?ButtonStyle::Filled.*?aria_label\(active_workspace_terminal_destination_label\(\)\).*?Button::new\("new-session", "New Terminal"\).*?ButtonStyle::OutlinedCustom.*?aria_label\(active_workspace_terminal_destination_label\(\)\)' \
+    'fn active_workspace_terminal_destination_label.*?"New Terminal in Main Work Area of Active Workspace".*?Button::new\("no-results-new-terminal", "Start Terminal Session"\).*?ButtonStyle::Filled.*?tab_index\(0isize\).*?aria_label\(active_workspace_terminal_destination_label\(\)\).*?Button::new\("new-session", "New Terminal"\).*?ButtonStyle::OutlinedCustom.*?tab_index\(0isize\).*?aria_label\(active_workspace_terminal_destination_label\(\)\)' \
     'global Session Rail terminal actions can regress to an ambiguous Workspace or Agent destination'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'Button::new\([[:space:]]*SharedString::from\(format!\([[:space:]]*"\{id_prefix\}empty-project-new-terminal-\{ix\}".*?tab_index\(0isize\).*?Button::new\("no-results-clear-search", "Clear Search"\).*?tab_index\(0isize\).*?Button::new\("show-all-sessions", "Show All Sessions"\).*?tab_index\(0isize\).*?aria_label\("Show All Sessions"\).*?Button::new\("all-session-scope".*?tab_index\(0isize\).*?Button::new\("attention-session-scope".*?tab_index\(0isize\)' \
+    'Session Rail start, recovery, and scope controls can regress outside the keyboard tab order'
 reject_pattern crates/sidebar/src/sidebar.rs \
     'when\(!is_focused, \|this\| this\.visible_on_hover\(&group_name\)\)' \
     'Workspace group disclosure can regress to an invisible hover-only affordance'

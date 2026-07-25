@@ -88,15 +88,17 @@ prefixes. The action is named **Rename Terminal…** and double-clicking the tab
 invokes the same editor.
 
 At zero sessions, the overview owns the rail title and **No sessions yet**
-status. The compact start block does not repeat an empty-state headline or
-decorative card. Without a Workspace it explains the complete
-edit/run/supervise/review loop, offers one filled **Open Workspace…** action,
-and keeps **Open Scratch Terminal** as the outlined pathless alternative. With
-an active Workspace but no Session, the primary recovery action is **Start
-Terminal Session**. All actions name their destination in accessibility output.
-Once one or more Sessions exist, the overview's **New Terminal** control
-becomes an outlined utility because the Session list—not repeat creation—is the
-primary content.
+status. The compact start block uses one quiet **Start with a Workspace**
+heading rather than a decorative card. It explains that a codebase supplies
+context to Terminal and Agent Sessions and that their changes return to the IDE
+for review, offers one filled **Open Workspace…** action, and keeps **Open
+Scratch Terminal** as the outlined pathless alternative. With an active
+Workspace but no Session, the primary recovery action is **Start Terminal
+Session**. Start, search recovery, attention scope, and Session scope actions
+are keyboard tab stops and name their destination in accessibility output.
+Once one or more Sessions exist, the overview's **New Terminal** control becomes
+an outlined utility because the Session list—not repeat creation—is the primary
+content.
 
 Workspace Tools and Agent are ordinary pane-grid regions with stable placement
 and normal focus behavior. Hiding one keeps its items available, returns focus

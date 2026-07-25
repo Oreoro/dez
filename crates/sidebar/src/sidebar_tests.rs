@@ -332,13 +332,18 @@ fn start_state_waits_for_restore_and_only_describes_a_true_empty_app() {
     assert!(!session_start_state_visible(false, 1, false, false, false));
     assert!(!session_start_state_visible(false, 0, true, false, false));
     assert!(!session_start_state_visible(false, 0, false, true, false));
+    assert_eq!(session_start_state_copy().0, "Start with a Workspace");
     assert_eq!(
         session_start_state_copy().1,
+        "Open a codebase, start a Terminal or Agent Session, then review its changes with the IDE."
+    );
+    assert_eq!(
+        session_start_state_copy().2,
         "Open Workspace…",
         "the empty app should establish IDE context before suggesting computation"
     );
     assert_eq!(
-        session_start_state_copy().2,
+        session_start_state_copy().3,
         "Open Scratch Terminal",
         "a pathless zero-state terminal should name its transient scope"
     );

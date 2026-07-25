@@ -550,9 +550,10 @@ fn session_start_state_visible(
     !has_open_projects && session_count == 0 && !has_query && !attention_only && !is_restoring
 }
 
-fn session_start_state_copy() -> (&'static str, &'static str, &'static str) {
+fn session_start_state_copy() -> (&'static str, &'static str, &'static str, &'static str) {
     (
-        "Open a Workspace to edit, run, supervise, and review in one place.",
+        "Start with a Workspace",
+        "Open a codebase, start a Terminal or Agent Session, then review its changes with the IDE.",
         "Open Workspace…",
         "Open Scratch Terminal",
     )
@@ -1300,10 +1301,12 @@ mod session_start_state_tests {
         assert_eq!(
             session_start_state_copy(),
             (
-                "Terminals open in the Main Work Area. Live state and attention return here.",
-                "New Terminal",
-                "Open Workspace…"
-            )
+                "Start with a Workspace",
+                "Open a codebase, start a Terminal or Agent Session, then review its changes with the IDE.",
+                "Open Workspace…",
+                "Open Scratch Terminal"
+            ),
+            "the true-empty Session Rail should explain Workspace context and the complete Dez loop"
         );
         assert_eq!(
             active_workspace_terminal_destination_label(),
@@ -5388,6 +5391,7 @@ impl Sidebar {
                             .size(ButtonSize::Medium)
                             .style(ButtonStyle::Filled)
                             .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                            .tab_index(0isize)
                             .aria_label(SharedString::from(format!(
                                 "Start Terminal Session in {}",
                                 workspace_name.as_ref()
@@ -12508,6 +12512,7 @@ impl Sidebar {
                                 .full_width()
                                 .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
                                 .label_size(LabelSize::Small)
+                                .tab_index(0isize)
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     this.reset_filter_editor_text(window, cx);
                                     this.update_entries(cx);
@@ -12522,6 +12527,7 @@ impl Sidebar {
                                 .style(ButtonStyle::Filled)
                                 .label_size(LabelSize::Small)
                                 .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                                .tab_index(0isize)
                                 .aria_label(active_workspace_terminal_destination_label())
                                 .tooltip(|_, cx| {
                                     Tooltip::for_action(
@@ -12583,6 +12589,8 @@ impl Sidebar {
                     .full_width()
                     .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
                     .label_size(LabelSize::Small)
+                    .tab_index(0isize)
+                    .aria_label("Show All Sessions")
                     .on_click(cx.listener(|this, _, window, cx| {
                         this.set_attention_filter(false, window, cx);
                     })),
@@ -12666,6 +12674,7 @@ impl Sidebar {
                                     .start_icon(
                                         Icon::new(IconName::Terminal).size(IconSize::XSmall),
                                     )
+                                    .tab_index(0isize)
                                     .aria_label(active_workspace_terminal_destination_label())
                                     .tooltip(|_, cx| {
                                         Tooltip::for_action(
@@ -12702,6 +12711,7 @@ impl Sidebar {
                                         .style(ButtonStyle::Subtle)
                                         .toggle_state(!self.attention_only)
                                         .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                                        .tab_index(0isize)
                                         .aria_label(all_scope_aria_label)
                                         .aria_keyshortcuts("Shift+A")
                                         .aria_description("Show every session in the rail")
@@ -12726,6 +12736,7 @@ impl Sidebar {
                                         .style(ButtonStyle::Subtle)
                                         .toggle_state(self.attention_only)
                                         .selected_style(ButtonStyle::Tinted(TintColor::Warning))
+                                        .tab_index(0isize)
                                         .aria_label(attention_scope_aria_label)
                                         .aria_keyshortcuts("Shift+A")
                                         .aria_description("Show only sessions that need attention")
@@ -12795,13 +12806,13 @@ impl Sidebar {
     }
 
     fn render_empty_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let (description, open_workspace_label, scratch_terminal_label) =
+        let (title, description, open_workspace_label, scratch_terminal_label) =
             session_start_state_copy();
 
         v_flex()
             .id("sidebar-start-state")
             .role(gpui::Role::Group)
-            .aria_label("Start working in Dez")
+            .aria_label(format!("{title}. {description}"))
             .flex_1()
             .min_h_0()
             .overflow_y_scroll()
@@ -12811,6 +12822,7 @@ impl Sidebar {
                 v_flex()
                     .w_full()
                     .gap_2()
+                    .child(Label::new(title).size(LabelSize::Small))
                     .child(
                         Label::new(description)
                             .size(LabelSize::XSmall)
@@ -12821,6 +12833,7 @@ impl Sidebar {
                             .full_width()
                             .style(ButtonStyle::Filled)
                             .start_icon(Icon::new(IconName::FolderOpen).size(IconSize::Small))
+                            .tab_index(0isize)
                             .aria_label(open_workspace_label)
                             .tooltip(move |_, cx| {
                                 Tooltip::for_action(
@@ -12846,6 +12859,7 @@ impl Sidebar {
                             .full_width()
                             .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
                             .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                            .tab_index(0isize)
                             .aria_label("Open Scratch Terminal in Main Work Area")
                             .tooltip(|_, cx| {
                                 Tooltip::for_action(

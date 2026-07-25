@@ -2673,3 +2673,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Session action retain distinct exact-Session semantics. Static guards cover
   visibility, roles, naming, focus, and ownership. This is source-only; no
   build or visual launch was performed.
+- 2026-07-25: Made the true-empty Session Rail explain the product integration
+  directly. **Start with a Workspace** now states that a codebase feeds
+  Terminal or Agent Sessions and that their changes return to the IDE for
+  review. Open Workspace remains the filled same-window, folder-only action;
+  Open Scratch Terminal remains secondary. Start, search recovery, attention,
+  and All/Attention scope controls now enter the keyboard tab order. A stale
+  embedded assertion for the superseded terminal-first empty state was aligned
+  with the canonical copy. Static guards cover hierarchy, routing, focus, and
+  exact Main Work Area destinations. This is source-only; no build, test
+  binary, or visual launch was performed.

@@ -3290,3 +3290,17 @@ Completed for the Agent tool-card interaction source slice:
 - added static visibility, role, naming, focus, and ownership guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Session Rail first-workflow clarity source slice:
+
+- replaced the true-empty rail's generic muted sentence with a quiet **Start
+  with a Workspace** heading and copy that connects Workspace context,
+  Terminal or Agent Sessions, and IDE review;
+- retained one filled, folder-only, same-window **Open Workspace…** action and
+  the secondary pathless **Open Scratch Terminal** route;
+- made Workspace-ready start, empty-search recovery, caught-up recovery,
+  overview creation, and All/Attention scope actions explicit tab stops;
+- aligned an embedded pure assertion with the canonical Workspace-first copy;
+- added static hierarchy, routing, focus, and destination regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

@@ -70,11 +70,15 @@ compact icons, but every control has a specific accessible name, tooltip, and
 place in the keyboard tab order. A critical action is never available only on
 pointer hover.
 
-The empty Session Rail follows the same activation loop. It asks for a
-Workspace first, keeps **Open Scratch Terminal** as a secondary pathless
-option, and changes its primary action to **Start Terminal Session** once a
-Workspace is ready. This prevents a first-run terminal in the home directory
-from looking connected to Files or Git when it is not.
+The empty Session Rail follows the same activation loop. **Start with a
+Workspace** explains that the codebase supplies context to Terminal or Agent
+Sessions and that their changes return to the IDE for review. **Open
+Workspace** remains the primary same-window action, **Open Scratch Terminal**
+is the secondary pathless option, and the primary action becomes **Start
+Terminal Session** once a Workspace is ready. This prevents a first-run
+terminal in the home directory from looking connected to Files or Git when it
+is not. Start, recovery, and All/Attention scope actions remain keyboard
+reachable as the rail changes state.
 
 Workspace controls follow focus. Selecting or keyboard-focusing a Workspace
 keeps its New Terminal and Options actions visible; opening the Options menu
