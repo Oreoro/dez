@@ -3708,3 +3708,18 @@ Completed for the auxiliary-drawer recovery geometry source slice:
   regressions;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the pane-header overlay source slice:
+
+- removed the inherited top-center whole-pane drag handle from Dez, including
+  its visible pill and larger invisible hit target over pane header chrome;
+- retained explicit split/move commands, ordinary Surface tab drag and drop,
+  and Canvas layout recipes as the coherent movement paths;
+- preserved the upstream whole-pane handle when the product identity is
+  official Zed;
+- added a pure product-identity assertion and static guards that reject an
+  unconditional pane-header overlay;
+- documented the stable-region rationale and the required runtime acceptance
+  proof;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

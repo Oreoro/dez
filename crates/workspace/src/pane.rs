@@ -100,6 +100,10 @@ fn canvas_tab_bar_height(cx: &App) -> Pixels {
     canvas_tab_density(cx).container_height(cx)
 }
 
+fn pane_drag_handle_visible(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 /// A group of selected entries from project panel.
 #[derive(Debug)]
 pub struct DraggedSelection {
@@ -5999,7 +6003,9 @@ impl Render for Pane {
             .when(self.drag_swap_target && cx.has_active_drag(), |this| {
                 this.child(Self::render_swap_drop_overlay(cx))
             })
-            .child(self.render_pane_drag_handle(cx))
+            .when(pane_drag_handle_visible(paths::APP_NAME), |this| {
+                this.child(self.render_pane_drag_handle(cx))
+            })
             .on_mouse_down(
                 MouseButton::Navigate(NavigationDirection::Back),
                 cx.listener(|pane, _, window, cx| {
@@ -6433,6 +6439,11 @@ mod tests {
             PaneKind::Tabs.accessibility_label_for_app("Zed"),
             "Editor pane"
         );
+        assert!(
+            !pane_drag_handle_visible("Dez"),
+            "Dez should keep pane movement in explicit layout controls instead of overlaying every header"
+        );
+        assert!(pane_drag_handle_visible("Zed"));
         assert_eq!(
             pane_new_surface_control_copy("Dez"),
             ("Add to Main Work Area", "Add a file, search, or terminal")

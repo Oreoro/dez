@@ -995,3 +995,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   **Brief**. Rename, Archive, provider hook setup, and diagnostics remain
   available through selected-Session commands or the Session context menu.
   Readable action labels are preserved at rail widths of 280 px and above.
+- **2026-07-26: Pane movement does not overlay Dez region headers.** Dez does
+  not render the inherited absolute whole-pane drag handle at the top center
+  of every pane. Its visible pill and larger invisible hit target compete with
+  tab and header chrome, intercept input in a region with no label, and imply
+  that Sessions, Workspace Tools, Main Work Area, and Agent are arbitrary
+  interchangeable columns. Pane movement remains available through explicit
+  split/move actions, ordinary Surface tab drag and drop, and Canvas layout
+  recipes. Official Zed retains the upstream whole-pane handle for
+  compatibility.

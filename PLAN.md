@@ -2922,3 +2922,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Main Work Area** action remain. A static geometry guard protects the
   contract. This is source-only; no build, test binary, alternate binary, or
   visual launch was performed.
+- 2026-07-26: Removed the inherited whole-pane drag overlay from Dez. The
+  top-center visible pill and its larger invisible hit target previously
+  covered pane tab/header chrome and suggested that the stable Sessions,
+  Workspace Tools, Main Work Area, and Agent regions were arbitrary columns.
+  Explicit split/move actions, ordinary Surface tab drag and drop, and Canvas
+  layout recipes remain available; official Zed retains its upstream handle.
+  A pure product-identity assertion and identity guards reject an
+  unconditional overlay. This is source-only; no build, test binary, alternate
+  binary, or visual launch was performed.

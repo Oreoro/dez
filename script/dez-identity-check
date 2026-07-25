@@ -1342,6 +1342,12 @@ require_multiline_pattern crates/workspace/src/pane.rs \
     'fn accessibility_label_for_app.*?"Editor pane".*?"Project pane".*?"Agent pane".*?"Main work area".*?"Workspace Tools".*?"Agent".*?if paths::APP_NAME != "Zed".*?PaneKind::Project.*?render_auxiliary_pane_hide_control\(PaneKind::Project\).*?PaneKind::Agent.*?render_auxiliary_pane_hide_control\(PaneKind::Agent\).*?if !has_focus.*?Some\(add_control\).*?fn render_auxiliary_pane_hide_control.*?"hide-workspace-tools".*?tab_index\(0isize\).*?"hide-agent".*?tab_index\(0isize\).*?fn pane_auxiliary_hide_control_copy.*?"Hide Workspace Tools".*?"Hide Agent"' \
     'main-area creation controls can regress into auxiliary panes or pane landmarks can lose their product-region identity'
 require_multiline_pattern crates/workspace/src/pane.rs \
+    'fn pane_drag_handle_visible.*?app_name == "Zed".*?fn render_pane_drag_handle.*?id\("pane_drag_handle"\).*?\.absolute\(\).*?\.on_drag.*?when\(pane_drag_handle_visible\(paths::APP_NAME\).*?child\(self\.render_pane_drag_handle\(cx\)\).*?!pane_drag_handle_visible\("Dez"\).*?pane_drag_handle_visible\("Zed"\)' \
+    'Dez can regress to overlaying every pane header with the inherited whole-pane drag target'
+reject_multiline_pattern crates/workspace/src/pane.rs \
+    'drag_swap_target.*?\.child\(Self::render_swap_drop_overlay\(cx\)\).*?\}\)[[:space:]]*\.child\(self\.render_pane_drag_handle\(cx\)\)' \
+    'the pane drag target can regress to an unconditional top-center overlay in Dez'
+require_multiline_pattern crates/workspace/src/pane.rs \
     'fn pane_new_surface_menu_copy.*?"Open File…".*?"Search Workspace…".*?"Go to Symbol…"' \
     'the Main Work Area creation menu can regress to ambiguous commands that conceal a follow-up'
 require_multiline_pattern crates/workspace/src/pane.rs \
