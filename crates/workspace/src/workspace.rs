@@ -215,6 +215,11 @@ const AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0.22;
 const MAIN_WORK_AREA_MINIMUM_RATIO: f32 = 0.60;
 const AUXILIARY_PANES_MIN_COEXIST_WIDTH: f32 = 1800.;
 const AUXILIARY_PANES_MIN_COEXIST_ASPECT_RATIO: f32 = 1.60;
+const WORKSPACE_NOTIFICATION_SHELF_MAX_WIDTH: f32 = 420.;
+const WORKSPACE_NOTIFICATION_SHELF_MIN_WIDTH: f32 = 280.;
+const WORKSPACE_NOTIFICATION_SHELF_WIDTH_FRACTION: f32 = 0.34;
+const WORKSPACE_NOTIFICATION_SHELF_MAX_VIEWPORT_FRACTION: f32 = 0.42;
+const WORKSPACE_NOTIFICATION_SHELF_EDGE_INSET: f32 = 12.;
 
 fn auxiliary_pane_initial_width(available_width: Pixels) -> Pixels {
     px(
@@ -230,6 +235,18 @@ fn dez_auxiliary_panes_can_coexist(size: Size<Pixels>) -> bool {
 
     size.width >= px(AUXILIARY_PANES_MIN_COEXIST_WIDTH)
         && size.width >= size.height * AUXILIARY_PANES_MIN_COEXIST_ASPECT_RATIO
+}
+
+fn workspace_notification_shelf_width(viewport_width: Pixels) -> Pixels {
+    let available_width =
+        (viewport_width - px(WORKSPACE_NOTIFICATION_SHELF_EDGE_INSET * 2.)).max(px(1.));
+    let preferred_width = px((viewport_width.as_f32()
+        * WORKSPACE_NOTIFICATION_SHELF_WIDTH_FRACTION)
+        .clamp(
+            WORKSPACE_NOTIFICATION_SHELF_MIN_WIDTH,
+            WORKSPACE_NOTIFICATION_SHELF_MAX_WIDTH,
+        ));
+    preferred_width.min(available_width)
 }
 
 fn canvas_layout_modal_row_border(cx: &App) -> Hsla {
@@ -7796,7 +7813,9 @@ impl Workspace {
         }
 
         let center_pane = self
-            .last_tabbed_pane(cx)
+            .ensure_visible_tabbed_panes(1, &[], window, cx)
+            .into_iter()
+            .next()
             .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
         self.set_active_pane(&center_pane, window, cx);
         center_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
@@ -7811,6 +7830,12 @@ impl Workspace {
     ) {
         self.push_canvas_layout_snapshot(cx);
 
+        let center_pane = self
+            .ensure_visible_tabbed_panes(1, &[], window, cx)
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
+
         if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
             self.set_canvas_panel_pane_visible(PanelPaneKind::Project, true, window, cx);
             self.set_canvas_panel_pane_visible(PanelPaneKind::Agent, true, window, cx);
@@ -7822,9 +7847,6 @@ impl Workspace {
             self.set_active_pane(&agent_pane, window, cx);
             agent_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
         } else {
-            let center_pane = self
-                .last_tabbed_pane(cx)
-                .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
             self.set_active_pane(&center_pane, window, cx);
             center_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
         }
@@ -7852,7 +7874,9 @@ impl Workspace {
         }
 
         let center_pane = self
-            .last_tabbed_pane(cx)
+            .ensure_visible_tabbed_panes(1, &[], window, cx)
+            .into_iter()
+            .next()
             .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
         self.set_active_pane(&center_pane, window, cx);
         center_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
@@ -8489,7 +8513,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> Vec<Entity<Pane>> {
         let count = count.max(1);
-        let mut panes = self
+        let panes = self
             .center
             .panes()
             .into_iter()
@@ -8498,29 +8522,84 @@ impl Workspace {
             .cloned()
             .collect::<Vec<_>>();
 
-        for pane in panes.iter().take(count) {
-            pane.update(cx, |pane, cx| pane.set_visible(true, cx));
-        }
-        panes.retain(|pane| pane.read(cx).is_visible());
+        // A single-work-area recipe used to leave empty panes from a previous
+        // split visible. That produced a large blank column beside the actual
+        // launch surface. Keep the active pane first, then panes that already
+        // contain user work, and only use empty panes to fill the requested
+        // recipe. Surplus panes containing files or terminals are never hidden.
+        let mut selected_pane_ids = HashSet::default();
+        let mut selected_panes = Vec::new();
+        let active_pane_id = self.active_pane.entity_id();
 
-        if panes.is_empty() {
-            panes.push(self.ensure_tabbed_pane(window, cx));
+        for pane in panes
+            .iter()
+            .filter(|pane| {
+                let pane_state = pane.read(cx);
+                pane.entity_id() == active_pane_id && pane_state.is_visible()
+            })
+            .chain(panes.iter().filter(|pane| {
+                let pane_state = pane.read(cx);
+                pane_state.is_visible() && pane_state.items_len() > 0
+            }))
+            .chain(panes.iter().filter(|pane| pane.read(cx).is_visible()))
+            .chain(panes.iter())
+        {
+            if selected_panes.len() >= count {
+                break;
+            }
+            if selected_pane_ids.insert(pane.entity_id()) {
+                selected_panes.push(pane.clone());
+            }
         }
 
-        while panes.len() < count {
-            let target = panes
+        for pane in &panes {
+            let pane_state = pane.read(cx);
+            let selected = selected_pane_ids.contains(&pane.entity_id());
+            let contains_user_work = pane_state.items_len() > 0;
+            let visible = pane_state.is_visible();
+            drop(pane_state);
+
+            if selected && !visible {
+                pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+            } else if !selected && visible && !contains_user_work {
+                pane.update(cx, |pane, cx| pane.set_visible(false, cx));
+            }
+        }
+
+        if selected_panes.is_empty() {
+            let pane = self.ensure_tabbed_pane(window, cx);
+            selected_pane_ids.insert(pane.entity_id());
+            selected_panes.push(pane);
+        }
+
+        while selected_panes.len() < count {
+            let target = selected_panes
                 .last()
                 .cloned()
                 .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
             let direction = if split_directions.is_empty() {
                 SplitDirection::Right
             } else {
-                split_directions[(panes.len() - 1) % split_directions.len()]
+                split_directions[(selected_panes.len() - 1) % split_directions.len()]
             };
-            panes.push(self.split_pane(target, direction, window, cx));
+            let pane = self.split_pane(target, direction, window, cx);
+            selected_pane_ids.insert(pane.entity_id());
+            selected_panes.push(pane);
         }
 
-        panes
+        // Recipes may request fewer panes than the user currently has open.
+        // Preserve and return every visible non-empty pane so applying a
+        // layout can never make active work disappear.
+        for pane in panes {
+            if pane.read(cx).is_visible()
+                && pane.read(cx).items_len() > 0
+                && selected_pane_ids.insert(pane.entity_id())
+            {
+                selected_panes.push(pane);
+            }
+        }
+
+        selected_panes
     }
 
     fn focus_canvas_tabbed_pane(
@@ -10845,20 +10924,34 @@ impl Workspace {
         self.update_window_edited(window, cx);
     }
 
-    fn render_notifications(&self, _window: &mut Window, _cx: &mut Context<Self>) -> Option<Div> {
+    fn render_notifications(&self, window: &mut Window, _cx: &mut Context<Self>) -> Option<Div> {
         if self.notifications.is_empty() {
             None
         } else {
+            let surface_width = if self.bounds.size.width > Pixels::ZERO {
+                self.bounds.size.width
+            } else {
+                window.viewport_size().width
+            };
+            let surface_height = if self.bounds.size.height > Pixels::ZERO {
+                self.bounds.size.height
+            } else {
+                window.viewport_size().height
+            };
             Some(
                 div()
+                    .id("workspace-notification-shelf")
+                    .role(gpui::Role::Region)
+                    .aria_label("Workspace notifications")
                     .absolute()
                     .right_3()
                     .bottom_3()
-                    .w_112()
-                    .h_full()
+                    .w(workspace_notification_shelf_width(surface_width))
+                    .min_h_0()
+                    .max_h(surface_height * WORKSPACE_NOTIFICATION_SHELF_MAX_VIEWPORT_FRACTION)
+                    .overflow_y_scroll()
                     .flex()
                     .flex_col()
-                    .justify_end()
                     .gap_2()
                     .children(
                         self.notifications
@@ -16320,6 +16413,14 @@ mod tests {
     }
 
     #[test]
+    fn workspace_notification_shelf_stays_bounded_to_the_viewport() {
+        assert_eq!(workspace_notification_shelf_width(px(2000.)), px(420.));
+        assert_eq!(workspace_notification_shelf_width(px(1000.)), px(340.));
+        assert_eq!(workspace_notification_shelf_width(px(600.)), px(280.));
+        assert_eq!(workspace_notification_shelf_width(px(240.)), px(216.));
+    }
+
+    #[test]
     fn empty_window_title_uses_outward_product_vocabulary() {
         assert_eq!(empty_workspace_window_title("Zed"), "empty project");
         assert_eq!(empty_workspace_window_title("Dez"), "Empty Workspace");
@@ -16364,6 +16465,51 @@ mod tests {
             pane_kinds,
             vec![PaneKind::Project, PaneKind::Tabs, PaneKind::Agent]
         );
+    }
+
+    #[gpui::test]
+    async fn test_single_work_area_cleanup_hides_only_surplus_empty_panes(cx: &mut TestAppContext) {
+        init_test(cx);
+
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            let primary_pane = workspace.active_pane().clone();
+            let surplus_empty_pane =
+                workspace.split_pane(primary_pane.clone(), SplitDirection::Right, window, cx);
+
+            workspace.set_active_pane(&primary_pane, window, cx);
+            workspace.ensure_visible_tabbed_panes(1, &[], window, cx);
+
+            assert!(primary_pane.read(cx).is_visible());
+            assert!(!surplus_empty_pane.read(cx).is_visible());
+
+            let user_work_pane =
+                workspace.split_pane(primary_pane.clone(), SplitDirection::Right, window, cx);
+            let user_item = cx.new(|cx| TestItem::new(cx).with_label("user-work.txt"));
+            workspace.add_item(
+                user_work_pane.clone(),
+                Box::new(user_item),
+                None,
+                false,
+                false,
+                window,
+                cx,
+            );
+
+            workspace.set_active_pane(&primary_pane, window, cx);
+            let retained_panes = workspace.ensure_visible_tabbed_panes(1, &[], window, cx);
+
+            assert!(primary_pane.read(cx).is_visible());
+            assert!(user_work_pane.read(cx).is_visible());
+            assert!(
+                retained_panes.iter().any(|pane| pane == &user_work_pane),
+                "a pane containing user work must remain part of the visible recipe"
+            );
+        });
     }
 
     #[gpui::test]

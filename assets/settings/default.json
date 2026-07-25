@@ -85,7 +85,7 @@
   // Active pane styling settings.
   "active_pane_modifiers": {
     // Inset border size of the active pane, in pixels.
-    "border_size": 2.0,
+    "border_size": 1.0,
     // Opacity of the inactive panes. 0 means transparent, 1 means opaque.
     // Values are clamped to the [0.0, 1.0] range.
     "inactive_opacity": 0.94
@@ -1102,7 +1102,7 @@
   "pane_grid": {
     "auto_reflow": true,
     "layout_history": true,
-    "focus_indicator": "border_and_title",
+    "focus_indicator": "title",
     "panel_surface": "pane_tab",
     "show_legacy_docks": false,
     "draggable_panel_tabs": true,

@@ -38,8 +38,17 @@ not permanent columns. On laptop and portrait windows, opening one closes the
 other. Both may coexist only in an ultrawide shell, where each is capped at 22%
 of visible horizontal space and Dez keeps at least 60% for the Main Work Area.
 The same policy applies after resizing, reopening, and restoring a saved layout.
+Returning to a one-work-area recipe removes surplus empty split panes while
+preserving every pane that contains a file, terminal, or other user Surface.
+When that work area is empty, one restrained launch panel states the product
+loop—**Run. Supervise. Review.**—and offers only Start Terminal Session, Find
+File, and New File. It is onboarding for the current Workspace, not a second
+welcome screen.
 The Session Rail is a projection over the real owners: selecting a row focuses
 or reattaches its existing Surface instead of opening a duplicate.
+Notifications and toasts are bounded transient shelves over the Main Work
+Area. They never become another full-height column, and overflowing alerts
+scroll inside their shelf instead of covering the editor or terminal.
 
 ## The control grammar
 
@@ -322,8 +331,11 @@ lines, pane boundaries, and scrollbars remain visible. Rail/drawer surfaces,
 the Main Work Area, tab strips, and elevated menus use distinct neutral layers
 instead of blending into one sheet. Structural dividers remain restrained;
 hover, active, selected, scrollbar, and focus states strengthen in a consistent
-order, and focus/selection carry the stronger accent. High-motion terminal and
-Agent content does not add independent nested blur layers.
+order, and focus/selection carry the stronger accent. The active Main Work Area
+is identified by its title and selected tab instead of a saturated rectangle
+around the entire pane; users who prefer a pane border can restore it through
+the normal `pane_grid.focus_indicator` setting. High-motion terminal and Agent
+content does not add independent nested blur layers.
 
 Stable secondary windows—including About, account verification, Settings,
 Audio Test, and profiling—inherit the same active Lumin window material and UI

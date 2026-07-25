@@ -15,6 +15,8 @@ use crate::{DesignSystemSettings, Workspace};
 
 const DEFAULT_TOAST_DURATION: Duration = Duration::from_secs(10);
 const MINIMUM_RESUME_DURATION: Duration = Duration::from_millis(800);
+const TOAST_MAX_VIEWPORT_WIDTH_FRACTION: f32 = 0.90;
+const TOAST_MAX_VIEWPORT_HEIGHT_FRACTION: f32 = 0.42;
 
 fn canvas_toast_layer_bottom(cx: &App) -> Pixels {
     match DesignSystemSettings::get_global(cx).density {
@@ -241,46 +243,48 @@ impl ToastLayer {
 }
 
 impl Render for ToastLayer {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let Some(active_toast) = &self.active_toast else {
             return div();
         };
 
-        div().absolute().size_full().bottom_0().left_0().child(
-            v_flex()
-                .id(("toast-layer-container", active_toast.id))
-                .absolute()
-                .w_full()
-                .bottom(canvas_toast_layer_bottom(cx))
-                .px(canvas_toast_layer_padding_x(cx))
-                .flex()
-                .flex_col()
-                .items_center()
-                .track_focus(&active_toast.focus_handle)
-                .child(
-                    h_flex()
-                        .id("active-toast-container")
-                        .occlude()
-                        .on_hover(cx.listener(|this, hover_start, _window, cx| {
-                            if *hover_start {
-                                this.pause_dismiss_timer();
-                            } else {
-                                this.restart_dismiss_timer(cx);
-                            }
-                            cx.stop_propagation();
-                        }))
-                        .on_click(|_, _, cx| {
-                            cx.stop_propagation();
-                        })
-                        .on_mouse_down(
-                            MouseButton::Middle,
-                            cx.listener(|this, _, _, cx| {
-                                this.hide_toast(cx);
-                            }),
-                        )
-                        .child(active_toast.toast.view()),
-                )
-                .animate_in(AnimationDirection::FromBottom, true),
-        )
+        v_flex()
+            .id(("toast-layer-container", active_toast.id))
+            .absolute()
+            .left_0()
+            .right_0()
+            .bottom(canvas_toast_layer_bottom(cx))
+            .px(canvas_toast_layer_padding_x(cx))
+            .flex()
+            .flex_col()
+            .items_center()
+            .child(
+                h_flex()
+                    .id("active-toast-container")
+                    .track_focus(&active_toast.focus_handle)
+                    .max_w(vw(TOAST_MAX_VIEWPORT_WIDTH_FRACTION, window))
+                    .max_h(vh(TOAST_MAX_VIEWPORT_HEIGHT_FRACTION, window))
+                    .overflow_y_scroll()
+                    .occlude()
+                    .on_hover(cx.listener(|this, hover_start, _window, cx| {
+                        if *hover_start {
+                            this.pause_dismiss_timer();
+                        } else {
+                            this.restart_dismiss_timer(cx);
+                        }
+                        cx.stop_propagation();
+                    }))
+                    .on_click(|_, _, cx| {
+                        cx.stop_propagation();
+                    })
+                    .on_mouse_down(
+                        MouseButton::Middle,
+                        cx.listener(|this, _, _, cx| {
+                            this.hide_toast(cx);
+                        }),
+                    )
+                    .child(active_toast.toast.view()),
+            )
+            .animate_in(AnimationDirection::FromBottom, true)
     }
 }

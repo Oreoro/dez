@@ -618,6 +618,15 @@ defer it.
   Workspace Tools and Agent are mutually exclusive drawers: revealing one
   hides the other, restored double-drawer layouts collapse deterministically,
   and both may coexist only on an ultrawide canvas.
+- **2026-07-25: One-work-area layouts remove only empty leftovers.** Full,
+  Agent Control, and Editor Focus recipes select one authoritative Main Work
+  Area and hide surplus empty tab panes left by earlier split recipes. A pane
+  containing a file, terminal, diff, or any other user Surface is never hidden
+  by this cleanup. The default pane focus indicator lives in the title/selected
+  tab rather than painting a saturated rectangle around the full work surface;
+  optional border focus remains user-configurable and defaults to one pixel.
+  The remaining empty Main Work Area is one bounded launch panel headed **Run.
+  Supervise. Review.**, with only the three immediate Workspace actions.
 - **2026-07-25: Terminal context is chrome, not another panel.** The standalone
   terminal handoff is one 32 px tab-aligned header with lifecycle, repository,
   Files, Review Changes, and Session Details. It uses the tab-bar surface,
@@ -625,6 +634,20 @@ defer it.
   complete actor identity in its accessible name and details disclosure. The
   supervisor region is visibly titled **Sessions**; **Session Rail** remains an
   architectural and accessibility name, not unexplained primary UI copy.
+- **2026-07-25: Transient feedback cannot become a fifth region.** Workspace
+  notifications are one named shelf bounded to the actual Main Work Area,
+  between 280 and 420 px when space permits, never wider than the available
+  surface, and capped at 42% of its height with internal scrolling. Toasts no
+  longer allocate an invisible full-screen layer; only their visible content
+  occludes input, within 90% of viewport width and 42% of viewport height.
+  Modal scrims remain full-screen only when they intentionally block the
+  application.
+- **2026-07-25: Recovery surfaces name their real destination.** Empty
+  Workspace Tools and Agent drawers are named regions whose single recovery
+  closes the drawer and returns to the **Main Work Area**, not generically to
+  an editor. Directional arrows point inward. New File consistently uses the
+  File object icon. Welcome explains Run, Supervise, and Review inside one
+  coherent panel rather than three competing cards.
 - **2026-07-25: Destination labels imply idempotent navigation.** **Open
   Workspace** accepts folders, not standalone files, and keeps the current
   window when the flow promises to preserve Sessions. **Open Files** reveals

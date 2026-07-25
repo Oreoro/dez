@@ -58,6 +58,9 @@ Dez v0.0.1 is complete only when all of the following are true:
   workflows, and language intelligence remain coherent Zed-quality work.
 - Keyboard and pointer flows have parity; empty, loading, disconnected,
   missing, failed, and recovery states are deliberate and accessible.
+- A one-work-area layout cannot retain a duplicate blank split, hide a pane
+  containing user work, or use a full-surface accent rectangle as its default
+  focus treatment.
 - Irrelevant Zed product promotion or account-centric chrome is removed or
   demoted without breaking compatible editor capabilities or the upstream
   merge path.
@@ -2408,6 +2411,16 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   supervisor's visible heading is **Sessions** instead of internal Session Rail
   jargon. Static guards and focused source assertions cover the contract. No
   build, test binary, alternate binary, or visual launch was performed.
+- 2026-07-25: Bounded transient feedback in source. Workspace notifications no
+  longer occupy a fixed 448 px, full-height overlay; one named shelf derives
+  width from the actual Main Work Area, stays within 280–420 px when space
+  permits, caps height at 42%, and scrolls overflow. Toasts no longer allocate
+  an invisible full-screen layer and bound visible content to 90% width and
+  42% height. Welcome now teaches Run, Supervise, and Review in one coherent
+  panel, empty drawers return to the Main Work Area with inward arrows, and New
+  File uses its object icon. Static guards and source assertions cover the
+  contract. No build, test binary, alternate binary, or visual launch was
+  performed.
 - 2026-07-25: Made first-run guidance and terminal surface naming contextual.
   With no project, Welcome leads with **Open Workspace** and **Open Scratch
   Terminal**. Once a Workspace exists, it stops repeating that request and

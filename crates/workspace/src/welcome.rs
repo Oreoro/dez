@@ -656,19 +656,25 @@ impl Render for WelcomePage {
                                 .role(gpui::Role::Region)
                                 .aria_label("How Dez works: Run, Supervise, Review")
                                 .w_full()
-                                .gap_2()
+                                .gap_0()
+                                .p_3()
+                                .rounded_md()
+                                .border_1()
+                                .border_color(cx.theme().colors().border_variant)
+                                .bg(cx.theme().colors().panel_background)
                                 .child(SectionHeader::new("How Dez Works"))
-                                .children(workflow_steps.into_iter().map(
-                                    |(number, title, description)| {
+                                .children(workflow_steps.into_iter().enumerate().map(
+                                    |(index, (number, title, description))| {
                                         h_flex()
                                             .w_full()
                                             .items_start()
                                             .gap_3()
-                                            .p_2p5()
-                                            .rounded_md()
-                                            .border_1()
-                                            .border_color(cx.theme().colors().border_variant)
-                                            .bg(cx.theme().colors().panel_background)
+                                            .py_2()
+                                            .when(index > 0, |this| {
+                                                this.border_t_1().border_color(
+                                                    cx.theme().colors().border_variant,
+                                                )
+                                            })
                                             .child(
                                                 h_flex()
                                                     .flex_none()

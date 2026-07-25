@@ -970,9 +970,14 @@ impl Pane {
             .pb_8()
             .child(
                 v_flex()
-                    .max_w(px(560.))
+                    .max_w(px(620.))
                     .w_full()
-                    .gap_5()
+                    .gap_4()
+                    .p_5()
+                    .rounded_lg()
+                    .border_1()
+                    .border_color(cx.theme().colors().border_variant)
+                    .bg(cx.theme().colors().panel_background)
                     .child(
                         v_flex()
                             .gap_2()
@@ -981,19 +986,10 @@ impl Pane {
                                     .size(LabelSize::XSmall)
                                     .color(Color::Muted),
                             )
-                            .child(
-                                h_flex()
-                                    .gap_2()
-                                    .child(
-                                        Icon::new(IconName::Terminal)
-                                            .size(IconSize::Small)
-                                            .color(Color::Accent),
-                                    )
-                                    .child(Headline::new("Workspace ready")),
-                            )
+                            .child(Headline::new("Run. Supervise. Review."))
                             .child(
                                 Label::new(
-                                    "Start a Terminal Session or find a file. The Sessions list supervises live terminal and Agent state; Files, Git, diffs, diagnostics, and Debug keep review in this Workspace.",
+                                    "Start a Terminal Session or open a file. Dez keeps Terminal and Agent Sessions visible in Sessions, then brings files, Git changes, diagnostics, and diffs here for review.",
                                 )
                                 .size(LabelSize::Small)
                                 .color(Color::Muted),
@@ -1050,7 +1046,7 @@ impl Pane {
                                 Button::new("empty-project-new-file", "New File")
                                     .tab_index(2isize)
                                     .style(ButtonStyle::Subtle)
-                                    .start_icon(Icon::new(IconName::Plus))
+                                    .start_icon(Icon::new(IconName::File))
                                     .aria_label("New File")
                                     .tooltip(|_, cx| {
                                         Tooltip::for_action("New File", &NewFile, cx)
@@ -1065,19 +1061,21 @@ impl Pane {
 
     fn render_empty_panel_state(&self, cx: &mut Context<Self>) -> AnyElement {
         let pane_kind = self.pane_kind;
-        let (id, icon, title, description, key_binding) = match pane_kind {
+        let (id, icon, title, description, return_icon, key_binding) = match pane_kind {
             PaneKind::Project => (
                 "empty-project-panel-state",
                 IconName::FileTree,
-                "Workspace tools unavailable",
-                "Workspace tools did not attach to this pane.",
+                "Workspace Tools unavailable",
+                "Workspace Tools did not attach. Close this drawer and continue in the Main Work Area.",
+                IconName::ArrowRight,
                 KeyBinding::for_action_in(&ToggleProjectPane, &self.focus_handle, cx),
             ),
             PaneKind::Agent => (
                 "empty-agent-panel-state",
                 IconName::Chat,
-                "Agent tools unavailable",
-                "Agent controls did not attach. Local editing is still available.",
+                "Agent unavailable",
+                "Agent controls did not attach. Close this drawer and continue in the Main Work Area.",
+                IconName::ArrowLeft,
                 KeyBinding::for_action_in(&ToggleAgentPane, &self.focus_handle, cx),
             ),
             PaneKind::Tabs => return gpui::Empty.into_any_element(),
@@ -1085,6 +1083,8 @@ impl Pane {
 
         v_flex()
             .id(id)
+            .role(gpui::Role::Region)
+            .aria_label(format!("{title}. {description}"))
             .max_w_96()
             .w_full()
             .px_6()
@@ -1107,12 +1107,12 @@ impl Pane {
             .child(
                 Button::new(
                     (gpui::ElementId::from(id), "return-to-editor"),
-                    "Return to Editor",
+                    "Return to Main Work Area",
                 )
                 .full_width()
                 .tab_index(0isize)
                 .style(ButtonStyle::Filled)
-                .start_icon(Icon::new(IconName::ArrowLeft))
+                .start_icon(Icon::new(return_icon))
                 .key_binding(key_binding)
                 .on_click(move |_, window, cx| match pane_kind {
                     PaneKind::Project => window.dispatch_action(Box::new(ToggleProjectPane), cx),

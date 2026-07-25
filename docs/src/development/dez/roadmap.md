@@ -3008,6 +3008,42 @@ Completed for the responsive shell-hierarchy source slice:
 - added source assertions and identity guards; no build, test binary,
   alternate binary, or visual launch was performed.
 
+Completed for the transient-layer and recovery-surface source slice:
+
+- replaced the fixed 448 px, full-height Workspace notification column with a
+  named shelf measured from the actual Main Work Area;
+- bounded the shelf to 280–420 px when space permits, never wider than the
+  available surface, and 42% of surface height with internal scrolling;
+- removed the toast layer's invisible full-screen container and bounded visible
+  toast content to 90% of viewport width and 42% of viewport height;
+- kept full-screen occlusion only for intentional modal and switcher scrims;
+- consolidated the Run, Supervise, and Review explanation into one Welcome
+  panel instead of three competing cards;
+- made empty Workspace Tools and Agent drawers named regions with inward
+  directional recovery to the Main Work Area, and aligned New File on the File
+  icon;
+- added pure width assertions and static guards; no build, test binary,
+  alternate binary, or visual launch was performed.
+
+Completed for the single-work-area cleanup and focus-hierarchy source slice:
+
+- traced the unexplained blank middle column in the installed screenshots to
+  single-work-area recipes retaining surplus empty tab panes from an earlier
+  split;
+- made Full, Agent Control, and Editor Focus select one authoritative Main Work
+  Area and hide only surplus empty tab panes;
+- preserved every visible pane containing a file, terminal, diff, or other user
+  Surface even when it exceeds the recipe's nominal pane count;
+- changed the default active-pane cue from a two-pixel full-surface rectangle to
+  the title and selected-tab state, while retaining a configurable one-pixel
+  border option;
+- replaced the generic **Workspace ready** placeholder with one bounded **Run.
+  Supervise. Review.** launch panel and the three immediate Workspace actions;
+- recorded the blue droplet/task pill as Codex desktop overlay and the **Bin**
+  label as a macOS Dock tooltip rather than misattributing either to Dez;
+- added static layout-safety and visual-default guards; no build, test binary,
+  alternate binary, or visual launch was performed.
+
 Completed for the truthful start-state navigation source slice:
 
 - moved **Open Files** to one Workspace-owned action used by Welcome, Terminal,

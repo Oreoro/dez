@@ -481,8 +481,14 @@ require_multiline_pattern crates/workspace/src/workspace.rs \
     'AUXILIARY_PANE_MAX_INITIAL_WIDTH: f32 = 360\..*?AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0\.22.*?MAIN_WORK_AREA_MINIMUM_RATIO: f32 = 0\.60.*?AUXILIARY_PANES_MIN_COEXIST_WIDTH: f32 = 1800\..*?AUXILIARY_PANES_MIN_COEXIST_ASPECT_RATIO: f32 = 1\.60.*?fn auxiliary_pane_initial_width.*?fn dez_auxiliary_panes_can_coexist.*?hide_competing_dez_auxiliary_pane_for_reveal.*?enforce_dez_auxiliary_pane_visibility_policy.*?enforce_dez_main_work_area_width_budget.*?constrain_auxiliary_horizontal_flexes' \
     'Workspace Tools can regress to an equal-width column or lose the persistent Main Work Area budget'
 require_multiline_pattern crates/workspace/src/workspace.rs \
+    'pub fn apply_canvas_layout.*?ensure_visible_tabbed_panes\(1, &\[\].*?pub fn apply_canvas_agent_control_layout.*?ensure_visible_tabbed_panes\(1, &\[\].*?pub fn apply_canvas_editor_focus_layout.*?ensure_visible_tabbed_panes\(1, &\[\].*?fn ensure_visible_tabbed_panes.*?selected_pane_ids.*?contains_user_work.*?!selected && visible && !contains_user_work.*?items_len\(\) > 0.*?selected_panes\.push\(pane\).*?test_single_work_area_cleanup_hides_only_surplus_empty_panes.*?!surplus_empty_pane\.read\(cx\)\.is_visible\(\).*?user_work_pane\.read\(cx\)\.is_visible\(\)' \
+    'single-work-area recipes can regress to a duplicate empty Main Work Area or hide panes containing user work'
+require_multiline_pattern crates/workspace/src/workspace.rs \
     'fn auxiliary_panes_only_coexist_in_an_ultrawide_shell.*?1799\..*?1800\..*?1200\..*?1800\..*?1000\.' \
     'Workspace Tools and Agent can regress to competing full-height drawers on laptop-sized windows'
+require_multiline_pattern assets/settings/default.json \
+    '"active_pane_modifiers": \{.*?"border_size": 1\.0.*?"pane_grid": \{.*?"focus_indicator": "title"' \
+    'the default canvas can regress to drawing a strong full-pane focus rectangle over the active Surface'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'pub fn reset_pane_sizes.*?center\.reset_pane_sizes\(cx\).*?enforce_dez_main_work_area_width_budget\(cx\).*?serialize_workspace' \
     'Reset Pane Sizes can bypass the Dez Main Work Area budget before persistence'
@@ -987,6 +993,9 @@ require_multiline_pattern crates/workspace/src/welcome.rs \
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'when\(self\.primary.*?ButtonStyle::Filled.*?aria_description\("Recommended first step"\).*?fn welcome_emphasizes_first_action.*?app_name != "Zed".*?first_section\.render\(.*?welcome_emphasizes_first_action\(APP_NAME\)' \
     'Dez Welcome can regress to equally weighted actions or lose its recommended first transition'
+require_multiline_pattern crates/workspace/src/welcome.rs \
+    'id\("dez-workflow"\).*?aria_label\("How Dez works: Run, Supervise, Review"\).*?\.p_3\(\).*?\.border_1\(\).*?SectionHeader::new\("How Dez Works"\).*?workflow_steps\.into_iter\(\)\.enumerate\(\).*?when\(index > 0.*?border_t_1\(\)' \
+    'Welcome can regress to three competing workflow cards instead of one coherent product explanation'
 require_multiline_pattern crates/debugger_ui/src/debugger_panel.rs \
     'fn debug_start_icon.*?IconName::Plus.*?IconName::Debug.*?fn debug_stop_icon.*?IconName::Power.*?IconName::Stop.*?"debug-new-session".*?tab_index\(0isize\).*?aria_label\("Start Debug Session"\).*?"debug-stop".*?tab_index\(0isize\).*?aria_label\(stop_label\).*?"debug-disconnect".*?tab_index\(0isize\).*?aria_label\("Detach Debug Session"\)' \
     'the Dez Debug toolbar can regress to ambiguous icons or tooltip-only controls'
@@ -1380,12 +1389,27 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
 require_multiline_pattern crates/workspace/src/pane.rs \
     '\.id\("empty-project-state"\).*?\.size_full\(\).*?\.min_h_0\(\).*?\.overflow_y_scroll\(\).*?\.pt_10\(\).*?\.pb_8\(\)' \
     'the empty Main Work Area can clip its primary actions in a short window'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    'fn render_empty_project_state.*?max_w\(px\(620\.\)\).*?\.p_5\(\).*?\.rounded_lg\(\).*?\.border_1\(\).*?\.bg\(cx\.theme\(\)\.colors\(\)\.panel_background\).*?Headline::new\("Run\. Supervise\. Review\."\).*?keeps Terminal and Agent Sessions visible in Sessions.*?Git changes, diagnostics, and diffs here for review' \
+    'the empty Main Work Area can regress to an unfinished placeholder that does not explain the Dez product loop'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'const SESSION_NOTICES_MAX_VIEWPORT_FRACTION: f32 = 0\.42;.*?fn render_session_notices.*?\.id\("session-rail-notices"\).*?\.role\(gpui::Role::Region\).*?\.aria_label\("Session Rail notices"\).*?\.max_h\(vh\(SESSION_NOTICES_MAX_VIEWPORT_FRACTION, window\)\).*?\.overflow_y_scroll\(\)' \
     'simultaneous recovery notices can consume the Session Rail instead of yielding to its primary list'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_session_notices.*?impl Render for Sidebar.*?self\.render_session_notices\(window, cx\).*?self\.render_session_notices\(window, cx\)' \
     'the Session Rail can regress to unbounded notices in its start or populated state'
+require_multiline_pattern crates/workspace/src/workspace.rs \
+    'WORKSPACE_NOTIFICATION_SHELF_MAX_WIDTH: f32 = 420\..*?WORKSPACE_NOTIFICATION_SHELF_MIN_WIDTH: f32 = 280\..*?WORKSPACE_NOTIFICATION_SHELF_WIDTH_FRACTION: f32 = 0\.34.*?WORKSPACE_NOTIFICATION_SHELF_MAX_VIEWPORT_FRACTION: f32 = 0\.42.*?fn workspace_notification_shelf_width.*?fn render_notifications.*?self\.bounds\.size\.width.*?self\.bounds\.size\.height.*?id\("workspace-notification-shelf"\).*?role\(gpui::Role::Region\).*?aria_label\("Workspace notifications"\).*?workspace_notification_shelf_width\(surface_width\).*?max_h\(surface_height \* WORKSPACE_NOTIFICATION_SHELF_MAX_VIEWPORT_FRACTION\).*?overflow_y_scroll\(\)' \
+    'Workspace notifications can regress to a fixed full-height overlay over the Main Work Area'
+require_multiline_pattern crates/workspace/src/workspace.rs \
+    'fn workspace_notification_shelf_stays_bounded_to_the_viewport.*?2000\..*?420\..*?1000\..*?340\..*?600\..*?280\..*?240\..*?216\.' \
+    'Workspace notification width can regress beyond narrow Main Work Area bounds'
+require_multiline_pattern crates/workspace/src/toast_layer.rs \
+    'TOAST_MAX_VIEWPORT_WIDTH_FRACTION: f32 = 0\.90.*?TOAST_MAX_VIEWPORT_HEIGHT_FRACTION: f32 = 0\.42.*?impl Render for ToastLayer.*?left_0\(\).*?right_0\(\).*?max_w\(vw\(TOAST_MAX_VIEWPORT_WIDTH_FRACTION, window\)\).*?max_h\(vh\(TOAST_MAX_VIEWPORT_HEIGHT_FRACTION, window\)\).*?overflow_y_scroll\(\).*?occlude\(\)' \
+    'transient toasts can regress to an unbounded full-screen overlay'
+reject_multiline_pattern crates/workspace/src/toast_layer.rs \
+    'impl Render for ToastLayer.*?absolute\(\)\.size_full\(\)' \
+    'the toast layer can regress to reserving an invisible full-screen interaction surface'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_row_setup_action_visible.*?setup_available && session_rail_supplemental_metadata_visible\(width\).*?let show_copy_codex_hook =.*?session_row_setup_action_visible\(rail_width, can_copy_codex_hook\).*?\.when\(show_copy_codex_hook' \
     'compact Session rows can regress to crowding their title with a third inline setup action'
@@ -1509,6 +1533,9 @@ require_pattern crates/workspace/src/pane.rs \
 require_multiline_pattern crates/workspace/src/pane.rs \
     'Button::new\("empty-project-terminal", "Start Terminal Session"\).*?\.aria_label\("Start Terminal Session in Main Work Area"\).*?Tooltip::for_action.*?"Start Terminal Session in Main Work Area".*?Button::new\("empty-project-open-file", "Find File"\).*?\.aria_label\("Find File in Workspace"\).*?Tooltip::for_action.*?"Find File in Workspace".*?Button::new\("empty-project-new-file", "New File"\).*?\.aria_label\("New File"\).*?Tooltip::for_action\("New File"' \
     'the Workspace-ready actions can regress to ambiguous or unnamed controls'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    'Button::new\("empty-project-new-file", "New File"\).*?start_icon\(Icon::new\(IconName::File\)\).*?fn render_empty_panel_state.*?"Workspace Tools unavailable".*?IconName::ArrowRight.*?"Agent unavailable".*?IconName::ArrowLeft.*?role\(gpui::Role::Region\).*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?"Return to Main Work Area"' \
+    'empty drawers can regress to ambiguous editor-only recovery or directionally incorrect controls'
 require_pattern crates/settings_ui/src/page_data.rs \
     '"Trust All Workspaces By Default"' \
     'the Dez trust setting still presents a Project boundary'
