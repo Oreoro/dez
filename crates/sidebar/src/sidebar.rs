@@ -407,6 +407,7 @@ struct WorkspaceRestoreStatusPresentation {
     description: &'static str,
     remove_label: &'static str,
     remove_aria_label: String,
+    remove_tooltip: &'static str,
 }
 
 fn workspace_restore_status_presentation(
@@ -416,15 +417,17 @@ fn workspace_restore_status_presentation(
         0 => None,
         1 => Some(WorkspaceRestoreStatusPresentation {
             title: "Workspace could not reopen".to_owned(),
-            description: "Dez kept a recovery entry. Open Recent Workspaces to try again, or remove the entry without deleting its recent Workspace data.",
-            remove_label: "Remove Entry",
+            description: "Dez kept a recovery entry. Open Recent Workspaces to try again, or remove the recovery entry from this rail without deleting recent Workspace data.",
+            remove_label: "Remove Recovery Entry",
             remove_aria_label: "Remove Unavailable Workspace Recovery Entry".to_owned(),
+            remove_tooltip: "Remove only the unavailable recovery entry from this rail; recent Workspace data remains available",
         }),
         count => Some(WorkspaceRestoreStatusPresentation {
             title: format!("{count} Workspaces could not reopen"),
-            description: "Dez kept recovery entries. Open Recent Workspaces to try again, or remove the entries without deleting recent Workspace data.",
-            remove_label: "Remove Entries",
+            description: "Dez kept recovery entries. Open Recent Workspaces to try again, or remove the recovery entries from this rail without deleting recent Workspace data.",
+            remove_label: "Remove Recovery Entries",
             remove_aria_label: format!("Remove {count} Unavailable Workspace Recovery Entries"),
+            remove_tooltip: "Remove only the unavailable recovery entries from this rail; recent Workspace data remains available",
         }),
     }
 }
@@ -1471,17 +1474,20 @@ mod workspace_restore_status_tests {
 
         let singular = workspace_restore_status_presentation(1).unwrap();
         assert_eq!(singular.title, "Workspace could not reopen");
-        assert_eq!(singular.remove_label, "Remove Entry");
+        assert_eq!(singular.remove_label, "Remove Recovery Entry");
         assert!(singular.description.contains("Open Recent Workspaces"));
+        assert!(singular.description.contains("from this rail"));
         assert!(singular.description.contains("without deleting"));
+        assert!(singular.remove_tooltip.contains("entry from this rail"));
 
         let plural = workspace_restore_status_presentation(3).unwrap();
         assert_eq!(plural.title, "3 Workspaces could not reopen");
-        assert_eq!(plural.remove_label, "Remove Entries");
+        assert_eq!(plural.remove_label, "Remove Recovery Entries");
         assert_eq!(
             plural.remove_aria_label,
             "Remove 3 Unavailable Workspace Recovery Entries"
         );
+        assert!(plural.remove_tooltip.contains("entries from this rail"));
         assert!(!plural.description.contains("Session reference"));
     }
 }
@@ -12913,6 +12919,7 @@ impl Sidebar {
                             Button::new("open-terminal-host-log", "Open Local Log")
                                 .size(ButtonSize::Medium)
                                 .style(ButtonStyle::Filled)
+                                .tab_index(0isize)
                                 .aria_label("Open Local Diagnostics Log")
                                 .tooltip(Tooltip::text("Open the local Dez diagnostics log"))
                                 .on_click(|_, window, cx| {
@@ -12923,7 +12930,9 @@ impl Sidebar {
                             Button::new("copy-terminal-host-details", copy_label)
                                 .size(ButtonSize::Medium)
                                 .style(ButtonStyle::Outlined)
+                                .tab_index(0isize)
                                 .aria_label(copy_label)
+                                .tooltip(Tooltip::text(copy_label))
                                 .on_click(move |_, _window, cx| {
                                     cx.write_to_clipboard(ClipboardItem::new_string(
                                         details.clone(),
@@ -12982,15 +12991,11 @@ impl Sidebar {
                         .flex_wrap()
                         .gap_1()
                         .child(
-                            Button::new(
-                                "recover-unresolved-workspace",
-                                "Open Recent Workspaces",
-                            )
+                            Button::new("recover-unresolved-workspace", "Open Recent Workspaces")
                                 .size(ButtonSize::Medium)
                                 .style(ButtonStyle::Filled)
-                                .start_icon(
-                                    Icon::new(IconName::FolderOpen).size(IconSize::XSmall),
-                                )
+                                .start_icon(Icon::new(IconName::FolderOpen).size(IconSize::XSmall))
+                                .tab_index(0isize)
                                 .aria_label("Open Recent Workspaces to Retry Recovery")
                                 .tooltip(Tooltip::text(
                                     "Choose the unavailable Workspace to try opening it again",
@@ -13000,24 +13005,18 @@ impl Sidebar {
                                 })),
                         )
                         .child(
-                            Button::new(
-                                "dismiss-unresolved-workspace",
-                                presentation.remove_label,
-                            )
+                            Button::new("dismiss-unresolved-workspace", presentation.remove_label)
                                 .size(ButtonSize::Medium)
                                 .style(ButtonStyle::Outlined)
+                                .tab_index(0isize)
                                 .aria_label(presentation.remove_aria_label)
-                                .tooltip(Tooltip::text(
-                                    "Remove only the unavailable recovery entry; recent Workspace data remains available",
-                                ))
+                                .tooltip(Tooltip::text(presentation.remove_tooltip))
                                 .on_click(cx.listener(move |this, _, _window, cx| {
                                     if let Some(app_session) = this.app_session(cx) {
                                         app_session.update(cx, |app_session, cx| {
                                             for workspace_id in &unresolved_workspace_ids {
-                                                app_session.remove_durable_workspace(
-                                                    *workspace_id,
-                                                    cx,
-                                                );
+                                                app_session
+                                                    .remove_durable_workspace(*workspace_id, cx);
                                             }
                                         });
                                     }

@@ -267,6 +267,14 @@ terminal grid.
 **Start Fresh Terminal** creates separate computation in the Main Work Area; it
 does not claim to reconnect, replay, or replace the unavailable Session.
 
+If the terminal session service itself is connecting, reconnecting, or failed,
+the Session Rail states whether any shell started and whether running processes
+were touched. **Open Local Log** and **Copy Details/Error** expose diagnostics
+without putting transport jargon in the main notice. If a Workspace cannot
+reopen, **Open Recent Workspaces** retries through the normal picker; **Remove
+Recovery Entry** removes only that rail record and keeps recent Workspace data.
+These recovery actions are keyboard reachable.
+
 ## Terminal and Agent integration
 
 Dez does not put the terminal inside chat.

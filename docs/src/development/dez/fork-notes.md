@@ -214,6 +214,14 @@ the persistent Dez setting, Anthropic log retention, and the current-request
 retry. Only **Accept and Retry** changes the setting and resends; **Cancel**
 leaves both untouched.
 
+Session Rail recovery notices preserve ownership truth. Terminal Session
+startup and reconnection copy states whether a shell was started and whether
+running processes were touched; raw transport details stay behind
+keyboard-reachable **Open Local Log** and **Copy Details/Error** actions.
+Workspace restoration offers **Open Recent Workspaces** to retry and **Remove
+Recovery Entry** to remove only the rail's recovery record. Removal does not
+delete recent Workspace data and never presents itself as a successful reopen.
+
 Agent tool cards teach their behavior without requiring pointer discovery.
 Copy Code, Copy Command, and expandable-output controls remain visible at
 rest. Disclosure controls are keyboard tab stops, announce the exact content

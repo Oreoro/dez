@@ -3304,3 +3304,17 @@ Completed for the Session Rail first-workflow clarity source slice:
 - added static hierarchy, routing, focus, and destination regression guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Session Rail recovery-notice source slice:
+
+- retained explicit no-shell, no-fallback, and process-untouched semantics for
+  Terminal Session preparation, reconnection, and failure;
+- made Open Local Log and Copy Details/Error named keyboard tab stops;
+- renamed vague Workspace **Remove Entry/Entries** actions to **Remove Recovery
+  Entry/Entries** and stated that they remove only rail recovery state;
+- made Workspace retry and recovery-record removal explicit tab stops while
+  preserving recent Workspace data;
+- updated pure presentation assertions and static wording, focus, diagnostics,
+  and removal-scope guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

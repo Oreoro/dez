@@ -2683,3 +2683,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   with the canonical copy. Static guards cover hierarchy, routing, focus, and
   exact Main Work Area destinations. This is source-only; no build, test
   binary, or visual launch was performed.
+- 2026-07-25: Polished Session Rail recovery notices without weakening their
+  truth boundary. Terminal Session connecting, reconnecting, and unavailable
+  notices retain explicit no-shell/no-replacement/process-untouched semantics;
+  Open Local Log and Copy Details/Error are named tab stops. Workspace restore
+  actions are also tab stops, and ambiguous Remove Entry copy is now **Remove
+  Recovery Entry**, with both notice and tooltip stating that only the rail
+  record is removed while recent Workspace data remains. Static guards cover
+  wording, focus, diagnostics, and exact removal scope. This is source-only; no
+  build, test binary, or visual launch was performed.
