@@ -152,7 +152,14 @@ no Workspace it offers **Open Workspace**, **Clone Repository**, and **Open
 Scratch Terminal**. With a Workspace it offers **Start Terminal Session**,
 **Open Files**, and **New File**. Generic utilities such as the command palette
 and replacing the active Workspace remain available through normal chrome, but
-do not compete with the release-defining start loop.
+do not compete with the release-defining start loop. Its headline is a concrete
+product promise rather than a second copy of the three-step guide: before a
+Workspace, it explains that opening one connects terminal and Agent work with
+files, Git, diagnostics, and diffs; inside one, it says that work stays
+connected and reviewable in the IDE. **How Dez Works** is a native passive list
+using the same Terminal, Sessions, and Diff icon grammar as other empty
+surfaces. It has no enclosing card, dividers, numbered selection pills, or
+control background.
 
 The empty Main Work Area uses the same **Start Terminal Session** vocabulary.
 Its orientation is part of the native work surface, not a bordered card
@@ -728,8 +735,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   Workspace Tools and Agent drawers are named regions whose single recovery
   closes the drawer and returns to the **Main Work Area**, not generically to
   an editor. Directional arrows point inward. New File consistently uses the
-  File object icon. Welcome explains Run, Supervise, and Review inside one
-  coherent panel rather than three competing cards.
+  File object icon. Welcome explains Run, Supervise, and Review as one native,
+  accessible icon list rather than three competing cards or another bordered
+  panel.
 - **2026-07-25: Destination labels imply idempotent navigation.** **Open
   Workspace** accepts folders, not standalone files, and keeps the current
   window when the flow promises to preserve Sessions. **Open Files** reveals

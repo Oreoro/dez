@@ -2903,3 +2903,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   guard protect the distinction between explanation and interaction. This is
   source-only; no build, test binary, alternate binary, or visual launch was
   performed.
+- 2026-07-26: Unified Welcome with the native first-use grammar. Its headline
+  now states the actual promise—Workspace-connected Terminal and Agent work
+  remains reviewable through the IDE—instead of repeating Run/Supervise/Review.
+  **How Dez Works** is now a named passive list using Terminal, Sessions, and
+  Diff icons. The bordered panel, dividers, numbered selected-looking pills,
+  and decorative bordered header icon tile are removed. The state-aware
+  three-action entry list and its single filled recommended action remain.
+  Static guards reject the old card treatment and protect the accessible list
+  structure. This is source-only; no build, test binary, alternate binary, or
+  visual launch was performed.

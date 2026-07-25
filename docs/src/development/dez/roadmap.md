@@ -3674,3 +3674,22 @@ Completed for the true-empty Sessions visual-grammar source slice:
   tiles, or control backgrounds from returning to the passive route;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Welcome visual-grammar source slice:
+
+- changed the Welcome summary from a duplicate Run/Supervise/Review sentence
+  into a concrete product promise about connecting Terminal and Agent work to
+  the Workspace and IDE;
+- removed the bordered **How Dez Works** panel, section dividers, and numbered
+  selected-looking pills;
+- rendered Run, Supervise, and Review as a native, passive list using Terminal,
+  Sessions, and Diff icons with the same grammar as the empty Main Work Area
+  and Sessions rail;
+- gave the workflow a named list and every step an explicit accessible name;
+- removed the decorative bordered Terminal icon tile from the Welcome heading
+  while preserving the product accent;
+- preserved the state-aware three-action entry hierarchy and the single filled
+  recommended first action;
+- added static guards rejecting the old card and numbered-pill treatment;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

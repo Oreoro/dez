@@ -187,9 +187,9 @@ fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Write. Delegate. Watch. Verify."
     } else if has_workspace {
-        "Run in this Workspace. Supervise in Sessions. Review changes here."
+        "Terminal and Agent work stays connected to this Workspace and reviewable in the IDE."
     } else {
-        "Run in the terminal. Supervise in Sessions. Review in the IDE."
+        "Open a Workspace to connect Terminal and Agent work with files, Git, diagnostics, and diffs."
     }
 }
 
@@ -571,7 +571,7 @@ impl Render for WelcomePage {
         };
         let workflow_steps = [
             (
-                "1",
+                IconName::Terminal,
                 "Run",
                 if has_workspace {
                     "Start a Terminal Session in this Workspace."
@@ -580,14 +580,14 @@ impl Render for WelcomePage {
                 },
             ),
             (
-                "2",
+                IconName::ListTree,
                 "Supervise",
-                "The Sessions list keeps live state, attention, and recovery visible.",
+                "Sessions keeps live state, attention, and recovery visible.",
             ),
             (
-                "3",
+                IconName::Diff,
                 "Review",
-                "Use Files, Git, diffs, diagnostics, and Debug on the same Workspace.",
+                "Files, Git, diffs, diagnostics, and Debug stay in the Main Work Area.",
             ),
         ];
 
@@ -617,20 +617,11 @@ impl Render for WelcomePage {
                             .items_center()
                             .gap_3()
                             .child(
-                                h_flex()
-                                    .flex_none()
-                                    .size_10()
-                                    .rounded_md()
-                                    .border_1()
-                                    .border_color(cx.theme().colors().border_variant)
-                                    .bg(cx.theme().colors().panel_background)
-                                    .items_center()
-                                    .justify_center()
-                                    .child(
-                                        Icon::new(IconName::Terminal)
-                                            .size(IconSize::Medium)
-                                            .color(Color::Accent),
-                                    ),
+                                div().flex_none().child(
+                                    Icon::new(IconName::Terminal)
+                                        .size(IconSize::Medium)
+                                        .color(Color::Accent),
+                                ),
                             )
                             .child(
                                 v_flex()
@@ -656,53 +647,46 @@ impl Render for WelcomePage {
                                 .role(gpui::Role::Region)
                                 .aria_label("How Dez works: Run, Supervise, Review")
                                 .w_full()
-                                .gap_0()
-                                .p_3()
-                                .rounded_md()
-                                .border_1()
-                                .border_color(cx.theme().colors().border_variant)
-                                .bg(cx.theme().colors().panel_background)
+                                .gap_1()
                                 .child(SectionHeader::new("How Dez Works"))
-                                .children(workflow_steps.into_iter().enumerate().map(
-                                    |(index, (number, title, description))| {
-                                        h_flex()
-                                            .w_full()
-                                            .items_start()
-                                            .gap_3()
-                                            .py_2()
-                                            .when(index > 0, |this| {
-                                                this.border_t_1().border_color(
-                                                    cx.theme().colors().border_variant,
-                                                )
-                                            })
-                                            .child(
+                                .child(
+                                    v_flex()
+                                        .id("dez-workflow-steps")
+                                        .role(gpui::Role::List)
+                                        .aria_label("Run, Supervise, Review workflow")
+                                        .w_full()
+                                        .gap_1()
+                                        .children(workflow_steps.into_iter().map(
+                                            |(icon, title, description)| {
                                                 h_flex()
-                                                    .flex_none()
-                                                    .size_6()
-                                                    .rounded_full()
-                                                    .bg(cx.theme().colors().element_selected)
-                                                    .items_center()
-                                                    .justify_center()
+                                                    .role(gpui::Role::ListItem)
+                                                    .aria_label(format!("{title}. {description}"))
+                                                    .w_full()
+                                                    .items_start()
+                                                    .gap_2()
+                                                    .py_1p5()
                                                     .child(
-                                                        Label::new(number)
-                                                            .buffer_font(cx)
-                                                            .size(LabelSize::XSmall)
+                                                        Icon::new(icon)
+                                                            .size(IconSize::XSmall)
                                                             .color(Color::Accent),
-                                                    ),
-                                            )
-                                            .child(
-                                                v_flex()
-                                                    .min_w_0()
-                                                    .gap_0p5()
-                                                    .child(Label::new(title).size(LabelSize::Small))
+                                                    )
                                                     .child(
-                                                        Label::new(description)
-                                                            .size(LabelSize::XSmall)
-                                                            .color(Color::Muted),
-                                                    ),
-                                            )
-                                    },
-                                )),
+                                                        v_flex()
+                                                            .min_w_0()
+                                                            .gap_0p5()
+                                                            .child(
+                                                                Label::new(title)
+                                                                    .size(LabelSize::Small),
+                                                            )
+                                                            .child(
+                                                                Label::new(description)
+                                                                    .size(LabelSize::XSmall)
+                                                                    .color(Color::Muted),
+                                                            ),
+                                                    )
+                                            },
+                                        )),
+                                ),
                         )
                     })
                     .child(first_section.render(
@@ -922,11 +906,11 @@ mod tests {
     fn dez_welcome_summary_teaches_the_workflow_without_a_promotion_card() {
         assert_eq!(
             welcome_summary("Dez", false),
-            "Run in the terminal. Supervise in Sessions. Review in the IDE."
+            "Open a Workspace to connect Terminal and Agent work with files, Git, diagnostics, and diffs."
         );
         assert_eq!(
             welcome_summary("Dez", true),
-            "Run in this Workspace. Supervise in Sessions. Review changes here."
+            "Terminal and Agent work stays connected to this Workspace and reviewable in the IDE."
         );
         assert_eq!(
             welcome_summary("Zed", true),
