@@ -2353,7 +2353,7 @@ impl TerminalView {
                     .separator()
                     .header("How Dez Works")
                     .label("Run · computation stays in this Terminal Session.")
-                    .label("Supervise · Session Rail shows live state and attention.")
+                    .label("Supervise · Sessions keeps live state and attention visible.")
                     .when(details_has_workspace_files, |menu| {
                         menu.label("Review · Files and Git inspect this same Workspace.")
                     })
@@ -2376,33 +2376,23 @@ impl TerminalView {
                     "Terminal Session controls. Status: {status}. {repository_label}. {changes_label}."
                 ))
                 .w_full()
-                .h(px(40.))
+                .h(px(32.))
                 .flex_none()
-                .gap_2()
-                .px_2()
+                .gap_1()
+                .px_1p5()
                 .border_b_1()
                 .border_color(cx.theme().colors().border_variant)
-                .bg(cx.theme().colors().panel_background)
+                .bg(cx.theme().colors().tab_bar_background)
                 .child(
                     h_flex()
                         .min_w_0()
                         .flex_1()
                         .overflow_hidden()
-                        .gap_2()
+                        .gap_1p5()
                         .child(
-                            h_flex()
-                                .flex_none()
-                                .gap_1()
-                                .child(
-                                    Icon::new(IconName::Terminal)
-                                        .size(IconSize::XSmall)
-                                        .color(Color::Accent),
-                                )
-                                .child(
-                                    Label::new("Terminal Session")
-                                        .size(LabelSize::Small)
-                                        .color(Color::Default),
-                                ),
+                            Icon::new(IconName::Terminal)
+                                .size(IconSize::XSmall)
+                                .color(Color::Accent),
                         )
                         .child(
                             h_flex()

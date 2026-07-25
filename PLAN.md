@@ -2399,6 +2399,15 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   retain Agent ownership instead of decoding as ordinary tabs. Focused
   assertions and identity guards cover these contracts. This remains
   source-only; no build or alternate binary was launched.
+- 2026-07-25: Replaced the competing-column shell with responsive drawers in
+  source. Below 1800 px or a 1.6:1 aspect ratio, revealing Workspace Tools
+  closes Agent and revealing Agent closes Workspace Tools; an ultrawide shell
+  may retain both under the existing Main Work Area budget. Window restoration
+  and resizing apply the same policy. The terminal handoff is now a 32 px
+  tab-bar-aligned header without a duplicate visible actor title, and the
+  supervisor's visible heading is **Sessions** instead of internal Session Rail
+  jargon. Static guards and focused source assertions cover the contract. No
+  build, test binary, alternate binary, or visual launch was performed.
 - 2026-07-25: Made first-run guidance and terminal surface naming contextual.
   With no project, Welcome leads with **Open Workspace** and **Open Scratch
   Terminal**. Once a Workspace exists, it stops repeating that request and

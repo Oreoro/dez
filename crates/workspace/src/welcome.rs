@@ -582,7 +582,7 @@ impl Render for WelcomePage {
             (
                 "2",
                 "Supervise",
-                "The Session Rail keeps live state, attention, and recovery visible.",
+                "The Sessions list keeps live state, attention, and recovery visible.",
             ),
             (
                 "3",

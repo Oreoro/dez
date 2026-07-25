@@ -2993,6 +2993,21 @@ Completed for the persistent Main Work Area budget source slice:
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
 
+Completed for the responsive shell-hierarchy source slice:
+
+- made Workspace Tools and Agent mutually exclusive below 1800 px or a 1.6:1
+  aspect ratio, with the newly revealed drawer always winning;
+- collapsed restored double-drawer layouts toward the focused auxiliary region
+  or the active recipe's intended region when window bounds change;
+- retained simultaneous Workspace Tools and Agent only for an ultrawide shell,
+  still under the 22% per-drawer and 60% Main Work Area budget;
+- reduced terminal context to one 32 px tab-bar-aligned header and removed its
+  redundant visible Terminal Session title;
+- changed the supervisor's visible heading from internal **Session Rail**
+  jargon to **Sessions** while preserving its architectural accessibility name;
+- added source assertions and identity guards; no build, test binary,
+  alternate binary, or visual launch was performed.
+
 Completed for the truthful start-state navigation source slice:
 
 - moved **Open Files** to one Workspace-owned action used by Welcome, Terminal,

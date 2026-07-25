@@ -8448,8 +8448,8 @@ fn ai_page(cx: &App) -> SettingsPage {
                 files: USER | PROJECT,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Session Rail Side",
-                description: "Which side of the window the Session Rail appears on.",
+                title: "Sessions Side",
+                description: "Which side of the window the Sessions list appears on.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.side"),

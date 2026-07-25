@@ -614,7 +614,17 @@ defer it.
   recipes, and persisted-layout restoration. **Reset Pane Sizes** returns to
   the Dez hierarchy rather than equalizing contextual tools with active work.
   Persistence must retain Agent, Workspace Tools, and Main Work Area region
-  identity.
+  identity. On shells below 1800 px or narrower than a 1.6:1 aspect ratio,
+  Workspace Tools and Agent are mutually exclusive drawers: revealing one
+  hides the other, restored double-drawer layouts collapse deterministically,
+  and both may coexist only on an ultrawide canvas.
+- **2026-07-25: Terminal context is chrome, not another panel.** The standalone
+  terminal handoff is one 32 px tab-aligned header with lifecycle, repository,
+  Files, Review Changes, and Session Details. It uses the tab-bar surface,
+  removes the redundant visible **Terminal Session** actor title, and keeps the
+  complete actor identity in its accessible name and details disclosure. The
+  supervisor region is visibly titled **Sessions**; **Session Rail** remains an
+  architectural and accessibility name, not unexplained primary UI copy.
 - **2026-07-25: Destination labels imply idempotent navigation.** **Open
   Workspace** accepts folders, not standalone files, and keeps the current
   window when the flow promises to preserve Sessions. **Open Files** reveals

@@ -993,7 +993,7 @@ impl Pane {
                             )
                             .child(
                                 Label::new(
-                                    "Start a Terminal Session or find a file. The Session Rail supervises live terminal and Agent state; Files, Git, diffs, diagnostics, and Debug keep review in this Workspace.",
+                                    "Start a Terminal Session or find a file. The Sessions list supervises live terminal and Agent state; Files, Git, diffs, diagnostics, and Debug keep review in this Workspace.",
                                 )
                                 .size(LabelSize::Small)
                                 .color(Color::Muted),

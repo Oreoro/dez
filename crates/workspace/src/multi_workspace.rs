@@ -196,9 +196,9 @@ fn render_sidebar_header_controls_for_state(
         (false, SidebarSide::Right) => IconName::SidebarRightClosed,
     };
     let sidebar_label = if sidebar_open {
-        "Hide Session Rail"
+        "Hide Sessions"
     } else {
-        "Open Session Rail"
+        "Open Sessions"
     };
     let on_right = sidebar_side == SidebarSide::Right;
     let sidebar_multi_workspace = multi_workspace.clone();

@@ -394,8 +394,8 @@ require_pattern crates/sidebar/src/sidebar.rs \
     'format!\("\{workspace_count\} \{workspace_noun\} ready"\)' \
     'the zero-session overview does not describe the ready Workspace scope'
 require_pattern crates/sidebar/src/sidebar.rs \
-    'Label::new\("Session Rail"\)' \
-    'the supervision region has regressed to an ambiguous Sessions heading'
+    'Label::new\("Sessions"\)' \
+    'the supervision region has regressed to internal Session Rail jargon'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_start_state_visible.*?!has_open_projects.*?session_count == 0.*?!has_query.*?!attention_only.*?!is_restoring.*?fn session_start_state_copy.*?"Start with a Workspace".*?"Open a codebase, start a Terminal or Agent Session, then review its changes with the IDE\.".*?"Open Workspace…".*?"Open Scratch Terminal".*?fn render_empty_state.*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?Label::new\(title\).*?Button::new\("start-open", open_workspace_label\).*?ButtonStyle::Filled.*?tab_index\(0isize\).*?OpenFolder \{.*?create_new_window: Some\(false\).*?Button::new\("start-terminal", scratch_terminal_label\).*?ButtonStyle::OutlinedCustom.*?tab_index\(0isize\).*?aria_label\("Open Scratch Terminal in Main Work Area"\)' \
     'the empty Session Rail can regress to a duplicated card, ambiguous actions, or the wrong terminal destination'
@@ -445,8 +445,11 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_has_persistent_owner.*?TerminalHostConnection::try_global.*?TerminalHostSnapshotStore::try_global.*?snapshot\.host_id == host_id && snapshot\.session_id == session_id.*?terminal_ownership_label\(has_persistent_owner, session_unavailable\)' \
     'terminal tooltips can claim persistence without a matching external terminal Host snapshot'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'TERMINAL_CONTEXT_ACTION_LABELS_MIN_WIDTH: Pixels = px\(700\.\).*?fn terminal_context_action_labels_visible.*?fn terminal_surface_tab_label.*?app_name == "Zed".*?"Terminal · \{title\}".*?fn terminal_workspace_context.*?status_summary\(\)\.count.*?fn render_session_context_strip.*?paths::APP_NAME == "Zed".*?action_labels_visible = terminal_context_action_labels_visible\(context_width\).*?details_visible_label.*?"Session Details".*?files_visible_label.*?"Files".*?open_workspace_visible_label.*?"Open Workspace".*?review_visible_label.*?"Review Changes".*?"Evidence".*?"Lifecycle · observed from Terminal and Host\.".*?"Git · changed-file counts belong to the Workspace\.".*?"Attribution · changes are not assigned to this Session\.".*?"Agents · confidence and checks require trusted evidence\.".*?"Terminal text is display content, not proof\.".*?"How Dez Works".*?"Run · computation stays in this Terminal Session\.".*?"Supervise · Session Rail shows live state and attention\.".*?"Review · Files and Git inspect this same Workspace\.".*?"Connect · open a Workspace to add Files and Git review\.".*?role\(gpui::Role::Toolbar\).*?min_w_0\(\).*?flex_1\(\).*?overflow_hidden\(\).*?"Terminal Session".*?files_visible_label.*?aria_label\("Open Files for this Workspace"\).*?tooltip\(Tooltip::text\("Open Files for this Workspace"\)\).*?RevealFiles.*?open_workspace_visible_label.*?Open a Workspace in this window and keep this Terminal Session.*?OpenWorkspace.*?create_new_window: Some\(false\).*?review_visible_label.*?review_accessibility_label.*?tooltip\(Tooltip::text\(review_accessibility_label.*?ReviewGitChanges' \
+    'TERMINAL_CONTEXT_ACTION_LABELS_MIN_WIDTH: Pixels = px\(700\.\).*?fn terminal_context_action_labels_visible.*?fn terminal_surface_tab_label.*?app_name == "Zed".*?"Terminal · \{title\}".*?fn terminal_workspace_context.*?status_summary\(\)\.count.*?fn render_session_context_strip.*?paths::APP_NAME == "Zed".*?action_labels_visible = terminal_context_action_labels_visible\(context_width\).*?details_visible_label.*?"Session Details".*?files_visible_label.*?"Files".*?open_workspace_visible_label.*?"Open Workspace".*?review_visible_label.*?"Review Changes".*?"Evidence".*?"Lifecycle · observed from Terminal and Host\.".*?"Git · changed-file counts belong to the Workspace\.".*?"Attribution · changes are not assigned to this Session\.".*?"Agents · confidence and checks require trusted evidence\.".*?"Terminal text is display content, not proof\.".*?"How Dez Works".*?"Run · computation stays in this Terminal Session\.".*?"Supervise · Sessions keeps live state and attention visible\.".*?"Review · Files and Git inspect this same Workspace\.".*?"Connect · open a Workspace to add Files and Git review\.".*?role\(gpui::Role::Toolbar\).*?\.h\(px\(32\.\)\).*?\.bg\(cx\.theme\(\)\.colors\(\)\.tab_bar_background\).*?min_w_0\(\).*?flex_1\(\).*?overflow_hidden\(\).*?IconName::Terminal.*?Label::new\(repository_label\).*?files_visible_label.*?aria_label\("Open Files for this Workspace"\).*?tooltip\(Tooltip::text\("Open Files for this Workspace"\)\).*?RevealFiles.*?open_workspace_visible_label.*?Open a Workspace in this window and keep this Terminal Session.*?OpenWorkspace.*?create_new_window: Some\(false\).*?review_visible_label.*?review_accessibility_label.*?tooltip\(Tooltip::text\(review_accessibility_label.*?ReviewGitChanges' \
     'the active Dez terminal can regress to an isolated shell with no authoritative IDE handoff'
+reject_pattern crates/terminal_view/src/terminal_view.rs \
+    'Label::new\("Terminal Session"\)' \
+    'the compact terminal context header can regress to a redundant second panel title'
 require_pattern crates/terminal_view/src/terminal_view.rs \
     'OpenFolder as OpenWorkspace' \
     'Scratch Terminal Open Workspace can regress to a generic file-or-folder picker'
@@ -475,8 +478,11 @@ require_multiline_pattern crates/git_ui/src/commit_modal.rs \
     '"More Commit Options".*?ButtonLike::new_rounded_left\(format!\("split-button-left-\{\}", commit_label\)\).*?tab_index\(0isize\).*?aria_label\(commit_label\)' \
     'the expanded Git commit flow can regress behind pointer-only split-button controls'
 require_multiline_pattern crates/workspace/src/workspace.rs \
-    'AUXILIARY_PANE_MAX_INITIAL_WIDTH: f32 = 360\..*?AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0\.22.*?MAIN_WORK_AREA_MINIMUM_RATIO: f32 = 0\.60.*?fn auxiliary_pane_initial_width.*?enforce_dez_main_work_area_width_budget.*?constrain_auxiliary_horizontal_flexes' \
+    'AUXILIARY_PANE_MAX_INITIAL_WIDTH: f32 = 360\..*?AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0\.22.*?MAIN_WORK_AREA_MINIMUM_RATIO: f32 = 0\.60.*?AUXILIARY_PANES_MIN_COEXIST_WIDTH: f32 = 1800\..*?AUXILIARY_PANES_MIN_COEXIST_ASPECT_RATIO: f32 = 1\.60.*?fn auxiliary_pane_initial_width.*?fn dez_auxiliary_panes_can_coexist.*?hide_competing_dez_auxiliary_pane_for_reveal.*?enforce_dez_auxiliary_pane_visibility_policy.*?enforce_dez_main_work_area_width_budget.*?constrain_auxiliary_horizontal_flexes' \
     'Workspace Tools can regress to an equal-width column or lose the persistent Main Work Area budget'
+require_multiline_pattern crates/workspace/src/workspace.rs \
+    'fn auxiliary_panes_only_coexist_in_an_ultrawide_shell.*?1799\..*?1800\..*?1200\..*?1800\..*?1000\.' \
+    'Workspace Tools and Agent can regress to competing full-height drawers on laptop-sized windows'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'pub fn reset_pane_sizes.*?center\.reset_pane_sizes\(cx\).*?enforce_dez_main_work_area_width_budget\(cx\).*?serialize_workspace' \
     'Reset Pane Sizes can bypass the Dez Main Work Area budget before persistence'
@@ -646,7 +652,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     '"Rename Thread", "Rename Agent Session".*?"Archive Thread", "Archive Agent Session".*?"Regenerate Thread Title".*?"Regenerate Agent Session Title".*?"Open Thread as Markdown".*?"Open Agent Session as Markdown"' \
     'Session Rail Agent Session actions can regress to mixed Thread terminology'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    '"Agent Profiles".*?agent_session_label\([[:space:]]*APP_NAME,[[:space:]]*"Open Settings",[[:space:]]*"Agent Settings".*?"Toggle Sidebar".*?"Hide Session Rail"' \
+    '"Agent Profiles".*?agent_session_label\([[:space:]]*APP_NAME,[[:space:]]*"Open Settings",[[:space:]]*"Agent Settings".*?"Toggle Sidebar".*?"Hide Sessions"' \
     'the Session Rail Agent Tools menu can regress to ambiguous Settings or Sidebar destinations'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
     '"agent::RenameSelectedThread".*?"session_rail::RenameSelectedSession".*?"sidebar::NewThreadInGroup".*?"session_rail::NewAgentSessionInWorkspace".*?"sidebar::ToggleThreadSwitcher".*?"session_rail::SwitchSessions".*?"sidebar::ToggleThreadHistory".*?"session_rail::ToggleAgentHistory"' \
@@ -1198,7 +1204,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\([[:space:]]*"open-recent-workspaces".*?session_rail_recent_workspaces_utility_label\(rail_width\).*?IconName::FolderOpen.*?aria_label\("Open Recent Workspaces"\).*?Tooltip::for_action\("Open Recent Workspaces"' \
     'the Session Rail footer can regress to an ambiguous Open Workspace utility'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'Button::new\([[:space:]]*"agent-sidebar-options-menu".*?if labels_visible \{ "Agent Tools" \} else \{ "" \}.*?IconName::Settings.*?aria_label\("Agent Tools and Settings"\).*?header\("Agent Context"\).*?"Hide Session Rail"' \
+    'Button::new\([[:space:]]*"agent-sidebar-options-menu".*?if labels_visible \{ "Agent Tools" \} else \{ "" \}.*?IconName::Settings.*?aria_label\("Agent Tools and Settings"\).*?header\("Agent Context"\).*?"Hide Sessions"' \
     'the Session Rail footer can regress to a Robot icon that does not open Agent'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let popover_open = popover_handle\.is_deployed\(\).*?Button::new\([[:space:]]*"open-recent-workspaces".*?tab_index\(0isize\).*?aria_label\("Open Recent Workspaces"\).*?aria_expanded\(popover_open\).*?let menu_open = self\.agent_options_menu_handle\.is_deployed\(\).*?Button::new\([[:space:]]*"agent-sidebar-options-menu".*?tab_index\(0isize\).*?aria_label\("Agent Tools and Settings"\).*?aria_expanded\(menu_open\).*?selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\).*?Button::new\("history".*?tab_index\(0isize\).*?toggle_state\(is_archive\)' \

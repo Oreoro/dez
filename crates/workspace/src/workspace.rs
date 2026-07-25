@@ -213,12 +213,23 @@ fn canvas_layout_modal_row_background(cx: &App) -> Hsla {
 const AUXILIARY_PANE_MAX_INITIAL_WIDTH: f32 = 360.;
 const AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0.22;
 const MAIN_WORK_AREA_MINIMUM_RATIO: f32 = 0.60;
+const AUXILIARY_PANES_MIN_COEXIST_WIDTH: f32 = 1800.;
+const AUXILIARY_PANES_MIN_COEXIST_ASPECT_RATIO: f32 = 1.60;
 
 fn auxiliary_pane_initial_width(available_width: Pixels) -> Pixels {
     px(
         (available_width.as_f32() * AUXILIARY_PANE_MAX_INITIAL_RATIO)
             .min(AUXILIARY_PANE_MAX_INITIAL_WIDTH),
     )
+}
+
+fn dez_auxiliary_panes_can_coexist(size: Size<Pixels>) -> bool {
+    if size.width <= Pixels::ZERO || size.height <= Pixels::ZERO {
+        return false;
+    }
+
+    size.width >= px(AUXILIARY_PANES_MIN_COEXIST_WIDTH)
+        && size.width >= size.height * AUXILIARY_PANES_MIN_COEXIST_ASPECT_RATIO
 }
 
 fn canvas_layout_modal_row_border(cx: &App) -> Hsla {
@@ -6824,20 +6835,26 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> Option<Arc<dyn PanelHandle>> {
         let (pane, ix, panel) = self.panel_item_for_id(panel_id, cx)?;
+        let competing_pane_hidden =
+            self.hide_competing_dez_auxiliary_pane_for_reveal(pane.read(cx).pane_kind(), cx);
         let was_hidden = pane.update(cx, |pane, cx| {
             let was_hidden = !pane.is_visible();
             pane.set_visible(true, cx);
             pane.activate_item(ix, true, focus, window, cx);
             was_hidden
         });
-        if was_hidden {
+        if competing_pane_hidden || was_hidden {
             self.enforce_dez_main_work_area_width_budget(cx);
             self.center.mark_positions(cx);
         }
-        if focus {
+        let focus_revealed_pane = competing_pane_hidden && !self.active_pane.read(cx).is_visible();
+        if focus_revealed_pane {
+            self.set_active_pane(&pane, window, cx);
+        }
+        if focus || focus_revealed_pane {
             panel.panel_focus_handle(cx).focus(window, cx);
         }
-        if was_hidden {
+        if competing_pane_hidden || was_hidden {
             self.serialize_workspace(window, cx);
         }
         Some(panel)
@@ -6850,20 +6867,26 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> Option<Arc<dyn PanelHandle>> {
         let (pane, ix, panel) = self.panel_item_for::<T>(cx)?;
+        let competing_pane_hidden =
+            self.hide_competing_dez_auxiliary_pane_for_reveal(pane.read(cx).pane_kind(), cx);
         let was_hidden = pane.update(cx, |pane, cx| {
             let was_hidden = !pane.is_visible();
             pane.set_visible(true, cx);
             pane.activate_item(ix, true, focus, window, cx);
             was_hidden
         });
-        if was_hidden {
+        if competing_pane_hidden || was_hidden {
             self.enforce_dez_main_work_area_width_budget(cx);
             self.center.mark_positions(cx);
         }
-        if focus {
+        let focus_revealed_pane = competing_pane_hidden && !self.active_pane.read(cx).is_visible();
+        if focus_revealed_pane {
+            self.set_active_pane(&pane, window, cx);
+        }
+        if focus || focus_revealed_pane {
             panel.panel_focus_handle(cx).focus(window, cx);
         }
-        if was_hidden {
+        if competing_pane_hidden || was_hidden {
             self.serialize_workspace(window, cx);
         }
         Some(panel)
@@ -7146,6 +7169,9 @@ impl Workspace {
             fallback_pane
         };
 
+        if !visible {
+            self.hide_competing_dez_auxiliary_pane_for_reveal(pane_kind, cx);
+        }
         pane.update(cx, |pane, cx| pane.set_visible(!visible, cx));
         self.enforce_dez_main_work_area_width_budget(cx);
         self.center.mark_positions(cx);
@@ -7759,8 +7785,7 @@ impl Workspace {
 
         if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
             for panel_pane_kind in [PanelPaneKind::Agent, PanelPaneKind::Project] {
-                let pane = self.ensure_panel_pane(panel_pane_kind, window, cx);
-                pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+                self.set_canvas_panel_pane_visible(panel_pane_kind, true, window, cx);
             }
 
             // The destination panes must exist before dock-backed panel items are
@@ -7787,11 +7812,9 @@ impl Workspace {
         self.push_canvas_layout_snapshot(cx);
 
         if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
-            let project_pane = self.ensure_panel_pane(PanelPaneKind::Project, window, cx);
-            project_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
-
+            self.set_canvas_panel_pane_visible(PanelPaneKind::Project, true, window, cx);
+            self.set_canvas_panel_pane_visible(PanelPaneKind::Agent, true, window, cx);
             let agent_pane = self.ensure_panel_pane(PanelPaneKind::Agent, window, cx);
-            agent_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
 
             self.sync_panel_panes_from_docks(window, cx);
             self.close_legacy_docks_for_canvas(window, cx);
@@ -8250,6 +8273,7 @@ impl Workspace {
 
         self.close_legacy_docks_for_canvas(window, cx);
 
+        self.enforce_dez_auxiliary_pane_visibility_policy(cx);
         self.center.mark_positions(cx);
         self.serialize_workspace(window, cx);
         cx.notify();
@@ -8448,6 +8472,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         if visible {
+            self.hide_competing_dez_auxiliary_pane_for_reveal(panel_pane_kind.pane_kind(), cx);
             let pane = self.ensure_panel_pane(panel_pane_kind, window, cx);
             pane.update(cx, |pane, cx| pane.set_visible(true, cx));
             self.sync_panel_panes_from_docks(window, cx);
@@ -8530,6 +8555,7 @@ impl Workspace {
             self.active_canvas_layout_recipe = Some(layout_recipe);
         }
 
+        self.enforce_dez_auxiliary_pane_visibility_policy(cx);
         self.enforce_dez_main_work_area_width_budget(cx);
         self.center.mark_positions(cx);
         self.serialize_workspace(window, cx);
@@ -8591,6 +8617,70 @@ impl Workspace {
         )
     }
 
+    fn hide_competing_dez_auxiliary_pane_for_reveal(
+        &mut self,
+        pane_kind: PaneKind,
+        cx: &mut App,
+    ) -> bool {
+        if paths::APP_NAME == "Zed" || dez_auxiliary_panes_can_coexist(self.bounds.size) {
+            return false;
+        }
+
+        let competing_kind = match pane_kind {
+            PaneKind::Project => PaneKind::Agent,
+            PaneKind::Agent => PaneKind::Project,
+            PaneKind::Tabs => return false,
+        };
+        let Some(competing_pane) = self.panel_pane_for_kind(competing_kind, cx) else {
+            return false;
+        };
+        if !competing_pane.read(cx).is_visible() {
+            return false;
+        }
+
+        competing_pane.update(cx, |pane, cx| pane.set_visible(false, cx));
+        true
+    }
+
+    fn compact_shell_preferred_auxiliary_pane_kind(&self, cx: &App) -> PaneKind {
+        let active_kind = self.active_pane.read(cx).pane_kind();
+        if matches!(active_kind, PaneKind::Project | PaneKind::Agent) {
+            return active_kind;
+        }
+
+        match self.active_canvas_layout_recipe {
+            Some(
+                CanvasLayoutRecipe::AgentControl
+                | CanvasLayoutRecipe::AgentOperations
+                | CanvasLayoutRecipe::RemoteOperations
+                | CanvasLayoutRecipe::PairProgramming
+                | CanvasLayoutRecipe::IncidentResponse,
+            ) => PaneKind::Agent,
+            _ => PaneKind::Project,
+        }
+    }
+
+    fn enforce_dez_auxiliary_pane_visibility_policy(&mut self, cx: &mut App) -> bool {
+        if paths::APP_NAME == "Zed"
+            || dez_auxiliary_panes_can_coexist(self.bounds.size)
+            || !self.panel_pane_visible(PaneKind::Project, cx)
+            || !self.panel_pane_visible(PaneKind::Agent, cx)
+        {
+            return false;
+        }
+
+        let keep_kind = self.compact_shell_preferred_auxiliary_pane_kind(cx);
+        let hide_kind = match keep_kind {
+            PaneKind::Agent => PaneKind::Project,
+            PaneKind::Project | PaneKind::Tabs => PaneKind::Agent,
+        };
+        let Some(pane) = self.panel_pane_for_kind(hide_kind, cx) else {
+            return false;
+        };
+        pane.update(cx, |pane, cx| pane.set_visible(false, cx));
+        true
+    }
+
     fn add_panel_to_panel_pane<T: Panel>(
         &mut self,
         panel: Entity<T>,
@@ -8647,6 +8737,8 @@ impl Workspace {
         };
 
         let panel_id = panel_handle.panel_id();
+        let competing_pane_hidden = activate
+            && self.hide_competing_dez_auxiliary_pane_for_reveal(panel_pane_kind.pane_kind(), cx);
         let pane = self.ensure_panel_pane(panel_pane_kind, window, cx);
         pane.update(cx, |pane, cx| {
             let existing_index = pane.items().enumerate().find_map(|(ix, item)| {
@@ -8678,6 +8770,14 @@ impl Workspace {
                 cx,
             );
         });
+        if competing_pane_hidden {
+            self.enforce_dez_main_work_area_width_budget(cx);
+            self.center.mark_positions(cx);
+            if !self.active_pane.read(cx).is_visible() {
+                self.set_active_pane(&pane, window, cx);
+                panel_handle.activation_focus_handle(cx).focus(window, cx);
+            }
+        }
     }
 
     fn sync_panel_panes_from_docks(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -13819,6 +13919,15 @@ impl Render for Workspace {
                                                 this.reflow_active_canvas_layout_for_bounds_change(
                                                     window, cx,
                                                 );
+                                                if this
+                                                    .enforce_dez_auxiliary_pane_visibility_policy(
+                                                        cx,
+                                                    )
+                                                {
+                                                    this.center.mark_positions(cx);
+                                                    this.serialize_workspace(window, cx);
+                                                    cx.notify();
+                                                }
                                                 this.enforce_dez_main_work_area_width_budget(cx);
                                             }
                                         })
@@ -16201,6 +16310,13 @@ mod tests {
             after_agent >= px(600.),
             "opening both contextual panes must preserve at least 60% of the Main Work Area"
         );
+    }
+
+    #[test]
+    fn auxiliary_panes_only_coexist_in_an_ultrawide_shell() {
+        assert!(!dez_auxiliary_panes_can_coexist(size(px(1799.), px(900.))));
+        assert!(!dez_auxiliary_panes_can_coexist(size(px(1800.), px(1200.))));
+        assert!(dez_auxiliary_panes_can_coexist(size(px(1800.), px(1000.))));
     }
 
     #[test]

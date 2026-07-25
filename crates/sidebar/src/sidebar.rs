@@ -12649,7 +12649,7 @@ impl Sidebar {
                         v_flex()
                             .min_w_0()
                             .gap_0p5()
-                            .child(Label::new("Session Rail").size(LabelSize::Small))
+                            .child(Label::new("Sessions").size(LabelSize::Small))
                             .child(
                                 h_flex()
                                     .id("session-rail-status")
@@ -13353,7 +13353,7 @@ impl Sidebar {
                                 if APP_NAME == "Zed" {
                                     "Toggle Sidebar"
                                 } else {
-                                    "Hide Session Rail"
+                                    "Hide Sessions"
                                 },
                                 Box::new(ToggleSidebar),
                             );
