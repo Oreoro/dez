@@ -701,6 +701,15 @@ pub struct AgentUiSettingsContent {
     ///
     /// Default: true
     pub notify_on_attention: Option<bool>,
+    /// Whether Dez may open floating attention popup windows in addition to
+    /// keeping the condition visible in Sessions.
+    ///
+    /// Official Zed retains its existing popup policy. Dez defaults this to
+    /// false so background work does not cover the Main Work Area; users who
+    /// prefer cross-window alerts can opt in.
+    ///
+    /// Default: false
+    pub floating_attention_popups: Option<bool>,
 }
 
 #[with_fallible_options]

@@ -3607,3 +3607,19 @@ Completed for the populated Sessions creation-ownership source slice:
 - added focused source assertions and a static identity guard for both products;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Agent attention overlay source slice:
+
+- kept unread and action-needed Agent state in Sessions without opening a
+  floating window over the Main Work Area by default;
+- added the explicit **Floating Attention Popups** Dez setting for users who
+  prefer cross-window alerts;
+- kept sound policy and accessible window-attention requests independent from
+  the visual popup;
+- preserved the shaped popup's Lumin material and JetBrains UI role when the
+  setting is enabled;
+- preserved official Zed's existing popup policy through a product branch;
+- added source assertions and static guards for the default, opt-in, and
+  compatibility states;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

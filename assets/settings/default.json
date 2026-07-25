@@ -1131,7 +1131,8 @@
     "show_terminal_agents_in_session_rail": true,
     "resume_sessions_on_restart": true,
     "connect_hooks": true,
-    "notify_on_attention": true
+    "notify_on_attention": true,
+    "floating_attention_popups": false
   },
   // Settings for multiplexer-style workspace behavior.
   "multiplexer": {

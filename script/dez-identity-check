@@ -193,6 +193,24 @@ require_multiline_pattern crates/settings_ui/src/pages/audio_test_window.rs \
 require_multiline_pattern crates/agent_ui/src/ui/agent_notification.rs \
     'WindowOptions.*?WindowBackgroundAppearance::Transparent.*?impl Render for AgentNotification.*?setup_ui_font\(window, cx\).*?font\(ui_font\)' \
     'the shaped Agent notification can lose its intentional transparency or active Dez UI font'
+require_pattern assets/settings/default.json \
+    '"floating_attention_popups": false' \
+    'Dez can regress to opening floating Agent attention windows by default'
+require_multiline_pattern crates/settings_content/src/canvas.rs \
+    'pub notify_on_attention: Option<bool>.*?pub floating_attention_popups: Option<bool>' \
+    'the Agent attention model can regress to coupling Sessions state with floating popup policy'
+require_multiline_pattern crates/agent_ui/src/agent_ui.rs \
+    'pub floating_attention_popups: bool.*?floating_attention_popups: agent_ui\.floating_attention_popups\.unwrap\(\).*?fn floating_agent_attention_popup_enabled.*?app_name == "Zed" \|\| floating_attention_popups.*?fn dez_keeps_attention_in_sessions_unless_floating_popups_are_enabled.*?!floating_agent_attention_popup_enabled\("Dez", false\).*?floating_agent_attention_popup_enabled\("Dez", true\).*?floating_agent_attention_popup_enabled\("Zed", false\)' \
+    'Dez floating Agent attention popup policy no longer covers default, opt-in, and official Zed states'
+require_multiline_pattern crates/agent_ui/src/conversation_view.rs \
+    'fn show_notification.*?let floating_popup_enabled = floating_agent_attention_popup_enabled\([[:space:]]*paths::APP_NAME,[[:space:]]*CanvasAgentUiSettings::get_global\(cx\)\.floating_attention_popups.*?NotifyWhenAgentWaiting::PrimaryScreen.*?request_agent_window_attention\(window, cx\).*?if floating_popup_enabled.*?self\.pop_up.*?NotifyWhenAgentWaiting::AllScreens.*?request_agent_window_attention\(window, cx\).*?if floating_popup_enabled.*?self\.pop_up' \
+    'native Agent attention can regress to covering the Dez Main Work Area or losing independent window attention'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'fn show_terminal_notification.*?let floating_popup_enabled = floating_agent_attention_popup_enabled\([[:space:]]*paths::APP_NAME,[[:space:]]*CanvasAgentUiSettings::get_global\(cx\)\.floating_attention_popups.*?NotifyWhenAgentWaiting::PrimaryScreen.*?request_agent_window_attention\(window, cx\).*?if floating_popup_enabled.*?pop_up_terminal_notification.*?NotifyWhenAgentWaiting::AllScreens.*?request_agent_window_attention\(window, cx\).*?if floating_popup_enabled.*?pop_up_terminal_notification' \
+    'terminal Agent attention can regress to covering the Dez Main Work Area or losing independent window attention'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'fn floating_attention_popup_setting_visible.*?app_name != "Zed".*?floating_attention_popup_setting_visible\(paths::APP_NAME\).*?"Floating Attention Popups".*?"agent_ui\.floating_attention_popups".*?assert!\(floating_attention_popup_setting_visible\("Dez"\)\).*?assert!\(!floating_attention_popup_setting_visible\("Zed"\)\)' \
+    'Dez can lose the explicit floating-attention opt-in or expose it as a redundant official Zed setting'
 require_multiline_pattern crates/collab_ui/src/collab_ui.rs \
     'kind: WindowKind::PopUp.*?window_background: WindowBackgroundAppearance::Transparent' \
     'the shaped collaboration notifications can lose their intentional transparent shell'

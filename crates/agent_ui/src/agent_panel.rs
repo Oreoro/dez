@@ -45,7 +45,8 @@ use crate::terminal_thread_metadata_store::{
 use crate::thread_metadata_store::{ThreadId, ThreadMetadataStore, ThreadMetadataStoreEvent};
 use crate::{
     Agent, AgentInitialContent, AgentThreadSource, CanvasAgentUiSettings, ExternalSourcePrompt,
-    NewExternalAgentThread, NewNativeAgentThreadFromSummary, request_agent_window_attention,
+    NewExternalAgentThread, NewNativeAgentThreadFromSummary,
+    floating_agent_attention_popup_enabled, request_agent_window_attention,
 };
 use crate::{
     AgentDiffPane, ConversationView, CopyThreadToClipboard, Follow, LoadThreadFromClipboard,
@@ -3043,17 +3044,23 @@ impl AgentPanel {
             return;
         }
         let settings = AgentSettings::get_global(cx);
+        let floating_popup_enabled = floating_agent_attention_popup_enabled(
+            paths::APP_NAME,
+            CanvasAgentUiSettings::get_global(cx).floating_attention_popups,
+        );
         match settings.notify_when_agent_waiting {
             NotifyWhenAgentWaiting::PrimaryScreen => {
                 request_agent_window_attention(window, cx);
-                if let Some(primary) = cx.primary_display() {
+                if floating_popup_enabled && let Some(primary) = cx.primary_display() {
                     self.pop_up_terminal_notification(terminal_id, &title, primary, window, cx);
                 }
             }
             NotifyWhenAgentWaiting::AllScreens => {
                 request_agent_window_attention(window, cx);
-                for screen in cx.displays() {
-                    self.pop_up_terminal_notification(terminal_id, &title, screen, window, cx);
+                if floating_popup_enabled {
+                    for screen in cx.displays() {
+                        self.pop_up_terminal_notification(terminal_id, &title, screen, window, cx);
+                    }
                 }
             }
             NotifyWhenAgentWaiting::Never => {}

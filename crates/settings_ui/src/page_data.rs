@@ -105,6 +105,10 @@ fn auto_update_setting_visible(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn floating_attention_popup_setting_visible(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
 fn cli_default_open_behavior_description(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "How `zed <path>` opens directories when no flag is specified."
@@ -9081,7 +9085,7 @@ fn attention_page() -> SettingsPage {
     } else {
         "Show the action-needed summary in Sessions."
     };
-    let items = vec![
+    let mut items = vec![
         SettingsPageItem::SectionHeader("Attention"),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Show Attention Status",
@@ -9172,6 +9176,34 @@ fn attention_page() -> SettingsPage {
             files: USER,
         }),
     ];
+
+    if floating_attention_popup_setting_visible(paths::APP_NAME) {
+        items.insert(
+            3,
+            SettingsPageItem::SettingItem(SettingItem {
+                title: "Floating Attention Popups",
+                description: "Allow Agent attention to open a floating window over other work. Off by default because Sessions already keeps unread and action-needed state visible.",
+                field: Box::new(SettingField {
+                    organization_override: None,
+                    json_path: Some("agent_ui.floating_attention_popups"),
+                    pick: |settings_content| {
+                        settings_content
+                            .agent_ui
+                            .as_ref()
+                            .and_then(|settings| settings.floating_attention_popups.as_ref())
+                    },
+                    write: |settings_content, value, _| {
+                        settings_content
+                            .agent_ui
+                            .get_or_insert_default()
+                            .floating_attention_popups = value;
+                    },
+                }),
+                metadata: None,
+                files: USER,
+            }),
+        );
+    }
 
     SettingsPage {
         title: "Attention",
@@ -11432,6 +11464,8 @@ mod tests {
         ));
         assert!(!auto_update_setting_visible("Dez"));
         assert!(auto_update_setting_visible("Zed"));
+        assert!(floating_attention_popup_setting_visible("Dez"));
+        assert!(!floating_attention_popup_setting_visible("Zed"));
     }
 
     #[test]

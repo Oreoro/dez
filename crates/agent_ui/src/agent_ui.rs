@@ -120,6 +120,7 @@ pub struct CanvasAgentUiSettings {
     pub resume_sessions_on_restart: bool,
     pub connect_hooks: bool,
     pub notify_on_attention: bool,
+    pub floating_attention_popups: bool,
     pub announce_agent_attention: bool,
 }
 
@@ -142,6 +143,7 @@ impl settings::Settings for CanvasAgentUiSettings {
             resume_sessions_on_restart: agent_ui.resume_sessions_on_restart.unwrap(),
             connect_hooks: agent_ui.connect_hooks.unwrap(),
             notify_on_attention: agent_ui.notify_on_attention.unwrap(),
+            floating_attention_popups: agent_ui.floating_attention_popups.unwrap(),
             announce_agent_attention: content
                 .accessibility
                 .as_ref()
@@ -149,6 +151,13 @@ impl settings::Settings for CanvasAgentUiSettings {
                 .unwrap_or(true),
         }
     }
+}
+
+pub(crate) fn floating_agent_attention_popup_enabled(
+    app_name: &str,
+    floating_attention_popups: bool,
+) -> bool {
+    app_name == "Zed" || floating_attention_popups
 }
 
 pub(crate) fn request_agent_window_attention(window: &mut Window, cx: &App) {
@@ -1121,6 +1130,13 @@ mod tests {
         assert!(terminal_thread_command_visible("Zed", false, true));
         assert!(!terminal_thread_command_visible("Zed", true, true));
         assert!(!terminal_thread_command_visible("Zed", false, false));
+    }
+
+    #[test]
+    fn dez_keeps_attention_in_sessions_unless_floating_popups_are_enabled() {
+        assert!(!floating_agent_attention_popup_enabled("Dez", false));
+        assert!(floating_agent_attention_popup_enabled("Dez", true));
+        assert!(floating_agent_attention_popup_enabled("Zed", false));
     }
 
     #[gpui::test]

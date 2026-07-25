@@ -50,7 +50,7 @@ use crate::conversation_view::elicitation::{
 use crate::message_editor::SessionCapabilities;
 use crate::{
     AgentThreadSource, CanvasAgentUiSettings, default_agent_session_title,
-    request_agent_window_attention, resolve_agent_image,
+    floating_agent_attention_popup_enabled, request_agent_window_attention, resolve_agent_image,
 };
 use lru::LruCache;
 use rope::Point;
@@ -3244,6 +3244,10 @@ impl ConversationView {
         }
 
         let settings = AgentSettings::get_global(cx);
+        let floating_popup_enabled = floating_agent_attention_popup_enabled(
+            paths::APP_NAME,
+            CanvasAgentUiSettings::get_global(cx).floating_attention_popups,
+        );
 
         let should_notify = !self.agent_status_visible(window, cx);
 
@@ -3266,7 +3270,7 @@ impl ConversationView {
         match settings.notify_when_agent_waiting {
             NotifyWhenAgentWaiting::PrimaryScreen => {
                 request_agent_window_attention(window, cx);
-                if let Some(primary) = cx.primary_display() {
+                if floating_popup_enabled && let Some(primary) = cx.primary_display() {
                     self.pop_up(
                         icon,
                         caption.into(),
@@ -3282,19 +3286,21 @@ impl ConversationView {
             }
             NotifyWhenAgentWaiting::AllScreens => {
                 request_agent_window_attention(window, cx);
-                let caption = caption.into();
-                for screen in cx.displays() {
-                    self.pop_up(
-                        icon,
-                        caption.clone(),
-                        title.clone(),
-                        root_thread_id,
-                        root_work_dirs.clone(),
-                        root_title.clone(),
-                        window,
-                        screen,
-                        cx,
-                    );
+                if floating_popup_enabled {
+                    let caption = caption.into();
+                    for screen in cx.displays() {
+                        self.pop_up(
+                            icon,
+                            caption.clone(),
+                            title.clone(),
+                            root_thread_id,
+                            root_work_dirs.clone(),
+                            root_title.clone(),
+                            window,
+                            screen,
+                            cx,
+                        );
+                    }
                 }
             }
             NotifyWhenAgentWaiting::Never => {
@@ -7251,7 +7257,13 @@ pub(crate) mod tests {
 
     pub(crate) fn init_test(cx: &mut TestAppContext) {
         cx.update(|cx| {
-            let settings_store = SettingsStore::test(cx);
+            let mut settings_store = SettingsStore::test(cx);
+            settings_store.update_user_settings(cx, |settings| {
+                settings
+                    .agent_ui
+                    .get_or_insert_with(Default::default)
+                    .floating_attention_popups = Some(true);
+            });
             cx.set_global(settings_store);
             // Use an isolated DB so parallel tests can't overwrite each
             // other's global keys (e.g. the last-created entry kind).

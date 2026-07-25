@@ -381,11 +381,18 @@ a small top shelf inside the Main Work Area, and toasts sit above the status bar
 without reserving an invisible full-screen interaction layer. On glass windows,
 nonblocking feedback uses lighter elevation and no modal shadow.
 
+Agent attention stays in Sessions by default instead of opening a shaped window
+over the editor or terminal. Unread state, action-needed counts, sound policy,
+and accessible window-attention requests remain independent; users who want
+cross-window alerts can enable **Floating Attention Popups** under
+**Settings → Attention**.
+
 Stable secondary windows—including About, account verification, Settings,
 Audio Test, and profiling—inherit the same active Lumin window material and UI
 font instead of becoming opaque or reverting to a platform-default typeface.
-Small shaped notification popups stay transparent around their own surface,
-while their text still uses the configured Dez UI font.
+When explicitly enabled, shaped Agent notification popups stay transparent
+around their own surface and use the configured Dez UI font. Retained incoming
+call and project-sharing popups follow the same material rule.
 
 ## What Dez is not
 

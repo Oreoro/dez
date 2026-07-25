@@ -859,7 +859,9 @@ Terminal-agent detection:
   in normal tabs across multiple panes.
 - Default `agent_ui.connect_hooks`, `agent_ui.resume_sessions_on_restart`, and
   `agent_ui.notify_on_attention` to `true`; runtime code must still distinguish
-  authoritative provider hooks from terminal-observed heuristics.
+  authoritative provider hooks from terminal-observed heuristics. Dez defaults
+  `agent_ui.floating_attention_popups` to `false` so Sessions owns visual
+  attention unless the user explicitly opts into cross-window alerts.
 - Runtime startup now respects `agent_ui.resume_sessions_on_restart` for
   automatic active agent-thread and terminal restoration. Terminal title,
   breadcrumb, program, and bell hooks now respect `agent_ui.connect_hooks`, and
@@ -1017,8 +1019,10 @@ Accessibility:
 - Agent attention is announced once, not repeatedly.
 - Runtime agent and terminal-agent notification paths now honor
   `accessibility.announce_agent_attention` for OS/window attention requests;
-  in-app notification popups remain controlled by `agent_ui.notify_on_attention`
-  and the existing agent waiting notification setting.
+  notification state remains controlled by `agent_ui.notify_on_attention` and
+  the existing agent waiting notification setting. Dez-shaped popup windows
+  additionally require `agent_ui.floating_attention_popups`, while official Zed
+  preserves its existing behavior.
 - State is not color-only.
 - High-contrast and reduced-motion modes are supported.
 - Runtime motion now honors `accessibility.reduced_motion`: `reduced` forces

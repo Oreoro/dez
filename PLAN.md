@@ -2723,7 +2723,9 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   collaboration notification popups retain transparent outer windows and
   their existing configured-font setup. Static guards protect the stable
   window versus shaped-popup distinction. This is source-only; no build, test
-  binary, alternate binary, or visual launch was performed.
+  binary, alternate binary, or visual launch was performed. The 2026-07-26
+  attention-overlay slice below keeps the Agent shape available but makes it an
+  explicit Dez opt-in.
 - 2026-07-25: Tightened the first-work hierarchy at both Main Work Area entry
   points. Welcome now exposes exactly three primary-section transitions per
   state: Open Workspace, Clone Repository, and Open Scratch Terminal without a
@@ -2855,5 +2857,14 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Keyboard shortcuts and command-palette routes continue to create a Main Work
   Area terminal, and official Zed retains its compatibility overview action.
   Focused source assertions and an identity guard pin both product branches.
+  This is source-only; no build, test binary, alternate binary, or visual
+  launch was performed.
+- 2026-07-26: Removed floating Agent attention windows from Dez's default
+  interaction model. Sessions already owns unread and action-needed state, so
+  background Agent work no longer places a shaped popup over the Main Work
+  Area. **Floating Attention Popups** provides an explicit opt-in; sound and
+  accessible window-attention policy remain independent. Official Zed keeps
+  its inherited behavior, and opt-in popups retain Lumin material plus the
+  configured UI font. Source assertions and identity guards cover each branch.
   This is source-only; no build, test binary, alternate binary, or visual
   launch was performed.
