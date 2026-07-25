@@ -501,6 +501,12 @@ require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
 reject_pattern crates/ui/src/components/ai/thread_item.rs \
     'GradientFade' \
     'Sessions rows can regress to gradient layers that paint over titles and actions'
+reject_pattern crates/sidebar/src/sidebar.rs \
+    'GradientFade' \
+    'Workspace headers can regress to theme-dependent gradient layers over their titles and actions'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn render_project_header.*?let label = if highlight_positions\.is_empty\(\).*?Label::new.*?\.truncate\(\).*?HighlightedLabel::new.*?\.truncate\(\).*?h_flex\(\).*?\.relative\(\).*?\.min_w_0\(\).*?\.flex_1\(\).*?\.child\([[:space:]]*h_flex\(\)[[:space:]]*\.flex_none\(\)[[:space:]]*\.gap\(px\(1\.0\)\).*?render_new_session_button.*?render_project_header_ellipsis_menu' \
+    'Workspace headers can regress from bounded inline truncation to overlapping title and action regions'
 require_multiline_pattern crates/git_ui/src/git_panel.rs \
     'fn review_repository_position.*?active_repository.*?filter.*?changed_file_counts.*?position.*?fn review_repository_with_changes.*?repositories\(\).*?sort_by.*?review_repository_position.*?fn first_review_change.*?cached_status.*?min_by.*?fn review_prefers_the_active_dirty_repository_then_the_first_dirty_repository.*?ReviewChanges,.*?register\(workspace: &mut Workspace\).*?_: &ReviewChanges.*?review_repository_with_changes.*?repository_changed.*?set_as_active_repository.*?reveal_panel::<GitPanel>.*?GitPanelTab::Changes.*?schedule_update.*?select_first_entry_if_none.*?first_review_change.*?ProjectDiff::deploy_at' \
     'Review Changes can regress to revealing an oversized tool column without an actual Main Work Area diff'

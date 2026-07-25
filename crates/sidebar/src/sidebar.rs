@@ -38,9 +38,8 @@ use feature_flags::{
 use gpui::{
     Action as _, AnyElement, AnyView, App, ClickEvent, ClipboardItem, Context, Decorations,
     DismissEvent, Entity, EntityId, FocusHandle, Focusable, KeyContext, ListState, Modifiers,
-    Pixels, PromptLevel, Render, SharedString, Task, TaskExt, WeakEntity, Window,
-    WindowBackgroundAppearance, WindowHandle, linear_color_stop, linear_gradient, list, prelude::*,
-    px,
+    Pixels, PromptLevel, Render, SharedString, Task, TaskExt, WeakEntity, Window, WindowHandle,
+    linear_color_stop, linear_gradient, list, prelude::*, px,
 };
 use itertools::Itertools;
 use language_model::LanguageModelRegistry;
@@ -72,7 +71,7 @@ use terminal::session_host::{
 use terminal_view::TerminalView;
 use theme::{ActiveTheme, CLIENT_SIDE_DECORATION_ROUNDING};
 use ui::{
-    AgentThreadStatus, Callout, CommonAnimationExt, ContextMenu, ContextMenuEntry, GradientFade,
+    AgentThreadStatus, Callout, CommonAnimationExt, ContextMenu, ContextMenuEntry,
     HighlightedLabel, PopoverMenu, PopoverMenuHandle, ScrollAxes, Scrollbars, Severity, Tab,
     ThreadItem, ThreadItemContrast, ThreadItemDensity, ThreadItemEvidenceStatus, ThreadItemRadius,
     ThreadItemWorktreeInfo, TintColor, Tooltip, WithScrollbar, prelude::*, render_modifiers,
@@ -5248,22 +5247,17 @@ impl Sidebar {
         let key_for_focus = key.clone();
         let key_for_empty_terminal = key.clone();
 
-        // The fade gradient renders as a visible patch on transparent windows,
-        // so truncate the label instead.
-        let opaque_window =
-            cx.theme().window_background_appearance() == WindowBackgroundAppearance::Opaque;
-
         let label = if highlight_positions.is_empty() {
             Label::new(label.clone())
                 .size(label_size)
                 .when(!is_active, |this| this.color(Color::Muted))
-                .when(!opaque_window, |this| this.truncate())
+                .truncate()
                 .into_any_element()
         } else {
             HighlightedLabel::new(label.clone(), highlight_positions.to_vec())
                 .size(label_size)
                 .when(!is_active, |this| this.color(Color::Muted))
-                .when(!opaque_window, |this| this.truncate())
+                .truncate()
                 .into_any_element()
         };
 
@@ -5293,17 +5287,6 @@ impl Sidebar {
             color.border_variant
         } else {
             color.border_focused
-        };
-
-        let group_name_for_gradient = group_name.clone();
-        let gradient_overlay = move || {
-            GradientFade::new(base_bg, hover_solid, hover_solid)
-                .width(px(92.0))
-                .right(px(-2.0))
-                .gradient_stop(0.7)
-                .when(!has_filter, |this| {
-                    this.group_name(group_name_for_gradient.clone())
-                })
         };
 
         let header = h_flex()
@@ -5345,7 +5328,7 @@ impl Sidebar {
                 h_flex()
                     .relative()
                     .min_w_0()
-                    .w_full()
+                    .flex_1()
                     .gap(header_gap)
                     .when(!labels_visible, |this| {
                         this.child(
@@ -5427,12 +5410,10 @@ impl Sidebar {
                         )
                     }),
             )
-            .children(opaque_window.then(|| gradient_overlay()))
             .child(
                 h_flex()
+                    .flex_none()
                     .gap(px(1.0))
-                    .pr(header_padding_right)
-                    .children(opaque_window.then(|| gradient_overlay()))
                     .child(self.render_new_session_button(
                         ix,
                         id_prefix,

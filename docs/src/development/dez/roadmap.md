@@ -3550,3 +3550,18 @@ Completed for the Sessions row hierarchy source slices:
 - updated source assertions, product docs, Fork Notes, and identity guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Workspace-header overlay cleanup source slice:
+
+- removed the two opaque-window gradient masks that could paint over Workspace
+  names and the Start Terminal Session/Options action boundary;
+- made the name, optional layout metadata, disclosure, and status indicators
+  use one bounded flexible allocation with unconditional truncation;
+- made the action cluster a fixed inline sibling and removed its duplicate
+  right padding, preventing overlap and theme-dependent header geometry;
+- removed the now-unused window-appearance and gradient-fade dependencies from
+  Sessions;
+- added a static no-gradient header guard and updated the permanent UI
+  contract;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

@@ -2817,3 +2817,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   areas. Source assertions and an identity guard pin the restoration boundary.
   This is source-only; no build, test binary, alternate binary, or visual
   launch was performed.
+- 2026-07-26: Removed the remaining Workspace-header action overlays from
+  Sessions. Workspace names, layout metadata, disclosure, and status now share
+  one flexible truncated region; Start Terminal Session and Options occupy one
+  fixed inline action region. The opaque-window gradient masks and duplicate
+  action-side padding are gone, so Lumin glass and opaque themes use identical
+  non-overlapping geometry. A source guard prevents gradient header layers from
+  returning. This is source-only; no build, test binary, alternate binary, or
+  visual launch was performed.
