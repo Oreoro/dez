@@ -4106,3 +4106,49 @@ Completed for the terminal context hierarchy source slice:
   a second tab-bar material; and
 - retained source-only evidence. No app build, test binary, alternate binary,
   or fresh visual launch was performed.
+
+Completed for the unified contextual-drawer reveal source slice:
+
+- audited direct toggles, typed panel activation, entity-ID activation, and
+  remote panel-ID activation instead of assuming they shared one layout path;
+- found that alternate activation routes could reveal Workspace Tools or Agent
+  without applying the narrow-window Sessions exclusion;
+- centralized the responsive preparation step so every pane-backed tool reveal
+  first retires the competing drawer and, below 1160 logical pixels, Sessions;
+- routed remote panel activation through the same visibility, focus, sizing,
+  and serialization behavior as local panel activation;
+- added focused source coverage and a static regression guard for the
+  alternate activation path; and
+- retained source-only evidence. No app build, test binary, alternate binary,
+  or fresh visual launch was performed.
+
+Completed for the minimal Welcome hierarchy source slice:
+
+- compared the rendered Welcome structure with the permanent three-transition
+  product contract instead of counting only its primary section;
+- removed the trailing **Configure Dez** launcher catalogue from both empty and
+  Workspace-backed Dez Welcome states;
+- kept Settings, keymaps, and extensions in the application menu and Command
+  Palette, where those global destinations already belong;
+- preserved recent Workspaces as useful secondary content when history exists,
+  the three state-dependent workflow actions, and official Zed's inherited
+  Personalize section;
+- added product assertions and static guards against restoring unrelated
+  configuration actions to the first canvas; and
+- retained source-only evidence. No app build, test binary, alternate binary,
+  or fresh visual launch was performed.
+
+Completed for the stale empty split restoration source slice:
+
+- traced the field-captured **Session unavailable + blank Main Work Area**
+  composition to single-work-area selection prioritizing stale active emptiness
+  over a visible pane containing user work;
+- changed restoration priority to retain active work first, then other visible
+  terminal, file, or recovery surfaces, using active emptiness only as a
+  fallback;
+- repaired active-pane command ownership when normalization retires the stale
+  pane, without forcing keyboard focus during application restoration;
+- added focused regression coverage and static guards for both retention order
+  and active-pane promotion; and
+- retained source-only evidence at implementation time. The subsequent release
+  validation is tracked by the macOS build workflow.

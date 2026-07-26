@@ -6657,14 +6657,8 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<Arc<dyn PanelHandle>> {
-        if let Some((pane, ix, panel)) = self.panel_item_for_proto_id(panel_id, cx) {
-            pane.update(cx, |pane, cx| {
-                pane.activate_item(ix, true, true, window, cx);
-            });
-            panel.panel_focus_handle(cx).focus(window, cx);
-            cx.notify();
-            self.serialize_workspace(window, cx);
-            return Some(panel);
+        if let Some((_, _, panel)) = self.panel_item_for_proto_id(panel_id, cx) {
+            return self.activate_panel_item_for_id(panel.panel_id(), true, window, cx);
         }
 
         let mut panel = None;
@@ -6887,7 +6881,7 @@ impl Workspace {
     ) -> Option<Arc<dyn PanelHandle>> {
         let (pane, ix, panel) = self.panel_item_for_id(panel_id, cx)?;
         let competing_pane_hidden =
-            self.hide_competing_dez_auxiliary_pane_for_reveal(pane.read(cx).pane_kind(), cx);
+            self.prepare_dez_auxiliary_pane_for_reveal(pane.read(cx).pane_kind(), window, cx);
         let was_hidden = pane.update(cx, |pane, cx| {
             let was_hidden = !pane.is_visible();
             pane.set_visible(true, cx);
@@ -6919,7 +6913,7 @@ impl Workspace {
     ) -> Option<Arc<dyn PanelHandle>> {
         let (pane, ix, panel) = self.panel_item_for::<T>(cx)?;
         let competing_pane_hidden =
-            self.hide_competing_dez_auxiliary_pane_for_reveal(pane.read(cx).pane_kind(), cx);
+            self.prepare_dez_auxiliary_pane_for_reveal(pane.read(cx).pane_kind(), window, cx);
         let was_hidden = pane.update(cx, |pane, cx| {
             let was_hidden = !pane.is_visible();
             pane.set_visible(true, cx);
@@ -7128,7 +7122,14 @@ impl Workspace {
             .map(|pane| pane.entity_id())
             .collect::<Vec<_>>();
 
-        self.ensure_visible_tabbed_panes(1, &[], window, cx);
+        let retained_panes = self.ensure_visible_tabbed_panes(1, &[], window, cx);
+        if !self.active_pane.read(cx).is_visible()
+            && let Some(next_active_pane) = retained_panes.first()
+        {
+            // Restoration should repair command ownership without stealing
+            // keyboard focus from another application or an auxiliary drawer.
+            self.set_active_pane(next_active_pane, window, cx);
+        }
 
         let visible_tabbed_panes_after = self
             .center
@@ -7242,9 +7243,6 @@ impl Workspace {
         }
 
         let visible = pane.read(cx).is_visible();
-        if !visible {
-            self.schedule_close_dez_sessions_for_auxiliary_reveal(window, cx);
-        }
         let pane_owned_focus =
             visible && (self.active_pane == pane || pane.read(cx).has_focus(window, cx));
         self.mark_canvas_layout_custom();
@@ -7266,7 +7264,7 @@ impl Workspace {
         };
 
         if !visible {
-            self.hide_competing_dez_auxiliary_pane_for_reveal(pane_kind, cx);
+            self.prepare_dez_auxiliary_pane_for_reveal(pane_kind, window, cx);
         }
         pane.update(cx, |pane, cx| pane.set_visible(!visible, cx));
         self.enforce_dez_main_work_area_width_budget(cx);
@@ -8573,8 +8571,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         if visible {
-            self.schedule_close_dez_sessions_for_auxiliary_reveal(window, cx);
-            self.hide_competing_dez_auxiliary_pane_for_reveal(panel_pane_kind.pane_kind(), cx);
+            self.prepare_dez_auxiliary_pane_for_reveal(panel_pane_kind.pane_kind(), window, cx);
             let pane = self.ensure_panel_pane(panel_pane_kind, window, cx);
             pane.update(cx, |pane, cx| pane.set_visible(true, cx));
             self.sync_panel_panes_from_docks(window, cx);
@@ -8602,9 +8599,10 @@ impl Workspace {
 
         // A single-work-area recipe used to leave empty panes from a previous
         // split visible. That produced a large blank column beside the actual
-        // launch surface. Keep the active pane first, then panes that already
-        // contain user work, and only use empty panes to fill the requested
-        // recipe. Surplus panes containing files or terminals are never hidden.
+        // launch surface. Keep an active pane first only when it contains user
+        // work, then prefer every other visible work surface before using a
+        // stale active empty pane as a fallback. Surplus panes containing files
+        // or terminals are never hidden.
         let mut selected_pane_ids = HashSet::default();
         let mut selected_panes = Vec::new();
         let active_pane_id = self.active_pane.entity_id();
@@ -8613,11 +8611,17 @@ impl Workspace {
             .iter()
             .filter(|pane| {
                 let pane_state = pane.read(cx);
-                pane.entity_id() == active_pane_id && pane_state.is_visible()
+                pane.entity_id() == active_pane_id
+                    && pane_state.is_visible()
+                    && pane_state.items_len() > 0
             })
             .chain(panes.iter().filter(|pane| {
                 let pane_state = pane.read(cx);
                 pane_state.is_visible() && pane_state.items_len() > 0
+            }))
+            .chain(panes.iter().filter(|pane| {
+                let pane_state = pane.read(cx);
+                pane.entity_id() == active_pane_id && pane_state.is_visible()
             }))
             .chain(panes.iter().filter(|pane| pane.read(cx).is_visible()))
             .chain(panes.iter())
@@ -8631,11 +8635,14 @@ impl Workspace {
         }
 
         for pane in &panes {
-            let pane_state = pane.read(cx);
-            let selected = selected_pane_ids.contains(&pane.entity_id());
-            let contains_user_work = pane_state.items_len() > 0;
-            let visible = pane_state.is_visible();
-            drop(pane_state);
+            let (selected, contains_user_work, visible) = {
+                let pane_state = pane.read(cx);
+                (
+                    selected_pane_ids.contains(&pane.entity_id()),
+                    pane_state.items_len() > 0,
+                    pane_state.is_visible(),
+                )
+            };
 
             if selected && !visible {
                 pane.update(cx, |pane, cx| pane.set_visible(true, cx));
@@ -8822,6 +8829,24 @@ impl Workspace {
             });
         });
         true
+    }
+
+    /// Applies Dez's auxiliary-region contract before any Workspace Tool or
+    /// Agent surface becomes visible. Every activation route must pass through
+    /// this method so command-palette, keyboard, remote-ID, and pointer
+    /// navigation cannot produce a different layout.
+    fn prepare_dez_auxiliary_pane_for_reveal(
+        &mut self,
+        pane_kind: PaneKind,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if !matches!(pane_kind, PaneKind::Project | PaneKind::Agent) {
+            return false;
+        }
+
+        self.schedule_close_dez_sessions_for_auxiliary_reveal(window, cx);
+        self.hide_competing_dez_auxiliary_pane_for_reveal(pane_kind, cx)
     }
 
     fn hide_competing_dez_auxiliary_pane_for_reveal(
@@ -16656,6 +16681,42 @@ mod tests {
     }
 
     #[gpui::test]
+    async fn test_panel_activation_uses_the_shared_dez_auxiliary_reveal_contract(
+        cx: &mut TestAppContext,
+    ) {
+        init_test(cx);
+
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            let project_pane = workspace.ensure_panel_pane(PanelPaneKind::Project, window, cx);
+            let agent_pane = workspace.ensure_panel_pane(PanelPaneKind::Agent, window, cx);
+            let panel = cx.new(|cx| TestPanel::new(DockPosition::Left, 100, cx));
+            workspace.add_panel(panel, window, cx);
+
+            project_pane.update(cx, |pane, cx| pane.set_visible(false, cx));
+            agent_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+
+            assert!(
+                workspace
+                    .activate_panel_item::<TestPanel>(true, window, cx)
+                    .is_some()
+            );
+            assert!(
+                project_pane.read(cx).is_visible(),
+                "the requested Workspace Tool must become visible"
+            );
+            assert!(
+                !agent_pane.read(cx).is_visible(),
+                "all activation routes must retire the competing Agent drawer"
+            );
+        });
+    }
+
+    #[gpui::test]
     async fn test_single_work_area_cleanup_hides_only_surplus_empty_panes(cx: &mut TestAppContext) {
         init_test(cx);
 
@@ -16691,11 +16752,15 @@ mod tests {
             workspace.set_active_pane(&primary_pane, window, cx);
             let retained_panes = workspace.ensure_visible_tabbed_panes(1, &[], window, cx);
 
-            assert!(primary_pane.read(cx).is_visible());
-            assert!(user_work_pane.read(cx).is_visible());
             assert!(
-                retained_panes.iter().any(|pane| pane == &user_work_pane),
-                "a pane containing user work must remain part of the visible recipe"
+                !primary_pane.read(cx).is_visible(),
+                "a stale active empty pane must not outrank visible user work"
+            );
+            assert!(user_work_pane.read(cx).is_visible());
+            assert_eq!(
+                retained_panes.first(),
+                Some(&user_work_pane),
+                "the single-work-area recipe must retain the visible pane containing user work"
             );
         });
     }
@@ -16728,6 +16793,47 @@ mod tests {
             );
             assert!(primary_pane.read(cx).is_visible());
             assert!(surplus_empty_pane.read(cx).is_visible());
+        });
+    }
+
+    #[gpui::test]
+    async fn test_restore_promotes_visible_user_work_over_stale_empty_active_pane(
+        cx: &mut TestAppContext,
+    ) {
+        init_test(cx);
+
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            let stale_empty_pane = workspace.active_pane().clone();
+            let user_work_pane =
+                workspace.split_pane(stale_empty_pane.clone(), SplitDirection::Right, window, cx);
+            let unavailable_session =
+                cx.new(|cx| TestItem::new(cx).with_label("Session unavailable"));
+            workspace.add_item(
+                user_work_pane.clone(),
+                Box::new(unavailable_session),
+                None,
+                false,
+                false,
+                window,
+                cx,
+            );
+
+            workspace.set_active_pane(&stale_empty_pane, window, cx);
+            workspace.active_canvas_layout_recipe = None;
+
+            assert!(workspace.normalize_restored_dez_main_work_area(window, cx));
+            assert!(!stale_empty_pane.read(cx).is_visible());
+            assert!(user_work_pane.read(cx).is_visible());
+            assert_eq!(
+                workspace.active_pane(),
+                &user_work_pane,
+                "restoration must return command ownership to the retained work surface"
+            );
         });
     }
 

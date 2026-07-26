@@ -286,30 +286,8 @@ const DEZ_CONTENT: (Section, Section) = (
         ],
     },
     Section {
-        title: "Configure Dez",
-        entries: &[
-            SectionEntry {
-                icon: IconName::Settings,
-                title: "Open Settings",
-                action: &OpenSettings,
-                visibility_guard: SectionVisibility::Always,
-            },
-            SectionEntry {
-                icon: IconName::Keyboard,
-                title: "Customize Keymaps",
-                action: &OpenKeymap,
-                visibility_guard: SectionVisibility::Always,
-            },
-            SectionEntry {
-                icon: IconName::Blocks,
-                title: "Explore Extensions",
-                action: &Extensions {
-                    category_filter: None,
-                    id: None,
-                },
-                visibility_guard: SectionVisibility::Always,
-            },
-        ],
+        title: "",
+        entries: &[],
     },
 );
 
@@ -338,30 +316,8 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
         ],
     },
     Section {
-        title: "Configure Dez",
-        entries: &[
-            SectionEntry {
-                icon: IconName::Settings,
-                title: "Open Settings",
-                action: &OpenSettings,
-                visibility_guard: SectionVisibility::Always,
-            },
-            SectionEntry {
-                icon: IconName::Keyboard,
-                title: "Customize Keymaps",
-                action: &OpenKeymap,
-                visibility_guard: SectionVisibility::Always,
-            },
-            SectionEntry {
-                icon: IconName::Blocks,
-                title: "Explore Extensions",
-                action: &Extensions {
-                    category_filter: None,
-                    id: None,
-                },
-                visibility_guard: SectionVisibility::Always,
-            },
-        ],
+        title: "",
+        entries: &[],
     },
 );
 
@@ -555,13 +511,19 @@ impl Render for WelcomePage {
 
         let showing_recent_projects =
             self.fallback_to_recent_projects && !recent_projects.is_empty();
-        let second_section = if showing_recent_projects {
-            self.render_recent_project_section(recent_projects)
-                .into_any_element()
+        let secondary_content = if showing_recent_projects {
+            Some(
+                self.render_recent_project_section(recent_projects)
+                    .into_any_element(),
+            )
+        } else if second_section.entries.is_empty() {
+            None
         } else {
-            second_section
-                .render(first_section_entries, &self.focus_handle, false)
-                .into_any_element()
+            Some(
+                second_section
+                    .render(first_section_entries, &self.focus_handle, false)
+                    .into_any_element(),
+            )
         };
 
         let welcome_label = if self.fallback_to_recent_projects {
@@ -695,7 +657,9 @@ impl Render for WelcomePage {
                         &self.focus_handle,
                         welcome_emphasizes_first_action(APP_NAME),
                     ))
-                    .child(second_section)
+                    .when_some(secondary_content, |this, secondary_content| {
+                        this.child(secondary_content)
+                    })
                     .when(
                         APP_NAME == "Zed" && !self.fallback_to_recent_projects,
                         |this| {
@@ -926,6 +890,18 @@ mod tests {
         );
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[1].title, "Open Files");
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[2].title, "New File");
+        assert!(
+            DEZ_CONTENT.1.entries.is_empty(),
+            "Dez Welcome should leave configuration to normal application navigation"
+        );
+        assert!(
+            DEZ_WORKSPACE_CONTENT.1.entries.is_empty(),
+            "an active Workspace should not restore unrelated configuration launchers"
+        );
+        assert!(
+            !ZED_CONTENT.1.entries.is_empty(),
+            "official Zed retains its inherited Personalize section"
+        );
         assert_eq!(ZED_CONTENT.0.entries[0].title, "New Terminal");
         assert_eq!(OPEN_WORKSPACE.create_new_window, Some(false));
         assert!(welcome_emphasizes_first_action("Dez"));
