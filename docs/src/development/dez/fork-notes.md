@@ -929,7 +929,10 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   it, they tell the user to repeat the command, press Enter to open, or Escape
   to return. Mixed Terminal Session and Agent Session rows retain quiet visual
   metadata but expose type, selection, position, and collection size to
-  assistive technology. The switcher previews work; hovering never does.
+  assistive technology. The switcher previews work; hovering never does. Its
+  intentional full-window interaction boundary dismisses on outside click,
+  while clicks inside the dialog stop propagation. It cannot remain as an
+  invisible shield that makes the Main Work Area appear frozen.
 - **2026-07-23: Public tool names describe regions, not compatibility types.**
   Command Palette namespaces, empty-state guidance, and cross-tool handoffs use
   Files, Outline, Git, Debug, Agent, Workspace Tools, and Sessions. Internal

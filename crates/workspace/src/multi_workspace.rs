@@ -2660,16 +2660,29 @@ impl Render for MultiWorkspace {
                 )
                 .child(self.workspace().read(cx).modal_layer.clone())
                 .children(self.sidebar_overlay.as_ref().map(|view| {
-                    deferred(div().absolute().size_full().inset_0().occlude().child(
-                        v_flex().h(px(0.0)).top_20().items_center().child(
-                            h_flex().occlude().child(view.clone()).on_mouse_down(
-                                MouseButton::Left,
-                                |_, _, cx| {
-                                    cx.stop_propagation();
-                                },
-                            ),
-                        ),
-                    ))
+                    deferred(
+                        div()
+                            .absolute()
+                            .size_full()
+                            .inset_0()
+                            .occlude()
+                            .on_mouse_down(MouseButton::Left, |_, window, cx| {
+                                // The Session Switcher intentionally owns the
+                                // window while open. Its outside hit target
+                                // must dismiss instead of becoming an
+                                // invisible, nonresponsive shield.
+                                window.dispatch_action(Box::new(menu::Cancel), cx);
+                                cx.stop_propagation();
+                            })
+                            .child(v_flex().h(px(0.0)).top_20().items_center().child(
+                                h_flex().occlude().child(view.clone()).on_mouse_down(
+                                    MouseButton::Left,
+                                    |_, _, cx| {
+                                        cx.stop_propagation();
+                                    },
+                                ),
+                            )),
+                    )
                     .with_priority(2)
                 })),
             window,

@@ -3019,3 +3019,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   client-decoration path. A pure source assertion and identity guards cover
   both decisions. This is source-only; no build, test binary, alternate binary,
   or visual launch was performed.
+- 2026-07-26: Closed the Session Switcher's invisible blocked-window path.
+  Its intentional full-window interaction boundary now dispatches Cancel on an
+  outside click, restoring the previewed origin through the existing
+  source-preserving dismissal flow. The bounded dialog stops propagation, so
+  row selection and controls remain interactive. Escape, Enter, modifier
+  release, and focus-loss behavior are unchanged. A static guard protects both
+  halves of the interaction. This is source-only; no build, test binary,
+  alternate binary, or visual launch was performed.

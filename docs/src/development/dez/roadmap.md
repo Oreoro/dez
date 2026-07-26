@@ -2572,6 +2572,8 @@ Completed for the Session Switcher guidance and collection-semantics slice:
 - attached the complete cycle, open, and cancel behavior to the dialog as its
   accessible description;
 - exposed the visible footer as an accessibility status;
+- made the outside interaction boundary dispatch Cancel while dialog clicks
+  remain contained, so the switcher cannot become an invisible dead overlay;
 - retained the selected row as the active descendant and added one-based row
   position plus total collection size to every mixed Session entry;
 - added reusable `ThreadItem` collection semantics, focused copy assertions,
@@ -3045,6 +3047,9 @@ Completed for the transient-layer and recovery-surface source slice:
   toast content to 90% of viewport width, 560 px, and 30% of viewport height
   with status-bar clearance;
 - kept full-screen occlusion only for intentional modal and switcher scrims;
+- made the Session Switcher's intentional full-window boundary dismiss on
+  outside click while containing clicks inside its dialog, eliminating the
+  invisible blocked-window state;
 - consolidated the Run, Supervise, and Review explanation into one Welcome
   panel instead of three competing cards;
 - made empty Workspace Tools and Agent drawers named regions with inward
