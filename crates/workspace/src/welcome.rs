@@ -197,10 +197,10 @@ fn welcome_emphasizes_first_action(app_name: &str) -> bool {
     app_name != "Zed"
 }
 
-const ZED_CONTENT: (Section<5>, Section<3>) = (
+const ZED_CONTENT: (Section, Section) = (
     Section {
         title: "Start Working",
-        entries: [
+        entries: &[
             SectionEntry {
                 icon: IconName::Terminal,
                 title: "New Terminal",
@@ -235,7 +235,7 @@ const ZED_CONTENT: (Section<5>, Section<3>) = (
     },
     Section {
         title: "Personalize",
-        entries: [
+        entries: &[
             SectionEntry {
                 icon: IconName::Settings,
                 title: "Open Settings",
@@ -261,10 +261,10 @@ const ZED_CONTENT: (Section<5>, Section<3>) = (
     },
 );
 
-const DEZ_CONTENT: (Section<3>, Section<3>) = (
+const DEZ_CONTENT: (Section, Section) = (
     Section {
         title: "Start a Dez Workflow",
-        entries: [
+        entries: &[
             SectionEntry {
                 icon: IconName::FolderOpen,
                 title: "Open Workspace",
@@ -287,7 +287,7 @@ const DEZ_CONTENT: (Section<3>, Section<3>) = (
     },
     Section {
         title: "Configure Dez",
-        entries: [
+        entries: &[
             SectionEntry {
                 icon: IconName::Settings,
                 title: "Open Settings",
@@ -313,10 +313,10 @@ const DEZ_CONTENT: (Section<3>, Section<3>) = (
     },
 );
 
-const DEZ_WORKSPACE_CONTENT: (Section<3>, Section<3>) = (
+const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
     Section {
         title: "Start in This Workspace",
-        entries: [
+        entries: &[
             SectionEntry {
                 icon: IconName::Terminal,
                 title: "Start Terminal Session",
@@ -339,7 +339,7 @@ const DEZ_WORKSPACE_CONTENT: (Section<3>, Section<3>) = (
     },
     Section {
         title: "Configure Dez",
-        entries: [
+        entries: &[
             SectionEntry {
                 icon: IconName::Settings,
                 title: "Open Settings",
@@ -365,12 +365,12 @@ const DEZ_WORKSPACE_CONTENT: (Section<3>, Section<3>) = (
     },
 );
 
-struct Section<const COLS: usize> {
+struct Section {
     title: &'static str,
-    entries: [SectionEntry; COLS],
+    entries: &'static [SectionEntry],
 }
 
-impl<const COLS: usize> Section<COLS> {
+impl Section {
     fn render(
         self,
         index_offset: usize,
@@ -656,9 +656,10 @@ impl Render for WelcomePage {
                                         .aria_label("Run, Supervise, Review workflow")
                                         .w_full()
                                         .gap_1()
-                                        .children(workflow_steps.into_iter().map(
-                                            |(icon, title, description)| {
+                                        .children(workflow_steps.into_iter().enumerate().map(
+                                            |(index, (icon, title, description))| {
                                                 h_flex()
+                                                    .id(("dez-workflow-step", index))
                                                     .role(gpui::Role::ListItem)
                                                     .aria_label(format!("{title}. {description}"))
                                                     .w_full()

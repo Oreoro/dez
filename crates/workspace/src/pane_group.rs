@@ -550,15 +550,6 @@ impl Member {
         }
     }
 
-    fn clear_bounding_boxes(&self) {
-        if let Self::Axis(axis) = self {
-            *axis.bounding_boxes.lock() = vec![None; axis.members.len()];
-            for member in &axis.members {
-                member.clear_bounding_boxes();
-            }
-        }
-    }
-
     pub fn mark_positions(
         &mut self,
         in_center_group: bool,

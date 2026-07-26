@@ -1249,13 +1249,13 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'render_agent_options_menu.*?IconName::Settings.*?Button::new\("history".*?IconName::Clock.*?render_recent_projects_button' \
     'the Session Rail can regress to inconsistent primary action icon roles'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'const DEZ_CONTENT: \(Section<3>.*?IconName::FolderOpen,[[:space:]]*title: "Open Workspace".*?IconName::CloudDownload,[[:space:]]*title: "Clone Repository".*?IconName::Terminal,[[:space:]]*title: "Open Scratch Terminal".*?const DEZ_WORKSPACE_CONTENT: \(Section<3>.*?IconName::Terminal,[[:space:]]*title: "Start Terminal Session".*?IconName::FolderOpen,[[:space:]]*title: "Open Files".*?IconName::File,[[:space:]]*title: "New File"' \
+    'const DEZ_CONTENT: \(Section, Section\).*?IconName::FolderOpen,[[:space:]]*title: "Open Workspace".*?IconName::CloudDownload,[[:space:]]*title: "Clone Repository".*?IconName::Terminal,[[:space:]]*title: "Open Scratch Terminal".*?const DEZ_WORKSPACE_CONTENT: \(Section, Section\).*?IconName::Terminal,[[:space:]]*title: "Start Terminal Session".*?IconName::FolderOpen,[[:space:]]*title: "Open Files".*?IconName::File,[[:space:]]*title: "New File"' \
     'the Dez welcome surface can regress to generic or contradictory action icons'
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'when\(self\.primary.*?ButtonStyle::Filled.*?aria_description\("Recommended first step"\).*?fn welcome_emphasizes_first_action.*?app_name != "Zed".*?first_section\.render\(.*?welcome_emphasizes_first_action\(APP_NAME\)' \
     'Dez Welcome can regress to equally weighted actions or lose its recommended first transition'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'id\("dez-workflow"\).*?role\(gpui::Role::Region\).*?aria_label\("How Dez works: Run, Supervise, Review"\).*?\.gap_1\(\).*?SectionHeader::new\("How Dez Works"\).*?id\("dez-workflow-steps"\).*?role\(gpui::Role::List\).*?aria_label\("Run, Supervise, Review workflow"\).*?workflow_steps\.into_iter\(\)\.map.*?role\(gpui::Role::ListItem\).*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?Icon::new\(icon\).*?Color::Accent' \
+    'id\("dez-workflow"\).*?role\(gpui::Role::Region\).*?aria_label\("How Dez works: Run, Supervise, Review"\).*?\.gap_1\(\).*?SectionHeader::new\("How Dez Works"\).*?id\("dez-workflow-steps"\).*?role\(gpui::Role::List\).*?aria_label\("Run, Supervise, Review workflow"\).*?workflow_steps\.into_iter\(\)\.enumerate\(\)\.map.*?id\(\("dez-workflow-step", index\)\).*?role\(gpui::Role::ListItem\).*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?Icon::new\(icon\).*?Color::Accent' \
     'Welcome can regress to an unnamed or visually ambiguous product workflow'
 reject_multiline_pattern crates/workspace/src/welcome.rs \
     'id\("dez-workflow"\).*?(\.p_3\(\)|\.rounded_md\(\)|\.border_1\(\)|\.bg\(cx\.theme\(\)\.colors\(\)\.panel_background\)|\.rounded_full\(\)|\.bg\(cx\.theme\(\)\.colors\(\)\.element_selected\)).*?first_section\.render' \
@@ -1738,7 +1738,7 @@ require_multiline_pattern crates/workspace/src/workspace.rs \
     'fn workspace_notification_shelf_stays_bounded_to_the_viewport.*?2000\..*?400\..*?1000\..*?320\..*?600\..*?280\..*?240\..*?216\.' \
     'Workspace notification width can regress beyond narrow Main Work Area bounds'
 require_multiline_pattern crates/workspace/src/toast_layer.rs \
-    'TOAST_MAX_WIDTH: Pixels = px\(560\.\).*?TOAST_MAX_VIEWPORT_WIDTH_FRACTION: f32 = 0\.90.*?TOAST_MAX_VIEWPORT_HEIGHT_FRACTION: f32 = 0\.30.*?fn canvas_toast_layer_bottom.*?Compact => px\(32\.\).*?Balanced => px\(36\.\).*?Spacious => px\(44\.\).*?impl Render for ToastLayer.*?left_0\(\).*?right_0\(\).*?bottom\(canvas_toast_layer_bottom\(cx\)\).*?id\("active-toast-container"\).*?role\(gpui::Role::Status\).*?aria_label\("Workspace status"\).*?vw\(TOAST_MAX_VIEWPORT_WIDTH_FRACTION, window\).*?min\(TOAST_MAX_WIDTH\).*?max_h\(vh\(TOAST_MAX_VIEWPORT_HEIGHT_FRACTION, window\)\).*?overflow_y_scroll\(\).*?occlude\(\)' \
+    'TOAST_MAX_WIDTH: Pixels = px\(560\.\).*?TOAST_MAX_VIEWPORT_WIDTH_FRACTION: f32 = 0\.90.*?TOAST_MAX_VIEWPORT_HEIGHT_FRACTION: f32 = 0\.30.*?fn canvas_toast_layer_bottom.*?Compact => px\(32\.\).*?Balanced => px\(36\.\).*?Spacious => px\(44\.\).*?fn canvas_toast_max_width.*?viewport_width \* TOAST_MAX_VIEWPORT_WIDTH_FRACTION.*?min\(TOAST_MAX_WIDTH\).*?impl Render for ToastLayer.*?left_0\(\).*?right_0\(\).*?bottom\(canvas_toast_layer_bottom\(cx\)\).*?id\("active-toast-container"\).*?role\(gpui::Role::Status\).*?aria_label\("Workspace status"\).*?max_w\(canvas_toast_max_width\(window\.viewport_size\(\)\.width\)\).*?max_h\(vh\(TOAST_MAX_VIEWPORT_HEIGHT_FRACTION, window\)\).*?overflow_y_scroll\(\).*?occlude\(\)' \
     'transient toasts can regress to an unbounded full-screen overlay'
 reject_multiline_pattern crates/workspace/src/toast_layer.rs \
     'impl Render for ToastLayer.*?absolute\(\)\.size_full\(\)' \
@@ -1849,10 +1849,10 @@ require_multiline_pattern crates/workspace/src/welcome.rs \
     'fn welcome_summary.*?"Terminal and Agent work stays connected to this Workspace and reviewable in the IDE\.".*?"Open a Workspace to connect Terminal and Agent work with files, Git, diagnostics, and diffs\.".*?Label::new\(welcome_summary\(APP_NAME, has_workspace\)\)' \
     'the Dez welcome headline no longer explains the Workspace-to-IDE product promise'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'const OPEN_WORKSPACE: OpenFolder = OpenFolder \{.*?create_new_window: Some\(false\).*?const DEZ_CONTENT: \(Section<3>.*?title: "Start a Dez Workflow".*?title: "Open Workspace",[[:space:]]*action: &OPEN_WORKSPACE.*?title: "Clone Repository".*?title: "Open Scratch Terminal"' \
+    'const OPEN_WORKSPACE: OpenFolder = OpenFolder \{.*?create_new_window: Some\(false\).*?const DEZ_CONTENT: \(Section, Section\).*?title: "Start a Dez Workflow".*?title: "Open Workspace",[[:space:]]*action: &OPEN_WORKSPACE.*?title: "Clone Repository".*?title: "Open Scratch Terminal"' \
     'the Dez welcome actions no longer make Workspace context primary'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'const REVEAL_FILES: RevealFiles = RevealFiles.*?const DEZ_WORKSPACE_CONTENT: \(Section<3>.*?title: "Start in This Workspace".*?title: "Start Terminal Session".*?title: "Open Files",[[:space:]]*action: &REVEAL_FILES.*?title: "New File".*?has_workspace.*?DEZ_WORKSPACE_CONTENT' \
+    'const REVEAL_FILES: RevealFiles = RevealFiles.*?const DEZ_WORKSPACE_CONTENT: \(Section, Section\).*?title: "Start in This Workspace".*?title: "Start Terminal Session".*?title: "Open Files",[[:space:]]*action: &REVEAL_FILES.*?title: "New File".*?has_workspace.*?DEZ_WORKSPACE_CONTENT' \
     'the Dez welcome screen can regress to asking for a Workspace that is already open'
 reject_pattern crates/workspace/src/welcome.rs \
     'title: "Open Files",[[:space:]]*action: &TOGGLE_PROJECT_PANE' \

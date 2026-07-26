@@ -35,6 +35,10 @@ fn canvas_toast_layer_padding_x(cx: &App) -> Pixels {
     }
 }
 
+fn canvas_toast_max_width(viewport_width: Pixels) -> Pixels {
+    (viewport_width * TOAST_MAX_VIEWPORT_WIDTH_FRACTION).min(TOAST_MAX_WIDTH)
+}
+
 pub fn init(cx: &mut App) {
     cx.observe_new(|workspace: &mut Workspace, _window, _cx| {
         workspace.register_action(|_workspace, _: &toast::RunAction, window, cx| {
@@ -246,7 +250,7 @@ impl ToastLayer {
 impl Render for ToastLayer {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let Some(active_toast) = &self.active_toast else {
-            return div();
+            return div().into_any_element();
         };
 
         v_flex()
@@ -265,7 +269,7 @@ impl Render for ToastLayer {
                     .role(gpui::Role::Status)
                     .aria_label("Workspace status")
                     .track_focus(&active_toast.focus_handle)
-                    .max_w(vw(TOAST_MAX_VIEWPORT_WIDTH_FRACTION, window).min(TOAST_MAX_WIDTH))
+                    .max_w(canvas_toast_max_width(window.viewport_size().width))
                     .max_h(vh(TOAST_MAX_VIEWPORT_HEIGHT_FRACTION, window))
                     .overflow_y_scroll()
                     .occlude()
@@ -289,5 +293,6 @@ impl Render for ToastLayer {
                     .child(active_toast.toast.view()),
             )
             .animate_in(AnimationDirection::FromBottom, true)
+            .into_any_element()
     }
 }

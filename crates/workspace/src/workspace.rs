@@ -67,8 +67,8 @@ use futures::{
     future::{Shared, try_join_all},
 };
 use gpui::{
-    Action, AnyEntity, AnyView, AnyWeakView, App, AsyncApp, AsyncWindowContext, Axis, Bounds,
-    ClipboardItem, Context, CursorStyle, Decorations, DismissEvent, DragMoveEvent, Entity,
+    Action, AnyElement, AnyEntity, AnyView, AnyWeakView, App, AsyncApp, AsyncWindowContext, Axis,
+    Bounds, ClipboardItem, Context, CursorStyle, Decorations, DismissEvent, DragMoveEvent, Entity,
     EntityId, EventEmitter, FocusHandle, Focusable, Global, HitboxBehavior, Hsla, KeyContext,
     Keystroke, ManagedView, MouseButton, PathPromptOptions, Point, PromptLevel, Render, ResizeEdge,
     Size, Stateful, Subscription, SystemWindowTabController, Task, TaskExt, Tiling, WeakEntity,
@@ -11051,7 +11051,11 @@ impl Workspace {
         self.update_window_edited(window, cx);
     }
 
-    fn render_notifications(&self, window: &mut Window, cx: &mut Context<Self>) -> Option<Div> {
+    fn render_notifications(
+        &self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
         if self.notifications.is_empty() {
             None
         } else {
@@ -11084,7 +11088,8 @@ impl Workspace {
                         self.notifications
                             .iter()
                             .map(|(_, notification)| notification.clone().into_any_element()),
-                    ),
+                    )
+                    .into_any_element(),
             )
         }
     }

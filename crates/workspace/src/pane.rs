@@ -1029,9 +1029,10 @@ impl Pane {
                                 .flex_wrap()
                                 .gap_x_5()
                                 .gap_y_2()
-                                .children(workflow_route.into_iter().map(
-                                    |(icon, label, target)| {
+                                .children(workflow_route.into_iter().enumerate().map(
+                                    |(index, (icon, label, target))| {
                                         h_flex()
+                                            .id(("empty-project-route-step", index))
                                             .role(gpui::Role::ListItem)
                                             .aria_label(format!("{label}. {target}"))
                                             .min_w(px(172.))
