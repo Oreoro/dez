@@ -5,15 +5,23 @@ use std::{
     path::PathBuf,
     sync::{Arc, mpsc},
     thread,
+    time::{Duration, Instant},
 };
+
+#[cfg(unix)]
+use std::os::fd::AsRawFd as _;
 
 use alacritty_terminal::{
     event::{OnResize as _, WindowSize},
     tty::{self, ChildEvent, EventedPty as _, EventedReadWrite as _},
 };
 use polling::{Event, Events, PollMode, Poller};
+#[cfg(unix)]
+use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 
 const PTY_READ_BUFFER_BYTES: usize = 64 * 1024;
+const FOREGROUND_PROCESS_REFRESH_INTERVAL: Duration = Duration::from_millis(200);
+const FOREGROUND_PROCESS_WATCH_DURATION: Duration = Duration::from_secs(2);
 // `EventedPty` assigns these fixed polling keys during registration, but the
 // current Alacritty revision no longer exports their names to consumers.
 const PTY_READ_WRITE_TOKEN: usize = 0;
@@ -22,8 +30,89 @@ const PTY_CHILD_EVENT_TOKEN: usize = 1;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TerminalHostPtyEvent {
     Output(Vec<u8>),
+    ForegroundProcessChanged { command: Option<String> },
     Exited { exit_code: Option<i32> },
     Failed(String),
+}
+
+struct ForegroundProcessObserver {
+    last_refresh: Option<Instant>,
+    last_command: Option<String>,
+    has_observation: bool,
+    #[cfg(unix)]
+    system: System,
+    #[cfg(unix)]
+    refresh_kind: ProcessRefreshKind,
+    #[cfg(unix)]
+    last_pid: Option<Pid>,
+}
+
+impl ForegroundProcessObserver {
+    fn new() -> Self {
+        Self {
+            last_refresh: None,
+            last_command: None,
+            has_observation: false,
+            #[cfg(unix)]
+            system: System::new(),
+            #[cfg(unix)]
+            refresh_kind: ProcessRefreshKind::nothing()
+                .with_cmd(UpdateKind::Always)
+                .with_exe(UpdateKind::Always)
+                .without_tasks(),
+            #[cfg(unix)]
+            last_pid: None,
+        }
+    }
+
+    fn refresh(&mut self, pty: &tty::Pty, force: bool) -> Option<Option<String>> {
+        let now = Instant::now();
+        if !force
+            && self.last_refresh.is_some_and(|last_refresh| {
+                now.duration_since(last_refresh) < FOREGROUND_PROCESS_REFRESH_INTERVAL
+            })
+        {
+            return None;
+        }
+        self.last_refresh = Some(now);
+
+        let command = self.foreground_command(pty);
+        if self.has_observation && self.last_command == command {
+            return None;
+        }
+        self.has_observation = true;
+        self.last_command = command.clone();
+        Some(command)
+    }
+
+    #[cfg(unix)]
+    fn foreground_command(&mut self, pty: &tty::Pty) -> Option<String> {
+        let process_group_id = unsafe { libc::tcgetpgrp(pty.file().as_raw_fd()) };
+        if process_group_id <= 0 {
+            return None;
+        }
+        let pid = Pid::from_u32(process_group_id as u32);
+        if self.last_pid.replace(pid) != Some(pid) {
+            self.system = System::new();
+        }
+        self.system.refresh_processes_specifics(
+            ProcessesToUpdate::Some(&[pid]),
+            true,
+            self.refresh_kind,
+        );
+        let process = self.system.process(pid)?;
+        let argv = process
+            .cmd()
+            .iter()
+            .filter_map(|argument| argument.to_str().map(ToOwned::to_owned))
+            .collect::<Vec<_>>();
+        crate::foreground_process_command_from_argv(&argv)
+    }
+
+    #[cfg(not(unix))]
+    fn foreground_command(&mut self, _pty: &tty::Pty) -> Option<String> {
+        None
+    }
 }
 
 enum TerminalHostPtyCommand {
@@ -145,10 +234,18 @@ fn run_pty(
         return;
     };
     let mut events = Events::with_capacity(event_capacity);
+    let mut foreground_process = ForegroundProcessObserver::new();
+    let mut foreground_process_watch_until = None;
+    if let Some(command) = foreground_process.refresh(&pty, true) {
+        event_handler(TerminalHostPtyEvent::ForegroundProcessChanged { command });
+    }
 
     'host: loop {
         events.clear();
-        if let Err(error) = poller.wait(&mut events, None) {
+        let foreground_process_wait = foreground_process_watch_until
+            .filter(|watch_until| *watch_until > Instant::now())
+            .map(|_| FOREGROUND_PROCESS_REFRESH_INTERVAL);
+        if let Err(error) = poller.wait(&mut events, foreground_process_wait) {
             if error.kind() == ErrorKind::Interrupted {
                 continue;
             }
@@ -161,6 +258,8 @@ fn run_pty(
                 Ok(TerminalHostPtyCommand::Input(bytes)) => {
                     if !bytes.is_empty() {
                         pending_input.push_back((bytes, 0));
+                        foreground_process_watch_until =
+                            Some(Instant::now() + FOREGROUND_PROCESS_WATCH_DURATION);
                     }
                 }
                 Ok(TerminalHostPtyCommand::Resize { columns, rows }) => {
@@ -214,6 +313,10 @@ fn run_pty(
                 }
                 _ => {}
             }
+        }
+
+        if let Some(command) = foreground_process.refresh(&pty, false) {
+            event_handler(TerminalHostPtyEvent::ForegroundProcessChanged { command });
         }
 
         let needs_write = !pending_input.is_empty();

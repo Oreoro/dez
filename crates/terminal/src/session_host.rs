@@ -422,6 +422,13 @@ pub struct TerminalSessionSnapshot {
     pub workspace_id: Option<i64>,
     #[serde(default)]
     pub process_id: Option<u32>,
+    /// Normalized command name observed in the PTY foreground process group.
+    ///
+    /// This is host-owned runtime evidence, not terminal-output inference. It
+    /// lets clients present a plain foreground agent immediately even when no
+    /// structured provider adapter is active.
+    #[serde(default)]
+    pub foreground_command: Option<String>,
     #[serde(default)]
     pub agent: Option<TerminalAgentSnapshot>,
     #[serde(default)]
@@ -566,6 +573,7 @@ mod tests {
             working_directory: Some(PathBuf::from("/repo")),
             workspace_id: Some(42),
             process_id: None,
+            foreground_command: None,
             agent: None,
             dimensions: TerminalDimensions::DEFAULT,
             earliest_replay_sequence: 0,
@@ -573,9 +581,14 @@ mod tests {
         };
         let mut serialized = serde_json::to_value(snapshot).unwrap();
         serialized.as_object_mut().unwrap().remove("workspace_id");
+        serialized
+            .as_object_mut()
+            .unwrap()
+            .remove("foreground_command");
 
         let restored: TerminalSessionSnapshot = serde_json::from_value(serialized).unwrap();
         assert_eq!(restored.workspace_id, None);
+        assert_eq!(restored.foreground_command, None);
     }
 
     #[test]

@@ -37,6 +37,24 @@ can:
 - select its Sessions row to return to the existing Surface; or
 - reattach a Host-owned terminal Session when durable terminals are enabled.
 
+### Foreground agents stay in the terminal
+
+Starting `codex`, `claude`, or another recognized terminal agent does not open
+an Agent panel or create a second Session. The existing terminal remains in the
+Main Work Area while its Sessions row changes to a concise state such as
+**Codex · Running**. Selecting that row returns to the same terminal Surface.
+
+For Host-owned terminals, Dez observes the PTY foreground process group and
+stores only its normalized command name in the bounded Session snapshot. This
+is process evidence, not inference from terminal text. A configured provider
+adapter can add structured progress, attention, commands, and checks; plain
+process detection deliberately promises only who appears to be running.
+
+Reattaching a detached Session shows **Opening…** in its existing row
+immediately. Repeated clicks do not create duplicate attachment work or another
+terminal. When attachment completes, the row returns to the observed lifecycle
+state and the restored terminal receives focus.
+
 ### Moving from a Session into the IDE
 
 The selected Sessions row and the active standalone terminal expose one shared

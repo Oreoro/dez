@@ -3106,3 +3106,15 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   inherited scope and populated-rail search presentation. Pure visibility
   assertions and the identity gate protect this behavior. This is source-only;
   no build, test binary, alternate binary, or visual launch was performed.
+- 2026-07-26: Closed the hosted-terminal foreground-agent gap. The helper now
+  observes the PTY foreground process group for a bounded window around input,
+  publishes the normalized command in the durable Session snapshot, and clears
+  it on exit. Attached terminals emit the same semantic process-info event as
+  ordinary terminals, so Sessions can change the existing row to **Codex ·
+  Running** without parsing TUI output or requiring a structured hook.
+  Detached Session activation now shows **Opening…** immediately and
+  coalesces repeat clicks until the single restored Surface is focused.
+  Structured attention and review evidence remain adapter-only. Static guards,
+  formatting, locked offline metadata, theme validation, and diff checks cover
+  this source slice; no build, test binary, alternate binary, or visual launch
+  was performed. Runtime proof remains open for the rebuilt app/helper pair.

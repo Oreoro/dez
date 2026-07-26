@@ -72,6 +72,10 @@ impl LocalTerminalHost {
                 .pid()
                 .map(|process_id| process_id.as_u32()),
         );
+        self.model.set_foreground_command(
+            session_id,
+            terminal.read(cx).foreground_process_command_name(),
+        );
         self.model
             .attach(session_id, TERMINAL_SESSION_PROTOCOL_VERSION, None);
         self.terminals.insert(session_id, terminal.clone());
@@ -83,17 +87,21 @@ impl LocalTerminalHost {
                     .set_title(session_id, Some(terminal.title(false)));
                 this.model
                     .set_working_directory(session_id, terminal.working_directory());
+                this.model
+                    .set_foreground_command(session_id, terminal.foreground_process_command_name());
             }
             Event::CloseTerminal => {
                 let exit_code = terminal.read(cx).exit_code();
                 this.model.terminate(session_id, exit_code);
                 this.model.set_process_id(session_id, None);
+                this.model.set_foreground_command(session_id, None);
                 this.terminals.remove(&session_id);
                 cx.notify();
             }
             Event::ProcessExited { exit_code } => {
                 this.model.terminate(session_id, *exit_code);
                 this.model.set_process_id(session_id, None);
+                this.model.set_foreground_command(session_id, None);
                 this.terminals.remove(&session_id);
                 cx.notify();
             }

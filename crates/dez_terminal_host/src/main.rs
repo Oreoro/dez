@@ -1076,14 +1076,19 @@ fn handle_pty_event(
                 eprintln!("failed to retain output for terminal session {session_id}: {error}");
             }
         }
+        TerminalHostPtyEvent::ForegroundProcessChanged { command } => {
+            model.set_foreground_command(session_id, command);
+        }
         TerminalHostPtyEvent::Exited { exit_code } => {
             model.set_state(session_id, TerminalSessionState::Exited { exit_code });
             model.set_process_id(session_id, None);
+            model.set_foreground_command(session_id, None);
         }
         TerminalHostPtyEvent::Failed(error) => {
             eprintln!("terminal session {session_id} PTY failed: {error}");
             model.set_state(session_id, TerminalSessionState::Exited { exit_code: None });
             model.set_process_id(session_id, None);
+            model.set_foreground_command(session_id, None);
         }
     }
     drop(model);

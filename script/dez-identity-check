@@ -1647,6 +1647,21 @@ require_multiline_pattern crates/workspace/src/notifications.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'if can_copy_codex_hook \{.*?menu = menu\.entry\("Copy Codex Hook Setup"' \
     'Codex hook setup can disappear instead of remaining in the Terminal Session context menu'
+require_multiline_pattern crates/terminal/src/session_host.rs \
+    'pub process_id: Option<u32>.*?pub foreground_command: Option<String>.*?pub agent: Option<TerminalAgentSnapshot>' \
+    'durable Terminal Sessions can regress to losing host-observed foreground process identity'
+require_multiline_pattern crates/terminal/src/session_host/pty_process.rs \
+    'FOREGROUND_PROCESS_REFRESH_INTERVAL.*?FOREGROUND_PROCESS_WATCH_DURATION.*?ForegroundProcessChanged.*?tcgetpgrp\(pty\.file\(\)\.as_raw_fd\(\)\).*?foreground_process_command_from_argv.*?foreground_process_watch_until.*?TerminalHostPtyCommand::Input.*?foreground_process\.refresh\(&pty, false\)' \
+    'the terminal helper can regress to ignoring foreground agent transitions or polling every idle Session'
+require_multiline_pattern crates/dez_terminal_host/src/main.rs \
+    'TerminalHostPtyEvent::ForegroundProcessChanged \{ command \}.*?model\.set_foreground_command\(session_id, command\).*?TerminalHostPtyEvent::Exited.*?model\.set_foreground_command\(session_id, None\)' \
+    'the terminal helper can observe a foreground command without publishing or clearing it'
+require_multiline_pattern crates/terminal/src/session_host/transport.rs \
+    'let foreground_command = attachment\.snapshot\.foreground_command\.clone\(\).*?terminal\.set_hosted_foreground_command\(foreground_command, cx\)' \
+    'an attached hosted terminal can regress to hiding Host foreground-process evidence'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'host_snapshot.*?snapshot\.foreground_command\.as_deref\(\).*?detect_terminal_agent_command.*?pending_terminal_activation.*?"Opening…".*?if !is_opening.*?activate_terminal_entry' \
+    'Sessions can regress to hiding plain hosted agents or making asynchronous activation look unresponsive'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn terminal_host_status_presentation.*?"Preparing Terminal Sessions".*?has not started a shell.*?"Terminal Sessions are reconnecting".*?processes remain untouched.*?"Terminal Sessions are unavailable".*?No fallback shell or replacement computation.*?fn render_terminal_host_status.*?terminal_host_status_presentation.*?"Copy Error".*?"Copy Details".*?Button::new\("open-terminal-host-log", "Open Local Log"\).*?tab_index\(0isize\).*?OpenLog\.boxed_clone.*?Button::new\("copy-terminal-host-details", copy_label\).*?tab_index\(0isize\).*?aria_label\(copy_label\).*?tooltip\(Tooltip::text\(copy_label\)\)' \
     'Terminal Session startup recovery can regress to raw transport copy or lose its diagnostic actions'

@@ -824,6 +824,7 @@ impl TerminalHostConnection {
                 let replay_was_truncated = attachment.replay_was_truncated;
                 let state = attachment.snapshot.state;
                 let dimensions = attachment.snapshot.dimensions;
+                let foreground_command = attachment.snapshot.foreground_command.clone();
                 let snapshot_latest_sequence = attachment.snapshot.latest_replay_sequence;
                 let replay = attachment.replay;
                 terminal.update(cx, |terminal, cx| {
@@ -838,6 +839,7 @@ impl TerminalHostConnection {
                         terminal.write_hosted_replay(&chunk, cx);
                     }
                     terminal.finish_hosted_replay(dimensions, cx);
+                    terminal.set_hosted_foreground_command(foreground_command, cx);
                     match state {
                         super::TerminalSessionState::Exited { exit_code } => {
                             terminal.hosted_process_exited(exit_code, cx);

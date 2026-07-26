@@ -382,6 +382,7 @@ async fn detached_host_session_prefers_durable_workspace_identity_over_shared_cw
         working_directory: Some(PathBuf::from("/shared")),
         workspace_id: Some(workspace_b_id),
         process_id: Some(42),
+        foreground_command: None,
         agent: None,
         dimensions: terminal::session_host::TerminalDimensions::DEFAULT,
         earliest_replay_sequence: 0,

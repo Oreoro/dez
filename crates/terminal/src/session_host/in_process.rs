@@ -95,6 +95,7 @@ impl InProcessTerminalHost {
             working_directory,
             workspace_id: None,
             process_id: None,
+            foreground_command: None,
             agent: None,
             dimensions,
             earliest_replay_sequence: 0,
@@ -284,6 +285,18 @@ impl InProcessTerminalHost {
         session.snapshot.clone()
     }
 
+    pub fn set_foreground_command(
+        &mut self,
+        session_id: TerminalSessionId,
+        foreground_command: Option<String>,
+    ) -> TerminalSessionSnapshot {
+        let Some(session) = self.sessions.get_mut(&session_id) else {
+            return self.missing_snapshot(session_id);
+        };
+        session.snapshot.foreground_command = foreground_command;
+        session.snapshot.clone()
+    }
+
     pub fn update_agent(
         &mut self,
         session_id: TerminalSessionId,
@@ -409,6 +422,7 @@ impl InProcessTerminalHost {
             working_directory: None,
             workspace_id: None,
             process_id: None,
+            foreground_command: None,
             agent: None,
             dimensions: TerminalDimensions::DEFAULT,
             earliest_replay_sequence: 0,
@@ -557,6 +571,7 @@ mod tests {
         host.set_working_directory(session_id, Some(std::path::PathBuf::from("/tmp/new")));
         host.set_workspace_id(session_id, 42);
         host.set_process_id(session_id, Some(4242));
+        host.set_foreground_command(session_id, Some("codex".to_owned()));
 
         let detached = host.detach(session_id);
         assert_eq!(detached.title.as_deref(), Some("Codex review"));
@@ -565,6 +580,7 @@ mod tests {
             Some(std::path::Path::new("/tmp/new"))
         );
         assert_eq!(detached.process_id, Some(4242));
+        assert_eq!(detached.foreground_command.as_deref(), Some("codex"));
         assert_eq!(detached.workspace_id, Some(42));
         assert_eq!(detached.state, TerminalSessionState::Detached);
         Ok(())

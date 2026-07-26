@@ -3356,6 +3356,7 @@ pub struct Sidebar {
     thread_switcher: Option<Entity<ThreadSwitcher>>,
     _thread_switcher_subscriptions: Vec<gpui::Subscription>,
     pending_thread_activation: Option<agent_ui::ThreadId>,
+    pending_terminal_activation: Option<TerminalId>,
     /// Structured Host sessions currently carrying an active attention
     /// condition. This is transient transition memory only; the Host snapshot
     /// remains authoritative.
@@ -3584,6 +3585,7 @@ impl Sidebar {
             thread_switcher: None,
             _thread_switcher_subscriptions: Vec::new(),
             pending_thread_activation: None,
+            pending_terminal_activation: None,
             host_attention_sessions: HashSet::new(),
             live_thread_statuses: HashMap::new(),
             draft_kinds: HashMap::new(),
@@ -4411,6 +4413,11 @@ impl Sidebar {
                     let detected_agent_kind = detect_terminal_agents
                         .then(|| {
                             terminal_agent_kind_from_snapshot(agent.as_ref())
+                                .or_else(|| {
+                                    host_snapshot
+                                        .and_then(|snapshot| snapshot.foreground_command.as_deref())
+                                        .and_then(detect_terminal_agent_command)
+                                })
                                 .or_else(|| metadata.detected_agent_kind())
                         })
                         .flatten();
@@ -8578,6 +8585,11 @@ impl Sidebar {
             log::warn!("terminal session {session_id} has no host identity");
             return;
         };
+        if self.pending_terminal_activation == Some(metadata.terminal_id) {
+            return;
+        }
+        self.pending_terminal_activation = Some(metadata.terminal_id);
+        cx.notify();
         let workspace = workspace.clone();
         let project = workspace.read(cx).project().clone();
         cx.spawn_in(window, async move |this, cx| {
@@ -8632,6 +8644,9 @@ impl Sidebar {
                 }
             };
             this.update_in(cx, |this, window, cx| {
+                if this.pending_terminal_activation == Some(metadata.terminal_id) {
+                    this.pending_terminal_activation = None;
+                }
                 multi_workspace.update(cx, |multi_workspace, cx| {
                     multi_workspace.activate(workspace.clone(), None, window, cx);
                     if retain {
@@ -11642,6 +11657,7 @@ impl Sidebar {
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
         let terminal_agent_kind = terminal.detected_agent_kind;
         let is_host_session = matches!(&terminal.source, TerminalEntrySource::HostSession(_));
+        let is_opening = self.pending_terminal_activation == Some(terminal.metadata.terminal_id);
         let (close_label, requires_termination_confirmation) = terminal_row_close_presentation(
             is_host_session,
             terminal.runtime.as_ref().map(|runtime| runtime.state),
@@ -11679,18 +11695,22 @@ impl Sidebar {
         let attention_is_unread =
             terminal.metadata.attention.presentation == TerminalAttentionPresentation::Unread;
         let attention_is_muted = terminal.metadata.attention.is_muted_at(Utc::now());
-        let terminal_state_label = terminal_agent_row_state_label(
-            terminal_agent_kind,
-            terminal_agent_state_label(
-                terminal.agent.as_ref(),
-                terminal.runtime.as_ref(),
-                needs_attention,
-                attention_is_muted,
-                can_copy_codex_hook,
-                show_detection_confidence,
-            ),
-            supplemental_metadata_visible,
-        );
+        let terminal_state_label = if is_opening {
+            "Opening…".into()
+        } else {
+            terminal_agent_row_state_label(
+                terminal_agent_kind,
+                terminal_agent_state_label(
+                    terminal.agent.as_ref(),
+                    terminal.runtime.as_ref(),
+                    needs_attention,
+                    attention_is_muted,
+                    can_copy_codex_hook,
+                    show_detection_confidence,
+                ),
+                supplemental_metadata_visible,
+            )
+        };
         let context_review_workspace = review_workspace.clone();
         let context_review_brief = review_brief.clone();
         let context_files_workspace = match &terminal.workspace {
@@ -11908,14 +11928,16 @@ impl Sidebar {
                 let workspace = terminal.workspace.clone();
                 let source = terminal.source.clone();
                 move |this, _, window, cx| {
-                    this.activate_terminal_entry(
-                        metadata.clone(),
-                        workspace.clone(),
-                        source.clone(),
-                        false,
-                        window,
-                        cx,
-                    );
+                    if !is_opening {
+                        this.activate_terminal_entry(
+                            metadata.clone(),
+                            workspace.clone(),
+                            source.clone(),
+                            false,
+                            window,
+                            cx,
+                        );
+                    }
                 }
             }));
 

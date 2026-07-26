@@ -1079,6 +1079,7 @@ impl TerminalBuilder {
             vi_mode_enabled: false,
             is_remote_terminal: false,
             hosted_working_directory: None,
+            hosted_foreground_command: None,
             last_mouse_move_time: Instant::now(),
             last_hyperlink_search_position: None,
             mouse_down_hyperlink: None,
@@ -1374,6 +1375,7 @@ impl TerminalBuilder {
                 vi_mode_enabled: false,
                 is_remote_terminal,
                 hosted_working_directory: None,
+                hosted_foreground_command: None,
                 last_mouse_move_time: Instant::now(),
                 last_hyperlink_search_position: None,
                 mouse_down_hyperlink: None,
@@ -1598,6 +1600,7 @@ pub struct Terminal {
     vi_mode_enabled: bool,
     is_remote_terminal: bool,
     hosted_working_directory: Option<PathBuf>,
+    hosted_foreground_command: Option<String>,
     last_mouse_move_time: Instant,
     last_hyperlink_search_position: Option<GpuiPoint<Pixels>>,
     mouse_down_hyperlink: Option<HyperlinkMatch>,
@@ -1694,6 +1697,18 @@ impl Terminal {
             self.complete_init_command_startup_handshake();
             cx.emit(Event::ProcessExited { exit_code });
         }
+    }
+
+    pub fn set_hosted_foreground_command(
+        &mut self,
+        foreground_command: Option<String>,
+        cx: &mut Context<Self>,
+    ) {
+        if self.hosted_foreground_command == foreground_command {
+            return;
+        }
+        self.hosted_foreground_command = foreground_command;
+        cx.emit(Event::ProcessInfoChanged);
     }
 
     pub fn set_hosted_replay_task(&mut self, task: Task<Result<()>>) {
@@ -2982,7 +2997,8 @@ impl Terminal {
                 .read()
                 .as_ref()
                 .and_then(|process| foreground_process_command_from_argv(&process.argv)),
-            TerminalType::Hosted { .. } | TerminalType::DisplayOnly => None,
+            TerminalType::Hosted { .. } => self.hosted_foreground_command.clone(),
+            TerminalType::DisplayOnly => None,
         }
     }
 
@@ -3497,7 +3513,7 @@ fn should_skip_wrapper_subcommand(command: &str) -> bool {
     )
 }
 
-fn foreground_process_command_from_argv(argv: &[String]) -> Option<String> {
+pub(crate) fn foreground_process_command_from_argv(argv: &[String]) -> Option<String> {
     let command = argv
         .first()
         .and_then(|command| normalize_process_command_name(command));

@@ -1055,6 +1055,17 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   state remains in the toolbar accessibility label and details, preventing
   status copy from crowding terminal actions. Official Zed retains its upstream
   chrome.
+- **2026-07-26: Host-owned terminals publish foreground-process truth.** A
+  hosted terminal no longer loses shell → Codex → shell transitions at the
+  display-only boundary. The helper observes the PTY foreground process group
+  during a bounded post-input window, normalizes the command, and stores it in
+  the durable Session snapshot. The attached terminal and Sessions consume
+  that same host-owned evidence; terminal output remains display content and is
+  never parsed for identity. Plain detection can say **Codex · Running**, while
+  structured attention, commands, checks, and review remain adapter
+  capabilities. Reattaching a detached Session marks the existing row
+  **Opening…** immediately and coalesces duplicate clicks until one Surface is
+  restored and focused.
 - **2026-07-26: A live terminal Surface owns its Session row.** If persisted
   metadata or a Host snapshot describes the same terminal already visible in
   the Main Work Area, the live `TerminalView` wins source resolution. Selecting
