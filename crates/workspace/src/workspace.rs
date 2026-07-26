@@ -214,6 +214,7 @@ const AUXILIARY_PANE_MAX_INITIAL_WIDTH: f32 = 360.;
 const AUXILIARY_PANE_MIN_USABLE_WIDTH: f32 = 240.;
 const AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0.22;
 const MAIN_WORK_AREA_MINIMUM_RATIO: f32 = 0.60;
+const DEZ_THREE_REGION_MIN_WINDOW_WIDTH: Pixels = px(1160.);
 const WORKSPACE_NOTIFICATION_SHELF_MAX_WIDTH: f32 = 400.;
 const WORKSPACE_NOTIFICATION_SHELF_MIN_WIDTH: f32 = 280.;
 const WORKSPACE_NOTIFICATION_SHELF_WIDTH_FRACTION: f32 = 0.32;
@@ -240,6 +241,10 @@ fn auxiliary_pane_max_ratio(available_width: Pixels) -> f32 {
 
 fn dez_auxiliary_drawer_is_exclusive(app_name: &str) -> bool {
     app_name != "Zed"
+}
+
+fn dez_auxiliary_surfaces_are_window_exclusive(app_name: &str, viewport_width: Pixels) -> bool {
+    app_name != "Zed" && viewport_width < DEZ_THREE_REGION_MIN_WINDOW_WIDTH
 }
 
 fn workspace_notification_shelf_width(viewport_width: Pixels) -> Pixels {
@@ -7225,6 +7230,9 @@ impl Workspace {
         }
 
         let visible = pane.read(cx).is_visible();
+        if !visible {
+            self.schedule_close_dez_sessions_for_auxiliary_reveal(window, cx);
+        }
         let pane_owned_focus =
             visible && (self.active_pane == pane || pane.read(cx).has_focus(window, cx));
         self.mark_canvas_layout_custom();
@@ -8553,6 +8561,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         if visible {
+            self.schedule_close_dez_sessions_for_auxiliary_reveal(window, cx);
             self.hide_competing_dez_auxiliary_pane_for_reveal(panel_pane_kind.pane_kind(), cx);
             let pane = self.ensure_panel_pane(panel_pane_kind, window, cx);
             pane.update(cx, |pane, cx| pane.set_visible(true, cx));
@@ -8751,6 +8760,56 @@ impl Workspace {
             MAIN_WORK_AREA_MINIMUM_RATIO,
             cx,
         )
+    }
+
+    pub(crate) fn hide_dez_auxiliary_drawer_for_sessions(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(visible_kind) = [PaneKind::Project, PaneKind::Agent]
+            .into_iter()
+            .find(|pane_kind| self.panel_pane_visible(*pane_kind, cx))
+        else {
+            return false;
+        };
+
+        self.toggle_panel_pane_visibility(visible_kind, window, cx);
+        true
+    }
+
+    fn schedule_close_dez_sessions_for_auxiliary_reveal(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if !dez_auxiliary_surfaces_are_window_exclusive(
+            paths::APP_NAME,
+            window.viewport_size().width,
+        ) {
+            return false;
+        }
+
+        let Some(multi_workspace) = self
+            .multi_workspace
+            .as_ref()
+            .and_then(|multi_workspace| multi_workspace.upgrade())
+        else {
+            return false;
+        };
+        if !multi_workspace.read(cx).sidebar_open() {
+            return false;
+        }
+
+        // The Workspace is already being updated while a tool pane is
+        // revealed. Defer the parent update so closing Sessions cannot
+        // re-enter this Workspace through MultiWorkspace's focus cleanup.
+        cx.defer_in(window, move |_workspace, window, cx| {
+            multi_workspace.update(cx, |multi_workspace, cx| {
+                multi_workspace.close_sidebar_for_auxiliary_surface(window, cx);
+            });
+        });
+        true
     }
 
     fn hide_competing_dez_auxiliary_pane_for_reveal(
@@ -16472,6 +16531,22 @@ mod tests {
     fn dez_uses_one_optional_auxiliary_drawer_at_every_window_size() {
         assert!(dez_auxiliary_drawer_is_exclusive("Dez"));
         assert!(!dez_auxiliary_drawer_is_exclusive("Zed"));
+    }
+
+    #[test]
+    fn dez_uses_one_auxiliary_surface_on_narrow_windows() {
+        assert!(dez_auxiliary_surfaces_are_window_exclusive(
+            "Dez",
+            px(1159.)
+        ));
+        assert!(!dez_auxiliary_surfaces_are_window_exclusive(
+            "Dez",
+            DEZ_THREE_REGION_MIN_WINDOW_WIDTH
+        ));
+        assert!(!dez_auxiliary_surfaces_are_window_exclusive(
+            "Zed",
+            px(600.)
+        ));
     }
 
     #[test]

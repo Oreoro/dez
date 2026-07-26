@@ -642,6 +642,18 @@ require_multiline_pattern crates/workspace/src/workspace.rs \
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'fn dez_uses_one_optional_auxiliary_drawer_at_every_window_size.*?dez_auxiliary_drawer_is_exclusive\("Dez"\).*?!dez_auxiliary_drawer_is_exclusive\("Zed"\).*?fn test_dez_keeps_only_the_active_auxiliary_drawer_visible_on_ultrawide.*?2400\..*?project_pane.*?agent_pane.*?set_active_pane\(&agent_pane.*?enforce_dez_auxiliary_pane_visibility_policy.*?!project_pane\.read\(cx\)\.is_visible\(\).*?agent_pane\.read\(cx\)\.is_visible\(\)' \
     'Workspace Tools and Agent can regress to simultaneous full-height drawers at wide window sizes'
+require_multiline_pattern crates/workspace/src/workspace.rs \
+    'DEZ_THREE_REGION_MIN_WINDOW_WIDTH: Pixels = px\(1160\.\).*?fn dez_auxiliary_surfaces_are_window_exclusive.*?app_name != "Zed" && viewport_width < DEZ_THREE_REGION_MIN_WINDOW_WIDTH.*?toggle_panel_pane_visibility.*?schedule_close_dez_sessions_for_auxiliary_reveal.*?set_canvas_panel_pane_visible.*?schedule_close_dez_sessions_for_auxiliary_reveal.*?hide_dez_auxiliary_drawer_for_sessions.*?schedule_close_dez_sessions_for_auxiliary_reveal.*?close_sidebar_for_auxiliary_surface.*?fn dez_uses_one_auxiliary_surface_on_narrow_windows.*?px\(1159\.\).*?DEZ_THREE_REGION_MIN_WINDOW_WIDTH.*?"Zed".*?px\(600\.\)' \
+    'narrow Dez windows can regress to showing Sessions beside a competing contextual drawer'
+require_multiline_pattern crates/workspace/src/multi_workspace.rs \
+    'fn toggle_sidebar.*?hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal.*?fn focus_sidebar.*?hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal.*?fn restore_sidebar_open_state.*?hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal.*?close_sidebar_for_auxiliary_surface.*?fn hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal.*?dez_auxiliary_surfaces_are_window_exclusive.*?hide_dez_auxiliary_drawer_for_sessions' \
+    'opening or restoring Sessions can regress to competing with a contextual drawer on focused windows'
+require_multiline_pattern crates/workspace/src/multi_workspace.rs \
+    'dez_auxiliary_surfaces_were_window_exclusive: bool.*?fn reconcile_dez_auxiliary_surfaces_after_resize.*?became_window_exclusive.*?auxiliary_pane_visible.*?defer_in.*?auxiliary_pane_has_focus.*?close_sidebar_for_auxiliary_surface.*?hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal.*?impl Render for MultiWorkspace.*?reconcile_dez_auxiliary_surfaces_after_resize' \
+    'resizing a wide Dez layout can regress to retaining three competing regions in a narrow window'
+require_multiline_pattern docs/src/development/dez/fork-notes.md \
+    'The final shell follows this responsive layout contract.*?flowchart TB.*?Wide window · 1160 logical px or more.*?Main Work Area.*?Narrow window · below 1160 logical px.*?One auxiliary surface.*?opening[[:space:]]+Sessions hides the visible contextual drawer.*?opening Workspace Tools or Agent[[:space:]]+hides Sessions' \
+    'the permanent Dez shell contract can lose its concrete responsive layout and state transition'
 require_multiline_pattern assets/settings/default.json \
     '"project_panel": \{.*?"starts_open": false.*?"session_rail": \{.*?"visibility": "auto".*?"mode": "compact"' \
     'the fresh Dez shell can regress to opening contextual Workspace Tools or Sessions over the Main Work Area by default'

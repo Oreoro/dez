@@ -32,7 +32,8 @@ use crate::open_remote_project_with_existing_connection;
 use crate::{
     CloseIntent, CloseWindow, DockPosition, Event as WorkspaceEvent, Item, ModalView, OpenMode,
     PaneKind, Panel, ToggleProjectPane, Workspace, WorkspaceId, client_side_decorations,
-    persistence::model::MultiWorkspaceState, workspace_card_gap,
+    dez_auxiliary_surfaces_are_window_exclusive, persistence::model::MultiWorkspaceState,
+    workspace_card_gap,
 };
 
 actions!(
@@ -577,6 +578,7 @@ pub struct MultiWorkspace {
     _serialize_task: Option<Task<()>>,
     _subscriptions: Vec<Subscription>,
     previous_focus_handle: Option<FocusHandle>,
+    dez_auxiliary_surfaces_were_window_exclusive: bool,
 }
 
 impl EventEmitter<MultiWorkspaceEvent> for MultiWorkspace {}
@@ -636,6 +638,11 @@ impl MultiWorkspace {
             _serialize_task: None,
             _subscriptions: vec![release_subscription, quit_subscription],
             previous_focus_handle: None,
+            dez_auxiliary_surfaces_were_window_exclusive:
+                dez_auxiliary_surfaces_are_window_exclusive(
+                    paths::APP_NAME,
+                    window.viewport_size().width,
+                ),
         };
 
         if sidebar_open {
@@ -757,6 +764,7 @@ impl MultiWorkspace {
                 self.close_sidebar(window, cx);
             }
         } else {
+            self.hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal(window, cx);
             self.previous_focus_handle = window.focused(cx);
             self.open_sidebar(cx);
             if let Some(sidebar) = &self.sidebar {
@@ -801,6 +809,7 @@ impl MultiWorkspace {
                 }
             }
         } else {
+            self.hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal(window, cx);
             self.previous_focus_handle = window.focused(cx);
             self.open_sidebar(cx);
             if let Some(sidebar) = &self.sidebar {
@@ -826,6 +835,7 @@ impl MultiWorkspace {
         cx: &mut Context<Self>,
     ) {
         if sidebar_open || SidebarSettings::get_global(cx).always_open {
+            self.hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal(window, cx);
             self.apply_open_sidebar(false, cx);
         } else {
             self.apply_close_sidebar(false, window, false, cx);
@@ -874,6 +884,90 @@ impl MultiWorkspace {
         };
         telemetry::event!("Sidebar Toggled", action = "close", side = side);
         self.apply_close_sidebar(true, window, true, cx);
+    }
+
+    pub(crate) fn close_sidebar_for_auxiliary_surface(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.sidebar_open() {
+            return;
+        }
+
+        let side = match self.sidebar_side(cx) {
+            SidebarSide::Left => "left",
+            SidebarSide::Right => "right",
+        };
+        telemetry::event!("Sidebar Toggled", action = "responsive-close", side = side);
+        self.apply_close_sidebar(true, window, true, cx);
+    }
+
+    fn hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if !dez_auxiliary_surfaces_are_window_exclusive(
+            paths::APP_NAME,
+            window.viewport_size().width,
+        ) {
+            return false;
+        }
+
+        let workspace = self.workspace().clone();
+        workspace.update(cx, |workspace, cx| {
+            workspace.hide_dez_auxiliary_drawer_for_sessions(window, cx)
+        })
+    }
+
+    fn reconcile_dez_auxiliary_surfaces_after_resize(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let window_exclusive = dez_auxiliary_surfaces_are_window_exclusive(
+            paths::APP_NAME,
+            window.viewport_size().width,
+        );
+        let became_window_exclusive =
+            window_exclusive && !self.dez_auxiliary_surfaces_were_window_exclusive;
+        self.dez_auxiliary_surfaces_were_window_exclusive = window_exclusive;
+
+        if !became_window_exclusive || !self.sidebar_open() {
+            return;
+        }
+
+        let workspace = self.workspace().clone();
+        let auxiliary_pane_visible = [PaneKind::Project, PaneKind::Agent]
+            .into_iter()
+            .any(|pane_kind| workspace.read(cx).panel_pane_visible(pane_kind, cx));
+        if !auxiliary_pane_visible {
+            return;
+        }
+
+        cx.defer_in(window, |multi_workspace, window, cx| {
+            if !multi_workspace.sidebar_open()
+                || !dez_auxiliary_surfaces_are_window_exclusive(
+                    paths::APP_NAME,
+                    window.viewport_size().width,
+                )
+            {
+                return;
+            }
+
+            let workspace = multi_workspace.workspace().clone();
+            let auxiliary_pane_has_focus = [PaneKind::Project, PaneKind::Agent]
+                .into_iter()
+                .filter_map(|pane_kind| workspace.read(cx).panel_pane_for_kind(pane_kind, cx))
+                .any(|pane| pane.read(cx).has_focus(window, cx));
+
+            if auxiliary_pane_has_focus {
+                multi_workspace.close_sidebar_for_auxiliary_surface(window, cx);
+            } else {
+                multi_workspace.hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal(window, cx);
+            }
+        });
     }
 
     fn apply_close_sidebar(
@@ -2490,6 +2584,7 @@ impl MultiWorkspace {
 
 impl Render for MultiWorkspace {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.reconcile_dez_auxiliary_surfaces_after_resize(window, cx);
         let multi_workspace_enabled = self.multi_workspace_enabled(cx);
         let sidebar_side = self.sidebar_side(cx);
         let sidebar_on_right = sidebar_side == SidebarSide::Right;

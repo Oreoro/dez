@@ -69,6 +69,40 @@ describe purpose, not the inherited dock or panel implementation:
 | **Main work area**  | File, terminal, search, diagnostics, settings, and review Surfaces | Global project scope or sidebar-only copies of active work          |
 | **Agent**           | Native and ACP conversation Surfaces in a hideable right tool pane | Terminal-agent process ownership                                    |
 
+The final shell follows this responsive layout contract:
+
+```mermaid
+flowchart TB
+    LOOP["Run in Main Work Area → supervise in Sessions → review in Files and Git"]
+
+    subgraph WIDE["Wide window · 1160 logical px or more"]
+        direction LR
+        WS["Sessions<br/>optional supervision rail"]
+        WM["Main Work Area<br/>terminal · editor · diff · debug"]
+        WD["One contextual drawer<br/>Workspace Tools or Agent"]
+        WS --- WM --- WD
+    end
+
+    subgraph NARROW["Narrow window · below 1160 logical px"]
+        direction LR
+        FA["One auxiliary surface<br/>Sessions or Workspace Tools or Agent"]
+        FM["Main Work Area<br/>always present and primary"]
+        FA --- FM
+    end
+
+    LOOP --> WIDE
+    LOOP --> FOCUSED
+```
+
+The Main Work Area is never replaced by shell navigation. Workspace Tools and
+Agent are mutually exclusive at every width. On narrow windows, opening
+Sessions hides the visible contextual drawer; opening Workspace Tools or Agent
+hides Sessions. The transition is normal layout and focus movement, never a
+floating overlay. At wide widths, Sessions may coexist with one contextual
+drawer because the Main Work Area retains a deliberate readable width.
+Transient progress and notices remain bounded and nonmodal; dialogs are
+reserved for decisions that block progress.
+
 Every visible **Start Terminal Session** action creates a normal main-area
 Surface. It can be tabbed, split, moved, detached from a durable Host Session,
 or reattached without introducing a separate Terminal Panel model. Compact
