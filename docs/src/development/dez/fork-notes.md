@@ -1162,3 +1162,10 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   cannot clip outside the toast, cover adjacent controls, or create a larger
   interaction layer. Persistent notices remain in their owning Sessions or
   Workspace notification surfaces.
+- **2026-07-26: Status content yields before navigation.** When Sessions is
+  closed, its **Open Sessions** status-bar control occupies a fixed allocation
+  on the configured edge. Optional Search, language-server, diagnostics,
+  activity, file, and editor status items live in a separate shrinkable
+  overflow region. A narrow Main Work Area may hide low-priority status detail,
+  but it may not hide the control required to recover the supervision
+  projection.

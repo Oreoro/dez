@@ -3148,3 +3148,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   content intercepts input. Static identity checks protect the layout and
   interaction contract; no build, test binary, alternate binary, or visual
   launch was performed.
+- 2026-07-26: Gave the closed-Sessions recovery action fixed priority in the
+  status bar. **Open Sessions** now occupies its own non-shrinking allocation;
+  Search, language-server, diagnostics, activity, and other optional status
+  items share a separate shrinkable overflow region. Right-positioned Sessions
+  receives the same fixed wrapper. Narrow Main Work Areas therefore discard
+  low-priority status content before they clip the navigation needed to recover
+  supervision. Static identity checks protect the allocation; no build, test
+  binary, alternate binary, or visual launch was performed.

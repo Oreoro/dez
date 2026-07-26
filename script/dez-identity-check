@@ -792,6 +792,9 @@ require_multiline_pattern crates/search/src/search_status_button.rs \
 reject_pattern crates/search/src/search_status_button.rs \
     '"Search files"' \
     'healthy terminal-focused status chrome can regress to a redundant visible search label'
+require_multiline_pattern crates/workspace/src/status_bar.rs \
+    'fn render_left_tools.*?\.flex_1\(\).*?\.min_w_0\(\).*?sidebar\.show_toggle.*?div\(\).*?\.flex_none\(\).*?render_sidebar_toggle\(sidebar, cx\).*?h_flex\(\).*?\.flex_1\(\).*?\.min_w_0\(\).*?\.overflow_x_hidden\(\).*?self\.left_items.*?fn render_right_tools.*?sidebar\.show_toggle.*?div\(\).*?\.flex_none\(\).*?render_sidebar_toggle\(sidebar, cx\)' \
+    'responsive status items can regress to clipping the fixed Open Sessions recovery control'
 require_multiline_pattern crates/search/src/project_search.rs \
     'fn workspace_search_title.*?app_name == "Zed".*?"Project Search".*?"Workspace Search".*?fn workspace_search_loading_label.*?"Loading project…".*?"Loading workspace…".*?fn workspace_search_no_results_label.*?"No results found in this project.*?"No files in this Workspace match the current query' \
     'Workspace Search can regress to Project scope after the status-bar action opens it'

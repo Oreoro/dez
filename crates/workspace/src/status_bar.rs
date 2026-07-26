@@ -212,16 +212,30 @@ impl StatusBar {
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         h_flex()
+            .flex_1()
             .gap_1()
             .min_w_0()
             .overflow_x_hidden()
             .when(
                 sidebar.show_toggle && !sidebar.open && sidebar.side == SidebarSide::Left,
-                |this| this.child(self.render_sidebar_toggle(sidebar, cx)),
+                |this| {
+                    this.child(
+                        div()
+                            .flex_none()
+                            .child(self.render_sidebar_toggle(sidebar, cx)),
+                    )
+                },
             )
-            .children(self.left_items.iter().enumerate().map(|(index, item)| {
-                render_hideable_item("status-bar-left", index, item.as_ref(), cx)
-            }))
+            .child(
+                h_flex()
+                    .flex_1()
+                    .min_w_0()
+                    .gap_1()
+                    .overflow_x_hidden()
+                    .children(self.left_items.iter().enumerate().map(|(index, item)| {
+                        render_hideable_item("status-bar-left", index, item.as_ref(), cx)
+                    })),
+            )
     }
 
     fn render_right_tools(
@@ -244,7 +258,13 @@ impl StatusBar {
             )
             .when(
                 sidebar.show_toggle && !sidebar.open && sidebar.side == SidebarSide::Right,
-                |this| this.child(self.render_sidebar_toggle(sidebar, cx)),
+                |this| {
+                    this.child(
+                        div()
+                            .flex_none()
+                            .child(self.render_sidebar_toggle(sidebar, cx)),
+                    )
+                },
             )
     }
 
