@@ -4063,3 +4063,16 @@ Completed for the integrated Agent-provider setup source slice:
 - retained source-only evidence. No build, test binary, alternate binary, or
   visual launch was performed. The next artifact must prove the section in
   Lumin Light and Lumin Blur at compact and default Agent widths.
+
+Completed for the flush Main Work Area frame source slice:
+
+- traced the apparent pane overlap and clipping risk to rounded upstream card
+  frames surviving beneath Dez's zero-gap pane grid;
+- kept one-pixel structural seams but changed Dez panes to square,
+  lower-contrast frames, leaving the native window as the only owner of the
+  outer radius;
+- preserved content clipping, resize handles, pane decoration, and official
+  Zed's rounded separated cards;
+- added source policy coverage and a static regression guard; and
+- retained source-only evidence. No app build, test binary, alternate binary,
+  or fresh visual launch was performed.

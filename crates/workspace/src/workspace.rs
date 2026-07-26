@@ -185,6 +185,10 @@ fn workspace_card_gap_for_product(app_name: &str, configured_gap: f32) -> Pixels
     }
 }
 
+pub(crate) fn workspace_pane_uses_rounded_card_frame(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 fn canvas_layout_modal_width(cx: &App, compact: f32, balanced: f32, spacious: f32) -> Rems {
     match DesignSystemSettings::get_global(cx).density {
         settings::CanvasDensity::Compact => rems(compact),
@@ -16540,6 +16544,8 @@ mod tests {
         assert_eq!(workspace_card_gap_for_product("Dez", 7.5), Pixels::ZERO);
         assert_eq!(workspace_card_gap_for_product("Zed", 7.5), px(7.5));
         assert_eq!(workspace_card_gap_for_product("Zed", -1.0), Pixels::ZERO);
+        assert!(!workspace_pane_uses_rounded_card_frame("Dez"));
+        assert!(workspace_pane_uses_rounded_card_frame("Zed"));
     }
 
     #[test]

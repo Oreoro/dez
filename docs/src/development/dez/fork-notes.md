@@ -1337,3 +1337,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   single divider and does not repaint the translucent panel background, add a
   shadowed frame, nest another glass surface, or mask content with a gradient.
   Official Zed retains its inherited onboarding card.
+- **2026-07-26: The Main Work Area is one glass grid, not touching cards.**
+  Dez already removes the desktop-colored inter-pane gutter. Its pane frames
+  now also use square, low-contrast seams, so adjacent Files, Git, Agent,
+  terminal, and editor Surfaces cannot expose clipped inner corners or
+  double-card silhouettes. Only the native window owns the outer radius.
+  Official Zed retains its rounded, separated pane cards.

@@ -3,7 +3,7 @@ use crate::{
     Workspace, WorkspaceSettings,
     notifications::DetachAndPromptErr,
     pane_group::element::pane_axis,
-    workspace_card_gap,
+    workspace_card_gap, workspace_pane_uses_rounded_card_frame,
     workspace_settings::{PaneSplitDirectionHorizontal, PaneSplitDirectionVertical},
 };
 use anyhow::Result;
@@ -377,28 +377,35 @@ pub(crate) fn render_pane_card(
 ) -> AnyElement {
     let decoration = render_cx.decorate(&pane, cx);
 
-    div()
+    let pane = div()
         .relative()
         .flex_1()
         .size_full()
         .overflow_hidden()
-        .rounded_lg()
         .border_1()
-        .border_color(cx.theme().colors().border)
-        .child(AnyView::from(pane).cached(StyleRefinement::default().v_flex().size_full()))
-        .when_some(decoration.border, |this, color| {
-            this.child(
-                div()
-                    .absolute()
-                    .size_full()
-                    .left_0()
-                    .top_0()
-                    .border_2()
-                    .border_color(color),
-            )
-        })
-        .children(decoration.status_box)
-        .into_any()
+        .child(AnyView::from(pane).cached(StyleRefinement::default().v_flex().size_full()));
+    let pane = if workspace_pane_uses_rounded_card_frame(paths::APP_NAME) {
+        pane.rounded_lg().border_color(cx.theme().colors().border)
+    } else {
+        // Dez panes are tiles in one native glass sheet. Square, low-contrast
+        // seams avoid clipped inner corners and double-card silhouettes when
+        // the product's inter-pane gap is zero.
+        pane.border_color(cx.theme().colors().border_variant)
+    };
+
+    pane.when_some(decoration.border, |this, color| {
+        this.child(
+            div()
+                .absolute()
+                .size_full()
+                .left_0()
+                .top_0()
+                .border_2()
+                .border_color(color),
+        )
+    })
+    .children(decoration.status_box)
+    .into_any()
 }
 
 pub(crate) fn render_leader_decoration(
