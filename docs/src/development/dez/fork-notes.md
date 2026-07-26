@@ -286,8 +286,11 @@ Dez Agent onboarding is provider setup, not Zed AI subscription onboarding.
 The reachable empty state is a named **Agent provider setup** region that says
 **Agent Session**, offers **Configure Agent Providers**, and exposes **Start
 Agent Session** only after a non-Zed-cloud provider is authenticated. Both
-actions are keyboard tab stops. Inherited Zed plan/trial components may remain
-for upstream compatibility, but the Dez Agent entry path must not render them.
+actions are keyboard tab stops. The setup is an in-flow part of the Agent
+surface: it inherits the pane material and uses one divider, never an elevated
+card, nested glass layer, or gradient mask. Inherited Zed plan/trial components
+and their card presentation may remain for upstream compatibility, but the Dez
+Agent entry path must not render them.
 
 The Agent composer control row has one interaction contract. Expand or
 minimize, Add Context, Follow, Fast Mode, Thinking Mode, thinking effort,
@@ -1329,3 +1332,8 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   in that submenu beside **Show or Hide Workspace Tools**. **Editor Layout**
   and **Diagnostics** remain separate. Official Zed retains its upstream
   Project Tab/Panel and Terminal Panel hierarchy.
+- **2026-07-26: Agent setup belongs to Agent, not a card above it.** Provider
+  setup is one flat, in-flow section on the Agent pane material. It uses a
+  single divider and does not repaint the translucent panel background, add a
+  shadowed frame, nest another glass surface, or mask content with a gradient.
+  Official Zed retains its inherited onboarding card.

@@ -146,6 +146,10 @@ fn agent_panel_terminal_restoration_enabled(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn agent_panel_onboarding_is_integrated(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
 fn agent_panel_title_edit_label(app_name: &str, is_terminal: bool) -> &'static str {
     if is_terminal {
         "Edit Terminal Title"
@@ -1671,7 +1675,7 @@ impl AgentPanel {
 
         let weak_panel = cx.entity().downgrade();
         let onboarding = cx.new(|cx| {
-            AgentPanelOnboarding::new(
+            let onboarding = AgentPanelOnboarding::new(
                 user_store.clone(),
                 client,
                 move |_window, cx| {
@@ -1682,7 +1686,12 @@ impl AgentPanel {
                         .ok();
                 },
                 cx,
-            )
+            );
+            if agent_panel_onboarding_is_integrated(paths::APP_NAME) {
+                onboarding.integrated()
+            } else {
+                onboarding
+            }
         });
 
         // Subscribe to extension events to sync agent servers when extensions change
@@ -6851,7 +6860,10 @@ impl AgentPanel {
 
         Some(
             div()
-                .bg(canvas_agent_panel_background(cx))
+                .when(
+                    !agent_panel_onboarding_is_integrated(paths::APP_NAME),
+                    |this| this.bg(canvas_agent_panel_background(cx)),
+                )
                 .child(self.new_user_onboarding.clone()),
         )
     }
@@ -7440,6 +7452,12 @@ mod tests {
         assert!(!agent_panel_terminal_creation_visible("Zed", false));
         assert!(!agent_panel_terminal_restoration_enabled("Dez"));
         assert!(agent_panel_terminal_restoration_enabled("Zed"));
+    }
+
+    #[test]
+    fn dez_integrates_provider_setup_into_the_agent_surface() {
+        assert!(agent_panel_onboarding_is_integrated("Dez"));
+        assert!(!agent_panel_onboarding_is_integrated("Zed"));
     }
 
     #[test]

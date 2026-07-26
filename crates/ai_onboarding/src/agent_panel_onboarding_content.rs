@@ -9,6 +9,7 @@ use crate::{AgentPanelOnboardingCard, ApiKeysWithoutProviders};
 
 pub struct AgentPanelOnboarding {
     has_configured_providers: bool,
+    integrated: bool,
     continue_to_agent: Arc<dyn Fn(&mut Window, &mut App)>,
 }
 
@@ -35,8 +36,16 @@ impl AgentPanelOnboarding {
 
         Self {
             has_configured_providers: Self::has_configured_providers(cx),
+            integrated: false,
             continue_to_agent: Arc::new(continue_to_agent),
         }
+    }
+
+    /// Uses the owning pane's native material instead of nesting an elevated
+    /// onboarding card inside it.
+    pub fn integrated(mut self) -> Self {
+        self.integrated = true;
+        self
     }
 
     fn has_configured_providers(cx: &App) -> bool {
@@ -50,8 +59,14 @@ impl AgentPanelOnboarding {
 impl Render for AgentPanelOnboarding {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         let continue_to_agent = self.continue_to_agent.clone();
-        AgentPanelOnboardingCard::new()
-            .child(
+        let card = AgentPanelOnboardingCard::new();
+        let card = if self.integrated {
+            card.integrated()
+        } else {
+            card
+        };
+
+        card.child(
                 v_flex()
                     .id("agent-provider-onboarding")
                     .role(gpui::Role::Region)

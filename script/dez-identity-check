@@ -244,7 +244,7 @@ require_file assets/fonts/jetbrains-mono/JetBrainsMono-BoldItalic.ttf \
 require_file assets/fonts/jetbrains-mono/OFL.txt \
     'the bundled JetBrains Mono license is missing'
 require_multiline_pattern assets/themes/lumin/lumin.json \
-    '"author": "Daksh Sharma".*?"name": "Lumin Blur".*?"background\.appearance": "blurred".*?"background": "#101010A6".*?"element\.background": "#FFFFFF0D".*?"element\.hover": "#FFFFFF16".*?"element\.active": "#FFFFFF1F".*?"tab_bar\.background": "#0909098F".*?"panel\.background": "#08080880".*?"editor\.background": "#1818184D".*?"terminal\.background": "#10101059".*?"pane\.focused_border": "#FFC79970".*?"name": "Lumin Light".*?"background\.appearance": "blurred".*?"background": "#F2F0EDB8".*?"element\.background": "#0000000D".*?"element\.hover": "#00000018".*?"element\.active": "#00000024".*?"tab_bar\.background": "#E4DED68F".*?"panel\.background": "#E6DED580".*?"editor\.background": "#FFFEFC59".*?"terminal\.background": "#FFFEFC59"' \
+    '"author": "Daksh Sharma".*?"name": "Lumin Blur".*?"background\.appearance": "blurred".*?"background": "#1010108F".*?"element\.background": "#FFFFFF0D".*?"element\.hover": "#FFFFFF16".*?"element\.active": "#FFFFFF1F".*?"tab_bar\.background": "#09090970".*?"panel\.background": "#05050570".*?"editor\.background": "#18181840".*?"terminal\.background": "#10101040".*?"pane\.focused_border": "#FFC79970".*?"name": "Lumin Light".*?"background\.appearance": "blurred".*?"background": "#F2F0EDA5".*?"element\.background": "#0000000D".*?"element\.hover": "#00000018".*?"element\.active": "#00000024".*?"tab_bar\.background": "#E4DED670".*?"panel\.background": "#E6DED55C".*?"editor\.background": "#FFFEFC52".*?"terminal\.background": "#FFFEFC52"' \
     'the attributed Lumin variants or their blur-safe focus hierarchy are missing'
 require_multiline_pattern crates/gpui_macos/src/window.rs \
     'fn blurred_view_init_with_frame.*?NSVisualEffectMaterial::UnderWindowBackground.*?NSVisualEffectBlendingMode::BehindWindow.*?NSVisualEffectState::FollowsWindowActiveState' \
@@ -747,6 +747,9 @@ require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
 require_multiline_pattern crates/ai_onboarding/src/agent_panel_onboarding_content.rs \
     'fn has_configured_providers.*?provider\.id\(\) != ZED_CLOUD_PROVIDER_ID.*?id\("agent-provider-onboarding"\).*?role\(gpui::Role::Region\).*?aria_label\("Agent provider setup"\).*?"Your configured provider is ready\. Start an Agent Session\.".*?"Dez keeps provider choice explicit\. Add a provider to start an Agent Session\.".*?Button::new\("continue-to-agent", "Start Agent Session"\).*?tab_index\(0isize\).*?aria_label\("Start Agent Session"\)' \
     'reachable Dez Agent onboarding can regress to thread vocabulary, an unnamed region, or a pointer-only start action'
+require_multiline_pattern crates/ai_onboarding/src/agent_panel_onboarding_card.rs \
+    'integrated: bool.*?pub fn integrated\(mut self\).*?self\.integrated = true.*?if integrated \{.*?id\("integrated-agent-onboarding"\).*?\.border_b_1\(\).*?\.border_color\(color\.border_variant\).*?\.children\(children\).*?\.into_any_element\(\)' \
+    'Dez Agent provider setup can regress to a nested elevated glass card'
 require_multiline_pattern crates/ai_onboarding/src/agent_api_keys_onboarding.rs \
     'Button::new\("configure-providers", "Configure Agent Providers"\).*?tab_index\(0isize\).*?aria_label\("Configure Agent Providers"\).*?OpenSettings' \
     'Agent provider setup can regress to an ambiguous or pointer-only recovery action'
@@ -757,8 +760,11 @@ reject_pattern crates/agent_ui/src/agent_panel.rs \
     'ZedAiOnboarding' \
     'the Dez Agent entry path can regress to inherited Zed AI subscription onboarding'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
-    'let onboarding = cx\.new\(.*?AgentPanelOnboarding::new' \
-    'the Dez Agent entry path no longer owns the explicit-provider onboarding'
+    'fn agent_panel_onboarding_is_integrated\(app_name: &str\) -> bool \{[[:space:]]*app_name != "Zed".*?let onboarding = cx\.new\(.*?AgentPanelOnboarding::new.*?if agent_panel_onboarding_is_integrated\(paths::APP_NAME\).*?onboarding\.integrated\(\).*?fn render_new_user_onboarding.*?!agent_panel_onboarding_is_integrated\(paths::APP_NAME\).*?this\.bg\(canvas_agent_panel_background\(cx\)\).*?fn dez_integrates_provider_setup_into_the_agent_surface.*?agent_panel_onboarding_is_integrated\("Dez"\).*?!agent_panel_onboarding_is_integrated\("Zed"\)' \
+    'the Dez Agent entry path can regress to an elevated or double-painted provider card'
+reject_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'fn render_new_user_onboarding.*?Some\([[:space:]]*div\(\)[[:space:]]*\.bg\(canvas_agent_panel_background\(cx\)\)' \
+    'Dez Agent onboarding can repaint translucent panel material over itself'
 require_multiline_pattern crates/agent_ui/src/conversation_view.rs \
     '\.id\(\("agent-conversation", cx\.entity_id\(\)\)\).*?\.role\(gpui::Role::Region\).*?"Agent thread".*?"Agent Session".*?\.track_focus\(&self\.focus_handle\)' \
     'native Agent conversation focus can regress to announcing the whole window'

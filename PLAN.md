@@ -3248,3 +3248,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Terminal Panel hierarchy. A pure product-policy assertion and identity guard
   cover the split. This is source-only; menu rendering and keyboard navigation
   remain part of the later consolidated artifact.
+- 2026-07-26: Removed the remaining nested-card treatment from reachable Dez
+  Agent provider setup. Provider state and actions now render in normal flow on
+  the Agent pane material with one divider; Dez no longer repaints the
+  translucent panel background, adds a shadowed frame, nests another glass
+  surface, or masks the setup with an absolute gradient. Official Zed retains
+  the upstream card. Static identity checks cover the product split. This is
+  source-only; Lumin Light/Blur and compact-width rendering remain part of the
+  later consolidated artifact.

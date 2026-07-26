@@ -1488,3 +1488,20 @@ separate Agent, Editor Layout, and Diagnostics destinations.
 No build, test binary, alternate binary, or new visual launch was performed.
 Rendered pointer, keyboard, idempotent reveal, dismissal, and focus-return proof
 remains open for the consolidated build.
+
+## 2026-07-26: integrated Agent provider setup
+
+The reachable Dez provider setup no longer uses the inherited nested
+onboarding-card treatment. It now sits in normal flow on the Agent pane
+material with one bottom divider. It does not repaint the translucent panel
+background, add an elevated frame, introduce another glass layer, or place an
+absolute gradient over the content. Provider status, configuration, and
+**Start Agent Session** behavior are unchanged.
+
+Official Zed retains the shared elevated onboarding card. A source guard pins
+the product split and rejects a direct panel-background repaint around the Dez
+setup.
+
+No build, test binary, alternate binary, or visual launch was performed.
+Rendered Lumin Light/Blur, compact-width, focus-order, and provider-state proof
+remains open for the consolidated build.

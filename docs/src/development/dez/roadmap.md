@@ -4048,3 +4048,18 @@ Completed for the coherent View-menu source slice:
 - retained source-only evidence. No build, test binary, alternate binary, or
   visual launch was performed. Rendered menu navigation and focus proof remain
   open for the consolidated artifact.
+
+Completed for the integrated Agent-provider setup source slice:
+
+- traced the reachable provider setup through the Agent pane and its shared
+  upstream onboarding-card component;
+- kept the explicit provider copy, keyboard actions, and configured-provider
+  state behavior;
+- rendered the Dez path as a flat in-flow section with one material boundary;
+- removed its outer surface repaint, elevation, nested translucent frame, and
+  absolute gradient while preserving the upstream card for official Zed;
+- added static guards against restoring either the elevated card or a
+  double-painted Lumin panel; and
+- retained source-only evidence. No build, test binary, alternate binary, or
+  visual launch was performed. The next artifact must prove the section in
+  Lumin Light and Lumin Blur at compact and default Agent widths.

@@ -7,6 +7,7 @@ use ui::prelude::*;
 #[derive(IntoElement)]
 pub struct AgentPanelOnboardingCard {
     children: SmallVec<[AnyElement; 2]>,
+    integrated: bool,
     outer_padding: Option<Pixels>,
     frame_padding: Option<Pixels>,
     content_padding_x: Option<Pixels>,
@@ -26,6 +27,7 @@ impl AgentPanelOnboardingCard {
     pub fn new() -> Self {
         Self {
             children: SmallVec::new(),
+            integrated: false,
             outer_padding: None,
             frame_padding: None,
             content_padding_x: None,
@@ -40,6 +42,14 @@ impl AgentPanelOnboardingCard {
             gradient_start: None,
             gradient_end: None,
         }
+    }
+
+    /// Renders onboarding as part of its owning pane instead of as a floating,
+    /// elevated card. This is appropriate when the surrounding product shell
+    /// already provides the surface, material, and spatial hierarchy.
+    pub fn integrated(mut self) -> Self {
+        self.integrated = true;
+        self
     }
 
     pub fn outer_padding(mut self, padding: Pixels) -> Self {
@@ -99,6 +109,7 @@ impl RenderOnce for AgentPanelOnboardingCard {
         let color = cx.theme().colors();
         let Self {
             children,
+            integrated,
             outer_padding,
             frame_padding,
             content_padding_x,
@@ -113,6 +124,20 @@ impl RenderOnce for AgentPanelOnboardingCard {
             gradient_start,
             gradient_end,
         } = self;
+
+        if integrated {
+            return v_flex()
+                .id("integrated-agent-onboarding")
+                .min_w_0()
+                .w_full()
+                .px(px(16.))
+                .py(px(12.))
+                .gap(px(8.))
+                .border_b_1()
+                .border_color(color.border_variant)
+                .children(children)
+                .into_any_element();
+        }
 
         let outer_padding = outer_padding.unwrap_or(px(10.));
         let frame_padding = frame_padding.unwrap_or(px(3.));
@@ -138,35 +163,40 @@ impl RenderOnce for AgentPanelOnboardingCard {
             frame.rounded_lg()
         };
 
-        div().min_w_0().p(outer_padding).bg(outer_background).child(
-            frame.child(
-                v_flex()
-                    .relative()
-                    .size_full()
-                    .min_w_0()
-                    .px(content_padding_x)
-                    .py(content_padding_y)
-                    .gap(content_gap)
-                    .border_1()
-                    .rounded(content_radius)
-                    .border_color(content_border)
-                    .bg(content_background)
-                    .overflow_hidden()
-                    .child(
-                        div()
-                            .absolute()
-                            .inset_0()
-                            .size_full()
-                            .rounded(content_radius)
-                            .overflow_hidden()
-                            .bg(linear_gradient(
-                                360.,
-                                linear_color_stop(gradient_start, 1.0),
-                                linear_color_stop(gradient_end, 0.45),
-                            )),
-                    )
-                    .children(children),
-            ),
-        )
+        div()
+            .min_w_0()
+            .p(outer_padding)
+            .bg(outer_background)
+            .child(
+                frame.child(
+                    v_flex()
+                        .relative()
+                        .size_full()
+                        .min_w_0()
+                        .px(content_padding_x)
+                        .py(content_padding_y)
+                        .gap(content_gap)
+                        .border_1()
+                        .rounded(content_radius)
+                        .border_color(content_border)
+                        .bg(content_background)
+                        .overflow_hidden()
+                        .child(
+                            div()
+                                .absolute()
+                                .inset_0()
+                                .size_full()
+                                .rounded(content_radius)
+                                .overflow_hidden()
+                                .bg(linear_gradient(
+                                    360.,
+                                    linear_color_stop(gradient_start, 1.0),
+                                    linear_color_stop(gradient_end, 0.45),
+                                )),
+                        )
+                        .children(children),
+                ),
+            )
+            .into_any_element()
     }
 }
