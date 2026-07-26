@@ -54,6 +54,7 @@ pub struct SidebarSettings {
     pub side: SidebarDockPosition,
     pub starts_open: bool,
     pub always_open: bool,
+    pub auto_visibility: bool,
     pub show_project_pane_button: bool,
 }
 
@@ -375,6 +376,8 @@ impl Settings for SidebarSettings {
             side: session_rail_side.unwrap_or_else(|| sidebar.side.unwrap()),
             starts_open,
             always_open: session_rail_always_open,
+            auto_visibility: !session_rail_hidden
+                && session_rail_visibility == settings::CanvasVisibility::Auto,
             show_project_pane_button: sidebar.show_project_pane_button.unwrap(),
         }
     }

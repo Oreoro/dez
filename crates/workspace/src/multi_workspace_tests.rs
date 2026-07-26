@@ -21,6 +21,72 @@ fn init_test(cx: &mut TestAppContext) {
 }
 
 #[gpui::test]
+async fn test_restored_auto_sidebar_closes_only_after_empty_state_is_ready(
+    cx: &mut TestAppContext,
+) {
+    init_test(cx);
+    let fs = FakeFs::new(cx.executor());
+    let project = Project::test(fs, [], cx).await;
+    let (multi_workspace, cx) =
+        cx.add_window_view(|window, cx| MultiWorkspace::test_new(project, window, cx));
+
+    multi_workspace.update_in(cx, |multi_workspace, window, cx| {
+        multi_workspace.restore_sidebar_open_state(true, window, cx);
+        assert!(multi_workspace.sidebar_open());
+        assert!(multi_workspace.restored_sidebar_visibility_pending());
+
+        multi_workspace.reconcile_restored_sidebar_visibility(false, false, window, cx);
+        assert!(
+            multi_workspace.sidebar_open(),
+            "Sessions must remain visible until restoration can report honest empty state"
+        );
+
+        multi_workspace.reconcile_restored_sidebar_visibility(true, true, window, cx);
+        assert!(
+            multi_workspace.sidebar_open(),
+            "real supervision or recovery state must keep restored Sessions visible"
+        );
+        assert!(
+            !multi_workspace.restored_sidebar_visibility_pending(),
+            "content resolves the one-shot restore policy without arming a later auto-close"
+        );
+
+        multi_workspace.restore_sidebar_open_state(true, window, cx);
+        multi_workspace.reconcile_restored_sidebar_visibility(true, false, window, cx);
+        assert!(
+            !multi_workspace.sidebar_open(),
+            "an empty auto-restored Sessions region should retire to the Main Work Area"
+        );
+    });
+}
+
+#[gpui::test]
+async fn test_explicit_sidebar_open_cancels_restored_auto_close(cx: &mut TestAppContext) {
+    init_test(cx);
+    let fs = FakeFs::new(cx.executor());
+    let project = Project::test(fs, [], cx).await;
+    let (multi_workspace, cx) =
+        cx.add_window_view(|window, cx| MultiWorkspace::test_new(project, window, cx));
+
+    multi_workspace.update_in(cx, |multi_workspace, window, cx| {
+        multi_workspace.restore_sidebar_open_state(true, window, cx);
+        assert!(multi_workspace.restored_sidebar_visibility_pending());
+
+        multi_workspace.open_sidebar(cx);
+        assert!(
+            !multi_workspace.restored_sidebar_visibility_pending(),
+            "an explicit Sessions command owns visibility from this point forward"
+        );
+
+        multi_workspace.reconcile_restored_sidebar_visibility(true, false, window, cx);
+        assert!(
+            multi_workspace.sidebar_open(),
+            "ordinary user-opened Sessions must never auto-hide"
+        );
+    });
+}
+
+#[gpui::test]
 async fn test_sidebar_stays_available_when_disable_ai_is_enabled(cx: &mut TestAppContext) {
     init_test(cx);
     let fs = FakeFs::new(cx.executor());

@@ -3119,16 +3119,18 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   this source slice; no build, test binary, alternate binary, or visual launch
   was performed. Runtime proof remains open for the rebuilt app/helper pair.
 - 2026-07-26: Consolidated Sessions visibility into one owner. Fresh Dez
-  windows still start with Sessions closed and restored windows still respect
-  their saved open state. While the rail is open, its overview now exposes one
-  explicit **Hide Sessions** action and generic window chrome no longer
-  duplicates that toggle; when closed, existing title/status chrome continues
-  to expose **Open Sessions**. The 280 px compact footer is now icon-only, with
-  full tooltip and accessibility names, while the 380 px detailed footer
-  restores **Agent Tools**, **Agent History**, and **Recent Workspaces**.
-  Official Zed retains its inherited toggle behavior. Formatting and static
-  identity checks cover this source slice; no build, test binary, alternate
-  binary, or visual launch was performed.
+  windows still start with Sessions closed. Under **Auto**, a restored-open rail
+  waits for Workspace and Terminal Host truth, keeps Sessions, attention,
+  Agent History, and recovery state visible, and closes only when genuinely
+  empty. Explicit open/focus cancels the one-shot close. While the rail is
+  open, its overview exposes one explicit **Hide Sessions** action and generic
+  window chrome no longer duplicates that toggle; when closed, existing
+  title/status chrome continues to expose **Open Sessions**. The 280 px compact
+  footer is icon-only, with full tooltip and accessibility names, while the
+  380 px detailed footer restores **Agent Tools**, **Agent History**, and
+  **Recent Workspaces**. Official Zed retains its inherited toggle behavior.
+  Formatting and static identity checks cover this source slice; no build, test
+  binary, alternate binary, or visual launch was performed.
 - 2026-07-26: Made the fresh Workspace honor the Main Work Area hierarchy.
   Workspace Tools no longer opens by default merely because a folder is
   present; Sessions and Agent already begin closed. Files, Outline, Git, and

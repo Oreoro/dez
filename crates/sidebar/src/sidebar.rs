@@ -2876,6 +2876,9 @@ struct SidebarContents {
     notified_threads: HashSet<agent_ui::ThreadId>,
     notified_terminals: HashSet<TerminalId>,
     project_header_indices: Vec<usize>,
+    /// False only before the first complete projection rebuild. Restore-time
+    /// auto visibility must not treat the default empty struct as evidence.
+    snapshot_ready: bool,
     has_open_projects: bool,
     has_attention: bool,
     session_count: usize,
@@ -5188,6 +5191,7 @@ impl Sidebar {
             notified_threads,
             notified_terminals,
             project_header_indices,
+            snapshot_ready: true,
             has_open_projects,
             has_attention,
             session_count,
@@ -13507,6 +13511,55 @@ impl Sidebar {
             .unwrap_or_default()
     }
 
+    /// Lets an `auto` Sessions region restored from a previous viewport retire
+    /// once restoration proves that it has nothing to supervise. This is
+    /// deferred out of render and guarded by MultiWorkspace's one-shot restore
+    /// flag, so ordinary user-opened Sessions regions are never auto-hidden.
+    fn reconcile_restored_sessions_visibility(&self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(multi_workspace) = self.multi_workspace.upgrade() else {
+            return;
+        };
+        if !multi_workspace
+            .read(cx)
+            .restored_sidebar_visibility_pending()
+        {
+            return;
+        }
+
+        let multi_workspace = self.multi_workspace.clone();
+        cx.defer_in(window, move |this, window, cx| {
+            let Some(multi_workspace) = multi_workspace.upgrade() else {
+                return;
+            };
+            let terminal_host_state = TerminalHostStartupStatus::state(cx);
+            let terminal_host_is_restoring =
+                matches!(&terminal_host_state, TerminalHostStartupState::Connecting);
+            let terminal_host_needs_recovery = matches!(
+                &terminal_host_state,
+                TerminalHostStartupState::Reconnecting { .. }
+                    | TerminalHostStartupState::Failed { .. }
+            );
+            let restoration_ready = this.contents.snapshot_ready
+                && this.update_task.is_none()
+                && !this.workspace_restore_is_pending(cx)
+                && !terminal_host_is_restoring;
+            let has_supervision_or_recovery = this.contents.session_count > 0
+                || this.contents.has_attention
+                || matches!(this.view, SidebarView::Archive(_))
+                || !this.unresolved_workspace_ids(cx).is_empty()
+                || terminal_host_needs_recovery;
+
+            multi_workspace.update(cx, |multi_workspace, cx| {
+                multi_workspace.reconcile_restored_sidebar_visibility(
+                    restoration_ready,
+                    has_supervision_or_recovery,
+                    window,
+                    cx,
+                );
+            });
+        });
+    }
+
     fn render_workspace_restore_status(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let unresolved_workspace_ids = self.unresolved_workspace_ids(cx);
         if unresolved_workspace_ids.is_empty() {
@@ -14439,6 +14492,8 @@ impl Focusable for Sidebar {
 
 impl Render for Sidebar {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.reconcile_restored_sessions_visibility(window, cx);
+
         let session_rail_settings = SessionRailSettings::get_global(cx);
         if session_rail_settings.is_hidden() {
             return div()

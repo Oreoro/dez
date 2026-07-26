@@ -69,29 +69,45 @@ describe purpose, not the inherited dock or panel implementation:
 | **Main work area**  | File, terminal, search, diagnostics, settings, and review Surfaces | Global project scope or sidebar-only copies of active work          |
 | **Agent**           | Native and ACP conversation Surfaces in a hideable right tool pane | Terminal-agent process ownership                                    |
 
-The final shell follows this responsive layout contract:
+The final shell follows this responsive layout and lifecycle contract:
 
 ```mermaid
 flowchart TB
-    LOOP["Run in Main Work Area → supervise in Sessions → review in Files and Git"]
+    START["Launch or restore"] --> PRIMARY["Main Work Area<br/>always visible · receives initial focus"]
 
     subgraph WIDE["Wide window · 1160 logical px or more"]
         direction LR
-        WS["Sessions<br/>optional supervision rail"]
-        WM["Main Work Area<br/>terminal · editor · diff · debug"]
+        WS["Sessions<br/>optional · live state and attention"]
+        WM["Main Work Area<br/>terminal · editor · diff · debug · review"]
         WD["One contextual drawer<br/>Workspace Tools or Agent"]
         WS --- WM --- WD
     end
 
     subgraph NARROW["Narrow window · below 1160 logical px"]
         direction LR
-        FA["One auxiliary surface<br/>Sessions or Workspace Tools or Agent"]
-        FM["Main Work Area<br/>always present and primary"]
+        FA["One auxiliary region<br/>Sessions or Workspace Tools or Agent"]
+        FM["Main Work Area<br/>always present · at least 60%"]
         FA --- FM
     end
 
-    LOOP --> WIDE
-    LOOP --> FOCUSED
+    PRIMARY -->|1160 px or wider| WM
+    PRIMARY -->|Below 1160 px| FM
+
+    subgraph AUTO["Sessions visibility = Auto"]
+        direction LR
+        RESTORED{"Restored open?"}
+        WAIT["Wait for Workspace and Host truth"]
+        CLOSED["Keep Main Work Area only"]
+        OPEN["Keep Sessions open"]
+        RESTORED -->|No| CLOSED
+        RESTORED -->|Yes| WAIT
+        WAIT -->|No Sessions, attention, history, or recovery| CLOSED
+        WAIT -->|Has supervision or recovery state| OPEN
+        CLOSED -->|Explicit Sessions command| OPEN
+        OPEN -->|Hide Sessions| CLOSED
+    end
+
+    START --> RESTORED
 ```
 
 The Main Work Area is never replaced by shell navigation. Workspace Tools and
@@ -102,6 +118,13 @@ floating overlay. At wide widths, Sessions may coexist with one contextual
 drawer because the Main Work Area retains a deliberate readable width.
 Transient progress and notices remain bounded and nonmodal; dialogs are
 reserved for decisions that block progress.
+
+**Auto** is a restore policy, not permission to surprise the user during
+ordinary work. A restored-open Sessions region waits until Workspace and
+Terminal Host restoration can report honest state. It then closes itself only
+when it is genuinely empty. A Session, attention item, Agent History view,
+failed Workspace recovery, or failed/reconnecting Terminal Host keeps it open.
+Any explicit Sessions command or focus cancels the pending automatic close.
 
 Sessions and the Main Work Area form one continuous window shell. Dez does not
 put a desktop-colored gutter or four-sided floating-card frame between them.
@@ -1176,16 +1199,18 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   non-empty query stays visible until it can be cleared. Official Zed retains
   its inherited scope and populated-rail search presentation.
 - **2026-07-26: Sessions visibility has one owner in each state.** A fresh Dez
-  window begins with Sessions closed; a restored window may preserve the
-  user's prior open state. While open, the Sessions overview owns one explicit
-  **Hide Sessions** action and generic title chrome does not repeat it. While
-  closed, the existing title/status affordance owns **Open Sessions**, so the
-  projection remains recoverable. At compact width, Agent Tools, Agent History,
-  and Recent Workspaces use icons with complete tooltip and accessibility
-  names; their visible labels return only in detailed mode. This keeps
-  supervision optional, reduces sidebar-like navigation furniture, and
-  preserves capability and keyboard access. Official Zed retains its inherited
-  chrome.
+  window begins with Sessions closed. Under **Auto**, a restored-open rail waits
+  for Workspace and Terminal Host truth, then closes only when it has no
+  Session, attention, Agent History, or recovery state. Explicitly opening or
+  focusing Sessions cancels that one-shot close, so normal work is never
+  auto-hidden. While open, the Sessions overview owns one explicit **Hide
+  Sessions** action and generic title chrome does not repeat it. While closed,
+  the existing title/status affordance owns **Open Sessions**, so the projection
+  remains recoverable. At compact width, Agent Tools, Agent History, and Recent
+  Workspaces use icons with complete tooltip and accessibility names; their
+  visible labels return only in detailed mode. This keeps supervision optional,
+  reduces sidebar-like navigation furniture, and preserves capability and
+  keyboard access. Official Zed retains its inherited chrome.
 - **2026-07-26: A fresh Workspace opens on the Main Work Area, not a tool
   drawer.** Workspace Tools, Agent, and Sessions are contextual projections and
   begin closed by default. Files, Outline, Git, and Debug reveal the existing

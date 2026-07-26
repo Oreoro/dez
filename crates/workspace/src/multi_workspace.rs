@@ -572,6 +572,10 @@ pub struct MultiWorkspace {
     active_workspace_id: Rc<Cell<EntityId>>,
     sidebar: Option<Box<dyn SidebarHandle>>,
     sidebar_open: bool,
+    /// A restored-open `visibility = "auto"` Sessions region may close once
+    /// Workspace and Host restoration prove that it contains no supervision
+    /// or recovery state. Explicit user interaction clears this flag.
+    sidebar_auto_close_pending: bool,
     pending_sidebar_state: Option<String>,
     sidebar_overlay: Option<AnyView>,
     pending_removal_tasks: Vec<Task<()>>,
@@ -632,6 +636,7 @@ impl MultiWorkspace {
             active_workspace_id,
             sidebar: None,
             sidebar_open: false,
+            sidebar_auto_close_pending: false,
             pending_sidebar_state: None,
             sidebar_overlay: None,
             pending_removal_tasks: Vec::new(),
@@ -706,6 +711,10 @@ impl MultiWorkspace {
         self.sidebar_open
     }
 
+    pub fn restored_sidebar_visibility_pending(&self) -> bool {
+        self.sidebar_auto_close_pending
+    }
+
     pub fn sidebar_has_notifications(&self, cx: &App) -> bool {
         self.sidebar
             .as_ref()
@@ -758,12 +767,14 @@ impl MultiWorkspace {
         }
 
         if self.sidebar_open() {
+            self.sidebar_auto_close_pending = false;
             if SidebarSettings::get_global(cx).always_open {
                 self.focus_sidebar(window, cx);
             } else {
                 self.close_sidebar(window, cx);
             }
         } else {
+            self.sidebar_auto_close_pending = false;
             self.hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal(window, cx);
             self.previous_focus_handle = window.focused(cx);
             self.open_sidebar(cx);
@@ -779,6 +790,7 @@ impl MultiWorkspace {
             return;
         }
 
+        self.sidebar_auto_close_pending = false;
         if SidebarSettings::get_global(cx).always_open {
             if !self.sidebar_open() {
                 self.apply_open_sidebar(true, cx);
@@ -793,6 +805,7 @@ impl MultiWorkspace {
             return;
         }
 
+        self.sidebar_auto_close_pending = false;
         if self.sidebar_open() {
             let sidebar_is_focused = self
                 .sidebar
@@ -820,6 +833,7 @@ impl MultiWorkspace {
     }
 
     pub fn open_sidebar(&mut self, cx: &mut Context<Self>) {
+        self.sidebar_auto_close_pending = false;
         let side = match self.sidebar_side(cx) {
             SidebarSide::Left => "left",
             SidebarSide::Right => "right",
@@ -834,12 +848,62 @@ impl MultiWorkspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if sidebar_open || SidebarSettings::get_global(cx).always_open {
+        let settings = SidebarSettings::get_global(cx);
+        self.sidebar_auto_close_pending =
+            sidebar_open && settings.auto_visibility && !settings.always_open;
+        if sidebar_open || settings.always_open {
             self.hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal(window, cx);
             self.apply_open_sidebar(false, cx);
         } else {
             self.apply_close_sidebar(false, window, false, cx);
         }
+    }
+
+    /// Resolves a restored-open Sessions region after its sources of truth are
+    /// ready. `visibility = "auto"` is intentionally limited to this restore
+    /// boundary: it never hides a rail the user explicitly opened while
+    /// working.
+    pub fn reconcile_restored_sidebar_visibility(
+        &mut self,
+        restoration_ready: bool,
+        has_supervision_or_recovery: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.sidebar_auto_close_pending || !self.sidebar_open() {
+            return;
+        }
+
+        let settings = SidebarSettings::get_global(cx);
+        let sidebar_has_focus = self
+            .sidebar
+            .as_ref()
+            .is_some_and(|sidebar| sidebar.focus_handle(cx).contains_focused(window, cx));
+
+        if !settings.auto_visibility
+            || settings.always_open
+            || sidebar_has_focus
+            || has_supervision_or_recovery
+        {
+            self.sidebar_auto_close_pending = false;
+            return;
+        }
+
+        if !restoration_ready {
+            return;
+        }
+
+        self.sidebar_auto_close_pending = false;
+        let side = match self.sidebar_side(cx) {
+            SidebarSide::Left => "left",
+            SidebarSide::Right => "right",
+        };
+        telemetry::event!(
+            "Sidebar Toggled",
+            action = "restore-auto-close",
+            side = side
+        );
+        self.apply_close_sidebar(false, window, true, cx);
     }
 
     fn apply_open_sidebar(&mut self, serialize: bool, cx: &mut Context<Self>) {
@@ -873,6 +937,7 @@ impl MultiWorkspace {
     }
 
     pub fn close_sidebar(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.sidebar_auto_close_pending = false;
         if SidebarSettings::get_global(cx).always_open {
             self.apply_open_sidebar(true, cx);
             return;
@@ -891,6 +956,7 @@ impl MultiWorkspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.sidebar_auto_close_pending = false;
         if !self.sidebar_open() {
             return;
         }
@@ -977,6 +1043,7 @@ impl MultiWorkspace {
         serialize: bool,
         cx: &mut Context<Self>,
     ) {
+        self.sidebar_auto_close_pending = false;
         self.sidebar_open = false;
         for workspace in self.retained_workspaces.clone() {
             workspace.update(cx, |workspace, cx| {
