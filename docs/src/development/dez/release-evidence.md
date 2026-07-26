@@ -1401,3 +1401,43 @@ notification, recovery action, and exact activation route. Runtime proof
 requires a controlled failed-termination response in the next consolidated
 artifact; no build, test binary, alternate binary, or visual launch was
 performed for this source slice.
+
+## 2026-07-26: Settings workflow hierarchy
+
+Current source makes the graphical Settings window explain Dez before exposing
+the inherited IDE surface:
+
+- Workspace & Privacy, Sessions & Terminal, Agents, Attention, and Evidence are
+  the first five root pages;
+- Appearance and the retained editor, language, layout, Git, network, and
+  advanced pages follow without losing compatibility settings;
+- Sessions placement is configured under Sessions & Terminal instead of Agent
+  providers;
+- Agent configuration starts with Agent Runtime & Providers and uses the public
+  **Disable Agent Features** label; and
+- official Zed keeps its existing page order and upstream labels.
+
+Pure source assertions cover the product order. The identity gate pins the
+sort, the relocated Sessions control, and the Agent copy. No build, test binary,
+alternate binary, or visual launch was performed. Rendered Settings navigation
+remains part of the later consolidated artifact check.
+
+## 2026-07-26: compact Lumin chrome audit
+
+The already-running installed Dez window remains older than current source. It
+still renders idle Workspace rows and opens Workspace Tools beside an empty Main
+Work Area. Those observations are not evidence against the current fixes: the
+source now omits idle rows and starts fresh Workspaces with the Main Work Area
+as the only primary region.
+
+The Lumin path itself is complete in source. Both Lumin Light and Lumin Blur
+request blurred window backgrounds; macOS supplies one under-window material,
+behind-window blending, and active-state tracking. Translucent panel, editor,
+terminal, toolbar, tab, status, and elevated layers remain bounded by the theme
+gate across representative warm, cool, light, and dark backdrops.
+
+This slice changes the fresh and recovery profile to compact Canvas density.
+The 14 px UI/editor/Agent/terminal baseline and control targets remain intact;
+only surplus padding contracts. Theme and identity checks pin the default,
+first-run, and recovery paths. No build, test binary, or alternate binary was
+launched, so rendered compact-density proof remains open.

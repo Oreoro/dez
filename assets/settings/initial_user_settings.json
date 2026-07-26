@@ -1,8 +1,8 @@
 // Dez settings
 //
-// Dez starts with Lumin and JetBrains Mono across the interface, editor,
-// terminal, prompts, and review surfaces. Change any value here to make the
-// experience your own.
+// Dez starts with compact Lumin chrome and JetBrains Mono across the interface,
+// editor, terminal, prompts, and review surfaces. Change any value here to make
+// the experience your own.
 //
 // To see every Dez default without changing your custom settings, run
 // `dez: open default settings` from the
@@ -16,6 +16,9 @@
     "mode": "system",
     "light": "Lumin Light",
     "dark": "Lumin Blur"
+  },
+  "design_system": {
+    "density": "compact"
   },
   "icon_theme": "Dez (Default)",
   "markdown_preview_code_font_family": "JetBrains Mono",

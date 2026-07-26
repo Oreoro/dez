@@ -149,8 +149,8 @@ require_multiline_pattern crates/diagnostics/src/toolbar_controls.rs \
     'IconButton::new\("inline_assist", ui::assistant_icon_for_app\(paths::APP_NAME\)\).*?aria_label\("Inline Assist"\)' \
     'the diagnostics Inline Assist icon can lose its neutral product identity or accessible name'
 require_multiline_pattern assets/settings/default.json \
-    '"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur"' \
-    'the Dez default appearance no longer follows the system with the Lumin light/blur pair'
+    '"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"design_system": \{.*?"density": "compact"' \
+    'the Dez default appearance no longer follows the Lumin pair with compact product density'
 require_pattern assets/settings/default.json \
     '^  "buffer_font_family": "JetBrains Mono",$' \
     'the editor no longer defaults to bundled JetBrains Mono'
@@ -161,7 +161,7 @@ require_multiline_pattern assets/settings/default.json \
     '^  "terminal": \{.*?^    "font_size": 14,.*?^    "font_family": "JetBrains Mono",$' \
     'the terminal no longer shares the polished JetBrains Mono typography profile'
 require_multiline_pattern assets/settings/initial_user_settings.json \
-    '"ui_font_family": "JetBrains Mono".*?"buffer_font_family": "JetBrains Mono".*?"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"terminal": \{.*?"font_family": "JetBrains Mono".*?"font_size": 14' \
+    '"ui_font_family": "JetBrains Mono".*?"buffer_font_family": "JetBrains Mono".*?"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"design_system": \{.*?"density": "compact".*?"terminal": \{.*?"font_family": "JetBrains Mono".*?"font_size": 14' \
     'first-run settings can override Dez with stale themes or typography'
 require_multiline_pattern assets/settings/initial_user_settings.json \
     '"icon_theme": "Dez \(Default\)".*?"markdown_preview_code_font_family": "JetBrains Mono"' \
@@ -170,13 +170,13 @@ require_multiline_pattern crates/zed_actions/src/lib.rs \
     'pub mod dez.*?actions!\([[:space:]]*dez.*?RestoreVisualProfile' \
     'the explicit Dez visual-profile recovery action is no longer registered'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'fn restore_dez_visual_profile.*?ui_font_family = Some\(jetbrains_mono\.clone\(\)\).*?buffer_font_family = Some\(jetbrains_mono\.clone\(\)\).*?markdown_preview_code_font_family = Some\(jetbrains_mono\.clone\(\)\).*?ThemeSelection::Dynamic.*?ThemeAppearanceMode::System.*?Lumin Light.*?Lumin Blur.*?IconThemeSelection::Static.*?Dez \(Default\).*?terminal.*?font_family = Some\(jetbrains_mono\)' \
+    'fn restore_dez_visual_profile.*?ui_font_family = Some\(jetbrains_mono\.clone\(\)\).*?buffer_font_family = Some\(jetbrains_mono\.clone\(\)\).*?markdown_preview_code_font_family = Some\(jetbrains_mono\.clone\(\)\).*?ThemeSelection::Dynamic.*?ThemeAppearanceMode::System.*?Lumin Light.*?Lumin Blur.*?IconThemeSelection::Static.*?Dez \(Default\).*?design_system.*?CanvasDensity::Compact.*?terminal.*?font_family = Some\(jetbrains_mono\)' \
     'visual-profile recovery can stop restoring the complete scoped Dez identity'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'RestoreVisualProfile.*?APP_NAME == "Zed".*?update_settings_file_with_completion.*?restore_dez_visual_profile.*?completion\.await\?\?.*?Restored Lumin, JetBrains Mono, and Dez icons\..*?Failed to restore the Dez visual profile' \
+    'RestoreVisualProfile.*?APP_NAME == "Zed".*?update_settings_file_with_completion.*?restore_dez_visual_profile.*?completion\.await\?\?.*?Restored Lumin, compact density, JetBrains Mono, and Dez icons\..*?Failed to restore the Dez visual profile' \
     'visual-profile recovery can affect official Zed, report before persistence, or fail silently'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'fn dez_visual_profile_restores_identity_without_resetting_font_size.*?ui_font_size = Some\(18\.0\.into\(\)\).*?restore_dez_visual_profile.*?Lumin Light.*?Lumin Blur.*?Dez \(Default\).*?JetBrains Mono.*?ui_font_size.*?18\.0' \
+    'fn dez_visual_profile_restores_identity_without_resetting_font_size.*?ui_font_size = Some\(18\.0\.into\(\)\).*?restore_dez_visual_profile.*?Lumin Light.*?Lumin Blur.*?Dez \(Default\).*?design_system.*?density.*?compact.*?JetBrains Mono.*?ui_font_size.*?18\.0' \
     'the scoped visual-profile mutation is no longer covered against size resets'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'APP_NAME != "Zed".*?Restore Dez Visual Profile.*?zed_actions::dez::RestoreVisualProfile' \
@@ -369,6 +369,15 @@ require_multiline_pattern crates/settings_ui/src/page_data.rs \
 require_pattern crates/settings_ui/src/page_data.rs \
     'dez_settings_page_visible\(paths::APP_NAME, "Collaboration"\)' \
     'Dez Settings can regress to exposing the inherited Calls and Collaboration page'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'if paths::APP_NAME != "Zed".*?pages\.sort_by_key\(\|page\| dez_settings_page_priority\(page\.title\)\).*?fn dez_settings_page_priority.*?"Workspace & Privacy" => 0.*?"Sessions & Terminal" => 1.*?"Agents" => 2.*?"Attention" => 3.*?"Evidence" => 4.*?"Advanced" => 15' \
+    'Dez Settings can regress to burying its product workflow below inherited IDE customization'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'fn sessions_side_setting_visible.*?app_name == "Zed".*?page_title == "Agents".*?page_title == "Sessions & Terminal".*?fn sessions_side_setting.*?title: "Sessions Side".*?json_path: Some\("sidebar\.side"\).*?fn terminal_page\(\) -> SettingsPage.*?sessions_side_setting_visible\(paths::APP_NAME, "Sessions & Terminal"\).*?sessions_side_setting\(\).*?title: "Sessions & Terminal".*?sessions_section\(\)' \
+    'the Sessions layout control can regress to an unrelated Agent-provider section'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'fn ai_page\(cx: &App\) -> SettingsPage.*?SectionHeader\(agent_session_setting_copy.*?"General".*?"Agent Runtime & Providers".*?"Disable AI".*?"Disable Agent Features".*?sessions_side_setting_visible\(paths::APP_NAME, "Agents"\).*?title: "Agents"' \
+    'Dez Agent settings can regress to inherited, implementation-shaped first-run copy'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'dez_network_setting_visible\(paths::APP_NAME' \
     'Dez Settings can regress to exposing inherited cloud connection controls'

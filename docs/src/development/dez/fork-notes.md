@@ -510,9 +510,10 @@ Typography uses one explicit Dez identity:
   Markdown, review, settings, and Git commit input.
 - Users can independently override UI, buffer, terminal, Agent, and Markdown
   roles through normal settings when they prefer proportional prose.
-- The balanced v0.0.1 baseline is 14 px for UI, editor, Agent, and terminal
-  text, with a 1.5 editor line height and a slightly smaller 13 px Git commit
-  input.
+- The compact v0.0.1 chrome baseline keeps 14 px UI, editor, Agent, and
+  terminal text, with a 1.5 editor line height and a slightly smaller 13 px Git
+  commit input. Compact density reduces unused padding; it does not shrink type
+  or interactive targets.
 
 First-run settings must select the same Lumin and font profile as product
 defaults. They must not pin a stale upstream theme or oversized typography that
@@ -521,9 +522,10 @@ remain free to override every role through normal settings.
 
 The app menu and command palette expose **Restore Dez Visual Profile** as an
 explicit recovery path. It writes only the system-selected Lumin Light/Lumin
-Blur pair, **Dez (Default)** icons, and JetBrains Mono for interface, buffer,
-terminal, and Markdown code roles. It preserves sizes and unrelated settings,
-waits for persistence, and shows success only after the write completes.
+Blur pair, compact density, **Dez (Default)** icons, and JetBrains Mono for
+interface, buffer, terminal, and Markdown code roles. It preserves sizes and
+unrelated settings, waits for persistence, and shows success only after the
+write completes.
 
 The upgrade path recognizes only known exact Dez-generated profile signatures.
 The first used `.ZedSans` beside Lumin; the earlier installed profile also
@@ -1297,3 +1299,18 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   or unavailable terminal item instead of opening a full-size **Session
   unavailable** placeholder beside real work. Official Zed retains its
   inherited placeholder behavior.
+- **2026-07-26: Settings starts with the product workflow.** Dez orders
+  **Workspace & Privacy**, **Sessions & Terminal**, **Agents**, **Attention**,
+  and **Evidence** before inherited editor customization. Appearance, editing,
+  language, layout, Git, network, and advanced compatibility remain available
+  after that product path. **Sessions Side** belongs to **Sessions & Terminal**,
+  not Agent provider configuration. The Agents page starts with **Agent Runtime
+  & Providers** and names its compatibility kill switch **Disable Agent
+  Features**. Official Zed retains its upstream page order and labels.
+- **2026-07-26: Compact density removes air, not affordances.** Fresh and
+  restored Dez profiles use compact Canvas density while preserving the 14 px
+  type baseline, keyboard order, accessible names, and existing target sizes.
+  Settings rows, navigation, and shell chrome therefore show more useful state
+  without turning the product into a miniature interface. Lumin Light and
+  Lumin Blur still use one native whole-window material; density does not add
+  nested blur or detached cards.

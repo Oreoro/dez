@@ -86,7 +86,32 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
         network_page(),
         developer_page(cx),
     ]);
+    if paths::APP_NAME != "Zed" {
+        pages.sort_by_key(|page| dez_settings_page_priority(page.title));
+    }
     pages
+}
+
+fn dez_settings_page_priority(title: &str) -> usize {
+    match title {
+        "Workspace & Privacy" => 0,
+        "Sessions & Terminal" => 1,
+        "Agents" => 2,
+        "Attention" => 3,
+        "Evidence" => 4,
+        "Appearance" => 5,
+        "Keymap" => 6,
+        "Editor" => 7,
+        "Languages & Tools" => 8,
+        "Search & Files" => 9,
+        "Window & Layout" => 10,
+        "Workspace Tools & Agent" => 11,
+        "Debugger" => 12,
+        "Version Control" => 13,
+        "Network" => 14,
+        "Advanced" => 15,
+        _ => 16,
+    }
 }
 
 fn dez_settings_page_visible(app_name: &str, title: &str) -> bool {
@@ -189,6 +214,31 @@ fn workspace_surface_setting_visible(app_name: &str, item: &SettingsPageItem) ->
     };
 
     workspace_surface_setting_path_visible(app_name, json_path)
+}
+
+fn sessions_side_setting_visible(app_name: &str, page_title: &str) -> bool {
+    if app_name == "Zed" {
+        page_title == "Agents"
+    } else {
+        page_title == "Sessions & Terminal"
+    }
+}
+
+fn sessions_side_setting() -> SettingsPageItem {
+    SettingsPageItem::SettingItem(SettingItem {
+        title: "Sessions Side",
+        description: "Which side of the window the Sessions list appears on.",
+        field: Box::new(SettingField {
+            organization_override: None,
+            json_path: Some("sidebar.side"),
+            pick: |settings_content| settings_content.sidebar.as_ref()?.side.as_ref(),
+            write: |settings_content, value, _| {
+                settings_content.sidebar.get_or_insert_default().side = value;
+            },
+        }),
+        metadata: None,
+        files: USER,
+    })
 }
 
 fn developer_page(cx: &App) -> SettingsPage {
@@ -6978,6 +7028,17 @@ fn debugger_page() -> SettingsPage {
 }
 
 fn terminal_page() -> SettingsPage {
+    fn sessions_section() -> Vec<SettingsPageItem> {
+        if sessions_side_setting_visible(paths::APP_NAME, "Sessions & Terminal") {
+            vec![
+                SettingsPageItem::SectionHeader("Sessions"),
+                sessions_side_setting(),
+            ]
+        } else {
+            Vec::new()
+        }
+    }
+
     fn environment_section() -> [SettingsPageItem; 5] {
         [
                 SettingsPageItem::SectionHeader("Environment"),
@@ -7849,6 +7910,7 @@ fn terminal_page() -> SettingsPage {
     SettingsPage {
         title: "Sessions & Terminal",
         items: concat_sections![
+            sessions_section(),
             environment_section(),
             font_section(),
             display_settings_section(),
@@ -8463,12 +8525,24 @@ fn collaboration_page() -> SettingsPage {
 }
 
 fn ai_page(cx: &App) -> SettingsPage {
-    fn general_section() -> [SettingsPageItem; 6] {
-        [
-            SettingsPageItem::SectionHeader("General"),
+    fn general_section() -> Vec<SettingsPageItem> {
+        let mut items = vec![
+            SettingsPageItem::SectionHeader(agent_session_setting_copy(
+                paths::APP_NAME,
+                "General",
+                "Agent Runtime & Providers",
+            )),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Disable AI",
-                description: "Whether to disable all AI features in Dez.",
+                title: agent_session_setting_copy(
+                    paths::APP_NAME,
+                    "Disable AI",
+                    "Disable Agent Features",
+                ),
+                description: agent_session_setting_copy(
+                    paths::APP_NAME,
+                    "Whether to disable all AI features in Zed.",
+                    "Disable Agent Sessions, model providers, and edit predictions in this Workspace.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("disable_ai"),
@@ -8480,20 +8554,11 @@ fn ai_page(cx: &App) -> SettingsPage {
                 metadata: None,
                 files: USER | PROJECT,
             }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Sessions Side",
-                description: "Which side of the window the Sessions list appears on.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("sidebar.side"),
-                    pick: |settings_content| settings_content.sidebar.as_ref()?.side.as_ref(),
-                    write: |settings_content, value, _| {
-                        settings_content.sidebar.get_or_insert_default().side = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
+        ];
+        if sessions_side_setting_visible(paths::APP_NAME, "Agents") {
+            items.push(sessions_side_setting());
+        }
+        items.extend([
             SettingsPageItem::SubPageLink(SubPageLink {
                 title: "LLM Providers".into(),
                 r#type: Default::default(),
@@ -8569,7 +8634,8 @@ fn ai_page(cx: &App) -> SettingsPage {
                 files: USER,
                 render: render_mcp_servers_page,
             }),
-        ]
+        ]);
+        items
     }
 
     fn agent_configuration_section(_cx: &App) -> Box<[SettingsPageItem]> {
@@ -11466,6 +11532,35 @@ mod tests {
         assert!(auto_update_setting_visible("Zed"));
         assert!(floating_attention_popup_setting_visible("Dez"));
         assert!(!floating_attention_popup_setting_visible("Zed"));
+    }
+
+    #[test]
+    fn dez_settings_put_the_product_workflow_before_ide_customization() {
+        let product_pages = [
+            "Workspace & Privacy",
+            "Sessions & Terminal",
+            "Agents",
+            "Attention",
+            "Evidence",
+        ];
+        for pair in product_pages.windows(2) {
+            assert!(dez_settings_page_priority(pair[0]) < dez_settings_page_priority(pair[1]));
+        }
+
+        assert!(dez_settings_page_priority("Evidence") < dez_settings_page_priority("Appearance"));
+        assert!(
+            dez_settings_page_priority("Workspace Tools & Agent")
+                < dez_settings_page_priority("Advanced")
+        );
+        assert_eq!(dez_settings_page_priority("Unknown Compatibility Page"), 16);
+    }
+
+    #[test]
+    fn sessions_placement_is_configured_with_its_own_surface_in_dez() {
+        assert!(sessions_side_setting_visible("Dez", "Sessions & Terminal"));
+        assert!(!sessions_side_setting_visible("Dez", "Agents"));
+        assert!(sessions_side_setting_visible("Zed", "Agents"));
+        assert!(!sessions_side_setting_visible("Zed", "Sessions & Terminal"));
     }
 
     #[test]

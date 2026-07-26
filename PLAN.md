@@ -740,7 +740,11 @@ with new labels.
       real trust/accessibility controls. Session Rail chrome uses product
       terminology, and dead sign-in/user-menu/avatar settings are no longer
       visible because Dez deliberately suppresses that upstream account chrome;
-      compatibility keys remain readable. Experimental-internal audit remains.
+      compatibility keys remain readable. Current local source orders
+      Workspace, Sessions, Agents, Attention, and Evidence before inherited IDE
+      customization, moves Sessions placement into Sessions & Terminal, and
+      gives Agent configuration a concrete Runtime & Providers entry point.
+      Experimental-internal audit remains.
 - [ ] Provide safe defaults and explain persistence, output retention,
       redaction, adapter trust, and experimental-host limitations. Evidence
       settings now distinguish local process detection, authenticated
@@ -3204,3 +3208,21 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   presentation. Static product assertions, formatting, identity, theme,
   metadata, and diff checks cover this source slice; no build, test binary,
   alternate binary, or visual launch was performed.
+- 2026-07-26: Reordered Dez Settings around the product workflow. Workspace &
+  Privacy, Sessions & Terminal, Agents, Attention, and Evidence now lead the
+  root navigation, with retained IDE customization and compatibility pages
+  following. Sessions placement moved out of Agent provider configuration and
+  into Sessions & Terminal; Agents now starts with Agent Runtime & Providers
+  and exposes its compatibility kill switch as Disable Agent Features.
+  Official Zed keeps its upstream order and labels. Source assertions and
+  static guards cover the hierarchy; no build, test binary, alternate binary,
+  or visual launch was performed.
+- 2026-07-26: Audited the running installed window against the current Lumin
+  source. The installed artifact still shows pre-fix idle Workspace rows and an
+  unsolicited Workspace Tools drawer; current source already removes both.
+  Lumin Light/Blur correctly reaches the one native macOS under-window material
+  with bounded translucent semantic layers and activation-aware behavior.
+  Fresh and restored profiles now use compact Canvas density while retaining
+  14 px typography and existing control targets. Theme and identity guards pin
+  the default, first-run, and recovery paths. No build, test binary, or
+  alternate binary was launched.

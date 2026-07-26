@@ -3977,3 +3977,37 @@ Completed for the focused empty-work-area hierarchy source slice:
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed. Focus transitions, explicit split layouts, and
   both Lumin variants remain runtime acceptance work for the next artifact.
+
+Completed for the Settings information-architecture source slice:
+
+- ordered Dez's workflow pages as Workspace, Sessions, Agents, Attention, and
+  Evidence before inherited IDE customization;
+- kept every retained editor, language, layout, Git, network, and compatibility
+  control available after the product path;
+- moved **Sessions Side** from Agent provider configuration to
+  **Sessions & Terminal**;
+- renamed the first Agent section **Agent Runtime & Providers** and exposed the
+  compatibility kill switch as **Disable Agent Features** in Dez;
+- preserved official Zed's page order and labels;
+- added pure ordering assertions and static regression guards; and
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Rendered Settings proof remains open for the
+  next consolidated artifact.
+
+Completed for the compact Lumin chrome source slice:
+
+- audited the already-running installed Dez window and confirmed it still
+  predates current source: it shows idle Workspace rows and an unsolicited
+  Workspace Tools drawer that current source has removed;
+- traced Lumin Light and Lumin Blur from bundled defaults through transparent
+  rendering to the native macOS under-window material;
+- kept the measured translucent shell, region, interaction, contrast, and
+  active/inactive behavior unchanged;
+- changed fresh and restored Dez profiles from balanced to compact Canvas
+  density while preserving the 14 px typography baseline and existing control
+  targets;
+- extended the theme and identity gates to pin compact density and accurate
+  visual-profile recovery copy; and
+- retained source-only evidence: no build, test binary, or alternate binary
+  was launched. The running installed artifact is diagnostic evidence only and
+  remains stale until the consolidated build.

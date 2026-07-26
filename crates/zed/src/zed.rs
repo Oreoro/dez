@@ -881,6 +881,7 @@ fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
     settings.theme.icon_theme = Some(settings::IconThemeSelection::Static(
         settings::IconThemeName(Arc::from("Dez (Default)")),
     ));
+    settings.design_system.get_or_insert_default().density = Some(settings::CanvasDensity::Compact);
     settings.terminal.get_or_insert_default().font_family = Some(jetbrains_mono);
 }
 
@@ -1221,7 +1222,7 @@ fn register_actions(
                         workspace.show_toast(
                             Toast::new(
                                 NotificationId::unique::<RestoreDezVisualProfile>(),
-                                "Restored Lumin, JetBrains Mono, and Dez icons.",
+                                "Restored Lumin, compact density, JetBrains Mono, and Dez icons.",
                             ),
                             cx,
                         );
@@ -2968,6 +2969,7 @@ mod tests {
             })
         );
         assert_eq!(settings["icon_theme"], "Dez (Default)");
+        assert_eq!(settings["design_system"]["density"], "compact");
         assert_eq!(settings["terminal"]["font_family"], "JetBrains Mono");
         assert_eq!(settings["ui_font_size"], 18.0);
     }
