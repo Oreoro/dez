@@ -2496,6 +2496,9 @@ impl TerminalView {
                 .tooltip(Tooltip::text("Session Details and How Dez Works")),
             )
             .menu(move |window, cx| {
+                let details_status = details_status.clone();
+                let details_repository = details_repository.clone();
+                let details_changes = details_changes.clone();
                 let details_working_directory = details_working_directory.clone();
                 let details_session_id = details_session_id.clone();
                 Some(ContextMenu::build(window, cx, move |mut menu, _, _| {
@@ -3040,6 +3043,7 @@ impl Item for TerminalView {
     }
 
     fn tab_icon_element(&self, _window: &Window, cx: &App) -> Option<AnyElement> {
+        let terminal_entity_id = self.terminal().entity_id();
         let terminal = self.terminal().read(cx);
         let foreground_command = terminal.foreground_process_command_name();
         let foreground_agent =
