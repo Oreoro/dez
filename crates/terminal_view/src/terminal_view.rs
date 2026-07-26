@@ -108,6 +108,10 @@ struct TerminalForegroundAgentPresentation {
     icon: IconName,
 }
 
+fn unavailable_session_restores_placeholder_surface(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 fn terminal_foreground_agent_presentation(
     app_name: &str,
     command: Option<&str>,
@@ -3428,6 +3432,11 @@ impl SerializableItem for TerminalView {
                             Some(terminal) => (terminal, None),
                             None => {
                                 let reason = "The terminal host no longer owns this saved session.";
+                                if !unavailable_session_restores_placeholder_surface(
+                                    paths::APP_NAME,
+                                ) {
+                                    return Err(anyhow!(reason));
+                                }
                                 (
                                     cx.update(|window, cx| {
                                         session_unavailable_terminal(&project, window, cx)
@@ -3439,6 +3448,9 @@ impl SerializableItem for TerminalView {
                     } else {
                         let reason =
                             "The saved terminal process is no longer available on this Dez host.";
+                        if !unavailable_session_restores_placeholder_surface(paths::APP_NAME) {
+                            return Err(anyhow!(reason));
+                        }
                         (
                             cx.update(|window, cx| {
                                 session_unavailable_terminal(&project, window, cx)
@@ -3449,6 +3461,9 @@ impl SerializableItem for TerminalView {
                 }
                 StoredTerminalSessionRef::Invalid => {
                     let reason = "The saved terminal session reference is incomplete or invalid.";
+                    if !unavailable_session_restores_placeholder_surface(paths::APP_NAME) {
+                        return Err(anyhow!(reason));
+                    }
                     (
                         cx.update(|window, cx| session_unavailable_terminal(&project, window, cx))?,
                         Some(reason.to_owned()),
@@ -3857,6 +3872,12 @@ mod tests {
     use util::rel_path::RelPath;
     use workspace::item::test::{TestItem, TestProjectItem};
     use workspace::{AppState, MultiWorkspace, SelectedEntry};
+
+    #[test]
+    fn dez_drops_unavailable_restored_surfaces_instead_of_faking_a_terminal() {
+        assert!(unavailable_session_restores_placeholder_surface("Zed"));
+        assert!(!unavailable_session_restores_placeholder_surface("Dez"));
+    }
 
     #[test]
     fn foreground_agent_presentation_is_immediate_but_product_scoped() {

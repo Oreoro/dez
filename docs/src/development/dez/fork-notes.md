@@ -1181,3 +1181,18 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   it does not repeat the product tutorial as permanent chrome. Closing a
   focused Workspace Tools or Agent pane must return focus to a visible Main
   Work Area even if the active-pane marker was already reconciled.
+- **2026-07-26: Foreground inspection is coalesced, never dropped.** Ordinary
+  terminal output may request process inspection faster than the OS query can
+  complete. Dez keeps at most one query in flight and one trailing request.
+  A shell → Codex transition that happens during the first query is therefore
+  observed even if the Codex TUI becomes quiet immediately afterward. Only a
+  changed process snapshot emits the semantic event consumed by the terminal
+  tab and Sessions; raw output still does not rebuild the rail.
+- **2026-07-26: Missing computation is row state, not a fake Surface.** When a
+  user selects a saved terminal Session that its Host cannot restore, Dez
+  preserves the current Main Work Area and changes that existing row to
+  **Missing**. A later selection may retry attachment; the row's removal action
+  discards the dead reference. Startup restoration similarly drops an invalid
+  or unavailable terminal item instead of opening a full-size **Session
+  unavailable** placeholder beside real work. Official Zed retains its
+  inherited placeholder behavior.

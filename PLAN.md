@@ -3170,3 +3170,21 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   advanced the active-pane pointer. Static checks and source assertions cover
   the contract; the inspected installed app predates this source and runtime
   proof remains deferred until the requested later build.
+- 2026-07-26: Closed the last ordinary-terminal observation race. PTY process
+  inspection still coalesces output bursts behind one asynchronous refresh,
+  but a wakeup received while that refresh is running now records one trailing
+  inspection. A shell therefore cannot remain stranded in Sessions when Codex
+  takes over during the earlier inspection and then becomes quiet; the same
+  terminal identity reaches **Codex · Running** without rebuilding on every
+  output frame. Direct npm-installed Codex script paths are covered by the
+  foreground-command assertion. This is source-only; runtime proof remains
+  deferred until the requested later build.
+- 2026-07-26: Removed dead-session placeholder terminals from Dez. A failed
+  saved-Session activation now leaves the current Main Work Area untouched and
+  marks the existing Sessions row **Missing**; retrying that row can still
+  reattach if its Host returns, and removing it uses the existing row action.
+  Startup restoration drops an unavailable or invalid terminal item rather
+  than reopening a full-size **Session unavailable** Surface beside real work.
+  Official Zed retains its inherited placeholder behavior. Static product
+  assertions and identity guards cover both paths; no build, test binary,
+  alternate binary, or visual launch was performed.

@@ -63,10 +63,20 @@ is process evidence, not inference from terminal text. A configured provider
 adapter can add structured progress, attention, commands, and checks; plain
 process detection deliberately promises only who appears to be running.
 
+For ordinary terminals, foreground inspection coalesces output bursts while
+retaining one trailing refresh. Starting Codex while an earlier shell
+inspection is still running therefore cannot leave Sessions permanently stuck
+on the shell once the TUI becomes quiet.
+
 Reattaching a detached Session shows **Opening…** in its existing row
 immediately. Repeated clicks do not create duplicate attachment work or another
 terminal. When attachment completes, the row returns to the observed lifecycle
 state and the restored terminal receives focus.
+
+If the saved computation is no longer available, Dez keeps the current Main
+Work Area intact and changes the existing row to **Missing**. It does not open
+a placeholder terminal. Select the row again to retry after its Host returns,
+or remove the dead reference from Sessions.
 
 ### Moving from a Session into the IDE
 

@@ -285,6 +285,10 @@ fn session_rail_shows_empty_agent_drafts(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn terminal_activation_failure_uses_placeholder_surface(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 fn session_switcher_uses_modal_overlay(app_name: &str) -> bool {
     app_name == "Zed"
 }
@@ -331,6 +335,8 @@ mod agent_session_label_tests {
         assert!(!session_rail_shows_idle_workspaces("Dez"));
         assert!(session_rail_shows_empty_agent_drafts("Zed"));
         assert!(!session_rail_shows_empty_agent_drafts("Dez"));
+        assert!(terminal_activation_failure_uses_placeholder_surface("Zed"));
+        assert!(!terminal_activation_failure_uses_placeholder_surface("Dez"));
     }
 }
 
@@ -3339,6 +3345,10 @@ pub struct Sidebar {
     manual_entry_order: Vec<ManualEntryOrderKey>,
     standalone_terminal_created_at: HashMap<TerminalId, DateTime<Utc>>,
     standalone_terminal_subscriptions: HashMap<EntityId, gpui::Subscription>,
+    /// Host Sessions that failed their most recent explicit activation stay
+    /// visible as Missing rows. They must not manufacture a placeholder
+    /// terminal Surface in the Main Work Area.
+    failed_terminal_activations: HashSet<TerminalId>,
     thread_switcher: Option<Entity<ThreadSwitcher>>,
     _thread_switcher_subscriptions: Vec<gpui::Subscription>,
     pending_thread_activation: Option<agent_ui::ThreadId>,
@@ -3568,6 +3578,7 @@ impl Sidebar {
             manual_entry_order: Vec::new(),
             standalone_terminal_created_at: HashMap::new(),
             standalone_terminal_subscriptions: HashMap::new(),
+            failed_terminal_activations: HashSet::new(),
             thread_switcher: None,
             _thread_switcher_subscriptions: Vec::new(),
             pending_thread_activation: None,
@@ -4248,6 +4259,7 @@ impl Sidebar {
             .iter()
             .map(|snapshot| (snapshot.session_id, snapshot.clone()))
             .collect::<HashMap<_, _>>();
+        let failed_terminal_activations = self.failed_terminal_activations.clone();
         let detached_local_sessions = local_host_sessions
             .into_iter()
             .chain(helper_host_sessions.iter().cloned())
@@ -4424,9 +4436,14 @@ impl Sidebar {
                                 },
                             })
                         } else {
-                            live_terminal_runtime
-                                .get(&metadata.terminal_id)
-                                .cloned()
+                            failed_terminal_activations
+                                .contains(&metadata.terminal_id)
+                                .then_some(TerminalRuntimeInfo {
+                                    state: TerminalRuntimeState::Missing,
+                                })
+                                .or_else(|| {
+                                    live_terminal_runtime.get(&metadata.terminal_id).cloned()
+                                })
                                 .or_else(|| host_snapshot.and_then(terminal_runtime_from_snapshot))
                         },
                         agent,
@@ -4608,7 +4625,12 @@ impl Sidebar {
                         detected_agent_kind,
                         workspace: ThreadEntryWorkspace::Open(workspace.clone()),
                         source: TerminalEntrySource::HostSession(snapshot.session_id),
-                        runtime: terminal_runtime_from_snapshot(snapshot),
+                        runtime: failed_terminal_activations
+                            .contains(&terminal_id)
+                            .then_some(TerminalRuntimeInfo {
+                                state: TerminalRuntimeState::Missing,
+                            })
+                            .or_else(|| terminal_runtime_from_snapshot(snapshot)),
                         agent: agent.clone(),
                         worktrees,
                         needs_attention: agent
@@ -5138,6 +5160,8 @@ impl Sidebar {
             .retain(|id, _| current_terminal_ids.contains(id));
         self.standalone_terminal_created_at
             .retain(|id, _| current_terminal_ids.contains(id));
+        self.failed_terminal_activations
+            .retain(|id| current_terminal_ids.contains(id));
 
         self.live_thread_statuses = new_live_statuses;
 
@@ -8558,6 +8582,8 @@ impl Sidebar {
                 .terminal
         });
         if let Some(terminal) = local_terminal {
+            self.failed_terminal_activations
+                .remove(&metadata.terminal_id);
             multi_workspace.update(cx, |multi_workspace, cx| {
                 multi_workspace.activate(workspace.clone(), None, window, cx);
                 if retain {
@@ -8606,48 +8632,73 @@ impl Sidebar {
                 )
                 .await
                 {
-                    Ok(Some(terminal)) => (terminal, None),
+                    Ok(Some(terminal)) => (Some(terminal), None),
                     Ok(None) => {
                         log::warn!("terminal host no longer owns session {session_id}");
-                        let terminal = cx.update(|window, cx| {
-                            terminal_view::session_unavailable_terminal(&project, window, cx)
-                        })?;
-                        (
-                            terminal,
-                            Some("The terminal host no longer owns this saved session.".to_owned()),
-                        )
+                        let reason =
+                            "The terminal host no longer owns this saved session.".to_owned();
+                        let terminal =
+                            if terminal_activation_failure_uses_placeholder_surface(APP_NAME) {
+                                Some(cx.update(|window, cx| {
+                                    terminal_view::session_unavailable_terminal(
+                                        &project, window, cx,
+                                    )
+                                })?)
+                            } else {
+                                None
+                            };
+                        (terminal, Some(reason))
                     }
                     Err(error) => {
                         log::warn!(
                             "failed to restore hosted terminal session {session_id}: {error:#}"
                         );
-                        let terminal = cx.update(|window, cx| {
-                            terminal_view::session_unavailable_terminal(&project, window, cx)
-                        })?;
-                        (
-                            terminal,
-                            Some(
-                                "The terminal host could not confirm this saved session."
-                                    .to_owned(),
-                            ),
-                        )
+                        let reason =
+                            "The terminal host could not confirm this saved session.".to_owned();
+                        let terminal =
+                            if terminal_activation_failure_uses_placeholder_surface(APP_NAME) {
+                                Some(cx.update(|window, cx| {
+                                    terminal_view::session_unavailable_terminal(
+                                        &project, window, cx,
+                                    )
+                                })?)
+                            } else {
+                                None
+                            };
+                        (terminal, Some(reason))
                     }
                 },
                 None => {
                     log::warn!("terminal host is unavailable for session {session_id}");
-                    let terminal = cx.update(|window, cx| {
-                        terminal_view::session_unavailable_terminal(&project, window, cx)
-                    })?;
-                    (
-                        terminal,
-                        Some("The terminal host is unavailable for this saved session.".to_owned()),
-                    )
+                    let reason =
+                        "The terminal host is unavailable for this saved session.".to_owned();
+                    let terminal = if terminal_activation_failure_uses_placeholder_surface(APP_NAME)
+                    {
+                        Some(cx.update(|window, cx| {
+                            terminal_view::session_unavailable_terminal(&project, window, cx)
+                        })?)
+                    } else {
+                        None
+                    };
+                    (terminal, Some(reason))
                 }
             };
             this.update_in(cx, |this, window, cx| {
                 if this.pending_terminal_activation == Some(metadata.terminal_id) {
                     this.pending_terminal_activation = None;
                 }
+                let Some(terminal) = terminal else {
+                    // A missing saved computation belongs in Sessions as
+                    // lifecycle state. Do not replace the user's current Main
+                    // Work Area with a fake terminal whose only content is a
+                    // recovery explanation.
+                    this.failed_terminal_activations
+                        .insert(metadata.terminal_id);
+                    this.update_entries(cx);
+                    return;
+                };
+                this.failed_terminal_activations
+                    .remove(&metadata.terminal_id);
                 multi_workspace.update(cx, |multi_workspace, cx| {
                     multi_workspace.activate(workspace.clone(), None, window, cx);
                     if retain {
@@ -8696,6 +8747,7 @@ impl Sidebar {
         };
 
         let terminal_id = metadata.terminal_id;
+        self.failed_terminal_activations.remove(&terminal_id);
         self.record_terminal_access(terminal_id);
         self.active_entry = Some(ActiveEntry::Terminal {
             terminal_id,
@@ -9274,6 +9326,8 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.failed_terminal_activations
+            .remove(&metadata.terminal_id);
         if let TerminalEntrySource::HostSession(session_id) = source {
             if let Some(host) = LocalTerminalHost::try_global(cx) {
                 host.update(cx, |host, cx| {

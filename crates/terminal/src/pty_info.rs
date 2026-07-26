@@ -1,6 +1,12 @@
 use gpui::{Context, Task};
 use parking_lot::{MappedRwLockReadGuard, Mutex, RwLock, RwLockReadGuard};
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    path::PathBuf,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+};
 
 #[cfg(target_os = "windows")]
 use windows::Win32::{Foundation::HANDLE, System::Threading::GetProcessId};
@@ -144,6 +150,7 @@ pub(crate) struct PtyProcessInfo {
     last_foreground_pid: Mutex<Option<Pid>>,
     pub(crate) current: RwLock<Option<ProcessInfo>>,
     task: Mutex<Option<Task<()>>>,
+    refresh_pending: AtomicBool,
 }
 
 impl PtyProcessInfo {
@@ -175,6 +182,7 @@ impl PtyProcessInfo {
             last_foreground_pid: Mutex::new(None),
             current: RwLock::new(None),
             task: Mutex::new(None),
+            refresh_pending: AtomicBool::new(false),
         }
     }
 
@@ -254,8 +262,15 @@ impl PtyProcessInfo {
 
     pub(crate) fn refresh_current(self: &Arc<Self>, cx: &mut Context<'_, Terminal>) {
         if self.task.lock().is_some() {
+            // Process refresh is asynchronous. A command can replace the shell
+            // while the previous inspection is still in flight, and a quiet
+            // TUI may not emit another wakeup after that transition. Coalesce
+            // the burst, but retain one trailing refresh so the final
+            // foreground process is never stranded behind stale shell state.
+            self.refresh_pending.store(true, Ordering::Release);
             return;
         }
+        self.refresh_pending.store(false, Ordering::Release);
         let previous = self.current.read().clone();
         let this = self.clone();
         let refresh = cx
@@ -266,11 +281,15 @@ impl PtyProcessInfo {
             let changed = refresh.await;
             if let Some(this) = this.upgrade() {
                 this.task.lock().take();
-            }
-            if changed {
+                let refresh_again = this.refresh_pending.swap(false, Ordering::AcqRel);
                 terminal
                     .update(cx, |_terminal, cx| {
-                        cx.emit(Event::ProcessInfoChanged);
+                        if changed {
+                            cx.emit(Event::ProcessInfoChanged);
+                        }
+                        if refresh_again {
+                            this.refresh_current(cx);
+                        }
                     })
                     .ok();
             }

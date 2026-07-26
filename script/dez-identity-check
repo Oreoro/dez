@@ -490,8 +490,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let pathless_workspaces = workspaces.*?workspace_path_list\(workspace, cx\)\.paths\(\)\.is_empty\(\).*?workspace::ProjectGroup.*?workspaces: pathless_workspaces.*?group_key\.path_list\(\)\.paths\(\)\.is_empty\(\) && terminals\.is_empty\(\)' \
     'scratch terminals can disappear because Session Rail has no transient empty-workspace group'
 require_multiline_pattern crates/terminal/src/pty_info.rs \
-    'fn load\(&self\).*?\*self\.current\.write\(\) = info\.clone\(\).*?fn refresh_current.*?let previous = self\.current\.read\(\)\.clone\(\).*?this\.load\(\) != previous.*?cx\.emit\(Event::ProcessInfoChanged\)' \
-    'foreground-process changes can stop notifying Main Work Area terminal consumers'
+    'refresh_pending: AtomicBool.*?fn load\(&self\).*?\*self\.current\.write\(\) = info\.clone\(\).*?fn refresh_current.*?self\.task\.lock\(\)\.is_some\(\).*?self\.refresh_pending\.store\(true, Ordering::Release\).*?let previous = self\.current\.read\(\)\.clone\(\).*?this\.load\(\) != previous.*?this\.task\.lock\(\)\.take\(\).*?this\.refresh_pending\.swap\(false, Ordering::AcqRel\).*?cx\.emit\(Event::ProcessInfoChanged\).*?this\.refresh_current\(cx\)' \
+    'foreground-process refreshes can drop a shell-to-agent transition instead of coalescing one trailing inspection'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_foreground_agent_presentation.*?app_name == "Zed".*?"Codex".*?IconName::AiOpenAi.*?fn terminal_context_activity_label.*?"\{\} running".*?status != "Active".*?Event::ProcessInfoChanged.*?cx\.notify\(\).*?cx\.emit\(ItemEvent::UpdateTab\).*?fn render_session_context_strip.*?foreground_process_command_name\(\).*?terminal_foreground_agent_presentation.*?activity_accessibility_label.*?activity_label_visible.*?Label::new\(activity_label\.unwrap_or_default\(\)\).*?fn tab_icon_element.*?foreground_process_command_name\(\).*?terminal_foreground_agent_presentation.*?agent\.icon.*?running in terminal' \
     'foreground agent detection can regress to updating Sessions without immediately acknowledging the same activity in existing terminal chrome'
@@ -513,6 +513,12 @@ require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'live_workspace_terminals: HashMap.*?items_of_type::<TerminalView>.*?terminal_entry_source_kind\(.*?live_workspace_terminal\.is_some\(\).*?TerminalEntrySourceKind::WorkspaceItem.*?TerminalEntrySource::WorkspaceItem\(terminal_view\.clone\(\)\).*?activate_workspace_terminal_item' \
     'persisted or Host metadata can steal a live Main Work Area terminal row and make Sessions activation appear unresponsive'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn terminal_activation_failure_uses_placeholder_surface.*?app_name == "Zed".*?failed_terminal_activations: HashSet<TerminalId>.*?failed_terminal_activations.*?TerminalRuntimeState::Missing.*?terminal_activation_failure_uses_placeholder_surface\(APP_NAME\).*?let Some\(terminal\) = terminal else.*?failed_terminal_activations.*?insert\(metadata\.terminal_id\).*?update_entries\(cx\)' \
+    'a missing saved Session can regress to replacing the Dez Main Work Area with a fake unavailable terminal Surface'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'fn unavailable_session_restores_placeholder_surface.*?app_name == "Zed".*?fn deserialize.*?The terminal host no longer owns this saved session.*?!unavailable_session_restores_placeholder_surface.*?return Err\(anyhow!\(reason\)\).*?The saved terminal process is no longer available.*?!unavailable_session_restores_placeholder_surface.*?return Err\(anyhow!\(reason\)\).*?The saved terminal session reference is incomplete or invalid.*?!unavailable_session_restores_placeholder_surface.*?return Err\(anyhow!\(reason\)\)' \
+    'restoring a dead terminal can regress to reopening a full-size placeholder Surface in Dez'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'TerminalEntrySource::WorkspaceItem\(terminal_view\).*?activate_workspace_terminal_item\(.*?retain,[[:space:]]*true,[[:space:]]*window' \
     'a live Session row can activate without returning keyboard focus to its Main Work Area terminal'

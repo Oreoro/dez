@@ -3837,6 +3837,13 @@ mod tests {
         );
         assert_eq!(
             foreground_process_command_from_argv(&[
+                "/opt/homebrew/bin/node".to_string(),
+                "/opt/homebrew/lib/node_modules/@openai/codex/bin/codex.js".to_string(),
+            ]),
+            Some("codex".to_string())
+        );
+        assert_eq!(
+            foreground_process_command_from_argv(&[
                 "npx".to_string(),
                 "-y".to_string(),
                 "@anthropic-ai/claude-code".to_string(),
