@@ -2971,8 +2971,9 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   contract as **Workspace Options**. Dez now exposes the six workflow recipes
   (Full, Agent Control, Focus Editor, Code/Run/Observe, Review, and Debug) plus
   Cycle, Save Layout As, Manage Saved Layouts, and Restore Previous. It hides
-  legacy Classic/Canvas toggles, experimental matrices and studios, numeric
-  slot internals, and clipboard/storage actions from command search. Those
+  the generic centered-editor toggle, legacy Classic/Canvas toggles,
+  experimental matrices and studios, numeric slot internals, and
+  clipboard/storage actions from command search. Those
   action types remain implemented for saved-layout internals and official Zed
   compatibility; official Zed retains the complete upstream inventory. A pure
   product-policy assertion and static action-set guard protect the boundary.

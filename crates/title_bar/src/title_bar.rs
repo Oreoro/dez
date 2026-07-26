@@ -61,7 +61,8 @@ use workspace::{
     RenameSavedCanvasLayoutSlot, ResetPaneSizes, ResizePaneDown, ResizePaneLeft, ResizePaneRight,
     ResizePaneUp, RestoreSavedCanvasLayoutNamed, SaveCurrentCanvasLayoutAs,
     SaveCurrentCanvasLayoutNamed, SendKeystrokes, SplitDown, SplitRight, SwapPaneDown,
-    SwapPaneLeft, SwapPaneRight, SwapPaneUp, ToggleWorktreeSecurity, Workspace,
+    SwapPaneLeft, SwapPaneRight, SwapPaneUp, ToggleCenteredLayout, ToggleWorktreeSecurity,
+    Workspace,
     notifications::{NotifyResultExt, NotifyTaskExt as _},
 };
 
@@ -476,6 +477,7 @@ fn update_layout_action_filter(cx: &mut App) {
         TypeId::of::<RestorePreviousCanvasLayout>(),
     ];
     let advanced_layout_actions = [
+        TypeId::of::<ToggleCenteredLayout>(),
         TypeId::of::<UseClassicLayout>(),
         TypeId::of::<UseAgenticLayout>(),
         TypeId::of::<ApplyCanvasEvenColumnsLayout>(),

@@ -1033,7 +1033,8 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   and command search expose the same six workflow recipes: Full, Agent
   Control, Focus Editor, Code/Run/Observe, Review, and Debug. Command search
   additionally exposes only Cycle, Save Layout As, Manage Saved Layouts, and
-  Restore Previous. Legacy Classic/Canvas toggles, experimental matrix/studio
-  recipes, numeric slots, and clipboard/storage internals are implementation
-  detail in Dez. Their action types remain intact for saved-layout UI and
-  compatibility; official Zed keeps its complete upstream inventory.
+  Restore Previous. The generic centered-editor toggle, legacy Classic/Canvas
+  toggles, experimental matrix/studio recipes, numeric slots, and
+  clipboard/storage internals are implementation detail in Dez. Their action
+  types remain intact for saved-layout UI and compatibility; official Zed
+  keeps its complete upstream inventory.

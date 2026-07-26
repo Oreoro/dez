@@ -3792,8 +3792,9 @@ Completed for the opinionated Canvas command-surface source slice:
   Workspace Options;
 - retained Cycle Layout, Save Layout As, Manage Saved Layouts, and Restore
   Previous as the four understandable management routes;
-- removed legacy layout-mode toggles, experimental recipes, numeric slot
-  commands, and clipboard/storage internals from Dez command search;
+- removed the generic centered-editor toggle, legacy layout-mode toggles,
+  experimental recipes, numeric slot commands, and clipboard/storage internals
+  from Dez command search;
 - kept underlying action types intact for saved-layout UI, keybinding
   compatibility, and official Zed's full upstream command inventory;
 - added a pure product-policy assertion and a static action-set guard;
