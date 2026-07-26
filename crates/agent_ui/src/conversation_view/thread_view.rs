@@ -55,6 +55,7 @@ use super::elicitation::{
 use super::*;
 
 const DATA_RETENTION_LEARN_MORE_URL: &str = "https://support.claude.com/en/articles/15425996-data-retention-practices-for-mythos-class-models";
+const EDIT_NOT_READY_TOOLTIP_LABEL: &str = "Wait until file edits are complete.";
 
 fn agent_plan_uses_gradient_overlays(app_name: &str) -> bool {
     app_name == "Zed"
@@ -4107,8 +4108,6 @@ impl ThreadView {
         pending_edits: bool,
         cx: &Context<Self>,
     ) -> Div {
-        const EDIT_NOT_READY_TOOLTIP_LABEL: &str = "Wait until file edits are complete.";
-
         let focus_handle = self.focus_handle(cx);
 
         h_flex()
@@ -4764,6 +4763,7 @@ impl ThreadView {
                 };
 
                 h_flex()
+                    .id(("queue-entry", entry_id))
                     .group("queue_entry")
                     .role(gpui::Role::ListItem)
                     .aria_label(queue_position_label)

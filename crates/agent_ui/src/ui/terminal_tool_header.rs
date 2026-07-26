@@ -267,7 +267,7 @@ impl RenderOnce for TerminalToolHeader {
                         .id(child_id("truncated"))
                         .role(gpui::Role::Status)
                         .aria_label("Agent received truncated command output")
-                        .cursor_style(CursorStyle::Arrow)
+                        .cursor(CursorStyle::Arrow)
                         .tooltip(Tooltip::text(tooltip))
                         .child(
                             Icon::new(IconName::Info)
@@ -285,7 +285,7 @@ impl RenderOnce for TerminalToolHeader {
                         .id(child_id("failed"))
                         .role(gpui::Role::Status)
                         .aria_label(failure_label.clone())
-                        .cursor_style(CursorStyle::Arrow)
+                        .cursor(CursorStyle::Arrow)
                         .tooltip(Tooltip::text(failure_label))
                         .child(
                             Icon::new(IconName::Close)
