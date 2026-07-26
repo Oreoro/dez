@@ -1339,10 +1339,11 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   Official Zed retains its inherited onboarding card.
 - **2026-07-26: The Main Work Area is one glass grid, not touching cards.**
   Dez already removes the desktop-colored inter-pane gutter. Its pane frames
-  now also use square, low-contrast seams, so adjacent Files, Git, Agent,
-  terminal, and editor Surfaces cannot expose clipped inner corners or
+  are borderless tiles; their pane axis paints each shared low-contrast seam
+  exactly once. Adjacent Files, Git, Agent, terminal, and editor Surfaces
+  therefore cannot expose clipped inner corners, double-width dividers, or
   double-card silhouettes. Only the native window owns the outer radius.
-  Official Zed retains its rounded, separated pane cards.
+  Official Zed retains its individually bordered, rounded pane cards.
 - **2026-07-26: Agent owns one header.** The Dez Agent drawer no longer stacks
   the generic pane tab bar above its native session toolbar. The native toolbar
   owns the active Session title, new Session, expand, options, and a direct

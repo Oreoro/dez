@@ -4068,11 +4068,12 @@ Completed for the flush Main Work Area frame source slice:
 
 - traced the apparent pane overlap and clipping risk to rounded upstream card
   frames surviving beneath Dez's zero-gap pane grid;
-- kept one-pixel structural seams but changed Dez panes to square,
-  lower-contrast frames, leaving the native window as the only owner of the
-  outer radius;
-- preserved content clipping, resize handles, pane decoration, and official
-  Zed's rounded separated cards;
+- made Dez leaf panes borderless and moved the structural boundary to the pane
+  axis, which paints each shared one-pixel seam exactly once;
+- left the native window as the only owner of the outer radius and eliminated
+  clipped inner corners, double-width dividers, and double-card silhouettes;
+- preserved content clipping, resize handles, inactive-pane opacity, pane
+  decoration, and official Zed's individually bordered rounded cards;
 - added source policy coverage and a static regression guard; and
 - retained source-only evidence. No app build, test binary, alternate binary,
   or fresh visual launch was performed.

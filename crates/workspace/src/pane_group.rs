@@ -382,15 +382,15 @@ pub(crate) fn render_pane_card(
         .flex_1()
         .size_full()
         .overflow_hidden()
-        .border_1()
         .child(AnyView::from(pane).cached(StyleRefinement::default().v_flex().size_full()));
     let pane = if workspace_pane_uses_rounded_card_frame(paths::APP_NAME) {
-        pane.rounded_lg().border_color(cx.theme().colors().border)
+        pane.rounded_lg()
+            .border_1()
+            .border_color(cx.theme().colors().border)
     } else {
-        // Dez panes are tiles in one native glass sheet. Square, low-contrast
-        // seams avoid clipped inner corners and double-card silhouettes when
-        // the product's inter-pane gap is zero.
-        pane.border_color(cx.theme().colors().border_variant)
+        // The pane axis paints each Dez divider once. Keeping leaf panes
+        // borderless avoids double-width seams and clipped inner corners.
+        pane
     };
 
     pane.when_some(decoration.border, |this, color| {
@@ -1948,7 +1948,10 @@ mod element {
     use ui::prelude::*;
     use util::ResultExt;
 
-    use crate::{PaneGridSettings, Workspace, WorkspaceSettings, workspace_card_gap};
+    use crate::{
+        PaneGridSettings, Workspace, WorkspaceSettings, workspace_card_gap,
+        workspace_pane_uses_rounded_card_frame,
+    };
 
     use super::{
         HANDLE_HITBOX_SIZE, HORIZONTAL_MIN_SIZE, VERTICAL_MIN_SIZE, resize_adjacent_visible_pair,
@@ -2289,18 +2292,20 @@ mod element {
                 .flatten();
 
             let card_gap = workspace_card_gap(cx);
+            let rounded_cards = workspace_pane_uses_rounded_card_frame(paths::APP_NAME);
+            let child_count = layout.children.len();
 
             for (ix, child) in &mut layout.children.iter_mut().enumerate() {
                 if overlay_opacity.is_some() || overlay_border.is_some() {
-                    // Keep active/inactive overlays inside the pane card border.
+                    let inset = if rounded_cards { px(1.) } else { px(0.) };
                     let overlay_bounds = Bounds {
                         origin: Point::new(
-                            child.bounds.origin.x + px(1.),
-                            child.bounds.origin.y + px(1.),
+                            child.bounds.origin.x + inset,
+                            child.bounds.origin.y + inset,
                         ),
                         size: Size {
-                            width: Pixels::max(child.bounds.size.width - px(2.), px(0.)),
-                            height: Pixels::max(child.bounds.size.height - px(2.), px(0.)),
+                            width: Pixels::max(child.bounds.size.width - inset * 2., px(0.)),
+                            height: Pixels::max(child.bounds.size.height - inset * 2., px(0.)),
                         },
                     };
 
@@ -2324,6 +2329,36 @@ mod element {
                             BorderStyle::Solid,
                         ));
                     }
+                }
+
+                if !rounded_cards && ix + 1 < child_count {
+                    let thickness = px(1.);
+                    let seam_bounds = match self.axis {
+                        Axis::Horizontal => Bounds {
+                            origin: Point::new(
+                                child.bounds.right() - thickness,
+                                child.bounds.top(),
+                            ),
+                            size: Size {
+                                width: thickness,
+                                height: child.bounds.size.height,
+                            },
+                        },
+                        Axis::Vertical => Bounds {
+                            origin: Point::new(
+                                child.bounds.left(),
+                                child.bounds.bottom() - thickness,
+                            ),
+                            size: Size {
+                                width: child.bounds.size.width,
+                                height: thickness,
+                            },
+                        },
+                    };
+                    window.paint_quad(gpui::fill(
+                        seam_bounds,
+                        cx.theme().colors().pane_group_border,
+                    ));
                 }
 
                 if let Some(handle) = child.handle.as_mut() {
