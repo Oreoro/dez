@@ -1169,3 +1169,15 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   overflow region. A narrow Main Work Area may hide low-priority status detail,
   but it may not hide the control required to recover the supervision
   projection.
+- **2026-07-26: Sessions contains work, not places to start work.** An idle
+  Workspace is not a Session, and an empty Agent composer is not a completed
+  run. Dez therefore omits both from the supervision list. **Start Terminal**
+  targets the active Main Work Area, Workspace Tools and Recent Workspaces own
+  navigation, and Agent Tools owns empty composition. A real terminal,
+  contentful draft, saved session, or started Agent run introduces its
+  Workspace group and row. Foreground-process observation updates that same
+  terminal row to **Codex · Running** without moving focus or creating an Agent
+  panel. The true-empty rail offers only open Workspace and scratch Terminal;
+  it does not repeat the product tutorial as permanent chrome. Closing a
+  focused Workspace Tools or Agent pane must return focus to a visible Main
+  Work Area even if the active-pane marker was already reconciled.

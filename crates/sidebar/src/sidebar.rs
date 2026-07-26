@@ -277,6 +277,14 @@ fn session_rail_uses_absolute_client_geometry(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn session_rail_shows_idle_workspaces(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
+fn session_rail_shows_empty_agent_drafts(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 fn session_switcher_uses_modal_overlay(app_name: &str) -> bool {
     app_name == "Zed"
 }
@@ -319,6 +327,10 @@ mod agent_session_label_tests {
         assert_eq!(agent_session_stop_label("Dez"), "Stop Agent Run");
         assert!(session_switcher_uses_modal_overlay("Zed"));
         assert!(!session_switcher_uses_modal_overlay("Dez"));
+        assert!(session_rail_shows_idle_workspaces("Zed"));
+        assert!(!session_rail_shows_idle_workspaces("Dez"));
+        assert!(session_rail_shows_empty_agent_drafts("Zed"));
+        assert!(!session_rail_shows_empty_agent_drafts("Dez"));
     }
 }
 
@@ -601,12 +613,12 @@ fn session_overview_status_label(
         if workspace_count == 0 {
             return "No sessions yet".to_owned();
         }
-        let workspace_noun = if workspace_count == 1 {
-            "workspace"
+        let group_noun = if workspace_count == 1 {
+            "session group"
         } else {
-            "workspaces"
+            "session groups"
         };
-        format!("{workspace_count} {workspace_noun} ready")
+        format!("{workspace_count} {group_noun} collapsed")
     } else if attention_count > 0 {
         let attention_verb = if attention_count == 1 {
             "needs"
@@ -744,19 +756,11 @@ fn session_start_state_visible(
 
 fn session_start_state_copy() -> (&'static str, &'static str, &'static str, &'static str) {
     (
-        "Start with a Workspace",
-        "Open a codebase, start a Terminal or Agent Session, then review its changes with the IDE.",
+        "No Workspace open",
+        "Open a codebase or start a scratch terminal. Sessions appears after real work starts.",
         "Open Workspace…",
         "Open Scratch Terminal",
     )
-}
-
-fn session_start_route_copy() -> [(&'static str, &'static str); 3] {
-    [
-        ("Run", "Terminal in Main Work Area"),
-        ("Supervise", "Live state in Sessions"),
-        ("Review", "Files, Git, and diffs"),
-    ]
 }
 
 fn active_workspace_terminal_destination_label() -> &'static str {
@@ -1510,21 +1514,12 @@ mod session_start_state_tests {
         assert_eq!(
             session_start_state_copy(),
             (
-                "Start with a Workspace",
-                "Open a codebase, start a Terminal or Agent Session, then review its changes with the IDE.",
+                "No Workspace open",
+                "Open a codebase or start a scratch terminal. Sessions appears after real work starts.",
                 "Open Workspace…",
                 "Open Scratch Terminal"
             ),
-            "the true-empty Session Rail should explain Workspace context and the complete Dez loop"
-        );
-        assert_eq!(
-            session_start_route_copy(),
-            [
-                ("Run", "Terminal in Main Work Area"),
-                ("Supervise", "Live state in Sessions"),
-                ("Review", "Files, Git, and diffs")
-            ],
-            "the true-empty Sessions state should explain where work runs, is supervised, and is reviewed"
+            "the true-empty Sessions state should explain why it is empty without becoming onboarding chrome"
         );
         assert_eq!(
             active_workspace_terminal_destination_label(),
@@ -2248,7 +2243,9 @@ fn thread_metadata_would_render_sidebar_row(
         return true;
     }
 
-    draft_display_label_for_thread_metadata(metadata, workspace, cx).is_some()
+    draft_display_label_for_thread_metadata(metadata, workspace, cx).is_some_and(|(_, kind)| {
+        kind != DraftKind::Empty || session_rail_shows_empty_agent_drafts(APP_NAME)
+    })
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -4112,10 +4109,11 @@ impl Sidebar {
     ///
     /// Properties:
     ///
-    /// - Should always show every workspace in the multiworkspace
-    ///     - If you have no threads, and two workspaces for the worktree and the main workspace, make sure at least one is shown
-    /// - Should always show every thread, associated with each workspace in the multiworkspace
-    /// - After every build_contents, our "active" state should exactly match the current workspace's, current agent panel's current thread.
+    /// - Dez shows only real sessions and contentful drafts; workspace
+    ///   navigation remains in Workspace Tools and Recent Workspaces.
+    /// - Every visible session stays associated with its owning workspace.
+    /// - After every build, active state matches the current workspace's
+    ///   current terminal or agent session whenever that work is visible.
     fn rebuild_contents(&mut self, cx: &App) {
         let Some(multi_workspace) = self.multi_workspace.upgrade() else {
             return;
@@ -4838,8 +4836,11 @@ impl Sidebar {
                 }
                 threads.retain(|thread| thread.draft.is_none() || thread.metadata.title.is_some());
 
-                // Keep empty drafts only while their thread is active; preserve
-                // drafts with content because they hold user-typed state.
+                // An empty composer is not a running or resumable unit of work
+                // in Dez. Keep it inside Agent Tools until the user types or
+                // sends something; Sessions should only contain work that can
+                // actually be supervised. Preserve upstream Zed's placeholder
+                // behavior and always preserve drafts with user content.
                 let pending_activation = self.pending_thread_activation;
                 let active_panel_thread_id = active_workspace
                     .as_ref()
@@ -4848,6 +4849,9 @@ impl Sidebar {
                 threads.retain(|thread| {
                     if thread.draft != Some(DraftKind::Empty) {
                         return true;
+                    }
+                    if !session_rail_shows_empty_agent_drafts(APP_NAME) {
+                        return false;
                     }
                     if pending_activation.is_some() {
                         return false;
@@ -5022,7 +5026,11 @@ impl Sidebar {
                     }
                 }
 
-                if matched_threads.is_empty() && matched_terminals.is_empty() && !workspace_matched
+                let idle_workspace_match =
+                    session_rail_shows_idle_workspaces(APP_NAME) && workspace_matched;
+                if matched_threads.is_empty()
+                    && matched_terminals.is_empty()
+                    && !idle_workspace_match
                 {
                     continue;
                 }
@@ -5061,6 +5069,10 @@ impl Sidebar {
                     &mut current_thread_ids,
                 );
             } else {
+                if !has_threads && !session_rail_shows_idle_workspaces(APP_NAME) {
+                    continue;
+                }
+
                 let has_terminal_notifications =
                     terminals.iter().any(|terminal| terminal.needs_attention);
 
@@ -13298,48 +13310,6 @@ impl Sidebar {
                         Label::new(description)
                             .size(LabelSize::XSmall)
                             .color(Color::Muted),
-                    )
-                    .child(
-                        v_flex()
-                            .id("sidebar-start-route")
-                            .role(gpui::Role::List)
-                            .aria_label("Dez workflow route")
-                            .w_full()
-                            .gap_1()
-                            .children(
-                                session_start_route_copy()
-                                    .into_iter()
-                                    .zip([IconName::Terminal, IconName::ListTree, IconName::Diff])
-                                    .map(|((step, target), icon)| {
-                                        h_flex()
-                                            .role(gpui::Role::ListItem)
-                                            .aria_label(format!("{step}. {target}"))
-                                            .w_full()
-                                            .items_start()
-                                            .gap_2()
-                                            .py_1p5()
-                                            .child(
-                                                Icon::new(icon)
-                                                    .size(IconSize::XSmall)
-                                                    .color(Color::Accent),
-                                            )
-                                            .child(
-                                                v_flex()
-                                                    .min_w_0()
-                                                    .gap_0p5()
-                                                    .child(
-                                                        Label::new(step)
-                                                            .size(LabelSize::XSmall)
-                                                            .color(Color::Default),
-                                                    )
-                                                    .child(
-                                                        Label::new(target)
-                                                            .size(LabelSize::XSmall)
-                                                            .color(Color::Muted),
-                                                    ),
-                                            )
-                                    }),
-                            ),
                     )
                     .child(
                         Button::new("start-open", open_workspace_label)

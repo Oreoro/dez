@@ -3156,3 +3156,17 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   low-priority status content before they clip the navigation needed to recover
   supervision. Static identity checks protect the allocation; no build, test
   binary, alternate binary, or visual launch was performed.
+- 2026-07-26: Removed fake work from Sessions. Idle Workspaces no longer render
+  **Ready for a session** groups, and an empty Agent composer no longer creates
+  a **New Agent Session · Completed** row. Workspace navigation remains in
+  Workspace Tools and Recent Workspaces; Agent composition remains in Agent
+  Tools. The first real terminal, contentful draft, saved session, or active
+  Agent run creates the first supervision row. A Main Work Area terminal still
+  keeps one stable row while foreground-process events change it from an
+  ordinary terminal to **Codex · Running** and back without opening another
+  panel. The no-Workspace state is now a concise open-workspace/scratch-terminal
+  choice instead of a permanent three-step tutorial. Hiding a focused auxiliary
+  pane now restores keyboard focus even when layout reconciliation had already
+  advanced the active-pane pointer. Static checks and source assertions cover
+  the contract; the inspected installed app predates this source and runtime
+  proof remains deferred until the requested later build.

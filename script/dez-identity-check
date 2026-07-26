@@ -439,17 +439,17 @@ require_pattern crates/workspace/src/multi_workspace.rs \
     'workspace\.mark_durable_session_present\(viewport_id, cx\);' \
     'background Workspace registration is absent from durable viewport composition'
 require_pattern crates/sidebar/src/sidebar.rs \
-    'format!\("\{workspace_count\} \{workspace_noun\} ready"\)' \
-    'the zero-session overview does not describe the ready Workspace scope'
+    'format!\("\{workspace_count\} \{group_noun\} collapsed"\)' \
+    'the zero-visible-row overview can no longer distinguish collapsed Session groups from an empty rail'
 require_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\("Sessions"\)' \
     'the supervision region has regressed to internal Session Rail jargon'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_start_state_visible.*?!has_open_projects.*?session_count == 0.*?!has_query.*?!attention_only.*?!is_restoring.*?fn session_start_state_copy.*?"Start with a Workspace".*?"Open a codebase, start a Terminal or Agent Session, then review its changes with the IDE\.".*?"Open Workspace…".*?"Open Scratch Terminal".*?fn render_empty_state.*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?Label::new\(title\).*?Button::new\("start-open", open_workspace_label\).*?ButtonStyle::Filled.*?tab_index\(0isize\).*?OpenFolder \{.*?create_new_window: Some\(false\).*?Button::new\("start-terminal", scratch_terminal_label\).*?ButtonStyle::OutlinedCustom.*?tab_index\(0isize\).*?aria_label\("Open Scratch Terminal in Main Work Area"\)' \
+    'fn session_start_state_visible.*?!has_open_projects.*?session_count == 0.*?!has_query.*?!attention_only.*?!is_restoring.*?fn session_start_state_copy.*?"No Workspace open".*?"Open a codebase or start a scratch terminal\. Sessions appears after real work starts\.".*?"Open Workspace…".*?"Open Scratch Terminal".*?fn render_empty_state.*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?Label::new\(title\).*?Button::new\("start-open", open_workspace_label\).*?ButtonStyle::Filled.*?tab_index\(0isize\).*?OpenFolder \{.*?create_new_window: Some\(false\).*?Button::new\("start-terminal", scratch_terminal_label\).*?ButtonStyle::OutlinedCustom.*?tab_index\(0isize\).*?aria_label\("Open Scratch Terminal in Main Work Area"\)' \
     'the empty Session Rail can regress to a duplicated card, ambiguous actions, or the wrong terminal destination'
-require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_start_route_copy.*?"Run", "Terminal in Main Work Area".*?"Supervise", "Live state in Sessions".*?"Review", "Files, Git, and diffs".*?\.id\("sidebar-start-route"\).*?\.role\(gpui::Role::List\).*?\.aria_label\("Dez workflow route"\).*?\.zip\(\[.*?IconName::Terminal.*?IconName::ListTree.*?IconName::Diff.*?\.role\(gpui::Role::ListItem\).*?\.aria_label\(format!\("\{step\}\. \{target\}"\)\).*?\.py_1p5\(\).*?Color::Accent' \
-    'the empty Sessions state can regress to hiding the concrete Run/Sessions/Review route'
+reject_pattern crates/sidebar/src/sidebar.rs \
+    'sidebar-start-route|Dez workflow route' \
+    'the true-empty Sessions state regressed to permanent onboarding chrome'
 reject_multiline_pattern crates/sidebar/src/sidebar.rs \
     '\.id\("sidebar-start-route"\).*?\.role\(gpui::Role::ListItem\).*?(\.rounded_md\(\)|\.border_1\(\)|\.bg\(cx\.theme\(\)\.colors\(\)\.element_background\)).*?Button::new\("start-open"' \
     'the passive Sessions workflow route can regress to a stack of controls that look clickable'
@@ -1884,6 +1884,12 @@ require_multiline_pattern docs/src/ai/terminal-threads.md \
 reject_pattern docs/src/ai/terminal-threads.md \
     'Open the new-thread menu from the \[Agent Panel\]|Terminal Thread opens in the panel body|Terminal Thread Init Command' \
     'the public terminal guide still routes terminals into the Agent region'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn session_rail_shows_idle_workspaces\(app_name: &str\).*?app_name == "Zed".*?fn session_rail_shows_empty_agent_drafts\(app_name: &str\).*?app_name == "Zed".*?fn thread_metadata_would_render_sidebar_row.*?kind != DraftKind::Empty \|\| session_rail_shows_empty_agent_drafts\(APP_NAME\).*?if !session_rail_shows_empty_agent_drafts\(APP_NAME\).*?return false;.*?if !has_threads && !session_rail_shows_idle_workspaces\(APP_NAME\).*?continue;' \
+    'Dez Sessions can regress to listing idle Workspaces or empty Agent composers as supervised work'
+require_multiline_pattern crates/workspace/src/workspace.rs \
+    'let pane_owned_focus =.*?visible && \(self\.active_pane == pane \|\| pane\.read\(cx\)\.has_focus\(window, cx\)\).*?if pane_owned_focus.*?window\.focus\(&pane\.focus_handle\(cx\), cx\)' \
+    'hiding a focused auxiliary pane can strand keyboard focus on an invisible surface'
 
 reject_pattern crates/release_channel/src/lib.rs \
     'dev\.zed\.Zed' \

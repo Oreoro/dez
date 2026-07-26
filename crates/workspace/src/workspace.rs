@@ -7225,6 +7225,8 @@ impl Workspace {
         }
 
         let visible = pane.read(cx).is_visible();
+        let pane_owned_focus =
+            visible && (self.active_pane == pane || pane.read(cx).has_focus(window, cx));
         self.mark_canvas_layout_custom();
         let fallback_pane = if visible {
             self.last_tabbed_pane(cx).or_else(|| {
@@ -7251,9 +7253,7 @@ impl Workspace {
         self.center.mark_positions(cx);
 
         if visible {
-            if self.active_pane == pane
-                && let Some(fallback_pane) = fallback_pane
-            {
+            if pane_owned_focus && let Some(fallback_pane) = fallback_pane {
                 self.set_active_pane(&fallback_pane, window, cx);
                 fallback_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
             }
@@ -16753,6 +16753,49 @@ mod tests {
             assert!(
                 workspace.panel_item_for::<TestPanel>(cx).is_none(),
                 "unregistering a panel must remove its retained pane-tab item"
+            );
+        });
+    }
+
+    #[gpui::test]
+    async fn test_hiding_focused_auxiliary_pane_recovers_from_stale_active_pane(
+        cx: &mut TestAppContext,
+    ) {
+        init_test(cx);
+
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        let (project_pane, tabbed_pane) = workspace.update_in(cx, |workspace, window, cx| {
+            let project_pane = workspace.ensure_panel_pane(PanelPaneKind::Project, window, cx);
+            project_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+            let tabbed_pane = workspace
+                .last_tabbed_pane(cx)
+                .unwrap_or_else(|| workspace.ensure_tabbed_pane(window, cx));
+
+            // Reproduce a transient mismatch possible during layout
+            // reconciliation: the auxiliary pane owns keyboard focus while
+            // active_pane has already advanced to the Main Work Area.
+            workspace.set_active_pane(&tabbed_pane, window, cx);
+            project_pane.update(cx, |pane, cx| {
+                window.focus(&pane.focus_handle(cx), cx);
+            });
+            (project_pane, tabbed_pane)
+        });
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            assert!(project_pane.read(cx).has_focus(window, cx));
+            assert_eq!(workspace.active_pane(), &tabbed_pane);
+
+            workspace.toggle_panel_pane_visibility(PaneKind::Project, window, cx);
+
+            assert!(!project_pane.read(cx).is_visible());
+            assert_eq!(workspace.active_pane(), &tabbed_pane);
+            assert!(
+                tabbed_pane.read(cx).has_focus(window, cx),
+                "hiding a focused auxiliary pane must return keyboard input to the Main Work Area"
             );
         });
     }

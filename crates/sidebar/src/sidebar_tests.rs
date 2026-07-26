@@ -412,7 +412,7 @@ async fn detached_host_session_prefers_durable_workspace_identity_over_shared_cw
 fn session_overview_copy_distinguishes_empty_search_attention_and_caught_up_states() {
     assert_eq!(
         session_overview_status_label(0, 0, 1, false, false),
-        "1 workspace ready"
+        "1 session group collapsed"
     );
     assert_eq!(
         session_overview_status_label(0, 0, 2, true, true),
@@ -432,7 +432,7 @@ fn session_overview_copy_distinguishes_empty_search_attention_and_caught_up_stat
     );
     assert_eq!(
         session_overview_status_label(0, 0, 2, false, false),
-        "2 workspaces ready"
+        "2 session groups collapsed"
     );
     assert_eq!(
         session_overview_status_label(0, 0, 0, false, false),
@@ -1331,8 +1331,15 @@ async fn test_single_workspace_no_threads(cx: &mut TestAppContext) {
 
     assert_eq!(
         visible_entries_as_strings(&_sidebar, cx),
-        vec!["v [my-project]"]
+        Vec::<String>::new()
     );
+    _sidebar.read_with(cx, |sidebar, _cx| {
+        assert_eq!(sidebar.contents.session_count, 0);
+        assert!(
+            sidebar.contents.project_header_indices.is_empty(),
+            "an idle Workspace must not impersonate a Session"
+        );
+    });
 }
 
 #[gpui::test]
@@ -2032,23 +2039,24 @@ async fn test_keyboard_navigation_on_empty_list(cx: &mut TestAppContext) {
         cx.add_window_view(|window, cx| MultiWorkspace::test_new(project, window, cx));
     let (sidebar, _panel) = setup_sidebar_with_agent_panel(&multi_workspace, cx);
 
-    // An empty project has only the header (no auto-created draft).
+    // Sessions contains no inert Workspace placeholder and no auto-created
+    // draft when there is no work to supervise.
     assert_eq!(
         visible_entries_as_strings(&sidebar, cx),
-        vec!["v [empty-project]"]
+        Vec::<String>::new()
     );
 
     // Focus sidebar — focus_in does not set a selection
     focus_sidebar(&sidebar, cx);
     assert_eq!(sidebar.read_with(cx, |s, _| s.selection), None);
 
-    // First SelectNext from None starts at index 0 (header)
+    // Navigation remains inert when there is no actual Session row.
     cx.dispatch_action(SelectNext);
-    assert_eq!(sidebar.read_with(cx, |s, _| s.selection), Some(0));
+    assert_eq!(sidebar.read_with(cx, |s, _| s.selection), None);
 
-    // SelectNext with only one entry stays at index 0
+    // Repeated movement does not create an invisible selection.
     cx.dispatch_action(SelectNext);
-    assert_eq!(sidebar.read_with(cx, |s, _| s.selection), Some(0));
+    assert_eq!(sidebar.read_with(cx, |s, _| s.selection), None);
 
     // SelectPrevious from first entry clears selection (returns to editor)
     cx.dispatch_action(SelectPrevious);
@@ -2438,13 +2446,16 @@ async fn test_agent_panel_terminals_appear_in_sidebar_and_search(cx: &mut TestAp
 }
 
 #[gpui::test]
-async fn test_closing_last_agent_panel_terminal_restores_empty_header(cx: &mut TestAppContext) {
+async fn test_closing_last_agent_panel_terminal_restores_true_empty_state(cx: &mut TestAppContext) {
     let project = init_test_project_with_agent_panel("/my-project", cx).await;
     let (multi_workspace, cx) =
         cx.add_window_view(|window, cx| MultiWorkspace::test_new(project.clone(), window, cx));
     let (sidebar, panel) = setup_sidebar_with_agent_panel(&multi_workspace, cx);
 
-    assert_project_header_has_threads(&sidebar, "my-project", false, cx);
+    assert_eq!(
+        visible_entries_as_strings(&sidebar, cx),
+        Vec::<String>::new()
+    );
 
     let terminal_id = panel
         .update_in(cx, |panel, window, cx| {
@@ -2493,30 +2504,16 @@ async fn test_closing_last_agent_panel_terminal_restores_empty_header(cx: &mut T
             "closing the active terminal should leave the panel on its empty draft"
         );
     });
-    // Closing the terminal drops the user back onto the panel's empty
-    // draft. The sidebar mirrors that with a "New {agent} Thread"
-    // placeholder row, so the header reports having threads.
+    // Agent Tools may return to an empty composer, but that is not a Session
+    // until the user supplies work. The supervision surface is truly empty.
     assert_eq!(
         visible_entries_as_strings(&sidebar, cx),
-        vec!["v [my-project]", "  New Dez Agent Thread"]
+        Vec::<String>::new()
     );
-    assert_project_header_has_threads(&sidebar, "my-project", true, cx);
-
-    let project_group_key = multi_workspace.read_with(cx, |multi_workspace, cx| {
-        multi_workspace.workspace().read(cx).project_group_key(cx)
+    sidebar.read_with(cx, |sidebar, _cx| {
+        assert_eq!(sidebar.contents.session_count, 0);
+        assert!(sidebar.contents.project_header_indices.is_empty());
     });
-    sidebar.update_in(cx, |sidebar, window, cx| {
-        sidebar.toggle_collapse(&project_group_key, window, cx);
-    });
-    cx.run_until_parked();
-
-    // Collapsed: header hides children but still reports the placeholder
-    // as a thread present in the group.
-    assert_eq!(
-        visible_entries_as_strings(&sidebar, cx),
-        vec!["> [my-project]"]
-    );
-    assert_project_header_has_threads(&sidebar, "my-project", true, cx);
 }
 
 #[gpui::test]
@@ -6323,8 +6320,8 @@ async fn test_plus_button_reuses_empty_draft(cx: &mut TestAppContext) {
         first_id, second_id,
         "an empty draft should be reused, not replaced"
     );
-    // The active empty draft is surfaced in the sidebar as a single
-    // "New {agent} Thread" placeholder so the sidebar mirrors the panel.
+    // The empty composer remains in Agent Tools; it is not yet work for
+    // Sessions to supervise.
     let draft_rows: Vec<_> = sidebar.read_with(cx, |sidebar, _| {
         sidebar
             .contents
@@ -6338,15 +6335,9 @@ async fn test_plus_button_reuses_empty_draft(cx: &mut TestAppContext) {
     });
     assert_eq!(
         draft_rows.len(),
-        1,
-        "active empty draft should appear as exactly one placeholder row"
+        0,
+        "an active empty composer must not create a fake Session row"
     );
-    assert_eq!(
-        draft_rows[0].draft,
-        Some(DraftKind::Empty),
-        "the row should be the empty-draft placeholder"
-    );
-    assert_eq!(draft_rows[0].metadata.thread_id, first_id);
 }
 
 #[gpui::test]
@@ -6385,10 +6376,8 @@ async fn test_plus_button_parks_nonempty_draft(cx: &mut TestAppContext) {
         "non-empty draft should be parked and a fresh draft activated"
     );
 
-    // Both drafts now appear as sidebar rows: the parked one with its
-    // editor-derived title (real user state), and the newly-created empty
-    // draft as a "New {agent} Thread" placeholder. The placeholder mirrors
-    // the panel's current view; the parked row preserves typed content.
+    // Only the parked draft with real user content appears in Sessions. The
+    // fresh empty composer remains inside Agent Tools.
     let draft_rows: Vec<_> = sidebar.read_with(cx, |sidebar, _| {
         sidebar
             .contents
@@ -6402,8 +6391,8 @@ async fn test_plus_button_parks_nonempty_draft(cx: &mut TestAppContext) {
     });
     assert_eq!(
         draft_rows.len(),
-        2,
-        "expected two draft rows (parked + new empty placeholder), got {:?}",
+        1,
+        "expected only the contentful parked draft, got {:?}",
         draft_rows
             .iter()
             .map(|t| t.metadata.display_title())
@@ -6418,14 +6407,11 @@ async fn test_plus_button_parks_nonempty_draft(cx: &mut TestAppContext) {
         Some(DraftKind::WithContent),
         "the parked draft has user content and is not an empty placeholder"
     );
-    let new_empty = draft_rows
-        .iter()
-        .find(|t| t.metadata.thread_id == second_id)
-        .expect("new empty draft should be present");
-    assert_eq!(
-        new_empty.draft,
-        Some(DraftKind::Empty),
-        "the freshly-created draft should be an empty placeholder"
+    assert!(
+        draft_rows
+            .iter()
+            .all(|thread| thread.metadata.thread_id != second_id),
+        "the freshly-created empty composer must remain outside Sessions"
     );
     assert_eq!(
         parked.metadata.display_title().as_ref(),
@@ -6449,23 +6435,14 @@ async fn test_plus_button_parks_nonempty_draft(cx: &mut TestAppContext) {
     });
     cx.run_until_parked();
 
-    // The empty-draft placeholder must still sort ABOVE the parked draft
-    // despite the parked draft's newer timestamp — it's pinned to the top.
-    let (empty_ix, parked_ix) = sidebar.read_with(cx, |sidebar, _| {
-        let position = |id: ThreadId| {
-            sidebar.contents.entries.iter().position(
-                |entry| matches!(entry, ListEntry::Thread(t) if t.metadata.thread_id == id),
-            )
-        };
-        (
-            position(second_id).expect("empty draft row should be present"),
-            position(first_id).expect("parked draft row should be present"),
-        )
+    sidebar.read_with(cx, |sidebar, _| {
+        assert!(sidebar.contents.entries.iter().any(
+            |entry| matches!(entry, ListEntry::Thread(t) if t.metadata.thread_id == first_id)
+        ));
+        assert!(sidebar.contents.entries.iter().all(
+            |entry| !matches!(entry, ListEntry::Thread(t) if t.metadata.thread_id == second_id)
+        ));
     });
-    assert!(
-        empty_ix < parked_ix,
-        "the new empty draft (ix {empty_ix}) should sort above the parked filled draft (ix {parked_ix})"
-    );
 }
 
 #[gpui::test]
@@ -12170,10 +12147,13 @@ async fn test_legacy_thread_with_canonical_path_opens_main_repo_workspace(cx: &m
 }
 
 #[gpui::test]
-async fn test_linked_worktree_workspace_reachable_after_adding_unrelated_project(
+async fn test_idle_worktrees_do_not_create_session_rows_after_adding_unrelated_project(
     cx: &mut TestAppContext,
 ) {
-    // Regression test for a property-test finding:
+    // This setup used to require an idle Workspace header in the thread
+    // switcher. Dez now keeps Workspace navigation in Workspace Tools and
+    // Recent Workspaces, so none of these idle Workspaces should masquerade as
+    // a Session.
     //   AddLinkedWorktree { project_group_index: 0 }
     //   AddProject { use_worktree: true }
     //   AddProject { use_worktree: false }
@@ -12300,39 +12280,27 @@ async fn test_linked_worktree_workspace_reachable_after_adding_unrelated_project
     });
     cx.run_until_parked();
 
-    // The linked-worktree workspace must be reachable from at least one
-    // sidebar entry — otherwise the user has no way to navigate to it.
-    let worktree_ws_id = worktree_workspace.entity_id();
-    let (all_ids, reachable_ids) = sidebar.read_with(cx, |sidebar, cx| {
-        let mw = multi_workspace.read(cx);
-
-        let all: HashSet<gpui::EntityId> = mw.workspaces().map(|ws| ws.entity_id()).collect();
-        let reachable: HashSet<gpui::EntityId> = sidebar
-            .contents
-            .entries
-            .iter()
-            .flat_map(|entry| entry.reachable_workspaces(mw, cx))
-            .map(|ws| ws.entity_id())
-            .collect();
-        (all, reachable)
+    assert_eq!(
+        visible_entries_as_strings(&sidebar, cx),
+        Vec::<String>::new(),
+        "idle Workspaces belong in Workspace navigation, not Sessions"
+    );
+    sidebar.read_with(cx, |sidebar, _cx| {
+        assert!(sidebar.contents.project_header_indices.is_empty());
+        assert_eq!(sidebar.contents.session_count, 0);
     });
-
-    let unreachable = &all_ids - &reachable_ids;
-    eprintln!("{}", visible_entries_as_strings(&sidebar, cx).join("\n"));
-
     assert!(
-        unreachable.is_empty(),
-        "workspaces not reachable from any sidebar entry: {:?}\n\
-         (linked-worktree workspace id: {:?})",
-        unreachable,
-        worktree_ws_id,
+        multi_workspace.read_with(cx, |mw, _| mw
+            .workspaces()
+            .any(|workspace| workspace == &worktree_workspace)),
+        "removing an idle row from Sessions must not close its Workspace"
     );
 }
 
 #[gpui::test]
 async fn test_startup_failed_restoration_shows_no_draft(cx: &mut TestAppContext) {
     // Empty project groups no longer auto-create drafts via reconciliation.
-    // A fresh startup with no restorable thread should show only the header.
+    // A fresh startup with no restorable thread should show no Session rows.
     let project = init_test_project_with_agent_panel("/my-project", cx).await;
     let (multi_workspace, cx) =
         cx.add_window_view(|window, cx| MultiWorkspace::test_new(project.clone(), window, cx));
@@ -12343,8 +12311,8 @@ async fn test_startup_failed_restoration_shows_no_draft(cx: &mut TestAppContext)
     let entries = visible_entries_as_strings(&sidebar, cx);
     assert_eq!(
         entries,
-        vec!["v [my-project]"],
-        "empty group should show only the header, no auto-created draft"
+        Vec::<String>::new(),
+        "an idle Workspace and empty composer must not create Session rows"
     );
 }
 
@@ -12843,12 +12811,12 @@ async fn test_worktree_add_only_regroups_threads_for_changed_workspace(cx: &mut 
 }
 
 #[gpui::test]
-async fn test_linked_worktree_workspace_reachable_after_adding_worktree_to_project(
+async fn test_idle_worktree_stays_out_of_sessions_after_adding_worktree_to_project(
     cx: &mut TestAppContext,
 ) {
-    // When a linked worktree is opened as its own workspace and then a new
-    // folder is added to the main project group, the linked worktree
-    // workspace must still be reachable from some sidebar entry.
+    // When a linked worktree is opened as its own Workspace and then a new
+    // folder is added to the main project group, neither idle Workspace should
+    // create a Session row.
     let (_fs, project) = init_multi_project_test(&["/my-project"], cx).await;
     let fs = _fs.clone();
 
@@ -12904,7 +12872,7 @@ async fn test_linked_worktree_workspace_reachable_after_adding_worktree_to_proje
     });
     cx.run_until_parked();
 
-    // Both workspaces should be reachable.
+    // Both Workspaces remain open even though Sessions stays empty.
     let workspace_count = multi_workspace.read_with(cx, |mw, _| mw.workspaces().count());
     assert_eq!(workspace_count, 2, "should have 2 workspaces");
 
@@ -12925,30 +12893,15 @@ async fn test_linked_worktree_workspace_reachable_after_adding_worktree_to_proje
     sidebar.update_in(cx, |sidebar, _window, cx| sidebar.update_entries(cx));
     cx.run_until_parked();
 
-    // The linked worktree workspace must still be reachable.
     let entries = visible_entries_as_strings(&sidebar, cx);
-    let mw_workspaces: Vec<_> = multi_workspace.read_with(cx, |mw, _| {
-        mw.workspaces().map(|ws| ws.entity_id()).collect()
-    });
-    sidebar.read_with(cx, |sidebar, cx| {
-        let multi_workspace = multi_workspace.read(cx);
-        let reachable: std::collections::HashSet<gpui::EntityId> = sidebar
-            .contents
-            .entries
-            .iter()
-            .flat_map(|entry| entry.reachable_workspaces(multi_workspace, cx))
-            .map(|ws| ws.entity_id())
-            .collect();
-        let all: std::collections::HashSet<gpui::EntityId> =
-            mw_workspaces.iter().copied().collect();
-        let unreachable = &all - &reachable;
-        assert!(
-            unreachable.is_empty(),
-            "all workspaces should be reachable after adding folder; \
-             unreachable: {:?}, entries: {:?}",
-            unreachable,
-            entries,
-        );
+    assert_eq!(
+        entries,
+        Vec::<String>::new(),
+        "idle Workspaces must stay out of Sessions after their group key changes"
+    );
+    sidebar.read_with(cx, |sidebar, _cx| {
+        assert!(sidebar.contents.project_header_indices.is_empty());
+        assert_eq!(sidebar.contents.session_count, 0);
     });
 }
 
@@ -13442,7 +13395,7 @@ mod property_test {
         verify_no_duplicate_threads(sidebar)?;
         verify_all_threads_are_shown(sidebar, cx)?;
         verify_active_state_matches_current_workspace(sidebar, cx)?;
-        verify_all_workspaces_are_reachable(sidebar, cx)?;
+        verify_no_idle_workspace_rows(sidebar)?;
         verify_workspace_group_key_integrity(sidebar, cx)?;
         Ok(())
     }
@@ -13755,38 +13708,21 @@ mod property_test {
         Ok(())
     }
 
-    /// Every workspace in the multi-workspace should be "reachable" from
-    /// the sidebar — meaning there is at least one entry (thread, draft,
-    /// new-thread, or project header) that, when clicked, would activate
-    /// that workspace.
-    fn verify_all_workspaces_are_reachable(sidebar: &Sidebar, cx: &App) -> anyhow::Result<()> {
-        let Some(multi_workspace) = sidebar.multi_workspace.upgrade() else {
-            anyhow::bail!("sidebar should still have an associated multi-workspace");
-        };
-
-        let multi_workspace = multi_workspace.read(cx);
-
-        let reachable_workspaces: HashSet<gpui::EntityId> = sidebar
-            .contents
-            .entries
-            .iter()
-            .flat_map(|entry| entry.reachable_workspaces(multi_workspace, cx))
-            .map(|ws| ws.entity_id())
-            .collect();
-
-        let all_workspace_ids: HashSet<gpui::EntityId> = multi_workspace
-            .workspaces()
-            .map(|ws| ws.entity_id())
-            .collect();
-
-        let unreachable = &all_workspace_ids - &reachable_workspaces;
-
-        anyhow::ensure!(
-            unreachable.is_empty(),
-            "The following workspaces are not reachable from any sidebar entry: {:?}",
-            unreachable,
-        );
-
+    /// Sessions is a supervision list, not a second Workspace navigator.
+    /// Every rendered project header must therefore own at least one real
+    /// terminal, agent session, saved session, or contentful draft.
+    fn verify_no_idle_workspace_rows(sidebar: &Sidebar) -> anyhow::Result<()> {
+        for entry in &sidebar.contents.entries {
+            if let ListEntry::ProjectHeader {
+                label, has_threads, ..
+            } = entry
+            {
+                anyhow::ensure!(
+                    *has_threads,
+                    "idle Workspace `{label}` appeared in Sessions without supervised work",
+                );
+            }
+        }
         Ok(())
     }
 
