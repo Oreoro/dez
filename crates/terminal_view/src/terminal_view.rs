@@ -13,12 +13,13 @@ use editor::{
 use futures::{channel::oneshot, future::join_all};
 use git_ui::git_panel::ReviewChanges as ReviewGitChanges;
 use gpui::{
-    Action, Anchor, AnyElement, App, AsyncApp, AsyncWindowContext, ClipboardEntry, DismissEvent,
-    Entity, EventEmitter, ExternalPaths, FocusHandle, Focusable, Font, Hsla, KeyContext,
-    KeyDownEvent, Keystroke, MouseButton, MouseDownEvent, Pixels, Point as GpuiPoint, PromptLevel,
-    Render, ScrollWheelEvent, Styled, Subscription, Task, TaskExt, WeakEntity, actions, anchored,
-    deferred, div,
+    Action, Anchor, AnyElement, App, AsyncApp, AsyncWindowContext, ClipboardEntry, ClipboardItem,
+    DismissEvent, Entity, EventEmitter, ExternalPaths, FocusHandle, Focusable, Font, Hsla,
+    KeyContext, KeyDownEvent, Keystroke, MouseButton, MouseDownEvent, Pixels, Point as GpuiPoint,
+    PromptLevel, Render, ScrollWheelEvent, Styled, Subscription, Task, TaskExt, WeakEntity,
+    actions, anchored, deferred, div,
 };
+use itertools::Itertools;
 use menu;
 use persistence::{StoredTerminalSessionRef, TerminalDb};
 use project::{Project, ProjectEntryId, search::SearchQuery};
@@ -3074,6 +3075,7 @@ impl Item for TerminalView {
 
         Some(
             h_flex()
+                .id(("terminal-tab-icon", terminal_entity_id))
                 .relative()
                 .flex_none()
                 .size(IconSize::Small.rems())

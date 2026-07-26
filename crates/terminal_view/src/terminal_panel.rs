@@ -1476,7 +1476,7 @@ impl Render for TerminalPanel {
                     },
                 ))
             })
-            .unwrap_or_else(|| div())
+            .unwrap_or_else(|| div().id("terminal-panel-unavailable"))
     }
 }
 
