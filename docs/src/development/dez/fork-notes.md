@@ -69,29 +69,56 @@ describe purpose, not the inherited dock or panel implementation:
 | **Main work area**  | File, terminal, search, diagnostics, settings, and review Surfaces | Global project scope or sidebar-only copies of active work          |
 | **Agent**           | Native and ACP conversation Surfaces in a hideable right tool pane | Terminal-agent process ownership                                    |
 
-The final shell follows this responsive layout and lifecycle contract:
+The final shell follows this responsive layout contract. This is the canonical
+wireframe, not a suggestion for an additional dashboard or panel system:
 
 ```mermaid
 flowchart TB
-    START["Launch or restore"] --> PRIMARY["Main Work Area<br/>always visible · receives initial focus"]
-
     subgraph WIDE["Wide window · 1160 logical px or more"]
         direction LR
-        WS["Sessions<br/>optional · live state and attention"]
-        WM["Main Work Area<br/>terminal · editor · diff · debug · review"]
-        WD["One contextual drawer<br/>Workspace Tools or Agent"]
+        WS["Sessions · optional<br/>status · Start · Search · Menu · Hide<br/>All / Attention<br/>Workspace groups and live Session rows<br/>no footer"]
+        WM["Main Work Area · primary<br/>one tab and pane grid<br/>terminal · editor · diff · debug · review"]
+        WD["One contextual drawer · optional<br/>Workspace Tools OR Agent<br/>never both"]
         WS --- WM --- WD
     end
 
     subgraph NARROW["Narrow window · below 1160 logical px"]
         direction LR
-        FA["One auxiliary region<br/>Sessions or Workspace Tools or Agent"]
-        FM["Main Work Area<br/>always present · at least 60%"]
+        FA["One auxiliary region · optional<br/>Sessions OR Workspace Tools OR Agent"]
+        FM["Main Work Area · always present<br/>at least 60% of the window"]
         FA --- FM
     end
 
-    PRIMARY -->|1160 px or wider| WM
-    PRIMARY -->|Below 1160 px| FM
+    WIDE -->|Window narrows| NARROW
+    NARROW -->|Window widens| WIDE
+```
+
+The visible work loop uses those same regions; it does not create a second
+agent dashboard:
+
+```mermaid
+flowchart LR
+    START["Start Terminal Session<br/>in Main Work Area"] --> RUN["Run shell, Codex, Claude,<br/>tests, or a long-lived process"]
+    RUN --> OBSERVE["Host and Workspace report<br/>lifecycle, attention, and evidence"]
+    OBSERVE --> SESSIONS["Sessions projects that state<br/>without owning the process"]
+    SESSIONS -->|Select row| RETURN["Focus or reattach the existing<br/>Main Work Area Surface"]
+    RUN --> CHANGES["Files and Git observe changes"]
+    CHANGES --> REVIEW["Open diff, diagnostics, or review<br/>in Main Work Area"]
+    REVIEW --> RUN
+```
+
+Running a terminal-native agent such as Codex does not turn the Sessions region
+into a chat transcript. Its terminal remains the interactive source of truth in
+the Main Work Area; Sessions becomes the compact place to see that it is live,
+needs attention, or has reviewable evidence. Native and ACP conversations use
+the Agent drawer and project into the same Sessions list. Both paths return to
+the existing Surface rather than opening a duplicate.
+
+Sessions restoration follows this lifecycle:
+
+```mermaid
+flowchart LR
+    START["Launch or restore"] --> PRIMARY["Main Work Area<br/>always visible · receives initial focus"]
 
     subgraph AUTO["Sessions visibility = Auto"]
         direction LR
@@ -125,6 +152,13 @@ Terminal Host restoration can report honest state. It then closes itself only
 when it is genuinely empty. A Session, attention item, Agent History view,
 failed Workspace recovery, or failed/reconnecting Terminal Host keeps it open.
 Any explicit Sessions command or focus cancels the pending automatic close.
+
+Dez renders no persistent Sessions footer. Secondary destinations live behind
+one named **Sessions Menu** in the overview: **Agent History**, **Open Recent
+Workspaces…**, and Agent tooling/settings. **Hide Sessions** remains the one
+direct adjacent action because it changes the current layout. Recovery notices
+open the global Recent Workspaces surface rather than relying on a hidden
+popover anchor. Official Zed retains its inherited footer.
 
 Sessions and the Main Work Area form one continuous window shell. Dez does not
 put a desktop-colored gutter or four-sided floating-card frame between them.
@@ -894,14 +928,14 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   progress reset, per-slice build mandate, and flattened Run/Session state are
   rejected. The treatment is recorded in
   [Consolidated Plan Reconciliation](./consolidated-plan-reconciliation.md).
-- **2026-07-23: Keep Session Rail utilities and Workspace status semantically
-  separate.** Agent Tools, Agent History, and recent Workspace navigation
-  belong to the Session Rail. Search, diagnostics, language services, file
-  state, and editor state belong to the bottom Workspace status/navigation
-  toolbar. Terminal-focused status must name useful Workspace-wide actions and
-  health states instead of presenting editor-shaped glyphs without context.
-  This boundary prevents the terminal-first shell from becoming an
-  undifferentiated bottom icon row.
+- **2026-07-23: Keep Sessions utilities and Workspace status semantically
+  separate.** Agent Tools, Agent History, and recent Workspace navigation are
+  reached through the Sessions Menu. They do not consume a permanent footer.
+  Search, diagnostics, language services, file state, and editor state belong
+  to the bottom Workspace status/navigation toolbar. Terminal-focused status
+  must name useful Workspace-wide actions and health states instead of
+  presenting editor-shaped glyphs without context. This boundary prevents the
+  terminal-first shell from becoming an undifferentiated bottom icon row.
 - **2026-07-23: Terminal lifecycle policy is interaction-path invariant.**
   Pointer controls, context menus, and keyboard removal must derive their
   detach, close, remove, or terminate presentation and confirmation requirement
@@ -927,15 +961,11 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   uses Terminal Session vocabulary. Paths, process identifiers, and Session
   identifiers are labeled precisely; generic Folder, Process, and Session
   prefixes are not sufficient for an inspectable terminal Surface.
-- **2026-07-23: Responsive breakpoints follow the control they govern.** The
-  Session Rail footer does not inherit the wider breakpoint used for
-  supplemental row metadata. At the default compact width, the conventional
-  Settings gear remains named by tooltip and accessibility output while
-  **History** and **Workspaces** keep visible labels because their destinations
-  are otherwise ambiguous. Only genuinely narrower rails collapse every
-  utility to a named, tooltip-backed icon. At detailed widths, the gear expands
-  to **Agent Tools**, History expands to **Agent History**, and Workspaces
-  expands to **Recent Workspaces**.
+- **2026-07-23: Responsive disclosure follows information priority.** Sessions
+  keeps status, optional search, one Sessions Menu, and Hide in its overview.
+  Secondary navigation never grows into a labeled footer as the rail widens.
+  Row metadata may disclose additional evidence at its own breakpoints, but
+  permanent chrome stays stable from the 200 px floor through detailed widths.
 - **2026-07-23: Responsive labels reserve space before they appear.** Controls
   made visible at a compact breakpoint use compact padding and typography. A
   breakpoint is incomplete if its newly revealed labels can only fit by
@@ -1206,11 +1236,11 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   auto-hidden. While open, the Sessions overview owns one explicit **Hide
   Sessions** action and generic title chrome does not repeat it. While closed,
   the existing title/status affordance owns **Open Sessions**, so the projection
-  remains recoverable. At compact width, Agent Tools, Agent History, and Recent
-  Workspaces use icons with complete tooltip and accessibility names; their
-  visible labels return only in detailed mode. This keeps supervision optional,
-  reduces sidebar-like navigation furniture, and preserves capability and
-  keyboard access. Official Zed retains its inherited chrome.
+  remains recoverable. One named Sessions Menu now owns Agent History, Recent
+  Workspaces, and Agent tooling at every width; Dez renders no persistent
+  footer. This keeps supervision optional, reduces sidebar-like navigation
+  furniture, and preserves capability and keyboard access. Official Zed
+  retains its inherited chrome.
 - **2026-07-26: A fresh Workspace opens on the Main Work Area, not a tool
   drawer.** Workspace Tools, Agent, and Sessions are contextual projections and
   begin closed by default. Files, Outline, Git, and Debug reveal the existing

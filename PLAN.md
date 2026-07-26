@@ -3125,12 +3125,16 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   empty. Explicit open/focus cancels the one-shot close. While the rail is
   open, its overview exposes one explicit **Hide Sessions** action and generic
   window chrome no longer duplicates that toggle; when closed, existing
-  title/status chrome continues to expose **Open Sessions**. The 280 px compact
-  footer is icon-only, with full tooltip and accessibility names, while the
-  380 px detailed footer restores **Agent Tools**, **Agent History**, and
-  **Recent Workspaces**. Official Zed retains its inherited toggle behavior.
-  Formatting and static identity checks cover this source slice; no build, test
-  binary, alternate binary, or visual launch was performed.
+  title/status chrome continues to expose **Open Sessions**. One named Sessions
+  Menu now owns Agent History, global Recent Workspaces, and Agent
+  tooling/settings at every width; Dez renders no persistent footer. Official
+  Zed retains its inherited toggle and footer behavior. The canonical shell
+  wireframe now pins the same implementation: a terminal-native agent remains
+  interactive in its Main Work Area terminal, Sessions projects lifecycle and
+  attention, and selecting the row returns to that existing Surface rather
+  than creating a transcript or overlay. Formatting and static identity checks
+  cover this source slice; no build, test binary, alternate binary, or visual
+  launch was performed.
 - 2026-07-26: Made the fresh Workspace honor the Main Work Area hierarchy.
   Workspace Tools no longer opens by default merely because a folder is
   present; Sessions and Agent already begin closed. Files, Outline, Git, and

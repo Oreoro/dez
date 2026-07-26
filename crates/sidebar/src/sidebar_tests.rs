@@ -86,6 +86,20 @@ fn dez_sessions_uses_normal_flow_client_geometry() {
 }
 
 #[test]
+fn dez_consolidates_session_utilities_into_one_overview_menu() {
+    assert!(session_overview_uses_sessions_menu("Dez"));
+    assert!(
+        !session_rail_uses_footer_utilities("Dez"),
+        "Dez should not spend a permanent bottom row on secondary navigation"
+    );
+    assert!(
+        !session_overview_uses_sessions_menu("Zed"),
+        "official Zed retains its inherited sidebar controls"
+    );
+    assert!(session_rail_uses_footer_utilities("Zed"));
+}
+
+#[test]
 fn session_rail_keeps_the_main_work_area_primary_on_narrow_windows() {
     let settings = SessionRailSettings {
         visibility: settings::CanvasVisibility::Auto,
@@ -171,7 +185,7 @@ fn compact_session_rows_prioritize_actions_and_evidence_over_recency() {
 }
 
 #[test]
-fn compact_footer_uses_icons_and_detailed_footer_names_destinations() {
+fn inherited_footer_uses_icons_and_detailed_footer_names_destinations() {
     assert_eq!(
         session_rail_agent_tools_utility_label(COMPACT_MAX_WIDTH),
         "",

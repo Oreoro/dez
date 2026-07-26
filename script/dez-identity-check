@@ -658,11 +658,14 @@ require_multiline_pattern crates/workspace/src/multi_workspace.rs \
     'dez_auxiliary_surfaces_were_window_exclusive: bool.*?fn reconcile_dez_auxiliary_surfaces_after_resize.*?became_window_exclusive.*?auxiliary_pane_visible.*?defer_in.*?auxiliary_pane_has_focus.*?close_sidebar_for_auxiliary_surface.*?hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal.*?impl Render for MultiWorkspace.*?reconcile_dez_auxiliary_surfaces_after_resize' \
     'resizing a wide Dez layout can regress to retaining three competing regions in a narrow window'
 require_multiline_pattern docs/src/development/dez/fork-notes.md \
-    'The final shell follows this responsive layout and lifecycle contract.*?flowchart TB.*?Wide window · 1160 logical px or more.*?Main Work Area.*?Narrow window · below 1160 logical px.*?One auxiliary region.*?Sessions visibility = Auto.*?Explicit Sessions command.*?opening[[:space:]]+Sessions hides the visible contextual drawer.*?opening Workspace Tools or Agent[[:space:]]+hides Sessions' \
+    'The final shell follows this responsive layout contract.*?canonical[[:space:]]+wireframe.*?Wide window · 1160 logical px or more.*?status · Start · Search · Menu · Hide.*?no footer.*?Main Work Area · primary.*?Workspace Tools OR Agent.*?Narrow window · below 1160 logical px.*?One auxiliary region · optional.*?at least 60% of the window.*?Start Terminal Session.*?Run shell, Codex, Claude.*?Sessions projects that state.*?Focus or reattach the existing.*?Running a terminal-native agent.*?terminal remains the interactive source of truth.*?Sessions restoration follows this lifecycle.*?Sessions visibility = Auto.*?Explicit Sessions command.*?opening[[:space:]]+Sessions hides the visible contextual drawer.*?opening Workspace Tools or Agent[[:space:]]+hides Sessions' \
     'the permanent Dez shell contract can lose its concrete responsive layout and state transition'
 require_multiline_pattern docs/src/development/dez/fork-notes.md \
     'Sessions and the Main Work Area form one continuous window shell.*?desktop-colored gutter or four-sided floating-card frame.*?One neutral one-pixel divider.*?window-facing outer corners.*?one bounded application surface' \
     'the permanent Dez visual contract can regress from one native glass shell to detached cards'
+require_multiline_pattern docs/src/development/dez/fork-notes.md \
+    'Dez renders no persistent Sessions footer.*?Sessions Menu.*?Agent History.*?Open Recent[[:space:]]+Workspaces….*?Hide Sessions.*?global Recent Workspaces surface.*?Official Zed retains its inherited footer' \
+    'the permanent Sessions hierarchy can regress to a persistent secondary-navigation strip'
 require_multiline_pattern crates/workspace/src/workspace_settings.rs \
     'pub struct SidebarSettings.*?auto_visibility: bool.*?session_rail_visibility == settings::CanvasVisibility::Auto' \
     'Session Rail auto visibility can regress to a display-only label with no restore policy'
@@ -802,8 +805,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_agent_options_menu.*?visible_label: &'"'"'static str.*?Button::new\([[:space:]]*"agent-sidebar-options-menu",[[:space:]]*visible_label.*?IconName::Settings.*?aria_label\("Agent Tools and Settings"\)' \
     'the compact Settings gear can regress to an unnamed Agent Tools destination'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
-    'fn compact_footer_uses_icons_and_detailed_footer_names_destinations.*?session_rail_agent_tools_utility_label\(COMPACT_MAX_WIDTH\).*?"".*?session_rail_agent_history_utility_label\(COMPACT_MAX_WIDTH\).*?"".*?session_rail_recent_workspaces_utility_label\(COMPACT_MAX_WIDTH\).*?"".*?session_rail_agent_tools_utility_label\(DETAILED_MIN_WIDTH\).*?"Agent Tools".*?session_rail_agent_history_utility_label\(DETAILED_MIN_WIDTH\).*?"Agent History".*?session_rail_recent_workspaces_utility_label\(DETAILED_MIN_WIDTH\).*?"Recent Workspaces"' \
-    'Sessions footer label hierarchy can regress across compact and detailed widths'
+    'fn inherited_footer_uses_icons_and_detailed_footer_names_destinations.*?session_rail_agent_tools_utility_label\(COMPACT_MAX_WIDTH\).*?"".*?session_rail_agent_history_utility_label\(COMPACT_MAX_WIDTH\).*?"".*?session_rail_recent_workspaces_utility_label\(COMPACT_MAX_WIDTH\).*?"".*?session_rail_agent_tools_utility_label\(DETAILED_MIN_WIDTH\).*?"Agent Tools".*?session_rail_agent_history_utility_label\(DETAILED_MIN_WIDTH\).*?"Agent History".*?session_rail_recent_workspaces_utility_label\(DETAILED_MIN_WIDTH\).*?"Recent Workspaces"' \
+    'the official-Zed footer compatibility hierarchy can regress across compact and detailed widths'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_session_overview.*?IconButton::new\("hide-sessions", IconName::Close\).*?aria_label\("Hide Sessions"\).*?Tooltip::for_action\("Hide Sessions", &ToggleSidebar.*?dispatch_action\(Box::new\(CloseSidebar\)' \
     'an open Sessions rail can regress to hiding its only obvious close action in generic window chrome'
@@ -874,8 +877,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     '"Rename Title", "Rename Agent Session".*?"Archive Thread", "Archive Agent Session".*?"Regenerate Thread Title".*?"Regenerate Agent Session Title".*?"Open Thread as Markdown".*?"Open Agent Session as Markdown"' \
     'Sessions Agent Session context actions can regress to mixed Thread terminology'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    '"Agent Profiles".*?agent_session_label\([[:space:]]*APP_NAME,[[:space:]]*"Open Settings",[[:space:]]*"Agent Settings".*?"Toggle Sidebar".*?"Hide Sessions"' \
-    'the Session Rail Agent Tools menu can regress to ambiguous Settings or Sidebar destinations'
+    '"Agent Profiles".*?agent_session_label\([[:space:]]*APP_NAME,[[:space:]]*"Open Settings",[[:space:]]*"Agent Settings".*?if !is_dez.*?"Toggle Sidebar"' \
+    'the Sessions Menu can regress to ambiguous Agent settings or duplicate Dez layout actions'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
     '"agent::RenameSelectedThread".*?"sessions::RenameSelectedSession".*?"sidebar::NewThreadInGroup".*?"sessions::NewAgentSessionInWorkspace".*?"sidebar::ToggleThreadSwitcher".*?"sessions::SwitchSessions".*?"sidebar::ToggleThreadHistory".*?"sessions::ToggleAgentHistory"' \
     'the mixed Session Rail rename action can regress to Thread terminology or one Session type'
@@ -1456,8 +1459,17 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\([[:space:]]*"open-recent-workspaces".*?session_rail_recent_workspaces_utility_label\(rail_width\).*?IconName::FolderOpen.*?aria_label\("Open Recent Workspaces"\).*?Tooltip::for_action\("Open Recent Workspaces"' \
     'the Session Rail footer can regress to an ambiguous Open Workspace utility'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'Button::new\([[:space:]]*"agent-sidebar-options-menu",[[:space:]]*visible_label.*?IconName::Settings.*?aria_label\("Agent Tools and Settings"\).*?header\("Agent Context"\).*?"Hide Sessions"' \
-    'the Session Rail footer can regress to a Robot icon that does not open Agent'
+    'fn render_agent_options_menu.*?let is_dez = paths::APP_NAME != "Zed".*?IconButton::new\("sessions-menu", IconName::Ellipsis\).*?aria_label\("Sessions Menu"\).*?header\("Sessions"\).*?action\("Agent History".*?Open Recent Workspaces….*?header\("Agent Context"\).*?if !is_dez.*?action\("Toggle Sidebar"' \
+    'Dez can regress from one named Sessions overflow to a persistent footer or duplicate Hide action'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn session_overview_uses_sessions_menu.*?app_name != "Zed".*?fn session_rail_uses_footer_utilities.*?app_name == "Zed".*?fn render_session_overview.*?session_overview_uses_sessions_menu\(paths::APP_NAME\).*?render_agent_options_menu\("", cx\).*?IconButton::new\("hide-sessions".*?on_action\(cx.listener\(\|this, _: &OpenRecent.*?session_rail_uses_footer_utilities\(paths::APP_NAME\).*?cx\.propagate\(\).*?session_rail_uses_footer_utilities\(paths::APP_NAME\).*?render_sidebar_bottom_bar' \
+    'Dez can regress to a permanent Sessions footer or intercept global Recent Workspaces with an unmounted popover'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn render_workspace_restore_status.*?recover-unresolved-workspace.*?session_rail_uses_footer_utilities\(paths::APP_NAME\).*?recent_projects_popover_handle\.toggle.*?window\.dispatch_action\(.*?OpenRecent::default\(\)\.boxed_clone' \
+    'Workspace recovery can regress to targeting a Recent Workspaces popover that Dez no longer mounts'
+require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
+    'fn dez_consolidates_session_utilities_into_one_overview_menu.*?session_overview_uses_sessions_menu\("Dez"\).*?!session_rail_uses_footer_utilities\("Dez"\).*?!session_overview_uses_sessions_menu\("Zed"\).*?session_rail_uses_footer_utilities\("Zed"\)' \
+    'the Dez-versus-Zed Sessions utility ownership split is no longer pinned by source assertions'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let popover_open = popover_handle\.is_deployed\(\).*?Button::new\([[:space:]]*"open-recent-workspaces".*?tab_index\(0isize\).*?aria_label\("Open Recent Workspaces"\).*?aria_expanded\(popover_open\).*?let menu_open = self\.agent_options_menu_handle\.is_deployed\(\).*?Button::new\([[:space:]]*"agent-sidebar-options-menu".*?tab_index\(0isize\).*?aria_label\("Agent Tools and Settings"\).*?aria_expanded\(menu_open\).*?selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\).*?Button::new\("history".*?tab_index\(0isize\).*?toggle_state\(is_archive\)' \
     'Session Rail utilities can regress to pointer-only controls or popovers that conceal their expanded state'

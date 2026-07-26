@@ -754,6 +754,14 @@ fn session_overview_create_action_visible(app_name: &str, session_count: usize) 
     app_name == "Zed" && session_count > 0
 }
 
+fn session_overview_uses_sessions_menu(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
+fn session_rail_uses_footer_utilities(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 fn session_start_state_visible(
     has_open_projects: bool,
     session_count: usize,
@@ -13201,6 +13209,10 @@ impl Sidebar {
                             )
                         },
                     )
+                    .when(
+                        session_overview_uses_sessions_menu(paths::APP_NAME),
+                        |this| this.child(self.render_agent_options_menu("", cx)),
+                    )
                     .child(
                         IconButton::new("hide-sessions", IconName::Close)
                             .size(ButtonSize::Medium)
@@ -13589,7 +13601,14 @@ impl Sidebar {
                                     "Choose the unavailable Workspace to try opening it again",
                                 ))
                                 .on_click(cx.listener(|this, _, window, cx| {
-                                    this.recent_projects_popover_handle.toggle(window, cx);
+                                    if session_rail_uses_footer_utilities(paths::APP_NAME) {
+                                        this.recent_projects_popover_handle.toggle(window, cx);
+                                    } else {
+                                        window.dispatch_action(
+                                            OpenRecent::default().boxed_clone(),
+                                            cx,
+                                        );
+                                    }
                                 })),
                         )
                         .child(
@@ -13768,6 +13787,7 @@ impl Sidebar {
         visible_label: &'static str,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
+        let is_dez = paths::APP_NAME != "Zed";
         let on_right = self.side(cx) == SidebarSide::Right;
         let active_conversation_view = self.active_agent_conversation_view(cx);
         let can_regenerate_thread_title =
@@ -13793,35 +13813,53 @@ impl Sidebar {
         let focus_handle = self.focus_handle.clone();
         let sidebar = cx.weak_entity();
         let menu_open = self.agent_options_menu_handle.is_deployed();
-
-        PopoverMenu::new("agent-sidebar-options-menu")
-            .trigger_with_tooltip(
-                Button::new(
-                    "agent-sidebar-options-menu",
-                    visible_label,
-                )
+        let trigger = if is_dez {
+            IconButton::new("sessions-menu", IconName::Ellipsis)
+                .size(ButtonSize::Medium)
+                .icon_size(IconSize::Small)
+                .tab_index(0isize)
+                .aria_label("Sessions Menu")
+                .aria_expanded(menu_open)
+                .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                .into_any_element()
+        } else {
+            Button::new("agent-sidebar-options-menu", visible_label)
                 .size(ButtonSize::Compact)
                 .label_size(LabelSize::Small)
                 .start_icon(Icon::new(IconName::Settings).size(IconSize::Small))
                 .tab_index(0isize)
                 .aria_label("Agent Tools and Settings")
                 .aria_expanded(menu_open)
-                .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
-                Tooltip::text("Agent Tools and Settings"),
+                .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                .into_any_element()
+        };
+
+        PopoverMenu::new("agent-sidebar-options-menu")
+            .trigger_with_tooltip(
+                trigger,
+                Tooltip::text(if is_dez {
+                    "Sessions Menu"
+                } else {
+                    "Agent Tools and Settings"
+                }),
             )
-            .anchor(if on_right {
+            .anchor(if is_dez {
+                gpui::Anchor::TopRight
+            } else if on_right {
                 gpui::Anchor::BottomRight
             } else {
                 gpui::Anchor::BottomLeft
             })
-            .attach(if on_right {
+            .attach(if is_dez {
+                gpui::Anchor::BottomRight
+            } else if on_right {
                 gpui::Anchor::TopRight
             } else {
                 gpui::Anchor::TopLeft
             })
             .offset(gpui::Point {
                 x: px(0.0),
-                y: px(-4.0),
+                y: if is_dez { px(4.0) } else { px(-4.0) },
             })
             .with_handle(self.agent_options_menu_handle.clone())
             .menu(move |window, cx| {
@@ -13833,6 +13871,17 @@ impl Sidebar {
                     cx,
                     move |mut menu, _window, _| {
                         menu = menu.context(focus_handle.clone());
+
+                        if is_dez {
+                            menu = menu
+                                .header("Sessions")
+                                .action("Agent History", Box::new(ToggleThreadHistory))
+                                .action(
+                                    "Open Recent Workspaces…",
+                                    Box::new(OpenRecent::default()),
+                                )
+                                .separator();
+                        }
 
                         if can_regenerate_thread_title {
                             menu = menu.header(agent_session_label(
@@ -13927,16 +13976,12 @@ impl Sidebar {
                                     "Agent Settings",
                                 ),
                                 Box::new(OpenSettings),
-                            )
-                            .separator()
-                            .action(
-                                if APP_NAME == "Zed" {
-                                    "Toggle Sidebar"
-                                } else {
-                                    "Hide Sessions"
-                                },
-                                Box::new(ToggleSidebar),
                             );
+                        if !is_dez {
+                            menu = menu
+                                .separator()
+                                .action("Toggle Sidebar", Box::new(ToggleSidebar));
+                        }
 
                         if has_auth_methods || supports_logout {
                             menu = menu.separator();
@@ -14570,7 +14615,11 @@ impl Render for Sidebar {
             .on_action(cx.listener(Self::on_previous_thread))
             .on_action(cx.listener(Self::toggle_agent_options_menu))
             .on_action(cx.listener(|this, _: &OpenRecent, window, cx| {
-                this.recent_projects_popover_handle.toggle(window, cx);
+                if session_rail_uses_footer_utilities(paths::APP_NAME) {
+                    this.recent_projects_popover_handle.toggle(window, cx);
+                } else {
+                    cx.propagate();
+                }
             }))
             .font(ui_font)
             .map(|el| {
@@ -14734,7 +14783,10 @@ impl Render for Sidebar {
                     this.child(self.render_cross_channel_import_onboarding(verbose, cx))
                 })
             })
-            .child(self.render_sidebar_bottom_bar(cx))
+            .when(
+                session_rail_uses_footer_utilities(paths::APP_NAME),
+                |this| this.child(self.render_sidebar_bottom_bar(cx)),
+            )
             .into_any_element()
     }
 }
