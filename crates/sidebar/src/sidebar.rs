@@ -1445,6 +1445,10 @@ fn terminal_termination_confirmation_copy(title: &str) -> (&'static str, String)
     )
 }
 
+fn terminal_termination_failure_copy(title: &str) -> String {
+    format!("Dez could not terminate “{title}”. It may still be running.")
+}
+
 fn terminal_row_owner_label(has_session_ref: bool, is_remote: bool) -> &'static str {
     if has_session_ref {
         "Persistent"
@@ -1749,6 +1753,17 @@ mod terminal_runtime_label_tests {
         assert!(detail.contains("shell and any foreground process"));
         assert!(detail.contains("cannot be undone"));
         assert!(!detail.contains("durable"));
+    }
+
+    #[test]
+    fn terminal_termination_failure_is_persistent_actionable_product_copy() {
+        let copy = terminal_termination_failure_copy("compiler");
+        assert_eq!(
+            copy,
+            "Dez could not terminate “compiler”. It may still be running."
+        );
+        assert!(!copy.to_lowercase().contains("durable"));
+        assert!(!copy.to_lowercase().contains("host"));
     }
 
     #[test]
@@ -9221,6 +9236,10 @@ impl Sidebar {
                     .filter(|connection| connection.host_id() == session_ref.host_id)
             {
                 let session_id = *session_id;
+                let return_metadata = metadata.clone();
+                let return_workspace = workspace.clone();
+                let return_source = source.clone();
+                let sidebar = cx.weak_entity();
                 cx.spawn(async move |this, cx| {
                     let result: anyhow::Result<()> = async {
                         let response = connection
@@ -9255,19 +9274,43 @@ impl Sidebar {
                     }
                     .await;
 
-                    if let Err(error) = &result {
+                    if result.is_err() {
+                        let return_metadata_for_action = return_metadata.clone();
+                        let return_workspace_for_action = return_workspace.clone();
+                        let return_source_for_action = return_source.clone();
+                        let sidebar = sidebar.clone();
                         this.update(cx, |this, cx| {
                             if let Some(workspace) = this.active_workspace(cx) {
                                 workspace.update(cx, |workspace, cx| {
                                     struct TerminateTerminalErrorToast;
                                     workspace.show_toast(
                                         Toast::new(
-                                            NotificationId::unique::<TerminateTerminalErrorToast>(),
-                                            format!(
-                                                "Durable session was not terminated: {error:#}"
+                                            NotificationId::composite::<
+                                                TerminateTerminalErrorToast,
+                                            >(
+                                                return_metadata.terminal_id.to_string()
+                                            ),
+                                            terminal_termination_failure_copy(
+                                                return_metadata.display_title().as_ref(),
                                             ),
                                         )
-                                        .autohide(),
+                                        .on_click(
+                                            "Return to Session",
+                                            move |window, cx| {
+                                                sidebar
+                                                    .update(cx, |sidebar, cx| {
+                                                        sidebar.activate_terminal_entry(
+                                                            return_metadata_for_action.clone(),
+                                                            return_workspace_for_action.clone(),
+                                                            return_source_for_action.clone(),
+                                                            false,
+                                                            window,
+                                                            cx,
+                                                        );
+                                                    })
+                                                    .ok();
+                                            },
+                                        ),
                                         cx,
                                     );
                                 });

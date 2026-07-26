@@ -472,10 +472,13 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn terminal_termination_confirmation_copy.*?"Terminate Terminal Session\?".*?shell and any foreground process.*?cannot be undone' \
     'terminal termination confirmation can regress to architecture jargon or omit the irreversible process effect'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn terminal_termination_failure_copy.*?Dez could not terminate.*?It may still be running.*?NotificationId::composite.*?terminal_termination_failure_copy.*?\.on_click\(.*?"Return to Session".*?activate_terminal_entry' \
+    'failed terminal termination can regress to a disappearing jargon toast without a return-to-owner recovery action'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn archive_selected_thread.*?ListEntry::Terminal.*?TerminalEntrySource::HostSession.*?terminal_row_close_presentation.*?close_terminal_with_confirmation' \
     'the selected-row keyboard action can bypass the terminal lifecycle presentation and confirmation policy'
 reject_pattern crates/sidebar/src/sidebar.rs \
-    'Terminate durable session|permanently stops the durable session' \
+    'Terminate durable session|permanently stops the durable session|Durable session was not terminated' \
     'terminal termination UI exposes internal durability terminology'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn terminal_row_owner_label.*?"Persistent".*?"Remote".*?"Local"' \

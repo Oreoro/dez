@@ -3911,3 +3911,20 @@ Completed for the visible terminal-agent handoff source slice:
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed. Expanded/collapsed shell → Codex → shell proof
   remains open for the next artifact.
+
+Completed for the terminal-termination failure source slice:
+
+- replaced the auto-hiding **Durable session was not terminated** message with
+  terminal-specific product copy stating that the process may still be running;
+- kept the uncertainty visible until dismissal instead of implying that a
+  destructive request succeeded;
+- added **Return to Session**, routed through the preserved terminal metadata,
+  Workspace, and source so recovery cannot open a substitute computation;
+- retained detailed transport errors in logs and removed Host/durability jargon
+  from public copy;
+- used a terminal-specific notification identity so one failure does not
+  silently replace another terminal's failure;
+- added a pure copy assertion and static identity guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Transport-failure runtime proof remains open for
+  the next artifact.

@@ -3065,3 +3065,14 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   assertions plus the identity gate protect the compact and collapsed
   responses. This is source-only; no build, test binary, alternate binary, or
   visual launch was performed.
+- 2026-07-26: Made failed terminal termination a durable recovery state in the
+  UI instead of a disappearing implementation error. If an external terminal
+  owner rejects or cannot complete termination, Dez now keeps a
+  terminal-specific notification stating that the named process may still be
+  running and offers **Return to Session**. That action restores the exact
+  owning Workspace and terminal route so the user can retry or stop it there.
+  The notification does not auto-hide, raw transport errors remain in logs,
+  and public copy no longer says **Durable session** or exposes Host internals.
+  Pure copy assertions and the identity gate protect the failure/recovery
+  contract. This is source-only; no build, test binary, alternate binary, or
+  visual launch was performed.

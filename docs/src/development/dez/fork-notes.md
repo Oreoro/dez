@@ -1099,3 +1099,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   visible, the layout remains still, and selecting the row returns to the exact
   owning terminal. No Agent panel, duplicate terminal, toast, or overlay is
   part of this transition.
+- **2026-07-26: A failed terminate request stays visible and returns to its
+  owner.** A destructive action is not complete merely because Dez sent a
+  transport command. If termination fails, the terminal-specific notification
+  says that the named process may still be running and remains present until
+  dismissed. **Return to Session** restores the exact Workspace and terminal
+  source so the user can inspect, retry, or stop it in the owner. Raw transport
+  detail is logged rather than exposed as product copy. Dez never describes
+  this state as **Durable session was not terminated**, silently removes the
+  uncertainty, or auto-hides it after a timer.

@@ -1380,3 +1380,24 @@ and rendered response. Runtime proof remains open until the consolidated Dez
 artifact is rebuilt: exercise shell → Codex → shell with the Workspace group
 expanded and collapsed, then select the row and confirm focus returns to the
 original terminal.
+
+## 2026-07-26: terminal termination failure recovery
+
+Current source no longer treats a failed destructive request as disposable
+feedback:
+
+- the notification names the affected terminal and states that it may still be
+  running;
+- it remains visible until dismissed instead of auto-hiding;
+- **Return to Session** activates the exact preserved terminal metadata,
+  Workspace, and source route;
+- notification identity is terminal-specific, preventing an unrelated failure
+  from silently replacing it; and
+- transport detail remains in logs while public copy omits **Durable session**
+  and Host implementation terminology.
+
+A pure copy assertion and the identity gate pin the message, persistent
+notification, recovery action, and exact activation route. Runtime proof
+requires a controlled failed-termination response in the next consolidated
+artifact; no build, test binary, alternate binary, or visual launch was
+performed for this source slice.
