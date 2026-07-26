@@ -1323,3 +1323,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   stricter maximum opacity. Elevated menus and feedback stay denser. This
   preserves readable hierarchy while preventing stacked semantic layers from
   flattening the system backdrop into an opaque-looking application.
+- **2026-07-26: View exposes regions before implementations.** Dez keeps
+  **Sessions** and **Agent** as separate View-menu destinations. Files, Outline,
+  Git, and Debug are modes of one **Workspace Tools** drawer and therefore live
+  in that submenu beside **Show or Hide Workspace Tools**. **Editor Layout**
+  and **Diagnostics** remain separate. Official Zed retains its upstream
+  Project Tab/Panel and Terminal Panel hierarchy.

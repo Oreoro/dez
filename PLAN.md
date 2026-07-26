@@ -3239,3 +3239,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   interaction, region, scrollbar, and focus contrast across representative
   backdrops. This is source-only; the installed artifact remains stale and
   rendered proof waits for the requested later build.
+- 2026-07-26: Made the application View menu match the one-drawer shell.
+  Sessions and Agent remain separate regions. Files, Outline, Git, and Debug
+  now live under one **Workspace Tools** submenu with an explicit
+  **Show or Hide Workspace Tools** action instead of appearing beside their
+  container as unrelated top-level panels. Editor Layout and Diagnostics
+  remain distinct. Official Zed keeps the upstream Project Tab/Panel and
+  Terminal Panel hierarchy. A pure product-policy assertion and identity guard
+  cover the split. This is source-only; menu rendering and keyboard navigation
+  remain part of the later consolidated artifact.

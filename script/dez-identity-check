@@ -1768,8 +1768,11 @@ require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'fn terminal_panel_surface_visible.*?app_name == "Zed".*?if terminal_panel_surface_visible\(APP_NAME\).*?terminal_panel::Toggle' \
     'the compatibility Terminal Panel can leak back into the Dez View menu'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
-    'fn workspace_tools_menu_label.*?"Workspace Tools".*?fn developer_surface_menu_label.*?if app_name != "Zed".*?dez_label' \
+    'fn workspace_tools_menu_label.*?"Show or Hide Workspace Tools".*?fn workspace_tools_are_grouped.*?app_name != "Zed".*?fn developer_surface_menu_label.*?if app_name != "Zed".*?dez_label' \
     'the Dez View menu can regress to implementation-flavored Project Tab and Panel labels'
+require_multiline_pattern crates/zed/src/zed/app_menus.rs \
+    'if workspace_tools_are_grouped\(APP_NAME\).*?MenuItem::action\("Sessions", workspace::ToggleSidebar\).*?Menu::new\("Workspace Tools"\).*?project_pane_label.*?project_surface_label.*?outline_surface_label.*?git_surface_label.*?debugger_surface_label.*?MenuItem::action\(agent_surface_label.*?editor_layout_menu\(\).*?Diagnostics' \
+    'the Dez View menu can regress to presenting one Workspace Tools drawer as unrelated top-level panels'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'fn product_menu_label.*?if app_name == "Zed".*?zed_label.*?dez_label.*?"Open Workspace Settings".*?"Add Folder to Workspace…".*?"Close Workspace".*?"Find in Workspace"' \
     'top-level Dez menus can regress to upstream Project vocabulary'

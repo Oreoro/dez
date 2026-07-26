@@ -1467,3 +1467,24 @@ No build, test binary, alternate binary, or new application launch was
 performed. The inspected installed Dez remains older than this source. Rendered
 proof of the opacity change and Settings root remains open for the consolidated
 build.
+
+## 2026-07-26: coherent View-menu hierarchy
+
+Current source aligns the application View menu with the Dez shell:
+
+- **Sessions** and **Agent** remain separate regions;
+- **Workspace Tools** owns Files, Outline, Git, Debug, and one
+  **Show or Hide Workspace Tools** action;
+- **Editor Layout** remains the owner of Main Work Area split commands; and
+- **Diagnostics** remains separate from drawer content.
+
+Official Zed retains its upstream Project Tab/Panel and Terminal Panel
+hierarchy. No actions or compatible implementation are removed.
+
+A pure source assertion pins the product split. The identity gate pins the
+submenu, its visibility action, all four Workspace Tools modes, and the
+separate Agent, Editor Layout, and Diagnostics destinations.
+
+No build, test binary, alternate binary, or new visual launch was performed.
+Rendered pointer, keyboard, idempotent reveal, dismissal, and focus-return proof
+remains open for the consolidated build.

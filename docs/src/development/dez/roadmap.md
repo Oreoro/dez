@@ -4032,3 +4032,19 @@ Completed for the public-shell and glass-opacity source slice:
   or fresh visual launch was performed. The next consolidated artifact must
   prove both Lumin variants against real desktop backdrops and the reduced
   Settings root.
+
+Completed for the coherent View-menu source slice:
+
+- kept **Sessions** and **Agent** as separate application regions;
+- grouped Files, Outline, Git, and Debug beneath one **Workspace Tools**
+  submenu instead of presenting the drawer and its modes as unrelated
+  top-level panels;
+- added **Show or Hide Workspace Tools** inside that submenu so visibility and
+  mode selection share one discoverable owner;
+- kept **Editor Layout** and **Diagnostics** separate from drawer content;
+- preserved official Zed's Project Tab/Panel and Terminal Panel hierarchy;
+- retained every underlying action and command-palette route;
+- added a pure product-policy assertion and static identity guard; and
+- retained source-only evidence. No build, test binary, alternate binary, or
+  visual launch was performed. Rendered menu navigation and focus proof remain
+  open for the consolidated artifact.

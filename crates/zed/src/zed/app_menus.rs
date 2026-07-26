@@ -23,12 +23,16 @@ fn product_menu_label(
 
 fn workspace_tools_menu_label(app_name: &str, panels_as_pane_tabs: bool) -> &'static str {
     if app_name != "Zed" {
-        "Workspace Tools"
+        "Show or Hide Workspace Tools"
     } else if panels_as_pane_tabs {
         "Toggle Project Tab"
     } else {
         "Toggle Project Pane"
     }
+}
+
+fn workspace_tools_are_grouped(app_name: &str) -> bool {
+    app_name != "Zed"
 }
 
 fn developer_surface_menu_label(
@@ -99,11 +103,9 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             zed_actions::ResetAllZoom { persist: false },
         ),
         MenuItem::separator(),
-        MenuItem::action(
-            product_menu_label(APP_NAME, "Sessions", "Session Rail"),
-            workspace::ToggleSidebar,
-        ),
-        MenuItem::action(project_pane_label, workspace::ToggleProjectPane),
+    ];
+
+    let editor_layout_menu = || {
         MenuItem::submenu(Menu {
             name: "Editor Layout".into(),
             disabled: false,
@@ -113,30 +115,59 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                 MenuItem::action("Split Left", workspace::SplitLeft::default()),
                 MenuItem::action("Split Right", workspace::SplitRight::default()),
             ],
-        }),
-        MenuItem::separator(),
-        MenuItem::action(project_surface_label, project_panel::ToggleFocus),
-        MenuItem::action(outline_surface_label, outline_panel::ToggleFocus),
-    ];
-    if terminal_panel_surface_visible(APP_NAME) {
-        let terminal_surface_label = if panels_as_pane_tabs {
-            "Terminal Tab"
-        } else {
-            "Terminal Panel"
-        };
-        view_items.push(MenuItem::action(
-            terminal_surface_label,
-            terminal_panel::Toggle,
-        ));
+        })
+    };
+
+    if workspace_tools_are_grouped(APP_NAME) {
+        view_items.extend([
+            MenuItem::action("Sessions", workspace::ToggleSidebar),
+            MenuItem::submenu(Menu::new("Workspace Tools").items([
+                MenuItem::action(project_pane_label, workspace::ToggleProjectPane),
+                MenuItem::separator(),
+                MenuItem::action(project_surface_label, project_panel::ToggleFocus),
+                MenuItem::action(outline_surface_label, outline_panel::ToggleFocus),
+                MenuItem::action(git_surface_label, git_panel::ToggleFocus),
+                MenuItem::action(debugger_surface_label, debug_panel::ToggleFocus),
+            ])),
+            MenuItem::action(agent_surface_label, assistant::ToggleFocus),
+            MenuItem::separator(),
+            editor_layout_menu(),
+            MenuItem::separator(),
+            MenuItem::action("Diagnostics", diagnostics::Deploy),
+            MenuItem::separator(),
+        ]);
+    } else {
+        view_items.extend([
+            MenuItem::action(
+                product_menu_label(APP_NAME, "Sessions", "Session Rail"),
+                workspace::ToggleSidebar,
+            ),
+            MenuItem::action(project_pane_label, workspace::ToggleProjectPane),
+            editor_layout_menu(),
+            MenuItem::separator(),
+            MenuItem::action(project_surface_label, project_panel::ToggleFocus),
+            MenuItem::action(outline_surface_label, outline_panel::ToggleFocus),
+        ]);
+        if terminal_panel_surface_visible(APP_NAME) {
+            let terminal_surface_label = if panels_as_pane_tabs {
+                "Terminal Tab"
+            } else {
+                "Terminal Panel"
+            };
+            view_items.push(MenuItem::action(
+                terminal_surface_label,
+                terminal_panel::Toggle,
+            ));
+        }
+        view_items.extend([
+            MenuItem::action(debugger_surface_label, debug_panel::ToggleFocus),
+            MenuItem::action(agent_surface_label, assistant::ToggleFocus),
+            MenuItem::action(git_surface_label, git_panel::ToggleFocus),
+            MenuItem::separator(),
+            MenuItem::action("Diagnostics", diagnostics::Deploy),
+            MenuItem::separator(),
+        ]);
     }
-    view_items.extend([
-        MenuItem::action(debugger_surface_label, debug_panel::ToggleFocus),
-        MenuItem::action(agent_surface_label, assistant::ToggleFocus),
-        MenuItem::action(git_surface_label, git_panel::ToggleFocus),
-        MenuItem::separator(),
-        MenuItem::action("Diagnostics", diagnostics::Deploy),
-        MenuItem::separator(),
-    ]);
 
     if ReleaseChannel::try_global(cx) == Some(ReleaseChannel::Dev) {
         view_items.push(MenuItem::action(
@@ -480,7 +511,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
 mod tests {
     use super::{
         developer_surface_menu_label, product_menu_label, terminal_panel_surface_visible,
-        workspace_tools_menu_label,
+        workspace_tools_are_grouped, workspace_tools_menu_label,
     };
 
     #[test]
@@ -491,8 +522,16 @@ mod tests {
 
     #[test]
     fn dez_view_menu_names_product_surfaces_not_implementation_placement() {
-        assert_eq!(workspace_tools_menu_label("Dez", true), "Workspace Tools");
-        assert_eq!(workspace_tools_menu_label("Dez", false), "Workspace Tools");
+        assert_eq!(
+            workspace_tools_menu_label("Dez", true),
+            "Show or Hide Workspace Tools"
+        );
+        assert_eq!(
+            workspace_tools_menu_label("Dez", false),
+            "Show or Hide Workspace Tools"
+        );
+        assert!(workspace_tools_are_grouped("Dez"));
+        assert!(!workspace_tools_are_grouped("Zed"));
         assert_eq!(
             developer_surface_menu_label("Dez", true, "Files", "Project Tab", "Project Panel"),
             "Files"
