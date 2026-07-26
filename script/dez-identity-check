@@ -1237,7 +1237,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn return_to_selected_session.*?thread\.metadata\.clone\(\).*?fn open_selected_session_files.*?ListEntry::Thread\(thread\) => match &thread\.workspace.*?thread\.metadata\.clone\(\).*?fn review_selected_session_changes.*?ThreadEntryWorkspace::Open\(workspace\) = &thread\.workspace.*?thread\.metadata\.clone\(\)' \
     'Arc-backed Agent sessions can regress to moving metadata or Workspace state out of the Session Rail'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'let trigger = ButtonLike::new\("agent-sidebar-options-menu-trigger"\).*?aria_label\(if is_dez.*?"Sessions Menu".*?"Agent Tools and Settings".*?PopoverMenu::new\("agent-sidebar-options-menu"\).*?trigger_with_tooltip\([[:space:]]*trigger' \
+    'use ui::.*?ButtonLike.*?let trigger = ButtonLike::new\("agent-sidebar-options-menu-trigger"\).*?aria_label\(if is_dez.*?"Sessions Menu".*?"Agent Tools and Settings".*?PopoverMenu::new\("agent-sidebar-options-menu"\).*?trigger_with_tooltip\([[:space:]]*trigger' \
     'the responsive Sessions menu can regress to erasing the typed popover trigger'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn open_workspace_and_activate_thread_with_destination.*?this\.activate_thread\(metadata, &workspace, false, window, cx\);.*?if reveal_files \{.*?RevealFiles.*?fn open_workspace_and_activate_terminal_with_destination.*?this\.activate_terminal_in_workspace\(&workspace, metadata, false, window, cx\);.*?if reveal_files \{.*?RevealFiles' \

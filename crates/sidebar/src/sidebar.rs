@@ -74,7 +74,7 @@ use terminal::{
 use terminal_view::TerminalView;
 use theme::{ActiveTheme, CLIENT_SIDE_DECORATION_ROUNDING};
 use ui::{
-    AgentThreadStatus, Callout, CommonAnimationExt, ContextMenu, ContextMenuEntry,
+    AgentThreadStatus, ButtonLike, Callout, CommonAnimationExt, ContextMenu, ContextMenuEntry,
     HighlightedLabel, PopoverMenu, PopoverMenuHandle, ScrollAxes, Scrollbars, Severity, Tab,
     ThreadItem, ThreadItemContrast, ThreadItemDensity, ThreadItemEvidenceStatus, ThreadItemRadius,
     ThreadItemWorktreeInfo, TintColor, Tooltip, WithScrollbar, prelude::*, render_modifiers,
