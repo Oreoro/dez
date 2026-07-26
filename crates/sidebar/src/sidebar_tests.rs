@@ -166,7 +166,7 @@ fn compact_session_rows_prioritize_actions_and_evidence_over_recency() {
 }
 
 #[test]
-fn footer_reserves_compact_text_for_ambiguous_destinations() {
+fn compact_footer_uses_icons_and_detailed_footer_names_destinations() {
     assert_eq!(
         session_rail_agent_tools_utility_label(COMPACT_MAX_WIDTH),
         "",
@@ -174,15 +174,23 @@ fn footer_reserves_compact_text_for_ambiguous_destinations() {
     );
     assert_eq!(
         session_rail_agent_history_utility_label(COMPACT_MAX_WIDTH),
-        "History"
+        ""
     );
     assert_eq!(
         session_rail_recent_workspaces_utility_label(COMPACT_MAX_WIDTH),
-        "Workspaces"
+        ""
     );
     assert_eq!(
         session_rail_agent_tools_utility_label(DETAILED_MIN_WIDTH),
         "Agent Tools"
+    );
+    assert_eq!(
+        session_rail_agent_history_utility_label(DETAILED_MIN_WIDTH),
+        "Agent History"
+    );
+    assert_eq!(
+        session_rail_recent_workspaces_utility_label(DETAILED_MIN_WIDTH),
+        "Recent Workspaces"
     );
 }
 

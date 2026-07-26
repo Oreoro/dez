@@ -279,12 +279,32 @@ fn render_sidebar_header_controls_for_state(
         h_flex()
             .h_full()
             .gap_1()
-            .child(sidebar_toggle_button)
+            .when(
+                sidebar_chrome_toggle_visible(paths::APP_NAME, sidebar_open),
+                |this| this.child(sidebar_toggle_button),
+            )
             .when_some(project_pane_toggle_button, |this, button| {
                 this.child(button)
             })
             .into_any_element(),
     )
+}
+
+fn sidebar_chrome_toggle_visible(app_name: &str, sidebar_open: bool) -> bool {
+    app_name == "Zed" || !sidebar_open
+}
+
+#[cfg(test)]
+mod sidebar_chrome_tests {
+    use super::sidebar_chrome_toggle_visible;
+
+    #[test]
+    fn dez_uses_chrome_to_open_sessions_but_not_to_duplicate_its_hide_action() {
+        assert!(sidebar_chrome_toggle_visible("Dez", false));
+        assert!(!sidebar_chrome_toggle_visible("Dez", true));
+        assert!(sidebar_chrome_toggle_visible("Zed", false));
+        assert!(sidebar_chrome_toggle_visible("Zed", true));
+    }
 }
 
 pub enum MultiWorkspaceEvent {

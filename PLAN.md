@@ -3118,3 +3118,14 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   formatting, locked offline metadata, theme validation, and diff checks cover
   this source slice; no build, test binary, alternate binary, or visual launch
   was performed. Runtime proof remains open for the rebuilt app/helper pair.
+- 2026-07-26: Consolidated Sessions visibility into one owner. Fresh Dez
+  windows still start with Sessions closed and restored windows still respect
+  their saved open state. While the rail is open, its overview now exposes one
+  explicit **Hide Sessions** action and generic window chrome no longer
+  duplicates that toggle; when closed, existing title/status chrome continues
+  to expose **Open Sessions**. The 280 px compact footer is now icon-only, with
+  full tooltip and accessibility names, while the 380 px detailed footer
+  restores **Agent Tools**, **Agent History**, and **Recent Workspaces**.
+  Official Zed retains its inherited toggle behavior. Formatting and static
+  identity checks cover this source slice; no build, test binary, alternate
+  binary, or visual launch was performed.

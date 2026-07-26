@@ -84,10 +84,11 @@ use unicode_segmentation::UnicodeSegmentation as _;
 use util::ResultExt as _;
 use util::path_list::PathList;
 use workspace::{
-    CloseWindow, DesignSystemSettings, MultiWorkspace, MultiWorkspaceEvent, NewCenterTerminal,
-    NextProject, NextThread, Open, OpenFolder, OpenLog, OpenMode, PreviousProject, PreviousThread,
-    ProjectGroupKey, RevealFiles, SaveIntent, Sidebar as WorkspaceSidebar, SidebarRenderState,
-    SidebarSettings, SidebarSide, Toast, ToggleSidebar, Workspace,
+    CloseSidebar, CloseWindow, DesignSystemSettings, MultiWorkspace, MultiWorkspaceEvent,
+    NewCenterTerminal, NextProject, NextThread, Open, OpenFolder, OpenLog, OpenMode,
+    PreviousProject, PreviousThread, ProjectGroupKey, RevealFiles, SaveIntent,
+    Sidebar as WorkspaceSidebar, SidebarRenderState, SidebarSettings, SidebarSide, Toast,
+    ToggleSidebar, Workspace,
     evidence::{
         WorkspaceEvidenceKind as AuthoritativeWorkspaceEvidenceKind, WorkspaceEvidenceLifecycle,
         WorkspaceEvidenceProvenance,
@@ -151,7 +152,6 @@ gpui::actions!(
 
 const DEFAULT_WIDTH: Pixels = px(300.0);
 const COMPACT_MAX_WIDTH: Pixels = px(280.0);
-const UTILITY_LABELS_MIN_WIDTH: Pixels = px(280.0);
 const PRIMARY_ACTION_LABELS_MIN_WIDTH: Pixels = px(280.0);
 const DETAILED_MIN_WIDTH: Pixels = px(380.0);
 const SUPPLEMENTAL_METADATA_MIN_WIDTH: Pixels = px(440.0);
@@ -334,10 +334,6 @@ fn session_rail_supplemental_metadata_visible(width: Pixels) -> bool {
     width >= SUPPLEMENTAL_METADATA_MIN_WIDTH
 }
 
-fn session_rail_utility_labels_visible(width: Pixels) -> bool {
-    width >= UTILITY_LABELS_MIN_WIDTH
-}
-
 fn session_rail_agent_tools_utility_label(width: Pixels) -> &'static str {
     if width >= DETAILED_MIN_WIDTH {
         "Agent Tools"
@@ -349,8 +345,6 @@ fn session_rail_agent_tools_utility_label(width: Pixels) -> &'static str {
 fn session_rail_agent_history_utility_label(width: Pixels) -> &'static str {
     if width >= DETAILED_MIN_WIDTH {
         "Agent History"
-    } else if session_rail_utility_labels_visible(width) {
-        "History"
     } else {
         ""
     }
@@ -359,8 +353,6 @@ fn session_rail_agent_history_utility_label(width: Pixels) -> &'static str {
 fn session_rail_recent_workspaces_utility_label(width: Pixels) -> &'static str {
     if width >= DETAILED_MIN_WIDTH {
         "Recent Workspaces"
-    } else if session_rail_utility_labels_visible(width) {
-        "Workspaces"
     } else {
         ""
     }
@@ -1582,10 +1574,7 @@ mod session_row_action_tests {
     }
 
     #[test]
-    fn compact_footer_prioritizes_ambiguous_destination_labels() {
-        assert!(session_rail_utility_labels_visible(COMPACT_MAX_WIDTH));
-        assert!(session_rail_utility_labels_visible(px(280.0)));
-        assert!(!session_rail_utility_labels_visible(px(279.0)));
+    fn compact_footer_uses_icons_and_detailed_footer_names_destinations() {
         assert_eq!(
             session_rail_agent_tools_utility_label(COMPACT_MAX_WIDTH),
             ""
@@ -1596,11 +1585,11 @@ mod session_row_action_tests {
         );
         assert_eq!(
             session_rail_agent_history_utility_label(COMPACT_MAX_WIDTH),
-            "History"
+            ""
         );
         assert_eq!(
             session_rail_recent_workspaces_utility_label(COMPACT_MAX_WIDTH),
-            "Workspaces"
+            ""
         );
         assert_eq!(
             session_rail_agent_history_utility_label(DETAILED_MIN_WIDTH),
@@ -13137,6 +13126,19 @@ impl Sidebar {
                                     })),
                             )
                         },
+                    )
+                    .child(
+                        IconButton::new("hide-sessions", IconName::Close)
+                            .size(ButtonSize::Medium)
+                            .icon_size(IconSize::Small)
+                            .tab_index(0isize)
+                            .aria_label("Hide Sessions")
+                            .tooltip(|_, cx| {
+                                Tooltip::for_action("Hide Sessions", &ToggleSidebar, cx)
+                            })
+                            .on_click(|_, window, cx| {
+                                window.dispatch_action(Box::new(CloseSidebar), cx);
+                            }),
                     ),
             )
             .when(

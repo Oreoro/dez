@@ -1134,3 +1134,14 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   clears the query, returns focus to Sessions, and removes the field. A
   non-empty query stays visible until it can be cleared. Official Zed retains
   its inherited scope and populated-rail search presentation.
+- **2026-07-26: Sessions visibility has one owner in each state.** A fresh Dez
+  window begins with Sessions closed; a restored window may preserve the
+  user's prior open state. While open, the Sessions overview owns one explicit
+  **Hide Sessions** action and generic title chrome does not repeat it. While
+  closed, the existing title/status affordance owns **Open Sessions**, so the
+  projection remains recoverable. At compact width, Agent Tools, Agent History,
+  and Recent Workspaces use icons with complete tooltip and accessibility
+  names; their visible labels return only in detailed mode. This keeps
+  supervision optional, reduces sidebar-like navigation furniture, and
+  preserves capability and keyboard access. Official Zed retains its inherited
+  chrome.

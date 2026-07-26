@@ -9,6 +9,13 @@ Dez treats terminals as first-class Surfaces beside files, search, diagnostics,
 and review. A terminal opens in the Main Work Area as a normal tab or split; the
 Sessions region only projects its live state and attention.
 
+Sessions starts closed in a fresh Dez window and may restore open when that
+window previously used it. When open, **Hide Sessions** lives in the Sessions
+overview; when closed, the window chrome and status bar expose **Open
+Sessions**. Compact Sessions uses icon-only utilities with named tooltips, while
+the detailed width restores their visible labels. This keeps supervision
+optional without hiding its recovery path.
+
 ## Opening Terminals
 
 | Action            | macOS         | Linux/Windows  |
