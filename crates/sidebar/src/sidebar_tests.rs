@@ -256,21 +256,26 @@ fn dez_only_projects_truthfully_backed_stored_terminals() {
     let host_session_id = TerminalSessionId::new();
 
     assert_eq!(
-        stored_terminal_source("Dez", false, None),
+        terminal_entry_source_kind("Dez", false, false, None),
         None,
         "stale metadata must not appear as a resumable Dez Session"
     );
     assert_eq!(
-        stored_terminal_source("Dez", true, None),
-        Some(StoredTerminalSource::AgentPanel)
+        terminal_entry_source_kind("Dez", false, true, None),
+        Some(TerminalEntrySourceKind::AgentPanel)
     );
     assert_eq!(
-        stored_terminal_source("Dez", false, Some(host_session_id)),
-        Some(StoredTerminalSource::HostSession(host_session_id))
+        terminal_entry_source_kind("Dez", false, false, Some(host_session_id)),
+        Some(TerminalEntrySourceKind::HostSession(host_session_id))
     );
     assert_eq!(
-        stored_terminal_source("Zed", false, None),
-        Some(StoredTerminalSource::AgentPanel),
+        terminal_entry_source_kind("Dez", true, true, Some(host_session_id)),
+        Some(TerminalEntrySourceKind::WorkspaceItem),
+        "a live Main Work Area terminal must own the row before stored or Host projections"
+    );
+    assert_eq!(
+        terminal_entry_source_kind("Zed", true, false, None),
+        Some(TerminalEntrySourceKind::AgentPanel),
         "official Zed retains legacy Terminal Thread restoration"
     );
 }

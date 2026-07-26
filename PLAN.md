@@ -3000,3 +3000,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   retains at least 60%. At 2000/1000/560/400 px of available workspace, the
   initial drawer resolves to 360/240/224/160 px. This is source-only; no build,
   test binary, alternate binary, or visual launch was performed.
+- 2026-07-26: Made Sessions activate the terminal that is actually on screen.
+  When durable metadata or a Host snapshot matches a live Main Work Area
+  terminal, the live `TerminalView` now owns the row, its Workspace, and its
+  focus route. A stale stored path cannot capture that row in another
+  Workspace, and selecting it no longer attempts a duplicate Host attachment.
+  Dez also rejects the inherited full-pane focus overlay at render time, so
+  imported border settings cannot restore the screenshot-class orange frame;
+  official Zed keeps the upstream option. Pure source assertions and static
+  guards cover both policies. This is source-only; no build, test binary,
+  alternate binary, or visual launch was performed.

@@ -3504,8 +3504,9 @@ Completed for the default focus quieting source slice:
 - changed Dez's default active pane modifiers to `border_size: 0.0` and
   `inactive_opacity: 1.0`, matching the public settings reference and removing
   the screenshot-class full-surface focus rectangle/dimmed-pane effect;
-- kept title/selected-tab focus as the default cue, with full-pane borders and
-  inactive-pane dimming still available as explicit user settings;
+- kept title/selected-tab focus as the stable cue and rejected the inherited
+  full-pane overlay at Dez render time, including for imported border settings;
+- preserved the configurable upstream full-pane border for official Zed;
 - added static identity guards so the default cannot drift back to a visible
   full-pane outline;
 - retained source-only evidence: no build, test binary, alternate binary, or
@@ -3813,6 +3814,11 @@ source slice:
   title, breadcrumb, process, exit, and attention transitions;
 - kept shell → Codex → shell on one stable terminal and Session identity while
   allowing its detected provider and evidence to update;
+- made a live Main Work Area terminal take precedence over matching persisted
+  metadata and Host snapshots, so Session activation focuses the exact existing
+  Surface instead of attempting to reattach or duplicating it;
+- rejected stale stored-path ownership when the live terminal belongs to a
+  different Workspace group;
 - added a viewport-responsive width contract used by both the outer workspace
   reservation and the inner Sessions render;
 - pinned compact widths at 280 px on wide windows, 240 px at an 800 px

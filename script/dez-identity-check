@@ -498,6 +498,18 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'fn terminal_sessions_refresh_on_state_changes_not_output_frames.*?TerminalEvent::ProcessInfoChanged.*?!terminal_event_refreshes_session\(&TerminalEvent::Wakeup\)' \
     'terminal output frames can regress into full Sessions rebuilds'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'live_workspace_terminals: HashMap.*?items_of_type::<TerminalView>.*?terminal_entry_source_kind\(.*?live_workspace_terminal\.is_some\(\).*?TerminalEntrySourceKind::WorkspaceItem.*?TerminalEntrySource::WorkspaceItem\(terminal_view\.clone\(\)\).*?activate_workspace_terminal_item' \
+    'persisted or Host metadata can steal a live Main Work Area terminal row and make Sessions activation appear unresponsive'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'TerminalEntrySource::WorkspaceItem\(terminal_view\).*?activate_workspace_terminal_item\(.*?retain,[[:space:]]*true,[[:space:]]*window' \
+    'a live Session row can activate without returning keyboard focus to its Main Work Area terminal'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'live_workspace_terminal.*?!group_workspaces\.contains\(live_workspace\).*?return None' \
+    'stale stored terminal paths can project a live Session under the wrong Workspace'
+require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
+    'terminal_entry_source_kind\("Dez", true, true, Some\(host_session_id\)\).*?Some\(TerminalEntrySourceKind::WorkspaceItem\)' \
+    'the live-terminal precedence policy is no longer pinned by a source assertion'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'TerminalEvent::TitleChanged.*?TerminalEvent::BreadcrumbsChanged.*?TerminalEvent::ProcessInfoChanged.*?refresh_terminal_metadata.*?TerminalEvent::Wakeup.*?TerminalEvent::BlinkChanged' \
     'Agent terminal metadata can regress to rebuilding on every PTY output frame'
@@ -600,6 +612,12 @@ require_multiline_pattern crates/workspace/src/workspace.rs \
 require_multiline_pattern assets/settings/default.json \
     '"active_pane_modifiers": \{.*?"border_size": 0\.0.*?"inactive_opacity": 1\.0.*?"pane_grid": \{.*?"focus_indicator": "title"' \
     'the default canvas can regress to drawing a strong full-pane focus rectangle over the active Surface'
+require_multiline_pattern crates/workspace/src/workspace_settings.rs \
+    'pub fn shows_active_pane_border\(&self, app_name: &str\).*?app_name == "Zed".*?fn dez_never_paints_a_whole_pane_focus_overlay.*?!settings\.shows_active_pane_border\("Dez"\).*?settings\.shows_active_pane_border\("Zed"\)' \
+    'Dez can regress to painting the inherited full-pane focus overlay'
+require_pattern crates/workspace/src/pane_group.rs \
+    'shows_active_pane_border\(paths::APP_NAME\)' \
+    'pane focus-border rendering is no longer gated by product identity'
 reject_multiline_pattern assets/settings/default.json \
     '"active_pane_modifiers": \{.*?"border_size": [1-9]' \
     'the default active pane modifier can regress to a visible full-surface border'
@@ -1219,7 +1237,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn switcher_selection_for_active_entry.*?ThreadSwitcherEntry::Thread.*?entry.metadata.thread_id.*?ThreadSwitcherEntry::Terminal.*?entry.metadata.terminal_id.*?let original_selection = self.switcher_selection_for_active_entry.*?ThreadSwitcherEvent::Dismissed.*?preview_switcher_selection\(selection' \
     'cancelling Session Switcher preview can regress to restoring terminals through the retired Agent-terminal path'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn stored_terminal_source.*?app_name == "Zed".*?StoredTerminalSource::HostSession\(session_id\).*?has_live_agent_terminal.*?None.*?stored_terminal_source\(.*?APP_NAME.*?live_terminal_runtime\.contains_key.*?host_snapshot\.map.*?seen_terminal_ids\.contains.*?let Some\(entry\) = make_terminal_entry.*?seen_terminal_ids\.insert' \
+    'fn terminal_entry_source_kind.*?has_live_workspace_terminal.*?app_name != "Zed".*?TerminalEntrySourceKind::WorkspaceItem.*?app_name == "Zed".*?TerminalEntrySourceKind::HostSession\(session_id\).*?has_live_agent_terminal.*?None.*?terminal_entry_source_kind\(.*?APP_NAME.*?live_workspace_terminal\.is_some\(\).*?live_terminal_runtime\.contains_key.*?host_snapshot\.map.*?seen_terminal_ids\.contains.*?let Some\(entry\) = make_terminal_entry.*?seen_terminal_ids\.insert' \
     'stale Agent-terminal metadata can regress to appearing as a resumable Dez Session or shadowing a real center/Host terminal'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'fn agent_panel_terminal_creation_visible.*?app_name == "Zed".*?register_action\(\|workspace, _: &NewTerminalThread.*?paths::APP_NAME == "Zed".*?NewCenterTerminal::default.*?pub fn should_create_terminal_for_new_entry.*?paths::APP_NAME == "Zed"' \

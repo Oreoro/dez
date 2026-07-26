@@ -2272,7 +2272,7 @@ mod element {
             }
 
             let overlay_border = PaneGridSettings::get(None, cx)
-                .shows_active_pane_border()
+                .shows_active_pane_border(paths::APP_NAME)
                 .then(|| {
                     WorkspaceSettings::get(None, cx)
                         .active_pane_modifiers

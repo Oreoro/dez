@@ -178,8 +178,9 @@ impl PaneGridSettings {
             && matches!(self.panel_surface, settings::CanvasPanelSurface::PaneTab)
     }
 
-    pub fn shows_active_pane_border(&self) -> bool {
-        self.attention_ring
+    pub fn shows_active_pane_border(&self, app_name: &str) -> bool {
+        app_name == "Zed"
+            && self.attention_ring
             && matches!(
                 self.focus_indicator,
                 settings::PaneGridFocusIndicator::Border
@@ -204,6 +205,36 @@ impl PaneGridSettings {
                 .and_then(|profile| profile.ultrawide_ratio)
                 .unwrap_or(self.responsive_ultrawide_ratio),
         }
+    }
+}
+
+#[cfg(test)]
+mod pane_grid_product_policy_tests {
+    use super::*;
+
+    #[test]
+    fn dez_never_paints_a_whole_pane_focus_overlay() {
+        let settings = PaneGridSettings {
+            auto_reflow: true,
+            layout_history: true,
+            show_legacy_docks: false,
+            focus_indicator: settings::PaneGridFocusIndicator::BorderAndTitle,
+            panel_surface: settings::CanvasPanelSurface::PaneTab,
+            draggable_panel_tabs: true,
+            attention_ring: true,
+            tab_overflow: settings::TabOverflowBehavior::Searchable,
+            auto_hide_single_tab_bar: false,
+            responsive_narrow_width: 900.,
+            responsive_portrait_ratio: 1.,
+            responsive_ultrawide_width: 1600.,
+            responsive_ultrawide_ratio: 1.6,
+            responsive_recipe_overrides: HashMap::new(),
+        };
+        assert!(!settings.shows_active_pane_border("Dez"));
+        assert!(
+            settings.shows_active_pane_border("Zed"),
+            "official Zed retains its configurable upstream focus border"
+        );
     }
 }
 

@@ -2173,22 +2173,26 @@ struct RenamingTerminalEntry {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum StoredTerminalSource {
+enum TerminalEntrySourceKind {
+    WorkspaceItem,
     AgentPanel,
     HostSession(TerminalSessionId),
 }
 
-fn stored_terminal_source(
+fn terminal_entry_source_kind(
     app_name: &str,
+    has_live_workspace_terminal: bool,
     has_live_agent_terminal: bool,
     host_session_id: Option<TerminalSessionId>,
-) -> Option<StoredTerminalSource> {
-    if app_name == "Zed" {
-        Some(StoredTerminalSource::AgentPanel)
+) -> Option<TerminalEntrySourceKind> {
+    if app_name != "Zed" && has_live_workspace_terminal {
+        Some(TerminalEntrySourceKind::WorkspaceItem)
+    } else if app_name == "Zed" {
+        Some(TerminalEntrySourceKind::AgentPanel)
     } else if let Some(session_id) = host_session_id {
-        Some(StoredTerminalSource::HostSession(session_id))
+        Some(TerminalEntrySourceKind::HostSession(session_id))
     } else if has_live_agent_terminal {
-        Some(StoredTerminalSource::AgentPanel)
+        Some(TerminalEntrySourceKind::AgentPanel)
     } else {
         None
     }
@@ -4073,6 +4077,10 @@ impl Sidebar {
         }
         let mut live_notified_terminal_ids: HashSet<TerminalId> = HashSet::new();
         let mut live_terminal_runtime: HashMap<TerminalId, TerminalRuntimeInfo> = HashMap::new();
+        let mut live_workspace_terminals: HashMap<
+            TerminalId,
+            (Entity<Workspace>, Entity<TerminalView>),
+        > = HashMap::new();
         if show_terminal_agents {
             for workspace in &workspaces {
                 if let Some(agent_panel) = workspace.read(cx).panel::<AgentPanel>(cx) {
@@ -4087,6 +4095,12 @@ impl Sidebar {
                             },
                         );
                     }
+                }
+                for terminal_view in workspace.read(cx).items_of_type::<TerminalView>(cx) {
+                    let terminal_id = standalone_terminal_id(workspace, &terminal_view, cx);
+                    live_workspace_terminals
+                        .entry(terminal_id)
+                        .or_insert_with(|| (workspace.clone(), terminal_view));
                 }
             }
         }
@@ -4206,14 +4220,34 @@ impl Sidebar {
                     {
                         metadata.title = title.clone().into();
                     }
-                    let source = match stored_terminal_source(
+                    let live_workspace_terminal =
+                        live_workspace_terminals.get(&metadata.terminal_id);
+                    if live_workspace_terminal.is_some_and(|(live_workspace, _)| {
+                        !group_workspaces.contains(live_workspace)
+                    }) {
+                        // Stale persisted paths must not steal a live terminal
+                        // from the Workspace that actually owns its Surface.
+                        return None;
+                    }
+                    let source_kind = terminal_entry_source_kind(
                         APP_NAME,
+                        live_workspace_terminal.is_some(),
                         live_terminal_runtime.contains_key(&metadata.terminal_id),
                         host_snapshot.map(|snapshot| snapshot.session_id),
-                    )? {
-                        StoredTerminalSource::AgentPanel => TerminalEntrySource::AgentPanel,
-                        StoredTerminalSource::HostSession(session_id) => {
-                            TerminalEntrySource::HostSession(session_id)
+                    )?;
+                    let (workspace, source) = match source_kind {
+                        TerminalEntrySourceKind::WorkspaceItem => {
+                            let (live_workspace, terminal_view) = live_workspace_terminal?;
+                            (
+                                ThreadEntryWorkspace::Open(live_workspace.clone()),
+                                TerminalEntrySource::WorkspaceItem(terminal_view.clone()),
+                            )
+                        }
+                        TerminalEntrySourceKind::AgentPanel => {
+                            (workspace, TerminalEntrySource::AgentPanel)
+                        }
+                        TerminalEntrySourceKind::HostSession(session_id) => {
+                            (workspace, TerminalEntrySource::HostSession(session_id))
                         }
                     };
                     let agent = host_snapshot.and_then(|snapshot| snapshot.agent.clone());
@@ -4236,10 +4270,26 @@ impl Sidebar {
                         })
                         .flatten();
                     Some(TerminalEntry {
-                        runtime: live_terminal_runtime
-                            .get(&metadata.terminal_id)
-                            .cloned()
-                            .or_else(|| host_snapshot.and_then(terminal_runtime_from_snapshot)),
+                        runtime: if let TerminalEntrySource::WorkspaceItem(terminal_view) = &source
+                        {
+                            Some(TerminalRuntimeInfo {
+                                state: if terminal_view
+                                    .read(cx)
+                                    .terminal()
+                                    .read(cx)
+                                    .process_exited()
+                                {
+                                    TerminalRuntimeState::Exited
+                                } else {
+                                    TerminalRuntimeState::Live
+                                },
+                            })
+                        } else {
+                            live_terminal_runtime
+                                .get(&metadata.terminal_id)
+                                .cloned()
+                                .or_else(|| host_snapshot.and_then(terminal_runtime_from_snapshot))
+                        },
                         agent,
                         metadata,
                         detected_agent_kind,

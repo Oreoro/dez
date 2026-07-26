@@ -691,8 +691,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   splits from reappearing as blank columns. An explicit multi-pane recipe keeps
   its requested empty work areas. The default pane focus indicator lives in the
   title/selected tab rather than painting a saturated rectangle around the full
-  work surface; full-pane border focus and inactive-pane dimming remain
-  user-configurable but default off.
+  work surface. Dez never paints the inherited full-pane focus overlay, even
+  when an imported setting requests it; title, selected-tab, and control focus
+  remain visible. Official Zed retains its configurable upstream pane border.
   The remaining empty Main Work Area is one top-anchored native launch region
   headed **Run, supervise, and review in this Workspace**, with only the three
   immediate Workspace actions. Its passive route names **Run -> Terminal in
@@ -1046,6 +1047,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   lifecycle evidence. Ordinary PTY output is display content and does not
   trigger full Sessions or Host-metadata rebuilds. The stable terminal/session
   identity is preserved across shell → Codex → shell.
+- **2026-07-26: A live terminal Surface owns its Session row.** If persisted
+  metadata or a Host snapshot describes the same terminal already visible in
+  the Main Work Area, the live `TerminalView` wins source resolution. Selecting
+  the row activates and focuses that exact Surface; a stale path cannot steal
+  the row into another Workspace, and Dez does not attach a duplicate terminal
+  over the one the user is already running.
 - **2026-07-26: Sessions is a responsive sibling, never an overlay.** The
   workspace reservation and rendered rail resolve one width from the current
   viewport. Compact mode is 280 px on wide windows, 240 px at an 800 px
