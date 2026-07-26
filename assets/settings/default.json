@@ -545,9 +545,9 @@
     // Whether to show document symbols in breadcrumbs.
     "show_breadcrumb_symbols": false,
     // Whether to show quick action buttons.
-    "quick_actions": true,
+    "quick_actions": false,
     // Whether to show the Selections menu in the editor toolbar.
-    "selections_menu": true,
+    "selections_menu": false,
     // Whether to show agent review buttons in the editor toolbar.
     "agent_review": true,
     // Whether to show code action buttons in the editor toolbar.
@@ -1098,7 +1098,7 @@
     "position": "left",
     "group_by": "project",
     "sort_by": "manual",
-    "metadata": ["branch", "worktree", "agent_state", "layout", "latest_attention"]
+    "metadata": ["agent_state", "latest_attention"]
   },
   // Settings for the Canvas pane grid.
   "pane_grid": {
@@ -1441,7 +1441,7 @@
     // Whether or not to show the tab bar in the editor
     "show": true,
     // Whether or not to show the navigation history buttons.
-    "show_nav_history_buttons": true,
+    "show_nav_history_buttons": false,
     // Whether or not to show the tab bar buttons.
     "show_tab_bar_buttons": true,
     // Whether or not to show pinned tabs in a separate row.

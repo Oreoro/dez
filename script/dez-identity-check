@@ -80,6 +80,15 @@ require_pattern assets/settings/default.json \
     '^  "auto_update": false,$' \
     'automatic binary updates are enabled by default'
 require_multiline_pattern assets/settings/default.json \
+    '"toolbar": \{.*?"quick_actions": false,.*?"selections_menu": false,.*?"agent_review": true,.*?"code_actions": false' \
+    'the default editor toolbar no longer follows the minimal Dez action hierarchy'
+require_multiline_pattern assets/settings/default.json \
+    '"session_rail": \{.*?"metadata": \["agent_state", "latest_attention"\]' \
+    'Sessions no longer defaults to supervision-only metadata'
+require_multiline_pattern assets/settings/default.json \
+    '"tab_bar": \{.*?"show": true,.*?"show_nav_history_buttons": false,.*?"show_tab_bar_buttons": true' \
+    'the Main Work Area tab bar no longer follows the minimal Dez navigation hierarchy'
+require_multiline_pattern assets/settings/default.json \
     'Whether Sessions should start open in new windows\..*?Settings for Sessions, the Dez supervision rail\.' \
     'bundled Settings comments can regress to public Session Rail terminology'
 require_multiline_pattern crates/settings_content/src/settings_content.rs \

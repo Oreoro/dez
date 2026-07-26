@@ -1020,3 +1020,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   renders the inherited right-edge gradient mask, preventing opaque patches on
   Lumin Blur and false overlap at compact Agent widths. Official Zed retains
   its upstream gradient presentation.
+- **2026-07-26: Minimal defaults remove repeated chrome, not capability.**
+  Main Work Area tab bars default to no persistent Back or Forward buttons,
+  and editor toolbars default to no generic quick-action or selection menu.
+  Keyboard shortcuts, command search, and user settings retain those actions.
+  Sessions defaults to the supervision signals it owns—Agent state and latest
+  attention—while branch, worktree, and layout detail remain with the owning
+  Workspace. Add, split, Surface switching, breadcrumbs, diagnostics, and
+  Agent review stay visible because they communicate or advance the current
+  task. Canvas Layout remains contextual in **Workspace Options**.

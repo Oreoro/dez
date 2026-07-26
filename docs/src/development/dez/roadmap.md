@@ -3771,3 +3771,17 @@ Completed for the minimalist one-drawer shell source slice:
   static regression guard;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the minimalist launch-profile source slice:
+
+- hid persistent Main Work Area Back and Forward buttons by default while
+  retaining keyboard and command navigation;
+- hid generic editor quick-action and selection-menu chrome by default while
+  retaining breadcrumbs, diagnostics, Agent review, shortcuts, and commands;
+- reduced default Sessions metadata to live Agent state and latest attention,
+  leaving branch, worktree, and Canvas Layout detail with the owning Workspace;
+- kept Add to Main Work Area, Switch Surface, split, and contextual Workspace
+  Canvas Layout controls visible;
+- updated public settings examples and added static default-profile guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

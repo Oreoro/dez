@@ -550,7 +550,7 @@ pub struct SessionRailSettingsContent {
     pub sort_by: Option<SessionRailSorting>,
     /// Metadata fields to show on rail entries.
     ///
-    /// Default: ["branch", "worktree", "agent_state", "layout", "latest_attention"]
+    /// Default: ["agent_state", "latest_attention"]
     pub metadata: Option<Vec<String>>,
 }
 

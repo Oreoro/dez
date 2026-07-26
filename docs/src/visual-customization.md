@@ -266,8 +266,8 @@ TBD: Centered layout related settings
     "breadcrumbs": true, // Whether to show breadcrumbs.
     "compact_mode": true, // Whether to use compact toolbar height.
     "show_breadcrumb_symbols": false, // Whether to show document symbols in breadcrumbs.
-    "quick_actions": true, // Whether to show quick action buttons.
-    "selections_menu": true, // Whether to show the Selections menu
+    "quick_actions": false, // Whether to show quick action buttons.
+    "selections_menu": false, // Whether to show the Selections menu
     "agent_review": true, // Whether to show agent review buttons
     "code_actions": false // Whether to show code action buttons
   }
@@ -324,7 +324,7 @@ TBD: Centered layout related settings
   // Customize the tab bar appearance
   "tab_bar": {
     "show": true,                     // Show/hide the tab bar
-    "show_nav_history_buttons": true, // Show/hide history buttons on tab bar
+    "show_nav_history_buttons": false, // Show/hide history buttons on tab bar
     "show_tab_bar_buttons": true      // Show hide buttons (new, split, zoom)
   },
   "tabs": {

@@ -1391,7 +1391,7 @@ or
 {
   "tab_bar": {
     "show": true,
-    "show_nav_history_buttons": true,
+    "show_nav_history_buttons": false,
     "show_tab_bar_buttons": true
   }
 }
@@ -1678,8 +1678,8 @@ When trusted, project settings are synchronized automatically, language and MCP 
     "breadcrumbs": true,
     "compact_mode": true,
     "show_breadcrumb_symbols": false,
-    "quick_actions": true,
-    "selections_menu": true,
+    "quick_actions": false,
+    "selections_menu": false,
     "agent_review": true,
     "code_actions": false
   }

@@ -2956,3 +2956,14 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   behavior. A pure product assertion, focused ultrawide source test, and static
   guard protect the invariant. This is source-only; no build, test binary,
   alternate binary, or visual launch was performed.
+- 2026-07-26: Tightened the launch profile around the minimalist shell instead
+  of adding another layout mode. Main Work Area tab bars no longer show
+  persistent Back and Forward buttons by default; editor toolbars no longer
+  show generic quick-action or selection menus by default; and Sessions
+  defaults to the two supervision signals that matter in the rail—live Agent
+  state and latest attention. Navigation, selection, and editor actions remain
+  available through shortcuts and commands. Canvas Layout remains contextual
+  in each Workspace's **Workspace Options**, while add, split, Surface
+  switching, breadcrumbs, diagnostics, and Agent review remain visible. Static
+  guards protect this hierarchy. This is source-only; no build, test binary,
+  alternate binary, or visual launch was performed.
