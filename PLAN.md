@@ -3037,3 +3037,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   duplicate Session is created. A pure product-policy assertion and static
   guard protect the contract. This is source-only; no build, test binary,
   alternate binary, or visual launch was performed.
+- 2026-07-26: Removed adjacent terminal-status duplication before it could
+  become new chrome debt. The terminal tab alone owns the provider icon; the
+  32 px context strip may show concise meaningful state such as **Codex
+  running**, but does not repeat the glyph. An ordinary active shell omits the
+  generic **Active** segment and begins directly with Workspace/Git context;
+  failures and other meaningful task states remain visible. Below 360 px the
+  activity text yields while the tab icon and full accessible/details state
+  remain. This is source-only; no build, test binary, alternate binary, or
+  visual launch was performed.

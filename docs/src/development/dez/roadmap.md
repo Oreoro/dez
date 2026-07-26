@@ -3837,11 +3837,13 @@ Completed for the foreground Agent acknowledgement source slice:
 
 - made the semantic process-info transition invalidate the existing terminal
   Surface as well as request a tab refresh;
-- reused the existing terminal tab icon and 32 px context strip to show the
-  detected provider and concise **Agent running** state, without creating a
-  panel, overlay, replacement terminal, or second Session;
+- assigned provider identity to the existing terminal tab icon and the concise
+  **Agent running** state to the 32 px context strip, without repeating the
+  glyph or creating a panel, overlay, replacement terminal, or second Session;
+- omitted the generic **Active** segment for ordinary shells while preserving
+  failures and other meaningful task states;
 - collapsed the visible activity label below 360 px while preserving the
-  provider icon and complete accessible/details copy;
+  tab's provider icon and complete accessible/details copy;
 - kept agent detection product-scoped, normalized-command based, and
   independent of terminal output; ordinary shells remain visually quiet and
   official Zed keeps upstream terminal chrome;

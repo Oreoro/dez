@@ -155,10 +155,10 @@ fn terminal_foreground_agent_presentation(
 fn terminal_context_activity_label(
     status: &str,
     foreground_agent: Option<TerminalForegroundAgentPresentation>,
-) -> String {
+) -> Option<String> {
     foreground_agent
         .map(|agent| format!("{} running", agent.display_name))
-        .unwrap_or_else(|| status.to_owned())
+        .or_else(|| (status != "Active").then(|| status.to_owned()))
 }
 
 fn terminal_context_activity_label_visible(width: Pixels) -> bool {
@@ -2359,15 +2359,14 @@ impl TerminalView {
         let foreground_agent =
             terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref());
         let activity_label = terminal_context_activity_label(status, foreground_agent);
-        let activity_label_visible = terminal_context_activity_label_visible(context_width);
+        let activity_accessibility_label = activity_label.as_deref().unwrap_or(status).to_owned();
+        let activity_label_visible =
+            activity_label.is_some() && terminal_context_activity_label_visible(context_width);
         let activity_color = if foreground_agent.is_some() {
             Color::Accent
         } else {
             status_color
         };
-        let activity_icon = foreground_agent
-            .map(|agent| agent.icon)
-            .unwrap_or(IconName::Terminal);
         let has_persistent_owner = terminal_has_persistent_owner(&terminal, cx);
         let ownership = terminal_ownership_label(has_persistent_owner, false);
         let working_directory = terminal
@@ -2396,7 +2395,7 @@ impl TerminalView {
             changed_files,
         );
 
-        let details_status = format!("{activity_label} · {ownership}");
+        let details_status = format!("{activity_accessibility_label} · {ownership}");
         let details_foreground_agent = foreground_agent.map(|agent| agent.display_name);
         let details_repository = repository_label.clone();
         let details_changes = changes_label.clone();
@@ -2504,7 +2503,7 @@ impl TerminalView {
                 .id(("terminal-session-context", terminal_entity_id))
                 .role(gpui::Role::Toolbar)
                 .aria_label(format!(
-                    "Terminal Session controls. Status: {activity_label}. {repository_label}. {changes_label}."
+                    "Terminal Session controls. Status: {activity_accessibility_label}. {repository_label}. {changes_label}."
                 ))
                 .w_full()
                 .h(px(32.))
@@ -2520,21 +2519,16 @@ impl TerminalView {
                         .flex_1()
                         .overflow_hidden()
                         .gap_1p5()
-                        .child(
-                            Icon::new(activity_icon)
-                                .size(IconSize::XSmall)
-                                .color(activity_color),
-                        )
                         .when(activity_label_visible, |this| {
                             this.child(
-                                Label::new(activity_label)
+                                Label::new(activity_label.unwrap_or_default())
                                     .size(LabelSize::XSmall)
                                     .color(activity_color),
                             )
+                            .child(div().h_4().border_l_1().border_color(
+                                cx.theme().colors().border_variant,
+                            ))
                         })
-                        .child(div().h_4().border_l_1().border_color(
-                            cx.theme().colors().border_variant,
-                        ))
                         .child(
                             Label::new(repository_label)
                                 .size(LabelSize::XSmall)
@@ -3871,7 +3865,12 @@ mod tests {
         assert_eq!(codex.display_name, "Codex");
         assert_eq!(
             terminal_context_activity_label("Active", Some(codex)),
-            "Codex running"
+            Some("Codex running".to_owned())
+        );
+        assert_eq!(terminal_context_activity_label("Active", None), None);
+        assert_eq!(
+            terminal_context_activity_label("Failed", None),
+            Some("Failed".to_owned())
         );
         assert!(!terminal_context_activity_label_visible(px(359.)));
         assert!(terminal_context_activity_label_visible(px(360.)));

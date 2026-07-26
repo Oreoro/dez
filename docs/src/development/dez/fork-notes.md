@@ -1051,13 +1051,14 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   trigger full Sessions or Host-metadata rebuilds. The stable terminal/session
   identity is preserved across shell → Codex → shell. That semantic transition
   also invalidates the existing terminal Surface immediately. The terminal tab
-  and its compact context strip reuse native agent icons and state copy such as
-  **Codex running**; they do not open a second panel, replace the terminal, or
-  infer agent activity from terminal text. Ordinary shells retain the quiet
-  terminal presentation. Below 360 px the provider icon carries the visual
-  acknowledgement while the full state remains in the toolbar accessibility
-  label and details, preventing status copy from crowding terminal actions.
-  Official Zed retains its upstream chrome.
+  owns the native provider icon; its compact context strip may add state copy
+  such as **Codex running**. The adjacent layers never repeat the same glyph,
+  open a second panel, replace the terminal, or infer agent activity from
+  terminal text. An ordinary active shell adds no generic **Active** label.
+  Below 360 px the tab icon carries the visual acknowledgement while the full
+  state remains in the toolbar accessibility label and details, preventing
+  status copy from crowding terminal actions. Official Zed retains its upstream
+  chrome.
 - **2026-07-26: A live terminal Surface owns its Session row.** If persisted
   metadata or a Host snapshot describes the same terminal already visible in
   the Main Work Area, the live `TerminalView` wins source resolution. Selecting
