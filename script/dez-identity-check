@@ -1254,9 +1254,12 @@ require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
 require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
     'fn session_switcher_entry_type_visible.*?app_name == "Zed".*?id\("thread-switcher-list"\).*?Role::List.*?aria_label\("Recent sessions"\).*?actor_label\(entry\.session_type_label\(paths::APP_NAME\)\).*?actor_label_visible\(session_switcher_entry_type_visible\(paths::APP_NAME\)\).*?selected\(ix == selected_index\).*?focused\(ix == selected_index\).*?position_in_set\(ix \+ 1\).*?set_size\(set_size\)' \
     'the Session Switcher can regress to repeated visible type labels or lose its accessible list selection'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn session_switcher_uses_modal_overlay\(app_name: &str\) -> bool.*?app_name == "Zed".*?fn toggle_thread_switcher_impl.*?if !session_switcher_uses_modal_overlay\(APP_NAME\).*?self\.dismiss_thread_switcher\(cx\).*?self\.cycle_thread_impl\(!select_last, window, cx\).*?return;.*?let thread_switcher = cx\.new' \
+    'Dez session switching can regress to mounting the inherited full-window modal instead of activating the next Session in place'
 require_multiline_pattern crates/workspace/src/multi_workspace.rs \
     'self\.sidebar_overlay\.as_ref\(\).*?\.absolute\(\).*?\.size_full\(\).*?\.occlude\(\).*?\.on_mouse_down\(MouseButton::Left.*?window\.dispatch_action\(Box::new\(menu::Cancel\), cx\).*?h_flex\(\)\.occlude\(\)\.child\(view\.clone\(\)\)\.on_mouse_down\(.*?cx\.stop_propagation\(\)' \
-    'the Session Switcher can regress to an invisible full-window shield that neither dismisses nor protects dialog clicks'
+    'the official Zed Session Switcher can regress to an invisible full-window shield that neither dismisses nor protects dialog clicks'
 require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
     'position_in_set: Option<usize>.*?set_size: Option<usize>.*?pub fn position_in_set.*?pub fn set_size.*?aria_position_in_set\(position\).*?aria_size_of_set\(size\)' \
     'mixed Session collections can regress to omitting accessible row position and total count'

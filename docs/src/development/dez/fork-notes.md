@@ -321,17 +321,13 @@ Session**. Icon-only toolbar controls require accessible names, and a disabled
 control must explain why it is unavailable rather than repeating its enabled
 label.
 
-Session Switcher previews are reversible. Confirming records and focuses the
-selected Session; cancelling restores the original Agent Session, center
-terminal Surface, or Host Session through its actual source without changing
-ownership or routing a terminal through Agent.
-
-Mixed switcher rows use distinct Agent and terminal icons. Their explicit
-**Agent Session** or **Terminal Session** type remains in accessibility output
-and the row tooltip instead of repeating as visible metadata under every title.
-Hover only reveals row emphasis; it never previews or activates work. Keyboard
-cycling previews deliberately, click confirms directly, and the selected row is
-the active descendant of the named **Recent sessions** list.
+In Dez, **Switch Sessions** activates the next or previous visible Session
+directly through its owning source. It does not mount a preview dialog, add a
+full-window interaction layer, move focus through temporary work, or require a
+second confirmation. Agent Sessions, center terminal Surfaces, and Host
+Sessions keep their actual ownership and restoration routes. Official Zed
+retains the inherited reversible preview switcher and its accessible mixed-row
+semantics.
 
 The Agent region is named **Agent** in user-facing controls; inherited Panel
 terminology remains an implementation detail. File actions name **Files** as
@@ -1108,3 +1104,11 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   detail is logged rather than exposed as product copy. Dez never describes
   this state as **Durable session was not terminated**, silently removes the
   uncertainty, or auto-hides it after a timer.
+- **2026-07-26: Session switching is direct navigation, not a temporary
+  mode.** While Agent or Sessions has focus, `Ctrl-Tab` activates the next
+  visible Session and `Ctrl-Shift-Tab` activates the previous one through the
+  same source-preserving path as selecting its row. No scrim, preview dialog,
+  outside-click boundary, or confirmation step is created in Dez. Main Work
+  Area `Ctrl-Tab` remains conventional Surface switching, and command search
+  retains **Sessions: Switch Sessions**. Official Zed keeps its inherited modal
+  Thread Switcher.

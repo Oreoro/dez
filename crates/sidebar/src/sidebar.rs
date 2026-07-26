@@ -277,6 +277,10 @@ fn session_rail_uses_absolute_client_geometry(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn session_switcher_uses_modal_overlay(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 fn agent_session_label(
     app_name: &str,
     upstream_thread_label: &'static str,
@@ -313,6 +317,8 @@ mod agent_session_label_tests {
         );
         assert_eq!(agent_session_stop_label("Zed"), "Stop Generation");
         assert_eq!(agent_session_stop_label("Dez"), "Stop Agent Run");
+        assert!(session_switcher_uses_modal_overlay("Zed"));
+        assert!(!session_switcher_uses_modal_overlay("Dez"));
     }
 }
 
@@ -10869,6 +10875,12 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if !session_switcher_uses_modal_overlay(APP_NAME) {
+            self.dismiss_thread_switcher(cx);
+            self.cycle_thread_impl(!select_last, window, cx);
+            return;
+        }
+
         if let Some(thread_switcher) = &self.thread_switcher {
             thread_switcher.update(cx, |switcher, cx| {
                 if select_last {

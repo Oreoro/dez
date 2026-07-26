@@ -3076,3 +3076,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Pure copy assertions and the identity gate protect the failure/recovery
   contract. This is source-only; no build, test binary, alternate binary, or
   visual launch was performed.
+- 2026-07-26: Removed Dez's last Sessions-owned full-window interaction layer.
+  While Agent or Sessions has focus, the existing switch-session action now
+  activates the next or previous visible Agent or terminal Session directly
+  through the same source-preserving route as its row. It no longer creates a
+  preview dialog, scrim, outside-click boundary, temporary focus owner, or
+  confirmation step. Main Work Area `Ctrl-Tab` remains conventional Surface
+  switching, command search remains available, and official Zed retains its
+  inherited modal Thread Switcher. A pure product-policy assertion and static
+  guard protect the split. This is source-only; no build, test binary,
+  alternate binary, or visual launch was performed.

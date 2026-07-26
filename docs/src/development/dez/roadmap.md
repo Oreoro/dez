@@ -3928,3 +3928,18 @@ Completed for the terminal-termination failure source slice:
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed. Transport-failure runtime proof remains open for
   the next artifact.
+
+Completed for the direct Session navigation source slice:
+
+- removed Dez's inherited full-window Session Switcher from the switch-session
+  action;
+- routed forward and reverse switching through the existing direct
+  Agent/terminal activation path, preserving Workspace and terminal-source
+  ownership;
+- retained conventional Main Work Area Surface switching and the discoverable
+  command-search action;
+- preserved the modal Thread Switcher for official Zed compatibility;
+- added a pure product-policy assertion and static regression guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Shortcut and focus proof remains open for the
+  next artifact.
