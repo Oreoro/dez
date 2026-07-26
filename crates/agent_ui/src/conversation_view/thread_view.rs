@@ -4763,12 +4763,12 @@ impl ThreadView {
                 };
 
                 h_flex()
-                    .id(("queue-entry", entry_id))
+                    .id(("queue-entry", index))
                     .group("queue_entry")
                     .role(gpui::Role::ListItem)
                     .aria_label(queue_position_label)
-                    .position_in_set(position_in_set)
-                    .set_size(queue_len)
+                    .aria_position_in_set(position_in_set)
+                    .aria_size_of_set(queue_len)
                     .w_full()
                     .p_1p5()
                     .gap_1()
