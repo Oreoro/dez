@@ -168,6 +168,7 @@ impl Render for StatusToast {
             .when_some(self.icon.clone(), |this, icon| this.child(icon))
             .child(
                 div()
+                    .id("status-toast-message")
                     .min_w_0()
                     .flex_1()
                     .tooltip(Tooltip::text(self.text.clone()))
