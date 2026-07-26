@@ -3129,3 +3129,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Official Zed retains its inherited toggle behavior. Formatting and static
   identity checks cover this source slice; no build, test binary, alternate
   binary, or visual launch was performed.
+- 2026-07-26: Made the fresh Workspace honor the Main Work Area hierarchy.
+  Workspace Tools no longer opens by default merely because a folder is
+  present; Sessions and Agent already begin closed. Files, Outline, Git, and
+  Debug remain one click or command away, and an explicit
+  `project_panel.starts_open` user override remains supported. Restored windows
+  continue to preserve intentional layout state. Together with the existing
+  one-drawer exclusivity and 60% Main Work Area budget, the default shell is
+  now one primary surface instead of an unsolicited two-column layout. Static
+  identity checks cover the default; no build, test binary, alternate binary,
+  or visual launch was performed.

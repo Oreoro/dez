@@ -16,6 +16,12 @@ Sessions**. Compact Sessions uses icon-only utilities with named tooltips, while
 the detailed width restores their visible labels. This keeps supervision
 optional without hiding its recovery path.
 
+Workspace Tools and Agent also begin closed in a fresh default Workspace, so
+the terminal or editor remains the obvious primary surface. **Files**,
+**Outline**, **Git**, and **Debug** reveal Workspace Tools on demand; repeating
+a destination focuses it instead of toggling the drawer away. Restored layouts
+and explicit `project_panel.starts_open` preferences remain respected.
+
 ## Opening Terminals
 
 | Action            | macOS         | Linux/Windows  |

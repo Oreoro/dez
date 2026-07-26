@@ -1145,3 +1145,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   supervision optional, reduces sidebar-like navigation furniture, and
   preserves capability and keyboard access. Official Zed retains its inherited
   chrome.
+- **2026-07-26: A fresh Workspace opens on the Main Work Area, not a tool
+  drawer.** Workspace Tools, Agent, and Sessions are contextual projections and
+  begin closed by default. Files, Outline, Git, and Debug reveal the existing
+  Workspace Tools drawer idempotently, while an explicit
+  `project_panel.starts_open` user preference may opt back into a visible file
+  tree. Restored windows preserve their intentional layout subject to the
+  one-drawer exclusivity and Main Work Area width budget. The default therefore
+  communicates the product's primary place to run, edit, and review before
+  introducing supervision or navigation furniture.
