@@ -3022,12 +3022,12 @@ Completed for the persistent Main Work Area budget source slice:
 
 Completed for the responsive shell-hierarchy source slice:
 
-- made Workspace Tools and Agent mutually exclusive below 1800 px or a 1.6:1
-  aspect ratio, with the newly revealed drawer always winning;
+- made Workspace Tools and Agent mutually exclusive, with the newly revealed
+  drawer always winning;
 - collapsed restored double-drawer layouts toward the focused auxiliary region
   or the active recipe's intended region when window bounds change;
-- retained simultaneous Workspace Tools and Agent only for an ultrawide shell,
-  still under the 22% per-drawer and 60% Main Work Area budget;
+- gave ultrawide space back to the Main Work Area instead of allowing a second
+  persistent contextual drawer;
 - reduced terminal context to one 32 px tab-bar-aligned header and removed its
   redundant visible Terminal Session title;
 - changed the supervisor's visible heading from internal **Session Rail**
@@ -3754,5 +3754,20 @@ Completed for the Agent plan-allocation source slice:
   guard;
 - documented compact-width, pending-count, tooltip, keyboard, disclosure, and
   Lumin runtime acceptance;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the minimalist one-drawer shell source slice:
+
+- made Workspace Tools and Agent mutually exclusive at every Dez window size;
+- preserved Sessions as the stable supervision rail and the Main Work Area as
+  the dominant work surface;
+- made a newly revealed drawer close its competitor and made restoration keep
+  the active or recipe-appropriate drawer deterministically;
+- removed the former 1800 px/1.6:1 coexistence exception so ultrawide width
+  benefits active work instead of accumulating tool columns;
+- preserved official Zed's upstream coexistence behavior;
+- added a pure product assertion, a 2400 px focused-drawer source test, and a
+  static regression guard;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.

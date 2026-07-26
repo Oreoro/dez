@@ -213,8 +213,6 @@ fn canvas_layout_modal_row_background(cx: &App) -> Hsla {
 const AUXILIARY_PANE_MAX_INITIAL_WIDTH: f32 = 360.;
 const AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0.22;
 const MAIN_WORK_AREA_MINIMUM_RATIO: f32 = 0.60;
-const AUXILIARY_PANES_MIN_COEXIST_WIDTH: f32 = 1800.;
-const AUXILIARY_PANES_MIN_COEXIST_ASPECT_RATIO: f32 = 1.60;
 const WORKSPACE_NOTIFICATION_SHELF_MAX_WIDTH: f32 = 400.;
 const WORKSPACE_NOTIFICATION_SHELF_MIN_WIDTH: f32 = 280.;
 const WORKSPACE_NOTIFICATION_SHELF_WIDTH_FRACTION: f32 = 0.32;
@@ -228,13 +226,8 @@ fn auxiliary_pane_initial_width(available_width: Pixels) -> Pixels {
     )
 }
 
-fn dez_auxiliary_panes_can_coexist(size: Size<Pixels>) -> bool {
-    if size.width <= Pixels::ZERO || size.height <= Pixels::ZERO {
-        return false;
-    }
-
-    size.width >= px(AUXILIARY_PANES_MIN_COEXIST_WIDTH)
-        && size.width >= size.height * AUXILIARY_PANES_MIN_COEXIST_ASPECT_RATIO
+fn dez_auxiliary_drawer_is_exclusive(app_name: &str) -> bool {
+    app_name != "Zed"
 }
 
 fn workspace_notification_shelf_width(viewport_width: Pixels) -> Pixels {
@@ -8753,7 +8746,7 @@ impl Workspace {
         pane_kind: PaneKind,
         cx: &mut App,
     ) -> bool {
-        if paths::APP_NAME == "Zed" || dez_auxiliary_panes_can_coexist(self.bounds.size) {
+        if !dez_auxiliary_drawer_is_exclusive(paths::APP_NAME) {
             return false;
         }
 
@@ -8773,7 +8766,7 @@ impl Workspace {
         true
     }
 
-    fn compact_shell_preferred_auxiliary_pane_kind(&self, cx: &App) -> PaneKind {
+    fn preferred_dez_auxiliary_pane_kind(&self, cx: &App) -> PaneKind {
         let active_kind = self.active_pane.read(cx).pane_kind();
         if matches!(active_kind, PaneKind::Project | PaneKind::Agent) {
             return active_kind;
@@ -8792,15 +8785,14 @@ impl Workspace {
     }
 
     fn enforce_dez_auxiliary_pane_visibility_policy(&mut self, cx: &mut App) -> bool {
-        if paths::APP_NAME == "Zed"
-            || dez_auxiliary_panes_can_coexist(self.bounds.size)
+        if !dez_auxiliary_drawer_is_exclusive(paths::APP_NAME)
             || !self.panel_pane_visible(PaneKind::Project, cx)
             || !self.panel_pane_visible(PaneKind::Agent, cx)
         {
             return false;
         }
 
-        let keep_kind = self.compact_shell_preferred_auxiliary_pane_kind(cx);
+        let keep_kind = self.preferred_dez_auxiliary_pane_kind(cx);
         let hide_kind = match keep_kind {
             PaneKind::Agent => PaneKind::Project,
             PaneKind::Project | PaneKind::Tabs => PaneKind::Agent,
@@ -16446,23 +16438,21 @@ mod tests {
     use util::rel_path::rel_path;
 
     #[test]
-    fn auxiliary_panes_start_compact_and_preserve_the_main_work_area() {
+    fn auxiliary_drawer_starts_compact_and_preserves_the_main_work_area() {
         assert_eq!(auxiliary_pane_initial_width(px(1000.)), px(220.));
         assert_eq!(auxiliary_pane_initial_width(px(2000.)), px(360.));
 
-        let after_project = px(1000.) - auxiliary_pane_initial_width(px(1000.));
-        let after_agent = after_project - auxiliary_pane_initial_width(after_project);
+        let after_drawer = px(1000.) - auxiliary_pane_initial_width(px(1000.));
         assert!(
-            after_agent >= px(600.),
-            "opening both contextual panes must preserve at least 60% of the Main Work Area"
+            after_drawer >= px(600.),
+            "the optional drawer must preserve at least 60% of the Main Work Area"
         );
     }
 
     #[test]
-    fn auxiliary_panes_only_coexist_in_an_ultrawide_shell() {
-        assert!(!dez_auxiliary_panes_can_coexist(size(px(1799.), px(900.))));
-        assert!(!dez_auxiliary_panes_can_coexist(size(px(1800.), px(1200.))));
-        assert!(dez_auxiliary_panes_can_coexist(size(px(1800.), px(1000.))));
+    fn dez_uses_one_optional_auxiliary_drawer_at_every_window_size() {
+        assert!(dez_auxiliary_drawer_is_exclusive("Dez"));
+        assert!(!dez_auxiliary_drawer_is_exclusive("Zed"));
     }
 
     #[test]
@@ -16518,6 +16508,31 @@ mod tests {
             pane_kinds,
             vec![PaneKind::Project, PaneKind::Tabs, PaneKind::Agent]
         );
+    }
+
+    #[gpui::test]
+    async fn test_dez_keeps_only_the_active_auxiliary_drawer_visible_on_ultrawide(
+        cx: &mut TestAppContext,
+    ) {
+        init_test(cx);
+
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            workspace.bounds.size = size(px(2400.), px(1200.));
+            let project_pane = workspace.ensure_panel_pane(PanelPaneKind::Project, window, cx);
+            let agent_pane = workspace.ensure_panel_pane(PanelPaneKind::Agent, window, cx);
+            project_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+            agent_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+            workspace.set_active_pane(&agent_pane, window, cx);
+
+            assert!(workspace.enforce_dez_auxiliary_pane_visibility_policy(cx));
+            assert!(!project_pane.read(cx).is_visible());
+            assert!(agent_pane.read(cx).is_visible());
+        });
     }
 
     #[gpui::test]

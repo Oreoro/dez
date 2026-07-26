@@ -2409,11 +2409,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   assertions and identity guards cover these contracts. This remains
   source-only; no build or alternate binary was launched.
 - 2026-07-25: Replaced the competing-column shell with responsive drawers in
-  source. Below 1800 px or a 1.6:1 aspect ratio, revealing Workspace Tools
-  closes Agent and revealing Agent closes Workspace Tools; an ultrawide shell
-  may retain both under the existing Main Work Area budget. Window restoration
-  and resizing apply the same policy. The terminal handoff is now a 32 px
-  tab-bar-aligned header without a duplicate visible actor title, and the
+  source. Revealing Workspace Tools closes Agent and revealing Agent closes
+  Workspace Tools at every window size; ultrawide space belongs to the Main
+  Work Area instead of a second persistent contextual column. Window
+  restoration and resizing apply the same policy. The terminal handoff is a
+  32 px tab-bar-aligned header without a duplicate visible actor title, and the
   supervisor's visible heading is **Sessions** instead of internal Session Rail
   jargon. Static guards and focused source assertions cover the contract. No
   build, test binary, alternate binary, or visual launch was performed.
@@ -2948,3 +2948,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   upstream masks. A pure product assertion and static summary/row guard protect
   the split. This is source-only; no build, test binary, alternate binary, or
   visual launch was performed.
+- 2026-07-26: Simplified Dez to one optional auxiliary drawer. Sessions remains
+  the stable rail, the Main Work Area remains dominant, and Workspace Tools
+  and Agent can no longer remain visible together—even at 2400 px ultrawide.
+  Revealing one closes the other; restored double-drawer state keeps the active
+  or recipe-appropriate region. Official Zed keeps its upstream coexistence
+  behavior. A pure product assertion, focused ultrawide source test, and static
+  guard protect the invariant. This is source-only; no build, test binary,
+  alternate binary, or visual launch was performed.

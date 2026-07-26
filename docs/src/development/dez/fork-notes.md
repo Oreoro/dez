@@ -671,16 +671,17 @@ are future options only if they strengthen the terminal-to-IDE review loop.
 - **2026-07-25: The Main Work Area owns the horizontal budget.** Workspace
   Tools and Agent are contextual regions, not equal peers of the file,
   terminal, and review canvas. Each starts at no more than 360 px or 22% of
-  visible horizontal space, and their combined width cannot silently reduce
-  the Main Work Area below 60%. This invariant applies after pointer or
+  visible horizontal space, and the visible drawer cannot silently reduce the
+  Main Work Area below 60%. This invariant applies after pointer or
   keyboard resizing, explicit pane-size reset, visibility changes, layout
   recipes, and persisted-layout restoration. **Reset Pane Sizes** returns to
   the Dez hierarchy rather than equalizing contextual tools with active work.
   Persistence must retain Agent, Workspace Tools, and Main Work Area region
-  identity. On shells below 1800 px or narrower than a 1.6:1 aspect ratio,
-  Workspace Tools and Agent are mutually exclusive drawers: revealing one
-  hides the other, restored double-drawer layouts collapse deterministically,
-  and both may coexist only on an ultrawide canvas.
+  identity. Workspace Tools and Agent are mutually exclusive at every window
+  size: revealing one hides the other, and restored double-drawer layouts
+  collapse deterministically toward the active or recipe-appropriate drawer.
+  Extra display width belongs to the Main Work Area, not another persistent
+  tool column.
 - **2026-07-25: One-work-area layouts remove only empty leftovers.** Full,
   Agent Control, and Editor Focus recipes select one authoritative Main Work
   Area and hide surplus empty tab panes left by earlier split recipes. A pane
