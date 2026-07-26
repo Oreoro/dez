@@ -3785,3 +3785,17 @@ Completed for the minimalist launch-profile source slice:
 - updated public settings examples and added static default-profile guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the opinionated Canvas command-surface source slice:
+
+- matched command search to the six workflow recipes already exposed by
+  Workspace Options;
+- retained Cycle Layout, Save Layout As, Manage Saved Layouts, and Restore
+  Previous as the four understandable management routes;
+- removed legacy layout-mode toggles, experimental recipes, numeric slot
+  commands, and clipboard/storage internals from Dez command search;
+- kept underlying action types intact for saved-layout UI, keybinding
+  compatibility, and official Zed's full upstream command inventory;
+- added a pure product-policy assertion and a static action-set guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

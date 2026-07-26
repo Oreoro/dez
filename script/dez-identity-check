@@ -1383,6 +1383,9 @@ require_multiline_pattern crates/editor/src/element/header.rs \
 require_multiline_pattern crates/title_bar/src/title_bar.rs \
     'fn layout_menu_label.*?app_name == "Zed".*?!panels_as_pane_tabs.*?"Panel Layout".*?"Canvas Layout".*?layout_menu_label\([[:space:]]*paths::APP_NAME' \
     'the Dez layout menu can regress to exposing inherited Panel terminology'
+require_multiline_pattern crates/title_bar/src/title_bar.rs \
+    'enum CanvasLayoutCommandSet.*?Hidden.*?Essentials.*?Full.*?fn canvas_layout_command_set.*?disable_ai \|\| !show_layout.*?CanvasLayoutCommandSet::Hidden.*?app_name == "Zed".*?CanvasLayoutCommandSet::Full.*?CanvasLayoutCommandSet::Essentials.*?essential_layout_actions = \[.*?ApplyCanvasFullLayout.*?ApplyCanvasAgentControlLayout.*?ApplyCanvasEditorFocusLayout.*?ApplyCanvasCodeRunObserveLayout.*?ApplyCanvasReviewLayout.*?ApplyCanvasDebugLayout.*?CycleCanvasLayout.*?SaveCurrentCanvasLayoutAs.*?ManageSavedCanvasLayouts.*?RestorePreviousCanvasLayout.*?advanced_layout_actions = \[.*?UseClassicLayout.*?UseAgenticLayout.*?ApplyCanvasFourAgentMatrixLayout.*?ApplyCanvasSixAgentSupervisorLayout.*?ImportSavedCanvasLayoutsFromClipboard.*?CanvasLayoutCommandSet::Essentials.*?show_action_types\(essential_layout_actions\.iter\(\)\).*?hide_action_types\(&advanced_layout_actions\).*?dez_command_search_exposes_only_workflow_layouts' \
+    'Dez command search can regress to exposing legacy, experimental, or internal Canvas layout actions'
 reject_pattern crates/workspace/src/pane.rs \
     '"New Terminal Panel"' \
     'the Dez New Item menu advertises a second terminal model'

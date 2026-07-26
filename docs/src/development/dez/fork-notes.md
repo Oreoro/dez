@@ -1029,3 +1029,11 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   Workspace. Add, split, Surface switching, breadcrumbs, diagnostics, and
   Agent review stay visible because they communicate or advance the current
   task. Canvas Layout remains contextual in **Workspace Options**.
+- **2026-07-26: Canvas Layout has one public vocabulary.** Workspace Options
+  and command search expose the same six workflow recipes: Full, Agent
+  Control, Focus Editor, Code/Run/Observe, Review, and Debug. Command search
+  additionally exposes only Cycle, Save Layout As, Manage Saved Layouts, and
+  Restore Previous. Legacy Classic/Canvas toggles, experimental matrix/studio
+  recipes, numeric slots, and clipboard/storage internals are implementation
+  detail in Dez. Their action types remain intact for saved-layout UI and
+  compatibility; official Zed keeps its complete upstream inventory.

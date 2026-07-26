@@ -435,25 +435,54 @@ pub fn init(cx: &mut App) {
     .detach();
 }
 
-/// Hides or shows the panel layout actions in the command palette based on
-/// whether AI is currently disabled.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum CanvasLayoutCommandSet {
+    Hidden,
+    Essentials,
+    Full,
+}
+
+fn canvas_layout_command_set(
+    app_name: &str,
+    disable_ai: bool,
+    show_layout: bool,
+) -> CanvasLayoutCommandSet {
+    if disable_ai || !show_layout {
+        CanvasLayoutCommandSet::Hidden
+    } else if app_name == "Zed" {
+        CanvasLayoutCommandSet::Full
+    } else {
+        CanvasLayoutCommandSet::Essentials
+    }
+}
+
+/// Keeps Dez's command surface aligned with the six workflow layouts exposed
+/// by Workspace Options. Official Zed retains the full upstream layout action
+/// inventory, while AI-disabled or explicitly hidden layouts stay out of
+/// command search.
 fn update_layout_action_filter(cx: &mut App) {
     let disable_ai = project::DisableAiSettings::get_global(cx).disable_ai;
     let show_layout = WorkspaceBarSettings::get_global(cx).show_layout();
-    let layout_actions = [
-        TypeId::of::<UseClassicLayout>(),
-        TypeId::of::<UseAgenticLayout>(),
+    let essential_layout_actions = [
         TypeId::of::<ApplyCanvasFullLayout>(),
         TypeId::of::<ApplyCanvasAgentControlLayout>(),
         TypeId::of::<ApplyCanvasEditorFocusLayout>(),
+        TypeId::of::<ApplyCanvasCodeRunObserveLayout>(),
+        TypeId::of::<ApplyCanvasReviewLayout>(),
+        TypeId::of::<ApplyCanvasDebugLayout>(),
+        TypeId::of::<CycleCanvasLayout>(),
+        TypeId::of::<SaveCurrentCanvasLayoutAs>(),
+        TypeId::of::<ManageSavedCanvasLayouts>(),
+        TypeId::of::<RestorePreviousCanvasLayout>(),
+    ];
+    let advanced_layout_actions = [
+        TypeId::of::<UseClassicLayout>(),
+        TypeId::of::<UseAgenticLayout>(),
         TypeId::of::<ApplyCanvasEvenColumnsLayout>(),
         TypeId::of::<ApplyCanvasEvenRowsLayout>(),
         TypeId::of::<ApplyCanvasMainStackLayout>(),
         TypeId::of::<ApplyCanvasMainTopLayout>(),
         TypeId::of::<ApplyCanvasGoldenSplitLayout>(),
-        TypeId::of::<ApplyCanvasCodeRunObserveLayout>(),
-        TypeId::of::<ApplyCanvasReviewLayout>(),
-        TypeId::of::<ApplyCanvasDebugLayout>(),
         TypeId::of::<ApplyCanvasDocumentationStudioLayout>(),
         TypeId::of::<ApplyCanvasBrowserDevelopmentLayout>(),
         TypeId::of::<ApplyCanvasAgentOperationsLayout>(),
@@ -464,7 +493,6 @@ fn update_layout_action_filter(cx: &mut App) {
         TypeId::of::<ApplyCanvasPairProgrammingLayout>(),
         TypeId::of::<ApplyCanvasIncidentResponseLayout>(),
         TypeId::of::<ApplyCanvasPortraitDisplayLayout>(),
-        TypeId::of::<CycleCanvasLayout>(),
         TypeId::of::<SaveCurrentCanvasLayout>(),
         TypeId::of::<SaveCurrentCanvasLayoutSlot2>(),
         TypeId::of::<SaveCurrentCanvasLayoutSlot3>(),
@@ -472,9 +500,7 @@ fn update_layout_action_filter(cx: &mut App) {
         TypeId::of::<RestoreSavedCanvasLayoutSlot2>(),
         TypeId::of::<RestoreSavedCanvasLayoutSlot3>(),
         TypeId::of::<RenameSavedCanvasLayoutSlot>(),
-        TypeId::of::<SaveCurrentCanvasLayoutAs>(),
         TypeId::of::<SaveCurrentCanvasLayoutNamed>(),
-        TypeId::of::<ManageSavedCanvasLayouts>(),
         TypeId::of::<ClearAllSavedCanvasLayouts>(),
         TypeId::of::<CopySavedCanvasLayoutsToClipboard>(),
         TypeId::of::<ImportSavedCanvasLayoutsFromClipboard>(),
@@ -484,13 +510,21 @@ fn update_layout_action_filter(cx: &mut App) {
         TypeId::of::<DuplicateSavedCanvasLayoutSlot>(),
         TypeId::of::<ClearSavedCanvasLayoutNamed>(),
         TypeId::of::<ClearSavedCanvasLayoutSlot>(),
-        TypeId::of::<RestorePreviousCanvasLayout>(),
     ];
     CommandPaletteFilter::update_global(cx, |filter, _| {
-        if disable_ai || !show_layout {
-            filter.hide_action_types(&layout_actions);
-        } else {
-            filter.show_action_types(layout_actions.iter());
+        match canvas_layout_command_set(paths::APP_NAME, disable_ai, show_layout) {
+            CanvasLayoutCommandSet::Hidden => {
+                filter.hide_action_types(&essential_layout_actions);
+                filter.hide_action_types(&advanced_layout_actions);
+            }
+            CanvasLayoutCommandSet::Essentials => {
+                filter.show_action_types(essential_layout_actions.iter());
+                filter.hide_action_types(&advanced_layout_actions);
+            }
+            CanvasLayoutCommandSet::Full => {
+                filter.show_action_types(essential_layout_actions.iter());
+                filter.show_action_types(advanced_layout_actions.iter());
+            }
         }
     });
 }
@@ -2183,8 +2217,8 @@ impl SidebarChrome {
 #[cfg(test)]
 mod dez_sidebar_chrome_tests {
     use super::{
-        layout_menu_label, project_or_workspace_label, sidebar_identity_row_visible,
-        sidebar_project_identity_visible,
+        CanvasLayoutCommandSet, canvas_layout_command_set, layout_menu_label,
+        project_or_workspace_label, sidebar_identity_row_visible, sidebar_project_identity_visible,
     };
 
     #[test]
@@ -2214,5 +2248,25 @@ mod dez_sidebar_chrome_tests {
         assert!(!sidebar_identity_row_visible(false, false, false));
         assert!(sidebar_identity_row_visible(false, true, false));
         assert!(sidebar_identity_row_visible(false, false, true));
+    }
+
+    #[test]
+    fn dez_command_search_exposes_only_workflow_layouts() {
+        assert_eq!(
+            canvas_layout_command_set("Dez", false, true),
+            CanvasLayoutCommandSet::Essentials
+        );
+        assert_eq!(
+            canvas_layout_command_set("Zed", false, true),
+            CanvasLayoutCommandSet::Full
+        );
+        assert_eq!(
+            canvas_layout_command_set("Dez", true, true),
+            CanvasLayoutCommandSet::Hidden
+        );
+        assert_eq!(
+            canvas_layout_command_set("Dez", false, false),
+            CanvasLayoutCommandSet::Hidden
+        );
     }
 }
