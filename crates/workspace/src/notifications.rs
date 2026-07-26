@@ -540,7 +540,7 @@ pub mod simple_message_notification {
 
     use gpui::{
         AnyElement, DismissEvent, EventEmitter, FocusHandle, Focusable, ParentElement, Render,
-        ScrollHandle, SharedString, Styled, Task,
+        ScrollHandle, SharedString, Styled, Task, WindowBackgroundAppearance,
     };
     use ui::{CopyButton, Tooltip, WithScrollbar, prelude::*};
 

@@ -1750,7 +1750,7 @@ reject_pattern crates/notifications/src/status_toast.rs \
     'elevation_3|shadow_lg' \
     'status feedback can regress to modal-grade elevation'
 require_multiline_pattern crates/workspace/src/notifications.rs \
-    'impl Render for LanguageServerPrompt.*?WindowBackgroundAppearance::Opaque.*?elevation_2\(cx\).*?shadow_none.*?impl Render for MessageNotification.*?WindowBackgroundAppearance::Opaque.*?elevation_2\(cx\).*?shadow_none' \
+    'impl Render for LanguageServerPrompt.*?WindowBackgroundAppearance::Opaque.*?elevation_2\(cx\).*?shadow_none.*?pub mod simple_message_notification.*?use gpui::.*?WindowBackgroundAppearance.*?impl Render for MessageNotification.*?WindowBackgroundAppearance::Opaque.*?elevation_2\(cx\).*?shadow_none' \
     'nonblocking Workspace notifications can regress to modal-grade shadows on glass'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'if can_copy_codex_hook \{.*?menu = menu\.entry\("Copy Codex Hook Setup"' \
