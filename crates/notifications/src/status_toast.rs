@@ -152,6 +152,8 @@ impl Render for StatusToast {
 
         h_flex()
             .id("status-toast")
+            .min_w_0()
+            .max_w_full()
             .elevation_2(cx)
             .when(!opaque_window, |this| this.shadow_none())
             .gap(status_toast_gap(cx))
@@ -164,33 +166,53 @@ impl Render for StatusToast {
             .border_color(status_toast_border(cx))
             .map(|this| status_toast_radius(this, cx))
             .when_some(self.icon.clone(), |this, icon| this.child(icon))
-            .child(Label::new(self.text.clone()).color(Color::Default))
+            .child(
+                div()
+                    .min_w_0()
+                    .flex_1()
+                    .tooltip(Tooltip::text(self.text.clone()))
+                    .child(
+                        Label::new(self.text.clone())
+                            .size(LabelSize::Small)
+                            .color(Color::Default)
+                            .truncate(),
+                    ),
+            )
             .when_some(self.action.as_ref(), |this, action| {
                 this.child(
-                    Button::new(action.id.clone(), action.label.clone())
-                        .tooltip(Tooltip::for_action_title(
-                            action.label.clone(),
-                            &toast::RunAction,
-                        ))
-                        .color(Color::Muted)
-                        .when_some(action.on_click.clone(), |el, handler| {
-                            el.on_click(move |_click_event, window, cx| handler(window, cx))
-                        }),
+                    div().flex_none().child(
+                        Button::new(action.id.clone(), action.label.clone())
+                            .size(ButtonSize::Compact)
+                            .tab_index(0isize)
+                            .aria_label(action.label.clone())
+                            .tooltip(Tooltip::for_action_title(
+                                action.label.clone(),
+                                &toast::RunAction,
+                            ))
+                            .color(Color::Muted)
+                            .when_some(action.on_click.clone(), |el, handler| {
+                                el.on_click(move |_click_event, window, cx| handler(window, cx))
+                            }),
+                    ),
                 )
             })
             .when(self.show_dismiss, |this| {
                 let handle = self.this_handle.clone();
                 this.child(
-                    IconButton::new("dismiss", IconName::Close)
-                        .shape(ui::IconButtonShape::Square)
-                        .icon_size(IconSize::Small)
-                        .icon_color(Color::Muted)
-                        .tooltip(Tooltip::text("Dismiss"))
-                        .on_click(move |_click_event, _window, cx| {
-                            handle.update(cx, |_, cx| {
-                                cx.emit(DismissEvent);
-                            });
-                        }),
+                    div().flex_none().child(
+                        IconButton::new("dismiss", IconName::Close)
+                            .shape(ui::IconButtonShape::Square)
+                            .icon_size(IconSize::Small)
+                            .icon_color(Color::Muted)
+                            .tab_index(0isize)
+                            .aria_label("Dismiss notification")
+                            .tooltip(Tooltip::text("Dismiss notification"))
+                            .on_click(move |_click_event, _window, cx| {
+                                handle.update(cx, |_, cx| {
+                                    cx.emit(DismissEvent);
+                                });
+                            }),
+                    ),
                 )
             })
     }

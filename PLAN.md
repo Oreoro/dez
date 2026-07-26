@@ -3139,3 +3139,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   now one primary surface instead of an unsolicited two-column layout. Static
   identity checks cover the default; no build, test binary, alternate binary,
   or visual launch was performed.
+- 2026-07-26: Hardened the remaining transient toast against the clipping shown
+  in earlier screenshots. Status copy now owns a shrinkable one-line region,
+  truncates inside the bounded toast, and exposes the complete text by tooltip
+  instead of pushing actions beyond the surface. Action and dismiss controls
+  are fixed-width compact targets with explicit keyboard tab stops and
+  accessible names. The toast keeps non-modal elevation and only its visible
+  content intercepts input. Static identity checks protect the layout and
+  interaction contract; no build, test binary, alternate binary, or visual
+  launch was performed.

@@ -1154,3 +1154,11 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   one-drawer exclusivity and Main Work Area width budget. The default therefore
   communicates the product's primary place to run, edit, and review before
   introducing supervision or navigation furniture.
+- **2026-07-26: A toast may compress its message, never its controls.**
+  Transient status copy occupies one shrinkable line inside the existing
+  bounded feedback surface, truncates with a full-text tooltip, and yields
+  fixed-width space to its action and dismiss targets. Both controls are
+  keyboard reachable and explicitly named. Long task or failure text therefore
+  cannot clip outside the toast, cover adjacent controls, or create a larger
+  interaction layer. Persistent notices remain in their owning Sessions or
+  Workspace notification surfaces.

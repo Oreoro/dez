@@ -1645,8 +1645,8 @@ reject_multiline_pattern crates/workspace/src/toast_layer.rs \
     'impl Render for ToastLayer.*?absolute\(\)\.size_full\(\)' \
     'the toast layer can regress to reserving an invisible full-screen interaction surface'
 require_multiline_pattern crates/notifications/src/status_toast.rs \
-    'fn status_toast_background.*?elevated_surface_background.*?impl Render for StatusToast.*?WindowBackgroundAppearance::Opaque.*?elevation_2\(cx\).*?when\(!opaque_window, \|this\| this\.shadow_none\(\)\)' \
-    'status feedback can regress to a modal shadow or an unlayered glass pill'
+    'fn status_toast_background.*?elevated_surface_background.*?impl Render for StatusToast.*?WindowBackgroundAppearance::Opaque.*?id\("status-toast"\).*?min_w_0\(\).*?max_w_full\(\).*?elevation_2\(cx\).*?when\(!opaque_window, \|this\| this\.shadow_none\(\)\).*?Tooltip::text\(self\.text\.clone\(\)\).*?Label::new\(self\.text\.clone\(\)\).*?truncate\(\).*?Button::new\(action\.id\.clone\(\), action\.label\.clone\(\)\).*?size\(ButtonSize::Compact\).*?tab_index\(0isize\).*?aria_label\(action\.label\.clone\(\)\).*?IconButton::new\("dismiss", IconName::Close\).*?tab_index\(0isize\).*?aria_label\("Dismiss notification"\)' \
+    'status feedback can regress to clipping long text, hiding keyboard actions, or using modal-grade elevation'
 reject_pattern crates/notifications/src/status_toast.rs \
     'elevation_3|shadow_lg' \
     'status feedback can regress to modal-grade elevation'
