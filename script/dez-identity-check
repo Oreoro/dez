@@ -373,6 +373,9 @@ require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'if paths::APP_NAME != "Zed".*?pages\.sort_by_key\(\|page\| dez_settings_page_priority\(page\.title\)\).*?fn dez_settings_page_priority.*?"Workspace & Privacy" => 0.*?"Sessions & Terminal" => 1.*?"Agents" => 2.*?"Attention" => 3.*?"Evidence" => 4.*?"Advanced" => 15' \
     'Dez Settings can regress to burying its product workflow below inherited IDE customization'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'developer_settings_page_visible\(paths::APP_NAME, cx\.feature_flag_overrides_enabled\(\)\).*?pages\.push\(developer_page\(cx\)\).*?fn developer_settings_page_visible.*?app_name == "Zed" \|\| feature_flag_overrides_enabled' \
+    'Dez Settings can regress to exposing staff instrumentation in the public navigation'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn sessions_side_setting_visible.*?app_name == "Zed".*?page_title == "Agents".*?page_title == "Sessions & Terminal".*?fn sessions_side_setting.*?title: "Sessions Side".*?json_path: Some\("sidebar\.side"\).*?fn terminal_page\(\) -> SettingsPage.*?sessions_side_setting_visible\(paths::APP_NAME, "Sessions & Terminal"\).*?sessions_side_setting\(\).*?title: "Sessions & Terminal".*?sessions_section\(\)' \
     'the Sessions layout control can regress to an unrelated Agent-provider section'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \

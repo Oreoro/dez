@@ -1441,3 +1441,29 @@ The 14 px UI/editor/Agent/terminal baseline and control targets remain intact;
 only surplus padding contracts. Theme and identity checks pin the default,
 first-run, and recovery paths. No build, test binary, or alternate binary was
 launched, so rendered compact-density proof remains open.
+
+## 2026-07-26: public shell and glass-opacity audit
+
+Current source removes the staff-only **Advanced** instrumentation page from
+ordinary Dez Settings navigation. Official Zed still exposes the upstream page,
+and staff builds with feature flag overrides retain both Feature Flags and the
+Performance Profiler. The underlying settings keys and commands remain
+compatible.
+
+Lumin Light and Lumin Blur keep the existing native macOS under-window
+material, behind-window blending, and active-state tracking. Their structural
+layers now use a stricter opacity ceiling so stacked root, title/status,
+Sessions, auxiliary, editor, terminal, toolbar, and tab-strip materials do not
+erase the backdrop. Elevated menus and feedback retain their denser legibility
+range.
+
+The source theme gate passes after compositing the updated layers over
+representative dark, neutral, cool, warm, and light backdrops. It still checks
+text and syntax contrast, focus and structural boundaries, active/selected
+controls, scrollbars, and editor-line visibility. The identity gate also pins
+the public Settings policy.
+
+No build, test binary, alternate binary, or new application launch was
+performed. The inspected installed Dez remains older than this source. Rendered
+proof of the opacity change and Settings root remains open for the consolidated
+build.

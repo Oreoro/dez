@@ -1,3 +1,4 @@
+use feature_flags::FeatureFlagAppExt as _;
 use gpui::{Action as _, App};
 use itertools::Itertools as _;
 use settings::{
@@ -84,8 +85,10 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
         attention_page(),
         evidence_page(),
         network_page(),
-        developer_page(cx),
     ]);
+    if developer_settings_page_visible(paths::APP_NAME, cx.feature_flag_overrides_enabled()) {
+        pages.push(developer_page(cx));
+    }
     if paths::APP_NAME != "Zed" {
         pages.sort_by_key(|page| dez_settings_page_priority(page.title));
     }
@@ -116,6 +119,10 @@ fn dez_settings_page_priority(title: &str) -> usize {
 
 fn dez_settings_page_visible(app_name: &str, title: &str) -> bool {
     app_name == "Zed" || title != "Collaboration"
+}
+
+fn developer_settings_page_visible(app_name: &str, feature_flag_overrides_enabled: bool) -> bool {
+    app_name == "Zed" || feature_flag_overrides_enabled
 }
 
 fn dez_privacy_setting_visible(app_name: &str, json_path: Option<&str>) -> bool {
@@ -242,8 +249,6 @@ fn sessions_side_setting() -> SettingsPageItem {
 }
 
 fn developer_page(cx: &App) -> SettingsPage {
-    use feature_flags::FeatureFlagAppExt as _;
-
     let mut items: Vec<SettingsPageItem> = Vec::new();
 
     // Feature flag overrides are a staff-only affordance, so only surface the section when the overrides are enabled.
@@ -11553,6 +11558,13 @@ mod tests {
                 < dez_settings_page_priority("Advanced")
         );
         assert_eq!(dez_settings_page_priority("Unknown Compatibility Page"), 16);
+    }
+
+    #[test]
+    fn dez_hides_staff_instrumentation_from_public_settings() {
+        assert!(!developer_settings_page_visible("Dez", false));
+        assert!(developer_settings_page_visible("Dez", true));
+        assert!(developer_settings_page_visible("Zed", false));
     }
 
     #[test]

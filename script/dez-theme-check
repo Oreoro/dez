@@ -96,7 +96,7 @@ function requireAlphaRange(theme, token, minimum, maximum) {
 }
 
 function requireGlassMaterial(theme) {
-  requireAlphaRange(theme, "background", 0.55, 0.8);
+  requireAlphaRange(theme, "background", 0.55, 0.65);
   for (const token of [
     "surface.background",
     "panel.background",
@@ -106,10 +106,10 @@ function requireGlassMaterial(theme) {
     "tab_bar.background",
     "toolbar.background",
   ]) {
-    requireAlphaRange(theme, token, 0.25, 0.65);
+    requireAlphaRange(theme, token, 0.25, 0.5);
   }
   for (const token of ["title_bar.background", "status_bar.background"]) {
-    requireAlphaRange(theme, token, 0.55, 0.8);
+    requireAlphaRange(theme, token, 0.55, 0.65);
   }
   for (const token of ["elevated_surface.background", "panel.overlay_background"]) {
     requireAlphaRange(theme, token, 0.8, 0.95);

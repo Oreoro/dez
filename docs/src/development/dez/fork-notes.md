@@ -1314,3 +1314,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   without turning the product into a miniature interface. Lumin Light and
   Lumin Blur still use one native whole-window material; density does not add
   nested blur or detached cards.
+- **2026-07-26: Public Settings and glass both have opacity budgets.** Ordinary
+  Dez builds omit the staff-only **Advanced** instrumentation page from the
+  graphical Settings root. Official Zed and staff builds with feature flag
+  overrides retain it. Lumin Light and Lumin Blur keep a single native
+  under-window material, but their root, title/status chrome, Sessions,
+  auxiliary surfaces, editor, terminal, toolbar, and tab strip now have a
+  stricter maximum opacity. Elevated menus and feedback stay denser. This
+  preserves readable hierarchy while preventing stacked semantic layers from
+  flattening the system backdrop into an opaque-looking application.

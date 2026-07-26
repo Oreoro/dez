@@ -736,15 +736,17 @@ with new labels.
       Appearance, Privacy, and Advanced compatibility; hide experimental
       internals from the default path. The settings shell now names Workspace
       & Privacy, Sessions & Terminal, Agents, Attention, Evidence, Appearance,
-      Network & Compatibility, and Advanced; Attention and Evidence expose
-      real trust/accessibility controls. Session Rail chrome uses product
-      terminology, and dead sign-in/user-menu/avatar settings are no longer
-      visible because Dez deliberately suppresses that upstream account chrome;
-      compatibility keys remain readable. Current local source orders
-      Workspace, Sessions, Agents, Attention, and Evidence before inherited IDE
-      customization, moves Sessions placement into Sessions & Terminal, and
-      gives Agent configuration a concrete Runtime & Providers entry point.
-      Experimental-internal audit remains.
+      and Network & Compatibility; Attention and Evidence expose real
+      trust/accessibility controls. Advanced instrumentation is absent from
+      ordinary Dez navigation and returns only in staff builds with feature
+      flag overrides. Session Rail chrome uses product terminology, and dead
+      sign-in/user-menu/avatar settings are no longer visible because Dez
+      deliberately suppresses that upstream account chrome; compatibility keys
+      remain readable. Current local source orders Workspace, Sessions, Agents,
+      Attention, and Evidence before inherited IDE customization, moves Sessions
+      placement into Sessions & Terminal, and gives Agent configuration a
+      concrete Runtime & Providers entry point. The remaining audit covers
+      experimental controls outside the graphical Settings root.
 - [ ] Provide safe defaults and explain persistence, output retention,
       redaction, adapter trust, and experimental-host limitations. Evidence
       settings now distinguish local process detection, authenticated
@@ -3226,3 +3228,14 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   14 px typography and existing control targets. Theme and identity guards pin
   the default, first-run, and recovery paths. No build, test binary, or
   alternate binary was launched.
+- 2026-07-26: Completed a final source-level public-shell audit before
+  publishing. Ordinary Dez Settings no longer lists the staff-only Advanced
+  instrumentation page; official Zed and staff override builds retain it.
+  Lumin Light and Lumin Blur now use a tighter translucency ceiling for the
+  root, title/status chrome, rail/drawers, editor, terminal, toolbar, and tab
+  strip. The native macOS under-window material remains the only blur owner,
+  while denser elevated surfaces retain legibility. The theme gate now rejects
+  structural layers that flatten the backdrop and still proves text,
+  interaction, region, scrollbar, and focus contrast across representative
+  backdrops. This is source-only; the installed artifact remains stale and
+  rendered proof waits for the requested later build.

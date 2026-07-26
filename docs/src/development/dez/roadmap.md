@@ -4011,3 +4011,24 @@ Completed for the compact Lumin chrome source slice:
 - retained source-only evidence: no build, test binary, or alternate binary
   was launched. The running installed artifact is diagnostic evidence only and
   remains stale until the consolidated build.
+
+Completed for the public-shell and glass-opacity source slice:
+
+- removed the staff-only **Advanced** instrumentation page from ordinary Dez
+  Settings navigation while retaining it in official Zed and staff override
+  builds;
+- kept the underlying profiler setting and command compatible rather than
+  deleting implementation needed by deliberate developer workflows;
+- lowered the maximum opacity of Lumin's root, title/status chrome, Sessions,
+  auxiliary surfaces, editor, terminal, toolbar, and tab strip while keeping
+  elevated menus and feedback denser;
+- retained one native macOS under-window material instead of adding nested blur
+  surfaces;
+- tightened the theme gate so a future palette cannot flatten the backdrop,
+  while preserving measured text, interaction, region, scrollbar, and focus
+  contrast;
+- added pure Settings policy coverage and an identity guard; and
+- retained source-only evidence. No app build, test binary, alternate binary,
+  or fresh visual launch was performed. The next consolidated artifact must
+  prove both Lumin variants against real desktop backdrops and the reduced
+  Settings root.
