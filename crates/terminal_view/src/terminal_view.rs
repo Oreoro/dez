@@ -90,6 +90,7 @@ fn viewport_line_for_point(point: Point, display_offset: usize) -> Option<usize>
 const CURSOR_BLINK_INTERVAL: Duration = Duration::from_millis(500);
 const TERMINAL_HOST_RESTORE_ATTEMPTS: usize = 40;
 const TERMINAL_HOST_RESTORE_INTERVAL: Duration = Duration::from_millis(50);
+const TERMINAL_CONTEXT_ACTIVITY_LABEL_MIN_WIDTH: Pixels = px(360.);
 const TERMINAL_CONTEXT_PRIMARY_ACTION_LABEL_MIN_WIDTH: Pixels = px(480.);
 const TERMINAL_CONTEXT_SECONDARY_ACTION_LABEL_MIN_WIDTH: Pixels = px(720.);
 const TERMINAL_CONTEXT_DETAILS_LABEL_MIN_WIDTH: Pixels = px(920.);
@@ -99,6 +100,69 @@ struct TerminalContextActionLabelVisibility {
     workspace: bool,
     review: bool,
     details: bool,
+}
+
+#[derive(Clone, Copy)]
+struct TerminalForegroundAgentPresentation {
+    display_name: &'static str,
+    icon: IconName,
+}
+
+fn terminal_foreground_agent_presentation(
+    app_name: &str,
+    command: Option<&str>,
+) -> Option<TerminalForegroundAgentPresentation> {
+    if app_name == "Zed" {
+        return None;
+    }
+
+    let command = command?
+        .trim()
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    let command = command.strip_suffix(".exe").unwrap_or(command.as_str());
+
+    let (display_name, icon) = match command {
+        "claude" => ("Claude Code", IconName::AiClaude),
+        command if command.starts_with("claude-code") => ("Claude Code", IconName::AiClaude),
+        "codex" => ("Codex", IconName::AiOpenAi),
+        command if command.starts_with("codex-") => ("Codex", IconName::AiOpenAi),
+        "gemini" => ("Gemini CLI", IconName::AiGemini),
+        command if command.starts_with("gemini-") => ("Gemini CLI", IconName::AiGemini),
+        "opencode" | "open-code" => ("OpenCode", IconName::AiOpenCode),
+        "grok" => ("Grok", IconName::AiXAi),
+        command if command.starts_with("grok-") => ("Grok", IconName::AiXAi),
+        "copilot" | "github-copilot" => ("GitHub Copilot", IconName::Copilot),
+        "cursor-agent" => ("Cursor Agent", IconName::EditorCursor),
+        "aider" => ("Aider", IconName::Robot),
+        "agy" => ("Agy", IconName::Robot),
+        "amp" => ("Amp", IconName::Robot),
+        "crush" => ("Crush", IconName::Robot),
+        "devin" => ("Devin", IconName::Robot),
+        "droid" => ("Droid", IconName::Robot),
+        "goose" => ("Goose", IconName::Robot),
+        "openhands" | "open-hands" => ("OpenHands", IconName::Robot),
+        "pi" => ("Pi", IconName::Robot),
+        "qwen" | "qwen-code" => ("Qwen Code", IconName::Robot),
+        _ => return None,
+    };
+
+    Some(TerminalForegroundAgentPresentation { display_name, icon })
+}
+
+fn terminal_context_activity_label(
+    status: &str,
+    foreground_agent: Option<TerminalForegroundAgentPresentation>,
+) -> String {
+    foreground_agent
+        .map(|agent| format!("{} running", agent.display_name))
+        .unwrap_or_else(|| status.to_owned())
+}
+
+fn terminal_context_activity_label_visible(width: Pixels) -> bool {
+    width >= TERMINAL_CONTEXT_ACTIVITY_LABEL_MIN_WIDTH
 }
 
 fn terminal_tab_status(
@@ -2099,6 +2163,10 @@ fn subscribe_for_terminal_events(
                 },
                 Event::BreadcrumbsChanged => cx.emit(ItemEvent::UpdateBreadcrumbs),
                 Event::ProcessInfoChanged => {
+                    // Foreground-agent presentation lives inside the terminal
+                    // surface as well as its tab. Refresh both immediately
+                    // when shell -> agent or agent -> shell is observed.
+                    cx.notify();
                     cx.emit(ItemEvent::UpdateTab);
                 }
                 Event::ProcessExited { .. } => {
@@ -2287,6 +2355,19 @@ impl TerminalView {
             terminal.task().map(|task| &task.status),
         );
         let status_color = terminal_tab_status_color(status);
+        let foreground_command = terminal.foreground_process_command_name();
+        let foreground_agent =
+            terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref());
+        let activity_label = terminal_context_activity_label(status, foreground_agent);
+        let activity_label_visible = terminal_context_activity_label_visible(context_width);
+        let activity_color = if foreground_agent.is_some() {
+            Color::Accent
+        } else {
+            status_color
+        };
+        let activity_icon = foreground_agent
+            .map(|agent| agent.icon)
+            .unwrap_or(IconName::Terminal);
         let has_persistent_owner = terminal_has_persistent_owner(&terminal, cx);
         let ownership = terminal_ownership_label(has_persistent_owner, false);
         let working_directory = terminal
@@ -2315,7 +2396,8 @@ impl TerminalView {
             changed_files,
         );
 
-        let details_status = format!("{status} · {ownership}");
+        let details_status = format!("{activity_label} · {ownership}");
+        let details_foreground_agent = foreground_agent.map(|agent| agent.display_name);
         let details_repository = repository_label.clone();
         let details_changes = changes_label.clone();
         let details_working_directory = working_directory.clone();
@@ -2373,6 +2455,11 @@ impl TerminalView {
                         .label(details_repository.clone())
                         .label(details_changes.clone())
                         .label(ownership_note);
+                    if let Some(foreground_agent) = details_foreground_agent {
+                        menu = menu.label(format!(
+                            "Foreground agent: {foreground_agent} (observed process)."
+                        ));
+                    }
                     if let Some(working_directory) = details_working_directory.clone() {
                         menu = menu
                             .label(format!("Working directory: {working_directory}"))
@@ -2417,7 +2504,7 @@ impl TerminalView {
                 .id(("terminal-session-context", terminal_entity_id))
                 .role(gpui::Role::Toolbar)
                 .aria_label(format!(
-                    "Terminal Session controls. Status: {status}. {repository_label}. {changes_label}."
+                    "Terminal Session controls. Status: {activity_label}. {repository_label}. {changes_label}."
                 ))
                 .w_full()
                 .h(px(32.))
@@ -2434,26 +2521,17 @@ impl TerminalView {
                         .overflow_hidden()
                         .gap_1p5()
                         .child(
-                            Icon::new(IconName::Terminal)
+                            Icon::new(activity_icon)
                                 .size(IconSize::XSmall)
-                                .color(Color::Accent),
+                                .color(activity_color),
                         )
-                        .child(
-                            h_flex()
-                                .flex_none()
-                                .gap_1()
-                                .child(
-                                    div()
-                                        .size(px(5.))
-                                        .rounded_full()
-                                        .bg(status_color.color(cx)),
-                                )
-                                .child(
-                                    Label::new(status)
-                                        .size(LabelSize::XSmall)
-                                        .color(status_color),
-                                ),
-                        )
+                        .when(activity_label_visible, |this| {
+                            this.child(
+                                Label::new(activity_label)
+                                    .size(LabelSize::XSmall)
+                                    .color(activity_color),
+                            )
+                        })
                         .child(div().h_4().border_l_1().border_color(
                             cx.theme().colors().border_variant,
                         ))
@@ -2823,6 +2901,10 @@ impl Item for TerminalView {
             terminal.process_exited(),
             terminal.task().map(|task| &task.status),
         );
+        let foreground_command = terminal.foreground_process_command_name();
+        let foreground_agent =
+            terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref())
+                .map(|agent| agent.display_name);
         let ownership = terminal_ownership_label(has_persistent_owner, session_unavailable);
         let working_directory = terminal
             .working_directory()
@@ -2854,6 +2936,15 @@ impl Item for TerminalView {
                             .color(Color::Muted)
                             .size(LabelSize::Small),
                     )
+                    .when_some(foreground_agent, |this, foreground_agent| {
+                        this.child(
+                            Label::new(format!(
+                                "Foreground agent: {foreground_agent} (observed process)"
+                            ))
+                            .color(Color::Accent)
+                            .size(LabelSize::Small),
+                        )
+                    })
                     .when_some(working_directory.clone(), |this, working_directory| {
                         this.child(
                             Label::new(format!("Working directory: {working_directory}"))
@@ -2905,6 +2996,9 @@ impl Item for TerminalView {
 
     fn tab_icon_element(&self, _window: &Window, cx: &App) -> Option<AnyElement> {
         let terminal = self.terminal().read(cx);
+        let foreground_command = terminal.foreground_process_command_name();
+        let foreground_agent =
+            terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref());
         let (icon, icon_color, rerun_button) = match terminal.task() {
             Some(terminal_task) => match &terminal_task.status {
                 TaskStatus::Running => (
@@ -2927,8 +3021,12 @@ impl Item for TerminalView {
                     }
                 }
             },
-            None => (IconName::Terminal, Color::Muted, None),
+            None => foreground_agent
+                .map(|agent| (agent.icon, Color::Accent, None))
+                .unwrap_or((IconName::Terminal, Color::Muted, None)),
         };
+        let foreground_agent_label =
+            foreground_agent.map(|agent| format!("{} running in terminal", agent.display_name));
 
         Some(
             h_flex()
@@ -2938,6 +3036,9 @@ impl Item for TerminalView {
                 .items_center()
                 .justify_center()
                 .group("term-tab-icon")
+                .when_some(foreground_agent_label, |this, label| {
+                    this.role(gpui::Role::Label).aria_label(label)
+                })
                 .child(
                     div()
                         .when(rerun_button.is_some(), |this| {
@@ -3762,6 +3863,36 @@ mod tests {
     use util::rel_path::RelPath;
     use workspace::item::test::{TestItem, TestProjectItem};
     use workspace::{AppState, MultiWorkspace, SelectedEntry};
+
+    #[test]
+    fn foreground_agent_presentation_is_immediate_but_product_scoped() {
+        let codex = terminal_foreground_agent_presentation("Dez", Some("/opt/homebrew/bin/codex"))
+            .expect("Codex should receive native terminal presentation");
+        assert_eq!(codex.display_name, "Codex");
+        assert_eq!(
+            terminal_context_activity_label("Active", Some(codex)),
+            "Codex running"
+        );
+        assert!(!terminal_context_activity_label_visible(px(359.)));
+        assert!(terminal_context_activity_label_visible(px(360.)));
+
+        let claude = terminal_foreground_agent_presentation("Dez", Some(r"C:\tools\claude.exe"))
+            .expect("Claude Code should receive native terminal presentation");
+        assert_eq!(claude.display_name, "Claude Code");
+
+        assert!(
+            terminal_foreground_agent_presentation("Dez", Some("zsh")).is_none(),
+            "ordinary shells should keep quiet terminal presentation"
+        );
+        assert!(
+            terminal_foreground_agent_presentation("Dez", Some("node")).is_none(),
+            "generic runtimes must not be mislabeled as agents"
+        );
+        assert!(
+            terminal_foreground_agent_presentation("Zed", Some("codex")).is_none(),
+            "official Zed keeps its upstream terminal presentation"
+        );
+    }
 
     #[test]
     fn terminal_context_copy_keeps_workspace_and_change_counts_compact() {

@@ -3833,6 +3833,24 @@ source slice:
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed. Runtime acceptance remains open.
 
+Completed for the foreground Agent acknowledgement source slice:
+
+- made the semantic process-info transition invalidate the existing terminal
+  Surface as well as request a tab refresh;
+- reused the existing terminal tab icon and 32 px context strip to show the
+  detected provider and concise **Agent running** state, without creating a
+  panel, overlay, replacement terminal, or second Session;
+- collapsed the visible activity label below 360 px while preserving the
+  provider icon and complete accessible/details copy;
+- kept agent detection product-scoped, normalized-command based, and
+  independent of terminal output; ordinary shells remain visually quiet and
+  official Zed keeps upstream terminal chrome;
+- disclosed foreground-process observation in terminal details without
+  attributing Workspace Git changes to that process;
+- added a pure product-policy assertion and a static identity guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Runtime acceptance remains open.
+
 Completed for the normal-flow Sessions geometry source slice:
 
 - kept the client-decorated Dez Sessions root inside the exact flex reservation

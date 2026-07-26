@@ -3027,3 +3027,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   release, and focus-loss behavior are unchanged. A static guard protects both
   halves of the interaction. This is source-only; no build, test binary,
   alternate binary, or visual launch was performed.
+- 2026-07-26: Made a foreground agent visible without adding more UI. The
+  semantic process-info transition now invalidates the existing terminal
+  Surface and refreshes its tab. Recognized direct agent commands reuse the
+  terminal tab icon and compact context strip for a concise state such as
+  **Codex running**; terminal details identify this as observed-process
+  evidence. Shells and generic runtimes remain quiet, official Zed keeps its
+  upstream chrome, and no Agent panel, overlay, replacement terminal, or
+  duplicate Session is created. A pure product-policy assertion and static
+  guard protect the contract. This is source-only; no build, test binary,
+  alternate binary, or visual launch was performed.
