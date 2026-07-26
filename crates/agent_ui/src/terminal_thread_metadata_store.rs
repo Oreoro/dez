@@ -260,7 +260,7 @@ pub(crate) fn compose_terminal_thread_title(
     }
 }
 
-pub(crate) fn terminal_title_without_prefix(title: &str) -> &str {
+pub fn terminal_title_without_prefix(title: &str) -> &str {
     terminal_title_prefix(title)
         .map(|prefix| &title[prefix.len()..])
         .unwrap_or(title)

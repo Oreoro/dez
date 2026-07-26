@@ -85,10 +85,9 @@ use util::ResultExt as _;
 use util::path_list::PathList;
 use workspace::{
     CloseSidebar, CloseWindow, DesignSystemSettings, MultiWorkspace, MultiWorkspaceEvent,
-    NewCenterTerminal, NextProject, NextThread, Open, OpenFolder, OpenLog, OpenMode,
-    PreviousProject, PreviousThread, ProjectGroupKey, RevealFiles, SaveIntent,
-    Sidebar as WorkspaceSidebar, SidebarRenderState, SidebarSettings, SidebarSide, Toast,
-    ToggleSidebar, Workspace,
+    NewCenterTerminal, NextProject, NextThread, OpenFolder, OpenLog, OpenMode, PreviousProject,
+    PreviousThread, ProjectGroupKey, RevealFiles, SaveIntent, Sidebar as WorkspaceSidebar,
+    SidebarRenderState, SidebarSettings, SidebarSide, Toast, ToggleSidebar, Workspace,
     evidence::{
         WorkspaceEvidenceKind as AuthoritativeWorkspaceEvidenceKind, WorkspaceEvidenceLifecycle,
         WorkspaceEvidenceProvenance,
@@ -7408,7 +7407,7 @@ impl Sidebar {
                     folder_paths,
                     project_group_key,
                 } => self.open_workspace_and_activate_thread(
-                    thread.metadata,
+                    thread.metadata.clone(),
                     folder_paths.clone(),
                     project_group_key,
                     window,
@@ -7438,18 +7437,18 @@ impl Sidebar {
         };
 
         match entry {
-            ListEntry::Thread(thread) => match thread.workspace {
+            ListEntry::Thread(thread) => match &thread.workspace {
                 ThreadEntryWorkspace::Open(workspace) => {
-                    self.activate_thread(thread.metadata, &workspace, true, window, cx);
+                    self.activate_thread(thread.metadata.clone(), workspace, true, window, cx);
                     window.dispatch_action(RevealFiles.boxed_clone(), cx);
                 }
                 ThreadEntryWorkspace::Closed {
                     folder_paths,
                     project_group_key,
                 } => self.open_workspace_activate_thread_and_reveal_files(
-                    thread.metadata,
-                    folder_paths,
-                    &project_group_key,
+                    thread.metadata.clone(),
+                    folder_paths.clone(),
+                    project_group_key,
                     window,
                     cx,
                 ),
@@ -7493,10 +7492,10 @@ impl Sidebar {
 
         match entry {
             ListEntry::Thread(thread) => {
-                let ThreadEntryWorkspace::Open(workspace) = thread.workspace else {
+                let ThreadEntryWorkspace::Open(workspace) = &thread.workspace else {
                     return;
                 };
-                self.activate_thread(thread.metadata, &workspace, true, window, cx);
+                self.activate_thread(thread.metadata.clone(), workspace, true, window, cx);
                 window.dispatch_action(OpenAgentDiff.boxed_clone(), cx);
             }
             ListEntry::Terminal(terminal) => {
@@ -13819,26 +13818,31 @@ impl Sidebar {
         let focus_handle = self.focus_handle.clone();
         let sidebar = cx.weak_entity();
         let menu_open = self.agent_options_menu_handle.is_deployed();
-        let trigger = if is_dez {
-            IconButton::new("sessions-menu", IconName::Ellipsis)
-                .size(ButtonSize::Medium)
-                .icon_size(IconSize::Small)
-                .tab_index(0isize)
-                .aria_label("Sessions Menu")
-                .aria_expanded(menu_open)
-                .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-                .into_any_element()
-        } else {
-            Button::new("agent-sidebar-options-menu", visible_label)
-                .size(ButtonSize::Compact)
-                .label_size(LabelSize::Small)
-                .start_icon(Icon::new(IconName::Settings).size(IconSize::Small))
-                .tab_index(0isize)
-                .aria_label("Agent Tools and Settings")
-                .aria_expanded(menu_open)
-                .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-                .into_any_element()
-        };
+        let trigger = ButtonLike::new("agent-sidebar-options-menu-trigger")
+            .size(if is_dez {
+                ButtonSize::Medium
+            } else {
+                ButtonSize::Compact
+            })
+            .tab_index(0isize)
+            .aria_label(if is_dez {
+                "Sessions Menu"
+            } else {
+                "Agent Tools and Settings"
+            })
+            .aria_expanded(menu_open)
+            .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+            .child(if is_dez {
+                Icon::new(IconName::Ellipsis)
+                    .size(IconSize::Small)
+                    .into_any_element()
+            } else {
+                h_flex()
+                    .gap_1()
+                    .child(Icon::new(IconName::Settings).size(IconSize::Small))
+                    .child(Label::new(visible_label).size(LabelSize::Small))
+                    .into_any_element()
+            });
 
         PopoverMenu::new("agent-sidebar-options-menu")
             .trigger_with_tooltip(

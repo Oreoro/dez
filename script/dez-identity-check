@@ -844,7 +844,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'const COMPACT_MAX_WIDTH: Pixels = px\(280\.0\).*?const DETAILED_MIN_WIDTH: Pixels = px\(380\.0\).*?fn session_rail_agent_tools_utility_label.*?width >= DETAILED_MIN_WIDTH.*?"Agent Tools".*?fn session_rail_agent_history_utility_label.*?width >= DETAILED_MIN_WIDTH.*?"Agent History".*?fn session_rail_recent_workspaces_utility_label.*?width >= DETAILED_MIN_WIDTH.*?"Recent Workspaces"' \
     'the Sessions footer can regress from an icon-only compact hierarchy to competing labels'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn render_agent_options_menu.*?visible_label: &'"'"'static str.*?Button::new\([[:space:]]*"agent-sidebar-options-menu",[[:space:]]*visible_label.*?IconName::Settings.*?aria_label\("Agent Tools and Settings"\)' \
+    'fn render_agent_options_menu.*?visible_label: &'"'"'static str.*?ButtonLike::new\("agent-sidebar-options-menu-trigger"\).*?aria_label\(if is_dez.*?"Sessions Menu".*?"Agent Tools and Settings".*?IconName::Settings.*?Label::new\(visible_label\)' \
     'the compact Settings gear can regress to an unnamed Agent Tools destination'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'fn inherited_footer_uses_icons_and_detailed_footer_names_destinations.*?session_rail_agent_tools_utility_label\(COMPACT_MAX_WIDTH\).*?"".*?session_rail_agent_history_utility_label\(COMPACT_MAX_WIDTH\).*?"".*?session_rail_recent_workspaces_utility_label\(COMPACT_MAX_WIDTH\).*?"".*?session_rail_agent_tools_utility_label\(DETAILED_MIN_WIDTH\).*?"Agent Tools".*?session_rail_agent_history_utility_label\(DETAILED_MIN_WIDTH\).*?"Agent History".*?session_rail_recent_workspaces_utility_label\(DETAILED_MIN_WIDTH\).*?"Recent Workspaces"' \
@@ -862,7 +862,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\([[:space:]]*"open-recent-workspaces".*?\.size\(ButtonSize::Compact\)' \
     'the labeled recent-Workspace utility can regress to medium padding that overflows the compact rail'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'Button::new\([[:space:]]*"agent-sidebar-options-menu".*?\.size\(ButtonSize::Compact\)' \
+    'ButtonLike::new\("agent-sidebar-options-menu-trigger"\).*?\.size\(if is_dez \{.*?ButtonSize::Medium.*?\} else \{.*?ButtonSize::Compact' \
     'the labeled Agent Tools utility can regress to medium padding that overflows the compact rail'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let history_visible_label = session_rail_agent_history_utility_label\(rail_width\).*?Button::new\("history", history_visible_label\).*?\.size\(ButtonSize::Compact\)' \
@@ -1230,6 +1230,15 @@ require_multiline_pattern assets/keymaps/default-windows.json \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'ReturnToSelectedSession,.*?OpenSelectedSessionFiles,.*?ReviewSelectedSessionChanges,.*?fn selected_or_active_session.*?fn return_to_selected_session.*?fn open_selected_session_files.*?ThreadEntryWorkspace::Closed.*?open_workspace_activate_thread_and_reveal_files.*?open_workspace_activate_terminal_and_reveal_files.*?fn review_selected_session_changes.*?OpenAgentDiff.*?ReviewGitChanges' \
     'selected Session Rail rows can regress to creating duplicate or disconnected IDE context'
+require_pattern crates/agent_ui/src/terminal_thread_metadata_store.rs \
+    '^pub fn terminal_title_without_prefix\(title: &str\) -> &str \{$' \
+    'the shared terminal title normalizer can become inaccessible to the Session Rail'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn return_to_selected_session.*?thread\.metadata\.clone\(\).*?fn open_selected_session_files.*?ListEntry::Thread\(thread\) => match &thread\.workspace.*?thread\.metadata\.clone\(\).*?fn review_selected_session_changes.*?ThreadEntryWorkspace::Open\(workspace\) = &thread\.workspace.*?thread\.metadata\.clone\(\)' \
+    'Arc-backed Agent sessions can regress to moving metadata or Workspace state out of the Session Rail'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'let trigger = ButtonLike::new\("agent-sidebar-options-menu-trigger"\).*?aria_label\(if is_dez.*?"Sessions Menu".*?"Agent Tools and Settings".*?PopoverMenu::new\("agent-sidebar-options-menu"\).*?trigger_with_tooltip\([[:space:]]*trigger' \
+    'the responsive Sessions menu can regress to erasing the typed popover trigger'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn open_workspace_and_activate_thread_with_destination.*?this\.activate_thread\(metadata, &workspace, false, window, cx\);.*?if reveal_files \{.*?RevealFiles.*?fn open_workspace_and_activate_terminal_with_destination.*?this\.activate_terminal_in_workspace\(&workspace, metadata, false, window, cx\);.*?if reveal_files \{.*?RevealFiles' \
     'Files can regress to dispatching before a closed Session Workspace has been restored'
@@ -1501,7 +1510,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\([[:space:]]*"open-recent-workspaces".*?session_rail_recent_workspaces_utility_label\(rail_width\).*?IconName::FolderOpen.*?aria_label\("Open Recent Workspaces"\).*?Tooltip::for_action\("Open Recent Workspaces"' \
     'the Session Rail footer can regress to an ambiguous Open Workspace utility'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn render_agent_options_menu.*?let is_dez = paths::APP_NAME != "Zed".*?IconButton::new\("sessions-menu", IconName::Ellipsis\).*?aria_label\("Sessions Menu"\).*?header\("Sessions"\).*?action\("Agent History".*?Open Recent Workspaces….*?header\("Agent Context"\).*?if !is_dez.*?action\("Toggle Sidebar"' \
+    'fn render_agent_options_menu.*?let is_dez = paths::APP_NAME != "Zed".*?ButtonLike::new\("agent-sidebar-options-menu-trigger"\).*?aria_label\(if is_dez.*?"Sessions Menu".*?"Agent Tools and Settings".*?header\("Sessions"\).*?action\("Agent History".*?Open Recent Workspaces….*?header\("Agent Context"\).*?if !is_dez.*?action\("Toggle Sidebar"' \
     'Dez can regress from one named Sessions overflow to a persistent footer or duplicate Hide action'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_overview_uses_sessions_menu.*?app_name != "Zed".*?fn session_rail_uses_footer_utilities.*?app_name == "Zed".*?fn render_session_overview.*?session_overview_uses_sessions_menu\(paths::APP_NAME\).*?render_agent_options_menu\("", cx\).*?IconButton::new\("hide-sessions".*?on_action\(cx.listener\(\|this, _: &OpenRecent.*?session_rail_uses_footer_utilities\(paths::APP_NAME\).*?cx\.propagate\(\).*?session_rail_uses_footer_utilities\(paths::APP_NAME\).*?render_sidebar_bottom_bar' \
@@ -1519,7 +1528,7 @@ require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'fn dez_consolidates_session_utilities_into_one_overview_menu.*?!session_sticky_header_uses_shadow\("Dez"\).*?session_sticky_header_uses_shadow\("Zed"\)' \
     'the flat-Dez and inherited-Zed sticky-header split is no longer pinned'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'let popover_open = popover_handle\.is_deployed\(\).*?Button::new\([[:space:]]*"open-recent-workspaces".*?tab_index\(0isize\).*?aria_label\("Open Recent Workspaces"\).*?aria_expanded\(popover_open\).*?let menu_open = self\.agent_options_menu_handle\.is_deployed\(\).*?Button::new\([[:space:]]*"agent-sidebar-options-menu".*?tab_index\(0isize\).*?aria_label\("Agent Tools and Settings"\).*?aria_expanded\(menu_open\).*?selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\).*?Button::new\("history".*?tab_index\(0isize\).*?toggle_state\(is_archive\)' \
+    'let popover_open = popover_handle\.is_deployed\(\).*?Button::new\([[:space:]]*"open-recent-workspaces".*?tab_index\(0isize\).*?aria_label\("Open Recent Workspaces"\).*?aria_expanded\(popover_open\).*?let menu_open = self\.agent_options_menu_handle\.is_deployed\(\).*?ButtonLike::new\("agent-sidebar-options-menu-trigger"\).*?tab_index\(0isize\).*?aria_label\(if is_dez.*?"Sessions Menu".*?"Agent Tools and Settings".*?aria_expanded\(menu_open\).*?selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\).*?Button::new\("history".*?tab_index\(0isize\).*?toggle_state\(is_archive\)' \
     'Session Rail utilities can regress to pointer-only controls or popovers that conceal their expanded state'
 require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
     'fn session_switcher_title.*?app_name == "Zed".*?"Thread Switcher".*?"Switch Sessions".*?fn session_switcher_count.*?"1 recent session".*?"\{count\} recent sessions".*?fn session_switcher_entry_type_label.*?"Thread".*?"Terminal".*?"Agent Session".*?"Terminal Session".*?fn session_switcher_help.*?"Continue to cycle · release to open".*?"Repeat to cycle · Enter to open".*?viewport_size\(\)\.width \* 0\.9.*?Role::Dialog.*?aria_label\(title\).*?aria_description\(accessibility_description\).*?"session-switcher-header".*?actor_label\(entry\.session_type_label\(paths::APP_NAME\)\).*?role\(gpui::Role::Status\).*?aria_label\(help\).*?KeyBinding::for_action_in.*?menu::Confirm.*?KeyBinding::for_action_in.*?menu::Cancel' \
