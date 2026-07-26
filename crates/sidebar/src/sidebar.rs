@@ -671,8 +671,16 @@ fn session_overview_status_icon(
     }
 }
 
-fn session_scope_controls_visible(session_count: usize) -> bool {
-    session_count > 0
+fn session_scope_controls_visible(
+    app_name: &str,
+    session_count: usize,
+    attention_only: bool,
+) -> bool {
+    if app_name == "Zed" {
+        session_count > 0
+    } else {
+        session_count > 1 || attention_only
+    }
 }
 
 fn session_scope_labels(
@@ -706,8 +714,22 @@ fn attention_sessions_accessibility_label(attention_count: usize) -> String {
     format!("Attention sessions, {attention_count} {attention_verb} attention")
 }
 
-fn session_search_visible(session_count: usize, has_query: bool) -> bool {
-    session_count > 0 || has_query
+fn session_search_visible(
+    app_name: &str,
+    session_count: usize,
+    has_query: bool,
+    is_focused: bool,
+    is_open: bool,
+) -> bool {
+    if app_name == "Zed" {
+        session_count > 0 || has_query
+    } else {
+        has_query || is_focused || is_open
+    }
+}
+
+fn session_search_control_visible(app_name: &str, session_count: usize) -> bool {
+    app_name != "Zed" && session_count > 1
 }
 
 fn session_overview_visible(_show_start_state: bool) -> bool {
@@ -3306,6 +3328,7 @@ pub struct Sidebar {
     /// A transient projection over the session list. Authoritative session and
     /// agent state remains in the existing stores and owning surfaces.
     attention_only: bool,
+    session_search_open: bool,
     /// The index of the list item that currently has the keyboard focus
     ///
     /// Note: This is NOT the same as the active item.
@@ -3544,6 +3567,7 @@ impl Sidebar {
             list_state: ListState::new(0, gpui::ListAlignment::Top, px(1000.)),
             contents: SidebarContents::default(),
             attention_only: false,
+            session_search_open: false,
             selection: None,
             active_entry: None,
             hovered_thread_index: None,
@@ -6802,19 +6826,16 @@ impl Sidebar {
             if self.selection.is_none() {
                 self.select_first_entry();
             }
-            if self.selection.is_some() {
-                self.focus_handle.focus(window, cx);
-                cx.notify();
-            }
+            self.session_search_open = false;
+            self.focus_handle.focus(window, cx);
+            cx.notify();
             return;
         }
 
         if self.reset_filter_editor_text(window, cx) {
             self.update_entries(cx);
         } else {
-            self.selection = None;
-            self.filter_editor.focus_handle(cx).focus(window, cx);
-            cx.notify();
+            self.focus_sidebar_filter(&FocusSidebarFilter, window, cx);
         }
     }
 
@@ -6830,8 +6851,14 @@ impl Sidebar {
                 view.clear_selection();
                 view.focus_filter_editor(window, cx);
             });
-        } else {
+        } else if paths::APP_NAME == "Zed" {
             self.filter_editor.focus_handle(cx).focus(window, cx);
+        } else {
+            self.session_search_open = true;
+            let filter_editor = self.filter_editor.clone();
+            cx.defer_in(window, move |_this, window, cx| {
+                filter_editor.focus_handle(cx).focus(window, cx);
+            });
         }
 
         cx.notify();
@@ -12958,9 +12985,12 @@ impl Sidebar {
             )
     }
 
-    fn render_session_overview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_session_overview(&self, window: &Window, cx: &mut Context<Self>) -> impl IntoElement {
         let has_attention = self.contents.has_attention;
         let is_searching = self.has_filter_query(cx);
+        let search_is_active = is_searching
+            || self.session_search_open
+            || self.filter_editor.focus_handle(cx).is_focused(window);
         let is_restoring = self.workspace_restore_is_pending(cx);
         let narrow_scope_controls = self.rendered_width < MIN_WIDTH;
         let status_label = session_overview_status_label(
@@ -13060,10 +13090,39 @@ impl Sidebar {
                                     }),
                             )
                         },
+                    )
+                    .when(
+                        session_search_control_visible(
+                            paths::APP_NAME,
+                            self.contents.session_count,
+                        ) && !search_is_active,
+                        |this| {
+                            this.child(
+                                IconButton::new("open-session-search", IconName::MagnifyingGlass)
+                                    .size(ButtonSize::Medium)
+                                    .icon_size(IconSize::Small)
+                                    .tab_index(0isize)
+                                    .aria_label("Search Sessions")
+                                    .tooltip(|_, cx| {
+                                        Tooltip::for_action(
+                                            "Search Sessions",
+                                            &FocusSidebarFilter,
+                                            cx,
+                                        )
+                                    })
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.focus_sidebar_filter(&FocusSidebarFilter, window, cx);
+                                    })),
+                            )
+                        },
                     ),
             )
             .when(
-                session_scope_controls_visible(self.contents.session_count),
+                session_scope_controls_visible(
+                    paths::APP_NAME,
+                    self.contents.session_count,
+                    self.attention_only,
+                ),
                 |this| {
                     this.child(
                         h_flex()
@@ -13149,6 +13208,11 @@ impl Sidebar {
 
     fn render_session_search(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let has_query = self.has_filter_query(cx);
+        let dismiss_label = if paths::APP_NAME == "Zed" {
+            "Clear Session Search"
+        } else {
+            "Close Session Search"
+        };
 
         h_flex()
             .id("session-search")
@@ -13166,17 +13230,23 @@ impl Sidebar {
                     .color(Color::Muted),
             )
             .child(self.render_filter_input(cx))
-            .when(has_query, |this| {
+            .when(has_query || paths::APP_NAME != "Zed", |this| {
                 this.child(
                     IconButton::new("clear-session-search", IconName::Close)
                         .size(ButtonSize::Medium)
                         .icon_size(IconSize::Small)
                         .tab_index(0isize)
-                        .aria_label("Clear Session Search")
-                        .tooltip(Tooltip::text("Clear Session Search"))
+                        .aria_label(dismiss_label)
+                        .tooltip(Tooltip::text(dismiss_label))
                         .on_click(cx.listener(|this, _, window, cx| {
                             this.reset_filter_editor_text(window, cx);
                             this.update_entries(cx);
+                            if paths::APP_NAME != "Zed" {
+                                this.selection = None;
+                                this.session_search_open = false;
+                                this.focus_handle.focus(window, cx);
+                                cx.notify();
+                            }
                         })),
                 )
             })
@@ -14336,7 +14406,14 @@ impl Render for Sidebar {
 
         let no_search_results = self.contents.entries.is_empty();
         let has_query = self.has_filter_query(cx);
-        let show_session_search = session_search_visible(self.contents.session_count, has_query);
+        let search_is_focused = self.filter_editor.focus_handle(cx).is_focused(window);
+        let show_session_search = session_search_visible(
+            paths::APP_NAME,
+            self.contents.session_count,
+            has_query,
+            search_is_focused,
+            self.session_search_open,
+        );
         let show_start_state = session_start_state_visible(
             self.contents.has_open_projects,
             self.contents.session_count,
@@ -14447,7 +14524,7 @@ impl Render for Sidebar {
             .map(|this| match &self.view {
                 SidebarView::ThreadList => this
                     .when(session_overview_visible(show_start_state), |this| {
-                        this.child(self.render_session_overview(cx))
+                        this.child(self.render_session_overview(window, cx))
                     })
                     .map(|this| {
                         if show_start_state {

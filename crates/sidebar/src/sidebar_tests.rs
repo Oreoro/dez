@@ -188,8 +188,9 @@ fn footer_reserves_compact_text_for_ambiguous_destinations() {
 
 #[test]
 fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
-    assert!(!session_scope_controls_visible(0));
-    assert!(!session_search_visible(0, false));
+    assert!(!session_scope_controls_visible("Dez", 0, false));
+    assert!(!session_search_visible("Dez", 0, false, false, false));
+    assert!(!session_search_control_visible("Dez", 0));
     assert!(
         session_overview_visible(true),
         "the rail keeps its identity and zero-session status visible above onboarding"
@@ -199,8 +200,27 @@ fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
         "an empty Workspace group owns its scoped creation action"
     );
 
-    assert!(session_scope_controls_visible(1));
-    assert!(session_search_visible(1, false));
+    assert!(
+        !session_scope_controls_visible("Dez", 1, false),
+        "one unfiltered Session does not need two scope buttons"
+    );
+    assert!(session_scope_controls_visible("Dez", 2, false));
+    assert!(
+        session_scope_controls_visible("Dez", 1, true),
+        "an active Attention projection must retain its exit control"
+    );
+    assert!(session_scope_controls_visible("Zed", 1, false));
+    assert!(
+        !session_search_visible("Dez", 1, false, false, false),
+        "an idle one-session rail should not spend a permanent row on search"
+    );
+    assert!(
+        !session_search_control_visible("Dez", 1),
+        "one Session does not need a visible search affordance"
+    );
+    assert!(session_search_control_visible("Dez", 2));
+    assert!(session_search_visible("Dez", 1, false, true, false));
+    assert!(session_search_visible("Dez", 1, false, false, true));
     assert!(session_overview_visible(false));
     assert!(
         !session_overview_create_action_visible("Dez", 1),
@@ -211,9 +231,11 @@ fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
         "official Zed retains its compatibility overview action"
     );
     assert!(
-        session_search_visible(0, true),
+        session_search_visible("Dez", 0, true, false, false),
         "an existing query must remain visible so it can be cleared"
     );
+    assert!(session_search_visible("Zed", 1, false, false, false));
+    assert!(!session_search_control_visible("Zed", 1));
 }
 
 #[test]

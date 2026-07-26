@@ -1112,3 +1112,14 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   Area `Ctrl-Tab` remains conventional Surface switching, and command search
   retains **Sessions: Switch Sessions**. Official Zed keeps its inherited modal
   Thread Switcher.
+- **2026-07-26: Session search is a disclosed tool, not permanent
+  furniture.** A Dez rail keeps its rows directly under the overview instead
+  of spending full lines on idle controls. One unfiltered Session omits both
+  search and the redundant **All 1 / Attention 0** scope; an active Attention
+  projection keeps its scope controls so it always has an exit. With multiple
+  Sessions, one named search control appears; the existing keyboard action
+  remains available at every count. Either path reveals the inline field and
+  focuses it. The overview trigger yields while search is active; closing
+  clears the query, returns focus to Sessions, and removes the field. A
+  non-empty query stays visible until it can be cleared. Official Zed retains
+  its inherited scope and populated-rail search presentation.

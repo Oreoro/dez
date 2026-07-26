@@ -3943,3 +3943,20 @@ Completed for the direct Session navigation source slice:
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed. Shortcut and focus proof remains open for the
   next artifact.
+
+Completed for the on-demand Sessions filtering source slice:
+
+- removed the permanent filter row and the redundant scope row from a
+  one-Session, unfiltered Dez rail;
+- retained scope controls for multiple Sessions and an active Attention
+  projection so the filtered state always has an exit;
+- added one compact, named overview control when multiple Sessions make
+  filtering useful and retained the keyboard-reachable filter at every count;
+- revealed the inline field only while focused or carrying a query and removed
+  the duplicate overview trigger while active;
+- made close clear the query, return focus to Sessions, and collapse the field;
+- preserved official Zed's populated-rail search behavior;
+- added pure visibility assertions and a static interaction guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Pointer, focus, and search-result proof remains
+  open for the next artifact.

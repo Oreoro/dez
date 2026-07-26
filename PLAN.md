@@ -622,8 +622,14 @@ with new labels.
       File and New File. New Window and startup fallbacks preserve this surface
       in Dez instead of covering it with an unsolicited blank editor. The full
       Session Rail zero state now says No sessions yet, exposes New Terminal,
-      and suppresses the inert All 0 / Attention 0 scopes and search field until
-      a real session exists. Commit `4e6292ff0a` goes further: the full **Start
+      and suppresses the inert All 0 / Attention 0 scopes. Session search is
+      now on demand: the overview exposes one compact, named search control
+      when multiple Sessions make filtering useful, the shortcut can reveal
+      the same inline field at any count, and closing it returns focus to
+      Sessions. One unfiltered Session also omits the redundant All/Attention
+      scope row; an active Attention projection retains those controls so the
+      user can exit it. A non-empty query remains visible until it can be
+      cleared. Commit `4e6292ff0a` goes further: the full **Start
       a session** state owns the only creation action instead of stacking below
       a duplicate Sessions overview, and its New File and Open alternatives
       have distinct icons. Commit `4fc53b860f` also removes the global overview
@@ -3086,3 +3092,17 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   inherited modal Thread Switcher. A pure product-policy assertion and static
   guard protect the split. This is source-only; no build, test binary,
   alternate binary, or visual launch was performed.
+- 2026-07-26: Removed idle filtering furniture from the default Sessions
+  hierarchy. One unfiltered Session now flows directly from the overview to its
+  Workspace and row instead of rendering redundant **All 1 / Attention 0**
+  scope controls or an empty search field. An active Attention projection keeps
+  the scope controls so it always has an exit. When multiple Sessions make
+  filtering useful, Dez exposes one compact **Search Sessions** control in the
+  overview; the existing filter action remains available at every count. Either
+  path reveals the inline search and moves focus into it. While search is
+  active the overview control yields, so the action is not duplicated. Closing
+  clears the query, returns focus to Sessions, and removes the row; a non-empty
+  query remains visible until recovery is possible. Official Zed retains its
+  inherited scope and populated-rail search presentation. Pure visibility
+  assertions and the identity gate protect this behavior. This is source-only;
+  no build, test binary, alternate binary, or visual launch was performed.
