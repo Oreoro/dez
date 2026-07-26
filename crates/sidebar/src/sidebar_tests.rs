@@ -101,6 +101,18 @@ fn session_rail_keeps_the_main_work_area_primary_on_narrow_windows() {
 }
 
 #[test]
+fn narrow_session_scope_uses_short_unambiguous_labels() {
+    assert_eq!(
+        session_scope_labels(px(200.0), 12, 3),
+        ("All 12".to_string(), "Needs 3".to_string())
+    );
+    assert_eq!(
+        session_scope_labels(MIN_WIDTH, 12, 3),
+        ("All 12".to_string(), "Attention 3".to_string())
+    );
+}
+
+#[test]
 fn terminal_sessions_refresh_on_state_changes_not_output_frames() {
     assert!(terminal_event_refreshes_session(
         &TerminalEvent::ProcessInfoChanged

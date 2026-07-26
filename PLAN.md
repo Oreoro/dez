@@ -2991,3 +2991,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   default. This is source-only; no build, test binary, alternate binary, or
   visual launch was performed. Runtime proof of the process transitions,
   identity stability, output responsiveness, and width matrix remains open.
+- 2026-07-26: Completed the narrow Sessions and optional-drawer allocation
+  pass. At the 200 px rail floor, the two scope controls use **All** and
+  **Needs** with their counts, compact targets, full accessibility names, and
+  a tooltip for truncated status; **Attention** returns at 240 px. Workspace
+  Tools or Agent now targets 240 px when space permits, remains capped at
+  360 px, and may grow only to 40% on smaller workspaces so the Main Work Area
+  retains at least 60%. At 2000/1000/560/400 px of available workspace, the
+  initial drawer resolves to 360/240/224/160 px. This is source-only; no build,
+  test binary, alternate binary, or visual launch was performed.

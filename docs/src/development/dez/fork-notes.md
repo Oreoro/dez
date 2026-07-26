@@ -1053,3 +1053,11 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   Work Area visually and interactively primary while preserving a usable
   supervision surface. A stored wide preference may not make the rail paint
   beyond the space the workspace reserved.
+- **2026-07-26: Narrow labels and drawers optimize for decisions, not desktop
+  proportions.** At the 200 px Sessions floor, the scope vocabulary contracts
+  from **Attention** to **Needs** without changing its accessible name or
+  action. At 240 px the complete label returns. The optional Workspace Tools
+  or Agent drawer targets a usable 240 px where available, caps at 360 px, and
+  may consume at most 40% on smaller workspaces. The Main Work Area always
+  retains at least 60%; a drawer may become narrower only when that invariant
+  requires it.

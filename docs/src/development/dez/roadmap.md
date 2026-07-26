@@ -3821,3 +3821,20 @@ source slice:
   subscriptions, output-frame rejection, and the 600/800/1400 px width matrix;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed. Runtime acceptance remains open.
+
+Completed for the narrow interaction-allocation source slice:
+
+- shortened the 200 px Sessions attention scope to **Needs** while retaining
+  counts, full accessibility names, tooltips, keyboard behavior, and the
+  complete **Attention** label from 240 px upward;
+- made both narrow scope targets compact and gave truncated overview status a
+  direct tooltip;
+- replaced the optional drawer's fixed 22% initial budget with a bounded
+  responsive target: 240 px when possible, 360 px maximum, and 40% maximum on
+  smaller workspaces;
+- preserved at least 60% of every horizontal allocation for the Main Work Area
+  and retained one-drawer exclusivity;
+- added pure source matrices for 200/240 px scope behavior and
+  2000/1000/560/400 px drawer allocation plus static guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.

@@ -618,6 +618,24 @@ fn session_scope_controls_visible(session_count: usize) -> bool {
     session_count > 0
 }
 
+fn session_scope_labels(
+    rail_width: Pixels,
+    session_count: usize,
+    attention_count: usize,
+) -> (String, String) {
+    if rail_width < MIN_WIDTH {
+        (
+            format!("All {session_count}"),
+            format!("Needs {attention_count}"),
+        )
+    } else {
+        (
+            format!("All {session_count}"),
+            format!("Attention {attention_count}"),
+        )
+    }
+}
+
 fn all_sessions_accessibility_label(session_count: usize) -> String {
     format!("All sessions, {session_count} total")
 }
@@ -12701,6 +12719,7 @@ impl Sidebar {
         let has_attention = self.contents.has_attention;
         let is_searching = self.has_filter_query(cx);
         let is_restoring = self.workspace_restore_is_pending(cx);
+        let narrow_scope_controls = self.rendered_width < MIN_WIDTH;
         let status_label = session_overview_status_label(
             self.contents.session_count,
             self.contents.attention_count,
@@ -12708,8 +12727,11 @@ impl Sidebar {
             is_searching,
             is_restoring,
         );
-        let all_scope_label = format!("All {}", self.contents.session_count);
-        let attention_scope_label = format!("Attention {}", self.contents.attention_count);
+        let (all_scope_label, attention_scope_label) = session_scope_labels(
+            self.rendered_width,
+            self.contents.session_count,
+            self.contents.attention_count,
+        );
         let all_scope_aria_label = all_sessions_accessibility_label(self.contents.session_count);
         let attention_scope_aria_label =
             attention_sessions_accessibility_label(self.contents.attention_count);
@@ -12751,6 +12773,7 @@ impl Sidebar {
                                     .gap_1()
                                     .role(gpui::Role::Status)
                                     .aria_label(status_label.clone())
+                                    .tooltip(Tooltip::text(status_label.clone()))
                                     .child(
                                         Icon::new(status_icon)
                                             .size(IconSize::XSmall)
@@ -12810,7 +12833,11 @@ impl Sidebar {
                                 div().min_w_0().flex_1().child(
                                     Button::new("all-session-scope", all_scope_label)
                                         .full_width()
-                                        .size(ButtonSize::Medium)
+                                        .size(if narrow_scope_controls {
+                                            ButtonSize::Compact
+                                        } else {
+                                            ButtonSize::Medium
+                                        })
                                         .style(ButtonStyle::Subtle)
                                         .toggle_state(!self.attention_only)
                                         .selected_style(ButtonStyle::Tinted(TintColor::Accent))
@@ -12835,7 +12862,11 @@ impl Sidebar {
                                 div().min_w_0().flex_1().child(
                                     Button::new("attention-session-scope", attention_scope_label)
                                         .full_width()
-                                        .size(ButtonSize::Medium)
+                                        .size(if narrow_scope_controls {
+                                            ButtonSize::Compact
+                                        } else {
+                                            ButtonSize::Medium
+                                        })
                                         .style(ButtonStyle::Subtle)
                                         .toggle_state(self.attention_only)
                                         .selected_style(ButtonStyle::Tinted(TintColor::Warning))

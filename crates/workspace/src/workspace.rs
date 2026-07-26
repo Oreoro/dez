@@ -211,6 +211,7 @@ fn canvas_layout_modal_row_background(cx: &App) -> Hsla {
 }
 
 const AUXILIARY_PANE_MAX_INITIAL_WIDTH: f32 = 360.;
+const AUXILIARY_PANE_MIN_USABLE_WIDTH: f32 = 240.;
 const AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0.22;
 const MAIN_WORK_AREA_MINIMUM_RATIO: f32 = 0.60;
 const WORKSPACE_NOTIFICATION_SHELF_MAX_WIDTH: f32 = 400.;
@@ -221,8 +222,19 @@ const WORKSPACE_NOTIFICATION_SHELF_EDGE_INSET: f32 = 12.;
 
 fn auxiliary_pane_initial_width(available_width: Pixels) -> Pixels {
     px(
-        (available_width.as_f32() * AUXILIARY_PANE_MAX_INITIAL_RATIO)
+        (available_width.as_f32() * auxiliary_pane_max_ratio(available_width))
             .min(AUXILIARY_PANE_MAX_INITIAL_WIDTH),
+    )
+}
+
+fn auxiliary_pane_max_ratio(available_width: Pixels) -> f32 {
+    if available_width <= Pixels::ZERO {
+        return AUXILIARY_PANE_MAX_INITIAL_RATIO;
+    }
+
+    (AUXILIARY_PANE_MIN_USABLE_WIDTH / available_width.as_f32()).clamp(
+        AUXILIARY_PANE_MAX_INITIAL_RATIO,
+        1.0 - MAIN_WORK_AREA_MINIMUM_RATIO,
     )
 }
 
@@ -8735,7 +8747,7 @@ impl Workspace {
             return false;
         }
         self.center.constrain_auxiliary_horizontal_flexes(
-            AUXILIARY_PANE_MAX_INITIAL_RATIO,
+            auxiliary_pane_max_ratio(self.bounds.size.width),
             MAIN_WORK_AREA_MINIMUM_RATIO,
             cx,
         )
@@ -16439,8 +16451,15 @@ mod tests {
 
     #[test]
     fn auxiliary_drawer_starts_compact_and_preserves_the_main_work_area() {
-        assert_eq!(auxiliary_pane_initial_width(px(1000.)), px(220.));
         assert_eq!(auxiliary_pane_initial_width(px(2000.)), px(360.));
+        assert_eq!(auxiliary_pane_initial_width(px(1000.)), px(240.));
+        assert_eq!(auxiliary_pane_initial_width(px(560.)), px(224.));
+        assert_eq!(auxiliary_pane_initial_width(px(400.)), px(160.));
+
+        assert_eq!(auxiliary_pane_max_ratio(px(2000.)), 0.22);
+        assert_eq!(auxiliary_pane_max_ratio(px(1000.)), 0.24);
+        assert_eq!(auxiliary_pane_max_ratio(px(560.)), 0.4);
+        assert_eq!(auxiliary_pane_max_ratio(px(400.)), 0.4);
 
         let after_drawer = px(1000.) - auxiliary_pane_initial_width(px(1000.));
         assert!(
