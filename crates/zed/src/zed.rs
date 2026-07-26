@@ -358,6 +358,23 @@ fn bind_on_window_closed(cx: &mut App) -> Option<gpui::Subscription> {
     }
 }
 
+fn product_window_min_size(app_name: &str) -> Size<gpui::Pixels> {
+    if app_name == "Zed" {
+        Size {
+            width: px(360.0),
+            height: px(240.0),
+        }
+    } else {
+        // Sessions has a 200 px readable floor. A 600 px shell leaves the
+        // Main Work Area at least 400 px before an optional drawer is opened,
+        // matching the narrowest supported Dez responsive-layout checkpoint.
+        Size {
+            width: px(600.0),
+            height: px(400.0),
+        }
+    }
+}
+
 pub fn build_window_options(display_uuid: Option<Uuid>, cx: &mut App) -> WindowOptions {
     let display = display_uuid.and_then(|uuid| {
         cx.displays()
@@ -414,10 +431,7 @@ pub fn build_window_options(display_uuid: Option<Uuid>, cx: &mut App) -> WindowO
         #[cfg(any(target_os = "linux", target_os = "freebsd"))]
         icon: APP_ICON.as_ref().cloned(),
         window_decorations: Some(window_decorations),
-        window_min_size: Some(gpui::Size {
-            width: px(360.0),
-            height: px(240.0),
-        }),
+        window_min_size: Some(product_window_min_size(APP_NAME)),
         tabbing_identifier: if use_system_window_tabs {
             Some(String::from("zed"))
         } else {
@@ -2906,6 +2920,24 @@ mod tests {
         item::{Item, ItemHandle},
         open_new, open_paths, pane,
     };
+
+    #[test]
+    fn dez_window_floor_preserves_a_usable_main_work_area() {
+        assert_eq!(
+            product_window_min_size("Dez"),
+            Size {
+                width: px(600.0),
+                height: px(400.0),
+            }
+        );
+        assert_eq!(
+            product_window_min_size("Zed"),
+            Size {
+                width: px(360.0),
+                height: px(240.0),
+            }
+        );
+    }
 
     #[test]
     fn dez_empty_workspace_preserves_the_actionable_launch_surface() {

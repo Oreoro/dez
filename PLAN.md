@@ -3046,3 +3046,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   activity text yields while the tab icon and full accessible/details state
   remain. This is source-only; no build, test binary, alternate binary, or
   visual launch was performed.
+- 2026-07-26: Aligned the native Dez window floor with its actual responsive
+  layout contract. Sessions cannot render readably below 200 px, so the
+  inherited 360 px window minimum could leave only 160 px for the Main Work
+  Area. Dez now uses a 600 × 400 px minimum, preserving 400 px for primary work
+  at the narrow checkpoint before an optional drawer; official Zed retains
+  360 × 240 px. A pure product assertion and static identity guard protect the
+  split. This is source-only; no build, test binary, alternate binary, or
+  visual launch was performed.

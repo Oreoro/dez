@@ -531,6 +531,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'fn session_rail_keeps_the_main_work_area_primary_on_narrow_windows.*?px\(800\.0\).*?px\(240\.0\).*?px\(600\.0\).*?RESPONSIVE_MIN_WIDTH.*?px\(1400\.0\).*?COMPACT_MAX_WIDTH' \
     'the responsive Sessions width matrix is no longer protected'
+require_multiline_pattern crates/zed/src/zed.rs \
+    'fn product_window_min_size\(app_name: &str\).*?app_name == "Zed".*?width: px\(360\.0\).*?height: px\(240\.0\).*?width: px\(600\.0\).*?height: px\(400\.0\).*?window_min_size: Some\(product_window_min_size\(APP_NAME\)\).*?fn dez_window_floor_preserves_a_usable_main_work_area.*?product_window_min_size\("Dez"\).*?width: px\(600\.0\).*?height: px\(400\.0\).*?product_window_min_size\("Zed"\).*?width: px\(360\.0\).*?height: px\(240\.0\)' \
+    'Dez can regress to accepting a native window narrower than the documented Sessions and Main Work Area layout floors'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_rail_uses_absolute_client_geometry\(app_name: &str\).*?app_name == "Zed".*?Decorations::Client \{ \.\. \}.*?!session_rail_uses_absolute_client_geometry\(APP_NAME\).*?el\.h_full\(\)\.w\(rail_width\).*?Decorations::Client \{ tiling, \.\. \} => el.*?\.absolute\(\)' \
     'the Dez Sessions root can regress to a second absolute client-decoration surface'

@@ -3883,3 +3883,15 @@ Completed for the narrow interaction-allocation source slice:
   2000/1000/560/400 px drawer allocation plus static guards;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the viable native-window floor source slice:
+
+- derived the narrow shell boundary from the existing 200 px Sessions floor
+  and 400 px Main Work Area checkpoint instead of allowing the inherited
+  360 px window to produce a 160 px primary surface;
+- set Dez's native minimum to 600 × 400 px while preserving official Zed's
+  360 × 240 px behavior;
+- added a pure product-policy assertion and static identity guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Native resize enforcement remains runtime
+  acceptance work for the next artifact.

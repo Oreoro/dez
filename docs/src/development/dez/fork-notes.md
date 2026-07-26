@@ -1068,14 +1068,17 @@ are future options only if they strengthen the terminal-to-IDE review loop.
 - **2026-07-26: Sessions is a responsive sibling, never an overlay.** The
   workspace reservation and rendered rail resolve one width from the current
   viewport. Compact mode is 280 px on wide windows, 240 px at an 800 px
-  viewport, and no less than 200 px on very narrow windows. This keeps the Main
-  Work Area visually and interactively primary while preserving a usable
-  supervision surface. A stored wide preference may not make the rail paint
-  beyond the space the workspace reserved. Dez's client-decorated rail is also
-  a normal-flow child of that reservation, not a second absolute surface. Its
+  viewport, and no less than 200 px on the narrow supported window. Dez's
+  native window floor is 600 × 400 px, leaving at least 400 px for the Main
+  Work Area before an optional drawer; accepting the inherited 360 px width
+  would leave an unusable 160 px work surface. This keeps the Main Work Area
+  visually and interactively primary while preserving a usable supervision
+  surface. A stored wide preference may not make the rail paint beyond the
+  space the workspace reserved. Dez's client-decorated rail is also a
+  normal-flow child of that reservation, not a second absolute surface. Its
   header owns its divider directly instead of painting a full-size decorative
-  child across the control row. Official Zed retains its inherited
-  client-decoration geometry.
+  child across the control row. Official Zed retains its inherited geometry
+  and 360 × 240 px window floor.
 - **2026-07-26: Narrow labels and drawers optimize for decisions, not desktop
   proportions.** At the 200 px Sessions floor, the scope vocabulary contracts
   from **Attention** to **Needs** without changing its accessible name or
