@@ -1350,3 +1350,10 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   keyboard-reachable **Hide Agent** control. Workspace Tools keeps its tab bar
   because Files, Git, Outline, and Debug are real modes of that drawer.
   Official Zed retains its inherited Agent-pane tab bar.
+- **2026-07-26: Terminal context is a subtoolbar, not a second tab bar.** The
+  pane tab bar owns Terminal navigation. The context row beneath it uses the
+  quieter toolbar material, one bottom divider, and density-aware height,
+  spacing, and horizontal padding. Its status, Workspace, review, and details
+  controls still collapse progressively at narrow widths without losing their
+  accessible names or actions. Official Zed retains its upstream terminal
+  presentation.

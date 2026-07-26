@@ -14,10 +14,10 @@ use futures::{channel::oneshot, future::join_all};
 use git_ui::git_panel::ReviewChanges as ReviewGitChanges;
 use gpui::{
     Action, Anchor, AnyElement, App, AsyncApp, AsyncWindowContext, ClipboardEntry, DismissEvent,
-    Entity, EventEmitter, ExternalPaths, FocusHandle, Focusable, Font, KeyContext, KeyDownEvent,
-    Keystroke, MouseButton, MouseDownEvent, Pixels, Point as GpuiPoint, PromptLevel, Render,
-    ScrollWheelEvent, Styled, Subscription, Task, TaskExt, WeakEntity, actions, anchored, deferred,
-    div,
+    Entity, EventEmitter, ExternalPaths, FocusHandle, Focusable, Font, Hsla, KeyContext,
+    KeyDownEvent, Keystroke, MouseButton, MouseDownEvent, Pixels, Point as GpuiPoint, PromptLevel,
+    Render, ScrollWheelEvent, Styled, Subscription, Task, TaskExt, WeakEntity, actions, anchored,
+    deferred, div,
 };
 use menu;
 use persistence::{StoredTerminalSessionRef, TerminalDb};
@@ -25,7 +25,8 @@ use project::{Project, ProjectEntryId, search::SearchQuery};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use settings::{
-    SeedQuerySetting, Settings, SettingsStore, TerminalBell, TerminalBlink, WorkingDirectory,
+    CanvasDensity, SeedQuerySetting, Settings, SettingsStore, TerminalBell, TerminalBlink,
+    WorkingDirectory,
 };
 use std::{
     any::Any,
@@ -61,9 +62,9 @@ use ui::{
 };
 use util::ResultExt;
 use workspace::{
-    CloseActiveItem, DraggedSelection, DraggedTab, NewCenterTerminal, NewTerminal,
-    OpenFolder as OpenWorkspace, OpenTerminal, Pane, RevealFiles, ToolbarItemLocation, Workspace,
-    WorkspaceId, delete_unloaded_items,
+    CloseActiveItem, DesignSystemSettings, DraggedSelection, DraggedTab, NewCenterTerminal,
+    NewTerminal, OpenFolder as OpenWorkspace, OpenTerminal, Pane, RevealFiles, ToolbarItemLocation,
+    Workspace, WorkspaceId, delete_unloaded_items,
     item::{
         HighlightedText, Item, ItemEvent, SerializableItem, TabContentParams, TabTooltipContent,
     },
@@ -167,6 +168,50 @@ fn terminal_context_activity_label(
 
 fn terminal_context_activity_label_visible(width: Pixels) -> bool {
     width >= TERMINAL_CONTEXT_ACTIVITY_LABEL_MIN_WIDTH
+}
+
+fn terminal_context_strip_height(density: CanvasDensity) -> Pixels {
+    match density {
+        CanvasDensity::Compact => px(28.),
+        CanvasDensity::Balanced => px(30.),
+        CanvasDensity::Spacious => px(32.),
+    }
+}
+
+fn terminal_context_strip_gap(density: CanvasDensity) -> Pixels {
+    match density {
+        CanvasDensity::Compact => px(3.),
+        CanvasDensity::Balanced => px(4.),
+        CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn terminal_context_strip_padding_x(density: CanvasDensity) -> Pixels {
+    match density {
+        CanvasDensity::Compact => px(6.),
+        CanvasDensity::Balanced => px(8.),
+        CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn terminal_context_strip_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.toolbar_background.opacity(0.88),
+        settings::CanvasContrast::Standard => colors.toolbar_background,
+        settings::CanvasContrast::High => colors
+            .toolbar_background
+            .blend(colors.border_focused.opacity(0.08)),
+    }
+}
+
+fn terminal_context_strip_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border_variant.opacity(0.42),
+        settings::CanvasContrast::Standard => colors.border_variant,
+        settings::CanvasContrast::High => colors.border_focused,
+    }
 }
 
 fn terminal_tab_status(
@@ -2350,6 +2395,7 @@ impl TerminalView {
             return None;
         }
 
+        let density = DesignSystemSettings::get_global(cx).density;
         let terminal = self.terminal.read(cx);
         let terminal_entity_id = self.terminal.entity_id();
         let context_width = terminal.last_content().terminal_bounds.bounds.size.width;
@@ -2510,13 +2556,13 @@ impl TerminalView {
                     "Terminal Session controls. Status: {activity_accessibility_label}. {repository_label}. {changes_label}."
                 ))
                 .w_full()
-                .h(px(32.))
+                .h(terminal_context_strip_height(density))
                 .flex_none()
-                .gap_1()
-                .px_1p5()
+                .gap(terminal_context_strip_gap(density))
+                .px(terminal_context_strip_padding_x(density))
                 .border_b_1()
-                .border_color(cx.theme().colors().border_variant)
-                .bg(cx.theme().colors().tab_bar_background)
+                .border_color(terminal_context_strip_border(cx))
+                .bg(terminal_context_strip_background(cx))
                 .child(
                     h_flex()
                         .min_w_0()
@@ -2550,7 +2596,7 @@ impl TerminalView {
                 .child(
                     h_flex()
                         .flex_none()
-                        .gap_1()
+                        .gap(terminal_context_strip_gap(density))
                         .when(has_workspace_files, |this| {
                             this.child(
                                 Button::new(
@@ -3911,6 +3957,39 @@ mod tests {
         assert!(
             terminal_foreground_agent_presentation("Zed", Some("codex")).is_none(),
             "official Zed keeps its upstream terminal presentation"
+        );
+    }
+
+    #[test]
+    fn terminal_context_strip_tracks_canvas_density() {
+        assert_eq!(
+            terminal_context_strip_height(CanvasDensity::Compact),
+            px(28.)
+        );
+        assert_eq!(
+            terminal_context_strip_height(CanvasDensity::Balanced),
+            px(30.)
+        );
+        assert_eq!(
+            terminal_context_strip_height(CanvasDensity::Spacious),
+            px(32.)
+        );
+
+        assert_eq!(terminal_context_strip_gap(CanvasDensity::Compact), px(3.));
+        assert_eq!(terminal_context_strip_gap(CanvasDensity::Balanced), px(4.));
+        assert_eq!(terminal_context_strip_gap(CanvasDensity::Spacious), px(6.));
+
+        assert_eq!(
+            terminal_context_strip_padding_x(CanvasDensity::Compact),
+            px(6.)
+        );
+        assert_eq!(
+            terminal_context_strip_padding_x(CanvasDensity::Balanced),
+            px(8.)
+        );
+        assert_eq!(
+            terminal_context_strip_padding_x(CanvasDensity::Spacious),
+            px(12.)
         );
     }
 

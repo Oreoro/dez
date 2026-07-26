@@ -4091,3 +4091,18 @@ Completed for the single-header Agent drawer source slice:
 - added pure product-policy coverage and static regression guards; and
 - retained source-only evidence. No app build, test binary, alternate binary,
   or fresh visual launch was performed.
+
+Completed for the terminal context hierarchy source slice:
+
+- traced the apparent duplicate Terminal header to the context row reusing the
+  same material as the real pane tab bar;
+- kept the pane tab bar as the sole navigation layer and moved status,
+  Workspace, review, and details controls onto the quieter toolbar material;
+- made subtoolbar height, spacing, and horizontal padding follow compact,
+  balanced, and spacious canvas density;
+- preserved progressive action-label collapse, keyboard focus, accessible
+  names, tooltips, and the existing Workspace and Git handoffs;
+- added pure density assertions and static regression guards against restoring
+  a second tab-bar material; and
+- retained source-only evidence. No app build, test binary, alternate binary,
+  or fresh visual launch was performed.
