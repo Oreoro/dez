@@ -273,6 +273,10 @@ fn session_rail_labels_visible(design_system: &DesignSystemSettings) -> bool {
     design_system.show_contextual_labels()
 }
 
+fn session_rail_uses_absolute_client_geometry(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 fn agent_session_label(
     app_name: &str,
     upstream_thread_label: &'static str,
@@ -13318,10 +13322,11 @@ impl Sidebar {
         };
 
         h_flex()
-            .relative()
             .flex_none()
             .h(Tab::container_height(cx))
             .bg(cx.theme().colors().tab_bar_background)
+            .border_b_1()
+            .border_color(cx.theme().colors().border)
             .when(left_window_controls, |this| {
                 this.children(Self::render_left_window_controls(window, cx))
             })
@@ -13341,15 +13346,6 @@ impl Sidebar {
             })
             .when(!right_window_controls, |this| this.pr_1p5())
             .gap_1()
-            .child(
-                div()
-                    .absolute()
-                    .top_0()
-                    .left_0()
-                    .size_full()
-                    .border_b_1()
-                    .border_color(cx.theme().colors().border),
-            )
             .when_some(left_header_buttons, |this, buttons| this.child(buttons))
             .child(div().flex_1())
             .when_some(right_header_buttons, |this, buttons| this.child(buttons))
@@ -14207,6 +14203,15 @@ impl Render for Sidebar {
                 let on_left = self.side(cx) == SidebarSide::Left;
                 match window.window_decorations() {
                     Decorations::Server => el.h_full().w(rail_width),
+                    Decorations::Client { .. }
+                        if !session_rail_uses_absolute_client_geometry(APP_NAME) =>
+                    {
+                        // MultiWorkspace already reserves this exact width.
+                        // Dez keeps one normal-flow layout and hit-test owner
+                        // instead of stretching a second absolute surface over
+                        // the reserved Sessions region.
+                        el.h_full().w(rail_width)
+                    }
                     // With client-side decorations the sidebar owns the window
                     // corners on its side, so round them like the title bar and
                     // status bar do. The sidebar is stretched 1px outwards over

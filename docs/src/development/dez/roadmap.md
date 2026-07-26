@@ -3828,6 +3828,20 @@ source slice:
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed. Runtime acceptance remains open.
 
+Completed for the normal-flow Sessions geometry source slice:
+
+- kept the client-decorated Dez Sessions root inside the exact flex reservation
+  already owned by `MultiWorkspace`, removing the inherited second absolute
+  surface and its independent hit-test geometry;
+- moved the header divider onto the header container and removed its absolute
+  full-size decorative child;
+- preserved official Zed's inherited client-decoration geometry;
+- added a pure product-policy assertion and static guards for normal-flow root
+  ownership and overlay-free header decoration;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Pointer and corner rendering remain runtime
+  acceptance work for the next artifact.
+
 Completed for the narrow interaction-allocation source slice:
 
 - shortened the 200 px Sessions attention scope to **Needs** while retaining

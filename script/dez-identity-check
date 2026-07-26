@@ -526,6 +526,18 @@ require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'fn session_rail_keeps_the_main_work_area_primary_on_narrow_windows.*?px\(800\.0\).*?px\(240\.0\).*?px\(600\.0\).*?RESPONSIVE_MIN_WIDTH.*?px\(1400\.0\).*?COMPACT_MAX_WIDTH' \
     'the responsive Sessions width matrix is no longer protected'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn session_rail_uses_absolute_client_geometry\(app_name: &str\).*?app_name == "Zed".*?Decorations::Client \{ \.\. \}.*?!session_rail_uses_absolute_client_geometry\(APP_NAME\).*?el\.h_full\(\)\.w\(rail_width\).*?Decorations::Client \{ tiling, \.\. \} => el.*?\.absolute\(\)' \
+    'the Dez Sessions root can regress to a second absolute client-decoration surface'
+require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
+    'fn dez_sessions_uses_normal_flow_client_geometry.*?!session_rail_uses_absolute_client_geometry\("Dez"\).*?session_rail_uses_absolute_client_geometry\("Zed"\)' \
+    'the normal-flow Sessions root is no longer pinned by a product assertion'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn render_sidebar_header.*?\.h\(Tab::container_height\(cx\)\).*?\.bg\(cx\.theme\(\)\.colors\(\)\.tab_bar_background\).*?\.border_b_1\(\).*?\.border_color\(cx\.theme\(\)\.colors\(\)\.border\)' \
+    'the Sessions header can lose its native inline divider'
+reject_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn render_sidebar_header.*?div\(\).*?\.absolute\(\).*?\.size_full\(\).*?\.border_b_1\(\)' \
+    'the Sessions header regressed to painting a full-size absolute decorative layer over its controls'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_overview_status_label.*?is_restoring: bool.*?"Loading sessions".*?fn session_empty_state_copy.*?"Restoring Workspaces and reconciling saved Terminal Sessions\.".*?workspace_restore_is_pending.*?WorkspaceRestoreState::Ready' \
     'Session Rail can claim to be empty while Workspace and terminal restoration is unresolved'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \

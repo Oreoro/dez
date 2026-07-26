@@ -72,6 +72,15 @@ fn session_rail_render_width_matches_reserved_width_for_each_mode() {
 }
 
 #[test]
+fn dez_sessions_uses_normal_flow_client_geometry() {
+    assert!(!session_rail_uses_absolute_client_geometry("Dez"));
+    assert!(
+        session_rail_uses_absolute_client_geometry("Zed"),
+        "official Zed retains its inherited client-decoration geometry"
+    );
+}
+
+#[test]
 fn session_rail_keeps_the_main_work_area_primary_on_narrow_windows() {
     let settings = SessionRailSettings {
         visibility: settings::CanvasVisibility::Auto,

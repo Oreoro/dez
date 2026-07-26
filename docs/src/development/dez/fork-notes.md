@@ -1059,7 +1059,11 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   viewport, and no less than 200 px on very narrow windows. This keeps the Main
   Work Area visually and interactively primary while preserving a usable
   supervision surface. A stored wide preference may not make the rail paint
-  beyond the space the workspace reserved.
+  beyond the space the workspace reserved. Dez's client-decorated rail is also
+  a normal-flow child of that reservation, not a second absolute surface. Its
+  header owns its divider directly instead of painting a full-size decorative
+  child across the control row. Official Zed retains its inherited
+  client-decoration geometry.
 - **2026-07-26: Narrow labels and drawers optimize for decisions, not desktop
   proportions.** At the 200 px Sessions floor, the scope vocabulary contracts
   from **Attention** to **Needs** without changing its accessible name or

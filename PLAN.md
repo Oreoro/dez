@@ -3010,3 +3010,12 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   official Zed keeps the upstream option. Pure source assertions and static
   guards cover both policies. This is source-only; no build, test binary,
   alternate binary, or visual launch was performed.
+- 2026-07-26: Removed the remaining absolute geometry from the Dez Sessions
+  shell. The client-decorated rail is now a normal-flow child of the exact
+  width reserved by `MultiWorkspace`, so layout, painting, and pointer hit
+  testing have one owner rather than a hidden second surface. Its header
+  divider now belongs to the header container instead of an absolute
+  full-header decorative child. Official Zed keeps its inherited
+  client-decoration path. A pure source assertion and identity guards cover
+  both decisions. This is source-only; no build, test binary, alternate binary,
+  or visual launch was performed.
