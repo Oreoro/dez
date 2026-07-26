@@ -60,12 +60,15 @@ use std::mem;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
-use terminal::session_host::{
-    LocalTerminalHost, TerminalAgentEventKind, TerminalAgentSnapshot, TerminalAgentState,
-    TerminalSessionCommand, TerminalSessionId, TerminalSessionSnapshot, TerminalSessionState,
-    transport::{
-        TerminalHostConnection, TerminalHostSnapshotRevision, TerminalHostSnapshotStore,
-        TerminalHostStartupState, TerminalHostStartupStatus,
+use terminal::{
+    Event as TerminalEvent,
+    session_host::{
+        LocalTerminalHost, TerminalAgentEventKind, TerminalAgentSnapshot, TerminalAgentState,
+        TerminalSessionCommand, TerminalSessionId, TerminalSessionSnapshot, TerminalSessionState,
+        transport::{
+            TerminalHostConnection, TerminalHostSnapshotRevision, TerminalHostSnapshotStore,
+            TerminalHostStartupState, TerminalHostStartupStatus,
+        },
     },
 };
 use terminal_view::TerminalView;
@@ -154,6 +157,8 @@ const DETAILED_MIN_WIDTH: Pixels = px(380.0);
 const SUPPLEMENTAL_METADATA_MIN_WIDTH: Pixels = px(440.0);
 const MIN_WIDTH: Pixels = px(240.0);
 const MAX_WIDTH: Pixels = px(800.0);
+const RESPONSIVE_MIN_WIDTH: Pixels = px(200.0);
+const SESSION_RAIL_MAX_VIEWPORT_FRACTION: f32 = 0.30;
 const SESSION_NOTICES_MAX_VIEWPORT_FRACTION: f32 = 0.42;
 
 #[derive(Clone, Debug, settings::RegisterSetting)]
@@ -232,6 +237,17 @@ impl SessionRailSettings {
         } else {
             configured_width
         }
+    }
+
+    fn responsive_width(&self, configured_width: Pixels, viewport_width: Pixels) -> Pixels {
+        let desired_width = self.width(configured_width);
+        if desired_width == Pixels::ZERO || viewport_width <= Pixels::ZERO {
+            return desired_width;
+        }
+
+        let viewport_cap =
+            (viewport_width * SESSION_RAIL_MAX_VIEWPORT_FRACTION).max(RESPONSIVE_MIN_WIDTH);
+        desired_width.min(viewport_cap)
     }
 }
 
@@ -1898,6 +1914,16 @@ fn standalone_terminal_id(
     TerminalId::from_stable_key("terminal-session", &terminal_key)
 }
 
+fn terminal_event_refreshes_session(event: &TerminalEvent) -> bool {
+    matches!(
+        event,
+        TerminalEvent::TitleChanged
+            | TerminalEvent::ProcessInfoChanged
+            | TerminalEvent::ProcessExited { .. }
+            | TerminalEvent::Bell
+    )
+}
+
 fn standalone_terminal_metadata(
     workspace: &Entity<Workspace>,
     terminal_view: &Entity<TerminalView>,
@@ -3128,6 +3154,7 @@ fn create_worktree_in_workspace(
 pub struct Sidebar {
     multi_workspace: WeakEntity<MultiWorkspace>,
     width: Pixels,
+    rendered_width: Pixels,
     focus_handle: FocusHandle,
     filter_editor: Entity<Editor>,
     thread_rename_editor: Entity<Editor>,
@@ -3159,6 +3186,7 @@ pub struct Sidebar {
     terminal_last_accessed: HashMap<TerminalId, DateTime<Utc>>,
     manual_entry_order: Vec<ManualEntryOrderKey>,
     standalone_terminal_created_at: HashMap<TerminalId, DateTime<Utc>>,
+    standalone_terminal_subscriptions: HashMap<EntityId, gpui::Subscription>,
     thread_switcher: Option<Entity<ThreadSwitcher>>,
     _thread_switcher_subscriptions: Vec<gpui::Subscription>,
     pending_thread_activation: Option<agent_ui::ThreadId>,
@@ -3366,6 +3394,7 @@ impl Sidebar {
         Self {
             multi_workspace: multi_workspace.downgrade(),
             width: DEFAULT_WIDTH,
+            rendered_width: DEFAULT_WIDTH,
             focus_handle,
             filter_editor,
             thread_rename_editor,
@@ -3384,6 +3413,7 @@ impl Sidebar {
             terminal_last_accessed: HashMap::new(),
             manual_entry_order: Vec::new(),
             standalone_terminal_created_at: HashMap::new(),
+            standalone_terminal_subscriptions: HashMap::new(),
             thread_switcher: None,
             _thread_switcher_subscriptions: Vec::new(),
             pending_thread_activation: None,
@@ -3450,6 +3480,14 @@ impl Sidebar {
             return;
         }
 
+        let terminal_views = workspace
+            .read(cx)
+            .items_of_type::<TerminalView>(cx)
+            .collect::<Vec<_>>();
+        for terminal_view in terminal_views {
+            self.subscribe_to_standalone_terminal(&terminal_view, window, cx);
+        }
+
         cx.subscribe_in(
             &project,
             window,
@@ -3492,9 +3530,19 @@ impl Sidebar {
             workspace,
             window,
             move |this, workspace, event: &workspace::Event, window, cx| match event {
-                workspace::Event::ActiveItemChanged
-                | workspace::Event::ItemAdded { .. }
-                | workspace::Event::ItemRemoved { .. } => {
+                workspace::Event::ActiveItemChanged => {
+                    this.sync_active_entry_from_active_workspace(cx);
+                    this.schedule_update_entries(false, cx);
+                }
+                workspace::Event::ItemAdded { item } => {
+                    if let Some(terminal_view) = item.downcast::<TerminalView>() {
+                        this.subscribe_to_standalone_terminal(&terminal_view, window, cx);
+                    }
+                    this.sync_active_entry_from_active_workspace(cx);
+                    this.schedule_update_entries(false, cx);
+                }
+                workspace::Event::ItemRemoved { item_id } => {
+                    this.standalone_terminal_subscriptions.remove(item_id);
                     this.sync_active_entry_from_active_workspace(cx);
                     this.schedule_update_entries(false, cx);
                 }
@@ -3514,6 +3562,34 @@ impl Sidebar {
         if let Some(agent_panel) = workspace.read(cx).panel::<AgentPanel>(cx) {
             self.subscribe_to_agent_panel(workspace, &agent_panel, window, cx);
         }
+    }
+
+    fn subscribe_to_standalone_terminal(
+        &mut self,
+        terminal_view: &Entity<TerminalView>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let item_id = terminal_view.entity_id();
+        if self
+            .standalone_terminal_subscriptions
+            .contains_key(&item_id)
+        {
+            return;
+        }
+
+        let terminal = terminal_view.read(cx).terminal().clone();
+        let subscription = cx.subscribe_in(
+            &terminal,
+            window,
+            |this, _terminal, event: &TerminalEvent, _window, cx| {
+                if terminal_event_refreshes_session(event) {
+                    this.schedule_update_entries(false, cx);
+                }
+            },
+        );
+        self.standalone_terminal_subscriptions
+            .insert(item_id, subscription);
     }
 
     fn move_entry_paths(
@@ -10701,7 +10777,7 @@ impl Sidebar {
         let color = cx.theme().colors();
         let sidebar_bg = color.panel_background;
         let session_rail_settings = SessionRailSettings::get_global(cx);
-        let rail_width = session_rail_settings.width(self.width);
+        let rail_width = self.rendered_width;
         let primary_action_labels_visible = session_row_primary_action_labels_visible(rail_width);
         let supplemental_metadata_visible = session_rail_supplemental_metadata_visible(rail_width);
         let design_system = DesignSystemSettings::get_global(cx);
@@ -11244,7 +11320,7 @@ impl Sidebar {
         let has_changes = changed_files > 0;
         let focus_handle = self.focus_handle.clone();
         let session_rail_settings = SessionRailSettings::get_global(cx);
-        let rail_width = session_rail_settings.width(self.width);
+        let rail_width = self.rendered_width;
         let primary_action_labels_visible = session_row_primary_action_labels_visible(rail_width);
         let supplemental_metadata_visible = session_rail_supplemental_metadata_visible(rail_width);
         let has_evidence = evidence_label.is_some();
@@ -13457,7 +13533,7 @@ impl Sidebar {
             "Show Agent History"
         };
         let on_right = self.side(cx) == SidebarSide::Right;
-        let rail_width = SessionRailSettings::get_global(cx).width(self.width);
+        let rail_width = self.rendered_width;
         let agent_tools_visible_label = session_rail_agent_tools_utility_label(rail_width);
         let history_visible_label = session_rail_agent_history_utility_label(rail_width);
 
@@ -13848,6 +13924,10 @@ impl WorkspaceSidebar for Sidebar {
         SessionRailSettings::get_global(cx).width(self.width)
     }
 
+    fn responsive_width(&self, viewport_width: Pixels, cx: &App) -> Pixels {
+        SessionRailSettings::get_global(cx).responsive_width(self.width, viewport_width)
+    }
+
     fn set_width(&mut self, width: Option<Pixels>, cx: &mut Context<Self>) {
         let width = width.unwrap_or(DEFAULT_WIDTH).clamp(MIN_WIDTH, MAX_WIDTH);
         if self.width == width {
@@ -13978,7 +14058,9 @@ impl Render for Sidebar {
                 .size_0()
                 .into_any_element();
         }
-        let rail_width = session_rail_settings.width(self.width);
+        let rail_width =
+            session_rail_settings.responsive_width(self.width, window.viewport_size().width);
+        self.rendered_width = rail_width;
 
         let ui_font = theme_settings::setup_ui_font(window, cx);
         let sticky_header = self.render_sticky_header(window, cx);

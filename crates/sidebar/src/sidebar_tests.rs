@@ -72,6 +72,53 @@ fn session_rail_render_width_matches_reserved_width_for_each_mode() {
 }
 
 #[test]
+fn session_rail_keeps_the_main_work_area_primary_on_narrow_windows() {
+    let settings = SessionRailSettings {
+        visibility: settings::CanvasVisibility::Auto,
+        mode: settings::CanvasVisibility::Compact,
+        show_worktree_metadata: false,
+        show_agent_state_metadata: true,
+        show_layout_metadata: false,
+        show_latest_attention_metadata: true,
+        sort_by: settings::SessionRailSorting::Manual,
+    };
+
+    assert_eq!(
+        settings.responsive_width(DEFAULT_WIDTH, px(800.0)),
+        px(240.0),
+        "Sessions may supervise a narrow window but must not overtake the Main Work Area"
+    );
+    assert_eq!(
+        settings.responsive_width(DEFAULT_WIDTH, px(600.0)),
+        RESPONSIVE_MIN_WIDTH,
+        "very narrow windows retain a usable, non-overlay supervision rail"
+    );
+    assert_eq!(
+        settings.responsive_width(DEFAULT_WIDTH, px(1400.0)),
+        COMPACT_MAX_WIDTH,
+        "wide windows keep the deliberately compact default"
+    );
+}
+
+#[test]
+fn terminal_sessions_refresh_on_state_changes_not_output_frames() {
+    assert!(terminal_event_refreshes_session(
+        &TerminalEvent::ProcessInfoChanged
+    ));
+    assert!(terminal_event_refreshes_session(
+        &TerminalEvent::TitleChanged
+    ));
+    assert!(terminal_event_refreshes_session(&TerminalEvent::Bell));
+    assert!(terminal_event_refreshes_session(
+        &TerminalEvent::ProcessExited { exit_code: Some(0) }
+    ));
+    assert!(
+        !terminal_event_refreshes_session(&TerminalEvent::Wakeup),
+        "terminal output must not rebuild Sessions on every PTY wakeup"
+    );
+}
+
+#[test]
 fn compact_session_rows_prioritize_actions_and_evidence_over_recency() {
     assert!(session_rail_row_is_compact(px(300.0)));
     assert!(!session_rail_row_is_compact(DETAILED_MIN_WIDTH));

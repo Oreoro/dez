@@ -684,7 +684,11 @@ pub fn insert_zed_terminal_env(
 pub enum Event {
     TitleChanged,
     BreadcrumbsChanged,
-    ProcessExited { exit_code: Option<i32> },
+    /// The foreground command or working directory changed.
+    ProcessInfoChanged,
+    ProcessExited {
+        exit_code: Option<i32>,
+    },
     CloseTerminal,
     Bell,
     Wakeup,

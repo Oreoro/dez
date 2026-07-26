@@ -720,7 +720,9 @@ impl TerminalHostConnection {
         cx.subscribe(terminal, move |terminal, event: &TerminalEvent, cx| {
             if !matches!(
                 event,
-                TerminalEvent::TitleChanged | TerminalEvent::BreadcrumbsChanged
+                TerminalEvent::TitleChanged
+                    | TerminalEvent::BreadcrumbsChanged
+                    | TerminalEvent::ProcessInfoChanged
             ) {
                 return;
             }

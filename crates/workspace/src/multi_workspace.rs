@@ -302,6 +302,10 @@ pub enum SidebarEvent {
 
 pub trait Sidebar: Focusable + Render + EventEmitter<SidebarEvent> + Sized {
     fn width(&self, cx: &App) -> Pixels;
+    fn responsive_width(&self, viewport_width: Pixels, cx: &App) -> Pixels {
+        let _ = viewport_width;
+        self.width(cx)
+    }
     fn set_width(&mut self, width: Option<Pixels>, cx: &mut Context<Self>);
     fn has_notifications(&self, cx: &App) -> bool;
     fn side(&self, _cx: &App) -> SidebarSide;
@@ -367,6 +371,7 @@ pub trait Sidebar: Focusable + Render + EventEmitter<SidebarEvent> + Sized {
 
 pub trait SidebarHandle: 'static + Send + Sync {
     fn width(&self, cx: &App) -> Pixels;
+    fn responsive_width(&self, viewport_width: Pixels, cx: &App) -> Pixels;
     fn set_width(&self, width: Option<Pixels>, cx: &mut App);
     fn focus_handle(&self, cx: &App) -> FocusHandle;
     fn focus(&self, window: &mut Window, cx: &mut App);
@@ -403,6 +408,10 @@ impl Render for DraggedSidebar {
 impl<T: Sidebar> SidebarHandle for Entity<T> {
     fn width(&self, cx: &App) -> Pixels {
         self.read(cx).width(cx)
+    }
+
+    fn responsive_width(&self, viewport_width: Pixels, cx: &App) -> Pixels {
+        self.read(cx).responsive_width(viewport_width, cx)
     }
 
     fn set_width(&self, width: Option<Pixels>, cx: &mut App) {
@@ -2470,7 +2479,8 @@ impl Render for MultiWorkspace {
             self.sidebar.as_ref().map(|sidebar_handle| {
                 let weak = cx.weak_entity();
 
-                let sidebar_width = sidebar_handle.width(cx);
+                let sidebar_width =
+                    sidebar_handle.responsive_width(window.viewport_size().width, cx);
                 let resize_handle_overhang = SIDEBAR_RESIZE_HANDLE_SIZE / 2.;
                 let resize_handle_width = card_gap + SIDEBAR_RESIZE_HANDLE_SIZE;
                 let resize_handle = deferred(

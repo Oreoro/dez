@@ -77,7 +77,7 @@ impl LocalTerminalHost {
         self.terminals.insert(session_id, terminal.clone());
 
         cx.subscribe(&terminal, move |this, terminal, event, cx| match event {
-            Event::TitleChanged | Event::BreadcrumbsChanged | Event::Wakeup => {
+            Event::TitleChanged | Event::BreadcrumbsChanged | Event::ProcessInfoChanged => {
                 let terminal = terminal.read(cx);
                 this.model
                     .set_title(session_id, Some(terminal.title(false)));
@@ -97,7 +97,8 @@ impl LocalTerminalHost {
                 this.terminals.remove(&session_id);
                 cx.notify();
             }
-            Event::Bell
+            Event::Wakeup
+            | Event::Bell
             | Event::BlinkChanged(_)
             | Event::SelectionsChanged
             | Event::NewNavigationTarget(_)

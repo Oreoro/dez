@@ -2979,3 +2979,15 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   product-policy assertion and static action-set guard protect the boundary.
   This is source-only; no build, test binary, alternate binary, or visual
   launch was performed.
+- 2026-07-26: Repaired the Main Work Area terminal-to-Sessions handoff and
+  made the rail viewport-responsive. Starting Codex, Claude, or another
+  recognized foreground process inside an existing terminal now emits one
+  explicit process-info change after the asynchronous process refresh.
+  Sessions subscribes to both existing and newly added Main Work Area
+  terminals and rebuilds only for semantic state changes—not every PTY output
+  frame. Shell → Codex → shell remains one terminal and one Session identity.
+  The rail now reserves and paints the same window-derived width: 240 px in an
+  800 px window, 200 px at the narrow floor, and 280 px at the compact wide
+  default. This is source-only; no build, test binary, alternate binary, or
+  visual launch was performed. Runtime proof of the process transitions,
+  identity stability, output responsiveness, and width matrix remains open.

@@ -486,6 +486,33 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let pathless_workspaces = workspaces.*?workspace_path_list\(workspace, cx\)\.paths\(\)\.is_empty\(\).*?workspace::ProjectGroup.*?workspaces: pathless_workspaces.*?group_key\.path_list\(\)\.paths\(\)\.is_empty\(\) && terminals\.is_empty\(\)' \
     'scratch terminals can disappear because Session Rail has no transient empty-workspace group'
+require_multiline_pattern crates/terminal/src/pty_info.rs \
+    'fn load\(&self\).*?\*self\.current\.write\(\) = info\.clone\(\).*?fn refresh_current.*?let previous = self\.current\.read\(\)\.clone\(\).*?this\.load\(\) != previous.*?cx\.emit\(Event::ProcessInfoChanged\)' \
+    'foreground-process changes can stop notifying Main Work Area terminal consumers'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'standalone_terminal_subscriptions: HashMap<EntityId, gpui::Subscription>.*?items_of_type::<TerminalView>.*?subscribe_to_standalone_terminal.*?workspace::Event::ItemAdded.*?item\.downcast::<TerminalView>.*?subscribe_to_standalone_terminal.*?fn subscribe_to_standalone_terminal.*?terminal_event_refreshes_session\(event\).*?schedule_update_entries' \
+    'Sessions can stop following foreground-process changes in existing and newly opened Main Work Area terminals'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn terminal_event_refreshes_session.*?TerminalEvent::ProcessInfoChanged.*?TerminalEvent::ProcessExited.*?TerminalEvent::Bell' \
+    'the Main Work Area terminal projection can lose its bounded state-change refresh policy'
+require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
+    'fn terminal_sessions_refresh_on_state_changes_not_output_frames.*?TerminalEvent::ProcessInfoChanged.*?!terminal_event_refreshes_session\(&TerminalEvent::Wakeup\)' \
+    'terminal output frames can regress into full Sessions rebuilds'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'TerminalEvent::TitleChanged.*?TerminalEvent::BreadcrumbsChanged.*?TerminalEvent::ProcessInfoChanged.*?refresh_terminal_metadata.*?TerminalEvent::Wakeup.*?TerminalEvent::BlinkChanged' \
+    'Agent terminal metadata can regress to rebuilding on every PTY output frame'
+require_multiline_pattern crates/terminal/src/session_host/local.rs \
+    'Event::TitleChanged \| Event::BreadcrumbsChanged \| Event::ProcessInfoChanged.*?set_working_directory.*?Event::Wakeup.*?\| Event::Bell' \
+    'local terminal Host metadata can regress to polling every output frame or miss process changes'
+require_multiline_pattern crates/workspace/src/multi_workspace.rs \
+    'fn responsive_width\(&self, viewport_width: Pixels, cx: &App\).*?sidebar_handle\.responsive_width\(window\.viewport_size\(\)\.width, cx\).*?\.w\(sidebar_width\)' \
+    'the outer Sessions reservation can stop following its window-responsive width contract'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'SESSION_RAIL_MAX_VIEWPORT_FRACTION: f32 = 0\.30.*?fn responsive_width.*?viewport_width \* SESSION_RAIL_MAX_VIEWPORT_FRACTION.*?rendered_width: Pixels.*?fn responsive_width\(&self, viewport_width: Pixels, cx: &App\).*?session_rail_settings\.responsive_width\(self\.width, window\.viewport_size\(\)\.width\).*?self\.rendered_width = rail_width' \
+    'Sessions can regress to reserving and painting different widths or overtake the Main Work Area'
+require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
+    'fn session_rail_keeps_the_main_work_area_primary_on_narrow_windows.*?px\(800\.0\).*?px\(240\.0\).*?px\(600\.0\).*?RESPONSIVE_MIN_WIDTH.*?px\(1400\.0\).*?COMPACT_MAX_WIDTH' \
+    'the responsive Sessions width matrix is no longer protected'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_overview_status_label.*?is_restoring: bool.*?"Loading sessions".*?fn session_empty_state_copy.*?"Restoring Workspaces and reconciling saved Terminal Sessions\.".*?workspace_restore_is_pending.*?WorkspaceRestoreState::Ready' \
     'Session Rail can claim to be empty while Workspace and terminal restoration is unresolved'

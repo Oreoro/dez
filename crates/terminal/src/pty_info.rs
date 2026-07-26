@@ -7,7 +7,7 @@ use windows::Win32::{Foundation::HANDLE, System::Threading::GetProcessId};
 
 use sysinfo::{Pid, Process, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 
-use crate::Terminal;
+use crate::{Event, Terminal};
 
 #[derive(Clone, Copy)]
 pub struct ProcessIdGetter {
@@ -65,7 +65,7 @@ impl ProcessIdGetter {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct ProcessInfo {
     pub(crate) cwd: PathBuf,
     pub(crate) argv: Vec<String>,
@@ -235,19 +235,16 @@ impl PtyProcessInfo {
     }
 
     fn load(&self) -> Option<ProcessInfo> {
-        let process = self.refresh()?;
-        let cwd = process.cwd().map_or(PathBuf::new(), |p| p.to_owned());
-
-        let info = ProcessInfo {
-            cwd,
+        let info = self.refresh().map(|process| ProcessInfo {
+            cwd: process.cwd().map_or(PathBuf::new(), |p| p.to_owned()),
             argv: process
                 .cmd()
                 .iter()
                 .filter_map(|s| s.to_str().map(ToOwned::to_owned))
                 .collect(),
-        };
-        *self.current.write() = Some(info.clone());
-        Some(info)
+        });
+        *self.current.write() = info.clone();
+        info
     }
 
     #[cfg(all(test, unix))]
@@ -259,15 +256,23 @@ impl PtyProcessInfo {
         if self.task.lock().is_some() {
             return;
         }
+        let previous = self.current.read().clone();
         let this = self.clone();
-        let refresh = cx.background_executor().spawn(async move {
-            this.load();
-        });
+        let refresh = cx
+            .background_executor()
+            .spawn(async move { this.load() != previous });
         let this = Arc::downgrade(self);
-        *self.task.lock() = Some(cx.spawn(async move |_term, _cx| {
-            refresh.await;
+        *self.task.lock() = Some(cx.spawn(async move |terminal, cx| {
+            let changed = refresh.await;
             if let Some(this) = this.upgrade() {
                 this.task.lock().take();
+            }
+            if changed {
+                terminal
+                    .update(cx, |_terminal, cx| {
+                        cx.emit(Event::ProcessInfoChanged);
+                    })
+                    .ok();
             }
         }));
     }

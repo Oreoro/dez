@@ -2098,6 +2098,9 @@ fn subscribe_for_terminal_events(
                     ),
                 },
                 Event::BreadcrumbsChanged => cx.emit(ItemEvent::UpdateBreadcrumbs),
+                Event::ProcessInfoChanged => {
+                    cx.emit(ItemEvent::UpdateTab);
+                }
                 Event::ProcessExited { .. } => {
                     event_workspace
                         .update(cx, |workspace, cx| {

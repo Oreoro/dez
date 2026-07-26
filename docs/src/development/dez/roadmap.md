@@ -3800,3 +3800,24 @@ Completed for the opinionated Canvas command-surface source slice:
 - added a pure product-policy assertion and a static action-set guard;
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
+
+Completed for the Main Work Area terminal projection and responsive Sessions
+source slice:
+
+- added an explicit foreground-process-change terminal event after
+  asynchronous process refresh and cleared stale cached process information
+  when no foreground process remains;
+- subscribed Sessions to terminal entities already present in every Workspace
+  and to terminals added later, without creating or relocating a terminal;
+- changed Agent and local Host metadata updates from raw PTY wakeups to exact
+  title, breadcrumb, process, exit, and attention transitions;
+- kept shell → Codex → shell on one stable terminal and Session identity while
+  allowing its detected provider and evidence to update;
+- added a viewport-responsive width contract used by both the outer workspace
+  reservation and the inner Sessions render;
+- pinned compact widths at 280 px on wide windows, 240 px at an 800 px
+  viewport, and a 200 px narrow-window floor;
+- added pure source assertions and identity guards for state-change
+  subscriptions, output-frame rejection, and the 600/800/1400 px width matrix;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Runtime acceptance remains open.

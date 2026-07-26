@@ -1038,3 +1038,18 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   clipboard/storage internals are implementation detail in Dez. Their action
   types remain intact for saved-layout UI and compatibility; official Zed
   keeps its complete upstream inventory.
+- **2026-07-26: A foreground Agent changes a Session; it does not create a
+  second terminal.** Sessions subscribes to the terminal entity already open
+  in the Main Work Area. When the foreground process changes, the terminal
+  emits a semantic process-info event after its asynchronous refresh and the
+  existing Session row updates provider, title, working directory, and
+  lifecycle evidence. Ordinary PTY output is display content and does not
+  trigger full Sessions or Host-metadata rebuilds. The stable terminal/session
+  identity is preserved across shell → Codex → shell.
+- **2026-07-26: Sessions is a responsive sibling, never an overlay.** The
+  workspace reservation and rendered rail resolve one width from the current
+  viewport. Compact mode is 280 px on wide windows, 240 px at an 800 px
+  viewport, and no less than 200 px on very narrow windows. This keeps the Main
+  Work Area visually and interactively primary while preserving a usable
+  supervision surface. A stored wide preference may not make the rail paint
+  beyond the space the workspace reserved.

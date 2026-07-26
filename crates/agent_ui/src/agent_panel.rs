@@ -2368,8 +2368,8 @@ impl AgentPanel {
             window,
             move |this, _terminal, event: &TerminalEvent, window, cx| match event {
                 TerminalEvent::TitleChanged
-                | TerminalEvent::Wakeup
-                | TerminalEvent::BreadcrumbsChanged => {
+                | TerminalEvent::BreadcrumbsChanged
+                | TerminalEvent::ProcessInfoChanged => {
                     if CanvasAgentUiSettings::get_global(cx).connect_hooks {
                         this.refresh_terminal_metadata(terminal_id, cx);
                         this.report_terminal_program(terminal_id, source, cx);
@@ -2386,7 +2386,8 @@ impl AgentPanel {
                 TerminalEvent::ProcessExited { .. } => {
                     this.refresh_terminal_metadata(terminal_id, cx);
                 }
-                TerminalEvent::BlinkChanged(_)
+                TerminalEvent::Wakeup
+                | TerminalEvent::BlinkChanged(_)
                 | TerminalEvent::SelectionsChanged
                 | TerminalEvent::NewNavigationTarget(_)
                 | TerminalEvent::Open(_) => {}
