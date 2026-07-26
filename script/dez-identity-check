@@ -747,6 +747,12 @@ require_multiline_pattern crates/debugger_ui/src/debugger_panel.rs \
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     '\.id\("agent-panel"\).*?\.role\(gpui::Role::Region\).*?"Agent Panel".*?"Agent".*?\.track_focus\(&self\.focus_handle\)' \
     'the Agent region can regain a focus handle with no accessibility node'
+require_multiline_pattern crates/workspace/src/panel_pane.rs \
+    'fn agent_pane_uses_outer_tab_bar.*?app_name == "Zed".*?fn configure_project_pane.*?set_should_display_tab_bar\(\|_, _\| true\).*?fn configure_agent_pane.*?set_should_display_tab_bar\(\|_, _\| agent_pane_uses_outer_tab_bar\(paths::APP_NAME\)\).*?fn dez_agent_uses_its_native_toolbar_instead_of_a_second_tab_bar.*?!agent_pane_uses_outer_tab_bar\("Dez"\).*?agent_pane_uses_outer_tab_bar\("Zed"\)' \
+    'the Dez Agent drawer can regress to stacking an outer pane tab bar above its native toolbar'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'fn agent_panel_owns_drawer_hide_control.*?app_name != "Zed".*?IconButton::new\("hide-agent-drawer", IconName::Close\).*?aria_label\(hide_agent_label\).*?Tooltip::for_action\(hide_agent_label, &ToggleAgentPane, cx\).*?dispatch_action\(Box::new\(ToggleAgentPane\).*?agent_panel_owns_drawer_hide_control\(paths::APP_NAME\).*?fn dez_agent_toolbar_owns_the_drawer_hide_control.*?agent_panel_owns_drawer_hide_control\("Dez"\).*?!agent_panel_owns_drawer_hide_control\("Zed"\)' \
+    'the flat Dez Agent toolbar can lose its direct, keyboard-reachable Hide Agent control'
 require_multiline_pattern crates/ai_onboarding/src/agent_panel_onboarding_content.rs \
     'fn has_configured_providers.*?provider\.id\(\) != ZED_CLOUD_PROVIDER_ID.*?id\("agent-provider-onboarding"\).*?role\(gpui::Role::Region\).*?aria_label\("Agent provider setup"\).*?"Your configured provider is ready\. Start an Agent Session\.".*?"Dez keeps provider choice explicit\. Add a provider to start an Agent Session\.".*?Button::new\("continue-to-agent", "Start Agent Session"\).*?tab_index\(0isize\).*?aria_label\("Start Agent Session"\)' \
     'reachable Dez Agent onboarding can regress to thread vocabulary, an unnamed region, or a pointer-only start action'

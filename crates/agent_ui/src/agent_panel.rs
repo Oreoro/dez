@@ -95,8 +95,8 @@ use ui::{
 use util::ResultExt as _;
 use workspace::{
     CollaboratorId, DesignSystemSettings, DraggedSelection, DraggedTab, MultiWorkspace,
-    NewCenterTerminal, PaneKind, PathList, SerializedPathList, ToggleSidebar, ToggleZoom,
-    ToolbarItemView, Workspace, WorkspaceId,
+    NewCenterTerminal, PaneKind, PathList, SerializedPathList, ToggleAgentPane, ToggleSidebar,
+    ToggleZoom, ToolbarItemView, Workspace, WorkspaceId,
     dock::{DockPosition, Panel, PanelEvent},
     item::{ItemEvent, ItemHandle},
 };
@@ -147,6 +147,10 @@ fn agent_panel_terminal_restoration_enabled(app_name: &str) -> bool {
 }
 
 fn agent_panel_onboarding_is_integrated(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
+fn agent_panel_owns_drawer_hide_control(app_name: &str) -> bool {
     app_name != "Zed"
 }
 
@@ -6691,6 +6695,15 @@ impl AgentPanel {
             .on_click(cx.listener(move |this, _, window, cx| {
                 this.toggle_zoom(&ToggleZoom, window, cx);
             }));
+        let hide_agent_label = "Hide Agent";
+        let hide_agent_button = IconButton::new("hide-agent-drawer", IconName::Close)
+            .icon_size(IconSize::Small)
+            .tab_index(0isize)
+            .aria_label(hide_agent_label)
+            .tooltip(move |_, cx| Tooltip::for_action(hide_agent_label, &ToggleAgentPane, cx))
+            .on_click(|_, window, cx| {
+                window.dispatch_action(Box::new(ToggleAgentPane), cx);
+            });
 
         let max_content_width = AgentSettings::get_global(cx).max_content_width;
 
@@ -6779,7 +6792,11 @@ impl AgentPanel {
                         .children(sandbox_status)
                         .when(can_create_entries, |this| this.child(new_thread_menu))
                         .child(full_screen_button)
-                        .child(self.render_panel_options_menu(window, cx)),
+                        .child(self.render_panel_options_menu(window, cx))
+                        .when(
+                            agent_panel_owns_drawer_hide_control(paths::APP_NAME),
+                            |this| this.child(hide_agent_button),
+                        ),
                 )
                 .into_any_element()
         };
@@ -7458,6 +7475,12 @@ mod tests {
     fn dez_integrates_provider_setup_into_the_agent_surface() {
         assert!(agent_panel_onboarding_is_integrated("Dez"));
         assert!(!agent_panel_onboarding_is_integrated("Zed"));
+    }
+
+    #[test]
+    fn dez_agent_toolbar_owns_the_drawer_hide_control() {
+        assert!(agent_panel_owns_drawer_hide_control("Dez"));
+        assert!(!agent_panel_owns_drawer_hide_control("Zed"));
     }
 
     #[test]

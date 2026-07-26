@@ -144,6 +144,10 @@ impl Item for PanelItem {
     }
 }
 
+fn agent_pane_uses_outer_tab_bar(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 pub fn configure_project_pane(pane: &mut Pane, cx: &mut Context<Pane>) {
     pane.set_pane_kind(PaneKind::Project, cx);
     pane.set_close_pane_if_empty(true, cx);
@@ -153,7 +157,7 @@ pub fn configure_project_pane(pane: &mut Pane, cx: &mut Context<Pane>) {
 pub fn configure_agent_pane(pane: &mut Pane, cx: &mut Context<Pane>) {
     pane.set_pane_kind(PaneKind::Agent, cx);
     pane.set_close_pane_if_empty(true, cx);
-    pane.set_should_display_tab_bar(|_, _| true);
+    pane.set_should_display_tab_bar(|_, _| agent_pane_uses_outer_tab_bar(paths::APP_NAME));
 }
 
 #[cfg(test)]
@@ -195,5 +199,11 @@ mod tests {
             Some(PanelPaneKind::Agent)
         );
         assert_eq!(PanelPaneKind::for_panel_key("UnknownPanel"), None);
+    }
+
+    #[test]
+    fn dez_agent_uses_its_native_toolbar_instead_of_a_second_tab_bar() {
+        assert!(!agent_pane_uses_outer_tab_bar("Dez"));
+        assert!(agent_pane_uses_outer_tab_bar("Zed"));
     }
 }

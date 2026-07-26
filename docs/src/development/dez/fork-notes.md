@@ -1343,3 +1343,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   terminal, and editor Surfaces cannot expose clipped inner corners or
   double-card silhouettes. Only the native window owns the outer radius.
   Official Zed retains its rounded, separated pane cards.
+- **2026-07-26: Agent owns one header.** The Dez Agent drawer no longer stacks
+  the generic pane tab bar above its native session toolbar. The native toolbar
+  owns the active Session title, new Session, expand, options, and a direct
+  keyboard-reachable **Hide Agent** control. Workspace Tools keeps its tab bar
+  because Files, Git, Outline, and Debug are real modes of that drawer.
+  Official Zed retains its inherited Agent-pane tab bar.

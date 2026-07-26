@@ -4076,3 +4076,17 @@ Completed for the flush Main Work Area frame source slice:
 - added source policy coverage and a static regression guard; and
 - retained source-only evidence. No app build, test binary, alternate binary,
   or fresh visual launch was performed.
+
+Completed for the single-header Agent drawer source slice:
+
+- traced the stacked Agent chrome to the generic pane tab bar rendering above
+  Agent's own complete session toolbar;
+- removed the redundant outer Agent tab bar only for Dez;
+- moved the direct **Hide Agent** action into the native toolbar beside expand
+  and options, with keyboard focus, accessible naming, action tooltip, and the
+  normal drawer toggle path;
+- retained Workspace Tools tabs for its real Files/Git/Outline/Debug modes and
+  preserved official Zed's inherited Agent-pane tab bar;
+- added pure product-policy coverage and static regression guards; and
+- retained source-only evidence. No app build, test binary, alternate binary,
+  or fresh visual launch was performed.
