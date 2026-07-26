@@ -3960,3 +3960,20 @@ Completed for the on-demand Sessions filtering source slice:
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed. Pointer, focus, and search-result proof remains
   open for the next artifact.
+
+Completed for the focused empty-work-area hierarchy source slice:
+
+- kept the Run/Supervise/Review orientation only in the active empty Main Work
+  Area, where first-use guidance can explain the product without becoming
+  permanent chrome;
+- changed inactive empty panes to compact **Open something here** copy while
+  preserving Start Terminal Session, Find File, and New File in the same order;
+- made the region accessibility description follow the active or compact copy;
+- preserved the inherited all-pane presentation for official Zed;
+- removed floating-card elevation from sticky Sessions Workspace headers in
+  Dez while retaining the material boundary and bottom divider;
+- added pure product-policy assertions and static guards for focused-only
+  orientation, official-Zed compatibility, and flat sticky-header chrome;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Focus transitions, explicit split layouts, and
+  both Lumin variants remain runtime acceptance work for the next artifact.

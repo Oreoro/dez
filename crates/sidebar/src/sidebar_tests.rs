@@ -97,6 +97,11 @@ fn dez_consolidates_session_utilities_into_one_overview_menu() {
         "official Zed retains its inherited sidebar controls"
     );
     assert!(session_rail_uses_footer_utilities("Zed"));
+    assert!(
+        !session_sticky_header_uses_shadow("Dez"),
+        "sticky Workspace headers should remain part of the flat Sessions list"
+    );
+    assert!(session_sticky_header_uses_shadow("Zed"));
 }
 
 #[test]

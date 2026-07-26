@@ -104,6 +104,10 @@ fn pane_drag_handle_visible(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn empty_main_work_area_shows_orientation(app_name: &str, is_active_pane: bool) -> bool {
+    app_name == "Zed" || is_active_pane
+}
+
 /// A group of selected entries from project panel.
 #[derive(Debug)]
 pub struct DraggedSelection {
@@ -958,6 +962,23 @@ impl Pane {
         let open_file_focus = self.focus_handle.clone();
         let new_file_focus = self.focus_handle.clone();
         let terminal_focus = self.focus_handle.clone();
+        let is_active_pane = match self.workspace.upgrade() {
+            Some(workspace) => workspace.read(cx).active_pane().entity_id() == cx.entity_id(),
+            None => true,
+        };
+        let show_orientation =
+            empty_main_work_area_shows_orientation(paths::APP_NAME, is_active_pane);
+        let (title, description) = if show_orientation {
+            (
+                "Start with a terminal or file",
+                "Run commands and agents here. Sessions tracks attention; files, Git changes, diagnostics, and diffs return here for review.",
+            )
+        } else {
+            (
+                "Open something here",
+                "Start a Terminal Session, find a file, or create one in this work area.",
+            )
+        };
         let workflow_route = [
             (IconName::Terminal, "Run", "Terminal in Main Work Area"),
             (IconName::ListTree, "Supervise", "Live state in Sessions"),
@@ -967,81 +988,83 @@ impl Pane {
         v_flex()
             .id("empty-project-state")
             .role(gpui::Role::Region)
-            .aria_label("Main Work Area ready")
+            .aria_label(format!("{title}. {description}"))
             .track_focus(&self.focus_handle(cx))
             .size_full()
             .min_h_0()
             .overflow_y_scroll()
             .items_start()
             .justify_start()
-            .px_8()
-            .pt_10()
-            .pb_8()
+            .px_6()
+            .pt_8()
+            .pb_6()
             .child(
                 v_flex()
-                    .max_w(px(640.))
+                    .max_w(px(600.))
                     .w_full()
-                    .gap_5()
+                    .gap_4()
                     .child(
                         v_flex()
-                            .max_w(px(580.))
+                            .max_w(px(560.))
                             .gap_2()
                             .child(
                                 Label::new("MAIN WORK AREA")
                                     .size(LabelSize::XSmall)
                                     .color(Color::Muted),
                             )
-                            .child(Headline::new("Run, supervise, and review in this Workspace"))
+                            .child(Headline::new(title))
                             .child(
-                                Label::new(
-                                    "Start a Terminal Session or open a file. Sessions tracks live Terminal and Agent work; files, Git changes, diagnostics, and diffs return here for review.",
-                                )
-                                .size(LabelSize::Small)
-                                .color(Color::Muted),
+                                Label::new(description)
+                                    .size(LabelSize::Small)
+                                    .color(Color::Muted),
                             ),
                     )
-                    .child(
-                        h_flex()
-                            .id("empty-project-route")
-                            .role(gpui::Role::List)
-                            .aria_label("Dez workflow route")
-                            .w_full()
-                            .flex_wrap()
-                            .gap_x_5()
-                            .gap_y_2()
-                            .children(workflow_route.into_iter().map(|(icon, label, target)| {
-                                h_flex()
-                                    .role(gpui::Role::ListItem)
-                                    .aria_label(format!("{label}. {target}"))
-                                    .min_w(px(172.))
-                                    .flex_1()
-                                    .items_center()
-                                    .gap_2()
-                                    .py_1p5()
-                                    .child(
-                                        Icon::new(icon)
-                                            .size(IconSize::XSmall)
-                                            .color(Color::Accent),
-                                    )
-                                    .child(
-                                        v_flex()
-                                            .min_w_0()
-                                            .gap_0p5()
+                    .when(show_orientation, |this| {
+                        this.child(
+                            h_flex()
+                                .id("empty-project-route")
+                                .role(gpui::Role::List)
+                                .aria_label("Dez workflow route")
+                                .w_full()
+                                .flex_wrap()
+                                .gap_x_5()
+                                .gap_y_2()
+                                .children(workflow_route.into_iter().map(
+                                    |(icon, label, target)| {
+                                        h_flex()
+                                            .role(gpui::Role::ListItem)
+                                            .aria_label(format!("{label}. {target}"))
+                                            .min_w(px(172.))
+                                            .flex_1()
+                                            .items_center()
+                                            .gap_2()
+                                            .py_1p5()
                                             .child(
-                                                Label::new(label)
-                                                    .size(LabelSize::XSmall)
-                                                    .color(Color::Default)
-                                                    .truncate(),
+                                                Icon::new(icon)
+                                                    .size(IconSize::XSmall)
+                                                    .color(Color::Accent),
                                             )
                                             .child(
-                                                Label::new(target)
-                                                    .size(LabelSize::XSmall)
-                                                    .color(Color::Muted)
-                                                    .truncate(),
-                                            ),
-                                    )
-                            })),
-                    )
+                                                v_flex()
+                                                    .min_w_0()
+                                                    .gap_0p5()
+                                                    .child(
+                                                        Label::new(label)
+                                                            .size(LabelSize::XSmall)
+                                                            .color(Color::Default)
+                                                            .truncate(),
+                                                    )
+                                                    .child(
+                                                        Label::new(target)
+                                                            .size(LabelSize::XSmall)
+                                                            .color(Color::Muted)
+                                                            .truncate(),
+                                                    ),
+                                            )
+                                    },
+                                )),
+                        )
+                    })
                     .child(
                         h_flex()
                             .w_full()
@@ -1095,9 +1118,7 @@ impl Pane {
                                     .style(ButtonStyle::Subtle)
                                     .start_icon(Icon::new(IconName::File))
                                     .aria_label("New File")
-                                    .tooltip(|_, cx| {
-                                        Tooltip::for_action("New File", &NewFile, cx)
-                                    })
+                                    .tooltip(|_, cx| Tooltip::for_action("New File", &NewFile, cx))
                                     .on_click(move |_, window, cx| {
                                         new_file_focus.dispatch_action(&NewFile, window, cx);
                                     }),
@@ -6618,6 +6639,19 @@ mod tests {
                 "N5", "N6*",
             ],
             cx,
+        );
+    }
+
+    #[test]
+    fn dez_orients_only_the_active_empty_main_work_area() {
+        assert!(empty_main_work_area_shows_orientation("Dez", true));
+        assert!(
+            !empty_main_work_area_shows_orientation("Dez", false),
+            "secondary empty panes should stay operational instead of repeating onboarding"
+        );
+        assert!(
+            empty_main_work_area_shows_orientation("Zed", false),
+            "official Zed retains the inherited empty-pane presentation"
         );
     }
 

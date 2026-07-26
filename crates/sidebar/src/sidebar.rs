@@ -762,6 +762,10 @@ fn session_rail_uses_footer_utilities(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn session_sticky_header_uses_shadow(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 fn session_start_state_visible(
     has_open_projects: bool,
     session_count: usize,
@@ -6804,7 +6808,9 @@ impl Sidebar {
             .border_b_1()
             .border_color(color.border.opacity(0.5))
             .child(header_element)
-            .shadow_sm()
+            .when(session_sticky_header_uses_shadow(paths::APP_NAME), |this| {
+                this.shadow_sm()
+            })
             .into_any_element();
 
         Some(element)

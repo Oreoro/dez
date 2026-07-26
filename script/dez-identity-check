@@ -664,6 +664,9 @@ require_multiline_pattern docs/src/development/dez/fork-notes.md \
     'Sessions and the Main Work Area form one continuous window shell.*?desktop-colored gutter or four-sided floating-card frame.*?One neutral one-pixel divider.*?window-facing outer corners.*?one bounded application surface' \
     'the permanent Dez visual contract can regress from one native glass shell to detached cards'
 require_multiline_pattern docs/src/development/dez/fork-notes.md \
+    'The active empty Main Work Area.*?Start with a terminal[[:space:]]+or file.*?Terminal in Main Work Area.*?Live[[:space:]]+state in Sessions.*?Files, Git, and diffs.*?inactive empty work areas do not[[:space:]]+repeat that onboarding.*?Open something here.*?omit the route until focused' \
+    'the permanent empty-pane hierarchy can regress to repeated dashboard-like onboarding'
+require_multiline_pattern docs/src/development/dez/fork-notes.md \
     'Dez renders no persistent Sessions footer.*?Sessions Menu.*?Agent History.*?Open Recent[[:space:]]+Workspaces….*?Hide Sessions.*?global Recent Workspaces surface.*?Official Zed retains its inherited footer' \
     'the permanent Sessions hierarchy can regress to a persistent secondary-navigation strip'
 require_multiline_pattern crates/workspace/src/workspace_settings.rs \
@@ -1471,6 +1474,12 @@ require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'fn dez_consolidates_session_utilities_into_one_overview_menu.*?session_overview_uses_sessions_menu\("Dez"\).*?!session_rail_uses_footer_utilities\("Dez"\).*?!session_overview_uses_sessions_menu\("Zed"\).*?session_rail_uses_footer_utilities\("Zed"\)' \
     'the Dez-versus-Zed Sessions utility ownership split is no longer pinned by source assertions'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn session_sticky_header_uses_shadow.*?app_name == "Zed".*?fn render_sticky_header.*?border_b_1\(\).*?session_sticky_header_uses_shadow\(paths::APP_NAME\).*?shadow_sm\(\)' \
+    'sticky Sessions Workspace headers can regress to floating-card elevation in Dez'
+require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
+    'fn dez_consolidates_session_utilities_into_one_overview_menu.*?!session_sticky_header_uses_shadow\("Dez"\).*?session_sticky_header_uses_shadow\("Zed"\)' \
+    'the flat-Dez and inherited-Zed sticky-header split is no longer pinned'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let popover_open = popover_handle\.is_deployed\(\).*?Button::new\([[:space:]]*"open-recent-workspaces".*?tab_index\(0isize\).*?aria_label\("Open Recent Workspaces"\).*?aria_expanded\(popover_open\).*?let menu_open = self\.agent_options_menu_handle\.is_deployed\(\).*?Button::new\([[:space:]]*"agent-sidebar-options-menu".*?tab_index\(0isize\).*?aria_label\("Agent Tools and Settings"\).*?aria_expanded\(menu_open\).*?selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\).*?Button::new\("history".*?tab_index\(0isize\).*?toggle_state\(is_archive\)' \
     'Session Rail utilities can regress to pointer-only controls or popovers that conceal their expanded state'
 require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
@@ -1651,14 +1660,17 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     '\.id\("terminal-unavailable-state"\).*?\.size_full\(\).*?\.min_h_0\(\).*?\.overflow_y_scroll\(\).*?\.pt_10\(\).*?\.pb_8\(\)' \
     'unavailable terminal recovery can clip its explanation or action in a short Main Work Area'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    '\.id\("empty-project-state"\).*?\.size_full\(\).*?\.min_h_0\(\).*?\.overflow_y_scroll\(\).*?\.pt_10\(\).*?\.pb_8\(\)' \
+    '\.id\("empty-project-state"\).*?\.size_full\(\).*?\.min_h_0\(\).*?\.overflow_y_scroll\(\).*?\.px_6\(\).*?\.pt_8\(\).*?\.pb_6\(\)' \
     'the empty Main Work Area can clip its primary actions in a short window'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'fn render_empty_project_state.*?max_w\(px\(640\.\)\).*?\.gap_5\(\).*?max_w\(px\(580\.\)\).*?Headline::new\("Run, supervise, and review in this Workspace"\).*?Sessions tracks live Terminal and Agent work.*?Git changes, diagnostics, and diffs return here for review' \
-    'the empty Main Work Area can regress to an unfinished placeholder that does not explain the Dez product loop'
+    'fn empty_main_work_area_shows_orientation.*?app_name == "Zed" \|\| is_active_pane.*?fn render_empty_project_state.*?active_pane\(\)\.entity_id\(\) == cx\.entity_id\(\).*?let show_orientation.*?empty_main_work_area_shows_orientation\(paths::APP_NAME, is_active_pane\).*?"Start with a terminal or file".*?"Run commands and agents here\. Sessions tracks attention; files, Git changes, diagnostics, and diffs return here for review\.".*?"Open something here".*?"Start a Terminal Session, find a file, or create one in this work area\.".*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?max_w\(px\(600\.\)\).*?\.gap_4\(\).*?max_w\(px\(560\.\)\).*?Headline::new\(title\)' \
+    'empty Main Work Areas can regress to repeated onboarding, vague copy, or a stale accessibility description'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'let workflow_route = \[.*?IconName::Terminal.*?"Run".*?"Terminal in Main Work Area".*?IconName::ListTree.*?"Supervise".*?"Live state in Sessions".*?IconName::Diff, "Review", "Files, Git, and diffs".*?\.id\("empty-project-route"\).*?\.role\(gpui::Role::List\).*?\.aria_label\("Dez workflow route"\).*?\.role\(gpui::Role::ListItem\).*?\.aria_label\(format!\("\{label\}\. \{target\}"\)\).*?\.py_1p5\(\).*?Color::Accent' \
-    'the empty Main Work Area can regress to a vague launch surface without the concrete Run/Sessions/Review route'
+    'let workflow_route = \[.*?IconName::Terminal.*?"Run".*?"Terminal in Main Work Area".*?IconName::ListTree.*?"Supervise".*?"Live state in Sessions".*?IconName::Diff, "Review", "Files, Git, and diffs".*?\.when\(show_orientation.*?\.id\("empty-project-route"\).*?\.role\(gpui::Role::List\).*?\.aria_label\("Dez workflow route"\).*?\.role\(gpui::Role::ListItem\).*?\.aria_label\(format!\("\{label\}\. \{target\}"\)\).*?\.py_1p5\(\).*?Color::Accent' \
+    'the active empty Main Work Area can lose its concrete route or secondary panes can repeat it'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    'fn dez_orients_only_the_active_empty_main_work_area.*?empty_main_work_area_shows_orientation\("Dez", true\).*?!empty_main_work_area_shows_orientation\("Dez", false\).*?empty_main_work_area_shows_orientation\("Zed", false\)' \
+    'the focused-only Dez orientation and official-Zed compatibility split is no longer pinned'
 reject_multiline_pattern crates/workspace/src/pane.rs \
     'fn render_empty_project_state.*?\.id\("empty-project-route"\).*?\.role\(gpui::Role::ListItem\).*?(\.rounded_md\(\)|\.border_1\(\)|\.bg\(cx\.theme\(\)\.colors\(\)\.element_background\)).*?Button::new\("empty-project-terminal"' \
     'the passive Main Work Area workflow route can regress to a row of controls that look clickable'

@@ -3194,3 +3194,13 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   Official Zed retains its inherited placeholder behavior. Static product
   assertions and identity guards cover both paths; no build, test binary,
   alternate binary, or visual launch was performed.
+- 2026-07-26: Stopped explicit split layouts from repeating first-use guidance
+  across every empty pane. Only the active empty Main Work Area now carries the
+  passive Run/Supervise/Review route under **Start with a terminal or file**.
+  Inactive empty panes keep the same three working actions under compact **Open
+  something here** copy and regain orientation when focused. Sticky Sessions
+  Workspace headers also drop their small shadow in Dez, staying within the
+  flat list material and divider hierarchy; official Zed retains its inherited
+  presentation. Static product assertions, formatting, identity, theme,
+  metadata, and diff checks cover this source slice; no build, test binary,
+  alternate binary, or visual launch was performed.

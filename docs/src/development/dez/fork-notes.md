@@ -189,17 +189,14 @@ prefixes. The action is named **Rename Terminal…** and double-clicking the tab
 invokes the same editor.
 
 At zero sessions, the overview owns the rail title and **No sessions yet**
-status. The compact start block uses one quiet **Start with a Workspace**
-heading rather than a decorative card. It explains that a codebase supplies
-context to Terminal and Agent Sessions and that their changes return to the IDE
-for review. Its passive icon-and-copy route says **Terminal in Main Work
-Area**, **Live state in Sessions**, and **Files, Git, and diffs** without
-button-like borders or backgrounds. It offers one filled **Open Workspace…**
-action and keeps **Open Scratch Terminal** as the outlined pathless
-alternative. With an active Workspace but no Session, the primary recovery
-action is **Start Terminal Session**. Start, search recovery, attention scope,
-and Session scope actions are keyboard tab stops and name their destination in
-accessibility output.
+status. With no Workspace open, the compact state says **No Workspace open**,
+explains that Sessions appears after real work starts, offers one filled **Open
+Workspace…** action, and keeps **Open Scratch Terminal** as the outlined
+pathless alternative. It does not repeat the Run/Supervise/Review route owned by
+the active Main Work Area and Welcome. With an active Workspace but no Session,
+that Workspace group owns the primary **Start Terminal Session** action. Start,
+search recovery, attention scope, and Session scope actions are keyboard tab
+stops and name their destination in accessibility output.
 Once one or more Sessions exist, the overview remains status and scope only.
 Each Workspace header owns its exact terminal-creation destination, preventing
 the active Workspace from exposing the same launcher twice. Official Zed may
@@ -259,15 +256,17 @@ using the same Terminal, Sessions, and Diff icon grammar as other empty
 surfaces. It has no enclosing card, dividers, numbered selection pills, or
 control background.
 
-The empty Main Work Area uses the same **Start Terminal Session** vocabulary.
-Its orientation is part of the native work surface, not a bordered card
-floating over it. One concrete heading explains that this Workspace is where
-users run, supervise, and review; the passive route says **Terminal in Main
-Work Area**, **Live state in Sessions**, and **Files, Git, and diffs** without
-using button-like containers. The action row owns all interactive styling.
-Copy describes live terminal and Agent state without calling the default
-GUI-owned terminal durable; durability is shown only when an external Host
-actually owns the exact Session.
+The active empty Main Work Area uses the same **Start Terminal Session**
+vocabulary. Its orientation is part of the native work surface, not a bordered
+card floating over it. The focused empty work area says **Start with a terminal
+or file** and retains the passive route **Terminal in Main Work Area**, **Live
+state in Sessions**, and **Files, Git, and diffs** without using button-like
+containers. In an explicit multi-pane layout, inactive empty work areas do not
+repeat that onboarding. They say **Open something here**, keep the three
+immediate actions, and omit the route until focused. The action row owns all
+interactive styling. Copy describes live terminal and Agent state without
+calling the default GUI-owned terminal durable; durability is shown only when
+an external Host actually owns the exact Session.
 
 Empty primary regions use compact, top-anchored recovery guidance rather than
 floating a small prompt in the middle of an empty pane. The heading names the
@@ -788,21 +787,24 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   work surface. Dez never paints the inherited full-pane focus overlay, even
   when an imported setting requests it; title, selected-tab, and control focus
   remain visible. Official Zed retains its configurable upstream pane border.
-  The remaining empty Main Work Area is one top-anchored native launch region
-  headed **Run, supervise, and review in this Workspace**, with only the three
-  immediate Workspace actions. Its passive route names **Run -> Terminal in
-  Main Work Area**, **Supervise -> Live state in Sessions**, and **Review ->
-  Files, Git, and diffs**. It has no enclosing card or button-like route tiles.
+  The active empty Main Work Area is one top-anchored native launch region
+  headed **Start with a terminal or file**, with only the three immediate
+  Workspace actions. Its passive route names **Run -> Terminal in Main Work
+  Area**, **Supervise -> Live state in Sessions**, and **Review -> Files, Git,
+  and diffs**. Inactive empty panes keep the same actions under **Open something
+  here** but omit the route, preventing repeated onboarding from turning an
+  explicit split layout into multiple dashboards. Neither presentation has an
+  enclosing card or button-like route tiles.
 - **2026-07-25: Terminal context is chrome, not another panel.** The standalone
   terminal handoff is one 32 px tab-aligned header with lifecycle, repository,
   Files, Review Changes, and Session Details. It uses the tab-bar surface,
   removes the redundant visible **Terminal Session** actor title, and keeps the
   complete actor identity in its accessible name and details disclosure. The
-  supervisor region is visibly titled and named **Sessions**, and its true-empty
-  state repeats the concrete route: **Run -> Terminal in Main Work Area**,
-  **Supervise -> Live state in Sessions**, and **Review -> Files, Git, and
-  diffs**. The route is a named passive list, not another action stack.
-  **Session Rail**
+  supervisor region is visibly titled and named **Sessions**. Its true-empty
+  state stays operational: open a Workspace or start a pathless scratch
+  terminal. The active Main Work Area and Welcome own first-use orientation, so
+  Sessions does not repeat that route as permanent narrow chrome. **Session
+  Rail**
   remains an implementation and historical documentation term, not unexplained
   primary UI copy.
 - **2026-07-25: Transient feedback cannot become a fifth region.** Workspace
@@ -966,6 +968,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   Secondary navigation never grows into a labeled footer as the rail widens.
   Row metadata may disclose additional evidence at its own breakpoints, but
   permanent chrome stays stable from the 200 px floor through detailed widths.
+  A sticky Workspace group remains part of that list: Dez uses the panel
+  material and one bottom divider without a floating-card shadow. Official Zed
+  retains its inherited elevation.
 - **2026-07-23: Responsive labels reserve space before they appear.** Controls
   made visible at a compact breakpoint use compact padding and typography. A
   breakpoint is incomplete if its newly revealed labels can only fit by
