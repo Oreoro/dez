@@ -547,11 +547,14 @@ require_multiline_pattern crates/zed/src/zed.rs \
     'fn product_window_min_size\(app_name: &str\).*?app_name == "Zed".*?width: px\(360\.0\).*?height: px\(240\.0\).*?width: px\(600\.0\).*?height: px\(400\.0\).*?window_min_size: Some\(product_window_min_size\(APP_NAME\)\).*?fn dez_window_floor_preserves_a_usable_main_work_area.*?product_window_min_size\("Dez"\).*?width: px\(600\.0\).*?height: px\(400\.0\).*?product_window_min_size\("Zed"\).*?width: px\(360\.0\).*?height: px\(240\.0\)' \
     'Dez can regress to accepting a native window narrower than the documented Sessions and Main Work Area layout floors'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_rail_uses_absolute_client_geometry\(app_name: &str\).*?app_name == "Zed".*?Decorations::Client \{ \.\. \}.*?!session_rail_uses_absolute_client_geometry\(APP_NAME\).*?el\.h_full\(\)\.w\(rail_width\).*?Decorations::Client \{ tiling, \.\. \} => el.*?\.absolute\(\)' \
+    'fn session_rail_uses_absolute_client_geometry\(app_name: &str\).*?app_name == "Zed".*?Decorations::Client \{ tiling, \.\. \}.*?!session_rail_uses_absolute_client_geometry\(APP_NAME\).*?el\.h_full\(\).*?\.w\(rail_width\).*?Decorations::Client \{ tiling, \.\. \} => el.*?\.absolute\(\)' \
     'the Dez Sessions root can regress to a second absolute client-decoration surface'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
-    'fn dez_sessions_uses_normal_flow_client_geometry.*?!session_rail_uses_absolute_client_geometry\("Dez"\).*?session_rail_uses_absolute_client_geometry\("Zed"\)' \
+    'fn dez_sessions_uses_normal_flow_client_geometry.*?!session_rail_uses_absolute_client_geometry\("Dez"\).*?!session_rail_uses_card_frame\("Dez"\).*?session_rail_uses_absolute_client_geometry\("Zed"\).*?session_rail_uses_card_frame\("Zed"\)' \
     'the normal-flow Sessions root is no longer pinned by a product assertion'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn session_rail_uses_card_frame\(app_name: &str\).*?app_name == "Zed".*?let rail_on_left = self\.side\(cx\) == SidebarSide::Left.*?if !session_rail_uses_absolute_client_geometry\(APP_NAME\).*?Only the window-facing corners round.*?if session_rail_uses_card_frame\(APP_NAME\).*?this\.rounded_lg\(\)\.border_1\(\).*?else if rail_on_left.*?this\.border_r_1\(\).*?this\.border_l_1\(\)' \
+    'Dez Sessions can regress from one flush structural edge to a detached four-sided card'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_sidebar_header.*?\.h\(Tab::container_height\(cx\)\).*?\.bg\(cx\.theme\(\)\.colors\(\)\.tab_bar_background\).*?\.border_b_1\(\).*?\.border_color\(cx\.theme\(\)\.colors\(\)\.border\)' \
     'the Sessions header can lose its native inline divider'
@@ -634,6 +637,9 @@ require_multiline_pattern crates/workspace/src/workspace.rs \
     'fn auxiliary_drawer_starts_compact_and_preserves_the_main_work_area.*?px\(2000\.\).*?px\(360\.\).*?px\(1000\.\).*?px\(240\.\).*?px\(560\.\).*?px\(224\.\).*?px\(400\.\).*?px\(160\.\).*?auxiliary_pane_max_ratio\(px\(2000\.\)\), 0\.22.*?auxiliary_pane_max_ratio\(px\(1000\.\)\), 0\.24.*?auxiliary_pane_max_ratio\(px\(560\.\)\), 0\.4' \
     'the responsive optional-drawer width matrix is no longer protected'
 require_multiline_pattern crates/workspace/src/workspace.rs \
+    'fn workspace_card_gap.*?workspace_card_gap_for_product\([[:space:]]*paths::APP_NAME.*?fn workspace_card_gap_for_product.*?app_name == "Zed".*?configured_gap\.max\(0\.0\).*?Pixels::ZERO.*?fn dez_uses_one_flush_window_shell_without_a_desktop_gutter.*?workspace_card_gap_for_product\("Dez", 7\.5\), Pixels::ZERO.*?workspace_card_gap_for_product\("Zed", 7\.5\), px\(7\.5\)' \
+    'the Dez shell can regress to exposing a desktop gutter between Sessions and the Main Work Area'
+require_multiline_pattern crates/workspace/src/workspace.rs \
     'pub fn apply_canvas_layout.*?ensure_visible_tabbed_panes\(1, &\[\].*?pub fn apply_canvas_agent_control_layout.*?ensure_visible_tabbed_panes\(1, &\[\].*?pub fn apply_canvas_editor_focus_layout.*?ensure_visible_tabbed_panes\(1, &\[\].*?fn ensure_visible_tabbed_panes.*?selected_pane_ids.*?contains_user_work.*?!selected && visible && !contains_user_work.*?items_len\(\) > 0.*?selected_panes\.push\(pane\).*?test_single_work_area_cleanup_hides_only_surplus_empty_panes.*?!surplus_empty_pane\.read\(cx\)\.is_visible\(\).*?user_work_pane\.read\(cx\)\.is_visible\(\)' \
     'single-work-area recipes can regress to a duplicate empty Main Work Area or hide panes containing user work'
 require_multiline_pattern crates/workspace/src/workspace.rs \
@@ -647,13 +653,16 @@ require_multiline_pattern crates/workspace/src/workspace.rs \
     'narrow Dez windows can regress to showing Sessions beside a competing contextual drawer'
 require_multiline_pattern crates/workspace/src/multi_workspace.rs \
     'fn toggle_sidebar.*?hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal.*?fn focus_sidebar.*?hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal.*?fn restore_sidebar_open_state.*?hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal.*?close_sidebar_for_auxiliary_surface.*?fn hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal.*?dez_auxiliary_surfaces_are_window_exclusive.*?hide_dez_auxiliary_drawer_for_sessions' \
-    'opening or restoring Sessions can regress to competing with a contextual drawer on focused windows'
+    'opening or restoring Sessions can regress to competing with a contextual drawer on narrow windows'
 require_multiline_pattern crates/workspace/src/multi_workspace.rs \
     'dez_auxiliary_surfaces_were_window_exclusive: bool.*?fn reconcile_dez_auxiliary_surfaces_after_resize.*?became_window_exclusive.*?auxiliary_pane_visible.*?defer_in.*?auxiliary_pane_has_focus.*?close_sidebar_for_auxiliary_surface.*?hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal.*?impl Render for MultiWorkspace.*?reconcile_dez_auxiliary_surfaces_after_resize' \
     'resizing a wide Dez layout can regress to retaining three competing regions in a narrow window'
 require_multiline_pattern docs/src/development/dez/fork-notes.md \
     'The final shell follows this responsive layout contract.*?flowchart TB.*?Wide window · 1160 logical px or more.*?Main Work Area.*?Narrow window · below 1160 logical px.*?One auxiliary surface.*?opening[[:space:]]+Sessions hides the visible contextual drawer.*?opening Workspace Tools or Agent[[:space:]]+hides Sessions' \
     'the permanent Dez shell contract can lose its concrete responsive layout and state transition'
+require_multiline_pattern docs/src/development/dez/fork-notes.md \
+    'Sessions and the Main Work Area form one continuous window shell.*?desktop-colored gutter or four-sided floating-card frame.*?One neutral one-pixel divider.*?window-facing outer corners.*?one bounded application surface' \
+    'the permanent Dez visual contract can regress from one native glass shell to detached cards'
 require_multiline_pattern assets/settings/default.json \
     '"project_panel": \{.*?"starts_open": false.*?"session_rail": \{.*?"visibility": "auto".*?"mode": "compact"' \
     'the fresh Dez shell can regress to opening contextual Workspace Tools or Sessions over the Main Work Area by default'

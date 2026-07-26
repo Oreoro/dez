@@ -74,9 +74,14 @@ fn session_rail_render_width_matches_reserved_width_for_each_mode() {
 #[test]
 fn dez_sessions_uses_normal_flow_client_geometry() {
     assert!(!session_rail_uses_absolute_client_geometry("Dez"));
+    assert!(!session_rail_uses_card_frame("Dez"));
     assert!(
         session_rail_uses_absolute_client_geometry("Zed"),
         "official Zed retains its inherited client-decoration geometry"
+    );
+    assert!(
+        session_rail_uses_card_frame("Zed"),
+        "official Zed retains its inherited floating card frame"
     );
 }
 

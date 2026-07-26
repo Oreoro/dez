@@ -103,6 +103,13 @@ drawer because the Main Work Area retains a deliberate readable width.
 Transient progress and notices remain bounded and nonmodal; dialogs are
 reserved for decisions that block progress.
 
+Sessions and the Main Work Area form one continuous window shell. Dez does not
+put a desktop-colored gutter or four-sided floating-card frame between them.
+One neutral one-pixel divider marks the shared structural edge; only the
+window-facing outer corners inherit the native window radius. Lumin
+translucency therefore reads as one bounded application surface rather than
+separate glass cards floating over the desktop.
+
 Every visible **Start Terminal Session** action creates a normal main-area
 Surface. It can be tabbed, split, moved, detached from a durable Host Session,
 or reattached without introducing a separate Terminal Panel model. Compact

@@ -174,7 +174,15 @@ pub use workspace_settings::{
 use zed_actions::{OpenTelemetryLog, Spawn, feedback::FileBugReport, theme::ToggleMode};
 
 pub(crate) fn workspace_card_gap(cx: &App) -> Pixels {
-    gpui::px(WorkspaceSettings::get_global(cx).card_gap.max(0.0))
+    workspace_card_gap_for_product(paths::APP_NAME, WorkspaceSettings::get_global(cx).card_gap)
+}
+
+fn workspace_card_gap_for_product(app_name: &str, configured_gap: f32) -> Pixels {
+    if app_name == "Zed" {
+        gpui::px(configured_gap.max(0.0))
+    } else {
+        Pixels::ZERO
+    }
 }
 
 fn canvas_layout_modal_width(cx: &App, compact: f32, balanced: f32, spacious: f32) -> Rems {
@@ -16525,6 +16533,13 @@ mod tests {
             after_drawer >= px(600.),
             "the optional drawer must preserve at least 60% of the Main Work Area"
         );
+    }
+
+    #[test]
+    fn dez_uses_one_flush_window_shell_without_a_desktop_gutter() {
+        assert_eq!(workspace_card_gap_for_product("Dez", 7.5), Pixels::ZERO);
+        assert_eq!(workspace_card_gap_for_product("Zed", 7.5), px(7.5));
+        assert_eq!(workspace_card_gap_for_product("Zed", -1.0), Pixels::ZERO);
     }
 
     #[test]

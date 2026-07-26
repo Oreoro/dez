@@ -277,6 +277,10 @@ fn session_rail_uses_absolute_client_geometry(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn session_rail_uses_card_frame(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 fn session_rail_shows_idle_workspaces(app_name: &str) -> bool {
     app_name == "Zed"
 }
@@ -14451,6 +14455,7 @@ impl Render for Sidebar {
 
         let color = cx.theme().colors();
         let bg = color.panel_background;
+        let rail_on_left = self.side(cx) == SidebarSide::Left;
 
         let no_search_results = self.contents.entries.is_empty();
         let has_query = self.has_filter_query(cx);
@@ -14514,17 +14519,29 @@ impl Render for Sidebar {
             }))
             .font(ui_font)
             .map(|el| {
-                let on_left = self.side(cx) == SidebarSide::Left;
                 match window.window_decorations() {
                     Decorations::Server => el.h_full().w(rail_width),
-                    Decorations::Client { .. }
+                    Decorations::Client { tiling, .. }
                         if !session_rail_uses_absolute_client_geometry(APP_NAME) =>
                     {
                         // MultiWorkspace already reserves this exact width.
-                        // Dez keeps one normal-flow layout and hit-test owner
-                        // instead of stretching a second absolute surface over
-                        // the reserved Sessions region.
-                        el.h_full().w(rail_width)
+                        // Dez keeps one normal-flow layout and one continuous
+                        // shell. Only the window-facing corners round; the
+                        // Main Work Area edge stays square and flush.
+                        el.h_full()
+                            .w(rail_width)
+                            .when(rail_on_left && !(tiling.top || tiling.left), |el| {
+                                el.rounded_tl(CLIENT_SIDE_DECORATION_ROUNDING)
+                            })
+                            .when(rail_on_left && !(tiling.bottom || tiling.left), |el| {
+                                el.rounded_bl(CLIENT_SIDE_DECORATION_ROUNDING)
+                            })
+                            .when(!rail_on_left && !(tiling.top || tiling.right), |el| {
+                                el.rounded_tr(CLIENT_SIDE_DECORATION_ROUNDING)
+                            })
+                            .when(!rail_on_left && !(tiling.bottom || tiling.right), |el| {
+                                el.rounded_br(CLIENT_SIDE_DECORATION_ROUNDING)
+                            })
                     }
                     // With client-side decorations the sidebar owns the window
                     // corners on its side, so round them like the title bar and
@@ -14541,7 +14558,7 @@ impl Render for Sidebar {
                         .when(!tiling.top, |el| el.pt_px())
                         .when(!tiling.bottom, |el| el.pb_px())
                         .map(|el| {
-                            if on_left {
+                            if rail_on_left {
                                 el.left(if tiling.left { px(0.) } else { px(-1.) })
                                     .when(!tiling.left, |el| el.pl(px(1.)))
                             } else {
@@ -14549,25 +14566,32 @@ impl Render for Sidebar {
                                     .when(!tiling.right, |el| el.pr(px(1.)))
                             }
                         })
-                        .when(on_left && !(tiling.top || tiling.left), |el| {
+                        .when(rail_on_left && !(tiling.top || tiling.left), |el| {
                             el.rounded_tl(CLIENT_SIDE_DECORATION_ROUNDING)
                         })
-                        .when(on_left && !(tiling.bottom || tiling.left), |el| {
+                        .when(rail_on_left && !(tiling.bottom || tiling.left), |el| {
                             el.rounded_bl(CLIENT_SIDE_DECORATION_ROUNDING)
                         })
-                        .when(!on_left && !(tiling.top || tiling.right), |el| {
+                        .when(!rail_on_left && !(tiling.top || tiling.right), |el| {
                             el.rounded_tr(CLIENT_SIDE_DECORATION_ROUNDING)
                         })
-                        .when(!on_left && !(tiling.bottom || tiling.right), |el| {
+                        .when(!rail_on_left && !(tiling.bottom || tiling.right), |el| {
                             el.rounded_br(CLIENT_SIDE_DECORATION_ROUNDING)
                         }),
                 }
             })
             .bg(bg)
             .overflow_hidden()
-            .rounded_lg()
-            .border_1()
             .border_color(color.border)
+            .map(|this| {
+                if session_rail_uses_card_frame(APP_NAME) {
+                    this.rounded_lg().border_1()
+                } else if rail_on_left {
+                    this.border_r_1()
+                } else {
+                    this.border_l_1()
+                }
+            })
             .child(self.render_sidebar_header(window, cx))
             .map(|this| match &self.view {
                 SidebarView::ThreadList => this
