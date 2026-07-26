@@ -368,6 +368,53 @@ fn session_row_primary_action_labels_visible(width: Pixels) -> bool {
     width >= PRIMARY_ACTION_LABELS_MIN_WIDTH
 }
 
+fn terminal_agent_row_state_label(
+    agent_kind: Option<TerminalAgentKind>,
+    state: SharedString,
+    actor_label_visible: bool,
+) -> SharedString {
+    let Some(agent_kind) = agent_kind else {
+        return state;
+    };
+
+    // Process-only detection is honest evidence, but "Detected · Live" is an
+    // implementation report rather than a useful supervision state. Details
+    // already name foreground-process observation explicitly. Keep the row
+    // concise and make the agent transition unmistakable at compact widths.
+    let observed = state.as_ref().strip_prefix("Detected · ");
+    let state = observed.unwrap_or(state.as_ref());
+    let state = if state == "Live" {
+        "Running".to_owned()
+    } else if let Some(remainder) = state.strip_prefix("Live · ") {
+        format!("Running · {remainder}")
+    } else {
+        state.to_owned()
+    };
+
+    if actor_label_visible {
+        if observed.is_some() {
+            format!("{state} · Observed").into()
+        } else {
+            state.into()
+        }
+    } else {
+        format!("{} · {state}", agent_kind.display_name()).into()
+    }
+}
+
+fn running_terminal_agent_summary(
+    agent_kinds: impl IntoIterator<Item = TerminalAgentKind>,
+) -> Option<SharedString> {
+    let mut agent_kinds = agent_kinds.into_iter();
+    let first = agent_kinds.next()?;
+    let additional_count = agent_kinds.count();
+    if additional_count == 0 {
+        Some(format!("{} running", first.display_name()).into())
+    } else {
+        Some(format!("{} agent sessions running", additional_count + 1).into())
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn session_row_primary_action_button(
     id: impl Into<ElementId>,
@@ -1712,6 +1759,54 @@ mod terminal_runtime_label_tests {
     }
 
     #[test]
+    fn compact_terminal_agent_state_names_the_actor_and_actionable_state() {
+        assert_eq!(
+            terminal_agent_row_state_label(
+                Some(TerminalAgentKind::Codex),
+                "Detected · Live".into(),
+                false,
+            ),
+            "Codex · Running"
+        );
+        assert_eq!(
+            terminal_agent_row_state_label(
+                Some(TerminalAgentKind::Claude),
+                "Detected · Needs attention".into(),
+                false,
+            ),
+            "Claude Code · Needs attention"
+        );
+        assert_eq!(
+            terminal_agent_row_state_label(
+                Some(TerminalAgentKind::Codex),
+                "Detected · Live".into(),
+                true,
+            ),
+            "Running · Observed"
+        );
+        assert_eq!(
+            terminal_agent_row_state_label(None, "Live".into(), false),
+            "Live"
+        );
+    }
+
+    #[test]
+    fn collapsed_workspace_summary_reports_running_terminal_agents() {
+        assert_eq!(
+            running_terminal_agent_summary([TerminalAgentKind::Codex]),
+            Some("Codex running".into())
+        );
+        assert_eq!(
+            running_terminal_agent_summary([TerminalAgentKind::Codex, TerminalAgentKind::Claude,]),
+            Some("2 agent sessions running".into())
+        );
+        assert_eq!(
+            running_terminal_agent_summary(std::iter::empty::<TerminalAgentKind>()),
+            None
+        );
+    }
+
+    #[test]
     fn distinguishes_saved_live_and_attention_terminal_agents() {
         let live = TerminalRuntimeInfo {
             state: TerminalRuntimeState::Live,
@@ -2622,6 +2717,7 @@ enum ListEntry {
         highlight_positions: Vec<usize>,
         layout_label: Option<SharedString>,
         has_running_threads: bool,
+        running_terminal_agent_label: Option<SharedString>,
         attention_thread_count: usize,
         has_notifications: bool,
         is_active: bool,
@@ -4551,8 +4647,23 @@ impl Sidebar {
                 .flat_map(|ws| all_thread_infos_for_workspace(ws, cx));
 
             let mut threads: Vec<Arc<ThreadEntry>> = Vec::new();
-            let mut has_running_threads = false;
-            let mut attention_thread_count: usize = 0;
+            let running_terminal_agent_label =
+                running_terminal_agent_summary(terminals.iter().filter_map(|terminal| {
+                    let agent_kind = terminal.detected_agent_kind?;
+                    matches!(
+                        terminal_run_review_state(
+                            terminal.agent.as_ref(),
+                            terminal.runtime.as_ref()
+                        ),
+                        RunReviewState::Running
+                    )
+                    .then_some(agent_kind)
+                }));
+            let mut has_running_threads = running_terminal_agent_label.is_some();
+            let mut attention_thread_count = terminals
+                .iter()
+                .filter(|terminal| terminal.needs_attention)
+                .count();
             let group_host = group_key.host();
 
             if should_load_threads {
@@ -4890,6 +5001,7 @@ impl Sidebar {
                     highlight_positions: workspace_highlight_positions,
                     layout_label: layout_label.clone(),
                     has_running_threads,
+                    running_terminal_agent_label: running_terminal_agent_label.clone(),
                     attention_thread_count,
                     has_notifications: has_thread_notifications || has_terminal_notifications,
                     is_active,
@@ -4940,6 +5052,7 @@ impl Sidebar {
                     highlight_positions: Vec::new(),
                     layout_label: layout_label.clone(),
                     has_running_threads,
+                    running_terminal_agent_label: running_terminal_agent_label.clone(),
                     attention_thread_count,
                     has_notifications: has_thread_notifications || has_terminal_notifications,
                     is_active,
@@ -5274,6 +5387,7 @@ impl Sidebar {
                 highlight_positions,
                 layout_label,
                 has_running_threads,
+                running_terminal_agent_label,
                 attention_thread_count,
                 has_notifications,
                 is_active: is_active_group,
@@ -5292,6 +5406,7 @@ impl Sidebar {
                     highlight_positions,
                     layout_label.as_ref(),
                     *has_running_threads,
+                    running_terminal_agent_label.as_ref(),
                     *attention_thread_count,
                     *has_notifications,
                     *is_active_group,
@@ -5358,6 +5473,7 @@ impl Sidebar {
         highlight_positions: &[usize],
         layout_label: Option<&SharedString>,
         has_running_threads: bool,
+        running_terminal_agent_label: Option<&SharedString>,
         attention_thread_count: usize,
         has_notifications: bool,
         is_active: bool,
@@ -5514,7 +5630,10 @@ impl Sidebar {
                     })
                     .when(labels_visible, |this| this.child(label))
                     .when_some(
-                        layout_label.filter(|_| labels_visible),
+                        layout_label.filter(|_| {
+                            labels_visible
+                                && !(is_collapsed && running_terminal_agent_label.is_some())
+                        }),
                         |this, layout_label| {
                             this.child(
                                 Label::new(SharedString::from(layout_label.as_ref()))
@@ -5525,18 +5644,34 @@ impl Sidebar {
                         },
                     )
                     .when_some(
+                        running_terminal_agent_label.filter(|_| is_collapsed && labels_visible),
+                        |this, running_terminal_agent_label| {
+                            this.child(
+                                Label::new(SharedString::from(
+                                    running_terminal_agent_label.as_ref(),
+                                ))
+                                .size(LabelSize::XSmall)
+                                .color(Color::Accent)
+                                .truncate(),
+                            )
+                        },
+                    )
+                    .when_some(
                         self.render_remote_project_icon(ix, host.as_ref()),
                         |this, icon| this.child(icon),
                     )
                     .when(is_collapsed, |this| {
-                        this.when(has_running_threads, |this| {
-                            this.child(
-                                Icon::new(IconName::LoadCircle)
-                                    .size(IconSize::XSmall)
-                                    .color(Color::Muted)
-                                    .with_rotate_animation(2),
-                            )
-                        })
+                        this.when(
+                            has_running_threads && running_terminal_agent_label.is_none(),
+                            |this| {
+                                this.child(
+                                    Icon::new(IconName::LoadCircle)
+                                        .size(IconSize::XSmall)
+                                        .color(Color::Muted)
+                                        .with_rotate_animation(2),
+                                )
+                            },
+                        )
                         .when(show_agent_attention && attention_thread_count > 0, |this| {
                             let tooltip_text = if attention_thread_count == 1 {
                                 "1 session needs attention".to_string()
@@ -6520,6 +6655,7 @@ impl Sidebar {
             highlight_positions,
             layout_label,
             has_running_threads,
+            running_terminal_agent_label,
             attention_thread_count,
             has_notifications,
             is_active,
@@ -6540,6 +6676,7 @@ impl Sidebar {
             &highlight_positions,
             layout_label.as_ref(),
             *has_running_threads,
+            running_terminal_agent_label.as_ref(),
             *attention_thread_count,
             *has_notifications,
             *is_active,
@@ -11455,6 +11592,23 @@ impl Sidebar {
         let can_copy_codex_hook = terminal_agent_kind == Some(TerminalAgentKind::Codex)
             && terminal.agent.is_none()
             && has_persistent_owner;
+        let attention_is_active =
+            terminal.metadata.attention.condition == TerminalAttentionCondition::Active;
+        let attention_is_unread =
+            terminal.metadata.attention.presentation == TerminalAttentionPresentation::Unread;
+        let attention_is_muted = terminal.metadata.attention.is_muted_at(Utc::now());
+        let terminal_state_label = terminal_agent_row_state_label(
+            terminal_agent_kind,
+            terminal_agent_state_label(
+                terminal.agent.as_ref(),
+                terminal.runtime.as_ref(),
+                needs_attention,
+                attention_is_muted,
+                can_copy_codex_hook,
+                show_detection_confidence,
+            ),
+            supplemental_metadata_visible,
+        );
         let context_review_workspace = review_workspace.clone();
         let context_review_brief = review_brief.clone();
         let context_files_workspace = match &terminal.workspace {
@@ -11465,11 +11619,6 @@ impl Sidebar {
         let context_session_ref = terminal.metadata.session_ref;
         let context_terminal_id = terminal.metadata.terminal_id;
         let context_attention_metadata = terminal.metadata.clone();
-        let attention_is_active =
-            terminal.metadata.attention.condition == TerminalAttentionCondition::Active;
-        let attention_is_unread =
-            terminal.metadata.attention.presentation == TerminalAttentionPresentation::Unread;
-        let attention_is_muted = terminal.metadata.attention.is_muted_at(Utc::now());
         let context_agent_panel = match (&terminal.workspace, &terminal.source) {
             (ThreadEntryWorkspace::Open(workspace), TerminalEntrySource::AgentPanel) => {
                 workspace.read(cx).panel::<AgentPanel>(cx)
@@ -11498,26 +11647,11 @@ impl Sidebar {
             .is_remote(is_remote)
             .when(session_rail_settings.show_agent_state_metadata, |this| {
                 this.when_some(terminal_agent_kind, |this, agent_kind| {
-                    this.actor_label(agent_kind.display_name()).state_label(
-                        terminal_agent_state_label(
-                            terminal.agent.as_ref(),
-                            terminal.runtime.as_ref(),
-                            needs_attention,
-                            attention_is_muted,
-                            can_copy_codex_hook,
-                            show_detection_confidence,
-                        ),
-                    )
+                    this.actor_label(agent_kind.display_name())
+                        .state_label(terminal_state_label.clone())
                 })
                 .when(terminal_agent_kind.is_none(), |this| {
-                    this.state_label(terminal_agent_state_label(
-                        terminal.agent.as_ref(),
-                        terminal.runtime.as_ref(),
-                        needs_attention,
-                        attention_is_muted,
-                        false,
-                        false,
-                    ))
+                    this.state_label(terminal_state_label.clone())
                 })
                 .host_label(host_label)
                 .host_label_visible(supplemental_metadata_visible)

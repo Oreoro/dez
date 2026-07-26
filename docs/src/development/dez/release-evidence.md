@@ -1358,3 +1358,25 @@ pass. The touched documentation also passes Prettier. Per the active
 source-first gate, no application build, test binary, bundle, alternate binary,
 or visual launch was performed. Rendered proof for these commits remains open
 and must use the intended Dez artifact when the consolidated build gate resumes.
+
+## 2026-07-26: visible terminal-agent handoff
+
+Current source closes the remaining silent compact/collapsed presentation gap:
+
+- a recognized foreground process keeps the same Main Work Area terminal and
+  Session identity;
+- compact Sessions rows name actor and state, such as **Codex · Running**,
+  instead of hiding the actor beside **Detected · Live**;
+- collapsed Workspace headers show the single running provider or a count of
+  running terminal Agent Sessions;
+- terminal-agent attention contributes to the same header summary as native
+  Agent Sessions; and
+- the transition does not expand a group, move focus, create a panel, display a
+  toast, add an overlay, or attach a duplicate terminal.
+
+Pure source assertions cover compact row presentation and collapsed summary
+copy. The identity gate pins the process-state derivation, header projection,
+and rendered response. Runtime proof remains open until the consolidated Dez
+artifact is rebuilt: exercise shell → Codex → shell with the Workspace group
+expanded and collapsed, then select the row and confirm focus returns to the
+original terminal.

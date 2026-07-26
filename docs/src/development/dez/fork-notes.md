@@ -1087,3 +1087,15 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   may consume at most 40% on smaller workspaces. The Main Work Area always
   retains at least 60%; a drawer may become narrower only when that invariant
   requires it.
+- **2026-07-26: Starting a terminal agent produces an immediate supervision
+  response without moving the user.** A recognized foreground process keeps
+  its existing Main Work Area terminal and stable Session identity. In compact
+  Sessions, the existing row names both actor and state—for example **Codex ·
+  Running**—instead of hiding the actor or exposing **Detected · Live**. If the
+  Workspace group is collapsed, its header summarizes the running terminal
+  agent or the number of running terminal Agent Sessions. Terminal attention
+  contributes to the same Workspace summary as native Agent attention. Dez
+  neither auto-expands the group nor steals terminal focus: the response is
+  visible, the layout remains still, and selecting the row returns to the exact
+  owning terminal. No Agent panel, duplicate terminal, toast, or overlay is
+  part of this transition.

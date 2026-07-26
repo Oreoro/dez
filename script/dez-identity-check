@@ -501,6 +501,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn terminal_event_refreshes_session.*?TerminalEvent::ProcessInfoChanged.*?TerminalEvent::ProcessExited.*?TerminalEvent::Bell' \
     'the Main Work Area terminal projection can lose its bounded state-change refresh policy'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn terminal_agent_row_state_label.*?strip_prefix\("Detected · "\).*?"Running".*?agent_kind\.display_name\(\).*?fn running_terminal_agent_summary.*?"\{\} running".*?running_terminal_agent_label =.*?terminal_run_review_state.*?RunReviewState::Running.*?running_terminal_agent_label: running_terminal_agent_label\.clone\(\).*?render_project_header.*?running_terminal_agent_label.*?Color::Accent' \
+    'starting a terminal agent can regress to an invisible compact-row or collapsed-Workspace transition in Sessions'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'fn terminal_sessions_refresh_on_state_changes_not_output_frames.*?TerminalEvent::ProcessInfoChanged.*?!terminal_event_refreshes_session\(&TerminalEvent::Wakeup\)' \
     'terminal output frames can regress into full Sessions rebuilds'

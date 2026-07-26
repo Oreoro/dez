@@ -3895,3 +3895,19 @@ Completed for the viable native-window floor source slice:
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed. Native resize enforcement remains runtime
   acceptance work for the next artifact.
+
+Completed for the visible terminal-agent handoff source slice:
+
+- replaced compact terminal-agent state such as **Detected · Live** with the
+  user-facing actor and state, such as **Codex · Running**;
+- summarized a running terminal agent in collapsed Workspace headers without
+  auto-expanding the group or moving focus out of the Main Work Area;
+- counted terminal-agent attention in the same Workspace summary as native
+  Agent Sessions;
+- preserved the existing terminal, Session identity, layout, and normal-flow
+  Sessions geometry—no panel, toast, duplicate terminal, or overlay is created;
+- added pure assertions plus a static identity guard for the compact and
+  collapsed response;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Expanded/collapsed shell → Codex → shell proof
+  remains open for the next artifact.

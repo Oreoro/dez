@@ -3054,3 +3054,14 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   360 × 240 px. A pure product assertion and static identity guard protect the
   split. This is source-only; no build, test binary, alternate binary, or
   visual launch was performed.
+- 2026-07-26: Made the terminal-to-Sessions response visible in both responsive
+  states. A compact terminal row now says **Codex · Running**, **Claude Code ·
+  Running**, or the equivalent provider state instead of hiding the actor and
+  exposing the implementation phrase **Detected · Live**. If its Workspace
+  group is collapsed, the header shows **Codex running** or a count of running
+  terminal Agent Sessions; attention counts now include terminal agents as
+  well as native Agent Sessions. The group does not auto-expand, focus stays in
+  the Main Work Area terminal, and no panel or overlay is created. Pure
+  assertions plus the identity gate protect the compact and collapsed
+  responses. This is source-only; no build, test binary, alternate binary, or
+  visual launch was performed.
