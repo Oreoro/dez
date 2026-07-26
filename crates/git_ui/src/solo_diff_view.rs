@@ -378,13 +378,18 @@ impl Item for SoloDiffView {
     }
 
     fn tab_content(&self, params: TabContentParams, _window: &Window, cx: &App) -> AnyElement {
-        Label::new(self.tab_content_text(params.detail.unwrap_or_default(), cx))
-            .color(if params.selected {
-                Color::Default
-            } else {
-                Color::Muted
-            })
-            .into_any_element()
+        let title = self.tab_content_text(params.detail.unwrap_or_default(), cx);
+        Label::new(crate::diff_surface_tab_label(
+            paths::APP_NAME,
+            title.as_ref(),
+        ))
+        .truncate()
+        .color(if params.selected {
+            Color::Default
+        } else {
+            Color::Muted
+        })
+        .into_any_element()
     }
 
     fn tab_content_text(&self, _detail: usize, cx: &App) -> SharedString {

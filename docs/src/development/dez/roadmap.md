@@ -4152,3 +4152,37 @@ Completed for the stale empty split restoration source slice:
   and active-pane promotion; and
 - retained source-only evidence at implementation time. The subsequent release
   validation is tracked by the macOS build workflow.
+
+Completed for the Sessions structural-splitter source slice:
+
+- traced the last full-height interaction boundary between Sessions and the
+  Main Work Area instead of treating a six-pixel transparent hit target as
+  harmless by definition;
+- kept pointer drag and double-click reset while preventing the Dez boundary
+  from occluding the adjacent work surface;
+- exposed one named vertical splitter with its current responsive width,
+  restrained hover/focus feedback, physical Left/Right Arrow resizing on
+  either rail side, and Enter reset;
+- preserved official Zed's upstream mouse-blocking resize boundary;
+- added pure direction/policy assertions, a static identity guard, and runtime
+  acceptance for interaction directly beside the seam; and
+- retained source-only evidence. No app build, test binary, alternate binary,
+  or fresh visual launch was performed.
+
+Completed for the active Editor-Surface identity source slice:
+
+- audited the Main Work Area vocabulary after Terminal and Project Diff had
+  gained explicit owners and found ordinary files still presented as bare,
+  ambiguous filenames;
+- added a quiet **Editor ·** prefix only to the selected file in the focused
+  pane, leaving inactive tabs filename-only for a minimal tab bar;
+- kept the filename in a flexible truncating allocation ahead of tab actions
+  and added **Editor · full path** to its tooltip;
+- normalized staged, unstaged, branch, file-to-file, clipboard, solo, and
+  multi-diff tabs to the same bounded **Diff · scope** grammar already used by
+  Project Diff;
+- preserved official Zed's upstream filename-only presentation;
+- added product-policy assertions, a static identity guard, and a four-Surface
+  runtime acceptance case; and
+- retained source-only evidence. No app build, test binary, alternate binary,
+  or fresh visual launch was performed.

@@ -349,13 +349,18 @@ impl Item for StagedDiff {
     }
 
     fn tab_content(&self, params: TabContentParams, _window: &Window, _cx: &App) -> AnyElement {
-        Label::new(self.tab_content_text(0, _cx))
-            .color(if params.selected {
-                Color::Default
-            } else {
-                Color::Muted
-            })
-            .into_any_element()
+        let title = self.tab_content_text(0, _cx);
+        Label::new(crate::diff_surface_tab_label(
+            paths::APP_NAME,
+            title.as_ref(),
+        ))
+        .truncate()
+        .color(if params.selected {
+            Color::Default
+        } else {
+            Color::Muted
+        })
+        .into_any_element()
     }
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {

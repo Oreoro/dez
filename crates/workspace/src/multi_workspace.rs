@@ -25,6 +25,7 @@ use settings::{CanvasSide, SidebarDockPosition};
 use ui::{ContextMenu, TintColor, Tooltip, right_click_menu};
 
 const SIDEBAR_RESIZE_HANDLE_SIZE: Pixels = px(6.0);
+const SIDEBAR_KEYBOARD_RESIZE_STEP: Pixels = px(16.0);
 #[cfg(target_os = "macos")]
 const TRAFFIC_LIGHT_INSET: Pixels = px(9.0);
 
@@ -295,9 +296,38 @@ fn sidebar_chrome_toggle_visible(app_name: &str, sidebar_open: bool) -> bool {
     app_name == "Zed" || !sidebar_open
 }
 
+fn sidebar_resize_handle_occludes_main_work_area(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
+fn sidebar_keyboard_resize_target(
+    key: &str,
+    sidebar_on_right: bool,
+    current_width: Pixels,
+) -> Option<Option<Pixels>> {
+    match key {
+        "left" => Some(Some(if sidebar_on_right {
+            current_width + SIDEBAR_KEYBOARD_RESIZE_STEP
+        } else {
+            current_width - SIDEBAR_KEYBOARD_RESIZE_STEP
+        })),
+        "right" => Some(Some(if sidebar_on_right {
+            current_width - SIDEBAR_KEYBOARD_RESIZE_STEP
+        } else {
+            current_width + SIDEBAR_KEYBOARD_RESIZE_STEP
+        })),
+        "enter" => Some(None),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod sidebar_chrome_tests {
-    use super::sidebar_chrome_toggle_visible;
+    use super::{
+        SIDEBAR_KEYBOARD_RESIZE_STEP, sidebar_chrome_toggle_visible,
+        sidebar_keyboard_resize_target, sidebar_resize_handle_occludes_main_work_area,
+    };
+    use gpui::px;
 
     #[test]
     fn dez_uses_chrome_to_open_sessions_but_not_to_duplicate_its_hide_action() {
@@ -305,6 +335,38 @@ mod sidebar_chrome_tests {
         assert!(!sidebar_chrome_toggle_visible("Dez", true));
         assert!(sidebar_chrome_toggle_visible("Zed", false));
         assert!(sidebar_chrome_toggle_visible("Zed", true));
+    }
+
+    #[test]
+    fn dez_sessions_splitter_never_becomes_an_invisible_work_area_overlay() {
+        assert!(!sidebar_resize_handle_occludes_main_work_area("Dez"));
+        assert!(sidebar_resize_handle_occludes_main_work_area("Zed"));
+    }
+
+    #[test]
+    fn sessions_splitter_keyboard_resizing_follows_the_physical_seam() {
+        let width = px(280.0);
+        assert_eq!(
+            sidebar_keyboard_resize_target("left", false, width),
+            Some(Some(width - SIDEBAR_KEYBOARD_RESIZE_STEP))
+        );
+        assert_eq!(
+            sidebar_keyboard_resize_target("right", false, width),
+            Some(Some(width + SIDEBAR_KEYBOARD_RESIZE_STEP))
+        );
+        assert_eq!(
+            sidebar_keyboard_resize_target("left", true, width),
+            Some(Some(width + SIDEBAR_KEYBOARD_RESIZE_STEP))
+        );
+        assert_eq!(
+            sidebar_keyboard_resize_target("right", true, width),
+            Some(Some(width - SIDEBAR_KEYBOARD_RESIZE_STEP))
+        );
+        assert_eq!(
+            sidebar_keyboard_resize_target("enter", false, width),
+            Some(None)
+        );
+        assert_eq!(sidebar_keyboard_resize_target("space", false, width), None);
     }
 }
 
@@ -2649,6 +2711,108 @@ impl MultiWorkspace {
     }
 }
 
+fn render_sidebar_resize_handle(
+    weak: WeakEntity<MultiWorkspace>,
+    sidebar_width: Pixels,
+    card_gap: Pixels,
+    sidebar_on_right: bool,
+    cx: &App,
+) -> AnyElement {
+    let resize_handle_overhang = SIDEBAR_RESIZE_HANDLE_SIZE / 2.;
+    let resize_handle_width = card_gap + SIDEBAR_RESIZE_HANDLE_SIZE;
+    let resize_handle_hover = cx.theme().colors().border_focused.opacity(0.12);
+    let resize_handle_focus = cx.theme().colors().border_focused.opacity(0.2);
+    let keyboard_weak = weak.clone();
+    let mouse_weak = weak;
+
+    deferred(
+        div()
+            .id("sidebar-resize-handle")
+            .role(gpui::Role::Splitter)
+            .aria_label("Resize Sessions")
+            .aria_description("Use Left and Right Arrow to resize Sessions. Press Enter to reset.")
+            .aria_orientation(gpui::Orientation::Vertical)
+            .aria_numeric_value(f64::from(sidebar_width))
+            .aria_numeric_value_step(f64::from(SIDEBAR_KEYBOARD_RESIZE_STEP))
+            .tab_index(0isize)
+            .absolute()
+            .when(!sidebar_on_right, |el| {
+                el.right(-(card_gap + resize_handle_overhang))
+            })
+            .when(sidebar_on_right, |el| {
+                el.left(-(card_gap + resize_handle_overhang))
+            })
+            .top(px(0.))
+            .h_full()
+            .w(resize_handle_width)
+            .cursor_col_resize()
+            .hover(|style| style.bg(resize_handle_hover))
+            .focus_visible(|style| style.bg(resize_handle_focus))
+            .tooltip(Tooltip::text(
+                "Resize Sessions · Arrow keys resize · Enter resets",
+            ))
+            .on_key_down(move |event, _, cx| {
+                if event.keystroke.modifiers.modified() {
+                    return;
+                }
+
+                let Some(next_width) = sidebar_keyboard_resize_target(
+                    event.keystroke.key.as_str(),
+                    sidebar_on_right,
+                    sidebar_width,
+                ) else {
+                    return;
+                };
+
+                keyboard_weak
+                    .update(cx, |this, cx| {
+                        if let Some(sidebar) = this.sidebar.as_mut() {
+                            match next_width {
+                                Some(next_width) => {
+                                    sidebar.set_width(Some(Pixels::max(next_width, px(0.0))), cx)
+                                }
+                                None => sidebar.set_width(None, cx),
+                            }
+                        }
+                        this.serialize(cx);
+                    })
+                    .ok();
+                cx.stop_propagation();
+            })
+            .on_drag(DraggedSidebar, |dragged, _, _, cx| {
+                cx.stop_propagation();
+                cx.new(|_| dragged.clone())
+            })
+            .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                cx.stop_propagation();
+            })
+            .on_mouse_up(MouseButton::Left, move |event, _, cx| {
+                if event.click_count == 2 {
+                    mouse_weak
+                        .update(cx, |this, cx| {
+                            if let Some(sidebar) = this.sidebar.as_mut() {
+                                sidebar.set_width(None, cx);
+                            }
+                            this.serialize(cx);
+                        })
+                        .ok();
+                    cx.stop_propagation();
+                } else {
+                    mouse_weak
+                        .update(cx, |this, cx| {
+                            this.serialize(cx);
+                        })
+                        .ok();
+                }
+            })
+            .when(
+                sidebar_resize_handle_occludes_main_work_area(paths::APP_NAME),
+                |this| this.occlude(),
+            ),
+    )
+    .into_any_element()
+}
+
 impl Render for MultiWorkspace {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.reconcile_dez_auxiliary_surfaces_after_resize(window, cx);
@@ -2659,51 +2823,14 @@ impl Render for MultiWorkspace {
 
         let sidebar: Option<AnyElement> = if multi_workspace_enabled && self.sidebar_open() {
             self.sidebar.as_ref().map(|sidebar_handle| {
-                let weak = cx.weak_entity();
-
                 let sidebar_width =
                     sidebar_handle.responsive_width(window.viewport_size().width, cx);
-                let resize_handle_overhang = SIDEBAR_RESIZE_HANDLE_SIZE / 2.;
-                let resize_handle_width = card_gap + SIDEBAR_RESIZE_HANDLE_SIZE;
-                let resize_handle = deferred(
-                    div()
-                        .id("sidebar-resize-handle")
-                        .absolute()
-                        .when(!sidebar_on_right, |el| {
-                            el.right(-(card_gap + resize_handle_overhang))
-                        })
-                        .when(sidebar_on_right, |el| {
-                            el.left(-(card_gap + resize_handle_overhang))
-                        })
-                        .top(px(0.))
-                        .h_full()
-                        .w(resize_handle_width)
-                        .cursor_col_resize()
-                        .on_drag(DraggedSidebar, |dragged, _, _, cx| {
-                            cx.stop_propagation();
-                            cx.new(|_| dragged.clone())
-                        })
-                        .on_mouse_down(MouseButton::Left, |_, _, cx| {
-                            cx.stop_propagation();
-                        })
-                        .on_mouse_up(MouseButton::Left, move |event, _, cx| {
-                            if event.click_count == 2 {
-                                weak.update(cx, |this, cx| {
-                                    if let Some(sidebar) = this.sidebar.as_mut() {
-                                        sidebar.set_width(None, cx);
-                                    }
-                                    this.serialize(cx);
-                                })
-                                .ok();
-                                cx.stop_propagation();
-                            } else {
-                                weak.update(cx, |this, cx| {
-                                    this.serialize(cx);
-                                })
-                                .ok();
-                            }
-                        })
-                        .occlude(),
+                let resize_handle = render_sidebar_resize_handle(
+                    cx.weak_entity(),
+                    sidebar_width,
+                    card_gap,
+                    sidebar_on_right,
+                    cx,
                 );
 
                 div()

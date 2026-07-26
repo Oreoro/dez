@@ -234,13 +234,18 @@ impl Item for MultiDiffView {
     }
 
     fn tab_content(&self, params: TabContentParams, _window: &Window, _cx: &App) -> AnyElement {
-        Label::new(self.title())
-            .color(if params.selected {
-                Color::Default
-            } else {
-                Color::Muted
-            })
-            .into_any_element()
+        let title = self.title();
+        Label::new(crate::diff_surface_tab_label(
+            paths::APP_NAME,
+            title.as_ref(),
+        ))
+        .truncate()
+        .color(if params.selected {
+            Color::Default
+        } else {
+            Color::Muted
+        })
+        .into_any_element()
     }
 
     fn tab_tooltip_text(&self, _cx: &App) -> Option<ui::SharedString> {

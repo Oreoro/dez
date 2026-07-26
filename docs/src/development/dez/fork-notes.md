@@ -1083,6 +1083,17 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   exact failure, and confirms that no replacement shell started. **Start Fresh
   Terminal** creates separate computation in the Main Work Area; it is not a
   reconnect or replay action.
+- **2026-07-26: The active file Surface names its IDE role once.** The selected
+  tab in the focused Main Work Area uses **Editor · filename**, completing the
+  same ownership grammar as **Terminal · title** and **Diff · filename**.
+  Inactive tabs remain filename-only, so a row of files does not repeat
+  **Editor** as decorative chrome. The title keeps a real flexible allocation,
+  truncates before tab actions, and its tooltip carries **Editor · full path**.
+  Every first-party review tab uses the matching **Diff · scope** grammar:
+  Project Diff, staged/unstaged and branch changes, file-to-file, clipboard,
+  solo, and multi-diff views no longer fall back to bare **Changes** or raw
+  filenames. Long review titles truncate within the tab. Official Zed retains
+  its upstream filename-only and diff-label presentation.
 - **2026-07-26: Sessions rows and Workspace headers do not use action
   overlays.** Titles truncate inside a bounded flexible allocation; hover and
   keyboard actions remain in a fixed inline cluster and never paint gradient
@@ -1190,6 +1201,15 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   header owns its divider directly instead of painting a full-size decorative
   child across the control row. Official Zed retains its inherited geometry
   and 360 × 240 px window floor.
+- **2026-07-26: The Sessions seam is a splitter, not an invisible overlay.**
+  Sessions keeps the forgiving six-pixel pointer target centered on its
+  structural divider, but Dez does not make that full-height strip occlude the
+  adjacent Main Work Area. Drag and double-click reset remain available. Hover
+  and keyboard focus provide restrained accent feedback; assistive technology
+  receives a named vertical splitter and its current width. Left and Right
+  Arrow move the physical seam in the expected direction for either rail side,
+  and Enter resets the width. Official Zed retains its upstream mouse-blocking
+  resize boundary.
 - **2026-07-26: Narrow labels and drawers optimize for decisions, not desktop
   proportions.** At the 200 px Sessions floor, the scope vocabulary contracts
   from **Attention** to **Needs** without changing its accessible name or

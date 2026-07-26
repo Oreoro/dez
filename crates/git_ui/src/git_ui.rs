@@ -82,6 +82,58 @@ pub fn get_provider_icon(name: &str) -> IconName {
     }
 }
 
+pub(crate) fn diff_surface_tab_label(app_name: &str, label: &str) -> SharedString {
+    if app_name == "Zed" {
+        return label.to_owned().into();
+    }
+
+    let label = label.trim();
+    if label.is_empty() || label == "Diff" {
+        return "Diff".into();
+    }
+    if label.starts_with("Diff · ") {
+        return label.to_owned().into();
+    }
+
+    let scope = label
+        .strip_suffix(" Diff")
+        .or_else(|| label.strip_prefix("Diff "))
+        .or_else(|| label.strip_suffix(" Changes"))
+        .or_else(|| label.strip_prefix("Changes "))
+        .unwrap_or(label);
+    format!("Diff · {scope}").into()
+}
+
+#[cfg(test)]
+mod diff_surface_label_tests {
+    use super::diff_surface_tab_label;
+
+    #[test]
+    fn dez_normalizes_first_party_diff_titles_without_changing_zed() {
+        assert_eq!(
+            diff_surface_tab_label("Dez", "Staged Changes").as_ref(),
+            "Diff · Staged"
+        );
+        assert_eq!(
+            diff_surface_tab_label("Dez", "Changes since main").as_ref(),
+            "Diff · since main"
+        );
+        assert_eq!(
+            diff_surface_tab_label("Dez", "Clipboard ↔ main.rs").as_ref(),
+            "Diff · Clipboard ↔ main.rs"
+        );
+        assert_eq!(
+            diff_surface_tab_label("Dez", "Diff · PLAN.md").as_ref(),
+            "Diff · PLAN.md"
+        );
+        assert_eq!(diff_surface_tab_label("Dez", "").as_ref(), "Diff");
+        assert_eq!(
+            diff_surface_tab_label("Zed", "Staged Changes").as_ref(),
+            "Staged Changes"
+        );
+    }
+}
+
 pub fn init(cx: &mut App) {
     editor::set_blame_renderer(blame_ui::GitBlameRenderer, cx);
     commit_view::init(cx);

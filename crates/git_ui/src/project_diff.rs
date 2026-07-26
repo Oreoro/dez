@@ -462,6 +462,7 @@ impl Item for ProjectDiff {
 
     fn tab_content(&self, params: TabContentParams, _window: &Window, cx: &App) -> AnyElement {
         Label::new(self.tab_content_text(0, cx))
+            .truncate()
             .color(if params.selected {
                 Color::Default
             } else {

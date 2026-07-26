@@ -65,6 +65,18 @@ use zed_actions::preview::{
 
 pub const MAX_TAB_TITLE_LEN: usize = 24;
 
+fn editor_surface_prefix_visible(app_name: &str, selected: bool, deemphasized: bool) -> bool {
+    app_name != "Zed" && selected && !deemphasized
+}
+
+fn editor_surface_tooltip_label(app_name: &str, title: &str) -> SharedString {
+    if app_name == "Zed" {
+        title.to_owned().into()
+    } else {
+        format!("Editor · {title}").into()
+    }
+}
+
 impl FollowableItem for Editor {
     fn remote_id(&self) -> Option<ViewId> {
         self.remote_id
@@ -690,18 +702,18 @@ impl Item for Editor {
             .and_then(|buffer| buffer.read(cx).file())
             .and_then(|file| File::from_dyn(Some(file)))
         {
-            Some(
-                file.worktree
-                    .read(cx)
-                    .absolutize(&file.path)
-                    .compact()
-                    .to_string_lossy()
-                    .into_owned()
-                    .into(),
-            )
+            let path = file
+                .worktree
+                .read(cx)
+                .absolutize(&file.path)
+                .compact()
+                .to_string_lossy()
+                .into_owned();
+            Some(editor_surface_tooltip_label(paths::APP_NAME, &path))
         } else {
             let title = multi_buffer.title(cx);
-            (!title.is_empty()).then(|| title.to_string().into())
+            (!title.is_empty())
+                .then(|| editor_surface_tooltip_label(paths::APP_NAME, title.as_ref()))
         }
     }
 
@@ -797,28 +809,50 @@ impl Item for Editor {
             .as_singleton()
             .and_then(|buffer| buffer.read(cx).file())
             .is_some_and(|file| file.disk_state().is_deleted());
+        let show_surface_prefix =
+            editor_surface_prefix_visible(paths::APP_NAME, params.selected, params.deemphasized);
+        let title = Label::new(if params.truncate_title_middle {
+            self.title(cx).to_string()
+        } else {
+            util::truncate_and_trailoff(
+                &self.title(cx),
+                params.max_title_len.unwrap_or(MAX_TAB_TITLE_LEN),
+            )
+        })
+        .color(label_color)
+        .when(
+            params.truncate_title_middle && !show_surface_prefix,
+            |this| this.truncate_middle().flex_1(),
+        )
+        .when(show_surface_prefix, |this| this.truncate())
+        .when(params.preview, |this| this.italic())
+        .when(was_deleted, |this| this.strikethrough());
+        let title = if show_surface_prefix {
+            div()
+                .min_w_0()
+                .flex_1()
+                .overflow_hidden()
+                .child(title)
+                .into_any_element()
+        } else {
+            title.into_any_element()
+        };
 
         h_flex()
+            .min_w_0()
             .gap_1()
             .when(params.truncate_title_middle, |this| {
                 this.w_full().min_w_0().overflow_hidden()
             })
-            .child(
-                Label::new(if params.truncate_title_middle {
-                    self.title(cx).to_string()
-                } else {
-                    util::truncate_and_trailoff(
-                        &self.title(cx),
-                        params.max_title_len.unwrap_or(MAX_TAB_TITLE_LEN),
-                    )
-                })
-                .color(label_color)
-                .when(params.truncate_title_middle, |this| {
-                    this.truncate_middle().flex_1()
-                })
-                .when(params.preview, |this| this.italic())
-                .when(was_deleted, |this| this.strikethrough()),
-            )
+            .when(show_surface_prefix, |this| {
+                this.child(
+                    Label::new("Editor ·")
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .flex_shrink_0(),
+                )
+            })
+            .child(title)
             .when_some(description, |this, description| {
                 this.child(
                     Label::new(description)
@@ -2463,6 +2497,22 @@ mod tests {
     use std::path::{Path, PathBuf};
     use util::{path, paths::PathWithPosition, rel_path::RelPath};
     use workspace::path_link::{OpenTarget, OpenTargetFoundBy};
+
+    #[test]
+    fn dez_names_only_the_active_focused_editor_surface() {
+        assert!(editor_surface_prefix_visible("Dez", true, false));
+        assert!(!editor_surface_prefix_visible("Dez", false, false));
+        assert!(!editor_surface_prefix_visible("Dez", true, true));
+        assert!(!editor_surface_prefix_visible("Zed", true, false));
+        assert_eq!(
+            editor_surface_tooltip_label("Dez", "/project/src/main.rs").as_ref(),
+            "Editor · /project/src/main.rs"
+        );
+        assert_eq!(
+            editor_surface_tooltip_label("Zed", "/project/src/main.rs").as_ref(),
+            "/project/src/main.rs"
+        );
+    }
 
     #[gpui::test]
     fn test_path_for_file(cx: &mut App) {

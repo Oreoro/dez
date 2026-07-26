@@ -684,6 +684,9 @@ require_multiline_pattern crates/workspace/src/multi_workspace.rs \
 require_multiline_pattern crates/workspace/src/multi_workspace.rs \
     'dez_auxiliary_surfaces_were_window_exclusive: bool.*?fn reconcile_dez_auxiliary_surfaces_after_resize.*?became_window_exclusive.*?auxiliary_pane_visible.*?defer_in.*?auxiliary_pane_has_focus.*?close_sidebar_for_auxiliary_surface.*?hide_narrow_dez_auxiliary_drawer_for_sidebar_reveal.*?impl Render for MultiWorkspace.*?reconcile_dez_auxiliary_surfaces_after_resize' \
     'resizing a wide Dez layout can regress to retaining three competing regions in a narrow window'
+require_multiline_pattern crates/workspace/src/multi_workspace.rs \
+    'fn sidebar_resize_handle_occludes_main_work_area.*?app_name == "Zed".*?fn sidebar_keyboard_resize_target.*?"left".*?"right".*?"enter".*?fn dez_sessions_splitter_never_becomes_an_invisible_work_area_overlay.*?!sidebar_resize_handle_occludes_main_work_area\("Dez"\).*?fn sessions_splitter_keyboard_resizing_follows_the_physical_seam.*?role\(gpui::Role::Splitter\).*?aria_label\("Resize Sessions"\).*?aria_orientation\(gpui::Orientation::Vertical\).*?tab_index\(0isize\).*?on_key_down.*?sidebar_keyboard_resize_target.*?when\([[:space:]]*sidebar_resize_handle_occludes_main_work_area\(paths::APP_NAME\).*?this\.occlude\(\)' \
+    'the Sessions seam can regress to an invisible mouse-blocking overlay or lose keyboard resizing'
 require_multiline_pattern docs/src/development/dez/fork-notes.md \
     'The final shell follows this responsive layout contract.*?canonical[[:space:]]+wireframe.*?Wide window · 1160 logical px or more.*?status · Start · Search · Menu · Hide.*?no footer.*?Main Work Area · primary.*?Workspace Tools OR Agent.*?Narrow window · below 1160 logical px.*?One auxiliary region · optional.*?at least 60% of the window.*?Start Terminal Session.*?Run shell, Codex, Claude.*?Sessions projects that state.*?Focus or reattach the existing.*?Running a terminal-native agent.*?terminal remains the interactive source of truth.*?Sessions restoration follows this lifecycle.*?Sessions visibility = Auto.*?Explicit Sessions command.*?opening[[:space:]]+Sessions hides the visible contextual drawer.*?opening Workspace Tools or Agent[[:space:]]+hides Sessions' \
     'the permanent Dez shell contract can lose its concrete responsive layout and state transition'
@@ -1501,8 +1504,27 @@ require_multiline_pattern crates/git_ui/src/project_diff.rs \
     'send_review_to_agent_tooltip\(paths::APP_NAME\).*?fn send_review_to_agent_tooltip.*?app_name == "Zed".*?"Send all review comments to the Agent panel".*?"Send all review comments to Agent"' \
     'the Git review handoff can regress to describing Agent as an inherited Panel'
 require_multiline_pattern crates/git_ui/src/project_diff.rs \
-    'fn project_diff_base_label.*?"Uncommitted Diff".*?"Unstaged Diff".*?"Staged Diff".*?"Diff since \{base_ref\}".*?fn project_diff_tab_label.*?app_name == "Zed".*?"Diff · \{active_file_name\}".*?strip_suffix\(" Diff"\).*?strip_prefix\("Diff "\).*?"Diff · \{scope\}".*?fn project_diff_tooltip_label.*?app_name == "Zed".*?"\{base_label\} · \{active_path\}".*?fn tab_tooltip_text.*?active_project_path.*?project_diff_tooltip_label.*?fn tab_content_text.*?active_project_path.*?file_name.*?project_diff_tab_label\(paths::APP_NAME' \
+    'fn project_diff_base_label.*?"Uncommitted Diff".*?"Unstaged Diff".*?"Staged Diff".*?"Diff since \{base_ref\}".*?fn project_diff_tab_label.*?app_name == "Zed".*?"Diff · \{active_file_name\}".*?strip_suffix\(" Diff"\).*?strip_prefix\("Diff "\).*?"Diff · \{scope\}".*?fn project_diff_tooltip_label.*?app_name == "Zed".*?"\{base_label\} · \{active_path\}".*?fn tab_tooltip_text.*?active_project_path.*?project_diff_tooltip_label.*?fn tab_content.*?Label::new\(self\.tab_content_text.*?truncate\(\).*?fn tab_content_text.*?active_project_path.*?file_name.*?project_diff_tab_label\(paths::APP_NAME' \
     'the Main Work Area Git review can regress to a generic tab with no active file identity'
+require_multiline_pattern crates/git_ui/src/git_ui.rs \
+    'fn diff_surface_tab_label.*?app_name == "Zed".*?label\.is_empty\(\) \|\| label == "Diff".*?label\.starts_with\("Diff · "\).*?strip_suffix\(" Diff"\).*?strip_prefix\("Diff "\).*?strip_suffix\(" Changes"\).*?strip_prefix\("Changes "\).*?"Diff · \{scope\}".*?fn dez_normalizes_first_party_diff_titles_without_changing_zed.*?"Staged Changes".*?"Diff · Staged".*?"Changes since main".*?"Diff · since main".*?"Clipboard ↔ main\.rs".*?"Diff · Clipboard ↔ main\.rs".*?"Zed".*?"Staged Changes"' \
+    'secondary Git review surfaces can regress to ambiguous Changes or filename-only tab labels'
+for diff_surface_file in \
+    crates/git_ui/src/file_diff_view.rs \
+    crates/git_ui/src/text_diff_view.rs \
+    crates/git_ui/src/solo_diff_view.rs \
+    crates/git_ui/src/branch_diff.rs \
+    crates/git_ui/src/multi_diff_view.rs \
+    crates/git_ui/src/staged_diff.rs \
+    crates/git_ui/src/unstaged_diff.rs
+do
+    require_multiline_pattern "$diff_surface_file" \
+        'fn tab_content.*?diff_surface_tab_label\([[:space:]]*paths::APP_NAME.*?truncate\(\)' \
+        "$diff_surface_file can regress to an ambiguous or unbounded diff tab"
+done
+require_multiline_pattern crates/editor/src/items.rs \
+    'fn editor_surface_prefix_visible.*?app_name != "Zed" && selected && !deemphasized.*?fn editor_surface_tooltip_label.*?app_name == "Zed".*?"Editor · \{title\}".*?fn tab_tooltip_text.*?editor_surface_tooltip_label\(paths::APP_NAME.*?let show_surface_prefix.*?editor_surface_prefix_visible.*?when\(show_surface_prefix, \|this\| this\.truncate\(\)\).*?if show_surface_prefix.*?min_w_0\(\).*?flex_1\(\).*?overflow_hidden\(\).*?child\(title\).*?Label::new\("Editor ·"\).*?fn dez_names_only_the_active_focused_editor_surface.*?editor_surface_prefix_visible\("Dez", true, false\).*?!editor_surface_prefix_visible\("Dez", false, false\).*?!editor_surface_prefix_visible\("Dez", true, true\).*?!editor_surface_prefix_visible\("Zed", true, false\)' \
+    'the active file Surface can regress to an ambiguous filename or repeat Editor ownership on inactive tabs'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'paths::APP_NAME == "Zed".*?with_copy\(.*?"Agent needs a Workspace".*?"Open Workspace…".*?top_aligned\(\)' \
     'the empty Dez Agent region regressed to centered project-centric recovery copy'
