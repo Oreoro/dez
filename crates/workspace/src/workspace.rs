@@ -378,6 +378,10 @@ const DEZ_PUBLIC_CANVAS_LAYOUT_CYCLE: &[CanvasLayoutRecipe] = &[
     CanvasLayoutRecipe::Debug,
 ];
 
+fn canvas_layout_recipe_is_available_for_app(recipe: CanvasLayoutRecipe, app_name: &str) -> bool {
+    app_name == "Zed" || DEZ_PUBLIC_CANVAS_LAYOUT_CYCLE.contains(&recipe)
+}
+
 fn next_dez_public_canvas_layout(active_layout: Option<CanvasLayoutRecipe>) -> CanvasLayoutRecipe {
     let Some(active_index) = active_layout.and_then(|active_layout| {
         DEZ_PUBLIC_CANVAS_LAYOUT_CYCLE
@@ -6971,6 +6975,18 @@ impl Workspace {
             return self.activate_panel_item_for_id(panel.panel_id(), true, window, cx);
         }
 
+        if PaneGridSettings::get_global(cx).panels_as_pane_tabs()
+            && let Some(panel) = self.all_docks().iter().find_map(|dock| {
+                dock.read(cx)
+                    .panel_handles()
+                    .into_iter()
+                    .find(|panel| panel.remote_id() == Some(panel_id))
+            })
+        {
+            self.add_panel_handle_to_panel_pane(panel.clone(), false, window, cx);
+            return self.activate_panel_item_for_id(panel.panel_id(), true, window, cx);
+        }
+
         let mut panel = None;
         for dock in self.all_docks() {
             if let Some(panel_index) = dock.read(cx).panel_index_for_proto_id(panel_id) {
@@ -8402,59 +8418,57 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> bool {
-        match CanvasLayoutRecipe::from_name(name) {
-            Some(CanvasLayoutRecipe::Full) => self.apply_canvas_layout(window, cx),
-            Some(CanvasLayoutRecipe::AgentControl) => {
-                self.apply_canvas_agent_control_layout(window, cx)
-            }
-            Some(CanvasLayoutRecipe::EditorFocus) => {
-                self.apply_canvas_editor_focus_layout(window, cx)
-            }
-            Some(CanvasLayoutRecipe::MainStack) => self.apply_canvas_main_stack_layout(window, cx),
-            Some(CanvasLayoutRecipe::MainTop) => self.apply_canvas_main_top_layout(window, cx),
-            Some(CanvasLayoutRecipe::GoldenSplit) => {
-                self.apply_canvas_golden_split_layout(window, cx)
-            }
-            Some(CanvasLayoutRecipe::CodeRunObserve) => {
+        let Some(recipe) = CanvasLayoutRecipe::from_name(name) else {
+            return false;
+        };
+        if !canvas_layout_recipe_is_available_for_app(recipe, paths::APP_NAME) {
+            return false;
+        }
+
+        match recipe {
+            CanvasLayoutRecipe::Full => self.apply_canvas_layout(window, cx),
+            CanvasLayoutRecipe::AgentControl => self.apply_canvas_agent_control_layout(window, cx),
+            CanvasLayoutRecipe::EditorFocus => self.apply_canvas_editor_focus_layout(window, cx),
+            CanvasLayoutRecipe::MainStack => self.apply_canvas_main_stack_layout(window, cx),
+            CanvasLayoutRecipe::MainTop => self.apply_canvas_main_top_layout(window, cx),
+            CanvasLayoutRecipe::GoldenSplit => self.apply_canvas_golden_split_layout(window, cx),
+            CanvasLayoutRecipe::CodeRunObserve => {
                 self.apply_canvas_code_run_observe_layout(window, cx)
             }
-            Some(CanvasLayoutRecipe::Review) => self.apply_canvas_review_layout(window, cx),
-            Some(CanvasLayoutRecipe::Debug) => self.apply_canvas_debug_layout(window, cx),
-            Some(CanvasLayoutRecipe::DocumentationStudio) => {
+            CanvasLayoutRecipe::Review => self.apply_canvas_review_layout(window, cx),
+            CanvasLayoutRecipe::Debug => self.apply_canvas_debug_layout(window, cx),
+            CanvasLayoutRecipe::DocumentationStudio => {
                 self.apply_canvas_documentation_studio_layout(window, cx)
             }
-            Some(CanvasLayoutRecipe::BrowserDevelopment) => {
+            CanvasLayoutRecipe::BrowserDevelopment => {
                 self.apply_canvas_browser_development_layout(window, cx)
             }
-            Some(CanvasLayoutRecipe::AgentOperations) => {
+            CanvasLayoutRecipe::AgentOperations => {
                 self.apply_canvas_agent_operations_layout(window, cx)
             }
-            Some(CanvasLayoutRecipe::FourAgentMatrix) => {
+            CanvasLayoutRecipe::FourAgentMatrix => {
                 self.apply_canvas_four_agent_matrix_layout(window, cx)
             }
-            Some(CanvasLayoutRecipe::SixAgentSupervisor) => {
+            CanvasLayoutRecipe::SixAgentSupervisor => {
                 self.apply_canvas_six_agent_supervisor_layout(window, cx)
             }
-            Some(CanvasLayoutRecipe::WorktreeMatrix) => {
+            CanvasLayoutRecipe::WorktreeMatrix => {
                 self.apply_canvas_worktree_matrix_layout(window, cx)
             }
-            Some(CanvasLayoutRecipe::RemoteOperations) => {
+            CanvasLayoutRecipe::RemoteOperations => {
                 self.apply_canvas_remote_operations_layout(window, cx)
             }
-            Some(CanvasLayoutRecipe::PairProgramming) => {
+            CanvasLayoutRecipe::PairProgramming => {
                 self.apply_canvas_pair_programming_layout(window, cx)
             }
-            Some(CanvasLayoutRecipe::IncidentResponse) => {
+            CanvasLayoutRecipe::IncidentResponse => {
                 self.apply_canvas_incident_response_layout(window, cx)
             }
-            Some(CanvasLayoutRecipe::PortraitDisplay) => {
+            CanvasLayoutRecipe::PortraitDisplay => {
                 self.apply_canvas_portrait_display_layout(window, cx)
             }
-            Some(CanvasLayoutRecipe::EvenColumns) => {
-                self.apply_canvas_even_columns_layout(window, cx)
-            }
-            Some(CanvasLayoutRecipe::EvenRows) => self.apply_canvas_even_rows_layout(window, cx),
-            None => return false,
+            CanvasLayoutRecipe::EvenColumns => self.apply_canvas_even_columns_layout(window, cx),
+            CanvasLayoutRecipe::EvenRows => self.apply_canvas_even_rows_layout(window, cx),
         }
         true
     }
@@ -9449,7 +9463,7 @@ impl Workspace {
 
         let panel_id = panel_handle.panel_id();
         let competing_pane_hidden = activate
-            && self.hide_competing_dez_auxiliary_pane_for_reveal(panel_pane_kind.pane_kind(), cx);
+            && self.prepare_dez_auxiliary_pane_for_reveal(panel_pane_kind.pane_kind(), window, cx);
         let pane = self.ensure_panel_pane(panel_pane_kind, window, cx);
         pane.update(cx, |pane, cx| {
             let existing_index = pane.items().enumerate().find_map(|(ix, item)| {
@@ -17144,6 +17158,18 @@ mod tests {
                 CanvasLayoutRecipe::Debug,
             ]
         );
+        assert!(canvas_layout_recipe_is_available_for_app(
+            CanvasLayoutRecipe::AgentControl,
+            "Dez"
+        ));
+        assert!(!canvas_layout_recipe_is_available_for_app(
+            CanvasLayoutRecipe::BrowserDevelopment,
+            "Dez"
+        ));
+        assert!(canvas_layout_recipe_is_available_for_app(
+            CanvasLayoutRecipe::BrowserDevelopment,
+            "Zed"
+        ));
         assert_eq!(
             next_dez_public_canvas_layout(None),
             CanvasLayoutRecipe::Full

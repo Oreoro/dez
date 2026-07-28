@@ -264,6 +264,27 @@ cannot be dismissed into a blank composer. Once a usable default exists, the
 action becomes **New Built-in Agent Session…**. Terminal agents do not use this
 model picker.
 
+#### Which agent surface should I use?
+
+Start with **Open Agent Terminal**. It is the durable default for Codex, Claude
+Code, OpenCode, and other terminal-native tools because their real PTY,
+subscription, authentication, TUI, commands, and plugins remain intact. Use
+**Built-in Agent** when you specifically want a structured, provider-backed
+conversation for planning, Project questions, edits, or tool calls beside the
+editor. It is optional and requires a usable provider and model.
+
+Both paths edit the same Project and return evidence to the same Files, Git,
+diagnostics, diff, and review surfaces. Starting a terminal agent does not
+require creating a Built-in Agent Session, and opening the Built-in Agent does
+not wrap or replace the terminal.
+
+An embedded **Live Preview** is planned as a normal Main Work Area Surface but
+is not present in the current candidate. URL actions currently open the system
+browser, while Markdown, SVG, and CSV use native file previews. A real Live
+Preview must own pane-scoped browser navigation without owning or restarting
+the terminal's dev-server process. The platform and security gate is documented
+in [Live Preview and Agent Model](./development/dez/live-preview-and-agent-model.md).
+
 The Agent composer is the control point for the current conversation. Its
 context, follow, speed, thinking, effort, send/queue, stop, size, and sandbox
 controls are keyboard-reachable and announce their action or current state.
@@ -431,7 +452,7 @@ observations. Dez can show limited process context and reveal the owning
 application, but it does not read the transcript or arguments, intercept input,
 persist the row, adopt the PTY, restore the process, or claim ownership of its
 work. External control requires an explicit adapter—such as a future `tmux`
-integration—and is outside the v0.0.2 contract.
+integration—and is outside the v0.0.3 contract.
 
 ## Visual design
 
@@ -494,7 +515,7 @@ Dez is not:
 - a claim that arbitrary terminals owned by other applications survive through
   Dez.
 
-The v0.0.2 goal is a complete native IDE with one sharp wedge: trustworthy
+The v0.0.3 goal is a complete native IDE with one sharp wedge: trustworthy
 supervision and review of terminal-native and agent-driven work.
 
 ## Source-preview limits
@@ -506,7 +527,7 @@ restart, crash, accessibility, upgrade, and coexistence evidence.
 For precise implementation state, read:
 
 - [Fork Notes](./development/dez/fork-notes.md)
-- [v0.0.2 Active Plan](./development/dez/v0.0.2-active-plan.md)
+- [v0.0.3 Production Readiness](./development/dez/v0.0.3-production-readiness.md)
 - [Architecture Baseline](./development/dez/architecture-baseline.md)
 - [Roadmap](./development/dez/roadmap.md)
 - [Release Evidence](./development/dez/release-evidence.md)

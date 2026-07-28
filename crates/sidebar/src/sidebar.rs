@@ -1031,8 +1031,8 @@ fn session_start_state_copy(
         )
     } else {
         (
-            "No Workspace open",
-            "Open a codebase first. Then run an agent in its Main Work Area and supervise it here.",
+            "No project open",
+            "Open a Workspace first. Then run an agent in its Main Work Area and supervise it here.",
             "Open Workspace…",
             None,
         )
@@ -1867,8 +1867,8 @@ mod session_start_state_tests {
         assert_eq!(
             session_start_state_copy("Dez"),
             (
-                "No Workspace open",
-                "Open a codebase first. Then run an agent in its Main Work Area and supervise it here.",
+                "No project open",
+                "Open a Workspace first. Then run an agent in its Main Work Area and supervise it here.",
                 "Open Workspace…",
                 None
             ),

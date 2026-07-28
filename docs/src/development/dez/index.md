@@ -7,16 +7,18 @@ documents according to their authority, not their age.
 
 1. [Fork Notes](./fork-notes.md) contains permanent product and architecture
    decisions. It wins when another plan or historical document conflicts.
-2. [v0.0.2 Completion Plan](./v0.0.2-completion-plan.md) is the current release
-   train and its ordered acceptance gates. It does not override Fork Notes.
+2. [v0.0.3 Production Readiness](./v0.0.3-production-readiness.md) is the
+   current release train and its ordered acceptance gates. It does not
+   override Fork Notes.
 3. [Roadmap](./roadmap.md) is the long-range execution record. Keep its
    discoveries, decisions, and verification current while work is active, but
    do not promote deferred work into the current release without a product
    decision.
-4. [v0.0.2 Source Ledger](./v0.0.2-active-plan.md) and
+4. [v0.0.2 Completion Plan](./v0.0.2-completion-plan.md),
+   [v0.0.2 Source Ledger](./v0.0.2-active-plan.md), and
    [Installed-build UX Audit](./v0.0.2-runtime-ux-recovery-plan.md) preserve the
-   accumulated source claims and installed-build findings. They are inputs to
-   the Completion Plan, not competing execution orders.
+   previous train's source claims and installed-build findings. They are
+   historical inputs, not competing execution orders.
 5. [Product Strategy](./product-strategy.md) records the market hypothesis,
    initial customer, product loop, and measures of product fit. These are
    hypotheses and should change when evidence contradicts them.
@@ -28,14 +30,18 @@ documents according to their authority, not their age.
    Dez ownership, records gaps, and identifies safe seams for the next change.
 9. [Codex Terminal Adapter](./codex-adapter.md) documents the opt-in structured
    lifecycle feed, trust boundary, retention limits, and current constraints.
-10. [Consolidated Plan Reconciliation](./consolidated-plan-reconciliation.md)
+10. [Live Preview and Agent Model](./live-preview-and-agent-model.md) defines
+    the terminal-first recommendation and the first honest embedded-preview
+    vertical slice. It is deferred beyond v0.0.3, not evidence that an embedded
+    browser exists.
+11. [Consolidated Plan Reconciliation](./consolidated-plan-reconciliation.md)
     records how the revised long-range plan was adopted, adapted, deferred, or
     rejected. It is an intake record, not a competing source of truth.
-11. [Dez v0.0.1](../dez-v0.0.1.md) is the historical first-release snapshot
-    and launch checklist. It does not describe the active v0.0.2 train.
-12. [Release Evidence](./release-evidence.md) records direct build, runtime,
+12. [Dez v0.0.1](../dez-v0.0.1.md) is the historical first-release snapshot
+    and launch checklist. It does not describe the active v0.0.3 train.
+13. [Release Evidence](./release-evidence.md) records direct build, runtime,
     visual, coexistence, and packaging proof for the current release candidate.
-13. [v0.0.1 Release Runbook](./v0.0.1-release-runbook.md) preserves historical
+14. [v0.0.1 Release Runbook](./v0.0.1-release-runbook.md) preserves historical
     release notes, recovery semantics, artifact identity, checksums, known
     limitations, rollback, and promotion gates.
 

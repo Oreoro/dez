@@ -1660,6 +1660,36 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   or duplicate Projects. Detached startup panes retain a stable accessibility
   identity so rapid focus restoration cannot enter a missing-node warning
   loop.
+- **2026-07-28: Agent execution is terminal-first; Live Preview is a real
+  Surface or it does not ship.** Agent Terminals are the default execution path
+  for Codex, Claude Code, OpenCode, and other terminal-native tools because
+  their real PTY, subscriptions, authentication, TUI, commands, and durable
+  Host lifecycle remain authoritative. Built-in Agent is the optional
+  provider-backed surface for structured planning, Project questions, edits,
+  and tool calls. A future Live Preview belongs in the Main Work Area beside
+  files and terminals. It owns browser navigation but never the dev-server
+  process, Project, or Agent Session. It may join the public Workspace layouts
+  only after a pane-scoped platform surface host and a restorable browser
+  Workspace item exist. Until then, URL actions remain explicitly external,
+  file previews remain native, and Dez rejects the inherited geometry-only
+  `BrowserDevelopment` recipe rather than creating an empty pane or
+  always-on-top native overlay. Agent preview control must be visible,
+  interruptible, origin-scoped, permissioned, and bounded. The implementation
+  and acceptance sequence lives in
+  [Live Preview and Agent Model](./live-preview-and-agent-model.md).
+- **2026-07-28: v0.0.3 hardens the existing product before adding another
+  surface category.** Home, Projects, Workspace Tools, Main Work Area,
+  Built-in Agent, terminal durability, review, Lumin material, typography,
+  icons, focus, keyboard behavior, and packaging form the complete release
+  scope. Projects, Workspace Tools, and Built-in Agent continue to compete for
+  one optional auxiliary slot through every activation route, including
+  protocol and restored-panel activation. Embedded Live Preview, automation
+  dashboards, terminal adoption, and new navigation models remain deferred.
+  Source, Compiled, Runtime, and Released evidence stay distinct, and a
+  successful older build cannot validate the active candidate. The
+  [v0.0.3 Production Readiness Plan](./v0.0.3-production-readiness.md)
+  supersedes v0.0.2 plans only as an execution order; it does not replace these
+  permanent decisions.
 - **2026-07-27: v0.0.2 proves the integrated loop before durable adoption.**
   The v0.0.2 release gate is one dependable in-app workflow: run a supported
   agent in an integrated terminal, supervise that same terminal through

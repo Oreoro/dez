@@ -135,6 +135,20 @@ jobs:
           cp "$dmg" "$artifact_dir/Dez-macOS-M2.dmg"
 
           {
+            echo "Packaged entry-point smoke test"
+            echo "================================"
+            echo
+            "$main" --system-specs
+            echo
+            "$cli" --dez "$app" --version
+            echo
+            "$terminal_host" --help
+          } >"$artifact_dir/runtime-smoke.txt"
+          grep -F "Dez: v0.0.3" "$artifact_dir/runtime-smoke.txt"
+          grep -F "Dez 0.0.3" "$artifact_dir/runtime-smoke.txt"
+          grep -F "Usage: dez-terminal-host" "$artifact_dir/runtime-smoke.txt"
+
+          {
             echo "commit=$(git rev-parse HEAD)"
             echo "runner=${RUNNER_OS}-${RUNNER_ARCH}"
             echo "target=aarch64-apple-darwin"
@@ -168,8 +182,8 @@ jobs:
             echo "    xattr -dr com.apple.quarantine /Applications/Dez.app"
             echo
             echo "The application, CLI, terminal host, Git helper, resources, bundle"
-            echo "identifier, arm64 architecture, and deep signature were verified"
-            echo "in GitHub Actions before upload."
+            echo "identifier, arm64 architecture, deep signature, and packaged"
+            echo "entry points were verified in GitHub Actions before upload."
           } >"$artifact_dir/INSTALL.txt"
 
           shasum -a 256 \

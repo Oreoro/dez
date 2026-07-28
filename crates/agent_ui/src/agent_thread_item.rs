@@ -379,6 +379,13 @@ impl Item for AgentThreadItem {
 impl Render for AgentThreadItem {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         div()
+            .id(("agent-thread-item", self.conversation_view.entity_id()))
+            .role(gpui::Role::Region)
+            .aria_label(if paths::APP_NAME == "Zed" {
+                "Agent thread"
+            } else {
+                "Agent Session"
+            })
             .track_focus(&self.focus_handle)
             .size_full()
             .child(self.conversation_view.clone())

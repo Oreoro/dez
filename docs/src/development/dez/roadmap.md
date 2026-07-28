@@ -8,9 +8,10 @@ Do not erase completed evidence.
 
 ## Objective {#objective}
 
-Ship Dez v0.0.2 as a credible public preview for terminal-native developers
-supervising concurrent coding agents. Prove one complete recovery and review
-loop before expanding into a general orchestration platform.
+Ship Dez v0.0.3 as a credible public preview for terminal-native developers
+supervising coding agents. Harden the existing recovery and review loop before
+expanding into a general orchestration platform or adding a new surface
+category.
 
 ## Dependency order {#dependency-order}
 
@@ -4246,5 +4247,30 @@ Completed for the Terminal/Sessions product-noun source slice:
   gates;
 - updated permanent Fork Notes, public product and terminal guides, assertions,
   and static guards; and
+- retained source-only evidence. No build, test binary, alternate binary, or
+  app launch was performed.
+
+Completed for the Live Preview and agent-surface decision slice:
+
+- audited the local preview and URL-opening paths and confirmed that Markdown,
+  SVG, and CSV are native file previews while `OpenBrowser` opens the system
+  browser;
+- confirmed that the inherited `BrowserDevelopment` recipe contains only pane
+  geometry and creates no browser Workspace item;
+- audited GPUI's macOS window ownership and found one full-window native view,
+  with no pane-scoped child-surface lifecycle, clipping, z-order, focus, or
+  accessibility contract suitable for `WKWebView`;
+- made Agent Terminal the recommended execution path for Codex, Claude Code,
+  OpenCode, and other terminal-native tools while retaining Built-in Agent as
+  an optional structured planning and Project-context surface;
+- defined Live Preview as a normal Main Work Area Surface whose terminal or
+  task owns the dev server and whose browser item owns only navigation and
+  viewport state;
+- rejected hidden layout recipes in Dez so `browser_development` and other
+  legacy commands cannot manufacture empty panes before their named surfaces
+  exist;
+- added the platform-host, browser-item, Project-pairing, bounded agent-control,
+  security, restoration, visual, and runtime acceptance sequence in
+  [Live Preview and Agent Model](./live-preview-and-agent-model.md); and
 - retained source-only evidence. No build, test binary, alternate binary, or
   app launch was performed.

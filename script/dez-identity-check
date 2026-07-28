@@ -65,8 +65,11 @@ require_pattern crates/paths/src/paths.rs \
     '^pub const APP_STORAGE_NAME: &str = "Superzed";' \
     'the documented legacy storage boundary changed without a migration'
 require_pattern crates/zed/Cargo.toml \
-    '^version = "0\.0\.2"$' \
-    'application version is not 0.0.2'
+    '^version = "0\.0\.3"$' \
+    'application version is not 0.0.3'
+require_multiline_pattern Cargo.lock \
+    '\[\[package\]\][[:space:]]*name = "zed"[[:space:]]*version = "0\.0\.3"' \
+    'the locked Dez package version does not match 0.0.3'
 require_pattern crates/zed/Cargo.toml \
     '^default-run = "dez"$' \
     'default executable is not dez'
@@ -265,7 +268,7 @@ require_pattern assets/fonts/jetbrains-mono/OFL.txt \
     '^Copyright 2020 The JetBrains Mono Project Authors' \
     'the JetBrains Mono source attribution is incomplete'
 require_multiline_pattern README.md \
-    '^# Dez.*?v0\.0\.2 source candidate.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Projects\*\*.*?\*\*Workspace Tools\*\*.*?\*\*Built-in Agent\*\*.*?Open Agent Terminal.*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?Before a public binary release' \
+    '^# Dez.*?v0\.0\.3 source candidate.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Projects\*\*.*?\*\*Workspace Tools\*\*.*?\*\*Built-in Agent\*\*.*?Open Agent Terminal.*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?Before a public binary release' \
     'the repository front page can regress to upstream branding, omit the Dez product model, or overstate release readiness'
 require_multiline_pattern README.md \
     '## Visual baseline.*?Lumin Blur.*?Lumin Light.*?IBM Plex Sans.*?Lilex.*?## Upstream relationship.*?deliberate fork.*?## License and attribution.*?independent fork' \
@@ -274,11 +277,16 @@ reject_pattern README.md \
     '^# Zed$|download Zed directly|we.re hiring|Sponsorships go directly to Zed Industries' \
     'the repository front page still presents Dez as the official upstream Zed product'
 require_multiline_pattern docs/src/dez.md \
-    '^# What is Dez\?.*?## The screen model.*?\*\*Projects\*\*.*?\*\*Workspace Tools\*\*.*?\*\*Main Work Area\*\*.*?\*\*Built-in Agent\*\*.*?## How coding work flows.*?Open Agent Terminal.*?## Terminal and Agent integration.*?Packaged Dez builds.*?The v0\.0\.2 goal.*?## Source-preview limits' \
+    '^# What is Dez\?.*?## The screen model.*?\*\*Projects\*\*.*?\*\*Workspace Tools\*\*.*?\*\*Main Work Area\*\*.*?\*\*Built-in Agent\*\*.*?## How coding work flows.*?Open Agent Terminal.*?## Terminal and Agent integration.*?Packaged Dez builds.*?The v0\.0\.3 goal.*?## Source-preview limits' \
     'the public product guide can lose the screen model, IDE integration, or honest source-preview boundary'
 require_pattern docs/src/SUMMARY.md \
     '^- \[What is Dez\?\]\(\./dez\.md\)$' \
     'the public product guide is no longer reachable from documentation navigation'
+require_file docs/src/development/dez/v0.0.3-production-readiness.md \
+    'the active v0.0.3 production-readiness plan is missing'
+require_multiline_pattern docs/src/development/dez/v0.0.3-production-readiness.md \
+    '^# Dez v0\.0\.3 production readiness.*?v0\.0\.3 is a hardening release, not a feature expansion.*?## Milestone 1 — startup and durable terminal truth.*?## Milestone 2 — one coherent shell.*?## Milestone 3 — responsive and visual production pass.*?## Milestone 6 — exact build and public-preview package.*?## Stop-ship defects' \
+    'the v0.0.3 plan can regress to feature expansion without reliability, visual, package, and stop-ship gates'
 require_multiline_pattern docs/src/development/dez/v0.0.1-release-runbook.md \
     'there is currently no retained runnable.*?## Historical local candidate.*?future runtime.*?rebuild, identify, hash, sign, and audit a new exact candidate' \
     'the release runbook can regress to presenting removed local targets as a current runnable candidate'
@@ -502,8 +510,11 @@ require_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\(session_rail_title\(APP_NAME\)\)' \
     'the supervision region has regressed to internal Session Rail jargon'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_start_state_visible.*?!has_open_projects.*?session_count == 0.*?!has_query.*?!attention_only.*?!is_restoring.*?fn terminal_launch_label.*?app_name == "Zed".*?"Start Terminal Session".*?"Open Agent Terminal".*?fn session_start_state_copy.*?Some\("Open Scratch Terminal"\).*?"Open a codebase first\. Then run an agent in its Main Work Area and supervise it here\.".*?"Open Workspace…".*?None.*?fn render_empty_state.*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?Label::new\(title\).*?Button::new\("start-open", open_workspace_label\).*?ButtonStyle::Filled.*?tab_index\(0isize\).*?OpenFolder \{.*?create_new_window: Some\(false\).*?\.when_some\(scratch_terminal_label.*?Button::new\("start-terminal", scratch_terminal_label\)' \
+    'fn session_start_state_visible.*?!has_open_projects.*?session_count == 0.*?!has_query.*?!attention_only.*?!is_restoring.*?fn terminal_launch_label.*?app_name == "Zed".*?"Start Terminal Session".*?"Open Agent Terminal".*?fn session_start_state_copy.*?Some\("Open Scratch Terminal"\).*?"No project open".*?"Open a Workspace first\. Then run an agent in its Main Work Area and supervise it here\.".*?"Open Workspace…".*?None.*?fn render_empty_state.*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?Label::new\(title\).*?Button::new\("start-open", open_workspace_label\).*?ButtonStyle::Filled.*?tab_index\(0isize\).*?OpenFolder \{.*?create_new_window: Some\(false\).*?\.when_some\(scratch_terminal_label.*?Button::new\("start-terminal", scratch_terminal_label\)' \
     'the empty Sessions region can regress to a pathless Dez terminal branch or the wrong project-scoped next step'
+require_multiline_pattern crates/agent_ui/src/agent_thread_item.rs \
+    'impl Render for AgentThreadItem.*?\.id\(\("agent-thread-item", self\.conversation_view\.entity_id\(\)\)\).*?\.role\(gpui::Role::Region\).*?\.aria_label\(if paths::APP_NAME == "Zed".*?"Agent thread".*?"Agent Session".*?\.track_focus\(&self\.focus_handle\)' \
+    'the Agent Session item can regress to a focused surface without an accessibility node'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn terminal_has_agent_evidence.*?detected_agent_kind\.is_some\(\) \|\| has_structured_agent.*?fn terminal_entry_visible_in_session_rail.*?app_name == "Zed".*?\|\| is_managed_terminal.*?\|\| terminal_has_agent_evidence.*?if !terminal_entry_visible_in_session_rail\(' \
     'ordinary shells can regress to cluttering Sessions without managed ownership or agent evidence'
@@ -1524,6 +1535,12 @@ reject_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'menu\.when\(is_active.*?submenu\("Workspace Layout".*?"Work Area \+ Files".*?"Work Area \+ Built-in Agent".*?"Focus Work Area".*?"Split Work Area".*?"Work Area \+ Git".*?"Work Area \+ Debug".*?workspace_layout_cycle_label\(APP_NAME\).*?"Save Layout As…".*?"Manage Saved Layouts…".*?"Restore Previous Layout"' \
     'the active Workspace Options menu can lose its curated Workspace Layout controls'
+require_multiline_pattern crates/workspace/src/workspace.rs \
+    'fn canvas_layout_recipe_is_available_for_app\(.*?app_name == "Zed" \|\| DEZ_PUBLIC_CANVAS_LAYOUT_CYCLE\.contains\(&recipe\).*?fn apply_canvas_layout_recipe\(.*?if !canvas_layout_recipe_is_available_for_app\(recipe, paths::APP_NAME\) \{[[:space:]]*return false;' \
+    'Dez can regress to accepting hidden geometry-only layouts such as Browser Development and manufacturing empty panes'
+require_multiline_pattern crates/workspace/src/workspace.rs \
+    'fn activate_panel_for_proto_id\(.*?if PaneGridSettings::get_global\(cx\)\.panels_as_pane_tabs\(\).*?panel\.remote_id\(\) == Some\(panel_id\).*?self\.add_panel_handle_to_panel_pane\(panel\.clone\(\), false, window, cx\);.*?self\.activate_panel_item_for_id\(panel\.panel_id\(\), true, window, cx\).*?fn add_panel_handle_to_panel_pane\(.*?activate[[:space:]]*&& self\.prepare_dez_auxiliary_pane_for_reveal\(' \
+    'remote or initially active panels can bypass Dez auxiliary-surface arbitration and reopen inherited docks'
 require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
     'fn session_switcher_title.*?"Thread Switcher".*?"Switch Sessions".*?fn session_switcher_count.*?"1 recent session".*?"\{count\} recent sessions".*?fn session_switcher_description.*?Continue the shortcut to move through recent sessions.*?Repeat the switch-session command to move through recent sessions.*?id\("session-switcher"\).*?Role::Dialog.*?aria_label\(title\).*?aria_description\(accessibility_description\)' \
     'the Dez Session Switcher can regress to an anonymous fixed-width Thread list without interaction guidance'
@@ -2197,6 +2214,9 @@ require_pattern .github/workflows/dez-build.yml \
 require_multiline_pattern .github/workflows/dez-build.yml \
     'hdiutil verify.*?Dez\.app.*?Contents/MacOS/dez-terminal-host.*?CFBundleIdentifier.*?dev\.dez\.Dez.*?codesign --verify --deep --strict' \
     'the manual macOS workflow does not verify its DMG, identity, helper, and signature'
+require_multiline_pattern .github/workflows/dez-build.yml \
+    '"\$main" --system-specs.*?"\$cli" --dez "\$app" --version.*?"\$terminal_host" --help.*?runtime-smoke\.txt.*?grep -F "Dez: v0\.0\.3".*?grep -F "Dez 0\.0\.3".*?grep -F "Usage: dez-terminal-host"' \
+    'the public macOS workflow no longer executes and verifies every packaged Dez entry point'
 require_multiline_pattern .github/workflows/dez-build.yml \
     'Dez-macOS-M2\.dmg.*?INSTALL\.txt.*?SHA256SUMS\.txt.*?compression-level: 0' \
     'the manual macOS artifact is not a fast-download DMG with install and checksum evidence'

@@ -2,8 +2,55 @@
 
 This log records direct evidence for the consolidated release gate. A source
 claim is not a runtime claim, and an unchecked scenario remains unverified.
-The [v0.0.2 Completion Plan](./v0.0.2-completion-plan.md) defines the current
-release order. Historical artifacts below do not validate a newer source tree.
+The
+[v0.0.3 Production Readiness Plan](./v0.0.3-production-readiness.md) defines
+the current release order. Historical artifacts below do not validate a newer
+source tree.
+
+## v0.0.3 candidate status {#v0-0-3-candidate-status}
+
+The package version and source release train now identify v0.0.3. No packaged
+artifact currently proves the active source tree. The successful macOS action
+for `ead91e2360815b61d0cc75f3fdecb48625d48825` predates the current Projects
+navigation, auxiliary-surface arbitration, release-plan, and version changes.
+It is useful historical compile and bundle evidence only.
+
+The active candidate may advance only when its exact commit is recorded here
+with source, compile, bundle, launch, restart, terminal survival, reattach,
+responsive layout, Lumin material, keyboard, accessibility, and coexistence
+evidence.
+
+### Upstream provenance refresh
+
+On 2026-07-28, `upstream/main` was refreshed before freezing the v0.0.3
+candidate:
+
+- audited Dez checkpoint: `82119a005e704a7cb7a4681ccd42231bc94aeaf9`;
+- upstream Zed head: `8e4e5a39eed932d943cb7a3e7078885b75d1ea54`;
+- shared merge base: `b0f145f4aec671970340a528cb8197181e969e8c`;
+- audited divergence: 762 Dez-side commits and 63 upstream-side commits.
+
+The read-only merge rehearsal produced eight conflict groups:
+
+- dependency resolution: `Cargo.lock`;
+- Dez defaults and public appearance documentation:
+  `assets/settings/default.json` and `docs/src/visual-customization.md`;
+- inherited Agent behavior:
+  `crates/agent_ui/src/agent_panel.rs` and
+  `crates/agent_ui/src/conversation_view/elicitation.rs`;
+- preview, terminal, and shell ownership:
+  `crates/markdown_preview/src/markdown_preview_view.rs`,
+  `crates/terminal_view/src/terminal_panel.rs`, and
+  `crates/workspace/src/workspace.rs`.
+
+Those conflicts touch the exact UI, terminal, and pane contracts being
+hardened. Pulling them unreviewed into the release checkpoint would expand the
+candidate and invalidate the current audit. They are intentionally deferred to
+the next upstream-parity branch.
+
+The exact v0.0.3 candidate is frozen by the annotated ref `v0.0.3-rc1`. Its
+Actions build manifest must name the same commit as the tag target; branch
+names or historical successful runs are not accepted as identity evidence.
 
 ## v0.0.2 parity build evidence {#v0-0-2-parity-build-evidence}
 

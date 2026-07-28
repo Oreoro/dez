@@ -11,7 +11,7 @@ and agent ecosystem, then reorganizes them around a clearer product promise:
 > See what is running, what needs attention, what changed, and what is ready
 > for review without reconstructing terminal and editor state.
 
-This repository is the **Dez v0.0.2 source candidate**. It is not yet a signed
+This repository is the **Dez v0.0.3 source candidate**. It is not yet a signed
 or supported binary release.
 
 ## What Dez does
@@ -109,18 +109,24 @@ and typography roles remain configurable through normal settings.
 
 ## Current status
 
-The v0.0.2 source candidate already contains the opinionated Dez shell,
+The v0.0.3 source candidate already contains the opinionated Dez shell,
 identity isolation, Workspace composition, Project navigation, session vocabulary,
 host-owned local terminal lifecycle, browser-like Back/Forward navigation,
 first-run experience, Lumin/Plex/Lilex visual defaults, read-only
 machine-terminal discovery on macOS, and a large set of static
 product-contract checks.
 
+**Live Preview is not implemented in the current candidate.** URL actions
+still open the system browser, while Markdown, SVG, and CSV use native file
+previews. The next browser slice requires a real pane-scoped native surface and
+Workspace item; Dez deliberately does not expose the inherited
+geometry-only `BrowserDevelopment` recipe as a fake preview.
+
 Before a public binary release, the project still requires a build of the
 current source checkpoint plus rendered, restart, crash, accessibility, and
 coexistence evidence on supported platforms. The exact state and open gates are
 documented in the
-[v0.0.2 Completion Plan](./docs/src/development/dez/v0.0.2-completion-plan.md)
+[v0.0.3 Production Readiness Plan](./docs/src/development/dez/v0.0.3-production-readiness.md)
 and
 [release evidence](./docs/src/development/dez/release-evidence.md). The v0.0.1
 runbook remains historical evidence, not the current release plan.
@@ -128,8 +134,10 @@ runbook remains historical evidence, not the current release plan.
 ## Documentation
 
 - [What is Dez?](./docs/src/dez.md) — public product guide
-- [v0.0.2 Completion Plan](./docs/src/development/dez/v0.0.2-completion-plan.md)
+- [v0.0.3 Production Readiness](./docs/src/development/dez/v0.0.3-production-readiness.md)
   — current release order and acceptance gates
+- [v0.0.2 Completion Plan](./docs/src/development/dez/v0.0.2-completion-plan.md)
+  — previous source and runtime recovery train
 - [Fork Notes](./docs/src/development/dez/fork-notes.md) — permanent product
   and architecture source of truth
 - [Roadmap](./docs/src/development/dez/roadmap.md) — dependency-ordered work
@@ -141,6 +149,8 @@ runbook remains historical evidence, not the current release plan.
   Zed integration policy and merge train
 - [Codex Terminal Adapter](./docs/src/development/dez/codex-adapter.md) —
   optional structured terminal-agent evidence
+- [Live Preview and Agent Model](./docs/src/development/dez/live-preview-and-agent-model.md)
+  — terminal-first recommendation and the embedded-preview implementation gate
 
 The inherited Zed documentation remains in `docs/src` while it is rewritten
 into Dez vocabulary. When public prose and implementation notes disagree,
@@ -185,7 +195,7 @@ flow from Zed.
 
 ## Contributing
 
-The public contributor workflow is being prepared for v0.0.2. Until its
+The public contributor workflow is being prepared for v0.0.3. Until its
 fork-specific policy is complete, use [CONTRIBUTING.md](./CONTRIBUTING.md) for
 the inherited engineering workflow and include:
 
