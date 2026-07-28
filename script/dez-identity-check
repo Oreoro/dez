@@ -928,7 +928,7 @@ require_multiline_pattern crates/git_ui/src/git_panel.rs \
     'paths::APP_NAME == "Zed".*?"Changes".*?"Git Changes".*?paths::APP_NAME == "Zed".*?"History".*?"Git History"' \
     'Dez Git tabs can regress to labels that conflict with Agent History'
 require_multiline_pattern crates/git_ui/src/git_panel.rs \
-    'fn dez_git_history_placeholder_copy.*?"No repository found".*?"Git History unavailable".*?"Loading Commit History…".*?"Loading Git History".*?"No commits yet".*?"Git History couldn'"'"'t load".*?fn render_tab_bar.*?role\(gpui::Role::Button\).*?aria_selected\(active\).*?on_key_down.*?"enter" \| "space".*?role\(gpui::Role::Toolbar\).*?aria_label\("Git views"\).*?fn render_history_placeholder.*?paths::APP_NAME == "Zed".*?id\("dez-git-history-placeholder"\).*?items_center\(\).*?justify_start\(\).*?role\(gpui::Role::Status\)' \
+    'fn dez_git_history_placeholder_copy.*?"No repository found".*?"Git History unavailable".*?"Loading Commit History…".*?"Loading Git History".*?"No commits yet".*?"Git History couldn'"'"'t load".*?fn render_tab_bar.*?role\(gpui::Role::Button\).*?aria_selected\(active\).*?on_key_down.*?"enter" \| "space".*?id\("git-panel-tab-bar"\).*?role\(gpui::Role::Toolbar\).*?aria_label\("Git views"\).*?fn render_history_placeholder.*?paths::APP_NAME == "Zed".*?id\("dez-git-history-placeholder"\).*?items_center\(\).*?justify_start\(\).*?role\(gpui::Role::Status\)' \
     'Git History can regress to a generic centered state or pointer-only tabs'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_row_actions_visible.*?\(is_hovered \|\| is_focused\) && !is_renaming.*?pointer_and_keyboard_selection_reveal_the_same_row_actions' \

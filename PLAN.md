@@ -3494,3 +3494,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   stack seen in narrow-rail screenshots without weakening the read-only
   contract. This remains source-only; no local build, test binary, alternate
   binary, or app launch was performed.
+- 2026-07-28: Repaired the stateful GPUI boundaries exposed by remote macOS
+  compilation. Home status semantics, the saved-layout scroll region, and the
+  Git view toolbar now receive stable element IDs before interactive,
+  accessibility, or scrolling behavior is attached. Saved-layout description
+  sizing is owned by a flex container instead of an unsupported Label method.
+  Local validation remained source-only; exact-candidate compilation runs on
+  GitHub Actions.

@@ -6477,6 +6477,7 @@ impl GitPanel {
         };
 
         h_flex()
+            .id("git-panel-tab-bar")
             .relative()
             .h(Tab::container_height(cx))
             .w_full()
