@@ -8,8 +8,8 @@ use agent_settings::{AgentSettings, UserAgentsMd};
 use agent_ui::terminal_thread_metadata_store::{
     TerminalAgentKind, TerminalAttentionCondition, TerminalAttentionPresentation,
     TerminalAttentionPriority, TerminalAttentionState, TerminalThreadMetadata,
-    TerminalThreadMetadataStore, detect_terminal_agent_command, terminal_title_prefix,
-    terminal_title_without_prefix,
+    TerminalThreadMetadataStore, detect_terminal_agent_command, detect_terminal_agent_kind,
+    terminal_title_prefix, terminal_title_without_prefix,
 };
 use agent_ui::thread_metadata_store::{
     ThreadMetadata, ThreadMetadataStore, WorktreePaths, worktree_info_from_thread_paths,
@@ -6526,7 +6526,6 @@ impl Sidebar {
 
         if open_workspaces.is_empty() {
             let key = key.clone();
-            let new_terminal_label = new_terminal_label.clone();
             return button
                 .tooltip(move |_, cx| {
                     Tooltip::for_action_in(

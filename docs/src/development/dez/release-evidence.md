@@ -48,11 +48,11 @@ hardened. Pulling them unreviewed into the release checkpoint would expand the
 candidate and invalidate the current audit. They are intentionally deferred to
 the next upstream-parity branch.
 
-The exact v0.0.3 candidate is frozen by the annotated ref `v0.0.3-rc2`. Its
+The exact v0.0.3 candidate is frozen by the annotated ref `v0.0.3-rc3`. Its
 Actions build manifest must name the same commit as the tag target; branch
 names or historical successful runs are not accepted as identity evidence.
 
-### Rejected candidate
+### Rejected candidates
 
 `v0.0.3-rc1` resolved to
 `45e3d2a90ca35284b38e53b397581b3a2b1114b5`. GitHub Actions run
@@ -61,6 +61,14 @@ names or historical successful runs are not accepted as identity evidence.
 a stateful element without importing `StatefulInteractiveElement`. Packaging
 and runtime verification were correctly skipped. The missing trait import is
 fixed in `v0.0.3-rc2`; no evidence from rc1 is promoted beyond source checks.
+
+`v0.0.3-rc2` resolved to
+`4c7c6b8094668bc9245f51ae8d36eaef1c07f63c`. GitHub Actions run
+`30346678382` passed the earlier compile stage, then failed while compiling
+`sidebar`: the Session Rail used the public `detect_terminal_agent_kind`
+helper without importing it. Packaging and runtime verification were correctly
+skipped. The missing import is fixed in `v0.0.3-rc3`; no evidence from rc2 is
+promoted beyond source checks.
 
 ## v0.0.2 parity build evidence {#v0-0-2-parity-build-evidence}
 
