@@ -14395,29 +14395,32 @@ impl Sidebar {
             return;
         }
 
+        let terminal_host_state = TerminalHostStartupStatus::state(cx);
+        let terminal_host_is_restoring =
+            matches!(&terminal_host_state, TerminalHostStartupState::Connecting);
+        let terminal_host_needs_recovery = matches!(
+            &terminal_host_state,
+            TerminalHostStartupState::Reconnecting { .. } | TerminalHostStartupState::Failed { .. }
+        );
+        let restoration_ready = self.contents.snapshot_ready
+            && self.update_task.is_none()
+            && !self.workspace_restore_is_pending(cx)
+            && !terminal_host_is_restoring;
+        let has_supervision_or_recovery = self.contents.session_count > 0
+            || self.contents.observed_terminal_count > 0
+            || self.contents.has_attention
+            || matches!(self.view, SidebarView::Archive(_))
+            || !self.unresolved_workspace_ids(cx).is_empty()
+            || terminal_host_needs_recovery;
+
         let multi_workspace = self.multi_workspace.clone();
-        cx.defer_in(window, move |this, window, cx| {
+        // Do not defer through the Sidebar entity. MultiWorkspace checks the
+        // Sidebar focus handle while reconciling, so Context::defer_in would
+        // hold a Sidebar lease and immediately re-read the same entity.
+        window.defer(cx, move |window, cx| {
             let Some(multi_workspace) = multi_workspace.upgrade() else {
                 return;
             };
-            let terminal_host_state = TerminalHostStartupStatus::state(cx);
-            let terminal_host_is_restoring =
-                matches!(&terminal_host_state, TerminalHostStartupState::Connecting);
-            let terminal_host_needs_recovery = matches!(
-                &terminal_host_state,
-                TerminalHostStartupState::Reconnecting { .. }
-                    | TerminalHostStartupState::Failed { .. }
-            );
-            let restoration_ready = this.contents.snapshot_ready
-                && this.update_task.is_none()
-                && !this.workspace_restore_is_pending(cx)
-                && !terminal_host_is_restoring;
-            let has_supervision_or_recovery = this.contents.session_count > 0
-                || this.contents.observed_terminal_count > 0
-                || this.contents.has_attention
-                || matches!(this.view, SidebarView::Archive(_))
-                || !this.unresolved_workspace_ids(cx).is_empty()
-                || terminal_host_needs_recovery;
 
             multi_workspace.update(cx, |multi_workspace, cx| {
                 multi_workspace.reconcile_restored_sidebar_visibility(

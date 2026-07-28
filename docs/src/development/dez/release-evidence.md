@@ -48,7 +48,7 @@ hardened. Pulling them unreviewed into the release checkpoint would expand the
 candidate and invalidate the current audit. They are intentionally deferred to
 the next upstream-parity branch.
 
-The exact v0.0.3 candidate is frozen by the annotated ref `v0.0.3-rc4`. Its
+The exact v0.0.3 candidate is frozen by the annotated ref `v0.0.3-rc5`. Its
 Actions build manifest must name the same commit as the tag target; branch
 names or historical successful runs are not accepted as identity evidence.
 
@@ -91,6 +91,21 @@ separate terminal Host remained alive after the GUI process exited. rc4 moves
 the sidebar close to a Window-level deferral and emits plus verifies a portable
 checksum entry. No runtime evidence from rc3 is promoted to the final
 candidate.
+
+`v0.0.3-rc4` resolved to
+`63ab2e565e898a85537d5fbf386e9f2759da33c4`. GitHub Actions run
+`30355776073` compiled, packaged, self-verified the portable checksum, and
+uploaded the candidate successfully. The downloaded checksum, manifest,
+version, architecture, deep ad-hoc signature, app, CLI, and terminal Host
+checks all passed locally. Launching that exact artifact with the isolated rc3
+profile then exposed a second startup re-entrancy panic:
+`Sidebar::reconcile_restored_sessions_visibility` used
+`Context::defer_in`, held the Sidebar lease, and called
+`MultiWorkspace::reconcile_restored_sidebar_visibility`, which read the same
+Sidebar focus handle. rc5 computes restoration truth before deferral and
+schedules only the parent reconciliation through the Window. The rc4 terminal
+Host again remained alive after the GUI panic. No runtime evidence from rc4 is
+promoted to the final candidate.
 
 ## v0.0.2 parity build evidence {#v0-0-2-parity-build-evidence}
 
