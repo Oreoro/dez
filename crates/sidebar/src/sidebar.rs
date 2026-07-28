@@ -13977,6 +13977,7 @@ impl Sidebar {
             .border_color(cx.theme().colors().border)
             .child(
                 h_flex()
+                    .id("machine-terminal-section-header")
                     .flex_none()
                     .h(Tab::content_height(cx))
                     .px_1p5()
@@ -15225,8 +15226,10 @@ impl Render for Sidebar {
         let ui_font = theme_settings::setup_ui_font(window, cx);
         let sticky_header = self.render_sticky_header(window, cx);
 
-        let color = cx.theme().colors();
-        let bg = color.panel_background;
+        let (bg, border) = {
+            let colors = cx.theme().colors();
+            (colors.panel_background, colors.border)
+        };
         let rail_on_left = self.side(cx) == SidebarSide::Left;
 
         let has_workspace_rows = !self.contents.entries.is_empty();
@@ -15363,7 +15366,7 @@ impl Render for Sidebar {
             })
             .bg(bg)
             .overflow_hidden()
-            .border_color(color.border)
+            .border_color(border)
             .map(|this| {
                 if session_rail_uses_card_frame(APP_NAME) {
                     this.rounded_lg().border_1()

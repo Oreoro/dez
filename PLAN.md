@@ -3496,8 +3496,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   binary, or app launch was performed.
 - 2026-07-28: Repaired the stateful GPUI boundaries exposed by remote macOS
   compilation. Home status semantics, the saved-layout scroll region, and the
-  Git view toolbar now receive stable element IDs before interactive,
-  accessibility, or scrolling behavior is attached. Saved-layout description
-  sizing is owned by a flex container instead of an unsupported Label method.
-  Local validation remained source-only; exact-candidate compilation runs on
-  GitHub Actions.
+  Git view toolbar and observed-terminal section header now receive stable
+  element IDs before interactive, accessibility, scrolling, or tooltip
+  behavior is attached. Saved-layout description sizing is owned by a flex
+  container instead of an unsupported Label method. The Sessions root also
+  copies its background and border values before child rendering mutably
+  borrows the GPUI context. Local validation remained source-only;
+  exact-candidate compilation runs on GitHub Actions.
