@@ -9315,9 +9315,11 @@ impl Workspace {
         }
 
         // The Workspace is already being updated while a tool pane is
-        // revealed. Defer the parent update so closing Sessions cannot
-        // re-enter this Workspace through MultiWorkspace's focus cleanup.
-        cx.defer_in(window, move |_workspace, window, cx| {
+        // revealed. Defer from the Window rather than this entity's Context:
+        // `Context::defer_in` reacquires the Workspace before invoking the
+        // closure, and MultiWorkspace's sidebar cleanup updates every retained
+        // Workspace. That would double-lease this Workspace and panic.
+        window.defer(cx, move |window, cx| {
             multi_workspace.update(cx, |multi_workspace, cx| {
                 multi_workspace.close_sidebar_for_auxiliary_surface(window, cx);
             });

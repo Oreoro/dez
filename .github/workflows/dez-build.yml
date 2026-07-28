@@ -186,9 +186,11 @@ jobs:
             echo "entry points were verified in GitHub Actions before upload."
           } >"$artifact_dir/INSTALL.txt"
 
-          shasum -a 256 \
-            "$artifact_dir/Dez-macOS-M2.dmg" \
-            >"$artifact_dir/SHA256SUMS.txt"
+          (
+            cd "$artifact_dir"
+            shasum -a 256 Dez-macOS-M2.dmg >SHA256SUMS.txt
+            shasum -a 256 -c SHA256SUMS.txt
+          )
 
           hdiutil detach "$mount_dir"
           trap - EXIT

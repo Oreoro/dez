@@ -48,7 +48,7 @@ hardened. Pulling them unreviewed into the release checkpoint would expand the
 candidate and invalidate the current audit. They are intentionally deferred to
 the next upstream-parity branch.
 
-The exact v0.0.3 candidate is frozen by the annotated ref `v0.0.3-rc3`. Its
+The exact v0.0.3 candidate is frozen by the annotated ref `v0.0.3-rc4`. Its
 Actions build manifest must name the same commit as the tag target; branch
 names or historical successful runs are not accepted as identity evidence.
 
@@ -69,6 +69,28 @@ fixed in `v0.0.3-rc2`; no evidence from rc1 is promoted beyond source checks.
 helper without importing it. Packaging and runtime verification were correctly
 skipped. The missing import is fixed in `v0.0.3-rc3`; no evidence from rc2 is
 promoted beyond source checks.
+
+`v0.0.3-rc3` resolved to
+`6632720293f9d75302bf9fd888451869e4c21a1e`. GitHub Actions run
+`30349983005` compiled and packaged the arm64 app successfully. Local
+exact-artifact inspection confirmed version `0.0.3`, the expected commit,
+arm64 executables, deep ad-hoc signature validity, and matching DMG and
+executable hashes. Runtime inspection then exposed two stop-ship defects:
+
+- revealing a Main Work Area destination while Sessions was open panicked in
+  `workspace::MultiWorkspace::apply_close_sidebar` because
+  `schedule_close_dez_sessions_for_main_work_area_destination` used
+  `Context::defer_in`, reacquired the active `Workspace`, and then updated the
+  same retained Workspace through the parent;
+- `SHA256SUMS.txt` stored the runner's internal artifact path, so
+  `shasum -c SHA256SUMS.txt` failed after download even though the DMG hash
+  itself matched.
+
+The exact panic was observed with a fresh isolated user-data directory; the
+separate terminal Host remained alive after the GUI process exited. rc4 moves
+the sidebar close to a Window-level deferral and emits plus verifies a portable
+checksum entry. No runtime evidence from rc3 is promoted to the final
+candidate.
 
 ## v0.0.2 parity build evidence {#v0-0-2-parity-build-evidence}
 
