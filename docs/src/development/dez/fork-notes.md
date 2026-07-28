@@ -864,7 +864,7 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   recipe-appropriate drawer.
   Extra display width belongs to the Main Work Area, not another persistent
   tool column.
-- **2026-07-25: One-work-area layouts remove only empty leftovers.** **Work Area
+- **2026-07-25: One-work-area layouts remove only empty leftovers.** \*\*Work Area
   - Files**, **Work Area + Built-in Agent**, and **Focus Work Area** select one
     authoritative Main Work Area and hide surplus empty tab panes left by
     earlier split recipes. A pane
@@ -882,7 +882,7 @@ are future options only if they strengthen the terminal-to-IDE review loop.
     headed **Run an agent in this Workspace**, with only the three immediate
     Workspace actions and one sentence explaining automatic Session detection.
     It does not repeat Welcome's workflow route. Inactive empty panes keep the
-    same actions under **Open something here**, preventing repeated onboarding
+    same actions under **Open something here\*\*, preventing repeated onboarding
     from turning an explicit split layout into multiple dashboards. Neither
     presentation has an enclosing card.
 - **2026-07-25: Terminal context is chrome, not another panel.** The standalone
@@ -1569,7 +1569,11 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   caught-up action is **Show All** in Dez, and **On This Mac** reports
   `n observed` below the detailed-width threshold. Full read-only ownership
   remains in the section description, row state, tooltip, and accessibility
-  name, so responsive shortening never implies adoption or control.
+  name, so responsive shortening never implies adoption or control. Observed
+  rows follow the same 440 px supplemental-metadata breakpoint as managed
+  Sessions: the title and explicit **Observed** state remain visible while the
+  owning application and working directory move to the full accessible name
+  and tooltip. The section tooltip itself stays deliberately short.
 - **2026-07-28: Terminal creation has one command-search owner.** The
   Workspace, Agent compatibility, and Sessions keybinding actions all surface
   under `terminal: open agent terminal …` in Dez command search. None is

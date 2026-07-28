@@ -3486,3 +3486,11 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   product boundary consistently as **Workspace** and leads with the concrete
   promise **Run agents in your codebase**. This remains source-only; no local
   build, test binary, alternate binary, or app launch was performed.
+- 2026-07-28: Completed a compact Agent Sessions metadata pass for read-only
+  **On This Mac** terminals. Below the supplemental-metadata breakpoint, rows
+  now preserve the terminal title and explicit **Observed** state while moving
+  the owner and working directory into the full accessible name and tooltip.
+  The section tooltip is deliberately short, preventing the vertical word
+  stack seen in narrow-rail screenshots without weakening the read-only
+  contract. This remains source-only; no local build, test binary, alternate
+  binary, or app launch was performed.

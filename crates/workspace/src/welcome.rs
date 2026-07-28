@@ -525,6 +525,7 @@ impl WelcomePage {
             .child(SectionHeader::new("Recent Workspaces"))
             .child(
                 h_flex()
+                    .id("recent-workspaces-status")
                     .w_full()
                     .min_w_0()
                     .items_start()

@@ -1067,6 +1067,14 @@ fn workspace_options_tooltip_label() -> &'static str {
     "Workspace Options"
 }
 
+fn machine_terminal_section_accessibility_description() -> &'static str {
+    "Observed from the local process table. Dez does not own these PTYs."
+}
+
+fn machine_terminal_section_tooltip_label() -> &'static str {
+    "Observed terminals are read-only"
+}
+
 fn merge_unambiguous_branch(
     branches: &mut HashMap<PathBuf, SharedString>,
     ambiguous_paths: &mut HashSet<PathBuf>,
@@ -1817,6 +1825,18 @@ mod session_start_state_tests {
             machine_terminal_count_label(DETAILED_MIN_WIDTH, 12),
             "12 observed · read-only"
         );
+        assert_eq!(
+            machine_terminal_section_tooltip_label(),
+            "Observed terminals are read-only"
+        );
+        assert!(
+            machine_terminal_section_accessibility_description()
+                .contains("does not own these PTYs")
+        );
+        assert!(!session_rail_supplemental_metadata_visible(DEFAULT_WIDTH));
+        assert!(session_rail_supplemental_metadata_visible(
+            SUPPLEMENTAL_METADATA_MIN_WIDTH
+        ));
     }
 }
 
@@ -13870,6 +13890,8 @@ impl Sidebar {
 
         let count = self.contents.machine_terminals.len();
         let count_label = machine_terminal_count_label(self.rendered_width, count);
+        let supplemental_metadata_visible =
+            session_rail_supplemental_metadata_visible(self.rendered_width);
         let design_system = DesignSystemSettings::get_global(cx);
         let labels_visible = session_rail_labels_visible(&design_system);
         let background = cx.theme().colors().panel_background;
@@ -13916,9 +13938,10 @@ impl Sidebar {
                         .unwrap_or(IconName::Terminal),
                 )
                 .actor_label(owner)
+                .actor_label_visible(supplemental_metadata_visible)
                 .state_label(state)
                 .host_label(location)
-                .host_label_visible(true)
+                .host_label_visible(supplemental_metadata_visible)
                 .labels_visible(labels_visible)
                 .action_slot(
                     IconButton::new(
@@ -13948,6 +13971,7 @@ impl Sidebar {
             .id("machine-terminal-section")
             .role(gpui::Role::Region)
             .aria_label("Terminals on this Mac")
+            .aria_description(machine_terminal_section_accessibility_description())
             .min_h_0()
             .border_t_1()
             .border_color(cx.theme().colors().border)
@@ -13964,9 +13988,7 @@ impl Sidebar {
                             .size(LabelSize::XSmall)
                             .color(Color::Muted),
                     )
-                    .tooltip(Tooltip::text(
-                        "Observed from the local process table. Dez does not own these PTYs.",
-                    )),
+                    .tooltip(Tooltip::text(machine_terminal_section_tooltip_label())),
             )
             .child(
                 v_flex()

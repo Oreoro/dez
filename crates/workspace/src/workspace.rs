@@ -1709,12 +1709,16 @@ impl Render for CanvasSavedLayoutManagerModal {
                                     .justify_between()
                                     .gap_2()
                                     .child(
-                                        Label::new(
-                                            "Saved layouts remember visible surfaces and their arrangement.",
-                                        )
+                                        div()
                                             .min_w_0()
-                                            .truncate()
-                                            .color(Color::Muted),
+                                            .flex_1()
+                                            .child(
+                                                Label::new(
+                                                    "Saved layouts remember visible surfaces and their arrangement.",
+                                                )
+                                                .truncate()
+                                                .color(Color::Muted),
+                                            ),
                                     )
                                     .child(
                                         Button::new("save-canvas-layout-as", "Save As…")
@@ -1730,6 +1734,7 @@ impl Render for CanvasSavedLayoutManagerModal {
                             )
                             .child(
                                 v_flex()
+                                    .id("canvas-saved-layout-rows")
                                     .gap_1()
                                     .min_h_0()
                                     .max_h(rows_max_height)
