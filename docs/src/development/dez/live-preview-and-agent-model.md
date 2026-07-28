@@ -3,9 +3,10 @@
 This document defines the first browser-preview vertical slice and the product
 boundary between terminal-native agents and the optional Built-in Agent.
 [Fork Notes](./fork-notes.md) remain the permanent source of truth. The
-[v0.0.2 Completion Plan](./v0.0.2-completion-plan.md) remains the current
-release train; Live Preview begins after that candidate is stable unless it is
-pulled forward by an explicit release decision.
+[v0.0.3 Production Readiness Plan](./v0.0.3-production-readiness.md) is the
+current release train. Live Preview remains out of scope until that hardening
+candidate passes its exact-package runtime gate and a later release makes an
+explicit expansion decision.
 
 ## Product decision {#product-decision}
 

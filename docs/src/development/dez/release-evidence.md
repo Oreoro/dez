@@ -48,9 +48,19 @@ hardened. Pulling them unreviewed into the release checkpoint would expand the
 candidate and invalidate the current audit. They are intentionally deferred to
 the next upstream-parity branch.
 
-The exact v0.0.3 candidate is frozen by the annotated ref `v0.0.3-rc1`. Its
+The exact v0.0.3 candidate is frozen by the annotated ref `v0.0.3-rc2`. Its
 Actions build manifest must name the same commit as the tag target; branch
 names or historical successful runs are not accepted as identity evidence.
+
+### Rejected candidate
+
+`v0.0.3-rc1` resolved to
+`45e3d2a90ca35284b38e53b397581b3a2b1114b5`. GitHub Actions run
+`30344835485` passed the source and bundle guards, then failed while compiling
+`workspace`: `InvalidItemView` assigned an accessibility role after becoming
+a stateful element without importing `StatefulInteractiveElement`. Packaging
+and runtime verification were correctly skipped. The missing trait import is
+fixed in `v0.0.3-rc2`; no evidence from rc1 is promoted beyond source checks.
 
 ## v0.0.2 parity build evidence {#v0-0-2-parity-build-evidence}
 
