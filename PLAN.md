@@ -3479,3 +3479,10 @@ up`; a read-only string fingerprint confirms that copy is absent from PID
   them. Official Zed and Main Work Area editor tabs retain their inherited
   lifecycle. This remains source-only; no local build, test binary, alternate
   binary, or app launch was performed.
+- 2026-07-28: Hardened Workspace Tools as an opinionated destination strip.
+  Its persistent tabs no longer expose inherited editor lifecycle context menus
+  or act as draggable sources, so Files, Git, Outline, and Debug cannot be
+  accidentally removed or pulled into the Main Work Area. Home now names the
+  product boundary consistently as **Workspace** and leads with the concrete
+  promise **Run agents in your codebase**. This remains source-only; no local
+  build, test binary, alternate binary, or app launch was performed.

@@ -2033,7 +2033,7 @@ require_pattern crates/workspace/src/welcome.rs \
     '\.aria_label\(self\.label\.clone\(\)\)' \
     'the Dez welcome actions are not named for assistive technology'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'fn welcome_summary.*?"Run an agent here\. Supervise it in Agent Sessions\. Review its work in Files and Git\.".*?"Open a project, run an agent in its terminal, and review the work in one place\.".*?Label::new\(welcome_summary\(APP_NAME, has_workspace\)\)' \
+    'fn welcome_summary.*?"Run an agent here\. Supervise it in Agent Sessions\. Review its work in Files and Git\.".*?"Open a Workspace, run an agent in its terminal, and review the work in one place\.".*?Label::new\(welcome_summary\(APP_NAME, has_workspace\)\)' \
     'the Dez welcome headline no longer explains the Workspace-to-IDE product promise'
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'const OPEN_WORKSPACE: OpenFolder = OpenFolder \{.*?create_new_window: Some\(false\).*?const DEZ_CONTENT: \(Section, Section\).*?title: "Start".*?title: "Open Workspace",[[:space:]]*action: &OPEN_WORKSPACE.*?title: "Clone Repository".*?const DEZ_WORKSPACE_CONTENT' \
@@ -2057,7 +2057,7 @@ require_multiline_pattern crates/workspace/src/welcome.rs \
     '\.when\(APP_NAME != "Zed", \|this\|.*?id\("dez-workflow"\).*?role\(gpui::Role::List\).*?when\(compact_spacing.*?flex_col\(\).*?items_start\(\).*?role\(gpui::Role::ListItem\).*?when\(index > 0 && !compact_spacing' \
     'Dez Home workflow can disappear before Workspace activation or wrap with detached arrows'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'DEZ_WELCOME_COMPACT_BREAKPOINT: Pixels = px\(760\.\).*?DEZ_WELCOME_SPLIT_BREAKPOINT: Pixels = px\(980\.\).*?fn dez_welcome_uses_split_layout.*?theme_is_transparent\(cx\).*?gpui::transparent_black\(\).*?\.items_start\(\)\.justify_start\(\).*?\.id\("welcome-content"\).*?\.w_full\(\).*?\.h_full\(\).*?640\..*?1040\..*?Headline::new\(if has_workspace.*?"Start in this Workspace".*?"Open a Workspace".*?\.child\(sections\)' \
+    'DEZ_WELCOME_COMPACT_BREAKPOINT: Pixels = px\(760\.\).*?DEZ_WELCOME_SPLIT_BREAKPOINT: Pixels = px\(980\.\).*?fn dez_welcome_uses_split_layout.*?theme_is_transparent\(cx\).*?gpui::transparent_black\(\).*?\.items_start\(\)\.justify_start\(\).*?\.id\("welcome-content"\).*?\.w_full\(\).*?\.h_full\(\).*?640\..*?1040\..*?Headline::new\(if has_workspace.*?"Run an agent in this Workspace".*?"Run agents in your codebase".*?\.child\(sections\)' \
     'the Dez welcome content can regress to an opaque, oversized, or centered presentation canvas'
 require_multiline_pattern crates/onboarding/src/onboarding.rs \
     'DEZ_ONBOARDING_COMPACT_BREAKPOINT: Pixels = px\(760\.\).*?fn dez_onboarding_uses_compact_layout.*?theme_is_transparent\(cx\).*?gpui::transparent_black\(\).*?\.bg\(onboarding_background\).*?780\..*?960\..*?when\(APP_NAME == "Zed", \|this\| this\.mx_auto\(\)\).*?when\(is_dez && compact_layout.*?this\.px_3\(\)\.py_4\(\).*?IconName::Settings.*?Headline::new\("Set up Dez"\).*?HeadlineSize::Large.*?when\(compact_layout, \|this\| this\.full_width\(\)\).*?fn dez_onboarding_collapses_before_controls_can_clip' \
@@ -2111,7 +2111,7 @@ require_multiline_pattern crates/workspace/src/pane.rs \
     'fn empty_auxiliary_surface_is_edge_anchored.*?app_name != "Zed" && pane_kind != PaneKind::Tabs.*?empty_auxiliary_surface_is_edge_anchored\([[:space:]]*paths::APP_NAME.*?self\.pane_kind.*?justify_start\(\).*?fn dez_empty_auxiliary_surfaces_start_at_the_drawer_edge.*?PaneKind::Project.*?PaneKind::Agent.*?PaneKind::Tabs' \
     'an unavailable Dez drawer can regress to a detached centered fallback'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'fn pane_tab_is_persistent_workspace_tool.*?app_name != "Zed" && pane_kind == PaneKind::Project.*?is_persistent_workspace_tool_tab.*?role\(gpui::Role::Button\).*?tab_index\(0isize\).*?aria_selected\(is_active\).*?matches!\(event\.keystroke\.key\.as_str\(\), "enter" \| "space"\).*?is_pinned \|\| is_persistent_workspace_tool_tab.*?if is_persistent_workspace_tool_tab' \
+    'fn pane_tab_is_persistent_workspace_tool.*?app_name != "Zed" && pane_kind == PaneKind::Project.*?is_persistent_workspace_tool_tab.*?role\(gpui::Role::Button\).*?tab_index\(0isize\).*?aria_selected\(is_active\).*?matches!\(event\.keystroke\.key\.as_str\(\), "enter" \| "space"\).*?is_pinned \|\| is_persistent_workspace_tool_tab.*?when\(!is_persistent_workspace_tool_tab.*?on_drag.*?if is_persistent_workspace_tool_tab \{[[:space:]]*return tab\.into_any_element\(\);' \
     'Workspace Tool tabs can regress to disposable, duplicated, or pointer-only editor chrome'
 require_multiline_pattern crates/workspace/src/pane.rs \
     'fn render_empty_panel_state.*?\.h_full\(\).*?\.min_h_0\(\).*?\.overflow_y_scroll\(\).*?\.max_w_96\(\).*?\.w_full\(\).*?\.items_start\(\).*?\.justify_start\(\).*?\.px_6\(\).*?\.pt_8\(\).*?\.pb_6\(\)' \

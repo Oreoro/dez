@@ -3295,7 +3295,7 @@ impl Pane {
         focus_handle: &FocusHandle,
         window: &mut Window,
         cx: &mut Context<Pane>,
-    ) -> impl IntoElement + use<> {
+    ) -> AnyElement {
         let is_active = ix == self.active_item_index;
         let is_preview = self
             .preview_item_id
@@ -3434,16 +3434,18 @@ impl Pane {
                     cx.stop_propagation();
                 }),
             )
-            .on_drag(
-                DraggedTab {
-                    item: item.boxed_clone(),
-                    pane: cx.entity(),
-                    detail,
-                    is_active,
-                    ix,
-                },
-                |tab, _, _, cx| cx.new(|_| tab.clone()),
-            )
+            .when(!is_persistent_workspace_tool_tab, |tab| {
+                tab.on_drag(
+                    DraggedTab {
+                        item: item.boxed_clone(),
+                        pane: cx.entity(),
+                        detail,
+                        is_active,
+                        ix,
+                    },
+                    |tab, _, _, cx| cx.new(|_| tab.clone()),
+                )
+            })
             .on_drag_move::<DraggedTab>(cx.listener(
                 move |this, event: &DragMoveEvent<DraggedTab>, _, cx| {
                     this.handle_dragged_tab_over_tab(ix, event, cx);
@@ -3637,6 +3639,10 @@ impl Pane {
                         this.child(read_only_toggle(true))
                     }),
             );
+
+        if is_persistent_workspace_tool_tab {
+            return tab.into_any_element();
+        }
 
         let single_entry_to_resolve = (self.items[ix].buffer_kind(cx) == ItemBufferKind::Singleton)
             .then(|| self.items[ix].project_entry_ids(cx).get(0).copied())
@@ -4002,6 +4008,7 @@ impl Pane {
                     menu.context(menu_context)
                 })
             })
+            .into_any_element()
     }
 
     fn render_tab_bar(&mut self, window: &mut Window, cx: &mut Context<Pane>) -> AnyElement {

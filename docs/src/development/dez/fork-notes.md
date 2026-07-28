@@ -464,8 +464,9 @@ names: **Main work area**, **Workspace Tools**, and **Built-in Agent**. The
 generic pane tab renderer owns the icon slot; a tool item supplies the icon but
 never embeds a second copy in its label. Files, Git, Outline, and Debug are
 persistent tool destinations, so their tabs do not repeat per-tab close or
-unpin buttons beside the region-level hide control. Each tool tab is keyboard
-reachable and announces its active state.
+unpin buttons beside the region-level hide control, expose editor lifecycle
+menus, or drag out of the tool strip. Each tool tab is keyboard reachable and
+announces its active state.
 
 Every visible pane-chrome control is a keyboard tab stop: Back, Forward, Add to
 Main Work Area, Switch Surface, Split, Zoom, Hide Workspace Tools, and Hide

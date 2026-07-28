@@ -157,9 +157,10 @@ The Main Work Area follows the same rule. Back, Forward, Add, Switch Surface,
 Split, Zoom, and the Workspace Tools/Built-in Agent hide controls are
 keyboard-focusable and specifically named. Files, Git, Outline, and Debug are
 persistent Workspace Tool destinations: each has one icon, is keyboard
-reachable, and does not repeat a close button beside **Hide Workspace Tools**.
-The active unpinned Main Work Area Surface keeps its close control visible in
-Dez; inactive tabs remain visually quiet.
+reachable, and does not repeat a close button or editor lifecycle menu beside
+**Hide Workspace Tools**. Tool tabs stay in their dedicated strip rather than
+dragging into the Main Work Area. The active unpinned Main Work Area Surface
+keeps its close control visible in Dez; inactive tabs remain visually quiet.
 
 Existing generated Dez profiles are upgraded consistently. A known legacy
 profile that pinned `.ZedSans`, One Light, and light-only appearance migrates

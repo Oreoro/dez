@@ -198,7 +198,7 @@ fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     } else if has_workspace {
         "Run an agent here. Supervise it in Agent Sessions. Review its work in Files and Git."
     } else {
-        "Open a project, run an agent in its terminal, and review the work in one place."
+        "Open a Workspace, run an agent in its terminal, and review the work in one place."
     }
 }
 
@@ -815,9 +815,9 @@ impl Render for WelcomePage {
                                     .child(
                                         div().font_weight(FontWeight::MEDIUM).child(
                                             Headline::new(if has_workspace {
-                                                "Start in this Workspace"
+                                                "Run an agent in this Workspace"
                                             } else {
-                                                "Open a Workspace"
+                                                "Run agents in your codebase"
                                             })
                                             .size(HeadlineSize::Large),
                                         ),
@@ -1081,7 +1081,7 @@ mod tests {
     fn dez_welcome_summary_teaches_the_workflow_without_a_promotion_card() {
         assert_eq!(
             welcome_summary("Dez", false),
-            "Open a project, run an agent in its terminal, and review the work in one place."
+            "Open a Workspace, run an agent in its terminal, and review the work in one place."
         );
         assert_eq!(
             welcome_summary("Dez", true),
