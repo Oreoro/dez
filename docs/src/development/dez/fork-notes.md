@@ -1635,6 +1635,13 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   all name Projects consistently. Read-only external observations live in
   **Machine Terminals**, not inside a Project and not under a vague machine
   heading.
+- **2026-07-28: Project rows navigate; disclosure controls fold.** Selecting or
+  confirming a Project row activates that codebase in the Main Work Area.
+  Expansion is a separate chevron action and remains available through the
+  native expand/collapse commands. Machine-terminal observations never replace
+  the no-Workspace path: **Open Workspace…** remains visible even when external
+  TTYs happen to be running, while the read-only observations stay in their
+  bounded secondary section.
 - **2026-07-28: Packaged local interactive terminals are host-owned by
   default.** This supersedes the v0.0.2 durability deferral below. If
   `dez-terminal-host` is installed beside Dez, the application connects to or

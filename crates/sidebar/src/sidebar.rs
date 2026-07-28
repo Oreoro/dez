@@ -740,11 +740,19 @@ fn session_empty_state_copy(
     is_restoring: bool,
 ) -> (IconName, &'static str, &'static str) {
     if has_query {
-        (
-            IconName::ListX,
-            "No matching sessions",
-            "Try another term or clear the search to return to your current work.",
-        )
+        if app_name == "Zed" {
+            (
+                IconName::ListX,
+                "No matching sessions",
+                "Try another term or clear the search to return to your current work.",
+            )
+        } else {
+            (
+                IconName::ListX,
+                "No matching projects or sessions",
+                "Try another term or clear the search to return to your open projects.",
+            )
+        }
     } else if is_restoring {
         (
             IconName::ArrowCircle,
@@ -1060,12 +1068,18 @@ fn workspace_options_action_persistent(
 }
 
 fn workspace_header_accessibility_label(
+    app_name: &str,
     workspace_name: &str,
     has_sessions: bool,
     has_running_sessions: bool,
     attention_count: usize,
 ) -> String {
-    let mut label = format!("Workspace {workspace_name}");
+    let noun = if app_name == "Zed" {
+        "Workspace"
+    } else {
+        "Project"
+    };
+    let mut label = format!("{noun} {workspace_name}");
     if !has_sessions {
         label.push_str(", ready for a session");
     }
@@ -1094,6 +1108,10 @@ fn workspace_options_control_label(workspace_name: &str) -> String {
 
 fn workspace_options_tooltip_label() -> &'static str {
     "Workspace Options"
+}
+
+fn project_header_primary_action_activates_workspace(app_name: &str) -> bool {
+    app_name != "Zed"
 }
 
 fn machine_terminal_section_accessibility_description() -> &'static str {
@@ -1777,6 +1795,16 @@ mod workspace_header_label_tests {
 
     #[test]
     fn workspace_controls_name_their_actual_workspace() {
+        assert!(project_header_primary_action_activates_workspace("Dez"));
+        assert!(!project_header_primary_action_activates_workspace("Zed"));
+        assert_eq!(
+            workspace_header_accessibility_label("Dez", "compiler", false, false, 0),
+            "Project compiler, ready for a session"
+        );
+        assert_eq!(
+            workspace_header_accessibility_label("Zed", "compiler", false, false, 0),
+            "Workspace compiler, ready for a session"
+        );
         assert_eq!(
             workspace_new_terminal_control_label("Dez", "compiler"),
             "Open Agent Terminal in compiler"
@@ -1805,6 +1833,8 @@ mod session_start_state_tests {
 
     #[test]
     fn start_state_has_one_primary_action_and_workspace_copy() {
+        assert!(session_start_state_visible(false, 0, false, false, false));
+        assert!(!session_start_state_visible(false, 1, false, false, false));
         assert_eq!(session_rail_title("Dez"), "Projects");
         assert_eq!(session_rail_title("Zed"), "Sessions");
         assert_eq!(
@@ -1814,6 +1844,18 @@ mod session_start_state_tests {
         assert_eq!(
             session_rail_search_label("Dez"),
             "Search Projects and Sessions"
+        );
+        assert_eq!(
+            session_empty_state_copy("Dez", true, false),
+            (
+                IconName::ListX,
+                "No matching projects or sessions",
+                "Try another term or clear the search to return to your open projects.",
+            )
+        );
+        assert_eq!(
+            session_empty_state_copy("Zed", true, false).1,
+            "No matching sessions"
         );
         assert_eq!(session_rail_hide_label("Dez"), "Hide Projects");
         assert_eq!(session_rail_menu_label("Dez"), "Projects Menu");
@@ -6061,6 +6103,7 @@ impl Sidebar {
         let group_name = SharedString::from(format!("{id_prefix}header-group-{ix}"));
         let workspace_name = label.clone();
         let workspace_accessibility_label = workspace_header_accessibility_label(
+            APP_NAME,
             workspace_name.as_ref(),
             has_threads,
             has_running_threads,
@@ -6075,7 +6118,8 @@ impl Sidebar {
         };
 
         let key_for_toggle = key.clone();
-        let key_for_focus = key.clone();
+        let key_for_disclosure = key.clone();
+        let key_for_activation = key.clone();
         let key_for_empty_terminal = key.clone();
 
         let label = if highlight_positions.is_empty() {
@@ -6251,13 +6295,41 @@ impl Sidebar {
                         )
                     })
                     .when(!has_filter, |this| {
-                        this.child(
-                            div().child(
-                                Icon::new(disclosure_icon)
-                                    .size(IconSize::Small)
-                                    .color(Color::Muted),
-                            ),
-                        )
+                        if project_header_primary_action_activates_workspace(APP_NAME) {
+                            let disclosure_label = if is_collapsed {
+                                format!("Expand project {}", workspace_name.as_ref())
+                            } else {
+                                format!("Collapse project {}", workspace_name.as_ref())
+                            };
+                            this.child(
+                                IconButton::new(
+                                    SharedString::from(format!(
+                                        "{id_prefix}project-disclosure-{ix}"
+                                    )),
+                                    disclosure_icon,
+                                )
+                                .size(ButtonSize::Medium)
+                                .icon_size(IconSize::Small)
+                                .tab_index(0isize)
+                                .aria_label(disclosure_label.clone())
+                                .tooltip(Tooltip::text(disclosure_label))
+                                .on_click(cx.listener(
+                                    move |this, _, window, cx| {
+                                        cx.stop_propagation();
+                                        window.prevent_default();
+                                        this.toggle_collapse(&key_for_disclosure, window, cx);
+                                    },
+                                )),
+                            )
+                        } else {
+                            this.child(
+                                div().child(
+                                    Icon::new(disclosure_icon)
+                                        .size(IconSize::Small)
+                                        .color(Color::Muted),
+                                ),
+                            )
+                        }
                     }),
             )
             .child(
@@ -6308,8 +6380,10 @@ impl Sidebar {
             })
             .on_click(
                 cx.listener(move |this, event: &gpui::ClickEvent, window, cx| {
-                    if event.modifiers().secondary() {
-                        this.activate_or_open_workspace_for_group(&key_for_focus, window, cx);
+                    if project_header_primary_action_activates_workspace(APP_NAME) {
+                        this.activate_or_open_workspace_for_group(&key_for_activation, window, cx);
+                    } else if event.modifiers().secondary() {
+                        this.activate_or_open_workspace_for_group(&key_for_activation, window, cx);
                     } else if !this.has_filter_query(cx) {
                         this.toggle_collapse(&key_for_toggle, window, cx);
                     }
@@ -7918,7 +7992,11 @@ impl Sidebar {
         match entry {
             ListEntry::ProjectHeader { key, .. } => {
                 let key = key.clone();
-                self.toggle_collapse(&key, window, cx);
+                if project_header_primary_action_activates_workspace(APP_NAME) {
+                    self.activate_or_open_workspace_for_group(&key, window, cx);
+                } else {
+                    self.toggle_collapse(&key, window, cx);
+                }
             }
             ListEntry::Thread(thread) => {
                 let metadata = thread.metadata.clone();
@@ -13357,9 +13435,6 @@ impl Sidebar {
             .and_then(|mw| mw.read(cx).last_active_workspace_for_group(key, cx))
             .or_else(|| self.workspace_for_group(key, cx));
         if let Some(workspace) = workspace {
-            if self.is_active_workspace(&workspace, cx) {
-                return;
-            }
             self.activate_workspace(&workspace, window, cx);
         } else {
             self.open_workspace_for_group(key, window, cx);
@@ -13944,7 +14019,7 @@ impl Sidebar {
         h_flex()
             .id("session-search")
             .role(gpui::Role::Search)
-            .aria_label("Search sessions")
+            .aria_label(session_rail_search_label(APP_NAME))
             .flex_none()
             .h(Tab::content_height(cx))
             .px_1p5()
@@ -15366,13 +15441,16 @@ impl Render for Sidebar {
         );
         let show_start_state = session_start_state_visible(
             self.contents.has_open_projects,
-            total_item_count,
+            self.contents.session_count,
             has_query,
             self.attention_only,
             self.workspace_restore_is_pending(cx),
         );
-        let machine_terminal_section =
-            self.render_machine_terminal_section(has_workspace_rows, window, cx);
+        let machine_terminal_section = self.render_machine_terminal_section(
+            has_workspace_rows || show_start_state,
+            window,
+            cx,
+        );
 
         v_flex()
             .id("workspace-sidebar")
@@ -15508,6 +15586,9 @@ impl Render for Sidebar {
                                 |this, status| this.child(status),
                             )
                             .child(self.render_empty_state(cx))
+                            .when_some(machine_terminal_section, |this, section| {
+                                this.child(section)
+                            })
                         } else {
                             this.child(
                                 v_flex()

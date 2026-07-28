@@ -1266,6 +1266,12 @@ require_pattern crates/sidebar/src/sidebar.rs \
 require_pattern crates/sidebar/src/sidebar.rs \
     'workspace_header_accessibility_label\(' \
     'Workspace group state is absent from the Session Rail accessibility tree'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn project_header_primary_action_activates_workspace.*?app_name != "Zed".*?project-disclosure-.*?toggle_collapse\(&key_for_disclosure.*?if project_header_primary_action_activates_workspace\(APP_NAME\).*?activate_or_open_workspace_for_group' \
+    'Projects can regress to folding on primary navigation instead of using a separate disclosure control'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'let show_start_state = session_start_state_visible\([[:space:]]*self\.contents\.has_open_projects,[[:space:]]*self\.contents\.session_count.*?render_machine_terminal_section\([[:space:]]*has_workspace_rows \|\| show_start_state.*?child\(self\.render_empty_state\(cx\)\).*?when_some\(machine_terminal_section' \
+    'observed machine terminals can regress to hiding the primary no-Workspace recovery path'
 require_pattern crates/sidebar/src/sidebar.rs \
     '\.aria_expanded\(!is_collapsed\)' \
     'Workspace group expansion state is absent from accessibility output'
@@ -1282,7 +1288,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     '\.role\(gpui::Role::Group\).*?\.aria_label\("Session scope"\)' \
     'Session scope controls are not exposed as a named accessibility group'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    '\.role\(gpui::Role::Search\).*?\.aria_label\("Search sessions"\)' \
+    '\.role\(gpui::Role::Search\).*?\.aria_label\(session_rail_search_label\(APP_NAME\)\)' \
     'Session search is not exposed as a named accessibility region'
 require_pattern crates/sidebar/src/sidebar.rs \
     '\.role\(gpui::Role::Status\)' \

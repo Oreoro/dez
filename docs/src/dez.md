@@ -69,8 +69,10 @@ current Workspace, not a second Home screen.
 The **Projects** rail is a projection over the real owners. Each open codebase
 remains visible even before an agent starts; its Agent Sessions appear beneath
 it as they are detected or managed. Selecting a Session focuses or reattaches
-its existing Surface instead of opening a duplicate. An ordinary shell is not
-an Agent Session and does not create a generic row.
+its existing Surface instead of opening a duplicate. Selecting a Project
+activates that codebase; its dedicated disclosure control folds or expands its
+Sessions. An ordinary shell is not an Agent Session and does not create a
+generic row.
 Each Main Work Area pane keeps native Back and Forward controls in its tab
 bar. They traverse files, terminals, diffs, settings, and other native
 Surfaces without inventing a separate browser or duplicating Project
@@ -186,7 +188,8 @@ footer. Empty, caught-up, search, and recovery states stay in normal sidebar
 flow and never become floating overlays. At compact widths, the caught-up
 action shortens to **Show All** and the **Machine Terminals** count shortens to
 `n observed`; the section description, row state, tooltip, and accessibility
-label retain the read-only ownership boundary.
+label retain the read-only ownership boundary. Observed machine terminals never
+hide the primary **Open Workspace…** path when no Project is open.
 
 The bottom Workspace status strip is evidence-driven. It does not repeat a
 global Search launcher or show a decorative checkmark when diagnostics are
