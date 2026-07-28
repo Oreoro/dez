@@ -1,16 +1,16 @@
 // Dez settings
 //
-// Dez starts with compact Lumin chrome and JetBrains Mono across the interface,
-// editor, terminal, prompts, and review surfaces. Change any value here to make
-// the experience your own.
+// Dez starts with compact Lumin chrome, IBM Plex Sans for native-feeling
+// interface text, and Lilex for code and terminals. Change any value here to
+// make the experience your own.
 //
 // To see every Dez default without changing your custom settings, run
 // `dez: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
-  "ui_font_family": "JetBrains Mono",
+  "ui_font_family": "IBM Plex Sans",
   "ui_font_size": 14,
-  "buffer_font_family": "JetBrains Mono",
+  "buffer_font_family": "Lilex",
   "buffer_font_size": 14,
   "theme": {
     "mode": "system",
@@ -21,9 +21,9 @@
     "density": "compact"
   },
   "icon_theme": "Dez (Default)",
-  "markdown_preview_code_font_family": "JetBrains Mono",
+  "markdown_preview_code_font_family": "Lilex",
   "terminal": {
-    "font_family": "JetBrains Mono",
+    "font_family": "Lilex",
     "font_size": 14
   }
 }

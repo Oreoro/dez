@@ -79,6 +79,9 @@ impl Render for InvalidItemView {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl gpui::IntoElement {
         let abs_path = self.abs_path.clone();
         v_flex()
+            .id(("invalid-item", cx.entity_id()))
+            .role(gpui::Role::Alert)
+            .aria_label("Could not open file")
             .size_full()
             .track_focus(&self.focus_handle(cx))
             .flex_none()

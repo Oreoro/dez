@@ -76,10 +76,10 @@ on the shell once the TUI becomes quiet.
 
 ### What Dez can and cannot observe
 
-Dez v0.0.2 observes terminals created inside Dez and, on macOS, can list
-current-user TTYs owned by another supported terminal application or IDE under
-**On This Mac**. An external row is ephemeral and read-only. It may show the
-TTY, foreground executable, owning application, current directory when
+Dez v0.0.2 observes terminals created inside Dez and, on macOS, Projects can
+list current-user TTYs owned by another supported terminal application or IDE
+under **Machine Terminals**. An external row is ephemeral and read-only. It may
+show the TTY, foreground executable, owning application, current directory when
 available, and a supported-agent hint. Selecting it reveals the owning
 application.
 
@@ -99,13 +99,13 @@ state and the restored terminal receives focus.
 If the saved computation is no longer available, Dez keeps the current Main
 Work Area intact and changes the existing row to **Missing**. It does not open
 a placeholder terminal. Select the row again to retry after its Host returns,
-or remove the dead reference from Sessions.
+or remove the dead reference from Projects.
 
 ### Moving from a Session into the IDE
 
 The selected agent Session and its active terminal expose one shared handoff:
 
-| Intent                         | Sessions shortcut        |
+| Intent                         | Projects shortcut        |
 | ------------------------------ | ------------------------ |
 | Return to the existing Session | `Enter` or `Shift+Enter` |
 | Open its Workspace files       | `Shift+F`                |

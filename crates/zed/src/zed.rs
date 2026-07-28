@@ -877,11 +877,12 @@ async fn initialize_agent_panel(
 }
 
 fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
-    let jetbrains_mono = settings::FontFamilyName(Arc::from("JetBrains Mono"));
+    let ui_font = settings::FontFamilyName(Arc::from("IBM Plex Sans"));
+    let code_font = settings::FontFamilyName(Arc::from("Lilex"));
 
-    settings.theme.ui_font_family = Some(jetbrains_mono.clone());
-    settings.theme.buffer_font_family = Some(jetbrains_mono.clone());
-    settings.theme.markdown_preview_code_font_family = Some(jetbrains_mono.clone());
+    settings.theme.ui_font_family = Some(ui_font);
+    settings.theme.buffer_font_family = Some(code_font.clone());
+    settings.theme.markdown_preview_code_font_family = Some(code_font.clone());
     settings.theme.theme = Some(settings::ThemeSelection::Dynamic {
         mode: settings::ThemeAppearanceMode::System,
         light: settings::ThemeName(Arc::from("Lumin Light")),
@@ -891,7 +892,7 @@ fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
         settings::IconThemeName(Arc::from("Dez (Default)")),
     ));
     settings.design_system.get_or_insert_default().density = Some(settings::CanvasDensity::Compact);
-    settings.terminal.get_or_insert_default().font_family = Some(jetbrains_mono);
+    settings.terminal.get_or_insert_default().font_family = Some(code_font);
 }
 
 fn register_actions(
@@ -1231,7 +1232,7 @@ fn register_actions(
                         workspace.show_toast(
                             Toast::new(
                                 NotificationId::unique::<RestoreDezVisualProfile>(),
-                                "Restored Lumin, compact density, JetBrains Mono, and Dez icons.",
+                                "Restored Lumin, compact density, IBM Plex Sans, Lilex, and Dez icons.",
                             ),
                             cx,
                         );
@@ -2969,12 +2970,9 @@ mod tests {
         restore_dez_visual_profile(&mut settings);
 
         let settings = serde_json::to_value(settings).unwrap();
-        assert_eq!(settings["ui_font_family"], "JetBrains Mono");
-        assert_eq!(settings["buffer_font_family"], "JetBrains Mono");
-        assert_eq!(
-            settings["markdown_preview_code_font_family"],
-            "JetBrains Mono"
-        );
+        assert_eq!(settings["ui_font_family"], "IBM Plex Sans");
+        assert_eq!(settings["buffer_font_family"], "Lilex");
+        assert_eq!(settings["markdown_preview_code_font_family"], "Lilex");
         assert_eq!(
             settings["theme"],
             json!({
@@ -2985,7 +2983,7 @@ mod tests {
         );
         assert_eq!(settings["icon_theme"], "Dez (Default)");
         assert_eq!(settings["design_system"]["density"], "compact");
-        assert_eq!(settings["terminal"]["font_family"], "JetBrains Mono");
+        assert_eq!(settings["terminal"]["font_family"], "Lilex");
         assert_eq!(settings["ui_font_size"], 18.0);
     }
 

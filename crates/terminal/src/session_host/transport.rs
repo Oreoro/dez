@@ -41,6 +41,37 @@ pub fn terminal_host_executable_path() -> io::Result<std::path::PathBuf> {
     Ok(std::env::current_exe()?.with_file_name(helper_name))
 }
 
+fn terminal_host_enablement(
+    app_name: &str,
+    override_value: Option<&str>,
+    helper_is_installed: bool,
+) -> bool {
+    match override_value.map(str::trim).map(str::to_ascii_lowercase) {
+        Some(value) if matches!(value.as_str(), "1" | "true" | "on") => true,
+        Some(value) if matches!(value.as_str(), "0" | "false" | "off") => false,
+        Some(_) => false,
+        None => app_name != "Zed" && helper_is_installed,
+    }
+}
+
+/// Returns whether this application should create host-owned local terminals.
+///
+/// Packaged Dez builds install `dez-terminal-host` next to the GUI, so durable
+/// terminal ownership is the default there. Source and partial installations
+/// without the helper keep the ordinary in-process terminal path, and official
+/// Zed compatibility remains unchanged. The legacy environment override stays
+/// available for diagnostics and development.
+pub fn terminal_host_enabled_for_app(app_name: &str) -> bool {
+    let helper_is_installed = terminal_host_executable_path().is_ok_and(|helper| helper.is_file());
+    terminal_host_enablement(
+        app_name,
+        std::env::var(EXPERIMENTAL_TERMINAL_HOST_ENV)
+            .ok()
+            .as_deref(),
+        helper_is_installed,
+    )
+}
+
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct TerminalHostAuthToken(String);
@@ -1109,6 +1140,17 @@ mod tests {
 
     fn token(value: char) -> Result<TerminalHostAuthToken, TerminalHostAuthTokenError> {
         TerminalHostAuthToken::parse(value.to_string().repeat(32))
+    }
+
+    #[test]
+    fn packaged_dez_enables_host_owned_terminals_by_default() {
+        assert!(terminal_host_enablement("Dez", None, true));
+        assert!(!terminal_host_enablement("Dez", None, false));
+        assert!(!terminal_host_enablement("Zed", None, true));
+        assert!(terminal_host_enablement("Dez", Some("on"), false));
+        assert!(terminal_host_enablement("Zed", Some("1"), false));
+        assert!(!terminal_host_enablement("Dez", Some("off"), true));
+        assert!(!terminal_host_enablement("Dez", Some("unexpected"), true));
     }
 
     #[test]

@@ -21,11 +21,11 @@ Workspace instead of separate applications or hidden panel modes.
 
 - **Main Work Area** — files, terminals, search results, settings, diagnostics,
   previews, and reviews are ordinary movable and splittable Surfaces.
-- **Sessions** — a compact supervision view of Workspaces, Agent Sessions,
-  Terminal Sessions, attention, lifecycle, and recent activity. It navigates
-  real work; it does not own duplicate tabs or processes. On macOS, its
-  separate **On This Mac** section can also list current-user terminals from
-  other applications as ephemeral, read-only observations.
+- **Projects** — the stable navigation rail for open codebases and their Agent
+  Sessions. It shows attention and lifecycle without owning duplicate tabs or
+  processes. On macOS, a separate **Machine Terminals** section can list
+  current-user terminals from other applications as ephemeral, read-only
+  observations.
 - **Workspace Tools** — Files, Outline, Git, and Debug are different views of
   the active Workspace's single Project.
 - **Built-in Agent** — an optional provider-backed conversation surface stays
@@ -35,8 +35,11 @@ Workspace instead of separate applications or hidden panel modes.
   review tools apply.
 - **Terminal Sessions** — terminals open in the Main Work Area. Session
   identity, deliberate close/end behavior, and honest unavailable-session
-  recovery define the default. An experimental process-owning Host explores
-  detach and reattach without changing the v0.0.2 promise.
+  recovery define the default. Packaged Dez builds place local interactive
+  shells under a small process-owning terminal service, so closing or
+  accidentally losing the GUI does not end the computation. Reopening Dez
+  reattaches the same Session; task and remote terminals keep their existing
+  lifecycle semantics.
 - **Evidence and review** — Dez distinguishes observed facts from reported or
   unknown state, then uses Workspace, terminal, command, check, file, and Git
   evidence to make review safer.
@@ -46,7 +49,7 @@ The result is an IDE that can follow the full loop:
 ```text
 open a Workspace
 → edit or delegate work
-→ observe Sessions and attention
+→ observe the Project and its agent Sessions
 → inspect files, diagnostics, commands, and Git changes
 → review the result
 → resume without rebuilding context
@@ -54,7 +57,7 @@ open a Workspace
 
 The window is deliberately not a dashboard of equal columns. Each Workspace
 owns one Project, one Main Work Area, its terminals, and its Git state.
-Sessions, Workspace Tools, and Built-in Agent compete for one optional
+Projects, Workspace Tools, and Built-in Agent compete for one optional
 auxiliary slot. The active Workspace exposes one **Workspace Layout** picker.
 Its six public layouts are named after the surfaces they show: **Work Area +
 Files**, **Work Area + Built-in Agent**, **Focus Work Area**, **Code +
@@ -62,7 +65,7 @@ Terminal**, **Review Changes**, and **Debug**. The first three use one work
 area. The last three use at most two populated work areas and never manufacture
 an empty column.
 
-From a selected Sessions row, `Enter` returns to the existing Session,
+From a selected Project Session row, `Enter` returns to the existing Session,
 `Shift+F` opens its Workspace files, `Shift+G` opens its change review, and
 `Shift+V` opens evidence-backed Session details. The same Files, Review Changes,
 and Session Details handoff appears on standalone terminals; it never creates a
@@ -82,7 +85,7 @@ one Zed-compatible Project:
 - Files, Outline, Search, Git, tasks, and Debug inspect the same Project;
 - Agent context comes from the active Workspace;
 - Agent edits become normal buffers and Git changes;
-- Sessions observes and routes to those owners without copying them.
+- Projects observes and routes to those owners without copying them.
 
 A terminal is therefore not embedded in chat, and the editor is not a separate
 mode. They are peer Surfaces in one native pane grid.
@@ -94,7 +97,8 @@ Dez ships with an attributed adaptation of
 
 - **Lumin Blur** in dark mode;
 - **Lumin Light** in light mode;
-- **JetBrains Mono** across interface, editor, terminal, prompts, and review;
+- **IBM Plex Sans** for native interface chrome and readable onboarding;
+- **Lilex** for editor, terminal, prompt, and review code;
 - **Dez (Default)** as the product-facing built-in file and folder icon set;
 - distinct rail/drawer, Main Work Area, tab, and elevated-overlay surfaces;
 - restrained structural boundaries, with ordered hover, active, selection,
@@ -106,10 +110,11 @@ and typography roles remain configurable through normal settings.
 ## Current status
 
 The v0.0.2 source candidate already contains the opinionated Dez shell,
-identity isolation, Workspace composition, Sessions, session vocabulary,
-terminal lifecycle safeguards, first-run experience, Lumin/JetBrains visual
-defaults, read-only machine-terminal discovery on macOS, and a large set of
-static product-contract checks.
+identity isolation, Workspace composition, Project navigation, session vocabulary,
+host-owned local terminal lifecycle, browser-like Back/Forward navigation,
+first-run experience, Lumin/Plex/Lilex visual defaults, read-only
+machine-terminal discovery on macOS, and a large set of static
+product-contract checks.
 
 Before a public binary release, the project still requires a build of the
 current source checkpoint plus rendered, restart, crash, accessibility, and
@@ -200,7 +205,9 @@ Dez retains Zed's licensing structure: source is primarily
 [Apache-2.0](./LICENSE-APACHE) components where marked. Third-party assets keep
 their own licenses, including:
 
-- Lumin by Daksh Sharma under the MIT License; and
+- Lumin by Daksh Sharma under the MIT License;
+- IBM Plex Sans under the SIL Open Font License 1.1;
+- Lilex under the SIL Open Font License 1.1; and
 - JetBrains Mono under the SIL Open Font License 1.1.
 
 Dez is an independent fork and is not an official Zed Industries product.

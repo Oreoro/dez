@@ -282,7 +282,8 @@ fn session_rail_uses_card_frame(app_name: &str) -> bool {
 }
 
 fn session_rail_shows_idle_workspaces(app_name: &str) -> bool {
-    app_name == "Zed"
+    let _ = app_name;
+    true
 }
 
 fn session_rail_shows_empty_agent_drafts(app_name: &str) -> bool {
@@ -365,7 +366,7 @@ mod agent_session_label_tests {
         assert!(session_switcher_uses_modal_overlay("Zed"));
         assert!(!session_switcher_uses_modal_overlay("Dez"));
         assert!(session_rail_shows_idle_workspaces("Zed"));
-        assert!(!session_rail_shows_idle_workspaces("Dez"));
+        assert!(session_rail_shows_idle_workspaces("Dez"));
         assert!(session_rail_shows_empty_agent_drafts("Zed"));
         assert!(!session_rail_shows_empty_agent_drafts("Dez"));
         assert!(terminal_activation_failure_uses_placeholder_surface("Zed"));
@@ -653,7 +654,11 @@ fn session_overview_status_label(
         "Loading sessions".to_owned()
     } else if session_count == 0 {
         if app_name != "Zed" {
-            return "No agent sessions".to_owned();
+            return match workspace_count {
+                0 => "No projects open".to_owned(),
+                1 => "1 project ready".to_owned(),
+                count => format!("{count} projects ready"),
+            };
         }
         if workspace_count == 0 {
             return "No sessions yet".to_owned();
@@ -903,7 +908,7 @@ fn session_rail_title(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Sessions"
     } else {
-        "Agent Sessions"
+        "Projects"
     }
 }
 
@@ -911,7 +916,31 @@ fn session_rail_accessibility_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Sessions"
     } else {
-        "Agent Sessions and observed terminals"
+        "Projects, agent sessions, and machine terminals"
+    }
+}
+
+fn session_rail_search_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Search Sessions"
+    } else {
+        "Search Projects and Sessions"
+    }
+}
+
+fn session_rail_hide_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Hide Sessions"
+    } else {
+        "Hide Projects"
+    }
+}
+
+fn session_rail_menu_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Agent Tools and Settings"
+    } else {
+        "Projects Menu"
     }
 }
 
@@ -1068,11 +1097,11 @@ fn workspace_options_tooltip_label() -> &'static str {
 }
 
 fn machine_terminal_section_accessibility_description() -> &'static str {
-    "Observed from the local process table. Dez does not own these PTYs."
+    "Read-only terminals observed from the local process table. Dez does not own these PTYs."
 }
 
 fn machine_terminal_section_tooltip_label() -> &'static str {
-    "Observed terminals are read-only"
+    "Machine terminals are read-only; select one to return to its owning app"
 }
 
 fn merge_unambiguous_branch(
@@ -1660,12 +1689,12 @@ fn terminal_runtime_from_snapshot(
 fn terminal_agent_kind_from_snapshot(
     snapshot: Option<&TerminalAgentSnapshot>,
 ) -> Option<TerminalAgentKind> {
-    snapshot.and_then(|agent| {
-        agent
-            .adapter
-            .starts_with("codex-")
-            .then_some(TerminalAgentKind::Codex)
-    })
+    let agent = snapshot?;
+    if agent.adapter.starts_with("codex-") {
+        Some(TerminalAgentKind::Codex)
+    } else {
+        detect_terminal_agent_kind(&agent.adapter)
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -1776,12 +1805,20 @@ mod session_start_state_tests {
 
     #[test]
     fn start_state_has_one_primary_action_and_workspace_copy() {
-        assert_eq!(session_rail_title("Dez"), "Agent Sessions");
+        assert_eq!(session_rail_title("Dez"), "Projects");
         assert_eq!(session_rail_title("Zed"), "Sessions");
         assert_eq!(
             session_rail_accessibility_label("Dez"),
-            "Agent Sessions and observed terminals"
+            "Projects, agent sessions, and machine terminals"
         );
+        assert_eq!(
+            session_rail_search_label("Dez"),
+            "Search Projects and Sessions"
+        );
+        assert_eq!(session_rail_hide_label("Dez"), "Hide Projects");
+        assert_eq!(session_rail_menu_label("Dez"), "Projects Menu");
+        assert_eq!(session_rail_search_label("Zed"), "Search Sessions");
+        assert_eq!(session_rail_hide_label("Zed"), "Hide Sessions");
         assert!(!session_overview_create_action_visible("Dez", 0));
         assert!(!session_overview_create_action_visible("Dez", 1));
         assert!(session_overview_create_action_visible("Zed", 1));
@@ -1827,7 +1864,7 @@ mod session_start_state_tests {
         );
         assert_eq!(
             machine_terminal_section_tooltip_label(),
-            "Observed terminals are read-only"
+            "Machine terminals are read-only; select one to return to its owning app"
         );
         assert!(
             machine_terminal_section_accessibility_description()
@@ -2208,6 +2245,26 @@ mod terminal_runtime_label_tests {
             events_truncated: false,
             events: Vec::new(),
         };
+        assert_eq!(
+            terminal_agent_kind_from_snapshot(Some(&structured)),
+            Some(TerminalAgentKind::Codex)
+        );
+        assert_eq!(
+            terminal_agent_kind_from_snapshot(Some(&TerminalAgentSnapshot {
+                adapter: "claude-code-hooks-v1".to_owned(),
+                actor: "Claude Code".to_owned(),
+                ..structured.clone()
+            })),
+            Some(TerminalAgentKind::Claude)
+        );
+        assert_eq!(
+            terminal_agent_kind_from_snapshot(Some(&TerminalAgentSnapshot {
+                adapter: "opencode-events-v1".to_owned(),
+                actor: "OpenCode".to_owned(),
+                ..structured.clone()
+            })),
+            Some(TerminalAgentKind::OpenCode)
+        );
         assert_eq!(
             terminal_agent_state_label(Some(&structured), Some(&live), true, false, false, true,),
             "Waiting for permission"
@@ -5005,6 +5062,12 @@ impl Sidebar {
                     let detected_agent_kind = detect_terminal_agents
                         .then(|| {
                             terminal_agent_kind_from_snapshot(agent.as_ref())
+                                .or_else(|| {
+                                    snapshot
+                                        .foreground_command
+                                        .as_deref()
+                                        .and_then(detect_terminal_agent_command)
+                                })
                                 .or_else(|| metadata.detected_agent_kind())
                         })
                         .flatten();
@@ -6259,49 +6322,83 @@ impl Sidebar {
                 .w_full()
                 .child(header)
                 .child(
-                    v_flex().px_2().pt_1().pb_2().child(
-                        Button::new(
-                            SharedString::from(format!(
-                                "{id_prefix}empty-project-new-terminal-{ix}"
-                            )),
-                            terminal_launch_label(APP_NAME),
+                    v_flex()
+                        .px_2()
+                        .pt_1()
+                        .pb_2()
+                        .gap_1()
+                        .child(
+                            Label::new("Run Codex, Claude Code, or OpenCode in this project.")
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
                         )
-                        .full_width()
-                        .size(ButtonSize::Medium)
-                        .style(ButtonStyle::Filled)
-                        .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
-                        .tab_index(0isize)
-                        .aria_label(SharedString::from(format!(
-                            "{} in {}",
-                            terminal_launch_label(APP_NAME),
-                            workspace_name.as_ref()
-                        )))
-                        .tooltip(move |_, cx| {
-                            Tooltip::for_action(
-                                workspace_new_terminal_tooltip_label(APP_NAME),
-                                &NewCenterTerminal::default(),
-                                cx,
+                        .child(
+                            h_flex().flex_wrap().gap_x_2().gap_y_1().children(
+                                [
+                                    (IconName::AiOpenAi, "Codex"),
+                                    (IconName::AiClaude, "Claude Code"),
+                                    (IconName::AiOpenCode, "OpenCode"),
+                                ]
+                                .into_iter()
+                                .map(|(icon, label)| {
+                                    h_flex()
+                                        .gap_1()
+                                        .child(
+                                            Icon::new(icon)
+                                                .size(IconSize::XSmall)
+                                                .color(Color::Muted),
+                                        )
+                                        .child(
+                                            Label::new(label)
+                                                .size(LabelSize::XSmall)
+                                                .color(Color::Muted),
+                                        )
+                                }),
+                            ),
+                        )
+                        .child(
+                            Button::new(
+                                SharedString::from(format!(
+                                    "{id_prefix}empty-project-new-terminal-{ix}"
+                                )),
+                                terminal_launch_label(APP_NAME),
                             )
-                        })
-                        .on_click(cx.listener(
-                            move |this, _, window, cx| {
-                                this.set_group_expanded(&key_for_empty_terminal, true, cx);
-                                this.selection = None;
-                                if let Some(workspace) =
-                                    this.workspace_for_group(&key_for_empty_terminal, cx)
-                                {
-                                    this.create_new_terminal(&workspace, window, cx);
-                                } else {
-                                    this.open_workspace_and_create_entry(
-                                        &key_for_empty_terminal,
-                                        NewEntryTarget::Terminal,
-                                        window,
-                                        cx,
-                                    );
-                                }
-                            },
-                        )),
-                    ),
+                            .full_width()
+                            .size(ButtonSize::Medium)
+                            .style(ButtonStyle::Filled)
+                            .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                            .tab_index(0isize)
+                            .aria_label(SharedString::from(format!(
+                                "{} in {}",
+                                terminal_launch_label(APP_NAME),
+                                workspace_name.as_ref()
+                            )))
+                            .tooltip(move |_, cx| {
+                                Tooltip::for_action(
+                                    workspace_new_terminal_tooltip_label(APP_NAME),
+                                    &NewCenterTerminal::default(),
+                                    cx,
+                                )
+                            })
+                            .on_click(cx.listener(
+                                move |this, _, window, cx| {
+                                    this.set_group_expanded(&key_for_empty_terminal, true, cx);
+                                    this.selection = None;
+                                    if let Some(workspace) =
+                                        this.workspace_for_group(&key_for_empty_terminal, cx)
+                                    {
+                                        this.create_new_terminal(&workspace, window, cx);
+                                    } else {
+                                        this.open_workspace_and_create_entry(
+                                            &key_for_empty_terminal,
+                                            NewEntryTarget::Terminal,
+                                            window,
+                                            cx,
+                                        );
+                                    }
+                                },
+                            )),
+                        ),
                 )
                 .into_any_element()
         } else {
@@ -13711,10 +13808,10 @@ impl Sidebar {
                                     .size(ButtonSize::Medium)
                                     .icon_size(IconSize::Small)
                                     .tab_index(0isize)
-                                    .aria_label("Search Sessions")
+                                    .aria_label(session_rail_search_label(APP_NAME))
                                     .tooltip(|_, cx| {
                                         Tooltip::for_action(
-                                            "Search Sessions",
+                                            session_rail_search_label(APP_NAME),
                                             &FocusSidebarFilter,
                                             cx,
                                         )
@@ -13734,9 +13831,13 @@ impl Sidebar {
                             .size(ButtonSize::Medium)
                             .icon_size(IconSize::Small)
                             .tab_index(0isize)
-                            .aria_label("Hide Sessions")
+                            .aria_label(session_rail_hide_label(APP_NAME))
                             .tooltip(|_, cx| {
-                                Tooltip::for_action("Hide Sessions", &ToggleSidebar, cx)
+                                Tooltip::for_action(
+                                    session_rail_hide_label(APP_NAME),
+                                    &ToggleSidebar,
+                                    cx,
+                                )
                             })
                             .on_click(|_, window, cx| {
                                 window.dispatch_action(Box::new(CloseSidebar), cx);
@@ -13895,6 +13996,22 @@ impl Sidebar {
         let design_system = DesignSystemSettings::get_global(cx);
         let labels_visible = session_rail_labels_visible(&design_system);
         let background = cx.theme().colors().panel_background;
+        let project_roots = self
+            .contents
+            .entries
+            .iter()
+            .filter_map(|entry| match entry {
+                ListEntry::ProjectHeader { key, label, .. } => Some(
+                    key.path_list()
+                        .paths()
+                        .iter()
+                        .cloned()
+                        .map(|path| (path, label.clone())),
+                ),
+                ListEntry::Thread(_) | ListEntry::Terminal(_) => None,
+            })
+            .flatten()
+            .collect::<Vec<_>>();
 
         let rows = self
             .contents
@@ -13903,7 +14020,17 @@ impl Sidebar {
             .cloned()
             .map(|terminal| {
                 let title = terminal.display_title();
-                let state = format!("Observed · {}", terminal.tty);
+                let project_label = terminal.working_directory.as_ref().and_then(|cwd| {
+                    project_roots
+                        .iter()
+                        .filter(|(root, _)| cwd.starts_with(root))
+                        .max_by_key(|(root, _)| root.components().count())
+                        .map(|(_, label)| label.clone())
+                });
+                let state = project_label
+                    .as_ref()
+                    .map(|project| format!("{project} · read-only"))
+                    .unwrap_or_else(|| format!("{} · read-only", terminal.tty));
                 let owner = terminal.owner_label().to_owned();
                 let location = terminal
                     .working_directory
@@ -13970,7 +14097,7 @@ impl Sidebar {
         let section = v_flex()
             .id("machine-terminal-section")
             .role(gpui::Role::Region)
-            .aria_label("Terminals on this Mac")
+            .aria_label("Machine terminals")
             .aria_description(machine_terminal_section_accessibility_description())
             .min_h_0()
             .border_t_1()
@@ -13983,7 +14110,7 @@ impl Sidebar {
                     .px_1p5()
                     .gap_1()
                     .justify_between()
-                    .child(Label::new("On This Mac").size(LabelSize::Small))
+                    .child(Label::new("Machine Terminals").size(LabelSize::Small))
                     .child(
                         Label::new(count_label)
                             .size(LabelSize::XSmall)
@@ -13995,7 +14122,7 @@ impl Sidebar {
                 v_flex()
                     .id("machine-terminal-list")
                     .role(gpui::Role::List)
-                    .aria_label("Observed machine terminals")
+                    .aria_label("Read-only machine terminals")
                     .min_h_0()
                     .flex_1()
                     .overflow_y_scroll()
@@ -14005,7 +14132,7 @@ impl Sidebar {
         Some(if has_workspace_rows {
             section
                 .flex_none()
-                .max_h(vh(0.45, window))
+                .max_h(vh(0.32, window))
                 .into_any_element()
         } else {
             section.flex_1().into_any_element()
@@ -14484,11 +14611,7 @@ impl Sidebar {
                 ButtonSize::Compact
             })
             .tab_index(0isize)
-            .aria_label(if is_dez {
-                "Sessions Menu"
-            } else {
-                "Agent Tools and Settings"
-            })
+            .aria_label(session_rail_menu_label(APP_NAME))
             .aria_expanded(menu_open)
             .selected_style(ButtonStyle::Tinted(TintColor::Accent))
             .child(if is_dez {
@@ -14506,11 +14629,7 @@ impl Sidebar {
         PopoverMenu::new("agent-sidebar-options-menu")
             .trigger_with_tooltip(
                 trigger,
-                Tooltip::text(if is_dez {
-                    "Sessions Menu"
-                } else {
-                    "Agent Tools and Settings"
-                }),
+                Tooltip::text(session_rail_menu_label(APP_NAME)),
             )
             .anchor(if is_dez {
                 gpui::Anchor::TopRight
@@ -15408,7 +15527,7 @@ impl Render for Sidebar {
                                             .aria_label(if APP_NAME == "Zed" {
                                                 "Workspace Sessions"
                                             } else {
-                                                "Agent Sessions by Workspace"
+                                                "Projects and Agent Sessions"
                                             })
                                             .relative()
                                             .flex_1()

@@ -26,7 +26,7 @@
   // The name of a font to use for rendering text in the editor
   // ".ZedMono" currently aliases to Lilex
   // but this may change in the future.
-  "buffer_font_family": "JetBrains Mono",
+  "buffer_font_family": "Lilex",
   // Set the buffer text's font fallbacks, this will be merged with
   // the platform's default fallbacks.
   "buffer_font_fallbacks": null,
@@ -52,10 +52,9 @@
   "buffer_line_height": {
     "custom": 1.5
   },
-  // Dez uses one unmistakable bundled type family across interface, editor,
-  // terminal, prompts, and review surfaces. You can set this to
-  // ".SystemUIFont" to use the system font.
-  "ui_font_family": "JetBrains Mono",
+  // Dez uses a proportional interface face and a separate coding face.
+  // Both are bundled, so fresh installs remain predictable on every platform.
+  "ui_font_family": "IBM Plex Sans",
   // Set the UI's font fallbacks, this will be merged with the platform's
   // default font fallbacks.
   "ui_font_fallbacks": null,
@@ -79,7 +78,7 @@
   // The font family for the markdown preview. Falls back to the UI font family if unset.
   "markdown_preview_font_family": null,
   // The font family for code blocks in the markdown preview. Falls back to the editor font family if unset.
-  "markdown_preview_code_font_family": "JetBrains Mono",
+  "markdown_preview_code_font_family": "Lilex",
   // How much to fade out unused code.
   "unnecessary_code_fade": 0.3,
   // Active pane styling settings.
@@ -2104,7 +2103,7 @@
     "font_size": 14,
     // Set the terminal's font family. If this option is not included,
     // the terminal will default to matching the buffer's font family.
-    "font_family": "JetBrains Mono",
+    "font_family": "Lilex",
     // Set the terminal's font fallbacks. If this option is not included,
     // the terminal will default to matching the buffer's font fallbacks.
     // This will be merged with the platform's default font fallbacks

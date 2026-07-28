@@ -104,6 +104,10 @@ fn pane_drag_handle_visible(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn pane_navigation_history_buttons_visible(app_name: &str, setting: bool) -> bool {
+    app_name != "Zed" || setting
+}
+
 fn empty_main_work_area_shows_orientation(app_name: &str, is_active_pane: bool) -> bool {
     app_name == "Zed" || is_active_pane
 }
@@ -738,9 +742,10 @@ impl Pane {
             render_tab_bar_buttons: Rc::new(default_render_tab_bar_buttons),
             render_tab_bar: Rc::new(Self::render_tab_bar),
             show_tab_bar_buttons: TabBarSettings::get_global(cx).show_tab_bar_buttons,
-            display_nav_history_buttons: Some(
+            display_nav_history_buttons: Some(pane_navigation_history_buttons_visible(
+                paths::APP_NAME,
                 TabBarSettings::get_global(cx).show_nav_history_buttons,
-            ),
+            )),
             _subscriptions: subscriptions,
             double_click_dispatch_action,
             save_modals_spawned: HashSet::default(),
@@ -925,7 +930,10 @@ impl Pane {
         let tab_bar_settings = TabBarSettings::get_global(cx);
 
         if let Some(display_nav_history_buttons) = self.display_nav_history_buttons.as_mut() {
-            *display_nav_history_buttons = tab_bar_settings.show_nav_history_buttons;
+            *display_nav_history_buttons = pane_navigation_history_buttons_visible(
+                paths::APP_NAME,
+                tab_bar_settings.show_nav_history_buttons,
+            );
         }
 
         self.show_tab_bar_buttons = tab_bar_settings.show_tab_bar_buttons;
@@ -979,7 +987,7 @@ impl Pane {
         let (title, description) = if show_orientation {
             (
                 "Run an agent in this workspace",
-                "Open an Agent Terminal, run Codex, Claude Code, OpenCode, or another supported CLI, and keep coding here. Sessions appears when Dez detects agent work.",
+                "Open an Agent Terminal, run Codex, Claude Code, OpenCode, or another supported CLI, and keep coding here. The session appears under this project when Dez detects agent work.",
             )
         } else {
             (
@@ -5718,7 +5726,12 @@ impl Render for Pane {
         let display_tab_bar = should_display_tab_bar(window, cx)
             && !(auto_hide_single_tab_bar && self.items_len() <= 1 && !active_item_forces_tab_bar);
         let Some(project) = self.project.upgrade() else {
-            return div().track_focus(&self.focus_handle(cx)).into_any_element();
+            return div()
+                .id(("detached-pane", cx.entity_id()))
+                .role(gpui::Role::Pane)
+                .aria_label(self.pane_kind.accessibility_label())
+                .track_focus(&self.focus_handle(cx))
+                .into_any_element();
         };
         let is_local = project.read(cx).is_local();
 
@@ -6479,6 +6492,12 @@ mod tests {
             "Dez should keep pane movement in explicit layout controls instead of overlaying every header"
         );
         assert!(pane_drag_handle_visible("Zed"));
+        assert!(
+            pane_navigation_history_buttons_visible("Dez", false),
+            "Dez should expose native Back and Forward navigation without a hidden setting"
+        );
+        assert!(pane_navigation_history_buttons_visible("Zed", true));
+        assert!(!pane_navigation_history_buttons_visible("Zed", false));
         assert_eq!(
             pane_new_surface_control_copy("Dez"),
             ("Add to Main Work Area", "Add a file, search, or terminal")

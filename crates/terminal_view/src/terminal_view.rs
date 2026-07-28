@@ -2621,7 +2621,7 @@ impl TerminalView {
                     })
                     .when(paths::APP_NAME != "Zed", |menu| {
                         menu.label(
-                            "Supervise · Agent Sessions surfaces active agent work and attention.",
+                            "Supervise · Projects keeps each codebase and its agent Sessions together.",
                         )
                     })
                     .when(details_has_workspace_files, |menu| {
@@ -3727,7 +3727,7 @@ pub async fn restore_hosted_terminal(
     })
 }
 
-/// Waits briefly for the opt-in terminal host startup task to publish its
+/// Waits briefly for the packaged terminal host startup task to publish its
 /// authenticated connection. Persisted views restore concurrently with app
 /// startup, so a synchronous lookup would turn a healthy session into a false
 /// "unavailable" state.
@@ -3736,8 +3736,7 @@ pub async fn wait_for_hosted_terminal_connection(
     cx: &mut AsyncWindowContext,
 ) -> Option<Arc<terminal::session_host::transport::TerminalHostConnection>> {
     let should_wait =
-        std::env::var(terminal::session_host::transport::EXPERIMENTAL_TERMINAL_HOST_ENV).as_deref()
-            == Ok("1");
+        terminal::session_host::transport::terminal_host_enabled_for_app(paths::APP_NAME);
     let attempts = if should_wait {
         TERMINAL_HOST_RESTORE_ATTEMPTS
     } else {

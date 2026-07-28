@@ -64,7 +64,7 @@ describe purpose, not the inherited dock or panel implementation:
 
 | Region              | Owns                                                               | Does not own                                                        |
 | ------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| **Agent Sessions**  | Search, attention scope, Workspace grouping, and navigation        | Terminal processes, Agent Sessions, editor state, or duplicate tabs |
+| **Projects**        | Open codebases, Agent Sessions, attention, and navigation          | Terminal processes, editor state, or duplicate tabs                  |
 | **Workspace Tools** | Files, Outline, Git, and Debug tabs in a hideable left tool pane   | A second Workspace, root selection, or terminal placement           |
 | **Main work area**  | File, terminal, search, diagnostics, settings, and review Surfaces | Global project scope or sidebar-only copies of active work          |
 | **Built-in Agent**  | Native and ACP conversation Surfaces in a hideable right tool pane | Terminal-agent process ownership                                    |
@@ -76,14 +76,14 @@ wireframe, not a suggestion for an additional dashboard or panel system:
 flowchart TB
     subgraph WIDE["Wide window · 1160 logical px or more"]
         direction LR
-        WA["One auxiliary surface · optional<br/>Sessions OR Workspace Tools OR Built-in Agent<br/>never side by side"]
+        WA["One auxiliary surface · optional<br/>Projects OR Workspace Tools OR Built-in Agent<br/>never side by side"]
         WM["Main Work Area · primary<br/>one tab and pane grid<br/>terminal · editor · diff · debug · review"]
         WA --- WM
     end
 
     subgraph NARROW["Narrow window · below 1160 logical px"]
         direction LR
-        FA["One compact auxiliary surface · optional<br/>Sessions OR Workspace Tools OR Built-in Agent"]
+        FA["One compact auxiliary surface · optional<br/>Projects OR Workspace Tools OR Built-in Agent"]
         FM["Main Work Area · always present<br/>at least 60% of the window"]
         FA --- FM
     end
@@ -99,49 +99,50 @@ agent dashboard:
 flowchart LR
     START["Open Agent Terminal<br/>in Main Work Area"] --> RUN["Run Codex, Claude Code,<br/>OpenCode, or another supported CLI"]
     RUN --> OBSERVE["Terminal and adapter report<br/>agent lifecycle and attention"]
-    OBSERVE --> SESSIONS["Sessions projects agent state<br/>without owning the process"]
+    OBSERVE --> SESSIONS["Projects shows agent Sessions<br/>without owning the process"]
     SESSIONS -->|Select row| RETURN["Focus or reattach the existing<br/>Main Work Area Surface"]
     RUN --> CHANGES["Files and Git observe changes"]
     CHANGES --> REVIEW["Open diff, diagnostics, or review<br/>in Main Work Area"]
     REVIEW --> RUN
 ```
 
-Running a terminal-native agent such as Codex does not turn the Sessions region
+Running a terminal-native agent such as Codex does not turn Projects
 into a chat transcript. Its terminal remains the interactive source of truth in
-the Main Work Area; Sessions becomes the compact place to see that it is live,
+the Main Work Area; its Project becomes the compact place to see that it is live,
 needs attention, or has reviewable evidence. Native and ACP conversations use
-the Agent drawer and project into the same Sessions list. Both paths return to
+the Built-in Agent surface and project into the same Project Session list. Both paths return to
 the existing Surface rather than opening a duplicate.
 
-The visible title is **Agent Sessions**, not a generic terminal sidebar.
-Ordinary integrated shells stay in the Main Work Area. Read-only machine
-observations are separated under **On This Mac**, where the UI states that Dez
-does not own those PTYs.
+The visible title is **Projects**, because the stable thing a developer
+navigates is a codebase. Agent Sessions appear beneath their owning Project;
+ordinary integrated shells stay in the Main Work Area. Read-only observations
+from other applications are separated under **Machine Terminals**, where the
+UI states that Dez does not own those PTYs.
 
-Sessions restoration follows this lifecycle:
+Projects restoration follows this lifecycle:
 
 ```mermaid
 flowchart LR
     START["Launch or restore"] --> PRIMARY["Main Work Area<br/>always visible · receives initial focus"]
 
-    subgraph AUTO["Sessions visibility = Auto"]
+    subgraph AUTO["Projects visibility = Auto"]
         direction LR
         RESTORED{"Restored open?"}
         WAIT["Wait for Workspace and Host truth"]
         CLOSED["Keep Main Work Area only"]
-        OPEN["Keep Sessions open"]
+        OPEN["Keep Projects open"]
         RESTORED -->|No| CLOSED
         RESTORED -->|Yes| WAIT
-        WAIT -->|No Sessions, attention, history, or recovery| CLOSED
+        WAIT -->|No Projects, Sessions, attention, history, or recovery| CLOSED
         WAIT -->|Has supervision or recovery state| OPEN
-        CLOSED -->|Explicit Sessions command| OPEN
-        OPEN -->|Hide Sessions| CLOSED
+        CLOSED -->|Explicit Projects command| OPEN
+        OPEN -->|Hide Projects| CLOSED
     end
 
     START --> RESTORED
 ```
 
-The Main Work Area is never replaced by shell navigation. Sessions, Workspace
+The Main Work Area is never replaced by shell navigation. Projects, Workspace
 Tools, and Built-in Agent share one optional auxiliary slot at every width.
 Opening one hides whichever of the other two is visible. The transition is
 normal layout and focus movement, never a floating overlay. Wide windows give
@@ -151,20 +152,20 @@ Transient progress and notices remain bounded and nonmodal; dialogs are
 reserved for decisions that block progress.
 
 **Auto** is a restore policy, not permission to surprise the user during
-ordinary work. A restored-open Sessions region waits until Workspace and
+ordinary work. Restored-open Projects waits until Workspace and
 Terminal Host restoration can report honest state. It then closes itself only
 when it is genuinely empty. A Session, attention item, Agent History view,
 failed Workspace recovery, or failed/reconnecting Terminal Host keeps it open.
-Any explicit Sessions command or focus cancels the pending automatic close.
+Any explicit Projects command or focus cancels the pending automatic close.
 
-Dez renders no persistent Sessions footer. Secondary destinations live behind
-one named **Sessions Menu** in the overview: **Agent History**, **Open Recent
-Workspaces…**, and Agent tooling/settings. **Hide Sessions** remains the one
+Dez renders no persistent Projects footer. Secondary destinations live behind
+one named **Projects Menu** in the overview: **Agent History**, **Open Recent
+Workspaces…**, and Agent tooling/settings. **Hide Projects** remains the one
 direct adjacent action because it changes the current layout. Recovery notices
 open the global Recent Workspaces surface rather than relying on a hidden
 popover anchor. Official Zed retains its inherited footer.
 
-Sessions and the Main Work Area form one continuous window shell. Dez does not
+Projects and the Main Work Area form one continuous window shell. Dez does not
 put a desktop-colored gutter or four-sided floating-card frame between them.
 One neutral one-pixel divider marks the shared structural edge; only the
 window-facing outer corners inherit the native window radius. Lumin
@@ -177,18 +178,18 @@ or reattached without introducing a separate Terminal Panel model. Opening the
 terminal alone does not create a Sessions row; the user still starts a
 supported agent CLI inside it.
 
-Sessions rows are projections. Selecting a terminal row focuses its
+Project Session rows are projections. Selecting a terminal row focuses its
 attached terminal Surface or reattaches the Host-owned Session. Selecting an
 Agent Session row focuses its existing conversation Surface. A row may compose
 actor, lifecycle, attention, evidence, changes, and recency, but it never
 becomes a second owner of those facts.
 
-### Session admission contract
+### Project Session admission contract
 
-Sessions is an agent supervisor, not a list of every shell.
+Projects supervises agent Sessions; it is not a list of every shell.
 
 - An ordinary Dez terminal remains only in the Main Work Area.
-- A terminal enters Sessions when a supported foreground agent is detected, a
+- A terminal appears beneath its Project when a supported foreground agent is detected, a
   structured agent snapshot exists, or Dez explicitly owns it as a managed
   Agent terminal.
 - Launching an agent promotes the existing terminal identity; it does not open a
@@ -427,7 +428,7 @@ Area + Debug** reveal Workspace Tools, hide Built-in Agent, and select
 ProjectPanel, GitPanel, and DebugPanel respectively. **Work Area + Built-in
 Agent** reveals Built-in Agent, hides Workspace Tools, and selects the Agent
 panel. **Focus Work Area** and **Split Work Area** hide both. Focus also closes
-Agent Sessions, leaving no auxiliary surface. Implementations must hide the
+Projects, leaving no auxiliary surface. Implementations must hide the
 competitor before revealing the destination; sequentially toggling both panes
 violates the label because the single-auxiliary-surface policy makes the last
 toggle win. Panel selection is fail-closed: if the named panel has not
@@ -435,10 +436,12 @@ registered, the empty auxiliary region collapses and focus remains in the Main
 Work Area. A layout must never relabel a stale tool or strand the user in an
 empty shell.
 
-The supervision surface is always named **Agent Sessions** in Dez-facing UI,
-including Welcome and Terminal Details. It projects supported agent work and
-explicit external observations; ordinary shells remain native Main Work Area
-tabs. Generic **Sessions** wording is reserved for official-Zed compatibility
+The supervision and navigation surface is always named **Projects** in
+Dez-facing UI, including Home and Terminal Details. It keeps open codebases
+visible before work begins, then projects supported agent Sessions beneath
+their owner. Ordinary shells remain native Main Work Area tabs. **Agent
+Session** remains the name of an individual agent run or conversation; generic
+top-level **Sessions** wording is reserved for official-Zed compatibility
 paths.
 
 The saved-layout manager follows the same rule. It shows only layouts the
@@ -589,11 +592,12 @@ popups remain transparent so their rounded shell is preserved, but still
 initialize the same UI font. A secondary window must never silently fall back
 to an opaque native background or GPUI's default text face.
 
-Typography uses one explicit Dez identity:
+Typography uses two explicit, role-appropriate Dez faces:
 
-- **JetBrains Mono** is bundled under the SIL Open Font License and is the
-  default for navigation, labels, menus, buffers, terminals, Agent content,
-  Markdown, review, settings, and Git commit input.
+- **IBM Plex Sans** is bundled under the SIL Open Font License and is the
+  default for navigation, labels, menus, settings, onboarding, and Agent prose.
+- **Lilex** is bundled under the SIL Open Font License and is the default for
+  buffers, terminals, prompts, Markdown code, review code, and Git commit input.
 - Users can independently override UI, buffer, terminal, Agent, and Markdown
   roles through normal settings when they prefer proportional prose.
 - The compact v0.0.1 chrome baseline keeps 14 px UI, editor, Agent, and
@@ -608,17 +612,18 @@ remain free to override every role through normal settings.
 
 The app menu and command palette expose **Restore Dez Visual Profile** as an
 explicit recovery path. It writes only the system-selected Lumin Light/Lumin
-Blur pair, compact density, **Dez (Default)** icons, and JetBrains Mono for
-interface, buffer, terminal, and Markdown code roles. It preserves sizes and
-unrelated settings, waits for persistence, and shows success only after the
-write completes.
+Blur pair, compact density, **Dez (Default)** icons, IBM Plex Sans for the
+interface, and Lilex for buffer, terminal, and Markdown code roles. It
+preserves sizes and unrelated settings, waits for persistence, and shows
+success only after the write completes.
 
 The upgrade path recognizes only known exact Dez-generated profile signatures.
 The first used `.ZedSans` beside Lumin; the earlier installed profile also
 pinned light mode to One Light despite claiming to follow the system. Dez
-upgrades those generated values in memory to JetBrains Mono, system appearance,
-Lumin Light, and Lumin Blur through the normal backup-and-update flow. It never
-rewrites official Zed settings or an arbitrary custom font/theme profile.
+upgrades those generated values in memory to IBM Plex Sans, Lilex, system
+appearance, Lumin Light, and Lumin Blur through the normal backup-and-update
+flow. It never rewrites official Zed settings or an arbitrary custom
+font/theme profile.
 
 Primary icon roles are semantic and stable: Terminal means terminal
 computation, Folder Open means Workspace/Files, File means file creation, Diff
@@ -986,9 +991,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   errors, warnings, counts, and diagnostic messages stay visible.
 - **2026-07-25: Visual identity has an explicit safe recovery action.**
   **Restore Dez Visual Profile** is available from Settings and the command
-  palette. It restores only Lumin, JetBrains Mono, and built-in Dez icons,
-  preserves sizes and non-visual preferences, and confirms only after the
-  settings write succeeds.
+  palette. It restores only Lumin, IBM Plex Sans, Lilex, and built-in Dez
+  icons, preserves sizes and non-visual preferences, and confirms only after
+  the settings write succeeds.
 - **2026-07-23: Public source must explain the product and its evidence
   boundary.** The canonical repository front page names Dez, explains how the
   Sessions, Workspace Tools, Main Work Area, Agent, and one
@@ -1502,9 +1507,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   when the active theme is transparent. It starts from the Main Work Area
   edge, uses a 1040 px content ceiling, splits actions and recent Workspaces
   only when at least 980 px is available, and stacks with compact spacing below
-  760 px. JetBrains Mono remains the bundled UI face; medium action labels,
-  larger headings, and semantic native icons provide hierarchy without adding
-  promotional cards.
+  760 px. IBM Plex Sans is the bundled UI face while Lilex owns code; medium
+  action labels, larger headings, and semantic native icons provide hierarchy
+  without adding promotional cards.
 - **2026-07-27: Glass ownership follows the component tree.** The native window
   and outer Dez shell own the whole-window material. A transparent Dez theme
   therefore makes the nested Workspace root transparent, and the Agent
@@ -1514,7 +1519,7 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   expands to a 960 px content ceiling, switches to compact spacing and a
   full-width finish action below 760 px, and uses the native Settings icon
   rather than a decorative badge. The shared Headline component is semibold
-  and must honor its semantic color property; this keeps JetBrains Mono
+  and must honor its semantic color property; this keeps the Plex/Lilex
   hierarchy deliberate without inventing another font system.
 - **2026-07-27: Terminal and transient surfaces own the right material.** A live
   terminal already paints `terminal.background` across its complete bounds, so
@@ -1566,7 +1571,7 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   send Dez into hidden matrix, tiled, or studio layouts. Workspace menus and
   command search use the same product name.
 - **2026-07-28: Compact supervision copy yields before controls clip.** The
-  caught-up action is **Show All** in Dez, and **On This Mac** reports
+  caught-up action is **Show All** in Dez, and **Machine Terminals** reports
   `n observed` below the detailed-width threshold. Full read-only ownership
   remains in the section description, row state, tooltip, and accessibility
   name, so responsive shortening never implies adoption or control. Observed
@@ -1621,6 +1626,33 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   loading, empty, and ready states, so asynchronous history cannot make the
   layout jump from one to two columns without an explanatory state. The header
   uses a plain semantic icon rather than a bordered badge.
+- **2026-07-28: Projects is the stable navigation noun.** This supersedes the
+  earlier top-level **Sessions** and **Agent Sessions** rail naming decisions.
+  Open codebases remain visible in **Projects** before an agent starts; Codex,
+  Claude Code, OpenCode, and other detected Agent Sessions appear beneath their
+  owner. **Agent Session** remains the name of one run or conversation.
+  Search, menu, hide, onboarding, Terminal Details, and accessibility labels
+  all name Projects consistently. Read-only external observations live in
+  **Machine Terminals**, not inside a Project and not under a vague machine
+  heading.
+- **2026-07-28: Packaged local interactive terminals are host-owned by
+  default.** This supersedes the v0.0.2 durability deferral below. If
+  `dez-terminal-host` is installed beside Dez, the application connects to or
+  launches that authenticated helper and new local interactive terminals use
+  its PTYs. Losing or closing the GUI does not end those shells or foreground
+  agents; reopening Dez reattaches the same saved Session. A missing helper in
+  a source or partial installation keeps the ordinary in-process terminal
+  path. A configured but unavailable helper never causes Dez to start a
+  disposable replacement computation. Task terminals remain GUI-owned and
+  remote terminals remain remote-owned. This is an ownership guarantee, not a
+  claim that Dez can adopt arbitrary external PTYs.
+- **2026-07-28: Pane history is Dez's browser-like navigation.** Every normal
+  Main Work Area pane shows the native Back and Forward controls even when the
+  inherited setting is off. History traverses existing files, terminals,
+  diffs, settings, and other Surfaces; it does not create a second route model
+  or duplicate Projects. Detached startup panes retain a stable accessibility
+  identity so rapid focus restoration cannot enter a missing-node warning
+  loop.
 - **2026-07-27: v0.0.2 proves the integrated loop before durable adoption.**
   The v0.0.2 release gate is one dependable in-app workflow: run a supported
   agent in an integrated terminal, supervise that same terminal through
@@ -1632,7 +1664,7 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   [v0.0.2 Completion Plan](./v0.0.2-completion-plan.md) replaces older,
   conflicting release orders without deleting their evidence.
 - **2026-07-27: Machine terminals are visible before they are adoptable.**
-  On macOS, Sessions may add a separate **On This Mac** projection of
+  On macOS, Projects may add a separate **Machine Terminals** projection of
   current-user TTYs owned by another terminal application or IDE. Each row is
   an ephemeral, read-only observation limited to its TTY, foreground
   executable, owning application, current directory when available, and a

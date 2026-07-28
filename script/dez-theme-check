@@ -418,35 +418,43 @@ for (const settings of [defaultSettings, initialSettings]) {
   requireValue(settings.includes('"dark": "Lumin Blur"'), "dark default must select Lumin Blur");
   requireValue(settings.includes('"density": "compact"'), "Dez visual defaults must use compact density");
   requireValue(
-    settings.includes('"buffer_font_family": "JetBrains Mono"'),
-    "editor default must select JetBrains Mono",
+    settings.includes('"buffer_font_family": "Lilex"'),
+    "editor default must select the bundled Lilex coding face",
   );
   requireValue(
-    settings.includes('"ui_font_family": "JetBrains Mono"'),
-    "UI default must select the bundled JetBrains Mono identity",
+    settings.includes('"ui_font_family": "IBM Plex Sans"'),
+    "UI default must select the bundled IBM Plex Sans interface face",
   );
 }
 requireValue(
-  defaultSettings.includes('"font_family": "JetBrains Mono"') &&
-    initialSettings.includes('"font_family": "JetBrains Mono"'),
-  "terminal default must select JetBrains Mono",
+  defaultSettings.includes('"font_family": "Lilex"') &&
+    initialSettings.includes('"font_family": "Lilex"'),
+  "terminal default must select Lilex",
 );
 requireValue(
   defaultSettings.includes('"icon_theme": "Dez (Default)"'),
   "default icon theme must use the product-facing Dez name",
 );
 requireValue(
-  defaultSettings.includes('"markdown_preview_code_font_family": "JetBrains Mono"'),
-  "Markdown code must select JetBrains Mono",
+  defaultSettings.includes('"markdown_preview_code_font_family": "Lilex"'),
+  "Markdown code must select Lilex",
 );
 
 for (const file of [
-  "JetBrainsMono-Regular.ttf",
-  "JetBrainsMono-Italic.ttf",
-  "JetBrainsMono-Bold.ttf",
-  "JetBrainsMono-BoldItalic.ttf",
+  "Lilex-Regular.ttf",
+  "Lilex-Italic.ttf",
+  "Lilex-Bold.ttf",
+  "Lilex-BoldItalic.ttf",
 ]) {
-  requireValue(fs.existsSync(path.join(root, "assets/fonts/jetbrains-mono", file)), `missing bundled font ${file}`);
+  requireValue(fs.existsSync(path.join(root, "assets/fonts/lilex", file)), `missing bundled font ${file}`);
+}
+for (const file of [
+  "IBMPlexSans-Regular.ttf",
+  "IBMPlexSans-Italic.ttf",
+  "IBMPlexSans-SemiBold.ttf",
+  "IBMPlexSans-SemiBoldItalic.ttf",
+]) {
+  requireValue(fs.existsSync(path.join(root, "assets/fonts/ibm-plex-sans", file)), `missing bundled font ${file}`);
 }
 
 console.log("Dez theme checks passed");

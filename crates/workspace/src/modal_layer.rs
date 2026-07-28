@@ -309,6 +309,9 @@ impl Render for ModalLayer {
             )
             .child(
                 v_flex()
+                    .id("active-modal-focus-root")
+                    .role(gpui::Role::Dialog)
+                    .aria_label("Dialog")
                     .h(px(0.0))
                     .top_20()
                     .items_center()

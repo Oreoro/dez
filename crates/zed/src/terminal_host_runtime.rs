@@ -12,9 +12,9 @@ use gpui::{App, AppContext as _, BackgroundExecutor, Entity, Global};
 use terminal::session_host::{
     TerminalHostId,
     transport::{
-        EXPERIMENTAL_TERMINAL_HOST_ENV, TerminalHostAuthToken, TerminalHostConnection,
-        TerminalHostHandshakeRejection, TerminalHostStartupState, TerminalHostStartupStatus,
-        TerminalHostTransportError, terminal_host_executable_path,
+        TerminalHostAuthToken, TerminalHostConnection, TerminalHostHandshakeRejection,
+        TerminalHostStartupState, TerminalHostStartupStatus, TerminalHostTransportError,
+        terminal_host_enabled_for_app, terminal_host_executable_path,
     },
 };
 use util::ResultExt as _;
@@ -37,7 +37,7 @@ impl TerminalHostRuntime {
 
         terminal::session_host::transport::TerminalHostSnapshotRevision::init(cx);
         TerminalHostStartupStatus::init(cx);
-        let enabled = std::env::var(EXPERIMENTAL_TERMINAL_HOST_ENV).as_deref() == Ok("1");
+        let enabled = terminal_host_enabled_for_app(paths::APP_NAME);
         let runtime = cx.new(|_| Self);
         cx.set_global(GlobalTerminalHostRuntime(runtime.clone()));
         if !enabled {

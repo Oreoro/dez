@@ -249,6 +249,7 @@ fn observed_terminals_from_processes(
             let foreground = processes
                 .iter()
                 .copied()
+                .filter(|process| !process_is_terminal_helper(process))
                 .filter(|process| {
                     process.foreground_process_group_id > 0
                         && process.process_group_id == process.foreground_process_group_id
@@ -259,11 +260,15 @@ fn observed_terminals_from_processes(
                         .saturating_add(process.pid as usize)
                 })
                 .or_else(|| {
-                    processes.iter().copied().max_by_key(|process| {
-                        process_depth(process.pid, &processes_by_pid)
-                            .saturating_mul(1_000_000)
-                            .saturating_add(process.pid as usize)
-                    })
+                    processes
+                        .iter()
+                        .copied()
+                        .filter(|process| !process_is_terminal_helper(process))
+                        .max_by_key(|process| {
+                            process_depth(process.pid, &processes_by_pid)
+                                .saturating_mul(1_000_000)
+                                .saturating_add(process.pid as usize)
+                        })
                 })?;
 
             if process_belongs_to_dez(foreground.pid, &processes_by_pid) {
@@ -293,6 +298,22 @@ fn observed_terminals_from_processes(
             })
         })
         .collect()
+}
+
+fn process_is_terminal_helper(process: &ProcessRecord) -> bool {
+    let executable =
+        process_executable_name(&process.command, &process.command_line).to_ascii_lowercase();
+    executable.starts_with("gitstatusd")
+        || matches!(
+            executable.as_str(),
+            "starship"
+                | "oh-my-posh"
+                | "zoxide"
+                | "direnv"
+                | "atuin"
+                | "zsh-async"
+                | "zsh-autosuggest"
+        )
 }
 
 fn process_is_descendant_of(
@@ -528,6 +549,22 @@ mod tests {
         assert_eq!(warp.owning_application.as_deref(), Some("Warp"));
         assert_eq!(warp.display_title(), "zsh");
         assert!(terminals.iter().all(|terminal| terminal.tty != "ttys002"));
+    }
+
+    #[test]
+    fn ignores_prompt_helpers_when_the_foreground_group_is_unavailable() {
+        let processes = parse_ps_output(
+            "\
+100 1 100 0 ?? /Applications/Utilities/Terminal.app/Contents/MacOS/Terminal
+101 100 101 0 ttys001 -zsh
+102 101 102 0 ttys001 /Users/test/.cache/gitstatus/gitstatusd-darwin-arm64 -G v1
+",
+        );
+
+        let terminals = observed_terminals_from_processes(&processes, 999);
+        assert_eq!(terminals.len(), 1);
+        assert_eq!(terminals[0].foreground_pid, 101);
+        assert_eq!(terminals[0].display_title(), "zsh");
     }
 
     #[test]

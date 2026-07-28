@@ -422,11 +422,8 @@ impl Project {
             .await
             .unwrap_or_default();
 
-            let helper_enabled = std::env::var(
-                terminal::session_host::transport::EXPERIMENTAL_TERMINAL_HOST_ENV,
-            )
-            .as_deref()
-                == Ok("1");
+            let helper_enabled =
+                terminal::session_host::transport::terminal_host_enabled_for_app(paths::APP_NAME);
             let mut hosted_connection = if is_via_remote {
                 None
             } else {
@@ -462,10 +459,10 @@ impl Project {
                     });
                     match detail {
                         Some(detail) => anyhow::bail!(
-                            "the experimental Dez terminal host is unavailable: {detail}; no disposable fallback shell was started"
+                            "the Dez terminal service is unavailable: {detail}; no disposable fallback shell was started"
                         ),
                         None => anyhow::bail!(
-                            "the experimental Dez terminal host is unavailable; no disposable fallback shell was started"
+                            "the Dez terminal service is unavailable; no disposable fallback shell was started"
                         ),
                     }
                 }
