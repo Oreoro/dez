@@ -6389,7 +6389,7 @@ impl ProjectPanel {
                         .px(validation_padding_x)
                         .border_1()
                         .border_color(color)
-                        .bg(cx.theme().colors().background)
+                        .bg(cx.theme().colors().elevated_surface_background)
                         .when(canvas_radius == settings::CanvasRadius::Subtle, |this| {
                             this.rounded_sm()
                         })
@@ -7726,7 +7726,7 @@ impl Render for DraggedProjectEntryView {
                     .py_1()
                     .px_2()
                     .rounded_lg()
-                    .bg(cx.theme().colors().background)
+                    .bg(cx.theme().colors().elevated_surface_background)
                     .map(|this| {
                         if self.selections.len() > 1 && self.selections.contains(&self.selection) {
                             this.child(Label::new(format!("{} entries", self.selections.len())))

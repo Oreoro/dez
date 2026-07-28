@@ -89,6 +89,14 @@ fn dez_sessions_uses_normal_flow_client_geometry() {
 fn dez_consolidates_session_utilities_into_one_overview_menu() {
     assert!(session_overview_uses_sessions_menu("Dez"));
     assert!(
+        session_sidebar_title_in_titlebar("Dez"),
+        "Dez should use one native titlebar label instead of repeating Sessions in a dashboard block"
+    );
+    assert!(
+        !session_empty_state_uses_icon_badge("Dez"),
+        "Dez empty states should remain plain list content, not decorative cards"
+    );
+    assert!(
         !session_rail_uses_footer_utilities("Dez"),
         "Dez should not spend a permanent bottom row on secondary navigation"
     );
@@ -96,6 +104,8 @@ fn dez_consolidates_session_utilities_into_one_overview_menu() {
         !session_overview_uses_sessions_menu("Zed"),
         "official Zed retains its inherited sidebar controls"
     );
+    assert!(!session_sidebar_title_in_titlebar("Zed"));
+    assert!(session_empty_state_uses_icon_badge("Zed"));
     assert!(session_rail_uses_footer_utilities("Zed"));
     assert!(
         !session_sticky_header_uses_shadow("Dez"),
@@ -285,7 +295,7 @@ fn active_or_focused_workspace_keeps_its_new_terminal_action_discoverable() {
 fn empty_expanded_workspace_uses_only_the_labeled_terminal_action() {
     assert!(
         !workspace_header_terminal_action_visible(false, false),
-        "the expanded empty Workspace already renders a full-width Start Terminal Session action"
+        "the expanded empty Workspace already renders a full-width Open Agent Terminal action"
     );
     assert!(
         workspace_header_terminal_action_visible(false, true),
@@ -341,6 +351,28 @@ fn dez_only_projects_truthfully_backed_stored_terminals() {
         Some(TerminalEntrySourceKind::AgentPanel),
         "official Zed retains legacy Terminal Thread restoration"
     );
+}
+
+#[test]
+fn dez_session_rail_requires_managed_or_agent_terminal_evidence() {
+    assert!(!terminal_entry_visible_in_session_rail(
+        "Dez", false, None, false
+    ));
+    assert!(terminal_entry_visible_in_session_rail(
+        "Dez", true, None, false
+    ));
+    assert!(terminal_entry_visible_in_session_rail(
+        "Dez",
+        false,
+        Some(TerminalAgentKind::Codex),
+        false
+    ));
+    assert!(terminal_entry_visible_in_session_rail(
+        "Dez", false, None, true
+    ));
+    assert!(terminal_entry_visible_in_session_rail(
+        "Zed", false, None, false
+    ));
 }
 
 #[test]
@@ -435,41 +467,64 @@ async fn detached_host_session_prefers_durable_workspace_identity_over_shared_cw
 #[test]
 fn session_overview_copy_distinguishes_empty_search_attention_and_caught_up_states() {
     assert_eq!(
-        session_overview_status_label(0, 0, 1, false, false),
+        session_overview_status_label("Zed", 0, 0, 1, false, false),
         "1 session group collapsed"
     );
     assert_eq!(
-        session_overview_status_label(0, 0, 2, true, true),
+        session_overview_status_label("Zed", 0, 0, 2, true, true),
         "0 matching sessions"
     );
     assert_eq!(
-        session_overview_status_label(3, 1, 2, false, false),
+        session_overview_status_label("Dez", 3, 1, 2, false, false),
         "1 needs attention · 3 total"
     );
     assert_eq!(
-        session_overview_status_label(3, 2, 2, false, false),
+        session_overview_status_label("Dez", 3, 2, 2, false, false),
         "2 need attention · 3 total"
     );
     assert_eq!(
-        session_overview_status_label(3, 0, 2, false, false),
+        session_overview_status_label("Dez", 3, 0, 2, false, false),
         "3 sessions · caught up"
     );
     assert_eq!(
-        session_overview_status_label(0, 0, 2, false, false),
+        session_overview_status_label("Zed", 0, 0, 2, false, false),
         "2 session groups collapsed"
     );
     assert_eq!(
-        session_overview_status_label(0, 0, 0, false, false),
+        session_overview_status_label("Zed", 0, 0, 0, false, false),
         "No sessions yet"
     );
     assert_eq!(
-        session_overview_status_label(0, 0, 0, false, true),
+        session_overview_status_label("Zed", 0, 0, 0, false, true),
         "Loading sessions"
     );
-    assert_eq!(session_empty_state_copy(false, true).1, "Loading sessions");
     assert_eq!(
-        session_empty_state_copy(false, false).1,
+        session_empty_state_copy("Dez", false, true).1,
+        "Loading sessions"
+    );
+    assert_eq!(
+        session_empty_state_copy("Dez", false, false).1,
+        "No agent sessions"
+    );
+    assert_eq!(
+        session_empty_state_copy("Zed", false, false).1,
         "No active sessions"
+    );
+    assert_eq!(
+        session_overview_status_label("Dez", 0, 0, 2, false, false),
+        "No agent sessions"
+    );
+    assert_eq!(
+        session_overview_status_label_with_observed_terminals("Dez", 0, 2, 0, 0, false, false),
+        "2 terminals observed · read-only"
+    );
+    assert_eq!(
+        session_overview_status_label_with_observed_terminals("Dez", 1, 2, 0, 1, false, false),
+        "1 session · 2 observed"
+    );
+    assert_eq!(
+        session_overview_status_label_with_observed_terminals("Dez", 1, 2, 0, 1, true, false),
+        "3 matching items"
     );
     assert_eq!(
         session_overview_status_icon(false, true, true, 3),
@@ -494,6 +549,31 @@ fn session_scope_accessibility_copy_keeps_control_names_stable() {
         attention_sessions_accessibility_label(2),
         "Attention sessions, 2 need attention"
     );
+    assert_eq!(
+        all_session_items_accessibility_label(1, 2),
+        "All session items, 1 managed and 2 observed on this Mac"
+    );
+}
+
+#[test]
+fn observed_machine_terminal_search_uses_visible_identity_and_context() {
+    let terminal = ObservedMachineTerminal {
+        id: "ttys004:410".to_owned(),
+        tty: "ttys004".to_owned(),
+        foreground_pid: 412,
+        foreground_command: "codex".to_owned(),
+        owning_application: Some("Terminal".to_owned()),
+        owning_application_pid: Some(410),
+        working_directory: Some(PathBuf::from("/Users/test/Documents/dez")),
+        detected_agent_kind: Some(TerminalAgentKind::Codex),
+    };
+
+    assert!(machine_terminal_matches_query(&terminal, ""));
+    assert!(machine_terminal_matches_query(&terminal, "CODEX"));
+    assert!(machine_terminal_matches_query(&terminal, "terminal"));
+    assert!(machine_terminal_matches_query(&terminal, "ttys004"));
+    assert!(machine_terminal_matches_query(&terminal, "documents/dez"));
+    assert!(!machine_terminal_matches_query(&terminal, "warp"));
 }
 
 #[test]
@@ -504,29 +584,25 @@ fn start_state_waits_for_restore_and_only_describes_a_true_empty_app() {
     assert!(!session_start_state_visible(false, 1, false, false, false));
     assert!(!session_start_state_visible(false, 0, true, false, false));
     assert!(!session_start_state_visible(false, 0, false, true, false));
-    assert_eq!(session_start_state_copy().0, "Start with a Workspace");
+    assert_eq!(session_start_state_copy("Dez").0, "No Workspace open");
     assert_eq!(
-        session_start_state_copy().1,
-        "Open a codebase, start a Terminal or Agent Session, then review its changes with the IDE."
+        session_start_state_copy("Dez").1,
+        "Open a codebase, then launch an agent in its Main Work Area. Sessions only shows detected or managed agent work."
     );
     assert_eq!(
-        session_start_state_copy().2,
+        session_start_state_copy("Dez").2,
         "Open Workspace…",
         "the empty app should establish IDE context before suggesting computation"
     );
     assert_eq!(
-        session_start_state_copy().3,
-        "Open Scratch Terminal",
-        "a pathless zero-state terminal should name its transient scope"
+        session_start_state_copy("Dez").3,
+        None,
+        "Dez should establish Workspace context before offering agent computation"
     );
     assert_eq!(
-        session_start_route_copy(),
-        [
-            ("Run", "Terminal in Main Work Area"),
-            ("Supervise", "Live state in Sessions"),
-            ("Review", "Files, Git, and diffs")
-        ],
-        "the empty Sessions state should name the concrete Dez route"
+        session_start_state_copy("Zed").3,
+        "Open Scratch Terminal",
+        "official Zed retains its inherited projectless terminal wording"
     );
 }
 
@@ -2284,7 +2360,7 @@ fn add_workspace_shell(
 }
 
 #[gpui::test]
-async fn test_plain_workspace_shell_appears_in_session_rail(cx: &mut TestAppContext) {
+async fn test_plain_workspace_shell_is_promoted_only_after_agent_evidence(cx: &mut TestAppContext) {
     let project = init_test_project_with_agent_panel("/my-project", cx).await;
     let (multi_workspace, cx) =
         cx.add_window_view(|window, cx| MultiWorkspace::test_new(project.clone(), window, cx));
@@ -2299,22 +2375,17 @@ async fn test_plain_workspace_shell_appears_in_session_rail(cx: &mut TestAppCont
     cx.run_until_parked();
 
     sidebar.read_with(cx, |sidebar, _cx| {
-        let terminal = sidebar
-            .contents
-            .entries
-            .iter()
-            .find_map(|entry| match entry {
-                ListEntry::Terminal(terminal) if terminal.metadata.terminal_id == terminal_id => {
-                    Some(terminal)
-                }
-                _ => None,
-            })
-            .expect("plain workspace shells should appear in Session Rail");
-        assert_eq!(terminal.detected_agent_kind, None);
-        assert!(matches!(
-            terminal.runtime.as_ref().map(|runtime| runtime.state),
-            Some(TerminalRuntimeState::Live)
-        ));
+        assert!(
+            !sidebar.contents.entries.iter().any(|entry| {
+                matches!(
+                    entry,
+                    ListEntry::Terminal(terminal)
+                        if terminal.metadata.terminal_id == terminal_id
+                )
+            }),
+            "ordinary shells belong to the Main Work Area, not the agent supervisor"
+        );
+        assert_eq!(sidebar.contents.session_count, 0);
         assert!(matches!(
             sidebar.active_entry,
             Some(ActiveEntry::Terminal {
@@ -2322,6 +2393,32 @@ async fn test_plain_workspace_shell_appears_in_session_rail(cx: &mut TestAppCont
                 ..
             }) if active_terminal_id == terminal_id
         ));
+    });
+
+    terminal_view.update(cx, |terminal, cx| {
+        terminal.set_custom_title(Some("Codex".to_owned()), cx);
+    });
+    multi_workspace.update_in(cx, |_, _window, cx| cx.notify());
+    cx.run_until_parked();
+
+    sidebar.read_with(cx, |sidebar, _cx| {
+        let matching_terminals = sidebar
+            .contents
+            .entries
+            .iter()
+            .filter(|entry| {
+                matches!(
+                    entry,
+                    ListEntry::Terminal(terminal)
+                        if terminal.metadata.terminal_id == terminal_id
+                )
+            })
+            .count();
+        assert_eq!(
+            matching_terminals, 1,
+            "agent evidence should promote the existing terminal identity exactly once"
+        );
+        assert_eq!(sidebar.contents.session_count, 1);
     });
 }
 
@@ -2333,6 +2430,9 @@ async fn test_switcher_cancel_restore_keeps_workspace_terminal_source(cx: &mut T
     let sidebar = setup_sidebar(&multi_workspace, cx);
     let workspace = multi_workspace.read_with(cx, |mw, _cx| mw.workspace().clone());
     let original_terminal = add_workspace_shell(&workspace, &project, cx);
+    original_terminal.update(cx, |terminal, cx| {
+        terminal.set_custom_title(Some("Codex".to_owned()), cx);
+    });
     let original_terminal_id = workspace.read_with(cx, |_workspace, cx| {
         standalone_terminal_id(&workspace, &original_terminal, cx)
     });
@@ -2368,7 +2468,7 @@ async fn test_switcher_cancel_restore_keeps_workspace_terminal_source(cx: &mut T
 }
 
 #[gpui::test]
-async fn test_empty_workspace_shell_appears_in_session_rail(cx: &mut TestAppContext) {
+async fn test_empty_workspace_shell_stays_out_of_session_rail(cx: &mut TestAppContext) {
     init_test(cx);
 
     let fs = FakeFs::new(cx.executor());
@@ -2388,20 +2488,17 @@ async fn test_empty_workspace_shell_appears_in_session_rail(cx: &mut TestAppCont
 
     sidebar.read_with(cx, |sidebar, _cx| {
         assert!(
-            sidebar.contents.entries.iter().any(|entry| {
+            !sidebar.contents.entries.iter().any(|entry| {
                 matches!(
                     entry,
                     ListEntry::Terminal(terminal)
                         if terminal.metadata.terminal_id == terminal_id
                 )
             }),
-            "terminal-only empty workspaces should still appear in the Session Rail"
+            "a scratch shell should remain in the Main Work Area until an agent is detected"
         );
-        assert_eq!(sidebar.contents.session_count, 1);
-        assert!(matches!(
-            sidebar.contents.entries.first(),
-            Some(ListEntry::ProjectHeader { label, .. }) if label.as_ref() == "Empty Workspace"
-        ));
+        assert_eq!(sidebar.contents.session_count, 0);
+        assert!(sidebar.contents.entries.is_empty());
     });
 }
 

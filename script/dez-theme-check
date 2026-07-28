@@ -96,7 +96,9 @@ function requireAlphaRange(theme, token, minimum, maximum) {
 }
 
 function requireGlassMaterial(theme) {
-  requireAlphaRange(theme, "background", 0.55, 0.65);
+  // The native macOS material is the primary glass layer. Theme colors tint
+  // that material; they must not be opaque enough to turn nested panes black.
+  requireAlphaRange(theme, "background", 0.32, 0.5);
   for (const token of [
     "surface.background",
     "panel.background",
@@ -106,10 +108,10 @@ function requireGlassMaterial(theme) {
     "tab_bar.background",
     "toolbar.background",
   ]) {
-    requireAlphaRange(theme, token, 0.25, 0.5);
+    requireAlphaRange(theme, token, 0.16, 0.32);
   }
   for (const token of ["title_bar.background", "status_bar.background"]) {
-    requireAlphaRange(theme, token, 0.55, 0.65);
+    requireAlphaRange(theme, token, 0.32, 0.5);
   }
   for (const token of ["elevated_surface.background", "panel.overlay_background"]) {
     requireAlphaRange(theme, token, 0.8, 0.95);
@@ -126,6 +128,27 @@ function requireGlassInteractionLayers(theme) {
     ["editor.active_line.background", 0.03, 0.1],
   ]) {
     requireAlphaRange(theme, token, minimum, maximum);
+  }
+}
+
+function requireGlassSemanticLayers(theme) {
+  for (const token of [
+    "conflict.background",
+    "created.background",
+    "deleted.background",
+    "error.background",
+    "hidden.background",
+    "hint.background",
+    "ignored.background",
+    "info.background",
+    "modified.background",
+    "predictive.background",
+    "renamed.background",
+    "success.background",
+    "unreachable.background",
+    "warning.background",
+  ]) {
+    requireAlphaRange(theme, token, 0.025, 0.14);
   }
 }
 
@@ -239,6 +262,8 @@ requireGlassMaterial(luminBlur);
 requireGlassMaterial(luminLight);
 requireGlassInteractionLayers(luminBlur);
 requireGlassInteractionLayers(luminLight);
+requireGlassSemanticLayers(luminBlur);
+requireGlassSemanticLayers(luminLight);
 
 const darkTextTokens = [
   "text",

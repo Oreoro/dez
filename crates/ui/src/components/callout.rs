@@ -198,6 +198,7 @@ impl RenderOnce for Callout {
                                 this.child(
                                     h_flex()
                                         .gap_0p5()
+                                        .flex_wrap()
                                         .when_some(self.actions_slot, |this, action| {
                                             this.child(action)
                                         })

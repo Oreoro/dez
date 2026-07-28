@@ -1,7 +1,7 @@
 # Dez
 
 **A native IDE for terminal-native developers supervising code, commands, and
-coding agents in one durable workspace.**
+coding agents in one focused workspace.**
 
 Dez is a source-available preview built on
 [Zed](https://github.com/zed-industries/zed). It keeps Zed's fast native
@@ -23,16 +23,20 @@ Workspace instead of separate applications or hidden panel modes.
   previews, and reviews are ordinary movable and splittable Surfaces.
 - **Sessions** — a compact supervision view of Workspaces, Agent Sessions,
   Terminal Sessions, attention, lifecycle, and recent activity. It navigates
-  real work; it does not own duplicate tabs or processes.
+  real work; it does not own duplicate tabs or processes. On macOS, its
+  separate **On This Mac** section can also list current-user terminals from
+  other applications as ephemeral, read-only observations.
 - **Workspace Tools** — Files, Outline, Git, and Debug are different views of
   the active Workspace's single Project.
-- **Agent** — native and external-agent conversations stay beside the editor.
-  Agent edits land in ordinary buffers and Git changes, so the same diagnostics,
-  diff, and review tools apply.
-- **Terminal Sessions** — terminals open in the Main Work Area. Session identity,
-  deliberate detach/terminate behavior, honest unavailable-session recovery,
-  and an experimental process-owning Host form the path toward durable
-  computation.
+- **Built-in Agent** — an optional provider-backed conversation surface stays
+  beside the editor. It is distinct from terminal agents such as Codex and
+  Claude Code, which start through **Open Agent Terminal**. All edits still land
+  in ordinary buffers and Git changes, so the same diagnostics, diff, and
+  review tools apply.
+- **Terminal Sessions** — terminals open in the Main Work Area. Session
+  identity, deliberate close/end behavior, and honest unavailable-session
+  recovery define the default. An experimental process-owning Host explores
+  detach and reattach without changing the v0.0.2 promise.
 - **Evidence and review** — Dez distinguishes observed facts from reported or
   unknown state, then uses Workspace, terminal, command, check, file, and Git
   evidence to make review safer.
@@ -47,6 +51,16 @@ open a Workspace
 → review the result
 → resume without rebuilding context
 ```
+
+The window is deliberately not a dashboard of equal columns. Each Workspace
+owns one Project, one Main Work Area, its terminals, and its Git state.
+Sessions, Workspace Tools, and Built-in Agent compete for one optional
+auxiliary slot. The active Workspace exposes one **Workspace Layout** picker.
+Its six public layouts are named after the surfaces they show: **Work Area +
+Files**, **Work Area + Built-in Agent**, **Focus Work Area**, **Code +
+Terminal**, **Review Changes**, and **Debug**. The first three use one work
+area. The last three use at most two populated work areas and never manufacture
+an empty column.
 
 From a selected Sessions row, `Enter` returns to the existing Session,
 `Shift+F` opens its Workspace files, `Shift+G` opens its change review, and
@@ -94,19 +108,23 @@ and typography roles remain configurable through normal settings.
 The v0.0.2 source candidate already contains the opinionated Dez shell,
 identity isolation, Workspace composition, Sessions, session vocabulary,
 terminal lifecycle safeguards, first-run experience, Lumin/JetBrains visual
-defaults, and a large set of static product-contract checks.
+defaults, read-only machine-terminal discovery on macOS, and a large set of
+static product-contract checks.
 
 Before a public binary release, the project still requires a build of the
 current source checkpoint plus rendered, restart, crash, accessibility, and
 coexistence evidence on supported platforms. The exact state and open gates are
 documented in the
-[v0.0.2 active plan](./docs/src/development/dez/v0.0.2-active-plan.md) and
+[v0.0.2 Completion Plan](./docs/src/development/dez/v0.0.2-completion-plan.md)
+and
 [release evidence](./docs/src/development/dez/release-evidence.md). The v0.0.1
 runbook remains historical evidence, not the current release plan.
 
 ## Documentation
 
 - [What is Dez?](./docs/src/dez.md) — public product guide
+- [v0.0.2 Completion Plan](./docs/src/development/dez/v0.0.2-completion-plan.md)
+  — current release order and acceptance gates
 - [Fork Notes](./docs/src/development/dez/fork-notes.md) — permanent product
   and architecture source of truth
 - [Roadmap](./docs/src/development/dez/roadmap.md) — dependency-ordered work

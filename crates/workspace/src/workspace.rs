@@ -185,16 +185,32 @@ fn workspace_card_gap_for_product(app_name: &str, configured_gap: f32) -> Pixels
     }
 }
 
+fn workspace_reuses_outer_window_material(app_name: &str, transparent_theme: bool) -> bool {
+    app_name != "Zed" && transparent_theme
+}
+
 pub(crate) fn workspace_pane_uses_rounded_card_frame(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
-fn canvas_layout_modal_width(cx: &App, compact: f32, balanced: f32, spacious: f32) -> Rems {
-    match DesignSystemSettings::get_global(cx).density {
+fn canvas_layout_modal_width(
+    window: &Window,
+    cx: &App,
+    compact: f32,
+    balanced: f32,
+    spacious: f32,
+) -> Pixels {
+    let desired_width = match DesignSystemSettings::get_global(cx).density {
         settings::CanvasDensity::Compact => rems(compact),
         settings::CanvasDensity::Balanced => rems(balanced),
         settings::CanvasDensity::Spacious => rems(spacious),
     }
+    .to_pixels(window.rem_size());
+    clamp_canvas_layout_modal_width(desired_width, window.viewport_size().width)
+}
+
+fn clamp_canvas_layout_modal_width(desired_width: Pixels, viewport_width: Pixels) -> Pixels {
+    desired_width.min((viewport_width - px(32.)).max(px(1.)))
 }
 
 fn canvas_layout_modal_gap(cx: &App) -> Rems {
@@ -226,7 +242,6 @@ const AUXILIARY_PANE_MAX_INITIAL_WIDTH: f32 = 360.;
 const AUXILIARY_PANE_MIN_USABLE_WIDTH: f32 = 240.;
 const AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0.22;
 const MAIN_WORK_AREA_MINIMUM_RATIO: f32 = 0.60;
-const DEZ_THREE_REGION_MIN_WINDOW_WIDTH: Pixels = px(1160.);
 const WORKSPACE_NOTIFICATION_SHELF_MAX_WIDTH: f32 = 400.;
 const WORKSPACE_NOTIFICATION_SHELF_MIN_WIDTH: f32 = 280.;
 const WORKSPACE_NOTIFICATION_SHELF_WIDTH_FRACTION: f32 = 0.32;
@@ -251,12 +266,8 @@ fn auxiliary_pane_max_ratio(available_width: Pixels) -> f32 {
     )
 }
 
-fn dez_auxiliary_drawer_is_exclusive(app_name: &str) -> bool {
+fn dez_uses_single_auxiliary_surface(app_name: &str) -> bool {
     app_name != "Zed"
-}
-
-fn dez_auxiliary_surfaces_are_window_exclusive(app_name: &str, viewport_width: Pixels) -> bool {
-    app_name != "Zed" && viewport_width < DEZ_THREE_REGION_MIN_WINDOW_WIDTH
 }
 
 fn workspace_notification_shelf_width(viewport_width: Pixels) -> Pixels {
@@ -288,8 +299,24 @@ fn canvas_layout_modal_row_border(cx: &App) -> Hsla {
     }
 }
 
+fn saved_layout_preservation_copy(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Saved pane geometry and restored project tabs are unchanged."
+    } else {
+        "The saved work-area arrangement and restorable files stay unchanged."
+    }
+}
+
 pub(crate) fn title_bar_visible(_cx: &App) -> bool {
     false
+}
+
+pub fn workspace_layout_cycle_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Cycle Layout"
+    } else {
+        "Next Workspace Layout"
+    }
 }
 
 fn normalized_canvas_layout_recipe_name(name: &str) -> String {
@@ -342,6 +369,30 @@ enum CanvasLayoutRecipe {
     EvenRows,
 }
 
+const DEZ_PUBLIC_CANVAS_LAYOUT_CYCLE: &[CanvasLayoutRecipe] = &[
+    CanvasLayoutRecipe::Full,
+    CanvasLayoutRecipe::AgentControl,
+    CanvasLayoutRecipe::EditorFocus,
+    CanvasLayoutRecipe::CodeRunObserve,
+    CanvasLayoutRecipe::Review,
+    CanvasLayoutRecipe::Debug,
+];
+
+fn next_dez_public_canvas_layout(active_layout: Option<CanvasLayoutRecipe>) -> CanvasLayoutRecipe {
+    let Some(active_index) = active_layout.and_then(|active_layout| {
+        DEZ_PUBLIC_CANVAS_LAYOUT_CYCLE
+            .iter()
+            .position(|recipe| *recipe == active_layout)
+    }) else {
+        return CanvasLayoutRecipe::Full;
+    };
+
+    DEZ_PUBLIC_CANVAS_LAYOUT_CYCLE
+        .get((active_index + 1) % DEZ_PUBLIC_CANVAS_LAYOUT_CYCLE.len())
+        .copied()
+        .unwrap_or(CanvasLayoutRecipe::Full)
+}
+
 const FOUR_AGENT_MATRIX_SPLIT_DIRECTIONS: &[SplitDirection] = &[
     SplitDirection::Right,
     SplitDirection::Down,
@@ -384,6 +435,22 @@ impl CanvasLayoutRecipe {
     }
 
     fn label(self) -> &'static str {
+        self.label_for_app(paths::APP_NAME)
+    }
+
+    fn label_for_app(self, app_name: &str) -> &'static str {
+        if app_name != "Zed" {
+            match self {
+                Self::Full => return "Work Area + Files",
+                Self::AgentControl => return "Work Area + Built-in Agent",
+                Self::EditorFocus => return "Focus Work Area",
+                Self::CodeRunObserve => return "Split Work Area",
+                Self::Review => return "Work Area + Git",
+                Self::Debug => return "Work Area + Debug",
+                _ => {}
+            }
+        }
+
         match self {
             Self::Full => "Full",
             Self::AgentControl => "Agent Control",
@@ -435,8 +502,16 @@ impl CanvasLayoutRecipe {
         })
     }
 
-    fn uses_single_tabbed_pane(self) -> bool {
-        matches!(self, Self::Full | Self::AgentControl | Self::EditorFocus)
+    fn main_work_area_limit_for_app(self, app_name: &str) -> Option<usize> {
+        if app_name == "Zed" {
+            return None;
+        }
+
+        match self {
+            Self::Full | Self::AgentControl | Self::EditorFocus => Some(1),
+            Self::CodeRunObserve | Self::Review | Self::Debug => Some(2),
+            _ => None,
+        }
     }
 
     fn root_axis_for_size(
@@ -517,6 +592,78 @@ impl CanvasLayoutRecipe {
             "even_rows" => Some(Self::EvenRows),
             _ => None,
         }
+    }
+}
+
+fn essential_canvas_recipe_geometry_for_app(
+    recipe: CanvasLayoutRecipe,
+    app_name: &str,
+) -> Option<(usize, &'static [SplitDirection])> {
+    Some(match (app_name == "Zed", recipe) {
+        (true, CanvasLayoutRecipe::CodeRunObserve) => {
+            (3, &[SplitDirection::Down, SplitDirection::Right])
+        }
+        (true, CanvasLayoutRecipe::Review) => (3, &[SplitDirection::Right, SplitDirection::Down]),
+        (true, CanvasLayoutRecipe::Debug) => (
+            4,
+            &[
+                SplitDirection::Down,
+                SplitDirection::Right,
+                SplitDirection::Down,
+            ],
+        ),
+        (false, CanvasLayoutRecipe::CodeRunObserve) => (2, &[SplitDirection::Down]),
+        (false, CanvasLayoutRecipe::Review) => (2, &[SplitDirection::Right]),
+        (false, CanvasLayoutRecipe::Debug) => (2, &[SplitDirection::Down]),
+        _ => return None,
+    })
+}
+
+fn canvas_recipe_populated_pane_target_for_app(
+    app_name: &str,
+    requested_pane_count: usize,
+    populated_pane_count: usize,
+) -> usize {
+    if app_name == "Zed" {
+        requested_pane_count.max(1)
+    } else {
+        requested_pane_count.max(1).min(populated_pane_count.max(1))
+    }
+}
+
+fn essential_canvas_recipe_auxiliary_pane_for_app(
+    recipe: CanvasLayoutRecipe,
+    app_name: &str,
+) -> Option<PanelPaneKind> {
+    if app_name == "Zed" {
+        return None;
+    }
+
+    match recipe {
+        CanvasLayoutRecipe::Full | CanvasLayoutRecipe::Review | CanvasLayoutRecipe::Debug => {
+            Some(PanelPaneKind::Project)
+        }
+        CanvasLayoutRecipe::AgentControl => Some(PanelPaneKind::Agent),
+        CanvasLayoutRecipe::EditorFocus | CanvasLayoutRecipe::CodeRunObserve => None,
+        _ => None,
+    }
+}
+
+fn essential_canvas_recipe_panel_key_for_app(
+    recipe: CanvasLayoutRecipe,
+    app_name: &str,
+) -> Option<&'static str> {
+    if app_name == "Zed" {
+        return None;
+    }
+
+    match recipe {
+        CanvasLayoutRecipe::Full => Some("ProjectPanel"),
+        CanvasLayoutRecipe::AgentControl => Some("agent_panel"),
+        CanvasLayoutRecipe::Review => Some("GitPanel"),
+        CanvasLayoutRecipe::Debug => Some("DebugPanel"),
+        CanvasLayoutRecipe::EditorFocus | CanvasLayoutRecipe::CodeRunObserve => None,
+        _ => None,
     }
 }
 
@@ -783,6 +930,23 @@ struct CanvasSavedLayoutSnapshot {
     panes: Vec<CanvasSavedPaneSnapshot>,
 }
 
+fn custom_layout_label_for_app(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Custom Canvas Layout"
+    } else {
+        "Custom Workspace Layout"
+    }
+}
+
+fn saved_layout_noun_for_app(app_name: &str, count: usize) -> &'static str {
+    match (app_name == "Zed", count == 1) {
+        (true, true) => "Canvas layout",
+        (true, false) => "Canvas layouts",
+        (false, true) => "Workspace layout",
+        (false, false) => "Workspace layouts",
+    }
+}
+
 impl CanvasSavedLayoutSnapshot {
     fn display_label(&self) -> &str {
         self.label
@@ -793,7 +957,7 @@ impl CanvasSavedLayoutSnapshot {
                     .and_then(CanvasLayoutRecipe::from_name)
                     .map(CanvasLayoutRecipe::label)
             })
-            .unwrap_or("Custom Canvas Layout")
+            .unwrap_or_else(|| custom_layout_label_for_app(paths::APP_NAME))
     }
 
     fn manager_detail(&self) -> String {
@@ -839,41 +1003,77 @@ impl CanvasSavedLayoutSnapshot {
         }
 
         let mut details = vec![
-            format!(
-                "{} {}",
-                pane_count,
-                if pane_count == 1 { "pane" } else { "panes" }
-            ),
+            if paths::APP_NAME == "Zed" {
+                format!(
+                    "{} {}",
+                    pane_count,
+                    if pane_count == 1 { "pane" } else { "panes" }
+                )
+            } else {
+                format!(
+                    "{} work {}",
+                    pane_count,
+                    if pane_count == 1 { "area" } else { "areas" }
+                )
+            },
             format!("{visible_pane_count} visible"),
-            format!(
-                "{} {}",
-                tab_count,
-                if tab_count == 1 { "tab" } else { "tabs" }
-            ),
+            if paths::APP_NAME == "Zed" {
+                format!(
+                    "{} {}",
+                    tab_count,
+                    if tab_count == 1 { "tab" } else { "tabs" }
+                )
+            } else {
+                format!(
+                    "{} {}",
+                    tab_count,
+                    if tab_count == 1 {
+                        "surface"
+                    } else {
+                        "surfaces"
+                    }
+                )
+            },
         ];
 
         if project_path_tab_count > 0 {
-            details.push(format!(
-                "{} file {}",
-                project_path_tab_count,
-                if project_path_tab_count == 1 {
-                    "restore"
-                } else {
-                    "restores"
-                }
-            ));
+            details.push(if paths::APP_NAME == "Zed" {
+                format!(
+                    "{} file {}",
+                    project_path_tab_count,
+                    if project_path_tab_count == 1 {
+                        "restore"
+                    } else {
+                        "restores"
+                    }
+                )
+            } else {
+                format!("{project_path_tab_count} restorable files")
+            });
         }
         if serializable_tab_count > 0 {
-            details.push(format!("{serializable_tab_count} serializable"));
+            details.push(if paths::APP_NAME == "Zed" {
+                format!("{serializable_tab_count} serializable")
+            } else {
+                format!("{serializable_tab_count} restorable views")
+            });
         }
         if live_only_tab_count > 0 {
-            details.push(format!("{live_only_tab_count} live-only"));
+            details.push(if paths::APP_NAME == "Zed" {
+                format!("{live_only_tab_count} live-only")
+            } else {
+                format!("{live_only_tab_count} live surfaces")
+            });
         }
         if pinned_tab_count > 0 {
             details.push(format!("{pinned_tab_count} pinned"));
         }
         if dirty_tab_count > 0 {
-            details.push(format!("{dirty_tab_count} dirty"));
+            details.push(if paths::APP_NAME == "Zed" {
+                format!("{dirty_tab_count} dirty")
+            } else {
+                format!("{dirty_tab_count} unsaved")
+            });
         }
 
         details.join(" · ")
@@ -1004,16 +1204,21 @@ impl CanvasSavedLayoutNameModal {
     }
 
     fn headline(&self) -> String {
+        let layout_name = if paths::APP_NAME == "Zed" {
+            "Canvas Layout"
+        } else {
+            "Workspace Layout"
+        };
         match &self.mode {
-            CanvasSavedLayoutNameModalMode::SaveNamed => "Save Canvas Layout As".to_string(),
+            CanvasSavedLayoutNameModalMode::SaveNamed => format!("Save {layout_name} As"),
             CanvasSavedLayoutNameModalMode::RenameSlot { slot } => {
-                format!("Rename Canvas Layout: Slot {slot}")
+                format!("Rename {layout_name}: Slot {slot}")
             }
             CanvasSavedLayoutNameModalMode::RenameNamed { .. } => {
-                "Rename Saved Canvas Layout".to_string()
+                format!("Rename Saved {layout_name}")
             }
             CanvasSavedLayoutNameModalMode::Duplicate { .. } => {
-                "Duplicate Saved Canvas Layout".to_string()
+                format!("Duplicate Saved {layout_name}")
             }
         }
     }
@@ -1045,9 +1250,9 @@ impl Focusable for CanvasSavedLayoutNameModal {
 }
 
 impl Render for CanvasSavedLayoutNameModal {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let canvas_radius = DesignSystemSettings::get_global(cx).radius;
-        let modal_width = canvas_layout_modal_width(cx, 31., 34., 38.);
+        let modal_width = canvas_layout_modal_width(window, cx, 31., 34., 38.);
         let (row_padding_x, row_padding_y) = canvas_layout_modal_row_padding(cx);
         let row_background = canvas_layout_modal_row_background(cx);
         let row_border = canvas_layout_modal_row_border(cx);
@@ -1081,11 +1286,9 @@ impl Render for CanvasSavedLayoutNameModal {
                                     this.rounded_md()
                                 })
                                 .child(
-                                    Label::new(
-                                        "Saved pane geometry and restored project tabs are unchanged.",
-                                    )
-                                    .size(LabelSize::Small)
-                                    .color(Color::Muted),
+                                    Label::new(saved_layout_preservation_copy(paths::APP_NAME))
+                                        .size(LabelSize::Small)
+                                        .color(Color::Muted),
                                 ),
                         ),
                     )
@@ -1094,16 +1297,19 @@ impl Render for CanvasSavedLayoutNameModal {
                             h_flex()
                                 .gap_1()
                                 .child(
-                                    Button::new("cancel-canvas-layout-label", "Cancel").on_click(
-                                        cx.listener(|this, _, _, cx| {
+                                    Button::new("cancel-canvas-layout-label", "Cancel")
+                                        .tab_index(0isize)
+                                        .aria_label("Cancel Workspace Layout Changes")
+                                        .on_click(cx.listener(|this, _, _, cx| {
                                             this.dismiss(cx);
                                             cx.stop_propagation();
-                                        }),
-                                    ),
+                                        })),
                                 )
                                 .child(
                                     Button::new("save-canvas-layout-label", "Save")
                                         .style(ButtonStyle::Filled)
+                                        .tab_index(0isize)
+                                        .aria_label("Save Workspace Layout")
                                         .on_click(cx.listener(|this, _, window, cx| {
                                             this.save_label(window, cx);
                                             cx.stop_propagation();
@@ -1285,18 +1491,27 @@ impl CanvasSavedLayoutManagerModal {
         let workspace = workspace.read(cx);
         let mut entries = Vec::new();
         for slot in 1..=3 {
+            let saved = workspace.has_saved_canvas_layout_slot(slot);
+            if paths::APP_NAME != "Zed" && !saved {
+                continue;
+            }
             let label = workspace.saved_canvas_layout_slot_label(slot).map_or_else(
                 || format!("Slot {slot} — Empty"),
                 |label| format!("Slot {slot} — {label}"),
             );
             entries.push(CanvasSavedLayoutManagerEntry {
-                saved: workspace.has_saved_canvas_layout_slot(slot),
+                saved,
                 label,
                 detail: canvas_saved_layout_slot_name(slot)
                     .and_then(|slot_name| workspace.saved_canvas_layouts.get(slot_name))
                     .map(CanvasSavedLayoutSnapshot::manager_detail)
                     .unwrap_or_else(|| {
-                        "Save the current Canvas layout into this slot.".to_string()
+                        if paths::APP_NAME == "Zed" {
+                            "Save the current Canvas layout into this slot."
+                        } else {
+                            "Save the current Workspace layout into this slot."
+                        }
+                        .to_string()
                     }),
                 kind: CanvasSavedLayoutManagerEntryKind::Slot(slot),
             });
@@ -1328,9 +1543,10 @@ impl Focusable for CanvasSavedLayoutManagerModal {
 }
 
 impl Render for CanvasSavedLayoutManagerModal {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let canvas_radius = DesignSystemSettings::get_global(cx).radius;
-        let modal_width = canvas_layout_modal_width(cx, 48., 56., 64.);
+        let modal_width = canvas_layout_modal_width(window, cx, 48., 56., 64.);
+        let rows_max_height = window.viewport_size().height * 0.58;
         let row_gap = canvas_layout_modal_gap(cx);
         let (row_padding_x, row_padding_y) = canvas_layout_modal_row_padding(cx);
         let row_background = canvas_layout_modal_row_background(cx);
@@ -1351,6 +1567,9 @@ impl Render for CanvasSavedLayoutManagerModal {
                 h_flex()
                     .id(("canvas-saved-layout-manager-row", index))
                     .w_full()
+                    .min_w_0()
+                    .flex_wrap()
+                    .items_start()
                     .gap(row_gap)
                     .justify_between()
                     .border_1()
@@ -1368,27 +1587,39 @@ impl Render for CanvasSavedLayoutManagerModal {
                         v_flex()
                             .gap_0p5()
                             .flex_1()
-                            .child(Label::new(entry.label).single_line())
+                            .min_w_0()
+                            .child(Label::new(entry.label).single_line().truncate())
                             .child(
                                 Label::new(entry.detail)
                                     .single_line()
+                                    .truncate()
                                     .size(LabelSize::Small)
                                     .color(Color::Muted),
                             ),
                     )
                     .child(
                         h_flex()
+                            .max_w_full()
+                            .flex_wrap()
+                            .justify_end()
                             .gap_1()
                             .when_some(save_kind, |this, save_kind| {
-                                this.child(Button::new(("save", index), "Save").on_click(
-                                    cx.listener(move |this, _, window, cx| {
-                                        this.save_layout(save_kind.clone(), window, cx);
-                                        cx.stop_propagation();
-                                    }),
-                                ))
+                                this.child(
+                                    Button::new(("save", index), "Save")
+                                        .size(ButtonSize::Compact)
+                                        .tab_index(0isize)
+                                        .aria_label("Save Workspace Layout")
+                                        .on_click(cx.listener(move |this, _, window, cx| {
+                                            this.save_layout(save_kind.clone(), window, cx);
+                                            cx.stop_propagation();
+                                        })),
+                                )
                             })
                             .child(
                                 Button::new(("restore", index), "Restore")
+                                    .size(ButtonSize::Compact)
+                                    .tab_index(0isize)
+                                    .aria_label("Restore Workspace Layout")
                                     .on_click(cx.listener(move |this, _, window, cx| {
                                         this.restore_layout(restore_kind.clone(), window, cx);
                                         cx.stop_propagation();
@@ -1397,27 +1628,53 @@ impl Render for CanvasSavedLayoutManagerModal {
                             )
                             .child(
                                 Button::new(("rename", index), "Rename")
+                                    .size(ButtonSize::Compact)
+                                    .tab_index(0isize)
+                                    .aria_label("Rename Workspace Layout")
                                     .on_click(cx.listener(move |this, _, window, cx| {
                                         this.rename_layout(rename_kind.clone(), window, cx);
                                         cx.stop_propagation();
                                     }))
                                     .disabled(!saved),
                             )
+                            .when(paths::APP_NAME == "Zed", |this| {
+                                this.child(
+                                    Button::new(("duplicate", index), "Duplicate")
+                                        .size(ButtonSize::Compact)
+                                        .tab_index(0isize)
+                                        .aria_label("Duplicate Canvas Layout")
+                                        .on_click(cx.listener(move |this, _, window, cx| {
+                                            this.duplicate_layout(
+                                                duplicate_kind.clone(),
+                                                window,
+                                                cx,
+                                            );
+                                            cx.stop_propagation();
+                                        }))
+                                        .disabled(!saved),
+                                )
+                            })
                             .child(
-                                Button::new(("duplicate", index), "Duplicate")
-                                    .on_click(cx.listener(move |this, _, window, cx| {
-                                        this.duplicate_layout(duplicate_kind.clone(), window, cx);
-                                        cx.stop_propagation();
-                                    }))
-                                    .disabled(!saved),
-                            )
-                            .child(
-                                Button::new(("clear", index), "Clear")
-                                    .on_click(cx.listener(move |this, _, window, cx| {
-                                        this.clear_layout(clear_kind.clone(), window, cx);
-                                        cx.stop_propagation();
-                                    }))
-                                    .disabled(!saved),
+                                Button::new(
+                                    ("clear", index),
+                                    if paths::APP_NAME == "Zed" {
+                                        "Clear"
+                                    } else {
+                                        "Remove"
+                                    },
+                                )
+                                .size(ButtonSize::Compact)
+                                .tab_index(0isize)
+                                .aria_label(if paths::APP_NAME == "Zed" {
+                                    "Clear Canvas Layout"
+                                } else {
+                                    "Remove Saved Workspace Layout"
+                                })
+                                .on_click(cx.listener(move |this, _, window, cx| {
+                                    this.clear_layout(clear_kind.clone(), window, cx);
+                                    cx.stop_propagation();
+                                }))
+                                .disabled(!saved),
                             ),
                     )
                     .into_any_element()
@@ -1434,24 +1691,37 @@ impl Render for CanvasSavedLayoutManagerModal {
                     .show_dismiss(true)
                     .header(
                         ModalHeader::new()
-                            .headline("Manage Canvas Saved Layouts")
+                            .headline(if paths::APP_NAME == "Zed" {
+                                "Manage Canvas Saved Layouts"
+                            } else {
+                                "Manage Saved Workspace Layouts"
+                            })
                             .description(
-                                "Save named layouts and restore, rename, or clear existing saved layouts.",
+                                "Save and restore arrangements of the Main Work Area and auxiliary surfaces.",
                             ),
                     )
                     .section(
                         Section::new()
                             .child(
                                 h_flex()
+                                    .min_w_0()
+                                    .flex_wrap()
                                     .justify_between()
                                     .gap_2()
                                     .child(
-                                        Label::new("Saved layouts are semantic pane snapshots.")
+                                        Label::new(
+                                            "Saved layouts remember visible surfaces and their arrangement.",
+                                        )
+                                            .min_w_0()
+                                            .truncate()
                                             .color(Color::Muted),
                                     )
                                     .child(
                                         Button::new("save-canvas-layout-as", "Save As…")
+                                            .size(ButtonSize::Compact)
                                             .style(ButtonStyle::Filled)
+                                            .tab_index(0isize)
+                                            .aria_label("Save Current Workspace Layout As")
                                             .on_click(cx.listener(|this, _, window, cx| {
                                                 this.save_named_layout(window, cx);
                                                 cx.stop_propagation();
@@ -1461,10 +1731,17 @@ impl Render for CanvasSavedLayoutManagerModal {
                             .child(
                                 v_flex()
                                     .gap_1()
+                                    .min_h_0()
+                                    .max_h(rows_max_height)
+                                    .overflow_y_scroll()
                                     .when(rows.is_empty(), |this| {
                                         this.child(
-                                            Label::new("No saved Canvas layouts yet.")
-                                                .color(Color::Muted),
+                                            Label::new(if paths::APP_NAME == "Zed" {
+                                                "No saved Canvas layouts yet."
+                                            } else {
+                                                "No saved Workspace layouts yet."
+                                            })
+                                            .color(Color::Muted),
                                         )
                                     })
                                     .children(rows),
@@ -1472,47 +1749,56 @@ impl Render for CanvasSavedLayoutManagerModal {
                     )
                     .footer(
                         ModalFooter::new()
-                            .start_slot(
-                                h_flex()
-                                    .gap_1()
-                                    .child(
-                                        Button::new(
-                                            "copy-canvas-saved-layouts-json",
-                                            "Copy JSON",
+                            .when(paths::APP_NAME == "Zed", |footer| {
+                                footer.start_slot(
+                                    h_flex()
+                                        .gap_1()
+                                        .flex_wrap()
+                                        .child(
+                                            Button::new(
+                                                "copy-canvas-saved-layouts-json",
+                                                "Copy JSON",
+                                            )
+                                            .color(Color::Muted)
+                                            .disabled(saved_layout_count == 0)
+                                            .on_click(cx.listener(|this, _, _, cx| {
+                                                this.copy_layouts_to_clipboard(cx);
+                                                cx.stop_propagation();
+                                            })),
                                         )
-                                        .color(Color::Muted)
-                                        .disabled(saved_layout_count == 0)
-                                        .on_click(cx.listener(|this, _, _, cx| {
-                                            this.copy_layouts_to_clipboard(cx);
-                                            cx.stop_propagation();
-                                        })),
-                                    )
-                                    .child(Button::new(
-                                        "import-canvas-saved-layouts-json",
-                                        "Import JSON…",
-                                    ).color(Color::Muted).on_click(
-                                        cx.listener(|this, _, window, cx| {
-                                            this.import_layouts_from_clipboard(window, cx);
-                                            cx.stop_propagation();
-                                        }),
-                                    ))
-                                    .child(
-                                        Button::new("clear-all-canvas-saved-layouts", "Clear All…")
+                                        .child(
+                                            Button::new(
+                                                "import-canvas-saved-layouts-json",
+                                                "Import JSON…",
+                                            )
+                                            .color(Color::Muted)
+                                            .on_click(cx.listener(|this, _, window, cx| {
+                                                this.import_layouts_from_clipboard(window, cx);
+                                                cx.stop_propagation();
+                                            })),
+                                        )
+                                        .child(
+                                            Button::new(
+                                                "clear-all-canvas-saved-layouts",
+                                                "Clear All…",
+                                            )
                                             .color(Color::Muted)
                                             .disabled(saved_layout_count == 0)
                                             .on_click(cx.listener(|this, _, window, cx| {
                                                 this.clear_all_layouts(window, cx);
                                                 cx.stop_propagation();
                                             })),
-                                    ),
-                            )
+                                        ),
+                                )
+                            })
                             .end_slot(
-                                Button::new("close-canvas-layout-manager", "Close").on_click(
-                                    cx.listener(|this, _, _, cx| {
+                                Button::new("close-canvas-layout-manager", "Close")
+                                    .tab_index(0isize)
+                                    .aria_label("Close Saved Workspace Layouts")
+                                    .on_click(cx.listener(|this, _, _, cx| {
                                         this.dismiss(cx);
                                         cx.stop_propagation();
-                                    }),
-                                ),
+                                    })),
                             ),
                     ),
             )
@@ -4209,19 +4495,28 @@ impl Workspace {
         }
 
         let layout_count = self.saved_canvas_layouts.len();
+        let layout_noun = saved_layout_noun_for_app(paths::APP_NAME, layout_count);
         let detail = format!(
-            "This removes {layout_count} saved Canvas {}. It does not close panes or tabs.",
-            if layout_count == 1 {
-                "layout"
+            "This removes {layout_count} saved {layout_noun}. {}",
+            if paths::APP_NAME == "Zed" {
+                "It does not close panes or tabs."
             } else {
-                "layouts"
+                "The Main Work Area and its open surfaces stay unchanged."
             },
         );
         let prompt = window.prompt(
             PromptLevel::Warning,
-            "Clear all saved Canvas layouts?",
+            if paths::APP_NAME == "Zed" {
+                "Clear all saved Canvas layouts?"
+            } else {
+                "Remove all saved Workspace layouts?"
+            },
             Some(&detail),
-            &["Clear All", "Cancel"],
+            if paths::APP_NAME == "Zed" {
+                &["Clear All", "Cancel"]
+            } else {
+                &["Remove All", "Cancel"]
+            },
             cx,
         );
 
@@ -4253,10 +4548,12 @@ impl Workspace {
 
         cx.write_to_clipboard(ClipboardItem::new_string(saved_layouts));
         struct CanvasSavedLayoutsCopiedToast;
+        let layout_noun =
+            saved_layout_noun_for_app(paths::APP_NAME, self.saved_canvas_layouts.len());
         self.show_toast(
             Toast::new(
                 NotificationId::unique::<CanvasSavedLayoutsCopiedToast>(),
-                "Saved Canvas layouts copied as JSON",
+                format!("Saved {layout_noun} copied as JSON"),
             )
             .autohide(),
             cx,
@@ -4274,7 +4571,11 @@ impl Workspace {
             self.show_toast(
                 Toast::new(
                     NotificationId::unique::<CanvasSavedLayoutsImportToast>(),
-                    "Clipboard does not contain saved Canvas layout JSON",
+                    if paths::APP_NAME == "Zed" {
+                        "Clipboard does not contain saved Canvas layout JSON"
+                    } else {
+                        "Clipboard does not contain saved Workspace layout JSON"
+                    },
                 )
                 .autohide(),
                 cx,
@@ -4303,7 +4604,11 @@ impl Workspace {
                 self.show_toast(
                     Toast::new(
                         NotificationId::unique::<CanvasSavedLayoutsImportToast>(),
-                        "Clipboard saved Canvas layout JSON is invalid",
+                        if paths::APP_NAME == "Zed" {
+                            "Clipboard saved Canvas layout JSON is invalid"
+                        } else {
+                            "Clipboard saved Workspace layout JSON is invalid"
+                        },
                     )
                     .autohide(),
                     cx,
@@ -4331,7 +4636,11 @@ impl Workspace {
             self.show_toast(
                 Toast::new(
                     NotificationId::unique::<CanvasSavedLayoutsImportToast>(),
-                    "No new saved Canvas layouts to import",
+                    if paths::APP_NAME == "Zed" {
+                        "No new saved Canvas layouts to import"
+                    } else {
+                        "No new saved Workspace layouts to import"
+                    },
                 )
                 .autohide(),
                 cx,
@@ -4345,14 +4654,10 @@ impl Workspace {
             .filter(|name| self.saved_canvas_layouts.contains_key(*name))
             .count();
         let new_count = import_count.saturating_sub(conflicting_count);
+        let layout_noun = saved_layout_noun_for_app(paths::APP_NAME, import_count);
         let detail = if conflicting_count > 0 {
             format!(
-                "Clipboard contains {import_count} saved Canvas {}: {new_count} new, {conflicting_count} already saved. {skipped_count} {} skipped.",
-                if import_count == 1 {
-                    "layout"
-                } else {
-                    "layouts"
-                },
+                "Clipboard contains {import_count} saved {layout_noun}: {new_count} new, {conflicting_count} already saved. {skipped_count} {} skipped.",
                 if skipped_count == 1 {
                     "layout was"
                 } else {
@@ -4361,12 +4666,7 @@ impl Workspace {
             )
         } else {
             format!(
-                "This imports {import_count} saved Canvas {}. {skipped_count} {} skipped.",
-                if import_count == 1 {
-                    "layout"
-                } else {
-                    "layouts"
-                },
+                "This imports {import_count} saved {layout_noun}. {skipped_count} {} skipped.",
                 if skipped_count == 1 {
                     "layout was"
                 } else {
@@ -4374,10 +4674,15 @@ impl Workspace {
                 },
             )
         };
+        let import_prompt = if paths::APP_NAME == "Zed" {
+            "Import saved Canvas layouts from clipboard?"
+        } else {
+            "Import saved Workspace layouts from clipboard?"
+        };
         let prompt = if conflicting_count > 0 {
             window.prompt(
                 PromptLevel::Warning,
-                "Import saved Canvas layouts from clipboard?",
+                import_prompt,
                 Some(&detail),
                 &["Import New Only", "Import and Replace", "Cancel"],
                 cx,
@@ -4385,7 +4690,7 @@ impl Workspace {
         } else {
             window.prompt(
                 PromptLevel::Warning,
-                "Import saved Canvas layouts from clipboard?",
+                import_prompt,
                 Some(&detail),
                 &["Import", "Cancel"],
                 cx,
@@ -4428,7 +4733,11 @@ impl Workspace {
                     workspace.show_toast(
                         Toast::new(
                             NotificationId::unique::<CanvasSavedLayoutsImportToast>(),
-                            "No new saved Canvas layouts to import",
+                            if paths::APP_NAME == "Zed" {
+                                "No new saved Canvas layouts to import"
+                            } else {
+                                "No new saved Workspace layouts to import"
+                            },
                         )
                         .autohide(),
                         cx,
@@ -4437,13 +4746,9 @@ impl Workspace {
                 }
 
                 workspace.serialize_workspace(window, cx);
+                let layout_noun = saved_layout_noun_for_app(paths::APP_NAME, imported_count);
                 let message = format!(
-                    "Imported {imported_count} saved Canvas {}{}{}",
-                    if imported_count == 1 {
-                        "layout"
-                    } else {
-                        "layouts"
-                    },
+                    "Imported {imported_count} saved {layout_noun}{}{}",
                     if replaced_count == 0 {
                         String::new()
                     } else {
@@ -6854,6 +7159,23 @@ impl Workspace {
         })
     }
 
+    fn panel_item_for_key(
+        &self,
+        panel_key: &str,
+        cx: &App,
+    ) -> Option<(Entity<Pane>, usize, Arc<dyn PanelHandle>)> {
+        self.panes.iter().find_map(|pane| {
+            if !self.pane_is_in_center(pane) {
+                return None;
+            }
+            pane.read(cx).items().enumerate().find_map(|(ix, item)| {
+                let item = item.downcast::<PanelItem>()?;
+                let item = item.read(cx);
+                (item.panel_key() == panel_key).then(|| (pane.clone(), ix, item.panel()))
+            })
+        })
+    }
+
     fn panel_item_for_proto_id(
         &self,
         panel_id: PanelId,
@@ -6903,6 +7225,27 @@ impl Workspace {
             self.serialize_workspace(window, cx);
         }
         Some(panel)
+    }
+
+    fn activate_panel_item_for_key(
+        &mut self,
+        panel_key: &str,
+        focus: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<Arc<dyn PanelHandle>> {
+        if let Some((_, _, panel)) = self.panel_item_for_key(panel_key, cx) {
+            return self.activate_panel_item_for_id(panel.panel_id(), focus, window, cx);
+        }
+
+        let panel = self.all_docks().iter().find_map(|dock| {
+            dock.read(cx)
+                .panel_handles()
+                .into_iter()
+                .find(|panel| panel.panel_key() == panel_key)
+        })?;
+        self.add_panel_handle_to_panel_pane(panel.clone(), false, window, cx);
+        self.activate_panel_item_for_id(panel.panel_id(), focus, window, cx)
     }
 
     fn activate_panel_item<T: Panel>(
@@ -7103,13 +7446,33 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> bool {
-        if paths::APP_NAME == "Zed"
-            || self
-                .active_canvas_layout_recipe
-                .is_some_and(|recipe| !recipe.uses_single_tabbed_pane())
-        {
+        if paths::APP_NAME == "Zed" {
             return false;
         }
+
+        let main_work_area_limit = match self.active_canvas_layout_recipe {
+            Some(recipe) => {
+                let Some(limit) = recipe.main_work_area_limit_for_app(paths::APP_NAME) else {
+                    return false;
+                };
+                limit
+            }
+            None => 1,
+        };
+        let populated_pane_count = self
+            .center
+            .panes()
+            .into_iter()
+            .filter(|pane| {
+                let pane = pane.read(cx);
+                pane.pane_kind() == PaneKind::Tabs && pane.items_len() > 0
+            })
+            .count();
+        let target_pane_count = canvas_recipe_populated_pane_target_for_app(
+            paths::APP_NAME,
+            main_work_area_limit,
+            populated_pane_count,
+        );
 
         let visible_tabbed_panes_before = self
             .center
@@ -7122,7 +7485,7 @@ impl Workspace {
             .map(|pane| pane.entity_id())
             .collect::<Vec<_>>();
 
-        let retained_panes = self.ensure_visible_tabbed_panes(1, &[], window, cx);
+        let retained_panes = self.ensure_visible_tabbed_panes(target_pane_count, &[], window, cx);
         if !self.active_pane.read(cx).is_visible()
             && let Some(next_active_pane) = retained_panes.first()
         {
@@ -7411,7 +7774,7 @@ impl Workspace {
             label: Some(
                 self.active_canvas_layout_recipe
                     .map(CanvasLayoutRecipe::label)
-                    .unwrap_or("Custom Canvas Layout")
+                    .unwrap_or_else(|| custom_layout_label_for_app(paths::APP_NAME))
                     .to_string(),
             ),
             active_pane,
@@ -7876,14 +8239,27 @@ impl Workspace {
         self.push_canvas_layout_snapshot(cx);
 
         if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
-            for panel_pane_kind in [PanelPaneKind::Agent, PanelPaneKind::Project] {
-                self.set_canvas_panel_pane_visible(panel_pane_kind, true, window, cx);
+            if paths::APP_NAME == "Zed" {
+                for panel_pane_kind in [PanelPaneKind::Agent, PanelPaneKind::Project] {
+                    self.set_canvas_panel_pane_visible(panel_pane_kind, true, window, cx);
+                }
+            } else {
+                // A public Dez recipe is a destination, not a loose collection
+                // of toggles. Reveal only the owner named by "Work Area +
+                // Files"; revealing Agent afterwards would immediately hide
+                // Files through the single-auxiliary-surface policy.
+                self.set_dez_essential_canvas_recipe_auxiliary_pane(
+                    CanvasLayoutRecipe::Full,
+                    window,
+                    cx,
+                );
             }
 
             // The destination panes must exist before dock-backed panel items are
             // migrated. Otherwise the first recipe invocation closes the docks
             // and leaves behind empty project and agent panes.
             self.sync_panel_panes_from_docks(window, cx);
+            self.select_dez_essential_canvas_recipe_panel(CanvasLayoutRecipe::Full, window, cx);
             self.close_legacy_docks_for_canvas(window, cx);
         }
 
@@ -7912,15 +8288,37 @@ impl Workspace {
             .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
 
         if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
-            self.set_canvas_panel_pane_visible(PanelPaneKind::Project, true, window, cx);
-            self.set_canvas_panel_pane_visible(PanelPaneKind::Agent, true, window, cx);
+            if paths::APP_NAME == "Zed" {
+                self.set_canvas_panel_pane_visible(PanelPaneKind::Project, true, window, cx);
+                self.set_canvas_panel_pane_visible(PanelPaneKind::Agent, true, window, cx);
+            } else {
+                self.set_dez_essential_canvas_recipe_auxiliary_pane(
+                    CanvasLayoutRecipe::AgentControl,
+                    window,
+                    cx,
+                );
+            }
             let agent_pane = self.ensure_panel_pane(PanelPaneKind::Agent, window, cx);
 
             self.sync_panel_panes_from_docks(window, cx);
+            let agent_panel_selected = self.select_dez_essential_canvas_recipe_panel(
+                CanvasLayoutRecipe::AgentControl,
+                window,
+                cx,
+            );
             self.close_legacy_docks_for_canvas(window, cx);
 
-            self.set_active_pane(&agent_pane, window, cx);
-            agent_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
+            if paths::APP_NAME == "Zed" || agent_panel_selected {
+                self.set_active_pane(&agent_pane, window, cx);
+                agent_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
+            } else {
+                // A layout destination must not strand focus in an empty
+                // auxiliary shell when the corresponding panel has not
+                // registered. The selection helper collapses that shell; keep
+                // the user in their existing Main Work Area.
+                self.set_active_pane(&center_pane, window, cx);
+                center_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
+            }
         } else {
             self.set_active_pane(&center_pane, window, cx);
             center_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
@@ -7935,6 +8333,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         self.push_canvas_layout_snapshot(cx);
+        self.schedule_close_dez_sessions_for_main_work_area_destination(window, cx);
 
         if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
             self.sync_panel_panes_from_docks(window, cx);
@@ -7960,6 +8359,12 @@ impl Workspace {
     }
 
     pub fn cycle_canvas_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if paths::APP_NAME != "Zed" {
+            let next_layout = next_dez_public_canvas_layout(self.active_canvas_layout_recipe);
+            self.apply_canvas_layout_recipe(next_layout.id(), window, cx);
+            return;
+        }
+
         let layout_cycle = MultiplexerSettings::get_global(cx).layout_cycle.clone();
         if !layout_cycle.is_empty() {
             let start_index = self.canvas_layout_cycle_index % layout_cycle.len();
@@ -8132,12 +8537,17 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        let (pane_count, split_directions) = essential_canvas_recipe_geometry_for_app(
+            CanvasLayoutRecipe::CodeRunObserve,
+            paths::APP_NAME,
+        )
+        .expect("Split Work Area must define product geometry");
         let panes = self.prepare_canvas_recipe(
             CanvasLayoutRecipe::CodeRunObserve,
-            true,
             false,
-            3,
-            &[SplitDirection::Down, SplitDirection::Right],
+            false,
+            pane_count,
+            split_directions,
             window,
             cx,
         );
@@ -8146,33 +8556,37 @@ impl Workspace {
     }
 
     pub fn apply_canvas_review_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let (pane_count, split_directions) =
+            essential_canvas_recipe_geometry_for_app(CanvasLayoutRecipe::Review, paths::APP_NAME)
+                .expect("Review Changes must define product geometry");
         let panes = self.prepare_canvas_recipe(
             CanvasLayoutRecipe::Review,
             true,
             false,
-            3,
-            &[SplitDirection::Right, SplitDirection::Down],
+            pane_count,
+            split_directions,
             window,
             cx,
         );
+        self.select_dez_essential_canvas_recipe_panel(CanvasLayoutRecipe::Review, window, cx);
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
         self.finish_canvas_recipe(Some(CanvasLayoutRecipe::Review), window, cx);
     }
 
     pub fn apply_canvas_debug_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let (pane_count, split_directions) =
+            essential_canvas_recipe_geometry_for_app(CanvasLayoutRecipe::Debug, paths::APP_NAME)
+                .expect("Debug must define product geometry");
         let panes = self.prepare_canvas_recipe(
             CanvasLayoutRecipe::Debug,
             true,
             false,
-            4,
-            &[
-                SplitDirection::Down,
-                SplitDirection::Right,
-                SplitDirection::Down,
-            ],
+            pane_count,
+            split_directions,
             window,
             cx,
         );
+        self.select_dez_essential_canvas_recipe_panel(CanvasLayoutRecipe::Debug, window, cx);
         self.focus_canvas_tabbed_pane(panes.first(), window, cx);
         self.finish_canvas_recipe(Some(CanvasLayoutRecipe::Debug), window, cx);
     }
@@ -8403,6 +8817,20 @@ impl Workspace {
             self.close_legacy_docks_for_canvas(window, cx);
         }
 
+        let populated_pane_count = self
+            .center
+            .panes()
+            .into_iter()
+            .filter(|pane| {
+                let pane = pane.read(cx);
+                pane.pane_kind() == PaneKind::Tabs && pane.items_len() > 0
+            })
+            .count();
+        let tabbed_pane_count = canvas_recipe_populated_pane_target_for_app(
+            paths::APP_NAME,
+            tabbed_pane_count,
+            populated_pane_count,
+        );
         let split_directions =
             self.reflow_canvas_split_directions(layout_recipe, split_directions, cx);
         self.ensure_visible_tabbed_panes(tabbed_pane_count, &split_directions, window, cx)
@@ -8580,6 +9008,57 @@ impl Workspace {
         }
     }
 
+    fn set_dez_essential_canvas_recipe_auxiliary_pane(
+        &mut self,
+        recipe: CanvasLayoutRecipe,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        debug_assert_ne!(paths::APP_NAME, "Zed");
+        let desired = essential_canvas_recipe_auxiliary_pane_for_app(recipe, paths::APP_NAME);
+
+        for pane_kind in [PanelPaneKind::Project, PanelPaneKind::Agent] {
+            if Some(pane_kind) != desired {
+                self.set_canvas_panel_pane_visible(pane_kind, false, window, cx);
+            }
+        }
+        if let Some(pane_kind) = desired {
+            self.set_canvas_panel_pane_visible(pane_kind, true, window, cx);
+        }
+    }
+
+    fn select_dez_essential_canvas_recipe_panel(
+        &mut self,
+        recipe: CanvasLayoutRecipe,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(panel_key) = essential_canvas_recipe_panel_key_for_app(recipe, paths::APP_NAME)
+        else {
+            return true;
+        };
+
+        if self
+            .activate_panel_item_for_key(panel_key, false, window, cx)
+            .is_some()
+        {
+            return true;
+        }
+
+        // A named destination such as Work Area + Git is only truthful when
+        // its owned panel exists. If panel registration is unavailable, do
+        // not expose a blank drawer or the previous tool under the new layout
+        // label. Collapse the auxiliary region and preserve the user's Main
+        // Work Area instead.
+        if let Some(panel_pane_kind) =
+            essential_canvas_recipe_auxiliary_pane_for_app(recipe, paths::APP_NAME)
+        {
+            self.set_canvas_panel_pane_visible(panel_pane_kind, false, window, cx);
+            self.center.mark_positions(cx);
+        }
+        false
+    }
+
     fn ensure_visible_tabbed_panes(
         &mut self,
         count: usize,
@@ -8597,12 +9076,12 @@ impl Workspace {
             .cloned()
             .collect::<Vec<_>>();
 
-        // A single-work-area recipe used to leave empty panes from a previous
-        // split visible. That produced a large blank column beside the actual
-        // launch surface. Keep an active pane first only when it contains user
-        // work, then prefer every other visible work surface before using a
-        // stale active empty pane as a fallback. Surplus panes containing files
-        // or terminals are never hidden.
+        // Curated recipes used to leave empty panes from a previous split
+        // visible or manufacture new blank columns to match a diagram. Keep an
+        // active pane first only when it contains user work, then prefer every
+        // other visible work surface before using a stale active empty pane as
+        // a fallback. Surplus panes containing files or terminals are never
+        // hidden.
         let mut selected_pane_ids = HashSet::default();
         let mut selected_panes = Vec::new();
         let active_pane_id = self.active_pane.entity_id();
@@ -8786,26 +9265,22 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> bool {
-        let Some(visible_kind) = [PaneKind::Project, PaneKind::Agent]
-            .into_iter()
-            .find(|pane_kind| self.panel_pane_visible(*pane_kind, cx))
-        else {
-            return false;
-        };
-
-        self.toggle_panel_pane_visibility(visible_kind, window, cx);
-        true
+        let mut hid_drawer = false;
+        for pane_kind in [PaneKind::Project, PaneKind::Agent] {
+            if self.panel_pane_visible(pane_kind, cx) {
+                self.toggle_panel_pane_visibility(pane_kind, window, cx);
+                hid_drawer = true;
+            }
+        }
+        hid_drawer
     }
 
-    fn schedule_close_dez_sessions_for_auxiliary_reveal(
+    fn schedule_close_dez_sessions_for_main_work_area_destination(
         &mut self,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> bool {
-        if !dez_auxiliary_surfaces_are_window_exclusive(
-            paths::APP_NAME,
-            window.viewport_size().width,
-        ) {
+        if !dez_uses_single_auxiliary_surface(paths::APP_NAME) {
             return false;
         }
 
@@ -8845,7 +9320,7 @@ impl Workspace {
             return false;
         }
 
-        self.schedule_close_dez_sessions_for_auxiliary_reveal(window, cx);
+        self.schedule_close_dez_sessions_for_main_work_area_destination(window, cx);
         self.hide_competing_dez_auxiliary_pane_for_reveal(pane_kind, cx)
     }
 
@@ -8854,7 +9329,7 @@ impl Workspace {
         pane_kind: PaneKind,
         cx: &mut App,
     ) -> bool {
-        if !dez_auxiliary_drawer_is_exclusive(paths::APP_NAME) {
+        if !dez_uses_single_auxiliary_surface(paths::APP_NAME) {
             return false;
         }
 
@@ -8893,7 +9368,7 @@ impl Workspace {
     }
 
     fn enforce_dez_auxiliary_pane_visibility_policy(&mut self, cx: &mut App) -> bool {
-        if !dez_auxiliary_drawer_is_exclusive(paths::APP_NAME)
+        if !dez_uses_single_auxiliary_surface(paths::APP_NAME)
             || !self.panel_pane_visible(PaneKind::Project, cx)
             || !self.panel_pane_visible(PaneKind::Agent, cx)
         {
@@ -14055,6 +14530,14 @@ impl Render for Workspace {
 
         let theme = cx.theme().clone();
         let colors = theme.colors();
+        let workspace_background = if workspace_reuses_outer_window_material(
+            paths::APP_NAME,
+            ui::theme_is_transparent(cx),
+        ) {
+            transparent_black()
+        } else {
+            colors.background
+        };
         let status_bar_visible = self.status_bar_visible(cx);
         let show_legacy_docks = PaneGridSettings::get_global(cx).show_legacy_docks;
         let notification_entities = self
@@ -14133,7 +14616,7 @@ impl Render for Workspace {
                     .child(
                         div()
                             .id("workspace")
-                            .bg(colors.background)
+                            .bg(workspace_background)
                             .relative()
                             .flex_1()
                             .w_full()
@@ -14280,7 +14763,7 @@ impl Render for Workspace {
                                     .occlude()
                                     .absolute()
                                     .overflow_hidden()
-                                    .bg(colors.background)
+                                    .bg(workspace_background)
                                     .child(zoomed_content)
                                     .inset_0()
                                     .shadow_lg();
@@ -15390,8 +15873,8 @@ pub fn open_paths(
                 if let Some(window) = target_window {
                     open_options.requesting_window = Some(window);
                     window
-                        .update(cx, |multi_workspace, _, cx| {
-                            multi_workspace.open_sidebar(cx);
+                        .update(cx, |multi_workspace, window, cx| {
+                            multi_workspace.open_sidebar_for_sessions_reveal(window, cx);
                         })
                         .log_err();
                 }
@@ -16551,6 +17034,195 @@ mod tests {
     use util::rel_path::rel_path;
 
     #[test]
+    fn dez_essential_layouts_name_their_owned_surfaces() {
+        assert_eq!(
+            custom_layout_label_for_app("Dez"),
+            "Custom Workspace Layout"
+        );
+        assert_eq!(custom_layout_label_for_app("Zed"), "Custom Canvas Layout");
+        assert_eq!(saved_layout_noun_for_app("Dez", 1), "Workspace layout");
+        assert_eq!(saved_layout_noun_for_app("Dez", 2), "Workspace layouts");
+        assert_eq!(saved_layout_noun_for_app("Zed", 1), "Canvas layout");
+        assert_eq!(saved_layout_noun_for_app("Zed", 2), "Canvas layouts");
+        assert_eq!(workspace_layout_cycle_label("Dez"), "Next Workspace Layout");
+        assert_eq!(workspace_layout_cycle_label("Zed"), "Cycle Layout");
+        assert_eq!(
+            CanvasLayoutRecipe::Full.label_for_app("Dez"),
+            "Work Area + Files"
+        );
+        assert_eq!(
+            CanvasLayoutRecipe::AgentControl.label_for_app("Dez"),
+            "Work Area + Built-in Agent"
+        );
+        assert_eq!(
+            CanvasLayoutRecipe::EditorFocus.label_for_app("Dez"),
+            "Focus Work Area"
+        );
+        assert_eq!(
+            CanvasLayoutRecipe::CodeRunObserve.label_for_app("Dez"),
+            "Split Work Area"
+        );
+        assert_eq!(
+            CanvasLayoutRecipe::Review.label_for_app("Dez"),
+            "Work Area + Git"
+        );
+        assert_eq!(
+            CanvasLayoutRecipe::Debug.label_for_app("Dez"),
+            "Work Area + Debug"
+        );
+        assert_eq!(CanvasLayoutRecipe::Full.label_for_app("Zed"), "Full");
+        assert_eq!(
+            CanvasLayoutRecipe::AgentControl.label_for_app("Zed"),
+            "Agent Control"
+        );
+        assert_eq!(
+            saved_layout_preservation_copy("Dez"),
+            "The saved work-area arrangement and restorable files stay unchanged."
+        );
+        assert_eq!(
+            saved_layout_preservation_copy("Zed"),
+            "Saved pane geometry and restored project tabs are unchanged."
+        );
+        assert_eq!(
+            essential_canvas_recipe_auxiliary_pane_for_app(CanvasLayoutRecipe::Full, "Dez"),
+            Some(PanelPaneKind::Project)
+        );
+        assert_eq!(
+            essential_canvas_recipe_auxiliary_pane_for_app(CanvasLayoutRecipe::AgentControl, "Dez"),
+            Some(PanelPaneKind::Agent)
+        );
+        assert_eq!(
+            essential_canvas_recipe_auxiliary_pane_for_app(CanvasLayoutRecipe::EditorFocus, "Dez"),
+            None
+        );
+        assert_eq!(
+            essential_canvas_recipe_auxiliary_pane_for_app(
+                CanvasLayoutRecipe::CodeRunObserve,
+                "Dez"
+            ),
+            None,
+            "splitting the Main Work Area must not reveal an unrelated tool surface"
+        );
+        assert_eq!(
+            essential_canvas_recipe_auxiliary_pane_for_app(CanvasLayoutRecipe::Full, "Zed"),
+            None,
+            "official Zed keeps its inherited layout behavior"
+        );
+        assert_eq!(
+            essential_canvas_recipe_panel_key_for_app(CanvasLayoutRecipe::Full, "Dez"),
+            Some("ProjectPanel")
+        );
+        assert_eq!(
+            essential_canvas_recipe_panel_key_for_app(CanvasLayoutRecipe::AgentControl, "Dez"),
+            Some("agent_panel")
+        );
+        assert_eq!(
+            essential_canvas_recipe_panel_key_for_app(CanvasLayoutRecipe::Review, "Dez"),
+            Some("GitPanel")
+        );
+        assert_eq!(
+            essential_canvas_recipe_panel_key_for_app(CanvasLayoutRecipe::Debug, "Dez"),
+            Some("DebugPanel")
+        );
+        assert_eq!(
+            essential_canvas_recipe_panel_key_for_app(CanvasLayoutRecipe::CodeRunObserve, "Dez"),
+            None
+        );
+        assert_eq!(
+            DEZ_PUBLIC_CANVAS_LAYOUT_CYCLE,
+            &[
+                CanvasLayoutRecipe::Full,
+                CanvasLayoutRecipe::AgentControl,
+                CanvasLayoutRecipe::EditorFocus,
+                CanvasLayoutRecipe::CodeRunObserve,
+                CanvasLayoutRecipe::Review,
+                CanvasLayoutRecipe::Debug,
+            ]
+        );
+        assert_eq!(
+            next_dez_public_canvas_layout(None),
+            CanvasLayoutRecipe::Full
+        );
+        assert_eq!(
+            next_dez_public_canvas_layout(Some(CanvasLayoutRecipe::AgentControl)),
+            CanvasLayoutRecipe::EditorFocus
+        );
+        assert_eq!(
+            next_dez_public_canvas_layout(Some(CanvasLayoutRecipe::Debug)),
+            CanvasLayoutRecipe::Full
+        );
+        assert_eq!(
+            next_dez_public_canvas_layout(Some(CanvasLayoutRecipe::EvenColumns)),
+            CanvasLayoutRecipe::Full,
+            "an inherited or custom legacy layout rejoins the public cycle at Work Area + Files"
+        );
+    }
+
+    #[test]
+    fn saved_layout_modals_fit_inside_the_window() {
+        assert_eq!(
+            clamp_canvas_layout_modal_width(px(896.), px(600.)),
+            px(568.)
+        );
+        assert_eq!(
+            clamp_canvas_layout_modal_width(px(896.), px(1400.)),
+            px(896.)
+        );
+        assert_eq!(clamp_canvas_layout_modal_width(px(496.), px(24.)), px(1.));
+    }
+
+    #[test]
+    fn dez_essential_multi_surface_layouts_create_only_one_split() {
+        for recipe in [
+            CanvasLayoutRecipe::CodeRunObserve,
+            CanvasLayoutRecipe::Review,
+            CanvasLayoutRecipe::Debug,
+        ] {
+            let (pane_count, split_directions) =
+                essential_canvas_recipe_geometry_for_app(recipe, "Dez")
+                    .expect("essential Dez recipe must define geometry");
+            assert_eq!(pane_count, 2);
+            assert_eq!(split_directions.len(), 1);
+        }
+
+        assert_eq!(
+            essential_canvas_recipe_geometry_for_app(CanvasLayoutRecipe::CodeRunObserve, "Zed")
+                .map(|(pane_count, split_directions)| (pane_count, split_directions.len())),
+            Some((3, 2))
+        );
+        assert_eq!(
+            essential_canvas_recipe_geometry_for_app(CanvasLayoutRecipe::Debug, "Zed")
+                .map(|(pane_count, split_directions)| (pane_count, split_directions.len())),
+            Some((4, 3))
+        );
+
+        assert_eq!(
+            canvas_recipe_populated_pane_target_for_app("Dez", 2, 0),
+            1,
+            "a workflow must not manufacture an empty work area"
+        );
+        assert_eq!(
+            canvas_recipe_populated_pane_target_for_app("Dez", 2, 1),
+            1,
+            "one populated work area must stay one work area"
+        );
+        assert_eq!(canvas_recipe_populated_pane_target_for_app("Dez", 2, 2), 2);
+        assert_eq!(
+            canvas_recipe_populated_pane_target_for_app("Zed", 4, 0),
+            4,
+            "official Zed keeps its inherited recipe geometry"
+        );
+        assert_eq!(
+            CanvasLayoutRecipe::Review.main_work_area_limit_for_app("Dez"),
+            Some(2)
+        );
+        assert_eq!(
+            CanvasLayoutRecipe::Review.main_work_area_limit_for_app("Zed"),
+            None
+        );
+    }
+
+    #[test]
     fn auxiliary_drawer_starts_compact_and_preserves_the_main_work_area() {
         assert_eq!(auxiliary_pane_initial_width(px(2000.)), px(360.));
         assert_eq!(auxiliary_pane_initial_width(px(1000.)), px(240.));
@@ -16579,25 +17251,16 @@ mod tests {
     }
 
     #[test]
-    fn dez_uses_one_optional_auxiliary_drawer_at_every_window_size() {
-        assert!(dez_auxiliary_drawer_is_exclusive("Dez"));
-        assert!(!dez_auxiliary_drawer_is_exclusive("Zed"));
+    fn dez_transparent_theme_reuses_the_outer_window_material() {
+        assert!(workspace_reuses_outer_window_material("Dez", true));
+        assert!(!workspace_reuses_outer_window_material("Dez", false));
+        assert!(!workspace_reuses_outer_window_material("Zed", true));
     }
 
     #[test]
-    fn dez_uses_one_auxiliary_surface_on_narrow_windows() {
-        assert!(dez_auxiliary_surfaces_are_window_exclusive(
-            "Dez",
-            px(1159.)
-        ));
-        assert!(!dez_auxiliary_surfaces_are_window_exclusive(
-            "Dez",
-            DEZ_THREE_REGION_MIN_WINDOW_WIDTH
-        ));
-        assert!(!dez_auxiliary_surfaces_are_window_exclusive(
-            "Zed",
-            px(600.)
-        ));
+    fn dez_uses_one_auxiliary_surface_at_every_window_size() {
+        assert!(dez_uses_single_auxiliary_surface("Dez"));
+        assert!(!dez_uses_single_auxiliary_surface("Zed"));
     }
 
     #[test]
@@ -16656,7 +17319,7 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn test_dez_keeps_only_the_active_auxiliary_drawer_visible_on_ultrawide(
+    async fn test_dez_keeps_only_one_auxiliary_surface_visible_on_ultrawide(
         cx: &mut TestAppContext,
     ) {
         init_test(cx);
@@ -16677,6 +17340,11 @@ mod tests {
             assert!(workspace.enforce_dez_auxiliary_pane_visibility_policy(cx));
             assert!(!project_pane.read(cx).is_visible());
             assert!(agent_pane.read(cx).is_visible());
+
+            project_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+            assert!(workspace.hide_dez_auxiliary_drawer_for_sessions(window, cx));
+            assert!(!project_pane.read(cx).is_visible());
+            assert!(!agent_pane.read(cx).is_visible());
         });
     }
 
@@ -16766,7 +17434,9 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn test_restore_normalizes_only_single_work_area_layouts(cx: &mut TestAppContext) {
+    async fn test_restore_removes_empty_leftovers_from_curated_dez_layouts(
+        cx: &mut TestAppContext,
+    ) {
         init_test(cx);
 
         let fs = FakeFs::new(cx.executor());
@@ -16787,9 +17457,28 @@ mod tests {
             surplus_empty_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
             workspace.active_canvas_layout_recipe = Some(CanvasLayoutRecipe::Review);
 
+            assert!(workspace.normalize_restored_dez_main_work_area(window, cx));
+            assert!(primary_pane.read(cx).is_visible());
+            assert!(
+                !surplus_empty_pane.read(cx).is_visible(),
+                "a public multi-surface recipe must arrange work, not restore an unexplained blank column"
+            );
+
+            let review_item = cx.new(|cx| TestItem::new(cx).with_label("review.diff"));
+            workspace.add_item(
+                surplus_empty_pane.clone(),
+                Box::new(review_item),
+                None,
+                false,
+                false,
+                window,
+                cx,
+            );
+            surplus_empty_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+
             assert!(
                 !workspace.normalize_restored_dez_main_work_area(window, cx),
-                "an explicit multi-pane recipe must keep its intentionally empty work areas"
+                "two populated Review Changes work areas should remain stable"
             );
             assert!(primary_pane.read(cx).is_visible());
             assert!(surplus_empty_pane.read(cx).is_visible());
@@ -17313,7 +18002,7 @@ mod tests {
             workspace.save_current_canvas_layout_slot(1, window, cx);
             assert_eq!(
                 workspace.saved_canvas_layout_slot_label(1),
-                Some("Custom Canvas Layout")
+                Some(custom_layout_label_for_app(paths::APP_NAME))
             );
 
             assert!(workspace.set_saved_canvas_layout_slot_label(
@@ -17330,7 +18019,7 @@ mod tests {
             assert!(workspace.set_saved_canvas_layout_slot_label(1, "  ".to_string(), window, cx));
             assert_eq!(
                 workspace.saved_canvas_layout_slot_label(1),
-                Some("Custom Canvas Layout")
+                Some(custom_layout_label_for_app(paths::APP_NAME))
             );
 
             assert!(workspace.clear_saved_canvas_layout_slot(1, window, cx));

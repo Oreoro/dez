@@ -1,14 +1,14 @@
 use crate::{
     Panel,
     dock::PanelHandle,
-    item::{Item, TabContentParams},
+    item::Item,
     pane::{Pane, PaneKind},
 };
 use gpui::{
     App, Context, EventEmitter, FocusHandle, Focusable, IntoElement, Render, SharedString, Window,
 };
 use std::sync::Arc;
-use ui::{Icon, IconSize, Label, LabelCommon, prelude::*};
+use ui::Icon;
 
 pub const PROJECT_TOOL_PANEL_KEYS: &[&str] =
     &["ProjectPanel", "GitPanel", "OutlinePanel", "DebugPanel"];
@@ -80,7 +80,8 @@ impl PanelItem {
             "DebugPanel" => "Debug",
             "TerminalPanel" => "Terminals",
             "CollaborationPanel" => "Collab",
-            AGENT_PANEL_KEY => "Agent",
+            AGENT_PANEL_KEY if paths::APP_NAME == "Zed" => "Agent",
+            AGENT_PANEL_KEY => "Built-in Agent",
             _ => self.panel.persistent_name(),
         }
     }
@@ -105,22 +106,6 @@ impl Item for PanelItem {
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
         self.tab_label().into()
-    }
-
-    fn tab_content(&self, params: TabContentParams, window: &Window, cx: &App) -> gpui::AnyElement {
-        h_flex()
-            .min_w_0()
-            .gap_1()
-            .when_some(self.tab_icon(window, cx), |this, icon| {
-                this.child(div().flex_none().child(icon.size(IconSize::XSmall)))
-            })
-            .child(
-                Label::new(self.tab_content_text(params.detail.unwrap_or_default(), cx))
-                    .single_line()
-                    .truncate()
-                    .color(params.text_color()),
-            )
-            .into_any_element()
     }
 
     fn tab_icon(&self, window: &Window, cx: &App) -> Option<Icon> {

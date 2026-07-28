@@ -1,17 +1,17 @@
 ---
 title: What is Dez?
-description: Learn how Dez combines a native IDE, terminal Sessions, coding agents, and review evidence in one Workspace.
+description: Learn how Dez combines a native IDE, integrated terminals, coding agents, and review evidence in one Workspace.
 ---
 
 # What is Dez?
 
 Dez is a native development environment for people who edit code themselves
-and supervise coding agents or long-running terminal work.
+and supervise coding agents running in integrated terminals.
 
 Its job is simple to state:
 
-> Keep the code, computation, attention, and evidence for a piece of work
-> visible in one place.
+> Keep a project's code, active agent work, attention, changes, and review
+> evidence visible in one native Workspace.
 
 Dez inherits Zed's fast editor, language support, Git, debugger, tasks, remote
 infrastructure, collaboration substrate, and agent ecosystem. It changes the
@@ -24,35 +24,54 @@ The default interface has four named regions:
 
 | Region              | What it is for                                                                   |
 | ------------------- | -------------------------------------------------------------------------------- |
-| **Sessions**        | Navigate Workspaces and Sessions; see lifecycle, attention, and recent activity  |
+| **Agent Sessions**  | Supervise detected or managed agent runs; see lifecycle and attention            |
 | **Workspace Tools** | Inspect Files, Outline, Git, and Debug for the active Workspace                  |
 | **Main Work Area**  | Edit files and open terminal, search, settings, diagnostics, and review Surfaces |
-| **Agent**           | Work with native or external coding-agent conversations                          |
+| **Built-in Agent**  | Use the optional provider-backed conversation surface                            |
 
 These are not four separate products.
 
 The Main Work Area is one pane grid. A file, terminal, diff, search result,
 settings page, or review can be tabbed, split, moved, and focused through the
-same rules. Workspace Tools and Agent are hideable drawers around that grid,
-not permanent columns. On laptop and portrait windows, opening one closes the
-other. Both may coexist only in an ultrawide shell, where each is capped at 22%
-of visible horizontal space and Dez keeps at least 60% for the Main Work Area.
-The same policy applies after resizing, reopening, and restoring a saved layout.
+same rules. Sessions, Workspace Tools, and Built-in Agent share one optional
+auxiliary slot around that grid; they are never simultaneous permanent
+columns. Opening one closes the visible competitor at laptop, desktop, and
+ultrawide sizes. A
+contextual drawer is capped at 22% of visible horizontal space when room
+permits, and Dez keeps at least 60% for the Main Work Area. The same policy
+applies after resizing, reopening, and restoring a saved layout.
 Returning to a one-work-area recipe removes surplus empty split panes while
 preserving every pane that contains a file, terminal, or other user Surface.
-Workspace restoration applies that same cleanup to the default layout and
-saved one-work-area recipes, so stale empty splits cannot return as unexplained
-blank columns. Explicit multi-pane recipes retain their requested work areas.
+Workspace restoration applies that same cleanup to the default layout and all
+six public recipes, so stale empty splits cannot return as unexplained blank
+columns. Public multi-surface recipes arrange up to two populated work
+areas and never create an empty pane merely to satisfy a diagram.
+The public **Workspace Layout** picker names destinations instead of abstract
+arrangements: **Work Area + Files**, **Work Area + Built-in Agent**, **Focus
+Work Area**, **Split Work Area**, **Work Area + Git**, and **Work Area +
+Debug**. Files, Git, Debug, and Built-in Agent each select that exact native
+surface. Focus closes every auxiliary surface. Split Work Area only arranges
+existing Main Work Area surfaces; it never starts a process or opens an
+unrelated tool. The three multi-surface recipes use a second work area only
+when it already contains user work, so a workflow can never open as a grid of
+unexplained blank columns. If a layout's named native panel is not registered,
+Dez collapses that empty auxiliary surface and keeps focus in the Main Work
+Area; it never substitutes a stale tab or presents a dead drawer.
+**Next Workspace Layout** advances through those same six states in that
+listed order. It does not enter inherited matrix, tiled, or implementation
+layouts, and invoking it after a custom or legacy state rejoins the public
+sequence at **Work Area + Files**. Workspace menus and command search use the
+same name.
 When that work area is empty, one restrained launch panel states the product
-loop—**Run. Supervise. Review.**—and offers only Start Terminal Session, Find
-File, and New File. A compact route row names where the loop happens: Run in
-the Main Work Area, Supervise in Sessions, and Review in Files + Git. It is
-onboarding for the current Workspace, not a second welcome screen.
-Sessions is a projection over the real owners: selecting a row focuses or
-reattaches its existing Surface instead of opening a duplicate. Its true-empty
-state uses the same route language—Run in the Main Work Area, Supervise in
-Sessions, Review in Files + Git—so the rail explains its job before any
-Terminal or Agent Session exists.
+purpose and offers only Open Agent Terminal, Find File, and New File. It does
+not repeat Home's workflow diagram. It is an operational start state for the
+current Workspace, not a second Home screen.
+The **Agent Sessions** rail is a projection over the real owners: selecting a
+row focuses or reattaches its existing Surface instead of opening a duplicate.
+Its true-empty state says exactly how to create the first agent Session. An
+ordinary shell is not a Session and does not create a generic row.
+Home and Terminal Details use that same name so **Supervise** never implies
+that Dez captures or relocates every shell on the machine.
 Notifications and toasts are bounded transient shelves over the Main Work
 Area. They never become another full-height column, and overflowing alerts
 scroll inside their shelf instead of covering the editor or terminal.
@@ -61,18 +80,18 @@ scroll inside their shelf instead of covering the editor or terminal.
 
 Dez uses the same icon for the same object or transition everywhere:
 
-| Icon role    | Meaning                                                  |
-| ------------ | -------------------------------------------------------- |
-| Terminal     | Start or return to terminal computation                  |
-| Folder open  | Open a Workspace or reveal its Files                     |
-| File         | Create a new file                                        |
-| Diff         | Review observed Workspace changes                        |
-| Information  | Inspect Terminal Session details and evidence boundaries |
-| Session list | Supervise Sessions and attention                         |
-| Clock        | Open Agent Session history                               |
-| Settings     | Configure Agent tools and application behavior           |
-| Robot        | Create or identify a Dez Agent Session                   |
-| Sparkle      | Invoke Inline Assist on the current editor context       |
+| Icon role    | Meaning                                            |
+| ------------ | -------------------------------------------------- |
+| Terminal     | Start or return to terminal computation            |
+| Folder open  | Open a Workspace or reveal its Files               |
+| File         | Create a new file                                  |
+| Diff         | Review observed Workspace changes                  |
+| Information  | Inspect terminal details and evidence boundaries   |
+| Session list | Supervise Sessions and attention                   |
+| Clock        | Open Agent Session history                         |
+| Settings     | Configure Agent tools and application behavior     |
+| Robot        | Create or identify a Dez Agent Session             |
+| Sparkle      | Invoke Inline Assist on the current editor context |
 
 Icons support labels; they never replace them. A creation icon does not stand
 in for an object-specific Terminal or File icon, and review/details controls
@@ -80,49 +99,67 @@ do not reuse each other's symbols. Dez does not reuse Zed-branded assistant
 marks for these controls. Command Palette labels follow the same grammar: Dez
 exposes `sessions: ...`, `files: ...`, `git: ...`, and
 `workspace tools: ...` display names instead of inherited implementation
-namespaces.
+namespaces. Terminal creation appears under `terminal: open agent terminal …`,
+and the six layout transitions and their management commands appear under
+`layout: ...`; neither route exposes inherited Thread or Canvas terminology.
 
-Hierarchy follows the next useful action. Welcome gives one filled,
-keyboard-focusable recommendation—**Open Workspace** when no codebase is open,
-or **Start Terminal Session** inside an active Workspace—while related actions
-remain quieter alternatives. Dense Workspace Tools and Agent toolbars use
+Hierarchy follows the next useful action. Home places **Open Workspace**
+first when no codebase is open, or **Open Agent Terminal** first inside an
+active Workspace. These are native command rows on the editor surface, not
+filled dashboard cards. Dense Workspace Tools and Built-in Agent toolbars use
 compact icons, but every control has a specific accessible name, tooltip, and
 place in the keyboard tab order. A critical action is never available only on
 pointer hover.
 
-Welcome keeps that first choice concrete. Without a Workspace, its three start
-actions are **Open Workspace**, **Clone Repository**, and **Open Scratch
-Terminal**. Inside a Workspace, they become **Start Terminal Session**, **Open
-Files**, and **New File**. The empty Main Work Area uses the same Session
-vocabulary and does not describe ordinary GUI-owned terminals as durable.
+First run follows the same rule. Setup is a top-anchored editor page for theme,
+keymap, optional Agent providers, imports, and trust preferences. A short
+in-flow list explains the Run, Supervise, Review loop. It does not open a
+pathless terminal, expose hook installation, or place a promotional card over
+the Workspace. **Finish Setup** returns to the normal Workspace activation
+flow.
 
-The empty Sessions region follows the same activation loop. **Start with a
-Workspace** explains that the codebase supplies context to Terminal or Agent
-Sessions and that their changes return to the IDE for review. **Open
-Workspace** remains the primary same-window action, **Open Scratch Terminal**
-is the secondary pathless option, and the primary action becomes **Start
-Terminal Session** once a Workspace is ready. This prevents a first-run
-terminal in the home directory from looking connected to Files or Git when it
-is not. Start, recovery, and All/Attention scope actions remain keyboard
-reachable as the rail changes state.
+Home keeps that first choice concrete. Without a Workspace, its start
+actions are **Open Workspace** and **Clone Repository**. Dez does not offer an
+Agent Terminal until a codebase can supply file and Git review context. Inside
+a Workspace, the actions become **Open Agent Terminal**, **Open Files**, and
+**New File**. The terminal action opens a normal integrated terminal; you then
+start a supported agent CLI. The terminal enters Sessions only after agent
+evidence exists.
+
+Home is a normal Main Work Area surface, not a modal dashboard. It always
+teaches the compact **Run → Supervise → Review** route, stacks that route below
+760 px, and names its tab **Home**. Recent Workspaces reserve a stable native
+section while local history loads, state clearly when no history exists, and
+become ordinary keyboard-reachable rows when ready. The section never appears
+as a floating card or repaints the Lumin window material.
+
+The empty Sessions region follows the same activation loop. **No Workspace
+open** explains that a codebase supplies context to agent work and review.
+**Open Workspace** is its only start action. Once a Workspace is ready, the
+scoped action becomes **Open Agent Terminal**. Sessions stays empty until agent
+evidence exists. Start, recovery, and All/Attention scope actions remain
+keyboard reachable as the rail changes state.
 
 Workspace controls follow focus. Selecting or keyboard-focusing a Workspace
-keeps its Start Terminal Session and Options actions visible; opening the
+keeps its Open Agent Terminal and Options actions visible; opening the
 Options menu keeps its scoped close controls visible as well. Search clearing
 and banner dismissal are keyboard-focusable, so pointer hover is never the only
 route to a visible shell action. Workspace names and their action cluster share
 one bounded inline row: text truncates within its allocation, actions never
 overlap it, and no gradient mask is painted over either side of the header. An
-expanded Workspace with no Sessions shows one labeled **Start Terminal
-Session** action below the header; its compact terminal icon is suppressed
+expanded Workspace with no Sessions shows one labeled **Open Agent Terminal**
+action below the header; its compact terminal icon is suppressed
 until the Workspace is collapsed or contains Sessions. Readiness remains in the
 overview summary and the Workspace header's accessible name instead of being
 repeated as a decorative dot-and-caption row.
 
 The Main Work Area follows the same rule. Back, Forward, Add, Switch Surface,
-Split, Zoom, and the Workspace Tools/Agent hide controls are keyboard-focusable
-and specifically named. The active unpinned Surface keeps its close control
-visible in Dez; inactive tabs remain visually quiet.
+Split, Zoom, and the Workspace Tools/Built-in Agent hide controls are
+keyboard-focusable and specifically named. Files, Git, Outline, and Debug are
+persistent Workspace Tool destinations: each has one icon, is keyboard
+reachable, and does not repeat a close button beside **Hide Workspace Tools**.
+The active unpinned Main Work Area Surface keeps its close control visible in
+Dez; inactive tabs remain visually quiet.
 
 Existing generated Dez profiles are upgraded consistently. A known legacy
 profile that pinned `.ZedSans`, One Light, and light-only appearance migrates
@@ -130,34 +167,39 @@ to JetBrains Mono with system-selected Lumin Light/Lumin Blur. Custom font or
 theme choices are not treated as generated defaults.
 
 Creation emphasis also follows state. A ready Workspace without a Session
-shows a filled **Start Terminal Session** action. Once work exists, a compact
-terminal action remains in each Workspace header while the Sessions overview
-stays focused on status and All/Attention scope. Dez does not repeat a global
-launcher for the already-active Workspace.
+shows one quiet **Open Agent Terminal** command row. Once work exists, a
+compact terminal action remains in each Workspace header while the Sessions
+overview stays focused on status and All/Attention scope. Dez does not repeat a
+global launcher for the already-active Workspace.
 
-The Sessions footer reserves text for destinations that would otherwise be
-ambiguous. Compact/default rails show the conventional Settings gear with its
-**Agent Tools and Settings** tooltip and accessible name, then label
-**History** and **Workspaces**. Detailed rails expand all three to **Agent
-Tools**, **Agent History**, and **Recent Workspaces**; genuinely narrow rails
-use named tooltip-backed icons.
+Sessions uses one native titlebar label and one options menu for secondary
+destinations such as Agent Tools, Agent History, and Recent Workspaces. It does
+not repeat **Sessions** inside a dashboard header or reserve a permanent
+footer. Empty, caught-up, search, and recovery states stay in normal sidebar
+flow and never become floating overlays. At compact widths, the caught-up
+action shortens to **Show All** and the **On This Mac** count shortens to
+`n observed`; the section description, row state, tooltip, and accessibility
+label retain the read-only ownership boundary.
 
-The bottom Workspace status strip is intentionally terse. Search and a healthy
-diagnostics state use familiar icons with complete tooltips and accessible
-names; actual errors, warnings, counts, and messages remain visible. Terminal
-focus does not expand routine healthy state into another row of prose.
+The bottom Workspace status strip is evidence-driven. It does not repeat a
+global Search launcher or show a decorative checkmark when diagnostics are
+healthy. Search remains available through normal Workspace navigation and the
+Command Palette. Actual errors, warnings, counts, active diagnostic messages,
+language health, and file context remain visible when relevant. Terminal focus
+does not expand routine healthy state into another row of controls or prose.
 
 ## The core objects
 
 You only need four concepts for everyday use:
 
-- A **Workspace** is durable human context: its Surfaces, pane layout, focus,
-  navigation history, and Project scope.
+- A **Workspace** is project-scoped human context: its Surfaces, pane layout,
+  focus, navigation history, and Project scope.
 - A **Surface** is something you can work with in the pane grid, such as a
   file, terminal, search result, debugger, settings page, Agent Session, or
   review.
-- A **Session** is computation or an agent conversation whose identity can
-  outlive a single view.
+- A **Session** is supervised agent work with a stable in-app identity: either
+  a Built-in Agent conversation or a terminal promoted by observed agent
+  evidence. An ordinary shell remains a terminal Surface, not a Session.
 - **Evidence** is what Dez actually knows about work: roots, files, terminal
   working directories, commands, check outcomes, Git state, lifecycle, and
   provenance.
@@ -183,10 +225,18 @@ route when it needs Project context, so its **Open Workspace** control cannot
 quietly accept a loose file or move the work into another window. Its Open and
 Clone recovery actions are keyboard-reachable.
 
+If a terminal cannot start, Dez opens no substitute process. The terminal
+surface keeps its native material and presents an edge-anchored recovery state
+with the launch error, one **Edit Settings** action, and a secondary settings
+menu. Center-terminal and compatibility-panel launch paths use the same
+hierarchy, so a failure never turns into a centered promotional card or a
+different workflow.
+
 ### 2. Work directly or delegate
 
-Open a file to edit directly, create a terminal in the Main Work Area, or start
-an Agent Session in the Agent region.
+Open a file to edit directly, choose **Open Agent Terminal** to run Codex,
+Claude Code, or another terminal agent in the Main Work Area, or start a
+provider-backed Agent Session in **Built-in Agent**.
 
 Agent edits land in ordinary buffers and Git changes. A terminal starts in the
 Workspace's working-directory context. Both sit beside files in the same pane
@@ -195,11 +245,14 @@ mode switches. Agent Options and New Agent Session are explicit popovers: their
 triggers stay highlighted while open and announce that state to keyboard and
 assistive-technology users.
 
-If no provider is configured, Agent shows a named provider-setup state rather
-than a Zed account or subscription pitch. **Configure Agent Providers** opens
-the relevant settings; after a non-Zed-cloud provider is ready, **Start Agent
-Session** becomes the primary action. Both actions are keyboard reachable, and
-the surface consistently names the resulting object an Agent Session.
+Dez creates a new Built-in Agent Session only when the provider registry has a
+usable default model. Until then, Workspace Options says **Configure Built-in
+Agent…** and opens the relevant provider settings without manufacturing a dead
+draft. A restored Built-in Agent surface that still needs setup keeps its
+informational recovery visible until a provider and model are selected; it
+cannot be dismissed into a blank composer. Once a usable default exists, the
+action becomes **New Built-in Agent Session…**. Terminal agents do not use this
+model picker.
 
 The Agent composer is the control point for the current conversation. Its
 context, follow, speed, thinking, effort, send/queue, stop, size, and sandbox
@@ -224,7 +277,7 @@ says so.
 
 Sessions groups work by Workspace and projects:
 
-- which Agent and Terminal Sessions exist;
+- which Agent Sessions and detected CLI-agent terminals exist;
 - whether they are running, waiting, failed, exited, saved, or unavailable;
 - which Session needs attention;
 - when meaningful activity last occurred; and
@@ -282,12 +335,17 @@ expansion for a longer message. View Diff, stage/unstage, commit, remote, and
 split-menu controls remain keyboard reachable and announce their action and
 open state.
 
+Git History uses the same drawer hierarchy. Its tab is keyboard reachable and
+announces whether it is selected. Missing-repository, loading, no-commit, and
+load-failure states begin at the drawer edge with a specific title and next-step
+explanation instead of switching to a generic centered label.
+
 If a saved Session owns a closed Workspace, **Files** restores that exact
 Workspace and Session before revealing the project tree. It does not silently
 do nothing or manufacture a replacement Session.
 
-Session Details also states the trust boundary. Lifecycle comes from the
-Terminal and Host; Git counts belong to the Workspace and are not automatically
+Terminal Details also states the trust boundary. Lifecycle comes from the
+terminal and Host; Git counts belong to the Workspace and are not automatically
 attributed to one Session; agent confidence and checks require trusted adapter
 evidence. Dez never treats arbitrary terminal text as proof that a command or
 check succeeded.
@@ -315,21 +373,20 @@ Session in the Agent work area.
 
 ### 5. Resume honestly
 
-Workspace composition and session metadata are restored where the source owns
-them. If a saved Terminal Session cannot be reconnected, Dez preserves its
-title and displays one **Terminal Session unavailable** warning. It does not
-silently start a replacement shell or print fake recovery text into the
-terminal grid.
+Workspace composition and agent-session metadata are restored where the source
+owns them. If a saved terminal cannot be reconnected, Dez preserves its title
+and displays one **Terminal unavailable** warning. It does not silently start a
+replacement shell or print fake recovery text into the terminal grid.
 
 **Start Fresh Terminal** creates separate computation in the Main Work Area; it
 does not claim to reconnect, replay, or replace the unavailable Session.
 
-If the terminal session service itself is connecting, reconnecting, or failed,
-Sessions states whether any shell started and whether running processes
-were touched. **Open Local Log** and **Copy Details/Error** expose diagnostics
-without putting transport jargon in the main notice. If a Workspace cannot
-reopen, **Open Recent Workspaces** retries through the normal picker; **Remove
-Recovery Entry** removes only that rail record and keeps recent Workspace data.
+If the terminal service itself is connecting, reconnecting, or failed, Sessions
+states whether any shell started and whether running processes were touched.
+**Open Local Log** and **Copy Details/Error** expose diagnostics without putting
+transport jargon in the main notice. If a Workspace cannot reopen, **Open Recent
+Workspaces** retries through the normal picker; **Remove Recovery Entry**
+removes only that rail record and keeps recent Workspace data.
 These recovery actions are keyboard reachable.
 
 ## Terminal and Agent integration
@@ -337,6 +394,9 @@ These recovery actions are keyboard reachable.
 Dez does not put the terminal inside chat.
 
 - Ordinary terminals are normal Main Work Area Surfaces.
+- Ordinary shells do not appear in Sessions.
+- A terminal is promoted into Sessions when Dez detects a supported foreground
+  agent or explicitly owns it as a managed agent terminal.
 - Agent conversations are normal Agent Surfaces.
 - The active Workspace supplies shared Project context.
 - Agent edits appear in the same buffers and Git repository the developer uses.
@@ -349,6 +409,14 @@ outside the GUI process. It is intentionally not the default until consolidated
 build, restart, transport-loss, and crash evidence is complete. Default task
 terminals remain GUI-owned because retaining a task after the UI reports
 cancellation would be dishonest.
+
+On macOS, Sessions can list current-user TTYs from another supported terminal
+application or IDE under **On This Mac**. These rows are ephemeral, read-only
+observations. Dez can show limited process context and reveal the owning
+application, but it does not read the transcript or arguments, intercept input,
+persist the row, adopt the PTY, restore the process, or claim ownership of its
+work. External control requires an explicit adapter—such as a future `tmux`
+integration—and is outside the v0.0.2 contract.
 
 ## Visual design
 
@@ -368,6 +436,11 @@ borders, selected rows, active lines, pane boundaries, and scrollbars remain
 visible. Sessions, Workspace Tools, Agent, the Main Work Area, tab strips, and
 elevated menus use distinct semantic layers instead of blending into one sheet.
 Controls in Lumin Light are translucent glass layers, not beige blocks.
+Error, warning, information, hidden, ignored, and predictive states use
+low-alpha semantic tints in both blurred variants, so a status callout or row
+never flattens the backdrop into an opaque patch. The non-blurred **Lumin**
+fallback deliberately keeps opaque semantic surfaces for reduced-transparency
+environments.
 Structural dividers remain restrained; hover, active, selected, scrollbar, and
 focus states strengthen in a consistent order, and focus/selection carry the
 stronger accent. The active Main Work Area is identified by its title and

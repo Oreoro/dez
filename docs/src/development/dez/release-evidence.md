@@ -2,6 +2,8 @@
 
 This log records direct evidence for the consolidated release gate. A source
 claim is not a runtime claim, and an unchecked scenario remains unverified.
+The [v0.0.2 Completion Plan](./v0.0.2-completion-plan.md) defines the current
+release order. Historical artifacts below do not validate a newer source tree.
 
 ## v0.0.2 parity build evidence {#v0-0-2-parity-build-evidence}
 

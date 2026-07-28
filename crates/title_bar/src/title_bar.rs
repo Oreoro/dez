@@ -88,10 +88,14 @@ fn project_or_workspace_label(
 }
 
 fn layout_menu_label(app_name: &str, panels_as_pane_tabs: bool) -> &'static str {
-    if app_name == "Zed" && !panels_as_pane_tabs {
-        "Panel Layout"
+    if app_name == "Zed" {
+        if panels_as_pane_tabs {
+            "Canvas Layout"
+        } else {
+            "Panel Layout"
+        }
     } else {
-        "Canvas Layout"
+        "Workspace Layout"
     }
 }
 
@@ -448,7 +452,7 @@ fn canvas_layout_command_set(
     disable_ai: bool,
     show_layout: bool,
 ) -> CanvasLayoutCommandSet {
-    if disable_ai || !show_layout {
+    if !show_layout || (app_name == "Zed" && disable_ai) {
         CanvasLayoutCommandSet::Hidden
     } else if app_name == "Zed" {
         CanvasLayoutCommandSet::Full
@@ -457,10 +461,15 @@ fn canvas_layout_command_set(
     }
 }
 
+fn canvas_layout_menu_visible(app_name: &str, disable_ai: bool, show_layout: bool) -> bool {
+    canvas_layout_command_set(app_name, disable_ai, show_layout) != CanvasLayoutCommandSet::Hidden
+}
+
 /// Keeps Dez's command surface aligned with the six workflow layouts exposed
 /// by Workspace Options. Official Zed retains the full upstream layout action
-/// inventory, while AI-disabled or explicitly hidden layouts stay out of
-/// command search.
+/// inventory. Dez layouts remain available without an Agent provider because
+/// Files, terminals, Git, Debug, and work-area geometry are IDE capabilities;
+/// explicitly hiding layout controls still removes them from command search.
 fn update_layout_action_filter(cx: &mut App) {
     let disable_ai = project::DisableAiSettings::get_global(cx).disable_ai;
     let show_layout = WorkspaceBarSettings::get_global(cx).show_layout();
@@ -2076,135 +2085,187 @@ impl SidebarChrome {
                         "Extensions",
                         zed_actions::Extensions::default().boxed_clone(),
                     )
-                    .when(ai_enabled && show_layout, |menu| {
-                        menu.separator()
-                            .submenu(layout_menu_label, move |menu, _window, _cx| {
-                                menu.toggleable_entry(
-                                    "Classic",
-                                    is_editor,
-                                    IconPosition::Start,
-                                    Some(UseClassicLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(UseClassicLayout.boxed_clone(), cx);
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Canvas",
-                                    is_agent,
-                                    IconPosition::Start,
-                                    Some(UseAgenticLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(UseAgenticLayout.boxed_clone(), cx);
-                                    },
-                                )
-                                .separator()
-                                .toggleable_entry(
-                                    "Full",
-                                    active_canvas_layout_recipe == Some("full"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasFullLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasFullLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Agent Control",
-                                    active_canvas_layout_recipe == Some("agent_control"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasAgentControlLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasAgentControlLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Focus Editor",
-                                    active_canvas_layout_recipe == Some("editor_focus"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasEditorFocusLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasEditorFocusLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Code, Run, Observe",
-                                    active_canvas_layout_recipe == Some("code_run_observe"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasCodeRunObserveLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasCodeRunObserveLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Review",
-                                    active_canvas_layout_recipe == Some("review"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasReviewLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasReviewLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .toggleable_entry(
-                                    "Debug",
-                                    active_canvas_layout_recipe == Some("debug"),
-                                    IconPosition::Start,
-                                    Some(ApplyCanvasDebugLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(
-                                            ApplyCanvasDebugLayout.boxed_clone(),
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .entry(
-                                    "Cycle Layout",
-                                    Some(CycleCanvasLayout.boxed_clone()),
-                                    move |window, cx| {
-                                        window.dispatch_action(CycleCanvasLayout.boxed_clone(), cx);
-                                    },
-                                )
-                                .separator()
-                                .action("Save Layout As…", SaveCurrentCanvasLayoutAs.boxed_clone())
-                                .action(
-                                    "Manage Saved Layouts…",
-                                    ManageSavedCanvasLayouts.boxed_clone(),
-                                )
-                                .action_checked_with_disabled(
-                                    "Restore Previous Layout",
-                                    RestorePreviousCanvasLayout.boxed_clone(),
-                                    false,
-                                    !has_previous_canvas_layout,
-                                )
-                                .when(is_agent && active_canvas_layout_recipe.is_none(), |menu| {
-                                    menu.item(
-                                        ContextMenuEntry::new("Custom Canvas Layout")
-                                            .toggleable(IconPosition::Start, true)
-                                            .disabled(true),
+                    .when(
+                        canvas_layout_menu_visible(paths::APP_NAME, !ai_enabled, show_layout),
+                        |menu| {
+                            menu.separator().submenu(
+                                layout_menu_label,
+                                move |menu, _window, _cx| {
+                                    menu.when(paths::APP_NAME == "Zed", |menu| {
+                                        menu.toggleable_entry(
+                                            "Classic",
+                                            is_editor,
+                                            IconPosition::Start,
+                                            Some(UseClassicLayout.boxed_clone()),
+                                            move |window, cx| {
+                                                window.dispatch_action(
+                                                    UseClassicLayout.boxed_clone(),
+                                                    cx,
+                                                );
+                                            },
+                                        )
+                                        .toggleable_entry(
+                                            "Canvas",
+                                            is_agent,
+                                            IconPosition::Start,
+                                            Some(UseAgenticLayout.boxed_clone()),
+                                            move |window, cx| {
+                                                window.dispatch_action(
+                                                    UseAgenticLayout.boxed_clone(),
+                                                    cx,
+                                                );
+                                            },
+                                        )
+                                        .separator()
+                                    })
+                                    .toggleable_entry(
+                                        if paths::APP_NAME == "Zed" {
+                                            "Full"
+                                        } else {
+                                            "Work Area + Files"
+                                        },
+                                        active_canvas_layout_recipe == Some("full"),
+                                        IconPosition::Start,
+                                        Some(ApplyCanvasFullLayout.boxed_clone()),
+                                        move |window, cx| {
+                                            window.dispatch_action(
+                                                ApplyCanvasFullLayout.boxed_clone(),
+                                                cx,
+                                            );
+                                        },
                                     )
-                                })
-                                .when(is_custom, |menu| {
-                                    menu.item(
-                                        ContextMenuEntry::new("Custom")
-                                            .toggleable(IconPosition::Start, true)
-                                            .disabled(true),
+                                    .toggleable_entry(
+                                        if paths::APP_NAME == "Zed" {
+                                            "Agent Control"
+                                        } else {
+                                            "Work Area + Built-in Agent"
+                                        },
+                                        active_canvas_layout_recipe == Some("agent_control"),
+                                        IconPosition::Start,
+                                        Some(ApplyCanvasAgentControlLayout.boxed_clone()),
+                                        move |window, cx| {
+                                            window.dispatch_action(
+                                                ApplyCanvasAgentControlLayout.boxed_clone(),
+                                                cx,
+                                            );
+                                        },
                                     )
-                                })
-                            })
-                    })
+                                    .toggleable_entry(
+                                        if paths::APP_NAME == "Zed" {
+                                            "Focus Editor"
+                                        } else {
+                                            "Focus Work Area"
+                                        },
+                                        active_canvas_layout_recipe == Some("editor_focus"),
+                                        IconPosition::Start,
+                                        Some(ApplyCanvasEditorFocusLayout.boxed_clone()),
+                                        move |window, cx| {
+                                            window.dispatch_action(
+                                                ApplyCanvasEditorFocusLayout.boxed_clone(),
+                                                cx,
+                                            );
+                                        },
+                                    )
+                                    .toggleable_entry(
+                                        if paths::APP_NAME == "Zed" {
+                                            "Code, Run, Observe"
+                                        } else {
+                                            "Split Work Area"
+                                        },
+                                        active_canvas_layout_recipe == Some("code_run_observe"),
+                                        IconPosition::Start,
+                                        Some(ApplyCanvasCodeRunObserveLayout.boxed_clone()),
+                                        move |window, cx| {
+                                            window.dispatch_action(
+                                                ApplyCanvasCodeRunObserveLayout.boxed_clone(),
+                                                cx,
+                                            );
+                                        },
+                                    )
+                                    .toggleable_entry(
+                                        if paths::APP_NAME == "Zed" {
+                                            "Review"
+                                        } else {
+                                            "Work Area + Git"
+                                        },
+                                        active_canvas_layout_recipe == Some("review"),
+                                        IconPosition::Start,
+                                        Some(ApplyCanvasReviewLayout.boxed_clone()),
+                                        move |window, cx| {
+                                            window.dispatch_action(
+                                                ApplyCanvasReviewLayout.boxed_clone(),
+                                                cx,
+                                            );
+                                        },
+                                    )
+                                    .toggleable_entry(
+                                        if paths::APP_NAME == "Zed" {
+                                            "Debug"
+                                        } else {
+                                            "Work Area + Debug"
+                                        },
+                                        active_canvas_layout_recipe == Some("debug"),
+                                        IconPosition::Start,
+                                        Some(ApplyCanvasDebugLayout.boxed_clone()),
+                                        move |window, cx| {
+                                            window.dispatch_action(
+                                                ApplyCanvasDebugLayout.boxed_clone(),
+                                                cx,
+                                            );
+                                        },
+                                    )
+                                    .entry(
+                                        workspace::workspace_layout_cycle_label(paths::APP_NAME),
+                                        Some(CycleCanvasLayout.boxed_clone()),
+                                        move |window, cx| {
+                                            window.dispatch_action(
+                                                CycleCanvasLayout.boxed_clone(),
+                                                cx,
+                                            );
+                                        },
+                                    )
+                                    .separator()
+                                    .action(
+                                        "Save Layout As…",
+                                        SaveCurrentCanvasLayoutAs.boxed_clone(),
+                                    )
+                                    .action(
+                                        "Manage Saved Layouts…",
+                                        ManageSavedCanvasLayouts.boxed_clone(),
+                                    )
+                                    .action_checked_with_disabled(
+                                        "Restore Previous Layout",
+                                        RestorePreviousCanvasLayout.boxed_clone(),
+                                        false,
+                                        !has_previous_canvas_layout,
+                                    )
+                                    .when(
+                                        is_agent && active_canvas_layout_recipe.is_none(),
+                                        |menu| {
+                                            menu.item(
+                                                ContextMenuEntry::new(
+                                                    if paths::APP_NAME == "Zed" {
+                                                        "Custom Canvas Layout"
+                                                    } else {
+                                                        "Custom Workspace Layout"
+                                                    },
+                                                )
+                                                .toggleable(IconPosition::Start, true)
+                                                .disabled(true),
+                                            )
+                                        },
+                                    )
+                                    .when(is_custom, |menu| {
+                                        menu.item(
+                                            ContextMenuEntry::new("Custom")
+                                                .toggleable(IconPosition::Start, true)
+                                                .disabled(true),
+                                        )
+                                    })
+                                },
+                            )
+                        },
+                    )
                     .when(is_signed_in, |this| {
                         this.separator()
                             .action("Sign Out", client::SignOut.boxed_clone())
@@ -2219,8 +2280,9 @@ impl SidebarChrome {
 #[cfg(test)]
 mod dez_sidebar_chrome_tests {
     use super::{
-        CanvasLayoutCommandSet, canvas_layout_command_set, layout_menu_label,
-        project_or_workspace_label, sidebar_identity_row_visible, sidebar_project_identity_visible,
+        CanvasLayoutCommandSet, canvas_layout_command_set, canvas_layout_menu_visible,
+        layout_menu_label, project_or_workspace_label, sidebar_identity_row_visible,
+        sidebar_project_identity_visible,
     };
 
     #[test]
@@ -2233,7 +2295,7 @@ mod dez_sidebar_chrome_tests {
             project_or_workspace_label("Zed", "Recent Projects", "Recent Workspaces"),
             "Recent Projects"
         );
-        assert_eq!(layout_menu_label("Dez", false), "Canvas Layout");
+        assert_eq!(layout_menu_label("Dez", false), "Workspace Layout");
         assert_eq!(layout_menu_label("Zed", false), "Panel Layout");
         assert_eq!(layout_menu_label("Zed", true), "Canvas Layout");
     }
@@ -2264,11 +2326,14 @@ mod dez_sidebar_chrome_tests {
         );
         assert_eq!(
             canvas_layout_command_set("Dez", true, true),
-            CanvasLayoutCommandSet::Hidden
+            CanvasLayoutCommandSet::Essentials
         );
         assert_eq!(
             canvas_layout_command_set("Dez", false, false),
             CanvasLayoutCommandSet::Hidden
         );
+        assert!(canvas_layout_menu_visible("Dez", true, true));
+        assert!(!canvas_layout_menu_visible("Dez", false, false));
+        assert!(!canvas_layout_menu_visible("Zed", true, true));
     }
 }

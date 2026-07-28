@@ -176,9 +176,9 @@ fn agent_panel_zoom_label(app_name: &str, is_zoomed: bool) -> &'static str {
             "Enable Full Screen"
         }
     } else if is_zoomed {
-        "Restore Agent"
+        "Restore Built-in Agent"
     } else {
-        "Expand Agent"
+        "Expand Built-in Agent"
     }
 }
 
@@ -527,6 +527,17 @@ pub fn init(cx: &mut App) {
         |workspace: &mut Workspace, _window, _cx: &mut Context<Workspace>| {
             workspace
                 .register_action(|workspace, _: &NewThread, window, cx| {
+                    if paths::APP_NAME != "Zed" && !crate::built_in_agent_is_ready(cx) {
+                        window.dispatch_action(
+                            Box::new(zed_actions::OpenSettingsAt {
+                                path: "llm_providers".to_string(),
+                                target: None,
+                            }),
+                            cx,
+                        );
+                        return;
+                    }
+
                     crate::agent_thread_item::create_agent_thread(
                         workspace,
                         Agent::NativeAgent,
@@ -5540,7 +5551,7 @@ impl Panel for AgentPanel {
         Some(agent_panel_session_label(
             paths::APP_NAME,
             "Agent Panel",
-            "Agent",
+            "Built-in Agent",
         ))
     }
 
@@ -6002,7 +6013,13 @@ impl AgentPanel {
                 }
             }
 
-            VisibleSurface::Uninitialized => Label::new("Agent").truncate().into_any_element(),
+            VisibleSurface::Uninitialized => Label::new(agent_panel_session_label(
+                paths::APP_NAME,
+                "Agent",
+                "Built-in Agent",
+            ))
+            .truncate()
+            .into_any_element(),
         };
 
         let toolbar_bg = canvas_agent_panel_toolbar_background(cx);
@@ -6376,7 +6393,7 @@ impl AgentPanel {
         };
 
         let empty_state = ProjectEmptyState::new(
-            agent_panel_session_label(paths::APP_NAME, "Agent Panel", "Agent"),
+            agent_panel_session_label(paths::APP_NAME, "Agent Panel", "Built-in Agent"),
             focus_handle.clone(),
             KeyBinding::for_action_in(&open_workspace, &focus_handle, cx),
         );
@@ -6385,8 +6402,8 @@ impl AgentPanel {
         } else {
             empty_state
                 .with_copy(
-                    "Agent needs a Workspace",
-                    "Open a folder or clone a repository, then start an Agent Session.",
+                    "Built-in Agent needs a Workspace",
+                    "Open a folder or clone a repository, then start a Built-in Agent Session.",
                     "Open Workspace…",
                     "Clone Repository…",
                 )
@@ -6695,7 +6712,8 @@ impl AgentPanel {
             .on_click(cx.listener(move |this, _, window, cx| {
                 this.toggle_zoom(&ToggleZoom, window, cx);
             }));
-        let hide_agent_label = "Hide Agent";
+        let hide_agent_label =
+            agent_panel_session_label(paths::APP_NAME, "Hide Agent", "Hide Built-in Agent");
         let hide_agent_button = IconButton::new("hide-agent-drawer", IconName::Close)
             .icon_size(IconSize::Small)
             .tab_index(0isize)
@@ -7055,7 +7073,7 @@ impl Render for AgentPanel {
             .aria_label(if paths::APP_NAME == "Zed" {
                 "Agent Panel"
             } else {
-                "Agent"
+                "Built-in Agent"
             })
             .key_context(self.key_context())
             .relative()
@@ -7542,8 +7560,14 @@ mod tests {
 
     #[test]
     fn agent_zoom_labels_describe_the_region_in_dez() {
-        assert_eq!(agent_panel_zoom_label("Dez", false), "Expand Agent");
-        assert_eq!(agent_panel_zoom_label("Dez", true), "Restore Agent");
+        assert_eq!(
+            agent_panel_zoom_label("Dez", false),
+            "Expand Built-in Agent"
+        );
+        assert_eq!(
+            agent_panel_zoom_label("Dez", true),
+            "Restore Built-in Agent"
+        );
         assert_eq!(agent_panel_zoom_label("Zed", false), "Enable Full Screen");
         assert_eq!(agent_panel_zoom_label("Zed", true), "Disable Full Screen");
     }

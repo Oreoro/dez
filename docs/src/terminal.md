@@ -1,13 +1,15 @@
 ---
 title: Built-in Terminal - Dez
-description: Dez's integrated terminal with main-area tabs, splits, durable sessions, custom shells, and editor integration.
+description: Dez's integrated terminal with main-area tabs, splits, agent supervision, optional Host sessions, custom shells, and editor integration.
 ---
 
 # Terminal
 
 Dez treats terminals as first-class Surfaces beside files, search, diagnostics,
-and review. A terminal opens in the Main Work Area as a normal tab or split; the
-Sessions region only projects its live state and attention.
+and review. A terminal opens in the Main Work Area as a normal tab or split.
+Ordinary shells stay there. Sessions only projects a terminal after Dez detects
+a supported foreground agent or explicitly owns it as a managed agent
+terminal.
 
 Sessions starts closed in a fresh Dez window and may restore open when that
 window previously used it. When open, **Hide Sessions** lives in the Sessions
@@ -30,32 +32,36 @@ and explicit `project_panel.starts_open` preferences remain respected.
 | Command palette   | `Cmd+Shift+P` | `Ctrl+Shift+P` |
 | Split terminal    | `Cmd+D`       | `Ctrl+Shift+5` |
 
-You can also choose **Start Terminal Session** from Sessions, an empty
-Workspace, the persistent **Add to Main Work Area** menu, or the command
-palette. A compact Sessions toolbar may shorten the visible label to **Start
-Terminal**, while its tooltip and accessible name keep the full Main Work Area
-destination. The add control stays available when focus moves to Workspace Tools
-or Agent; those auxiliary regions have their own hide controls and never present
-a second terminal destination.
+You can also choose **Open Agent Terminal** from Sessions or an empty Workspace.
+This opens a normal terminal in the Main Work Area; it does not start an agent
+for you. Run `codex`, `claude`, `opencode`, or another supported CLI in that
+terminal. Dez promotes the same terminal into Sessions when it detects the
+agent. The add control stays available when focus moves to Workspace Tools or
+Agent; those auxiliary regions have their own hide controls and never present a
+second terminal destination.
 
 ### One Terminal Model
 
-Dez has no separate Terminal Panel destination. Every ordinary **Start Terminal
-Session** action opens a main-area terminal Surface in the active Workspace. You
-can:
+Dez has no separate Terminal Panel destination. Every **Open Agent Terminal**
+action opens an ordinary main-area terminal Surface in the active Workspace.
+You can:
 
 - keep it as a tab beside files;
 - split it into the same pane grid;
 - move it with other Surfaces;
-- select its Sessions row to return to the existing Surface; or
-- reattach a Host-owned terminal Session when durable terminals are enabled.
+- run a supported agent and select its Sessions row to return to the existing
+  Surface; or
+- reattach a Host-owned terminal Session when the experimental Terminal Host
+  is explicitly enabled.
 
 ### Foreground agents stay in the terminal
 
 Starting `codex`, `claude`, or another recognized terminal agent does not open
 an Agent panel or create a second Session. The existing terminal remains in the
-Main Work Area while its Sessions row changes to a concise state such as
-**Codex · Running**. Selecting that row returns to the same terminal Surface.
+Main Work Area and is promoted to a concise Sessions row such as **Codex ·
+Running**. Selecting that row returns to the same terminal Surface. When an
+ordinary detected agent exits back to its shell, the terminal stays open in the
+Main Work Area and leaves Sessions.
 
 For Host-owned terminals, Dez observes the PTY foreground process group and
 stores only its normalized command name in the bounded Session snapshot. This
@@ -67,6 +73,23 @@ For ordinary terminals, foreground inspection coalesces output bursts while
 retaining one trailing refresh. Starting Codex while an earlier shell
 inspection is still running therefore cannot leave Sessions permanently stuck
 on the shell once the TUI becomes quiet.
+
+### What Dez can and cannot observe
+
+Dez v0.0.2 observes terminals created inside Dez and, on macOS, can list
+current-user TTYs owned by another supported terminal application or IDE under
+**On This Mac**. An external row is ephemeral and read-only. It may show the
+TTY, foreground executable, owning application, current directory when
+available, and a supported-agent hint. Selecting it reveals the owning
+application.
+
+Dez does not capture that terminal's transcript or arguments, accept its input,
+adopt its PTY, restore its process, or attribute its work. The row disappears
+when the external TTY does.
+
+Run the agent in a Dez-owned terminal when you want it supervised. A future
+adapter may adopt explicitly shared `tmux` sessions, but no such external
+terminal control is part of v0.0.2.
 
 Reattaching a detached Session shows **Opening…** in its existing row
 immediately. Repeated clicks do not create duplicate attachment work or another
@@ -80,47 +103,50 @@ or remove the dead reference from Sessions.
 
 ### Moving from a Session into the IDE
 
-The selected Sessions row and the active standalone terminal expose one shared
-handoff:
+The selected agent Session and its active terminal expose one shared handoff:
 
 | Intent                         | Sessions shortcut        |
 | ------------------------------ | ------------------------ |
 | Return to the existing Session | `Enter` or `Shift+Enter` |
 | Open its Workspace files       | `Shift+F`                |
 | Review its changes             | `Shift+G`                |
-| Open its Session details       | `Shift+V`                |
+| Open its run details           | `Shift+V`                |
 
-The terminal context bar exposes **Files**, **Review Changes**, and **Session
-Details** directly. The Sessions context menu retains the same actions when a
-compact row has no room for every control. Compatibility command identifiers may
-still include the inherited Session Rail name, but visible Dez chrome uses
-**Sessions**.
+The terminal context bar exposes **Files**, **Review Changes**, and **Terminal
+Details**. A detected or managed agent terminal projects its live state into
+Sessions; an ordinary shell remains only a terminal and never becomes a
+synthetic Session. The Sessions context menu retains the same handoff actions
+when a compact row has no room for every control. Compatibility command
+identifiers may still include the inherited Session Rail name, but visible Dez
+chrome uses **Sessions**.
 
-After the welcome guide disappears, **Session Details** keeps a compact **How
-Dez Works** explanation available: run computation in this Terminal Session,
-supervise live state and attention in Sessions, then review the same Workspace
-through Files and Git. This keeps orientation one click away without adding a
-permanent help row.
+After the welcome guide disappears, **Terminal Details** keeps a compact **How
+Dez Works** explanation available: run work in the terminal, supervise detected
+agent state and attention in Sessions, then review the same Workspace through
+Files and Git. This keeps orientation one click away without adding a permanent
+help row.
 
-An **Open Scratch Terminal** begins without a project tree by design. Its
-context strip shows **Open Workspace** instead of pretending that Files or Git
-review are already available. Its picker accepts folders only. Every selected
-folder is added to the same window, so the running Terminal Session remains
-intact and gains the normal Files and review handoff.
+Dez does not advertise a pathless Agent Terminal before a Workspace is open.
+If an existing scratch terminal is present, it does not appear in Sessions
+until a supported agent is detected. Its context strip shows **Open Workspace**
+instead of pretending that Files or Git review are already available. Its
+picker accepts folders only. Every selected folder is added to the same window,
+so the running terminal remains intact and gains the normal Files and review
+handoff.
 
 These actions first activate the selected Session and its owning Workspace. If
 that Workspace is closed, **Files** reopens it, restores the selected Session,
 and only then reveals the existing project tree. It never fails silently or
 creates a replacement Session. **Files** reveals the existing Workspace tree.
-**Review Changes** opens the
-Agent change review for an Agent Session. For a Terminal Session, it reveals
-Git Changes and opens the first uncommitted diff in the Main Work Area. In a
-multi-repository Workspace, it keeps the active repository when that repository
-has changes; otherwise it selects the first dirty repository deterministically.
+**Review Changes** opens the Agent change review for an Agent Session. For a
+detected CLI-agent terminal, it reveals Git Changes and opens the first
+uncommitted diff in the Main Work Area. In a multi-repository Workspace, it
+keeps the active repository when that repository has changes; otherwise it
+selects the first dirty repository deterministically.
 A completely clean Workspace remains on Git's explicit clean state. The review
 tab is named **Diff · filename**, with diff base and relative path retained in
 its tooltip.
-**Session Details** opens the evidence-backed run summary. None of these actions
+**Terminal Details** opens the evidence-backed terminal summary. None of these actions
 starts another terminal or creates a second project context.
 
 **Files** and **Review Changes** are idempotent destination actions. Repeating
@@ -128,9 +154,9 @@ them keeps the requested tool visible and focused instead of toggling it closed.
 At narrow pane widths, the action labels yield to their icons before the
 lifecycle/repository metadata or toolbar can clip. Every icon retains its full
 accessible name and matching tooltip, and the full metadata remains available
-in **Session Details**.
+in **Terminal Details**.
 
-Inside Session Details, **Evidence** explains the boundary behind those facts:
+Inside Terminal Details, **Evidence** explains the boundary behind those facts:
 lifecycle is observed from the Terminal and Host, Git counts belong to the
 Workspace rather than automatically to this Session, and agent confidence or
 checks require trusted evidence. Arbitrary terminal text remains display
@@ -138,28 +164,31 @@ content, not proof.
 
 ## Working with Multiple Terminals
 
-Create additional terminals from **Start Terminal Session**. Each terminal is an
-independent main-area tab and keeps the active Workspace's directory context.
+Create additional terminals from the normal terminal command or **Open Agent
+Terminal**. Each terminal is an independent main-area tab and keeps the active
+Workspace's directory context. Only detected or managed agent terminals appear
+in Sessions.
 
 Split terminals horizontally with `Cmd+D` (macOS) or `Ctrl+Shift+5` (Linux/Windows).
 
 ### Naming Terminals
 
 An ordinary shell terminal follows the title supplied by its shell. Dez retains
-that full title for Sessions, Session Switcher, durable Host metadata, and
-tooltips; tabs and rows shorten it only when space requires.
+that full title for its tab and tooltip. When the terminal becomes a detected
+or managed agent Session, the same identity is reused by Sessions, Session
+Switcher, and Host ownership metadata.
 
-Double-click a terminal tab, use its **Rename Terminal…** context action, or
-rename its Terminal Session from Sessions. A normal-width Sessions
-row exposes a pencil when the row is hovered or keyboard-selected. Narrow rows
-retain rename in the context menu and **Session Rail: Rename Selected Session**
-command instead of crowding the lifecycle controls. Leading and trailing
-whitespace is removed. Clearing the custom name returns to the live shell title.
-A running-agent or shell status prefix continues to update around the custom
-name. Task terminals retain their task label.
+Double-click a terminal tab or use its **Rename Terminal…** context action.
+Detected or managed agent terminals can also be renamed from Sessions. A
+normal-width Sessions row exposes a pencil when the row is hovered or
+keyboard-selected. Narrow rows retain rename in the context menu and **Session
+Rail: Rename Selected Session** command instead of crowding the lifecycle
+controls. Leading and trailing whitespace is removed. Clearing the custom name
+returns to the live terminal title. A running-agent status prefix continues to
+update around the custom name. Task terminals retain their task label.
 
 Hover a terminal tab for its current status and ownership. When available, the
-tooltip distinguishes the **Working directory**, **Process ID**, and persistent
+tooltip distinguishes the **Working directory**, **Process ID**, and Host
 **Session ID** instead of presenting those values as generic metadata.
 
 ## Close, Detach, and Terminate
@@ -170,22 +199,23 @@ These actions have deliberately different meanings:
   shell is still running, Dez uses the normal dirty-item protection before
   discarding it.
 - **Detach Terminal** closes a Host-owned terminal Surface without stopping
-  its persistent computation. Its Session remains available from Sessions.
-- **Terminate Terminal Session…** is destructive. It is separated from
-  close/detach in the terminal context menu and opens a critical confirmation
-  explaining that the shell and any foreground process will stop. It is not
-  offered for an exited or unavailable terminal.
+  its Host-owned process. Its Sessions row remains available while the Host
+  continues to report that process.
+- **End Terminal…** is destructive. It is separated from close/detach in the
+  terminal context menu and opens a critical confirmation explaining that the
+  shell and any foreground command will stop. It is not offered for an exited
+  or unavailable terminal.
 
 Termination always goes through the selected terminal's own controller. The
 presence of another local Host does not change which process the action owns.
 
-## Unavailable Sessions
+## Unavailable Terminals
 
-When Dez cannot reconnect a saved Terminal Session, it preserves the original
-Surface title and shows one **Terminal Session unavailable** warning outside the
-terminal grid. The warning names the concrete failure and confirms that Dez did
-not start a replacement shell. The inactive grid contains no synthetic output
-or fake cursor.
+When Dez cannot reconnect a saved terminal, it preserves the original tab title
+and shows one **Terminal unavailable** warning outside the terminal grid. The
+warning names the concrete failure and confirms that Dez did not start a
+replacement shell. The inactive grid contains no synthetic output or fake
+cursor.
 
 Choose **Start Fresh Terminal** only when you want separate computation in the
 Main Work Area. It does not reconnect, replay, or replace the unavailable

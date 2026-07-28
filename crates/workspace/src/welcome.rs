@@ -7,8 +7,8 @@ use crate::{
 use git::Clone as GitClone;
 use gpui::WeakEntity;
 use gpui::{
-    Action, App, Context, Entity, EventEmitter, FocusHandle, Focusable, InteractiveElement,
-    ParentElement, Render, Styled, Task, TaskExt, Window, actions,
+    Action, App, Context, Entity, EventEmitter, FocusHandle, Focusable, FontWeight,
+    InteractiveElement, ParentElement, Pixels, Render, Styled, Task, TaskExt, Window, actions, px,
 };
 use menu::{SelectNext, SelectPrevious};
 use paths::APP_NAME;
@@ -16,7 +16,7 @@ use paths::APP_NAME;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use settings::{DefaultOpenBehavior, Settings};
-use ui::{ButtonLike, Divider, DividerColor, KeyBinding, prelude::*};
+use ui::{ButtonLike, Divider, DividerColor, KeyBinding, prelude::*, theme_is_transparent};
 use util::ResultExt;
 use zed_actions::{Extensions, OpenKeymap, OpenOnboarding, OpenSettings, command_palette};
 
@@ -54,7 +54,7 @@ impl RenderOnce for SectionHeader {
             .w_full()
             .min_w_0()
             .px_1()
-            .mb_2()
+            .mb_1()
             .gap_2()
             .child(
                 div().flex_none().child(
@@ -64,7 +64,9 @@ impl RenderOnce for SectionHeader {
                         .size(LabelSize::XSmall),
                 ),
             )
-            .child(Divider::horizontal().color(DividerColor::BorderVariant))
+            .when(APP_NAME == "Zed", |this| {
+                this.child(Divider::horizontal().color(DividerColor::BorderVariant))
+            })
     }
 }
 
@@ -103,7 +105,7 @@ impl RenderOnce for SectionButton {
         let id = format!("onb-button-{}-{}", self.label, self.tab_index);
         let action_ref: &dyn Action = &*self.action;
         let icon_color = if self.primary {
-            Color::Default
+            Color::Accent
         } else {
             Color::Muted
         };
@@ -111,9 +113,13 @@ impl RenderOnce for SectionButton {
         ButtonLike::new(id)
             .tab_index(self.tab_index as isize)
             .aria_label(self.label.clone())
-            .when(self.primary, |this| {
+            .when(APP_NAME != "Zed", |this| this.style(ButtonStyle::Subtle))
+            .when(self.primary && APP_NAME == "Zed", |this| {
                 this.style(ButtonStyle::Filled)
                     .aria_description("Recommended first step")
+            })
+            .when(self.primary && APP_NAME != "Zed", |this| {
+                this.aria_description("Recommended first step")
             })
             .full_width()
             .size(ButtonSize::Medium)
@@ -125,7 +131,10 @@ impl RenderOnce for SectionButton {
                         h_flex()
                             .gap_2()
                             .child(Icon::new(self.icon).color(icon_color).size(IconSize::Small))
-                            .child(Label::new(self.label)),
+                            .child(
+                                Label::new(self.label)
+                                    .when(self.primary, |label| label.weight(FontWeight::MEDIUM)),
+                            ),
                     )
                     .child(
                         KeyBinding::for_action_in(action_ref, &self.focus_handle, cx)
@@ -187,14 +196,32 @@ fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Write. Delegate. Watch. Verify."
     } else if has_workspace {
-        "Terminal and Agent work stays connected to this Workspace and reviewable in the IDE."
+        "Run an agent here. Supervise it in Agent Sessions. Review its work in Files and Git."
     } else {
-        "Open a Workspace to connect Terminal and Agent work with files, Git, diagnostics, and diffs."
+        "Open a project, run an agent in its terminal, and review the work in one place."
     }
+}
+
+fn welcome_surface_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" { "Welcome" } else { "Home" }
 }
 
 fn welcome_emphasizes_first_action(app_name: &str) -> bool {
     app_name != "Zed"
+}
+
+fn welcome_run_step_description(app_name: &str, has_workspace: bool) -> &'static str {
+    if app_name == "Zed" {
+        if has_workspace {
+            "Start a Terminal Session in this Workspace."
+        } else {
+            "Open a Workspace, then start a Terminal Session in its codebase."
+        }
+    } else if has_workspace {
+        "Open an Agent Terminal here, then run Codex, Claude Code, or OpenCode."
+    } else {
+        "Open a Workspace, then run an agent in its Main Work Area."
+    }
 }
 
 const ZED_CONTENT: (Section, Section) = (
@@ -263,7 +290,7 @@ const ZED_CONTENT: (Section, Section) = (
 
 const DEZ_CONTENT: (Section, Section) = (
     Section {
-        title: "Start a Dez Workflow",
+        title: "Start",
         entries: &[
             SectionEntry {
                 icon: IconName::FolderOpen,
@@ -277,12 +304,6 @@ const DEZ_CONTENT: (Section, Section) = (
                 action: &GitClone,
                 visibility_guard: SectionVisibility::Always,
             },
-            SectionEntry {
-                icon: IconName::Terminal,
-                title: "Open Scratch Terminal",
-                action: &NEW_CENTER_TERMINAL,
-                visibility_guard: SectionVisibility::Always,
-            },
         ],
     },
     Section {
@@ -293,11 +314,11 @@ const DEZ_CONTENT: (Section, Section) = (
 
 const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
     Section {
-        title: "Start in This Workspace",
+        title: "This Workspace",
         entries: &[
             SectionEntry {
                 icon: IconName::Terminal,
-                title: "Start Terminal Session",
+                title: "Open Agent Terminal",
                 action: &NEW_CENTER_TERMINAL,
                 visibility_guard: SectionVisibility::Always,
             },
@@ -321,6 +342,7 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
     },
 );
 
+#[derive(Clone, Copy)]
 struct Section {
     title: &'static str,
     entries: &'static [SectionEntry],
@@ -334,7 +356,9 @@ impl Section {
         emphasize_first: bool,
     ) -> impl IntoElement {
         v_flex()
-            .min_w_full()
+            .w_full()
+            .min_w_0()
+            .gap_0p5()
             .child(SectionHeader::new(self.title))
             .children(
                 self.entries
@@ -352,6 +376,48 @@ pub struct WelcomePage {
     focus_handle: FocusHandle,
     fallback_to_recent_projects: bool,
     recent_workspaces: Option<Vec<RecentWorkspace>>,
+}
+
+const DEZ_WELCOME_COMPACT_BREAKPOINT: Pixels = px(760.);
+const DEZ_WELCOME_SPLIT_BREAKPOINT: Pixels = px(980.);
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum WelcomeRecentState {
+    Hidden,
+    Loading,
+    Empty,
+    Ready,
+}
+
+fn welcome_recent_state(
+    app_name: &str,
+    fallback_to_recent_projects: bool,
+    recent_workspaces_loaded: bool,
+    recent_workspace_count: usize,
+) -> WelcomeRecentState {
+    if !fallback_to_recent_projects {
+        WelcomeRecentState::Hidden
+    } else if recent_workspace_count > 0 {
+        WelcomeRecentState::Ready
+    } else if app_name == "Zed" {
+        WelcomeRecentState::Hidden
+    } else if recent_workspaces_loaded {
+        WelcomeRecentState::Empty
+    } else {
+        WelcomeRecentState::Loading
+    }
+}
+
+fn dez_welcome_uses_compact_spacing(app_name: &str, viewport_width: Pixels) -> bool {
+    app_name != "Zed" && viewport_width < DEZ_WELCOME_COMPACT_BREAKPOINT
+}
+
+fn dez_welcome_uses_split_layout(
+    app_name: &str,
+    viewport_width: Pixels,
+    has_secondary_content: bool,
+) -> bool {
+    app_name != "Zed" && has_secondary_content && viewport_width >= DEZ_WELCOME_SPLIT_BREAKPOINT
 }
 
 impl WelcomePage {
@@ -449,6 +515,44 @@ impl WelcomePage {
             .children(recent_projects)
     }
 
+    fn render_recent_workspace_status(
+        title: &'static str,
+        description: &'static str,
+        icon: IconName,
+    ) -> impl IntoElement {
+        v_flex()
+            .w_full()
+            .child(SectionHeader::new("Recent Workspaces"))
+            .child(
+                h_flex()
+                    .w_full()
+                    .min_w_0()
+                    .items_start()
+                    .gap_2()
+                    .px_1()
+                    .py_2()
+                    .role(gpui::Role::Status)
+                    .aria_label(format!("{title}. {description}"))
+                    .child(
+                        div()
+                            .flex_none()
+                            .pt_0p5()
+                            .child(Icon::new(icon).size(IconSize::Small).color(Color::Muted)),
+                    )
+                    .child(
+                        v_flex()
+                            .min_w_0()
+                            .gap_0p5()
+                            .child(Label::new(title).size(LabelSize::Small))
+                            .child(
+                                Label::new(description)
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Muted),
+                            ),
+                    ),
+            )
+    }
+
     fn render_recent_project(
         &self,
         project_index: usize,
@@ -477,7 +581,10 @@ impl WelcomePage {
 }
 
 impl Render for WelcomePage {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let is_dez = APP_NAME != "Zed";
+        let viewport_width = window.viewport_size().width;
+        let compact_spacing = dez_welcome_uses_compact_spacing(APP_NAME, viewport_width);
         let has_workspace = self
             .workspace
             .upgrade()
@@ -509,49 +616,121 @@ impl Render for WelcomePage {
             })
             .collect::<Vec<_>>();
 
-        let showing_recent_projects =
-            self.fallback_to_recent_projects && !recent_projects.is_empty();
-        let secondary_content = if showing_recent_projects {
-            Some(
+        let recent_state = welcome_recent_state(
+            APP_NAME,
+            self.fallback_to_recent_projects,
+            self.recent_workspaces.is_some(),
+            recent_projects.len(),
+        );
+        let secondary_content = match recent_state {
+            WelcomeRecentState::Ready => Some(
                 self.render_recent_project_section(recent_projects)
                     .into_any_element(),
-            )
-        } else if second_section.entries.is_empty() {
-            None
-        } else {
-            Some(
+            ),
+            WelcomeRecentState::Loading => Some(
+                Self::render_recent_workspace_status(
+                    "Loading recent Workspaces",
+                    "Reading your local Workspace history.",
+                    IconName::Clock,
+                )
+                .into_any_element(),
+            ),
+            WelcomeRecentState::Empty => Some(
+                Self::render_recent_workspace_status(
+                    "No recent Workspaces",
+                    "Open a Workspace and it will appear here.",
+                    IconName::Folder,
+                )
+                .into_any_element(),
+            ),
+            WelcomeRecentState::Hidden if !second_section.entries.is_empty() => Some(
                 second_section
                     .render(first_section_entries, &self.focus_handle, false)
                     .into_any_element(),
-            )
+            ),
+            WelcomeRecentState::Hidden => None,
         };
+        let has_secondary_content = secondary_content.is_some();
+        let split_layout =
+            dez_welcome_uses_split_layout(APP_NAME, viewport_width, has_secondary_content);
 
-        let welcome_label = if self.fallback_to_recent_projects {
+        let welcome_label = if is_dez {
+            "Dez Home".to_string()
+        } else if self.fallback_to_recent_projects {
             format!("Welcome back to {APP_NAME}")
         } else {
             format!("Welcome to {APP_NAME}")
+        };
+        let supervise_surface = if APP_NAME == "Zed" {
+            "Sessions"
+        } else {
+            "Agent Sessions"
+        };
+        let supervise_description = if APP_NAME == "Zed" {
+            "Sessions keeps live state, attention, and recovery visible."
+        } else {
+            "Agent Sessions surfaces active agent work, attention, and recovery without moving ordinary terminals out of the Main Work Area."
         };
         let workflow_steps = [
             (
                 IconName::Terminal,
                 "Run",
-                if has_workspace {
-                    "Start a Terminal Session in this Workspace."
-                } else {
-                    "Open a Workspace, then start a Terminal Session in its codebase."
-                },
+                "Terminal",
+                welcome_run_step_description(APP_NAME, has_workspace),
             ),
             (
                 IconName::ListTree,
                 "Supervise",
-                "Sessions keeps live state, attention, and recovery visible.",
+                supervise_surface,
+                supervise_description,
             ),
             (
                 IconName::Diff,
                 "Review",
+                "Files & Git",
                 "Files, Git, diffs, diagnostics, and Debug stay in the Main Work Area.",
             ),
         ];
+        let sections = if split_layout {
+            h_flex()
+                .id("welcome-sections")
+                .w_full()
+                .min_w_0()
+                .items_start()
+                .gap_6()
+                .child(div().min_w_0().flex_1().child(first_section.render(
+                    0,
+                    &self.focus_handle,
+                    welcome_emphasizes_first_action(APP_NAME),
+                )))
+                .when_some(secondary_content, |this, secondary_content| {
+                    this.child(div().min_w_0().flex_1().child(secondary_content))
+                })
+                .into_any_element()
+        } else {
+            v_flex()
+                .id("welcome-sections")
+                .w_full()
+                .min_w_0()
+                .gap_4()
+                .when(is_dez && !has_secondary_content, |this| {
+                    this.max_w(rems_from_px(520.))
+                })
+                .child(first_section.render(
+                    0,
+                    &self.focus_handle,
+                    welcome_emphasizes_first_action(APP_NAME),
+                ))
+                .when_some(secondary_content, |this, secondary_content| {
+                    this.child(secondary_content)
+                })
+                .into_any_element()
+        };
+        let welcome_background = if is_dez && theme_is_transparent(cx) {
+            gpui::transparent_black()
+        } else {
+            cx.theme().colors().editor_background
+        };
 
         h_flex()
             .id("welcome-page")
@@ -563,17 +742,22 @@ impl Render for WelcomePage {
             .on_action(cx.listener(Self::select_next))
             .on_action(cx.listener(Self::open_recent_project))
             .size_full()
-            .bg(cx.theme().colors().editor_background)
+            .bg(welcome_background)
             .justify_center()
+            .when(is_dez, |this| this.items_start().justify_start())
             .child(
                 v_flex()
                     .id("welcome-content")
-                    .p_6()
-                    .max_w(rems_from_px(640.))
-                    .size_full()
-                    .gap_5()
+                    .w_full()
+                    .h_full()
+                    .max_w(rems_from_px(if APP_NAME == "Zed" { 640. } else { 1040. }))
+                    .when(APP_NAME == "Zed", |this| this.p_6().gap_5())
+                    .when(is_dez && compact_spacing, |this| this.px_3().py_4().gap_4())
+                    .when(is_dez && !compact_spacing, |this| {
+                        this.px_6().py_6().gap_5()
+                    })
                     .overflow_y_scroll()
-                    .child(
+                    .child(if APP_NAME == "Zed" {
                         h_flex()
                             .w_full()
                             .items_center()
@@ -594,72 +778,98 @@ impl Render for WelcomePage {
                                             .size(LabelSize::XSmall)
                                             .color(Color::Muted),
                                     )
-                                    .child(Headline::new(welcome_label))
+                                    .child(Headline::new(welcome_label.clone()))
                                     .child(
                                         Label::new(welcome_summary(APP_NAME, has_workspace))
                                             .size(LabelSize::Small)
                                             .color(Color::Muted),
                                     ),
-                            ),
-                    )
+                            )
+                            .into_any_element()
+                    } else {
+                        h_flex()
+                            .w_full()
+                            .items_start()
+                            .gap_3()
+                            .child(
+                                div()
+                                    .size_8()
+                                    .flex_none()
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .child(
+                                        Icon::new(if has_workspace {
+                                            IconName::Terminal
+                                        } else {
+                                            IconName::FolderOpen
+                                        })
+                                        .size(IconSize::Small)
+                                        .color(Color::Accent),
+                                    ),
+                            )
+                            .child(
+                                v_flex()
+                                    .min_w_0()
+                                    .gap_1()
+                                    .child(
+                                        div().font_weight(FontWeight::MEDIUM).child(
+                                            Headline::new(if has_workspace {
+                                                "Start in this Workspace"
+                                            } else {
+                                                "Open a Workspace"
+                                            })
+                                            .size(HeadlineSize::Large),
+                                        ),
+                                    )
+                                    .child(
+                                        Label::new(welcome_summary(APP_NAME, has_workspace))
+                                            .size(LabelSize::Small)
+                                            .color(Color::Muted),
+                                    ),
+                            )
+                            .into_any_element()
+                    })
                     .when(APP_NAME != "Zed", |this| {
                         this.child(
-                            v_flex()
+                            h_flex()
                                 .id("dez-workflow")
-                                .role(gpui::Role::Region)
+                                .role(gpui::Role::List)
                                 .aria_label("How Dez works: Run, Supervise, Review")
                                 .w_full()
-                                .gap_1()
-                                .child(SectionHeader::new("How Dez Works"))
-                                .child(
-                                    v_flex()
-                                        .id("dez-workflow-steps")
-                                        .role(gpui::Role::List)
-                                        .aria_label("Run, Supervise, Review workflow")
-                                        .w_full()
-                                        .gap_1()
-                                        .children(workflow_steps.into_iter().enumerate().map(
-                                            |(index, (icon, title, description))| {
-                                                h_flex()
-                                                    .id(("dez-workflow-step", index))
-                                                    .role(gpui::Role::ListItem)
-                                                    .aria_label(format!("{title}. {description}"))
-                                                    .w_full()
-                                                    .items_start()
-                                                    .gap_2()
-                                                    .py_1p5()
-                                                    .child(
-                                                        Icon::new(icon)
-                                                            .size(IconSize::XSmall)
-                                                            .color(Color::Accent),
-                                                    )
-                                                    .child(
-                                                        v_flex()
-                                                            .min_w_0()
-                                                            .gap_0p5()
-                                                            .child(
-                                                                Label::new(title)
-                                                                    .size(LabelSize::Small),
-                                                            )
-                                                            .child(
-                                                                Label::new(description)
-                                                                    .size(LabelSize::XSmall)
-                                                                    .color(Color::Muted),
-                                                            ),
-                                                    )
-                                            },
-                                        )),
-                                ),
+                                .flex_wrap()
+                                .items_center()
+                                .gap_x_2()
+                                .gap_y_1()
+                                .when(compact_spacing, |this| {
+                                    this.flex_col().items_start().gap_y_2()
+                                })
+                                .children(workflow_steps.into_iter().enumerate().map(
+                                    |(index, (icon, title, destination, description))| {
+                                        h_flex()
+                                            .id(("dez-workflow-step", index))
+                                            .role(gpui::Role::ListItem)
+                                            .aria_label(format!("{title}. {description}"))
+                                            .items_center()
+                                            .gap_1()
+                                            .when(index > 0 && !compact_spacing, |this| {
+                                                this.child(
+                                                    Icon::new(IconName::ArrowRight)
+                                                        .size(IconSize::XSmall)
+                                                        .color(Color::Muted),
+                                                )
+                                            })
+                                            .child(Icon::new(icon).size(IconSize::XSmall))
+                                            .child(
+                                                Label::new(format!("{title} in {destination}"))
+                                                    .size(LabelSize::XSmall)
+                                                    .color(Color::Muted),
+                                            )
+                                    },
+                                )),
                         )
                     })
-                    .child(first_section.render(
-                        Default::default(),
-                        &self.focus_handle,
-                        welcome_emphasizes_first_action(APP_NAME),
-                    ))
-                    .when_some(secondary_content, |this, secondary_content| {
-                        this.child(secondary_content)
-                    })
+                    .child(sections)
                     .when(
                         APP_NAME == "Zed" && !self.fallback_to_recent_projects,
                         |this| {
@@ -693,7 +903,7 @@ impl Item for WelcomePage {
     type Event = ItemEvent;
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
-        "Welcome".into()
+        welcome_surface_label(APP_NAME).into()
     }
 
     fn telemetry_event_text(&self) -> Option<&'static str> {
@@ -871,22 +1081,28 @@ mod tests {
     fn dez_welcome_summary_teaches_the_workflow_without_a_promotion_card() {
         assert_eq!(
             welcome_summary("Dez", false),
-            "Open a Workspace to connect Terminal and Agent work with files, Git, diagnostics, and diffs."
+            "Open a project, run an agent in its terminal, and review the work in one place."
         );
         assert_eq!(
             welcome_summary("Dez", true),
-            "Terminal and Agent work stays connected to this Workspace and reviewable in the IDE."
+            "Run an agent here. Supervise it in Agent Sessions. Review its work in Files and Git."
         );
         assert_eq!(
             welcome_summary("Zed", true),
             "Write. Delegate. Watch. Verify."
         );
+        assert_eq!(welcome_surface_label("Dez"), "Home");
+        assert_eq!(welcome_surface_label("Zed"), "Welcome");
         assert_eq!(DEZ_CONTENT.0.entries[0].title, "Open Workspace");
         assert_eq!(DEZ_CONTENT.0.entries[1].title, "Clone Repository");
-        assert_eq!(DEZ_CONTENT.0.entries[2].title, "Open Scratch Terminal");
+        assert_eq!(
+            DEZ_CONTENT.0.entries.len(),
+            2,
+            "the empty Dez window must not offer a pathless agent-terminal dead end"
+        );
         assert_eq!(
             DEZ_WORKSPACE_CONTENT.0.entries[0].title,
-            "Start Terminal Session"
+            "Open Agent Terminal"
         );
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[1].title, "Open Files");
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[2].title, "New File");
@@ -906,5 +1122,50 @@ mod tests {
         assert_eq!(OPEN_WORKSPACE.create_new_window, Some(false));
         assert!(welcome_emphasizes_first_action("Dez"));
         assert!(!welcome_emphasizes_first_action("Zed"));
+        assert_eq!(
+            welcome_run_step_description("Dez", true),
+            "Open an Agent Terminal here, then run Codex, Claude Code, or OpenCode."
+        );
+        assert_eq!(
+            welcome_run_step_description("Dez", false),
+            "Open a Workspace, then run an agent in its Main Work Area."
+        );
+        assert_eq!(
+            welcome_run_step_description("Zed", true),
+            "Start a Terminal Session in this Workspace."
+        );
+    }
+
+    #[test]
+    fn dez_welcome_layout_uses_space_without_becoming_a_dashboard() {
+        assert!(dez_welcome_uses_compact_spacing("Dez", px(600.)));
+        assert!(!dez_welcome_uses_compact_spacing("Dez", px(760.)));
+        assert!(!dez_welcome_uses_compact_spacing("Zed", px(600.)));
+
+        assert!(!dez_welcome_uses_split_layout("Dez", px(979.), true));
+        assert!(dez_welcome_uses_split_layout("Dez", px(980.), true));
+        assert!(!dez_welcome_uses_split_layout("Dez", px(1400.), false));
+        assert!(!dez_welcome_uses_split_layout("Zed", px(1400.), true));
+
+        assert_eq!(
+            welcome_recent_state("Dez", true, false, 0),
+            WelcomeRecentState::Loading
+        );
+        assert_eq!(
+            welcome_recent_state("Dez", true, true, 0),
+            WelcomeRecentState::Empty
+        );
+        assert_eq!(
+            welcome_recent_state("Dez", true, true, 2),
+            WelcomeRecentState::Ready
+        );
+        assert_eq!(
+            welcome_recent_state("Dez", false, true, 2),
+            WelcomeRecentState::Hidden
+        );
+        assert_eq!(
+            welcome_recent_state("Zed", true, true, 0),
+            WelcomeRecentState::Hidden
+        );
     }
 }

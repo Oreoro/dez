@@ -114,6 +114,10 @@ fn unavailable_session_restores_placeholder_surface(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn terminal_container_reuses_terminal_material(app_name: &str, transparent_theme: bool) -> bool {
+    app_name != "Zed" && transparent_theme
+}
+
 fn terminal_foreground_agent_presentation(
     app_name: &str,
     command: Option<&str>,
@@ -253,8 +257,12 @@ fn terminal_tab_status_label_visible(status: &str) -> bool {
     matches!(status, "Failed" | "Unavailable" | "Status unknown")
 }
 
-fn terminal_surface_accessibility_label(title: &str, status: &str) -> String {
-    format!("Terminal Session: {title}. Status: {status}")
+fn terminal_surface_accessibility_label(app_name: &str, title: &str, status: &str) -> String {
+    if app_name == "Zed" {
+        format!("Terminal Session: {title}. Status: {status}")
+    } else {
+        format!("Terminal: {title}. Status: {status}")
+    }
 }
 
 fn terminal_context_action_label_visibility(
@@ -294,12 +302,16 @@ fn terminal_unavailable_description(reason: Option<&str>) -> String {
     )
 }
 
-fn terminal_failed_to_start_guidance(app_name: &str) -> &'static str {
+pub(crate) fn terminal_failed_to_start_guidance(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "No terminal process was started. Review terminal settings, then use New Terminal to try again."
     } else {
-        "No terminal process was started. Review terminal settings, then start a new Terminal Session."
+        "No terminal process was started. Review terminal settings, then open a new terminal."
     }
+}
+
+pub(crate) fn terminal_launch_failure_is_top_anchored(app_name: &str) -> bool {
+    app_name != "Zed"
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -387,8 +399,12 @@ fn terminal_close_label(is_hosted: bool) -> &'static str {
     }
 }
 
-fn terminal_terminate_label() -> &'static str {
-    "Terminate Terminal Session…"
+fn terminal_terminate_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Terminate Terminal Session…"
+    } else {
+        "End Terminal…"
+    }
 }
 
 fn terminal_termination_available(session_unavailable: bool, process_exited: bool) -> bool {
@@ -414,31 +430,58 @@ fn terminal_has_persistent_owner(terminal: &Terminal, cx: &App) -> bool {
     })
 }
 
-fn terminal_ownership_label(has_persistent_owner: bool, session_unavailable: bool) -> &'static str {
-    if has_persistent_owner {
-        "Persistent Terminal Session"
+fn terminal_ownership_label(
+    app_name: &str,
+    has_persistent_owner: bool,
+    session_unavailable: bool,
+) -> &'static str {
+    if app_name == "Zed" {
+        if has_persistent_owner {
+            "Persistent Terminal Session"
+        } else if session_unavailable {
+            "Saved Terminal Session"
+        } else {
+            "Workspace Terminal Session"
+        }
+    } else if has_persistent_owner {
+        "Host-owned terminal"
     } else if session_unavailable {
-        "Saved Terminal Session"
+        "Saved terminal"
     } else {
-        "Workspace Terminal Session"
+        "Workspace terminal"
     }
 }
 
-fn terminal_termination_confirmation(has_persistent_owner: bool, title: &str) -> (String, String) {
+fn terminal_termination_confirmation(
+    app_name: &str,
+    has_persistent_owner: bool,
+    title: &str,
+) -> (String, String) {
     let title = match title.trim() {
         "" => "Terminal",
         title => title,
     };
     let detail = if has_persistent_owner {
-        format!(
-            "“{title}” will stop immediately, including its shell and any foreground process. This cannot be undone. Its Surface will close; closing the Surface alone only detaches the persistent Terminal Session."
-        )
+        if app_name == "Zed" {
+            format!(
+                "“{title}” will stop immediately, including its shell and any foreground process. This cannot be undone. Its Surface will close; closing the Surface alone only detaches the persistent Terminal Session."
+            )
+        } else {
+            format!(
+                "“{title}” will stop immediately, including its shell and any foreground command. This cannot be undone. Closing the tab alone only detaches this host-owned terminal."
+            )
+        }
     } else {
         format!(
-            "“{title}” will stop immediately, including its shell and any foreground process, and its Surface will close. This cannot be undone."
+            "“{title}” will stop immediately, including its shell and any foreground command, and its tab will close. This cannot be undone."
         )
     };
-    ("Terminate Terminal Session?".to_owned(), detail)
+    let heading = if app_name == "Zed" {
+        "Terminate Terminal Session?"
+    } else {
+        "End Terminal?"
+    };
+    (heading.to_owned(), detail)
 }
 
 /// Event to transmit the scroll from the element to the view
@@ -879,10 +922,14 @@ impl Focusable for FailedToSpawnTerminal {
 
 impl Render for FailedToSpawnTerminal {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let is_dez = terminal_launch_failure_is_top_anchored(paths::APP_NAME);
         let popover_menu = PopoverMenu::new("settings-popover")
             .trigger(
                 IconButton::new("icon-button-popover", IconName::ChevronDown)
-                    .icon_size(IconSize::XSmall),
+                    .icon_size(IconSize::XSmall)
+                    .tab_index(0isize)
+                    .aria_label("More Terminal Settings")
+                    .tooltip(Tooltip::text("More Terminal Settings")),
             )
             .menu(move |window, cx| {
                 Some(ContextMenu::build(window, cx, |context_menu, _, _| {
@@ -901,19 +948,40 @@ impl Render for FailedToSpawnTerminal {
             });
 
         v_flex()
+            .id("terminal-failed-to-start")
+            .role(gpui::Role::Alert)
+            .aria_label("Terminal did not start")
             .track_focus(&self.focus_handle)
             .size_full()
-            .p_4()
-            .items_center()
-            .justify_center()
-            .bg(cx.theme().colors().editor_background)
+            .min_h_0()
+            .overflow_y_scroll()
+            .when(is_dez, |this| {
+                this.px_8().pt_10().pb_8().items_start().justify_start()
+            })
+            .when(!is_dez, |this| this.p_4().items_center().justify_center())
+            .bg(cx.theme().colors().terminal_background)
             .child(
                 v_flex()
-                    .max_w_112()
-                    .items_center()
-                    .justify_center()
-                    .text_center()
-                    .child(Label::new("Terminal did not start"))
+                    .w_full()
+                    .max_w(if is_dez { px(600.) } else { px(448.) })
+                    .when(!is_dez, |this| {
+                        this.items_center().justify_center().text_center()
+                    })
+                    .when(is_dez, |this| {
+                        this.gap_2().child(
+                            h_flex()
+                                .gap_2()
+                                .child(
+                                    Icon::new(IconName::Warning)
+                                        .size(IconSize::Small)
+                                        .color(Color::Warning),
+                                )
+                                .child(Headline::new("Terminal did not start")),
+                        )
+                    })
+                    .when(!is_dez, |this| {
+                        this.child(Label::new("Terminal did not start"))
+                    })
                     .child(
                         Label::new(format!(
                             "{}\n\n{}",
@@ -927,6 +995,9 @@ impl Render for FailedToSpawnTerminal {
                     .child(SplitButton::new(
                         ButtonLike::new("open-settings-ui")
                             .child(Label::new("Edit Settings").size(LabelSize::Small))
+                            .tab_index(0isize)
+                            .aria_label("Edit Terminal Settings")
+                            .tooltip(Tooltip::text("Edit Terminal Settings"))
                             .on_click(|_, window, cx| {
                                 window.dispatch_action(zed_actions::OpenSettings.boxed_clone(), cx);
                             }),
@@ -1397,7 +1468,7 @@ impl TerminalView {
             )
         };
         let close_label = terminal_close_label(is_hosted);
-        let terminate_label = terminal_terminate_label();
+        let terminate_label = terminal_terminate_label(paths::APP_NAME);
         let context_menu = ContextMenu::build(window, cx, |menu, _, _| {
             menu.context(self.focus_handle.clone())
                 .when(self.shows_workspace_actions(), |menu| {
@@ -1410,7 +1481,7 @@ impl TerminalView {
                             .separator()
                     } else {
                         menu.action(
-                            "Start Terminal Session",
+                            "Open Agent Terminal",
                             Box::new(NewCenterTerminal::default()),
                         )
                         .separator()
@@ -1556,12 +1627,20 @@ impl TerminalView {
         }
 
         let title = self.tab_content_text(1, cx);
-        let (message, detail) = terminal_termination_confirmation(has_persistent_owner, &title);
+        let (message, detail) =
+            terminal_termination_confirmation(paths::APP_NAME, has_persistent_owner, &title);
         let confirmation = window.prompt(
             PromptLevel::Critical,
             &message,
             Some(&detail),
-            &["Terminate Session", "Cancel"],
+            &[
+                if paths::APP_NAME == "Zed" {
+                    "Terminate Session"
+                } else {
+                    "End Terminal"
+                },
+                "Cancel",
+            ],
             cx,
         );
 
@@ -2419,7 +2498,7 @@ impl TerminalView {
             status_color
         };
         let has_persistent_owner = terminal_has_persistent_owner(&terminal, cx);
-        let ownership = terminal_ownership_label(has_persistent_owner, false);
+        let ownership = terminal_ownership_label(paths::APP_NAME, has_persistent_owner, false);
         let working_directory = terminal
             .working_directory()
             .map(|path| path.to_string_lossy().into_owned());
@@ -2454,7 +2533,7 @@ impl TerminalView {
         let details_session_id = session_id.clone();
         let details_has_workspace_files = has_workspace_files;
         let details_visible_label = if action_label_visibility.details {
-            "Session Details"
+            "Terminal Details"
         } else {
             ""
         };
@@ -2478,9 +2557,9 @@ impl TerminalView {
             if changed_files == 1 { "file" } else { "files" }
         );
         let ownership_note = if has_persistent_owner {
-            "The external Dez Terminal Host owns this process."
+            "The external Dez Terminal Host owns this process. Detaching the tab does not stop it."
         } else {
-            "This Workspace owns the process. Persistence requires the Dez Terminal Host."
+            "This Workspace owns the process. Closing Dez also ends it."
         };
         let details_menu = PopoverMenu::new(("terminal-session-details", terminal_entity_id))
             .trigger(
@@ -2492,8 +2571,8 @@ impl TerminalView {
                 .style(ButtonStyle::Subtle)
                 .start_icon(Icon::new(IconName::Info).size(IconSize::XSmall))
                 .tab_index(0isize)
-                .aria_label("Open Terminal Session Details and How Dez Works")
-                .tooltip(Tooltip::text("Session Details and How Dez Works")),
+                .aria_label("Open Terminal Details and How Dez Works")
+                .tooltip(Tooltip::text("Terminal Details and How Dez Works")),
             )
             .menu(move |window, cx| {
                 let details_status = details_status.clone();
@@ -2503,7 +2582,7 @@ impl TerminalView {
                 let details_session_id = details_session_id.clone();
                 Some(ContextMenu::build(window, cx, move |mut menu, _, _| {
                     menu = menu
-                        .header("Terminal Session")
+                        .header("Terminal")
                         .label(details_status.clone())
                         .label(details_repository.clone())
                         .label(details_changes.clone())
@@ -2536,8 +2615,15 @@ impl TerminalView {
                     .label("Terminal text is display content, not proof.")
                     .separator()
                     .header("How Dez Works")
-                    .label("Run · computation stays in this Terminal Session.")
-                    .label("Supervise · Sessions keeps live state and attention visible.")
+                    .label("Run · work stays in this terminal.")
+                    .when(paths::APP_NAME == "Zed", |menu| {
+                        menu.label("Supervise · Sessions keeps live state and attention visible.")
+                    })
+                    .when(paths::APP_NAME != "Zed", |menu| {
+                        menu.label(
+                            "Supervise · Agent Sessions surfaces active agent work and attention.",
+                        )
+                    })
                     .when(details_has_workspace_files, |menu| {
                         menu.label("Review · Files and Git inspect this same Workspace.")
                     })
@@ -2557,7 +2643,7 @@ impl TerminalView {
                 .id(("terminal-session-context", terminal_entity_id))
                 .role(gpui::Role::Toolbar)
                 .aria_label(format!(
-                    "Terminal Session controls. Status: {activity_accessibility_label}. {repository_label}. {changes_label}."
+                    "Terminal controls. Status: {activity_accessibility_label}. {repository_label}. {changes_label}."
                 ))
                 .w_full()
                 .h(terminal_context_strip_height(density))
@@ -2633,10 +2719,10 @@ impl TerminalView {
                                 )
                                 .tab_index(0isize)
                                 .aria_label(
-                                    "Open a Workspace in this window and keep this Terminal Session",
+                                    "Open a Workspace in this window and keep this terminal",
                                 )
                                 .tooltip(Tooltip::text(
-                                    "Open a Workspace in this window and keep this Terminal Session",
+                                    "Open a Workspace in this window and keep this terminal",
                                 ))
                                 .on_click(|_, window, cx| {
                                     window.dispatch_action(
@@ -2705,15 +2791,23 @@ impl Render for TerminalView {
         let unavailable_description =
             terminal_unavailable_description(self.session_unavailable_reason.as_deref());
         let session_context_strip = self.render_session_context_strip(cx);
+        let terminal_container_background = if terminal_container_reuses_terminal_material(
+            paths::APP_NAME,
+            ui::theme_is_transparent(cx),
+        ) {
+            gpui::transparent_black()
+        } else {
+            cx.theme().colors().editor_background
+        };
         let terminal_surface = if self.session_unavailable {
             div()
                 .id("terminal-unavailable-state")
                 .role(gpui::Role::Alert)
-                .aria_label("Terminal Session unavailable")
+                .aria_label("Terminal unavailable")
                 .size_full()
                 .min_h_0()
                 .overflow_y_scroll()
-                .bg(cx.theme().colors().editor_background)
+                .bg(cx.theme().colors().terminal_background)
                 .px_8()
                 .pt_10()
                 .pb_8()
@@ -2726,7 +2820,7 @@ impl Render for TerminalView {
                             v_flex()
                                 .gap_2()
                                 .child(
-                                    Label::new("TERMINAL SESSION")
+                                    Label::new("TERMINAL")
                                         .size(LabelSize::XSmall)
                                         .color(Color::Muted),
                                 )
@@ -2738,7 +2832,7 @@ impl Render for TerminalView {
                                                 .size(IconSize::Small)
                                                 .color(Color::Warning),
                                         )
-                                        .child(Headline::new("Session unavailable")),
+                                        .child(Headline::new("Terminal unavailable")),
                                 )
                                 .child(
                                     Label::new(unavailable_description)
@@ -2778,7 +2872,7 @@ impl Render for TerminalView {
             div()
                 .id("terminal-view-container")
                 .size_full()
-                .bg(cx.theme().colors().editor_background)
+                .bg(terminal_container_background)
                 .child(TerminalElement::new(
                     terminal_handle,
                     terminal_view_handle,
@@ -2805,6 +2899,7 @@ impl Render for TerminalView {
             .id("terminal-view")
             .role(gpui::Role::Group)
             .aria_label(terminal_surface_accessibility_label(
+                paths::APP_NAME,
                 accessibility_title.as_ref(),
                 accessibility_status,
             ))
@@ -2953,7 +3048,8 @@ impl Item for TerminalView {
         let foreground_agent =
             terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref())
                 .map(|agent| agent.display_name);
-        let ownership = terminal_ownership_label(has_persistent_owner, session_unavailable);
+        let ownership =
+            terminal_ownership_label(paths::APP_NAME, has_persistent_owner, session_unavailable);
         let working_directory = terminal
             .working_directory()
             .map(|path| path.to_string_lossy().into_owned())
@@ -3698,7 +3794,7 @@ pub fn session_unavailable_terminal(
     );
     cx.new(|cx| {
         builder
-            .with_display_text("Session unavailable", &[])
+            .with_display_text("Terminal unavailable", &[])
             .subscribe(cx)
     })
 }
@@ -3932,6 +4028,23 @@ mod tests {
     }
 
     #[test]
+    fn dez_terminal_launch_failures_use_native_recovery_hierarchy() {
+        assert!(terminal_launch_failure_is_top_anchored("Dez"));
+        assert!(!terminal_launch_failure_is_top_anchored("Zed"));
+        assert_eq!(
+            terminal_failed_to_start_guidance("Dez"),
+            "No terminal process was started. Review terminal settings, then open a new terminal."
+        );
+    }
+
+    #[test]
+    fn dez_terminal_element_owns_the_translucent_terminal_material() {
+        assert!(terminal_container_reuses_terminal_material("Dez", true));
+        assert!(!terminal_container_reuses_terminal_material("Dez", false));
+        assert!(!terminal_container_reuses_terminal_material("Zed", true));
+    }
+
+    #[test]
     fn foreground_agent_presentation_is_immediate_but_product_scoped() {
         let codex = terminal_foreground_agent_presentation("Dez", Some("/opt/homebrew/bin/codex"))
             .expect("Codex should receive native terminal presentation");
@@ -4141,7 +4254,11 @@ mod tests {
         assert!(terminal_tab_status_label_visible("Failed"));
         assert!(terminal_tab_status_label_visible("Unavailable"));
         assert_eq!(
-            terminal_surface_accessibility_label("tests", "Active"),
+            terminal_surface_accessibility_label("Dez", "tests", "Active"),
+            "Terminal: tests. Status: Active"
+        );
+        assert_eq!(
+            terminal_surface_accessibility_label("Zed", "tests", "Active"),
             "Terminal Session: tests. Status: Active"
         );
         assert_eq!(
@@ -4156,30 +4273,52 @@ mod tests {
         );
         assert_eq!(terminal_close_label(true), "Detach Terminal");
         assert_eq!(terminal_close_label(false), "Close Terminal Tab");
-        assert_eq!(terminal_terminate_label(), "Terminate Terminal Session…");
+        assert_eq!(terminal_terminate_label("Dez"), "End Terminal…");
         assert_eq!(
-            terminal_ownership_label(true, false),
+            terminal_terminate_label("Zed"),
+            "Terminate Terminal Session…"
+        );
+        assert_eq!(
+            terminal_ownership_label("Dez", true, false),
+            "Host-owned terminal"
+        );
+        assert_eq!(
+            terminal_ownership_label("Dez", false, true),
+            "Saved terminal"
+        );
+        assert_eq!(
+            terminal_ownership_label("Dez", false, false),
+            "Workspace terminal"
+        );
+        assert_eq!(
+            terminal_ownership_label("Zed", true, false),
             "Persistent Terminal Session"
         );
         assert_eq!(
-            terminal_ownership_label(false, true),
+            terminal_ownership_label("Zed", false, true),
             "Saved Terminal Session"
         );
         assert_eq!(
-            terminal_ownership_label(false, false),
+            terminal_ownership_label("Zed", false, false),
             "Workspace Terminal Session"
         );
         assert!(terminal_termination_available(false, false));
         assert!(!terminal_termination_available(true, false));
         assert!(!terminal_termination_available(false, true));
-        let (message, detail) = terminal_termination_confirmation(true, "build");
+        let (message, detail) = terminal_termination_confirmation("Dez", true, "build");
+        assert_eq!(message, "End Terminal?");
+        assert!(detail.contains("“build” will stop immediately"));
+        assert!(detail.contains("shell and any foreground command"));
+        assert!(detail.contains("only detaches this host-owned terminal"));
+        assert!(!detail.contains("durable"));
+        let (message, detail) = terminal_termination_confirmation("Zed", true, "build");
         assert_eq!(message, "Terminate Terminal Session?");
         assert!(detail.contains("“build” will stop immediately"));
         assert!(detail.contains("shell and any foreground process"));
         assert!(detail.contains("only detaches the persistent Terminal Session"));
         assert!(!detail.contains("durable"));
-        let (_, detail) = terminal_termination_confirmation(false, "");
-        assert!(detail.contains("shell and any foreground process"));
+        let (_, detail) = terminal_termination_confirmation("Dez", false, "");
+        assert!(detail.contains("shell and any foreground command"));
         assert!(detail.contains("“Terminal” will stop immediately"));
     }
 

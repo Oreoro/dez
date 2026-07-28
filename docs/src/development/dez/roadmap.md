@@ -4112,9 +4112,9 @@ Completed for the unified contextual-drawer reveal source slice:
 - audited direct toggles, typed panel activation, entity-ID activation, and
   remote panel-ID activation instead of assuming they shared one layout path;
 - found that alternate activation routes could reveal Workspace Tools or Agent
-  without applying the narrow-window Sessions exclusion;
+  without applying the shared Sessions exclusion;
 - centralized the responsive preparation step so every pane-backed tool reveal
-  first retires the competing drawer and, below 1160 logical pixels, Sessions;
+  first retires the competing drawer and Sessions at every window size;
 - routed remote panel activation through the same visibility, focus, sizing,
   and serialization behavior as local panel activation;
 - added focused source coverage and a static regression guard for the
@@ -4186,3 +4186,65 @@ Completed for the active Editor-Surface identity source slice:
   runtime acceptance case; and
 - retained source-only evidence. No app build, test binary, alternate binary,
   or fresh visual launch was performed.
+
+Completed for the project-scoped activation funnel source slice:
+
+- removed the pathless Agent Terminal action from empty Welcome and empty
+  Sessions, where it could not provide file or Git review context;
+- made **Open Workspace** or **Clone Repository** the only empty-application
+  decisions and retained **Open Agent Terminal** as the primary transition once
+  a Workspace exists;
+- compressed Welcome's Run → Supervise → Review explanation into one passive
+  inline route and removed the duplicate route from the empty Main Work Area;
+- preserved official Zed's inherited scratch-terminal path;
+- added product assertions and static guards for the progressive-disclosure
+  boundary; and
+- retained source-only evidence. No build, test binary, alternate binary, or
+  app launch was performed.
+
+Completed for the native activation and Sessions hierarchy source slice:
+
+- replaced the centered Dez first-run canvas with a compact, top-anchored
+  settings surface;
+- flattened the three-card workflow into one responsive native list and
+  removed hook installation plus pathless terminal launch from setup;
+- top-aligned Workspace Welcome, removed its hero badge, and changed Dez
+  actions from filled dashboard controls to quiet command rows;
+- moved the only visible **Sessions** title into the native titlebar, removed
+  the repeated dashboard heading, and kept status and scope in the next row;
+- removed decorative icon-card frames and filled calls to action from Dez
+  empty, caught-up, search, and start states;
+- preserved official Zed behavior through explicit product gates;
+- added policy assertions and static identity guards for the native hierarchy;
+  and
+- retained source-only evidence. No build, test binary, alternate binary, or
+  app launch was performed.
+
+Completed for the residual Lumin callout-material source slice:
+
+- audited the remaining reachable gradients after the outer shell and Agent
+  onboarding-card repairs;
+- retained official Zed's inherited gradient treatments;
+- changed Dez's Sessions import guidance and unsupported-Agent recovery to
+  low-opacity semantic fills that preserve the native under-window blur as the
+  only blur owner;
+- added pure product-policy assertions and static regression guards; and
+- retained source-only evidence. No build, test binary, alternate binary, or
+  app launch was performed.
+
+Completed for the Terminal/Sessions product-noun source slice:
+
+- made **Terminal** the interactive Main Work Area surface and reserved
+  **Sessions** for the agent-supervision projection;
+- renamed the terminal disclosure to **Terminal Details**, destructive action
+  to **End Terminal**, and unavailable state to **Terminal unavailable**;
+- simplified terminal-service notices without hiding whether a shell started
+  or whether running work was touched;
+- kept ordinary shells outside Sessions while preserving their terminal facts,
+  files, Git handoff, and evidence boundary;
+- retained official Zed's inherited Terminal Session copy behind product
+  gates;
+- updated permanent Fork Notes, public product and terminal guides, assertions,
+  and static guards; and
+- retained source-only evidence. No build, test binary, alternate binary, or
+  app launch was performed.

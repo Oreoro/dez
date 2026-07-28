@@ -214,6 +214,31 @@ fn dez_git_unsafe_repository_copy() -> (&'static str, &'static str) {
     )
 }
 
+fn dez_git_history_placeholder_copy(message: &str) -> (&'static str, &'static str) {
+    match message {
+        "No repository found" => (
+            "Git History unavailable",
+            "Open a Workspace containing a Git repository.",
+        ),
+        "Loading Commit History…" => (
+            "Loading Git History",
+            "Reading commits from this repository.",
+        ),
+        "No commits yet" => (
+            "No commits yet",
+            "Git History will appear after the first commit.",
+        ),
+        "Failed to load commit history" | "Failed to load commits" => (
+            "Git History couldn't load",
+            "Check the repository state, then reopen Git History.",
+        ),
+        _ => (
+            "Git History unavailable",
+            "Repository history is not available right now.",
+        ),
+    }
+}
+
 fn canvas_git_panel_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match contrast {
@@ -6401,10 +6426,16 @@ impl GitPanel {
                    set_active_tab: GitPanelTab,
                    tooltip_action: Box<dyn Action>| {
             let focus_handle = focus_handle.clone();
+            let accessibility_label = format!("Open {label}");
+            let keyboard_tab = set_active_tab;
 
             h_flex()
                 .cursor_pointer()
                 .id(id)
+                .role(gpui::Role::Button)
+                .tab_index(0isize)
+                .aria_label(accessibility_label.clone())
+                .aria_selected(active)
                 .h_full()
                 .py_1()
                 .gap_1()
@@ -6425,10 +6456,21 @@ impl GitPanel {
                     )
                 })
                 .tooltip(Tooltip::for_action_title_in(
-                    format!("Toggle {} Tab", label),
+                    accessibility_label,
                     tooltip_action.as_ref(),
                     &focus_handle,
                 ))
+                .on_key_down(
+                    cx.listener(move |this, event: &gpui::KeyDownEvent, window, cx| {
+                        if event.keystroke.modifiers.modified() {
+                            return;
+                        }
+                        if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+                            this.set_active_tab(keyboard_tab, window, cx);
+                            cx.stop_propagation();
+                        }
+                    }),
+                )
                 .on_click(cx.listener(move |this, _, window, cx| {
                     this.set_active_tab(set_active_tab, window, cx)
                 }))
@@ -6438,6 +6480,8 @@ impl GitPanel {
             .relative()
             .h(Tab::container_height(cx))
             .w_full()
+            .role(gpui::Role::Toolbar)
+            .aria_label("Git views")
             .child(tab(
                 ElementId::Name("changes-tab".into()),
                 active_tab == GitPanelTab::Changes,
@@ -6495,11 +6539,48 @@ impl GitPanel {
         })
     }
 
-    fn render_history_placeholder(message: &'static str) -> impl IntoElement {
-        h_flex()
+    fn render_history_placeholder(message: &'static str) -> AnyElement {
+        if paths::APP_NAME == "Zed" {
+            return h_flex()
+                .flex_1()
+                .justify_center()
+                .child(Label::new(message).color(Color::Muted))
+                .into_any_element();
+        }
+
+        let (title, description) = dez_git_history_placeholder_copy(message);
+        v_flex()
+            .id("dez-git-history-placeholder")
             .flex_1()
-            .justify_center()
-            .child(Label::new(message).color(Color::Muted))
+            .w_full()
+            .items_center()
+            .justify_start()
+            .px_4()
+            .pt_8()
+            .role(gpui::Role::Status)
+            .aria_label(format!("{title}. {description}"))
+            .child(
+                v_flex()
+                    .w_64()
+                    .max_w_full()
+                    .gap_2()
+                    .child(
+                        h_flex()
+                            .gap_1p5()
+                            .child(
+                                Icon::new(IconName::GitBranch)
+                                    .size(IconSize::Small)
+                                    .color(Color::Accent),
+                            )
+                            .child(Label::new(title).size(LabelSize::Large)),
+                    )
+                    .child(
+                        Label::new(description)
+                            .size(LabelSize::Small)
+                            .color(Color::Muted),
+                    ),
+            )
+            .into_any_element()
     }
 
     fn commit_history_entries(&self) -> &[CommitHistoryEntry] {
@@ -9545,6 +9626,34 @@ mod tests {
             (
                 "Repository ownership needs review",
                 "Git blocked this repository because its metadata has a different owner. Trust only folders you recognize; approval changes your global Git configuration."
+            )
+        );
+        assert_eq!(
+            dez_git_history_placeholder_copy("No repository found"),
+            (
+                "Git History unavailable",
+                "Open a Workspace containing a Git repository."
+            )
+        );
+        assert_eq!(
+            dez_git_history_placeholder_copy("Loading Commit History…"),
+            (
+                "Loading Git History",
+                "Reading commits from this repository."
+            )
+        );
+        assert_eq!(
+            dez_git_history_placeholder_copy("No commits yet"),
+            (
+                "No commits yet",
+                "Git History will appear after the first commit."
+            )
+        );
+        assert_eq!(
+            dez_git_history_placeholder_copy("Failed to load commits"),
+            (
+                "Git History couldn't load",
+                "Check the repository state, then reopen Git History."
             )
         );
     }

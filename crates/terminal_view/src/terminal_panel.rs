@@ -5,6 +5,7 @@ use crate::{
     persistence::{
         SerializedItems, SerializedTerminalPanel, deserialize_terminal_panel, serialize_pane_group,
     },
+    terminal_failed_to_start_guidance, terminal_launch_failure_is_top_anchored,
 };
 use breadcrumbs::Breadcrumbs;
 use collections::HashMap;
@@ -1235,10 +1236,14 @@ impl Focusable for FailedToSpawnTerminal {
 
 impl Render for FailedToSpawnTerminal {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let is_dez = terminal_launch_failure_is_top_anchored(paths::APP_NAME);
         let popover_menu = PopoverMenu::new("settings-popover")
             .trigger(
                 IconButton::new("icon-button-popover", IconName::ChevronDown)
-                    .icon_size(IconSize::XSmall),
+                    .icon_size(IconSize::XSmall)
+                    .tab_index(0isize)
+                    .aria_label("More Terminal Settings")
+                    .tooltip(Tooltip::text("More Terminal Settings")),
             )
             .menu(move |window, cx| {
                 Some(ContextMenu::build(window, cx, |context_menu, _, _| {
@@ -1262,29 +1267,51 @@ impl Render for FailedToSpawnTerminal {
             .aria_label("Terminal did not start")
             .track_focus(&self.focus_handle)
             .size_full()
-            .p_4()
-            .items_center()
-            .justify_center()
-            .bg(cx.theme().colors().editor_background)
+            .min_h_0()
+            .overflow_y_scroll()
+            .when(is_dez, |this| {
+                this.px_8().pt_10().pb_8().items_start().justify_start()
+            })
+            .when(!is_dez, |this| this.p_4().items_center().justify_center())
+            .bg(cx.theme().colors().terminal_background)
             .child(
                 v_flex()
-                    .max_w_112()
-                    .items_center()
-                    .justify_center()
-                    .text_center()
-                    .child(Label::new("Terminal did not start"))
+                    .w_full()
+                    .max_w(if is_dez { px(600.) } else { px(448.) })
+                    .when(!is_dez, |this| {
+                        this.items_center().justify_center().text_center()
+                    })
+                    .when(is_dez, |this| {
+                        this.gap_2().child(
+                            h_flex()
+                                .gap_2()
+                                .child(
+                                    Icon::new(IconName::Warning)
+                                        .size(IconSize::Small)
+                                        .color(Color::Warning),
+                                )
+                                .child(Headline::new("Terminal did not start")),
+                        )
+                    })
+                    .when(!is_dez, |this| {
+                        this.child(Label::new("Terminal did not start"))
+                    })
                     .child(
                         Label::new(format!(
-                            "{}\n\nNo terminal process was started. Review terminal settings, then use New Terminal to try again.",
-                            self.error
+                            "{}\n\n{}",
+                            self.error,
+                            terminal_failed_to_start_guidance(paths::APP_NAME),
                         ))
-                            .size(LabelSize::Small)
-                            .color(Color::Muted)
-                            .mb_4(),
+                        .size(LabelSize::Small)
+                        .color(Color::Muted)
+                        .mb_4(),
                     )
                     .child(SplitButton::new(
                         ButtonLike::new("open-settings-ui")
                             .child(Label::new("Edit Settings").size(LabelSize::Small))
+                            .tab_index(0isize)
+                            .aria_label("Edit Terminal Settings")
+                            .tooltip(Tooltip::text("Edit Terminal Settings"))
                             .on_click(|_, window, cx| {
                                 window.dispatch_action(zed_actions::OpenSettings.boxed_clone(), cx);
                             }),

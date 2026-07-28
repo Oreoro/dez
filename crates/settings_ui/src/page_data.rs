@@ -4317,7 +4317,7 @@ fn window_and_layout_page() -> SettingsPage {
         let sessions_chrome_header = if paths::APP_NAME == "Zed" {
             "Session Rail Chrome"
         } else {
-            "Sessions Chrome"
+            "Sessions Appearance"
         };
         let branch_status_description = if paths::APP_NAME == "Zed" {
             "Show Git status indicators on the branch icon in the Session Rail."

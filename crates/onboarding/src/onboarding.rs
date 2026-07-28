@@ -3,8 +3,8 @@ use db::kvp::KeyValueStore;
 use fs::Fs;
 use gpui::{
     Action, AnyElement, App, AppContext, AsyncWindowContext, Context, Entity, EventEmitter,
-    FocusHandle, Focusable, Global, IntoElement, KeyContext, Render, ScrollHandle, SharedString,
-    Subscription, Task, WeakEntity, Window, actions,
+    FocusHandle, Focusable, Global, IntoElement, KeyContext, Pixels, Render, ScrollHandle,
+    SharedString, Subscription, Task, WeakEntity, Window, actions, px,
 };
 use notifications::status_toast::StatusToast;
 use paths::APP_NAME;
@@ -14,7 +14,7 @@ use settings::{SettingsStore, VsCodeSettingsSource};
 use std::sync::Arc;
 use ui::{
     Divider, KeyBinding, ParentElement as _, StatefulInteractiveElement, WithScrollbar as _,
-    prelude::*, rems_from_px,
+    prelude::*, rems_from_px, theme_is_transparent,
 };
 
 pub use workspace::welcome::ShowWelcome;
@@ -51,6 +51,11 @@ pub struct ImportCursorSettings {
 }
 
 pub const FIRST_OPEN: &str = "first_open";
+const DEZ_ONBOARDING_COMPACT_BREAKPOINT: Pixels = px(760.);
+
+fn dez_onboarding_uses_compact_layout(app_name: &str, viewport_width: Pixels) -> bool {
+    app_name != "Zed" && viewport_width < DEZ_ONBOARDING_COMPACT_BREAKPOINT
+}
 
 actions!(
     onboarding,
@@ -242,6 +247,15 @@ impl Onboarding {
 
 impl Render for Onboarding {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let is_dez = APP_NAME != "Zed";
+        let compact_layout =
+            dez_onboarding_uses_compact_layout(APP_NAME, window.viewport_size().width);
+        let onboarding_background = if is_dez && theme_is_transparent(cx) {
+            gpui::transparent_black()
+        } else {
+            cx.theme().colors().editor_background
+        };
+
         div()
             .image_cache(gpui::retain_all("onboarding-page"))
             .key_context({
@@ -252,7 +266,7 @@ impl Render for Onboarding {
             })
             .track_focus(&self.focus_handle)
             .size_full()
-            .bg(cx.theme().colors().editor_background)
+            .bg(onboarding_background)
             .on_action(Self::on_finish)
             .on_action(cx.listener(|_, _: &menu::SelectNext, window, cx| {
                 window.focus_next(cx);
@@ -271,17 +285,26 @@ impl Render for Onboarding {
                     .child(
                         v_flex()
                             .min_w_0()
-                            .max_w(rems_from_px(780.))
+                            .max_w(rems_from_px(if APP_NAME == "Zed" { 780. } else { 960. }))
                             .w_full()
-                            .mx_auto()
-                            .p_12()
-                            .gap_6()
+                            .when(APP_NAME == "Zed", |this| this.mx_auto())
+                            .when(APP_NAME == "Zed", |this| this.p_12().gap_6())
+                            .when(is_dez && compact_layout, |this| {
+                                this.px_3().py_4().gap_4()
+                            })
+                            .when(is_dez && !compact_layout, |this| {
+                                this.px_6().py_6().gap_5()
+                            })
                             .child(
                                 h_flex()
                                     .w_full()
-                                    .gap_4()
-                                    .justify_between()
-                                    .child(
+                                    .items_start()
+                                    .gap_3()
+                                    .when(compact_layout, |this| {
+                                        this.flex_col().items_stretch()
+                                    })
+                                    .when(!compact_layout, |this| this.justify_between())
+                                    .child(if APP_NAME == "Zed" {
                                         h_flex()
                                             .gap_4()
                                             .child(
@@ -319,13 +342,58 @@ impl Render for Onboarding {
                                                         .size(LabelSize::Small)
                                                         .italic(),
                                                     ),
-                                            ),
-                                    )
+                                            )
+                                            .into_any_element()
+                                    } else {
+                                        h_flex()
+                                            .min_w_0()
+                                            .items_start()
+                                            .gap_3()
+                                            .child(
+                                                div()
+                                                    .size_8()
+                                                    .flex_none()
+                                                    .flex()
+                                                    .items_center()
+                                                    .justify_center()
+                                                    .rounded_md()
+                                                    .border_1()
+                                                    .border_color(
+                                                        cx.theme().colors().border_variant,
+                                                    )
+                                                    .bg(cx.theme().colors().element_background)
+                                                    .child(
+                                                        Icon::new(IconName::Settings)
+                                                            .size(IconSize::Small)
+                                                            .color(Color::Accent),
+                                                    ),
+                                            )
+                                            .child(
+                                                v_flex()
+                                                    .min_w_0()
+                                                    .gap_1()
+                                                    .child(
+                                                        Headline::new("Set up Dez")
+                                                            .size(HeadlineSize::Large),
+                                                    )
+                                                    .child(
+                                                        Label::new(
+                                                            "Choose your editor preferences. You can change everything later in Settings.",
+                                                        )
+                                                        .color(Color::Muted)
+                                                        .size(LabelSize::Small),
+                                                    ),
+                                                )
+                                            .into_any_element()
+                                    })
                                     .child({
                                         Button::new("finish_setup", "Finish Setup")
                                             .style(ButtonStyle::Filled)
                                             .size(ButtonSize::Medium)
-                                            .width(rems_from_px(200.))
+                                            .when(APP_NAME == "Zed", |this| {
+                                                this.width(rems_from_px(200.))
+                                            })
+                                            .when(compact_layout, |this| this.full_width())
                                             .key_binding(KeyBinding::for_action_in(
                                                 &Finish,
                                                 &self.focus_handle,
@@ -387,6 +455,18 @@ impl Item for Onboarding {
 
     fn to_item_events(event: &Self::Event, f: &mut dyn FnMut(workspace::item::ItemEvent)) {
         f(*event)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dez_onboarding_collapses_before_controls_can_clip() {
+        assert!(dez_onboarding_uses_compact_layout("Dez", px(759.)));
+        assert!(!dez_onboarding_uses_compact_layout("Dez", px(760.)));
+        assert!(!dez_onboarding_uses_compact_layout("Zed", px(320.)));
     }
 }
 

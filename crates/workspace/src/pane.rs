@@ -108,6 +108,14 @@ fn empty_main_work_area_shows_orientation(app_name: &str, is_active_pane: bool) 
     app_name == "Zed" || is_active_pane
 }
 
+fn empty_auxiliary_surface_is_edge_anchored(app_name: &str, pane_kind: PaneKind) -> bool {
+    app_name != "Zed" && pane_kind != PaneKind::Tabs
+}
+
+fn pane_tab_is_persistent_workspace_tool(app_name: &str, pane_kind: PaneKind) -> bool {
+    app_name != "Zed" && pane_kind == PaneKind::Project
+}
+
 /// A group of selected entries from project panel.
 #[derive(Debug)]
 pub struct DraggedSelection {
@@ -151,7 +159,7 @@ impl PaneKind {
             (true, Self::Agent) => "Agent pane",
             (false, Self::Tabs) => "Main work area",
             (false, Self::Project) => "Workspace Tools",
-            (false, Self::Agent) => "Agent",
+            (false, Self::Agent) => "Built-in Agent",
         }
     }
 
@@ -970,20 +978,25 @@ impl Pane {
             empty_main_work_area_shows_orientation(paths::APP_NAME, is_active_pane);
         let (title, description) = if show_orientation {
             (
-                "Start with a terminal or file",
-                "Run commands and agents here. Sessions tracks attention; files, Git changes, diagnostics, and diffs return here for review.",
+                "Run an agent in this workspace",
+                "Open an Agent Terminal, run Codex, Claude Code, OpenCode, or another supported CLI, and keep coding here. Sessions appears when Dez detects agent work.",
             )
         } else {
             (
                 "Open something here",
-                "Start a Terminal Session, find a file, or create one in this work area.",
+                "Open an Agent Terminal, find a file, or create one in this work area.",
             )
         };
-        let workflow_route = [
-            (IconName::Terminal, "Run", "Terminal in Main Work Area"),
-            (IconName::ListTree, "Supervise", "Live state in Sessions"),
-            (IconName::Diff, "Review", "Files, Git, and diffs"),
-        ];
+        let terminal_action_label = if paths::APP_NAME == "Zed" {
+            "Start Terminal Session"
+        } else {
+            "Open Agent Terminal"
+        };
+        let terminal_action_aria_label = if paths::APP_NAME == "Zed" {
+            "Start Terminal Session in Main Work Area"
+        } else {
+            "Open Agent Terminal in Main Work Area"
+        };
 
         v_flex()
             .id("empty-project-state")
@@ -1019,67 +1032,20 @@ impl Pane {
                                     .color(Color::Muted),
                             ),
                     )
-                    .when(show_orientation, |this| {
-                        this.child(
-                            h_flex()
-                                .id("empty-project-route")
-                                .role(gpui::Role::List)
-                                .aria_label("Dez workflow route")
-                                .w_full()
-                                .flex_wrap()
-                                .gap_x_5()
-                                .gap_y_2()
-                                .children(workflow_route.into_iter().enumerate().map(
-                                    |(index, (icon, label, target))| {
-                                        h_flex()
-                                            .id(("empty-project-route-step", index))
-                                            .role(gpui::Role::ListItem)
-                                            .aria_label(format!("{label}. {target}"))
-                                            .min_w(px(172.))
-                                            .flex_1()
-                                            .items_center()
-                                            .gap_2()
-                                            .py_1p5()
-                                            .child(
-                                                Icon::new(icon)
-                                                    .size(IconSize::XSmall)
-                                                    .color(Color::Accent),
-                                            )
-                                            .child(
-                                                v_flex()
-                                                    .min_w_0()
-                                                    .gap_0p5()
-                                                    .child(
-                                                        Label::new(label)
-                                                            .size(LabelSize::XSmall)
-                                                            .color(Color::Default)
-                                                            .truncate(),
-                                                    )
-                                                    .child(
-                                                        Label::new(target)
-                                                            .size(LabelSize::XSmall)
-                                                            .color(Color::Muted)
-                                                            .truncate(),
-                                                    ),
-                                            )
-                                    },
-                                )),
-                        )
-                    })
                     .child(
                         h_flex()
                             .w_full()
                             .flex_wrap()
                             .gap_2()
                             .child(
-                                Button::new("empty-project-terminal", "Start Terminal Session")
+                                Button::new("empty-project-terminal", terminal_action_label)
                                     .tab_index(0isize)
                                     .style(ButtonStyle::Filled)
                                     .start_icon(Icon::new(IconName::Terminal))
-                                    .aria_label("Start Terminal Session in Main Work Area")
-                                    .tooltip(|_, cx| {
+                                    .aria_label(terminal_action_aria_label)
+                                    .tooltip(move |_, cx| {
                                         Tooltip::for_action(
-                                            "Start Terminal Session in Main Work Area",
+                                            terminal_action_aria_label,
                                             &NewCenterTerminal::default(),
                                             cx,
                                         )
@@ -1130,20 +1096,22 @@ impl Pane {
 
     fn render_empty_panel_state(&self, cx: &mut Context<Self>) -> AnyElement {
         let pane_kind = self.pane_kind;
-        let (id, icon, title, description, return_icon, key_binding) = match pane_kind {
+        let (id, icon, title, description, action, return_icon, key_binding) = match pane_kind {
             PaneKind::Project => (
                 "empty-project-panel-state",
                 IconName::FileTree,
-                "Workspace Tools unavailable",
-                "Workspace Tools did not attach. Close this drawer and continue in the Main Work Area.",
+                "Workspace Tools couldn't open",
+                "No Workspace Tool is available. Close this surface and keep working in the Main Work Area.",
+                "Close Workspace Tools",
                 IconName::ArrowRight,
                 KeyBinding::for_action_in(&ToggleProjectPane, &self.focus_handle, cx),
             ),
             PaneKind::Agent => (
                 "empty-agent-panel-state",
                 IconName::Chat,
-                "Agent unavailable",
-                "Agent controls did not attach. Close this drawer and continue in the Main Work Area.",
+                "Built-in Agent couldn't open",
+                "No built-in Agent surface is available. Close it and keep working in the Main Work Area.",
+                "Close Built-in Agent",
                 IconName::ArrowLeft,
                 KeyBinding::for_action_in(&ToggleAgentPane, &self.focus_handle, cx),
             ),
@@ -1181,20 +1149,19 @@ impl Pane {
                     ),
             )
             .child(
-                Button::new(
-                    (gpui::ElementId::from(id), "return-to-editor"),
-                    "Return to Main Work Area",
-                )
-                .full_width()
-                .tab_index(0isize)
-                .style(ButtonStyle::Filled)
-                .start_icon(Icon::new(return_icon))
-                .key_binding(key_binding)
-                .on_click(move |_, window, cx| match pane_kind {
-                    PaneKind::Project => window.dispatch_action(Box::new(ToggleProjectPane), cx),
-                    PaneKind::Agent => window.dispatch_action(Box::new(ToggleAgentPane), cx),
-                    PaneKind::Tabs => {}
-                }),
+                Button::new((gpui::ElementId::from(id), "return-to-editor"), action)
+                    .full_width()
+                    .tab_index(0isize)
+                    .style(ButtonStyle::Filled)
+                    .start_icon(Icon::new(return_icon))
+                    .key_binding(key_binding)
+                    .on_click(move |_, window, cx| match pane_kind {
+                        PaneKind::Project => {
+                            window.dispatch_action(Box::new(ToggleProjectPane), cx)
+                        }
+                        PaneKind::Agent => window.dispatch_action(Box::new(ToggleAgentPane), cx),
+                        PaneKind::Tabs => {}
+                    }),
             )
             .into_any_element()
     }
@@ -3360,6 +3327,9 @@ impl Pane {
         let is_last_item = ix == self.items.len() - 1;
         let is_pinned = self.is_tab_pinned(ix);
         let position_relative_to_active_item = ix.cmp(&self.active_item_index);
+        let is_persistent_workspace_tool_tab =
+            pane_tab_is_persistent_workspace_tool(paths::APP_NAME, self.pane_kind);
+        let tab_accessibility_label = item.tab_content_text(detail, cx);
 
         let read_only_toggle = |toggleable: bool| {
             IconButton::new("toggle_read_only", IconName::FileLock)
@@ -3414,6 +3384,24 @@ impl Pane {
                 ClosePosition::Right => ui::TabCloseSide::End,
             })
             .toggle_state(is_active)
+            .when(is_persistent_workspace_tool_tab, |tab| {
+                let accessibility_label = format!("Open {tab_accessibility_label}");
+                tab.role(gpui::Role::Button)
+                    .tab_index(0isize)
+                    .aria_label(accessibility_label)
+                    .aria_selected(is_active)
+                    .on_key_down(cx.listener(
+                        move |pane, event: &gpui::KeyDownEvent, window, cx| {
+                            if event.keystroke.modifiers.modified() {
+                                return;
+                            }
+                            if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+                                pane.activate_item(ix, true, true, window, cx);
+                                cx.stop_propagation();
+                            }
+                        },
+                    ))
+            })
             .on_click(cx.listener({
                 let item_handle = item.boxed_clone();
                 move |pane: &mut Self, event: &ClickEvent, window, cx| {
@@ -3437,7 +3425,7 @@ impl Pane {
             }))
             .on_aux_click(
                 cx.listener(move |pane: &mut Self, event: &ClickEvent, window, cx| {
-                    if !event.is_middle_click() || is_pinned {
+                    if !event.is_middle_click() || is_pinned || is_persistent_workspace_tool_tab {
                         return;
                     }
 
@@ -3503,6 +3491,14 @@ impl Pane {
                 }
             })
             .map(|this| {
+                if is_persistent_workspace_tool_tab {
+                    return if let Some(indicator) = indicator {
+                        this.end_slot(indicator)
+                    } else {
+                        this
+                    };
+                }
+
                 let end_slot_action: &'static dyn Action;
                 let end_slot_tooltip_text: &'static str;
                 let end_slot_control = if is_pinned {
@@ -5567,7 +5563,7 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                         )
                 } else {
                     menu.action(
-                        "Start Terminal Session",
+                        "Open Agent Terminal",
                         NewCenterTerminal::default().boxed_clone(),
                     )
                 }
@@ -5631,7 +5627,7 @@ fn pane_new_surface_menu_copy(
 fn pane_auxiliary_hide_control_copy(pane_kind: PaneKind) -> Option<&'static str> {
     match pane_kind {
         PaneKind::Project => Some("Hide Workspace Tools"),
-        PaneKind::Agent => Some("Hide Agent"),
+        PaneKind::Agent => Some("Hide Built-in Agent"),
         PaneKind::Tabs => None,
     }
 }
@@ -5916,6 +5912,13 @@ impl Render for Pane {
                                 .h_flex()
                                 .size_full()
                                 .justify_center()
+                                .when(
+                                    empty_auxiliary_surface_is_edge_anchored(
+                                        paths::APP_NAME,
+                                        self.pane_kind,
+                                    ),
+                                    |this| this.justify_start(),
+                                )
                                 .on_click(cx.listener(
                                     move |this, event: &ClickEvent, window, cx| {
                                         if event.click_count() == 2 {
@@ -6456,7 +6459,10 @@ mod tests {
             PaneKind::Project.accessibility_label_for_app("Dez"),
             "Workspace Tools"
         );
-        assert_eq!(PaneKind::Agent.accessibility_label_for_app("Dez"), "Agent");
+        assert_eq!(
+            PaneKind::Agent.accessibility_label_for_app("Dez"),
+            "Built-in Agent"
+        );
         assert_eq!(
             PaneKind::Tabs.accessibility_label_for_app("Zed"),
             "Editor pane"
@@ -6490,7 +6496,7 @@ mod tests {
         );
         assert_eq!(
             pane_auxiliary_hide_control_copy(PaneKind::Agent),
-            Some("Hide Agent")
+            Some("Hide Built-in Agent")
         );
         assert_eq!(pane_auxiliary_hide_control_copy(PaneKind::Tabs), None);
         assert_eq!(
@@ -6531,6 +6537,22 @@ mod tests {
         ));
         assert!(!pane_tab_end_control_is_keyboard_focusable(
             "Zed", true, false, false
+        ));
+        assert!(pane_tab_is_persistent_workspace_tool(
+            "Dez",
+            PaneKind::Project
+        ));
+        assert!(!pane_tab_is_persistent_workspace_tool(
+            "Dez",
+            PaneKind::Tabs
+        ));
+        assert!(!pane_tab_is_persistent_workspace_tool(
+            "Dez",
+            PaneKind::Agent
+        ));
+        assert!(!pane_tab_is_persistent_workspace_tool(
+            "Zed",
+            PaneKind::Project
         ));
     }
 
@@ -6654,6 +6676,26 @@ mod tests {
             empty_main_work_area_shows_orientation("Zed", false),
             "official Zed retains the inherited empty-pane presentation"
         );
+    }
+
+    #[test]
+    fn dez_empty_auxiliary_surfaces_start_at_the_drawer_edge() {
+        assert!(empty_auxiliary_surface_is_edge_anchored(
+            "Dez",
+            PaneKind::Project
+        ));
+        assert!(empty_auxiliary_surface_is_edge_anchored(
+            "Dez",
+            PaneKind::Agent
+        ));
+        assert!(!empty_auxiliary_surface_is_edge_anchored(
+            "Dez",
+            PaneKind::Tabs
+        ));
+        assert!(!empty_auxiliary_surface_is_edge_anchored(
+            "Zed",
+            PaneKind::Project
+        ));
     }
 
     #[gpui::test]

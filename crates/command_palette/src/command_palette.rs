@@ -931,6 +931,25 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
     }
 
     match name {
+        "workspace::NewTerminal" => return "terminal::OpenAgentTerminal".to_owned(),
+        "zed::ApplyCanvasFullLayout" => return "layout::WorkAreaAndFiles".to_owned(),
+        "zed::ApplyCanvasAgentControlLayout" => {
+            return "layout::WorkAreaAndBuiltInAgent".to_owned();
+        }
+        "zed::ApplyCanvasEditorFocusLayout" => return "layout::FocusWorkArea".to_owned(),
+        "zed::ApplyCanvasCodeRunObserveLayout" => return "layout::SplitWorkArea".to_owned(),
+        "zed::ApplyCanvasReviewLayout" => return "layout::WorkAreaAndGit".to_owned(),
+        "zed::ApplyCanvasDebugLayout" => return "layout::WorkAreaAndDebug".to_owned(),
+        "zed::CycleCanvasLayout" => return "layout::NextWorkspaceLayout".to_owned(),
+        "workspace::SaveCurrentCanvasLayoutAs" => {
+            return "layout::SaveWorkspaceLayoutAs".to_owned();
+        }
+        "workspace::ManageSavedCanvasLayouts" => {
+            return "layout::ManageSavedWorkspaceLayouts".to_owned();
+        }
+        "zed::RestorePreviousCanvasLayout" => {
+            return "layout::RestorePreviousWorkspaceLayout".to_owned();
+        }
         "workspace::ToggleProjectPane" => return "workspace_tools::Toggle".to_owned(),
         "workspace::AddFolderToProject" => return "workspace::AddFolder".to_owned(),
         "workspace::CloseProject" => return "workspace::Close".to_owned(),
@@ -948,9 +967,14 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
         "agent::RenameSelectedThread" => {
             return "sessions::RenameSelectedSession".to_owned();
         }
-        "agent::NewTerminalThread" => return "agent::NewTerminalSession".to_owned(),
+        "agent::NewTerminalThread" => {
+            return "terminal::OpenAgentTerminalInWorkspace".to_owned();
+        }
+        "sidebar::NewSessionInGroup" => {
+            return "terminal::OpenAgentTerminalInSelectedWorkspace".to_owned();
+        }
         "sidebar::NewThreadInGroup" => {
-            return "sessions::NewAgentSessionInWorkspace".to_owned();
+            return "built_in_agent::NewSessionInWorkspace".to_owned();
         }
         "sidebar::ToggleThreadSwitcher" => return "sessions::SwitchSessions".to_owned(),
         "sidebar::ToggleThreadHistory" => return "sessions::ToggleAgentHistory".to_owned(),
@@ -966,7 +990,7 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
     for (source, product) in [
         ("zed_actions::", "dez::"),
         ("sidebar::", "sessions::"),
-        ("agent_panel::", "agent::"),
+        ("agent_panel::", "built_in_agent::"),
         ("debug_panel::", "debug::"),
         ("git_panel::", "git::"),
         ("outline_panel::", "outline::"),
@@ -1127,6 +1151,50 @@ mod tests {
             "files: open"
         );
         assert_eq!(
+            humanize_action_name_for_product("workspace::NewTerminal", "Dez"),
+            "terminal: open agent terminal"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::ApplyCanvasFullLayout", "Dez"),
+            "layout: work area and files"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::ApplyCanvasAgentControlLayout", "Dez"),
+            "layout: work area and built in agent"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::ApplyCanvasCodeRunObserveLayout", "Dez"),
+            "layout: split work area"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::ApplyCanvasReviewLayout", "Dez"),
+            "layout: work area and git"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::ApplyCanvasDebugLayout", "Dez"),
+            "layout: work area and debug"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::ApplyCanvasFullLayout", "Zed"),
+            "zed: apply canvas full layout"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::CycleCanvasLayout", "Dez"),
+            "layout: next workspace layout"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("workspace::SaveCurrentCanvasLayoutAs", "Dez"),
+            "layout: save workspace layout as"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("workspace::ManageSavedCanvasLayouts", "Dez"),
+            "layout: manage saved workspace layouts"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::RestorePreviousCanvasLayout", "Dez"),
+            "layout: restore previous workspace layout"
+        );
+        assert_eq!(
             humanize_action_name_for_product("outline_panel::ToggleFocus", "Dez"),
             "outline: toggle focus"
         );
@@ -1144,7 +1212,7 @@ mod tests {
         );
         assert_eq!(
             humanize_action_name_for_product("agent_panel::ToggleFocus", "Dez"),
-            "agent: toggle focus"
+            "built in agent: toggle focus"
         );
         assert_eq!(
             humanize_action_name_for_product("workspace::ToggleProjectPane", "Dez"),
@@ -1168,7 +1236,15 @@ mod tests {
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::NewThreadInGroup", "Dez"),
-            "sessions: new agent session in workspace"
+            "built in agent: new session in workspace"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("agent::NewTerminalThread", "Dez"),
+            "terminal: open agent terminal in workspace"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::NewSessionInGroup", "Dez"),
+            "terminal: open agent terminal in selected workspace"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::ToggleThreadHistory", "Dez"),

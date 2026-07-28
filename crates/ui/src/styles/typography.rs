@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use gpui::{
-    AnyElement, App, IntoElement, ParentElement, Rems, RenderOnce, SharedString, Styled, Window,
-    div, rems,
+    AnyElement, App, FontWeight, IntoElement, ParentElement, Rems, RenderOnce, SharedString,
+    Styled, Window, div, rems,
 };
 use theme::ActiveTheme;
 
@@ -215,9 +215,10 @@ impl RenderOnce for Headline {
 
         div()
             .font(ui_font)
+            .font_weight(FontWeight::SEMIBOLD)
             .line_height(self.size.line_height())
             .text_size(self.size.rems())
-            .text_color(cx.theme().colors().text)
+            .text_color(self.color.color(cx))
             .child(self.text)
     }
 }

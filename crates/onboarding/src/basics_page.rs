@@ -3,7 +3,7 @@ use std::sync::Arc;
 use client::TelemetrySettings;
 use collections::HashMap;
 use fs::Fs;
-use gpui::{Action, App, ClipboardItem, IntoElement};
+use gpui::{Action, App, IntoElement};
 use paths::APP_NAME;
 use project::agent_server_store::AllAgentServersSettings;
 use project::project_settings::ProjectSettings;
@@ -19,7 +19,6 @@ use ui::{
     prelude::*,
 };
 use vim_mode_setting::VimModeSetting;
-use workspace::NewCenterTerminal;
 
 use crate::{
     ImportCursorSettings, ImportVsCodeSettings, SettingsImportState,
@@ -33,8 +32,6 @@ const FAMILY_NAMES: [SharedString; 3] = [
     SharedString::new_static("Ayu"),
     SharedString::new_static("Gruvbox"),
 ];
-const CODEX_HOOK_SETUP: &str = include_str!("../../../assets/dez/codex-hooks.json");
-
 fn get_theme_family_themes(theme_name: &str) -> Option<(&'static str, &'static str)> {
     for i in 0..LIGHT_THEMES.len() {
         if LIGHT_THEMES[i] == theme_name || DARK_THEMES[i] == theme_name {
@@ -96,6 +93,7 @@ fn render_theme_section(tab_index: &mut isize, cx: &mut App) -> impl IntoElement
         .child(
             h_flex()
                 .gap_2()
+                .flex_wrap()
                 .justify_between()
                 .children(render_theme_previews(tab_index, &theme_selection, cx)),
         );
@@ -242,13 +240,12 @@ fn render_theme_section(tab_index: &mut isize, cx: &mut App) -> impl IntoElement
     }
 }
 
-fn render_dez_workflow_section(tab_index: &mut isize, cx: &mut App) -> impl IntoElement {
-    let colors = cx.theme().colors();
+fn render_dez_workflow_section() -> impl IntoElement {
     let steps = [
         (
             IconName::Terminal,
             "Run",
-            "Run work in an ordinary terminal or a pane-native agent.",
+            "Run a supported agent in the current Workspace terminal.",
         ),
         (
             IconName::ListTree,
@@ -258,126 +255,71 @@ fn render_dez_workflow_section(tab_index: &mut isize, cx: &mut App) -> impl Into
         (
             IconName::Diff,
             "Review",
-            "Open observed commands, checks, and changes beside the owning session.",
+            "Inspect files, Git changes, checks, and diagnostics in the Main Work Area.",
         ),
     ];
 
-    *tab_index += 1;
-    let copy_hook_tab_index = *tab_index;
-    *tab_index += 1;
-    let new_terminal_tab_index = *tab_index;
     v_flex()
         .id("dez-terminal-workflow")
         .role(gpui::Role::Region)
         .aria_label("Terminal-first workflow")
         .w_full()
-        .gap_3()
-        .p_4()
-        .rounded_md()
-        .border_1()
-        .border_color(colors.border_variant)
-        .bg(colors.panel_background)
+        .gap_2()
         .child(
             v_flex()
                 .gap_0p5()
-                .child(Label::new("Terminal-first workflow"))
+                .child(Label::new("How Dez works"))
                 .child(
                     Label::new(
-                        "Write. Delegate. Watch. Verify. Dez keeps the owning surface and its evidence close together.",
+                        "Run an agent in a Workspace terminal, supervise it in Sessions, then review its work in Files and Git.",
                     )
                     .size(LabelSize::Small)
                     .color(Color::Muted),
                 ),
         )
         .child(
-            div()
+            v_flex()
                 .id("dez-terminal-workflow-steps")
                 .role(gpui::Role::List)
                 .aria_label("Terminal workflow steps")
                 .w_full()
-                .grid()
-                .grid_cols(3)
-                .gap_2()
+                .gap_1()
                 .children(steps.into_iter().enumerate().map(
                     |(index, (icon, title, description))| {
-                    v_flex()
-                        .id(("dez-terminal-workflow-step", index))
-                        .role(gpui::Role::ListItem)
-                        .aria_label(format!("{title}. {description}"))
-                        .min_w_0()
-                        .gap_1()
-                        .p_3()
-                        .rounded_sm()
-                        .border_1()
-                        .border_color(colors.border_variant)
-                        .child(
-                            h_flex()
-                                .gap_1p5()
-                                .child(
-                                    Icon::new(icon)
-                                        .size(IconSize::Small)
-                                        .color(Color::Muted),
-                                )
-                                .child(Label::new(title)),
-                        )
-                        .child(
-                            Label::new(description)
-                                .size(LabelSize::Small)
-                                .color(Color::Muted),
-                        )
+                        h_flex()
+                            .id(("dez-terminal-workflow-step", index))
+                            .role(gpui::Role::ListItem)
+                            .aria_label(format!("{title}. {description}"))
+                            .min_w_0()
+                            .items_start()
+                            .gap_2()
+                            .px_1()
+                            .py_0p5()
+                            .child(
+                                Icon::new(icon)
+                                    .size(IconSize::Small)
+                                    .color(Color::Muted),
+                            )
+                            .child(
+                                v_flex()
+                                    .min_w_0()
+                                    .gap_0p5()
+                                    .child(Label::new(title).size(LabelSize::Small))
+                                    .child(
+                                        Label::new(description)
+                                            .size(LabelSize::XSmall)
+                                            .color(Color::Muted),
+                                    ),
+                            )
                     },
                 )),
         )
         .child(
-            v_flex()
-                .w_full()
-                .gap_2()
-                .child(
-                    Label::new(
-                        "Close hides a view. Detach keeps a Host-owned session. Terminate ends the process. Persistence depends on the connected Host. Hooks are never installed automatically.",
-                    )
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted),
-                )
-                .child(
-                    h_flex()
-                        .w_full()
-                        .flex_wrap()
-                        .gap_1()
-                        .justify_end()
-                        .child(
-                            Button::new("onboarding-copy-codex-hook", "Copy Codex Hook")
-                                .tab_index(copy_hook_tab_index)
-                                .size(ButtonSize::Medium)
-                                .style(ButtonStyle::Outlined)
-                                .start_icon(Icon::new(IconName::Copy).size(IconSize::Small))
-                                .aria_label("Copy Deliberate Codex Hook Setup")
-                                .tooltip(Tooltip::text(
-                                    "Copy the bundled setup; Dez does not install or modify Codex hooks",
-                                ))
-                                .on_click(|_, _window, cx| {
-                                    cx.write_to_clipboard(ClipboardItem::new_string(
-                                        CODEX_HOOK_SETUP.to_owned(),
-                                    ));
-                                }),
-                        )
-                        .child(
-                            Button::new(
-                                "onboarding-new-terminal",
-                                "Start Terminal Session",
-                            )
-                                .tab_index(new_terminal_tab_index)
-                                .size(ButtonSize::Medium)
-                                .style(ButtonStyle::Filled)
-                                .start_icon(Icon::new(IconName::Terminal).size(IconSize::Small))
-                                .on_click(|_, window, cx| {
-                                    window.dispatch_action(
-                                        Box::new(NewCenterTerminal { local: false }),
-                                        cx,
-                                    );
-                                }),
-                        ),
-                ),
+            Label::new(
+                "Finish setup, open a Workspace, and start the agent from its Main Work Area.",
+            )
+            .size(LabelSize::XSmall)
+            .color(Color::Muted),
         )
 }
 
@@ -756,15 +698,8 @@ fn render_ai_section(cx: &mut App) -> impl IntoElement {
         .get::<AllAgentServersSettings>(None)
         .clone();
 
-    let column_count = FEATURED_AGENT_IDS.len() as u16;
-
     let grid = FEATURED_AGENT_IDS.iter().fold(
-        div()
-            .w_full()
-            .mt_1p5()
-            .grid()
-            .grid_cols(column_count)
-            .gap_2(),
+        h_flex().w_full().mt_1p5().flex_wrap().gap_2(),
         |grid, agent_id| {
             let Some(agent) = registry_agents
                 .iter()
@@ -773,7 +708,12 @@ fn render_ai_section(cx: &mut App) -> impl IntoElement {
                 return grid;
             };
             let is_installed = installed_agents.contains_key(*agent_id);
-            grid.child(render_registry_agent_button(agent, is_installed, cx))
+            grid.child(
+                div()
+                    .min_w(rems_from_px(150.))
+                    .flex_1()
+                    .child(render_registry_agent_button(agent, is_installed, cx)),
+            )
         },
     );
 
@@ -782,7 +722,7 @@ fn render_ai_section(cx: &mut App) -> impl IntoElement {
         .child(Label::new("Optional ACP Agents"))
         .child(
             Label::new(
-                "Connect pane-native agents here. Terminal agents such as Codex remain ordinary terminal sessions and appear in Sessions.",
+                "Connect pane-native agents here. Supported terminal agents such as Codex run in a Workspace terminal and appear in Sessions after detection.",
             )
             .color(Color::Muted),
         )
@@ -794,8 +734,10 @@ pub(crate) fn render_basics_page(cx: &mut App) -> impl IntoElement {
 
     v_flex()
         .id("basics-page")
-        .gap_6()
-        .child(render_dez_workflow_section(&mut tab_index, cx))
+        .gap_5()
+        .when(APP_NAME != "Zed", |this| {
+            this.child(render_dez_workflow_section())
+        })
         .child(render_theme_section(&mut tab_index, cx))
         .child(render_base_keymap_section(&mut tab_index, cx))
         .child(render_ai_section(cx))

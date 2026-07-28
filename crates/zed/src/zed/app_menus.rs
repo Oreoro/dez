@@ -78,7 +78,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
     let agent_surface_label = developer_surface_menu_label(
         APP_NAME,
         panels_as_pane_tabs,
-        "Agent",
+        "Built-in Agent",
         "Agent Tab",
         "Agent Panel",
     );
@@ -308,7 +308,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             disabled: false,
             items: vec![
                 MenuItem::action(
-                    product_menu_label(APP_NAME, "Start Terminal Session", "New Terminal"),
+                    product_menu_label(APP_NAME, "Open Agent Terminal", "New Terminal"),
                     workspace::NewTerminal::default(),
                 ),
                 MenuItem::action("New File", workspace::NewFile),
@@ -543,6 +543,10 @@ mod tests {
         assert_eq!(
             developer_surface_menu_label("Zed", false, "Files", "Project Tab", "Project Panel"),
             "Project Panel"
+        );
+        assert_eq!(
+            developer_surface_menu_label("Dez", true, "Built-in Agent", "Agent Tab", "Agent Panel",),
+            "Built-in Agent"
         );
     }
 

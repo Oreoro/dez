@@ -61,6 +61,44 @@ fn agent_plan_uses_gradient_overlays(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn unset_model_recovery_copy(
+    app_name: &str,
+    has_authenticated_provider: bool,
+) -> (&'static str, &'static str) {
+    if app_name == "Zed" {
+        if has_authenticated_provider {
+            (
+                "No model selected",
+                "Choose a different model or configure other providers to get started",
+            )
+        } else {
+            ("No model selected", "Configure a provider to get started")
+        }
+    } else if has_authenticated_provider {
+        (
+            "Built-in Agent needs a model",
+            "Select a model for the built-in Agent. Terminal agents such as Codex or Claude Code run from Open Agent Terminal and do not use this picker.",
+        )
+    } else {
+        (
+            "Built-in Agent needs a provider",
+            "Configure a provider for the built-in Agent. To run Codex, Claude Code, or another terminal agent, use Open Agent Terminal instead.",
+        )
+    }
+}
+
+fn model_recovery_severity(app_name: &str, is_initial_setup: bool) -> Severity {
+    if app_name != "Zed" && is_initial_setup {
+        Severity::Info
+    } else {
+        Severity::Error
+    }
+}
+
+fn model_recovery_is_dismissible(app_name: &str, is_initial_setup: bool) -> bool {
+    app_name == "Zed" || !is_initial_setup
+}
+
 #[derive(Default)]
 struct ThreadFeedbackState {
     feedback: Option<ThreadFeedback>,
@@ -11766,7 +11804,7 @@ impl ThreadView {
         let has_authenticated_provider =
             LanguageModelRegistry::read_global(cx).has_authenticated_provider(cx);
 
-        let (title, description): (SharedString, SharedString) =
+        let (title, description, is_initial_setup): (SharedString, SharedString, bool) =
             match thread.read(cx).thread_model() {
                 agent::ThreadModel::Ready(_) => return None,
                 agent::ThreadModel::Unresolved(selected_model) => {
@@ -11779,60 +11817,75 @@ impl ThreadView {
                                 format!("Failed to authenticate with {} provider", provider.name())
                                     .into(),
                                 "Open the settings to configure the selected provider".into(),
+                                false,
                             )
                         } else {
                             (
                                 format!("Model {} was not found", selected_model.model.0).into(),
                                 "You may need to reconfigure authentication for this provider"
                                     .into(),
+                                false,
                             )
                         }
                     } else {
                         (
                             format!("Provider {} was not found", selected_model.provider).into(),
                             "Open the settings to configure providers".into(),
+                            false,
                         )
                     }
                 }
                 agent::ThreadModel::Unset => {
-                    if has_authenticated_provider {
-                        (
-                            "No model selected".into(),
-                            "Choose a different model or configure other providers to get started"
-                                .into(),
-                        )
-                    } else {
-                        (
-                            "No model selected".into(),
-                            "Configure a provider to get started".into(),
-                        )
-                    }
+                    let (title, description) =
+                        unset_model_recovery_copy(paths::APP_NAME, has_authenticated_provider);
+                    (title.into(), description.into(), true)
                 }
             };
+        let severity = model_recovery_severity(paths::APP_NAME, is_initial_setup);
 
         let callout = Callout::new()
-            .severity(Severity::Error)
-            .icon(IconName::XCircle)
+            .severity(severity)
+            .icon(if severity == Severity::Info {
+                IconName::Settings
+            } else {
+                IconName::XCircle
+            })
             .title(title)
             .description(description)
             .actions_slot(
                 h_flex()
+                    .flex_wrap()
                     .gap_1()
-                    .child(self.open_llm_providers_settings_button(cx))
                     .when(has_authenticated_provider, |this| {
                         this.child(self.open_model_selector_button(cx))
-                    }),
+                    })
+                    .child(
+                        self.open_llm_providers_settings_button(!has_authenticated_provider, cx),
+                    ),
             )
-            .dismiss_action(self.dismiss_error_button(cx));
+            .when(
+                model_recovery_is_dismissible(paths::APP_NAME, is_initial_setup),
+                |callout| callout.dismiss_action(self.dismiss_error_button(cx)),
+            );
 
         Some(callout)
     }
 
-    fn open_llm_providers_settings_button(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn open_llm_providers_settings_button(
+        &self,
+        primary: bool,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
         Button::new("configure-llm-provider", "Configure Provider")
             .label_size(LabelSize::Small)
-            .style(ButtonStyle::Filled)
+            .style(if primary {
+                ButtonStyle::Filled
+            } else {
+                ButtonStyle::Outlined
+            })
             .tab_index(0isize)
+            .aria_label("Configure Agent Provider")
+            .tooltip(Tooltip::text("Configure Agent Provider"))
             .on_click(cx.listener(|this, _, window, cx| {
                 this.clear_thread_error(cx);
                 window.dispatch_action(
@@ -11850,6 +11903,8 @@ impl ThreadView {
             .label_size(LabelSize::Small)
             .style(ButtonStyle::Filled)
             .tab_index(0isize)
+            .aria_label("Select Agent Model")
+            .tooltip(Tooltip::text("Select Agent Model"))
             .key_binding(KeyBinding::for_action(&ToggleModelSelector, cx))
             .on_click(cx.listener(|this, _, window, cx| {
                 this.clear_thread_error(cx);
@@ -13300,6 +13355,49 @@ mod tests {
     fn dez_agent_plan_rows_use_real_width_allocations_instead_of_gradient_masks() {
         assert!(!agent_plan_uses_gradient_overlays("Dez"));
         assert!(agent_plan_uses_gradient_overlays("Zed"));
+    }
+
+    #[test]
+    fn dez_model_recovery_distinguishes_the_built_in_agent_from_terminal_agents() {
+        assert_eq!(
+            unset_model_recovery_copy("Dez", true),
+            (
+                "Built-in Agent needs a model",
+                "Select a model for the built-in Agent. Terminal agents such as Codex or Claude Code run from Open Agent Terminal and do not use this picker.",
+            )
+        );
+        assert_eq!(
+            unset_model_recovery_copy("Dez", false),
+            (
+                "Built-in Agent needs a provider",
+                "Configure a provider for the built-in Agent. To run Codex, Claude Code, or another terminal agent, use Open Agent Terminal instead.",
+            )
+        );
+        assert_eq!(
+            unset_model_recovery_copy("Zed", false),
+            ("No model selected", "Configure a provider to get started",)
+        );
+        assert_eq!(
+            model_recovery_severity("Dez", true),
+            Severity::Info,
+            "initial built-in Agent setup is guidance, not a failed run"
+        );
+        assert_eq!(
+            model_recovery_severity("Dez", false),
+            Severity::Error,
+            "a previously selected provider or model becoming unavailable is an error"
+        );
+        assert_eq!(
+            model_recovery_severity("Zed", true),
+            Severity::Error,
+            "official Zed retains its inherited presentation"
+        );
+        assert!(
+            !model_recovery_is_dismissible("Dez", true),
+            "required Built-in Agent setup must not disappear into a blank composer"
+        );
+        assert!(model_recovery_is_dismissible("Dez", false));
+        assert!(model_recovery_is_dismissible("Zed", true));
     }
 
     fn mcp_command(name: &str) -> acp::AvailableCommand {

@@ -113,6 +113,14 @@ const TOKEN_THRESHOLD: u64 = 250;
 
 pub(crate) const DRAFT_PROMPT_PERSIST_DEBOUNCE: Duration = Duration::from_millis(250);
 
+fn agent_unsupported_state_uses_gradient(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
+fn agent_conversation_reuses_panel_material(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
 pub(crate) mod elicitation;
 mod message_queue;
 mod thread_search_bar;
@@ -3109,6 +3117,9 @@ impl ConversationView {
                 )
             },
         );
+        let uses_gradient = agent_unsupported_state_uses_gradient(paths::APP_NAME);
+        let editor_background = cx.theme().colors().editor_background;
+        let info_background = cx.theme().status().info_background;
 
         v_flex()
             .w_full()
@@ -3116,11 +3127,16 @@ impl ConversationView {
             .gap_2p5()
             .border_t_1()
             .border_color(cx.theme().colors().border)
-            .bg(linear_gradient(
-                180.,
-                linear_color_stop(cx.theme().colors().editor_background.opacity(0.4), 4.),
-                linear_color_stop(cx.theme().status().info_background.opacity(0.), 0.),
-            ))
+            .when(uses_gradient, |this| {
+                this.bg(linear_gradient(
+                    180.,
+                    linear_color_stop(editor_background.opacity(0.4), 4.),
+                    linear_color_stop(info_background.opacity(0.), 0.),
+                ))
+            })
+            .when(!uses_gradient, |this| {
+                this.bg(info_background.opacity(0.08))
+            })
             .child(
                 v_flex().gap_0p5().child(Label::new(heading_label)).child(
                     Label::new(description_label)
@@ -4055,6 +4071,11 @@ impl Render for ConversationView {
                 }
             }
         };
+        let conversation_background = if agent_conversation_reuses_panel_material(paths::APP_NAME) {
+            gpui::transparent_black()
+        } else {
+            cx.theme().colors().panel_background
+        };
 
         v_flex()
             .id(("agent-conversation", cx.entity_id()))
@@ -4066,7 +4087,7 @@ impl Render for ConversationView {
             })
             .track_focus(&self.focus_handle)
             .size_full()
-            .bg(cx.theme().colors().panel_background)
+            .bg(conversation_background)
             .child(v_flex().flex_1().min_h_0().child(content))
             .when(!active_thread_renders_request_elicitations, |this| {
                 this.children(request_elicitation_connection.as_ref().map_or_else(
@@ -4321,6 +4342,18 @@ pub(crate) mod tests {
     use crate::thread_metadata_store::ThreadMetadataStore;
 
     use super::*;
+
+    #[test]
+    fn dez_unsupported_agent_state_uses_a_quiet_semantic_surface() {
+        assert!(agent_unsupported_state_uses_gradient("Zed"));
+        assert!(!agent_unsupported_state_uses_gradient("Dez"));
+    }
+
+    #[test]
+    fn dez_agent_conversation_reuses_the_panel_material() {
+        assert!(agent_conversation_reuses_panel_material("Dez"));
+        assert!(!agent_conversation_reuses_panel_material("Zed"));
+    }
 
     #[test]
     fn test_data_retention_error_maps_from_provider_error() {

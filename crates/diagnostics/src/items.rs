@@ -50,6 +50,18 @@ fn diagnostics_status_label(app_name: &str, errors: usize, warnings: usize) -> S
     }
 }
 
+fn diagnostic_indicator_is_visible(
+    app_name: &str,
+    errors: usize,
+    warnings: usize,
+    has_current_diagnostic: bool,
+) -> bool {
+    // Upstream Zed preserves its healthy checkmark. Dez treats the status
+    // strip as evidence rather than a launcher row: healthy silence is the
+    // default, while counts and an active diagnostic remain visible.
+    app_name == "Zed" || errors > 0 || warnings > 0 || has_current_diagnostic
+}
+
 /// The status bar item that displays diagnostic counts.
 pub struct DiagnosticIndicator {
     summary: project::DiagnosticSummary,
@@ -66,6 +78,14 @@ impl Render for DiagnosticIndicator {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let indicator = h_flex().gap_2().min_w_0().overflow_x_hidden();
         if !ProjectSettings::get_global(cx).diagnostics.button {
+            return indicator.hidden();
+        }
+        if !diagnostic_indicator_is_visible(
+            APP_NAME,
+            self.summary.error_count,
+            self.summary.warning_count,
+            self.current_diagnostic.is_some(),
+        ) {
             return indicator.hidden();
         }
 
@@ -308,5 +328,14 @@ mod tests {
             "Workspace diagnostics: 1 error, 2 warnings"
         );
         assert_eq!(diagnostics_scope_label("Zed"), "Project Diagnostics");
+    }
+
+    #[test]
+    fn dez_diagnostics_are_quiet_until_there_is_evidence() {
+        assert!(!diagnostic_indicator_is_visible("Dez", 0, 0, false));
+        assert!(diagnostic_indicator_is_visible("Dez", 1, 0, false));
+        assert!(diagnostic_indicator_is_visible("Dez", 0, 2, false));
+        assert!(diagnostic_indicator_is_visible("Dez", 0, 0, true));
+        assert!(diagnostic_indicator_is_visible("Zed", 0, 0, false));
     }
 }

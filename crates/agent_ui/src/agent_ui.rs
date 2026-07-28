@@ -19,6 +19,7 @@ mod favorite_models;
 mod inline_assistant;
 mod inline_prompt_editor;
 mod language_model_selector;
+pub mod machine_terminal_store;
 mod mention_set;
 mod message_editor;
 mod mode_selector;
@@ -82,6 +83,7 @@ pub use crate::agent_thread_item::{
     create_agent_thread_in_workspace, open_agent_thread_in_workspace,
 };
 pub use crate::inline_assistant::InlineAssistant;
+pub use crate::machine_terminal_store::{MachineTerminalStore, ObservedMachineTerminal};
 pub use crate::message_editor::MessageEditorEvent;
 pub use crate::run_review::{
     ObservedRepositoryEvidence, ObservedRunActivity, ObservedRunCheck, ObservedRunCheckStatus,
@@ -104,6 +106,19 @@ pub use thread_import::{
 };
 use zed_actions;
 pub use zed_actions::{CreateWorktree, NewWorktreeBranchTarget, SwitchWorktree};
+
+/// Returns whether the provider-backed Built-in Agent can create a usable
+/// session immediately.
+///
+/// An authenticated provider alone is not enough: the native Agent creates a
+/// thread from the registry's default model. If that model is unresolved,
+/// opening a draft only produces a dead "No model selected" surface.
+pub fn built_in_agent_is_ready(cx: &App) -> bool {
+    let registry = LanguageModelRegistry::read_global(cx);
+    registry
+        .default_model()
+        .is_some_and(|model| model.provider.is_authenticated(cx))
+}
 
 #[derive(Clone, Debug, settings::RegisterSetting)]
 pub struct CanvasAgentUiSettings {
@@ -711,6 +726,7 @@ pub fn init(
     context_server_configuration::init(language_registry.clone(), fs.clone(), cx);
     thread_metadata_store::init(cx);
     terminal_thread_metadata_store::init(cx);
+    machine_terminal_store::init(cx);
 
     inline_assistant::init(fs.clone(), prompt_builder.clone(), cx);
     terminal_inline_assistant::init(fs.clone(), prompt_builder, cx);
