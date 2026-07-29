@@ -76,20 +76,23 @@ on the shell once the TUI becomes quiet.
 
 ### What Dez can and cannot observe
 
-Dez v0.0.2 observes terminals created inside Dez and, on macOS, Projects can
-list current-user TTYs owned by another supported terminal application or IDE
-under **Machine Terminals**. An external row is ephemeral and read-only. It may
-show the TTY, foreground executable, owning application, current directory when
-available, and a supported-agent hint. Selecting it reveals the owning
+Dez observes terminals created inside Dez and, on macOS, Projects can list
+current-user TTYs owned by another supported terminal application or IDE under
+**External Sessions**. A machine-terminal row is ephemeral and read-only. It
+may show the TTY, foreground executable, owning application, current directory
+when available, and a supported-agent hint. Selecting it reveals the owning
 application.
 
 Dez does not capture that terminal's transcript or arguments, accept its input,
 adopt its PTY, restore its process, or attribute its work. The row disappears
 when the external TTY does.
 
-Run the agent in a Dez-owned terminal when you want it supervised. A future
-adapter may adopt explicitly shared `tmux` sessions, but no such external
-terminal control is part of v0.0.2.
+v0.0.4 adds a narrower, explicit control boundary for tmux and Herdr. Dez
+discovers live tmux sessions through `list-panes` and live Herdr panes through
+the documented snapshot API. Selecting one opens the documented attach command
+in an ordinary Main Work Area terminal. tmux or Herdr remains authoritative,
+closing the Dez tab detaches rather than terminates, and Dez never requests a
+Herdr takeover automatically. Other machine terminals remain read-only.
 
 Reattaching a detached Session shows **Opening…** in its existing row
 immediately. Repeated clicks do not create duplicate attachment work or another

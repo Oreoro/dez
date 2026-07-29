@@ -48,6 +48,7 @@ settings.workspace = true
 telemetry.workspace = true
 terminal.workspace = true
 terminal_view.workspace = true
+task.workspace = true
 theme.workspace = true
 theme_settings.workspace = true
 title_bar.workspace = true

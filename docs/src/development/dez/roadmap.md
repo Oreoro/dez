@@ -8,10 +8,10 @@ Do not erase completed evidence.
 
 ## Objective {#objective}
 
-Ship Dez v0.0.3 as a credible public preview for terminal-native developers
-supervising coding agents. Harden the existing recovery and review loop before
-expanding into a general orchestration platform or adding a new surface
-category.
+Ship Dez v0.0.4 as a focused native IDE for developers who move between code,
+durable terminals, and terminal-native agents. Make explicit tmux and Herdr
+attachment useful without importing their navigation model or pretending Dez
+owns external processes.
 
 ## Dependency order {#dependency-order}
 
@@ -28,6 +28,48 @@ upstream and identity gate
 
 Visual polish continues in small slices, but it must support truthful state and
 the product loop rather than outrun ownership foundations.
+
+## v0.0.4 active slice {#v0-0-4-active-slice}
+
+The release promise is one predictable route:
+
+```text
+open a Project
+-> run or reattach work in the native Main Work Area
+-> supervise its state in Projects
+-> inspect Files, Git, diagnostics, and review in Workspace Tools
+```
+
+The implementation order is:
+
+```text
+v0.0.3 shell and durability baseline
+-> protocol-based external discovery
+-> explicit attach without ownership transfer
+-> Project association and attention projection
+-> responsive/Lumin verification
+-> exact macOS artifact
+```
+
+Decisions for this slice:
+
+- tmux discovery uses one fixed `list-panes` format and stable session IDs;
+- Herdr discovery uses its documented local snapshot response;
+- selecting an attachable row opens a normal draggable terminal Surface;
+- closing the tab or application detaches the client and never ends externally
+  owned work;
+- Herdr attachment never passes `--takeover` automatically;
+- arbitrary machine terminals remain ephemeral, read-only observations; and
+- external work does not introduce a second rail, transcript, pane grid, tab
+  implementation, or session database.
+
+**Acceptance:** With a tmux session and a Herdr pane already running, Projects
+shows each under **External Sessions**, associates available working-directory
+context, marks Herdr blocked state as needing attention, attaches in a native
+Main Work Area terminal, and leaves the original session alive after the tab
+or Dez closes. Dark, light, and reduced-transparency layouts retain one clear
+Projects/Main Work Area/Workspace Tools hierarchy without overlays or clipped
+controls.
 
 ## Revised consolidated-plan intake {#revised-plan-intake}
 

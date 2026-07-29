@@ -25,6 +25,7 @@ mod message_editor;
 mod mode_selector;
 mod model_selector;
 mod model_selector_popover;
+pub mod multiplexer_session_store;
 mod profile_selector;
 mod run_review;
 mod terminal_codegen;
@@ -85,6 +86,10 @@ pub use crate::agent_thread_item::{
 pub use crate::inline_assistant::InlineAssistant;
 pub use crate::machine_terminal_store::{MachineTerminalStore, ObservedMachineTerminal};
 pub use crate::message_editor::MessageEditorEvent;
+pub use crate::multiplexer_session_store::{
+    ExternalMultiplexerSession, ExternalSessionCommand, MultiplexerKind, MultiplexerSessionState,
+    MultiplexerSessionStore,
+};
 pub use crate::run_review::{
     ObservedRepositoryEvidence, ObservedRunActivity, ObservedRunCheck, ObservedRunCheckStatus,
     ObservedRunCommand, ObservedWorkspaceEvidence, RunReviewBrief, RunReviewState,
@@ -727,6 +732,7 @@ pub fn init(
     thread_metadata_store::init(cx);
     terminal_thread_metadata_store::init(cx);
     machine_terminal_store::init(cx);
+    multiplexer_session_store::init(cx);
 
     inline_assistant::init(fs.clone(), prompt_builder.clone(), cx);
     terminal_inline_assistant::init(fs.clone(), prompt_builder, cx);

@@ -11,7 +11,7 @@ and agent ecosystem, then reorganizes them around a clearer product promise:
 > See what is running, what needs attention, what changed, and what is ready
 > for review without reconstructing terminal and editor state.
 
-This repository is the **Dez v0.0.3 source candidate**. It is not yet a signed
+This repository is the **Dez v0.0.4 source candidate**. It is not yet a signed
 or supported binary release.
 
 ## What Dez does
@@ -24,8 +24,9 @@ Workspace instead of separate applications or hidden panel modes.
 - **Projects** — a stable, collapsible left navigator for codebases and their
   Agent Sessions. It shows provider identity and Running, Needs Input, Waiting
   for Permission, Reconnecting, Completed, or Error state without owning
-  duplicate tabs or processes. On macOS, **Machine Terminals** can list
-  terminals from other applications as ephemeral, read-only observations.
+  duplicate tabs or processes. **External Sessions** can attach explicitly
+  shared tmux and Herdr work without taking ownership; other terminals remain
+  ephemeral, read-only observations.
 - **Workspace Tools** — Files, Outline, Git, and Debug use one contextual
   right-side surface for the active Project. The optional provider-backed
   Built-in Agent shares that contextual slot instead of becoming another
@@ -95,8 +96,9 @@ one Zed-compatible Project:
 A terminal is therefore not embedded in chat, and the editor is not a separate
 mode. They are peer Surfaces in one native pane grid. Dez detects supported
 agents running in its terminals, including Codex, Claude Code, OpenCode, and
-Herdr. Detached tmux/Herdr control is a later adapter boundary; v0.0.3 does not
-pretend an externally owned PTY is a Dez-owned recoverable Session.
+Herdr. v0.0.4 discovers explicitly shared tmux sessions and live Herdr panes,
+then attaches them in ordinary terminal tabs while leaving process and layout
+ownership with the external multiplexer. Arbitrary PTYs remain read-only.
 
 ## Visual baseline
 
@@ -117,13 +119,13 @@ and typography roles remain configurable through normal settings.
 
 ## Current status
 
-The v0.0.3 source candidate already contains the opinionated Dez shell,
+The v0.0.4 source candidate contains the opinionated Dez shell,
 identity isolation, Workspace composition, persistent Projects navigation,
 contextual Workspace Tools, explicit Agent Session state, host-owned local
 terminal lifecycle, browser-like Back/Forward and native draggable tab
 navigation, first-run experience, Lumin/Plex/Lilex visual defaults, read-only
-machine-terminal discovery on macOS, and a large set of static product-contract
-checks.
+machine-terminal discovery on macOS, protocol-based tmux and Herdr attachment,
+and a large set of static product-contract checks.
 
 **Live Preview is not implemented in the current candidate.** URL actions
 still open the system browser, while Markdown, SVG, and CSV use native file
@@ -135,7 +137,7 @@ Before a public binary release, the project still requires a build of the
 current source checkpoint plus rendered, restart, crash, accessibility, and
 coexistence evidence on supported platforms. The exact state and open gates are
 documented in the
-[v0.0.3 Production Readiness Plan](./docs/src/development/dez/v0.0.3-production-readiness.md)
+[v0.0.4 External Sessions Plan](./docs/src/development/dez/v0.0.4-external-sessions.md)
 and
 [release evidence](./docs/src/development/dez/release-evidence.md). The v0.0.1
 runbook remains historical evidence, not the current release plan.
@@ -143,8 +145,10 @@ runbook remains historical evidence, not the current release plan.
 ## Documentation
 
 - [What is Dez?](./docs/src/dez.md) — public product guide
-- [v0.0.3 Production Readiness](./docs/src/development/dez/v0.0.3-production-readiness.md)
+- [v0.0.4 External Sessions](./docs/src/development/dez/v0.0.4-external-sessions.md)
   — current release order and acceptance gates
+- [v0.0.3 Production Readiness](./docs/src/development/dez/v0.0.3-production-readiness.md)
+  — previous hardening train and evidence
 - [v0.0.2 Completion Plan](./docs/src/development/dez/v0.0.2-completion-plan.md)
   — previous source and runtime recovery train
 - [Fork Notes](./docs/src/development/dez/fork-notes.md) — permanent product
@@ -204,7 +208,7 @@ flow from Zed.
 
 ## Contributing
 
-The public contributor workflow is being prepared for v0.0.3. Until its
+The public contributor workflow is being prepared for v0.0.4. Until its
 fork-specific policy is complete, use [CONTRIBUTING.md](./CONTRIBUTING.md) for
 the inherited engineering workflow and include:
 

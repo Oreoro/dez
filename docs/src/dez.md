@@ -22,11 +22,11 @@ editing and delegated work without reconstructing context.
 
 The default interface has three clear ownership regions:
 
-| Region                       | What it is for                                                                   |
-| ---------------------------- | -------------------------------------------------------------------------------- |
-| **Projects** · left          | Switch codebases and supervise their terminal and Built-in Agent Sessions        |
-| **Main Work Area** · center  | Edit files and open terminal, diff, search, settings, diagnostics, and review tabs |
-| **Workspace Tools** · right  | Browse Files, Outline, Git, Debug, or the optional Built-in Agent for one Project |
+| Region                      | What it is for                                                                     |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| **Projects** · left         | Switch codebases and supervise their terminal and Built-in Agent Sessions          |
+| **Main Work Area** · center | Edit files and open terminal, diff, search, settings, diagnostics, and review tabs |
+| **Workspace Tools** · right | Browse Files, Outline, Git, Debug, or the optional Built-in Agent for one Project  |
 
 Projects is global and collapsible. It does not turn into Files, Git, or chat,
 and opening a Workspace Tool does not dismiss it. Each codebase remains visible
@@ -189,10 +189,11 @@ destinations such as Agent Tools, Agent History, and Recent Workspaces. It does
 not repeat **Projects** inside a dashboard header or reserve a permanent
 footer. Empty, caught-up, search, and recovery states stay in normal sidebar
 flow and never become floating overlays. At compact widths, the caught-up
-action shortens to **Show All** and the **Machine Terminals** count shortens to
-`n observed`; the section description, row state, tooltip, and accessibility
-label retain the read-only ownership boundary. Observed machine terminals never
-hide the primary **Open Workspace…** path when no Project is open.
+action shortens to **Show All** and the **External Sessions** count shortens
+without losing source or status in each row. Explicit tmux and Herdr rows
+attach in the Main Work Area; observed machine terminals retain their read-only
+ownership boundary. External rows never hide the primary **Open Workspace…**
+path when no Project is open.
 
 The bottom Workspace status strip is evidence-driven. It does not repeat a
 global Search launcher or show a decorative checkmark when diagnostics are
@@ -456,13 +457,18 @@ GUI-owned because retaining a task after the UI reports cancellation would be
 dishonest, and remote terminals retain their remote owner.
 
 On macOS, Projects can list current-user TTYs from another supported terminal
-application or IDE under **Machine Terminals**. These rows are ephemeral, read-only
-observations. Dez can show limited process context and reveal the owning
-application, but it does not read the transcript or arguments, intercept input,
-persist the row, adopt the PTY, restore the process, or claim ownership of its
-work. External control requires an explicit adapter. A future tmux control-mode
-or Herdr socket adapter must distinguish observe, attach, input, detach, and end
-ownership; it is outside the v0.0.3 contract.
+application or IDE under **External Sessions**. These machine rows are
+ephemeral, read-only observations. Dez can show limited process context and
+reveal the owning application, but it does not read the transcript or
+arguments, intercept input, persist the row, adopt the PTY, restore the
+process, or claim ownership of its work.
+
+v0.0.4 adds explicit attachment for tmux and Herdr only. Dez discovers tmux
+sessions through the documented CLI format and Herdr panes through the local
+snapshot API, then opens the documented attach command in a normal terminal
+Surface. The multiplexer remains authoritative; closing the tab detaches,
+Herdr never receives automatic takeover, and the Projects row does not become
+a second process, transcript, or layout owner.
 
 ## Visual design
 
@@ -526,8 +532,8 @@ Dez is not:
 - a claim that arbitrary terminals owned by other applications survive through
   Dez.
 
-The v0.0.3 goal is a complete native IDE with one sharp wedge: trustworthy
-supervision and review of terminal-native and agent-driven work.
+The v0.0.4 goal is a complete native IDE with one sharp wedge: trustworthy
+supervision, reattachment, and review of terminal-native and agent-driven work.
 
 ## Source-preview limits
 
@@ -538,7 +544,7 @@ restart, crash, accessibility, upgrade, and coexistence evidence.
 For precise implementation state, read:
 
 - [Fork Notes](./development/dez/fork-notes.md)
-- [v0.0.3 Production Readiness](./development/dez/v0.0.3-production-readiness.md)
+- [v0.0.4 External Sessions](./development/dez/v0.0.4-external-sessions.md)
 - [Architecture Baseline](./development/dez/architecture-baseline.md)
 - [Roadmap](./development/dez/roadmap.md)
 - [Release Evidence](./development/dez/release-evidence.md)

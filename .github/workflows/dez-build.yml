@@ -144,8 +144,8 @@ jobs:
             echo
             "$terminal_host" --help
           } >"$artifact_dir/runtime-smoke.txt"
-          grep -F "Dez: v0.0.3" "$artifact_dir/runtime-smoke.txt"
-          grep -F "Dez 0.0.3" "$artifact_dir/runtime-smoke.txt"
+          grep -F "Dez: v0.0.4" "$artifact_dir/runtime-smoke.txt"
+          grep -F "Dez 0.0.4" "$artifact_dir/runtime-smoke.txt"
           grep -F "Usage: dez-terminal-host" "$artifact_dir/runtime-smoke.txt"
 
           {

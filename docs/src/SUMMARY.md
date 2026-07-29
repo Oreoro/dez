@@ -229,6 +229,7 @@
   - [Superzed Canvas Implementation Plan](./development/superzed-canvas-plan.md)
   - [Dez Development](./development/dez/index.md)
     - [Fork Notes](./development/dez/fork-notes.md)
+    - [v0.0.4 External Sessions](./development/dez/v0.0.4-external-sessions.md)
     - [v0.0.3 Production Readiness](./development/dez/v0.0.3-production-readiness.md)
     - [v0.0.2 Completion Plan](./development/dez/v0.0.2-completion-plan.md)
     - [v0.0.2 Source Ledger](./development/dez/v0.0.2-active-plan.md)

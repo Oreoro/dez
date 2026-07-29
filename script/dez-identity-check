@@ -65,11 +65,11 @@ require_pattern crates/paths/src/paths.rs \
     '^pub const APP_STORAGE_NAME: &str = "Superzed";' \
     'the documented legacy storage boundary changed without a migration'
 require_pattern crates/zed/Cargo.toml \
-    '^version = "0\.0\.3"$' \
-    'application version is not 0.0.3'
+    '^version = "0\.0\.4"$' \
+    'application version is not 0.0.4'
 require_multiline_pattern Cargo.lock \
-    '\[\[package\]\][[:space:]]*name = "zed"[[:space:]]*version = "0\.0\.3"' \
-    'the locked Dez package version does not match 0.0.3'
+    '\[\[package\]\][[:space:]]*name = "zed"[[:space:]]*version = "0\.0\.4"' \
+    'the locked Dez package version does not match 0.0.4'
 require_pattern crates/zed/Cargo.toml \
     '^default-run = "dez"$' \
     'default executable is not dez'
@@ -104,7 +104,7 @@ require_multiline_pattern crates/workspace/src/pane.rs \
     'fn render_empty_project_state.*?"Start work in this project".*?Codex, Claude Code, OpenCode, Herdr.*?items_center\(\).*?justify_center\(\).*?"Run".*?"Supervise in Projects".*?"Review in Files & Git"' \
     'the Main Work Area onboarding can regress to a sparse non-native blank canvas'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn terminal_thread_status.*?TerminalAgentState::Failed.*?TerminalRuntimeState::Missing.*?TerminalRuntimeState::Incompatible.*?AgentThreadStatus::Error.*?TerminalAgentState::WaitingForPermission.*?TerminalAgentState::WaitingForInput.*?AgentThreadStatus::WaitingForConfirmation.*?TerminalAgentState::Running.*?TerminalRuntimeState::Reconnecting.*?AgentThreadStatus::Running.*?\.status\(terminal_status\)' \
+    'fn terminal_thread_status.*?TerminalAgentState::Failed.*?TerminalRuntimeState::Missing.*?TerminalRuntimeState::Incompatible.*?AgentThreadStatus::Error.*?TerminalAgentState::WaitingForPermission.*?TerminalAgentState::WaitingForInput.*?AgentThreadStatus::WaitingForConfirmation.*?TerminalAgentState::Running.*?TerminalRuntimeState::Live.*?TerminalRuntimeState::Detached.*?TerminalRuntimeState::Reconnecting.*?AgentThreadStatus::Running.*?\.status\(terminal_status\)' \
     'Agent Session rows can regress to hiding running, human-intervention, reconnecting, and failed states'
 require_multiline_pattern crates/agent_ui/src/terminal_thread_metadata_store.rs \
     'enum TerminalAgentKind.*?Herdr.*?Self::Herdr => "Herdr".*?has_token\("herdr"\).*?TerminalAgentKind::Herdr' \
@@ -283,7 +283,7 @@ require_pattern assets/fonts/jetbrains-mono/OFL.txt \
     '^Copyright 2020 The JetBrains Mono Project Authors' \
     'the JetBrains Mono source attribution is incomplete'
 require_multiline_pattern README.md \
-    '^# Dez.*?v0\.0\.3 source candidate.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Projects\*\*.*?\*\*Workspace Tools\*\*.*?\*\*Built-in Agent\*\*.*?Open Agent Terminal.*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?Before a public binary release' \
+    '^# Dez.*?v0\.0\.4 source candidate.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Projects\*\*.*?\*\*External Sessions\*\*.*?tmux.*?Herdr.*?\*\*Workspace Tools\*\*.*?\*\*Built-in Agent\*\*.*?Open Agent Terminal.*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?Before a public binary release' \
     'the repository front page can regress to upstream branding, omit the Dez product model, or overstate release readiness'
 require_multiline_pattern README.md \
     '## Visual baseline.*?Lumin Blur.*?Lumin Light.*?IBM Plex Sans.*?Lilex.*?## Upstream relationship.*?deliberate fork.*?## License and attribution.*?independent fork' \
@@ -292,16 +292,21 @@ reject_pattern README.md \
     '^# Zed$|download Zed directly|we.re hiring|Sponsorships go directly to Zed Industries' \
     'the repository front page still presents Dez as the official upstream Zed product'
 require_multiline_pattern docs/src/dez.md \
-    '^# What is Dez\?.*?## The screen model.*?Projects.*?Main Work Area.*?Workspace Tools.*?native pane grid.*?## How coding work flows.*?Open Agent Terminal.*?## Terminal and Agent integration.*?Packaged Dez builds.*?The v0\.0\.3 goal.*?## Source-preview limits' \
+    '^# What is Dez\?.*?## The screen model.*?Projects.*?Main Work Area.*?Workspace Tools.*?native pane grid.*?## How coding work flows.*?Open Agent Terminal.*?## Terminal and Agent integration.*?Packaged Dez builds.*?External Sessions.*?v0\.0\.4 adds explicit attachment for tmux and Herdr only.*?The v0\.0\.4 goal.*?## Source-preview limits' \
     'the public product guide can lose the screen model, IDE integration, or honest source-preview boundary'
 require_pattern docs/src/SUMMARY.md \
     '^- \[What is Dez\?\]\(\./dez\.md\)$' \
     'the public product guide is no longer reachable from documentation navigation'
 require_file docs/src/development/dez/v0.0.3-production-readiness.md \
-    'the active v0.0.3 production-readiness plan is missing'
+    'the historical v0.0.3 production-readiness plan is missing'
 require_multiline_pattern docs/src/development/dez/v0.0.3-production-readiness.md \
     '^# Dez v0\.0\.3 production readiness.*?v0\.0\.3 is a hardening release, not a feature expansion.*?## Milestone 1 — startup and durable terminal truth.*?## Milestone 2 — one coherent shell.*?## Milestone 3 — responsive and visual production pass.*?## Milestone 6 — exact build and public-preview package.*?## Stop-ship defects' \
     'the v0.0.3 plan can regress to feature expansion without reliability, visual, package, and stop-ship gates'
+require_file docs/src/development/dez/v0.0.4-external-sessions.md \
+    'the active v0.0.4 external-sessions plan is missing'
+require_multiline_pattern docs/src/development/dez/v0.0.4-external-sessions.md \
+    '^# Dez v0\.0\.4 external sessions.*?## Release promise.*?## Ownership contract.*?tmux session.*?Herdr pane.*?Other local terminal process.*?## Milestone 1 — external discovery.*?## Milestone 2 — safe native attach.*?Never pass Herdr `--takeover` automatically.*?## Milestone 4 — native visual and responsive pass.*?## Milestone 5 — release proof.*?## Deferred' \
+    'the v0.0.4 plan can regress to implied PTY ownership, a second navigation model, or an unverified release'
 require_multiline_pattern docs/src/development/dez/v0.0.1-release-runbook.md \
     'there is currently no retained runnable.*?## Historical local candidate.*?future runtime.*?rebuild, identify, hash, sign, and audit a new exact candidate' \
     'the release runbook can regress to presenting removed local targets as a current runnable candidate'
@@ -537,17 +542,23 @@ require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'test_plain_workspace_shell_is_promoted_only_after_agent_evidence.*?!sidebar\.contents\.entries\.iter\(\)\.any.*?session_count, 0.*?set_custom_title\(Some\("Codex".*?matching_terminals, 1.*?session_count, 1' \
     'the ordinary-shell-to-agent promotion contract is no longer covered'
 require_multiline_pattern docs/src/terminal.md \
-    'What Dez can and cannot observe.*?Projects can.*?list current-user TTYs.*?Machine Terminals.*?ephemeral and read-only.*?does not capture.*?transcript or arguments.*?accept its input.*?adopt its PTY.*?future.*?tmux.*?no such external.*?terminal control.*?v0\.0\.2' \
+    'What Dez can and cannot observe.*?Projects can.*?list.*?current-user TTYs.*?External Sessions.*?ephemeral and read-only.*?does not capture.*?transcript or arguments.*?accept its input.*?adopt its PTY.*?v0\.0\.4 adds a narrower, explicit control boundary for tmux and Herdr.*?list-panes.*?snapshot API.*?remains authoritative.*?never requests.*?a.*?Herdr takeover automatically.*?Other machine terminals remain read-only' \
     'the public product contract can regress to confusing machine terminal observation with ownership'
 require_multiline_pattern crates/agent_ui/src/machine_terminal_store.rs \
     'MACHINE_TERMINAL_REFRESH_INTERVAL.*?observation-only.*?does not own the PTY.*?ObservedMachineTerminal.*?Command::new\("/bin/ps"\).*?process_is_descendant_of.*?process_belongs_to_dez.*?/dez\.app/.*?dez-terminal-host.*?working_directories_for' \
     'machine terminal discovery can regress to implied ownership, self-duplication, or retained command context'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn machine_terminal_section_accessibility_description.*?Read-only terminals observed from the local process table\. Dez does not own these PTYs\..*?fn machine_terminal_section_tooltip_label.*?Machine terminals are read-only.*?machine_terminal_matches_query.*?activate_observed_machine_terminal.*?machine_terminals: Vec<ObservedMachineTerminal>.*?render_machine_terminal_section.*?aria_label\("Machine terminals"\).*?aria_description\(machine_terminal_section_accessibility_description\(\)\).*?id\("machine-terminal-section-header"\).*?Label::new\("Machine Terminals"\).*?tooltip\(Tooltip::text\(machine_terminal_section_tooltip_label\(\)\)\)' \
-    'Projects can regress to hiding machine terminals or presenting them as managed work'
+    'fn machine_terminal_matches_query.*?fn external_multiplexer_session_matches_query.*?fn activate_observed_machine_terminal.*?fn external_multiplexer_status.*?multiplexer_sessions: Vec<ExternalMultiplexerSession>.*?machine_terminals: Vec<ObservedMachineTerminal>.*?fn attach_external_multiplexer_session.*?use_new_terminal: true.*?RevealTarget::Center.*?fn render_external_terminal_section.*?tmux and Herdr sessions can be attached in the Main Work Area\. Other machine terminals remain observation-only\..*?Label::new\("External Sessions"\).*?Attach tmux and Herdr sessions without taking process ownership\. Other terminal apps are shown read-only' \
+    'Projects can regress to hiding attachable sessions, taking process ownership, or presenting machine terminals as managed work'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn attention_empty_state_copy.*?"No agent sessions need attention\..*?"Show All".*?"Show all Agent Sessions and observed terminals".*?fn machine_terminal_count_label.*?rail_width < DETAILED_MIN_WIDTH.*?"\{count\} observed".*?"\{count\} observed · read-only".*?let count_label = machine_terminal_count_label\(self\.rendered_width, count\)' \
-    'compact Agent Sessions recovery or observed-terminal metadata can regress to ambiguous or clipped copy'
+    'fn attention_empty_state_copy.*?"No agent sessions need attention\..*?"Show All".*?"Show all Agent Sessions and observed terminals".*?let count =.*?multiplexer_sessions\.len\(\) \+ self\.contents\.machine_terminals\.len\(\).*?format!\("\{count\} external"\).*?max_h\(vh\(0\.32, window\)\)' \
+    'compact Agent Sessions recovery or external-terminal metadata can regress to ambiguous, unbounded, or clipped copy'
+require_multiline_pattern crates/agent_ui/src/multiplexer_session_store.rs \
+    'MULTIPLEXER_REFRESH_INTERVAL.*?TMUX_FORMAT.*?pub enum MultiplexerKind.*?pub enum MultiplexerSessionState.*?pub struct ExternalMultiplexerSession.*?attach_command.*?"attach-session".*?"agent".*?"attach".*?"terminal".*?"session".*?"control".*?scan_tmux_sessions.*?"list-panes".*?parse_tmux_sessions.*?scan_herdr_sessions.*?"api".*?"snapshot".*?parse_herdr_snapshot.*?Some\("blocked"\) => MultiplexerSessionState::NeedsAttention' \
+    'tmux and Herdr discovery can regress to unstable identity, missing attention state, or a non-native attach path'
+reject_pattern crates/agent_ui/src/multiplexer_session_store.rs \
+    '"--takeover"' \
+    'Dez can regress to seizing a Herdr pane without an explicit user decision'
 reject_pattern crates/sidebar/src/sidebar.rs \
     'sidebar-start-route|Dez workflow route' \
     'the true-empty Sessions state regressed to permanent onboarding chrome'
@@ -1296,8 +1307,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn project_header_primary_action_activates_workspace.*?app_name != "Zed".*?project-disclosure-.*?toggle_collapse\(&key_for_disclosure.*?if project_header_primary_action_activates_workspace\(APP_NAME\).*?activate_or_open_workspace_for_group' \
     'Projects can regress to folding on primary navigation instead of using a separate disclosure control'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'let show_start_state = session_start_state_visible\([[:space:]]*self\.contents\.has_open_projects,[[:space:]]*self\.contents\.session_count.*?render_machine_terminal_section\([[:space:]]*has_workspace_rows \|\| show_start_state.*?child\(self\.render_empty_state\(cx\)\).*?when_some\(machine_terminal_section' \
-    'observed machine terminals can regress to hiding the primary no-Workspace recovery path'
+    'let show_start_state = session_start_state_visible\([[:space:]]*self\.contents\.has_open_projects,[[:space:]]*self\.contents\.session_count.*?render_external_terminal_section\([[:space:]]*has_workspace_rows \|\| show_start_state.*?child\(self\.render_empty_state\(cx\)\).*?when_some\(external_terminal_section' \
+    'external terminal sessions can regress to hiding the primary no-Workspace recovery path'
 require_pattern crates/sidebar/src/sidebar.rs \
     '\.aria_expanded\(!is_collapsed\)' \
     'Workspace group expansion state is absent from accessibility output'
@@ -1605,8 +1616,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'SUPPLEMENTAL_METADATA_MIN_WIDTH.*?fn session_rail_supplemental_metadata_visible.*?show_worktree_metadata && supplemental_metadata_visible.*?actor_label_visible\(supplemental_metadata_visible\).*?host_label_visible\(supplemental_metadata_visible\)' \
     'narrow Session rows can regress to crowding primary state with actor, host, and worktree detail'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn render_machine_terminal_section.*?let supplemental_metadata_visible =.*?session_rail_supplemental_metadata_visible\(self\.rendered_width\).*?actor_label\(owner\).*?actor_label_visible\(supplemental_metadata_visible\).*?state_label\(state\).*?host_label\(location\).*?host_label_visible\(supplemental_metadata_visible\)' \
-    'read-only machine terminal rows can regress to crowding compact Agent Sessions with owner and working-directory metadata'
+    'fn render_external_terminal_section.*?let supplemental_metadata_visible =.*?session_rail_supplemental_metadata_visible\(self\.rendered_width\).*?actor_label\(owner\).*?actor_label_visible\(supplemental_metadata_visible\).*?state_label\(state\).*?host_label\(location\).*?host_label_visible\(supplemental_metadata_visible\)' \
+    'external terminal rows can regress to crowding compact Agent Sessions with owner and working-directory metadata'
 require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
     'actor_label_visible: bool.*?host_label_visible: bool.*?pub fn actor_label_visible.*?pub fn host_label_visible.*?has_visible_actor_label.*?has_visible_host_label.*?when\(self\.actor_label_visible.*?when\(self\.host_label_visible' \
     'hidden Session ownership context can regress to disappearing from accessibility and tooltips'
@@ -1780,7 +1791,7 @@ require_multiline_pattern crates/workspace/src/pane.rs \
     'fn render_new_surface_control.*?pane_new_surface_control_copy\(paths::APP_NAME\).*?IconButton::new\("plus", IconName::Plus\).*?tab_index\(0isize\).*?aria_label\(aria_label\).*?Tooltip::text\(tooltip\).*?fn pane_new_surface_control_copy.*?"New Item".*?"New…".*?"Add to Main Work Area".*?"Add a file, search, or terminal"' \
     'the main-work-area add control can regress to an unexplained generic plus button'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'fn accessibility_label_for_app.*?"Editor pane".*?"Project pane".*?"Agent pane".*?"Main work area".*?"Files and Git".*?"Built-in Agent".*?if paths::APP_NAME != "Zed".*?PaneKind::Project.*?render_auxiliary_pane_hide_control\(PaneKind::Project\).*?PaneKind::Agent.*?render_auxiliary_pane_hide_control\(PaneKind::Agent\).*?if !has_focus.*?Some\(add_control\).*?fn render_auxiliary_pane_hide_control.*?"hide-files-and-git".*?tab_index\(0isize\).*?"hide-agent".*?tab_index\(0isize\).*?fn pane_auxiliary_hide_control_copy.*?"Hide Files and Git".*?"Hide Built-in Agent"' \
+    'fn accessibility_label_for_app.*?"Editor pane".*?"Project pane".*?"Agent pane".*?"Main work area".*?"Workspace Tools".*?"Built-in Agent".*?if paths::APP_NAME != "Zed".*?PaneKind::Project.*?render_auxiliary_pane_hide_control\(PaneKind::Project\).*?PaneKind::Agent.*?render_auxiliary_pane_hide_control\(PaneKind::Agent\).*?if !has_focus.*?Some\(add_control\).*?fn render_auxiliary_pane_hide_control.*?"hide-workspace-tools".*?tab_index\(0isize\).*?"hide-agent".*?tab_index\(0isize\).*?fn pane_auxiliary_hide_control_copy.*?"Hide Workspace Tools".*?"Hide Built-in Agent"' \
     'main-area creation controls can regress into auxiliary panes or pane landmarks can lose their product-region identity'
 require_multiline_pattern crates/workspace/src/pane.rs \
     'fn pane_drag_handle_visible.*?app_name == "Zed".*?fn render_pane_drag_handle.*?id\("pane_drag_handle"\).*?\.absolute\(\).*?\.on_drag.*?when\(pane_drag_handle_visible\(paths::APP_NAME\).*?child\(self\.render_pane_drag_handle\(cx\)\).*?!pane_drag_handle_visible\("Dez"\).*?pane_drag_handle_visible\("Zed"\)' \
@@ -2230,7 +2241,7 @@ require_multiline_pattern .github/workflows/dez-build.yml \
     'hdiutil verify.*?Dez\.app.*?Contents/MacOS/dez-terminal-host.*?CFBundleIdentifier.*?dev\.dez\.Dez.*?codesign --verify --deep --strict' \
     'the manual macOS workflow does not verify its DMG, identity, helper, and signature'
 require_multiline_pattern .github/workflows/dez-build.yml \
-    '"\$main" --system-specs.*?"\$cli" --dez "\$app" --version.*?"\$terminal_host" --help.*?runtime-smoke\.txt.*?grep -F "Dez: v0\.0\.3".*?grep -F "Dez 0\.0\.3".*?grep -F "Usage: dez-terminal-host"' \
+    '"\$main" --system-specs.*?"\$cli" --dez "\$app" --version.*?"\$terminal_host" --help.*?runtime-smoke\.txt.*?grep -F "Dez: v0\.0\.4".*?grep -F "Dez 0\.0\.4".*?grep -F "Usage: dez-terminal-host"' \
     'the public macOS workflow no longer executes and verifies every packaged Dez entry point'
 require_multiline_pattern .github/workflows/dez-build.yml \
     'Dez-macOS-M2\.dmg.*?INSTALL\.txt.*?SHA256SUMS\.txt.*?compression-level: 0' \

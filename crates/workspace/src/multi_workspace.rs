@@ -32,7 +32,7 @@ const TRAFFIC_LIGHT_INSET: Pixels = px(9.0);
 use crate::open_remote_project_with_existing_connection;
 use crate::{
     CloseIntent, CloseWindow, DockPosition, Event as WorkspaceEvent, Item, ModalView, OpenMode,
-    PaneKind, Panel, ToggleProjectPane, Workspace, WorkspaceId, client_side_decorations,
+    Panel, ToggleProjectPane, Workspace, WorkspaceId, client_side_decorations,
     persistence::model::MultiWorkspaceState, workspace_card_gap,
 };
 
@@ -185,7 +185,7 @@ fn render_sidebar_header_controls_for_state(
     enabled: bool,
     sidebar: SidebarRenderState,
     _active_workspace: Option<Entity<Workspace>>,
-    _project_pane_visible: Option<bool>,
+    project_pane_visible: Option<bool>,
     _agent_pane_visible: Option<bool>,
     cx: &mut App,
 ) -> Option<AnyElement> {

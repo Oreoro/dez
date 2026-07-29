@@ -162,7 +162,7 @@ impl PaneKind {
             (true, Self::Project) => "Project pane",
             (true, Self::Agent) => "Agent pane",
             (false, Self::Tabs) => "Main work area",
-            (false, Self::Project) => "Files and Git",
+            (false, Self::Project) => "Workspace Tools",
             (false, Self::Agent) => "Built-in Agent",
         }
     }
@@ -5652,7 +5652,7 @@ fn render_auxiliary_pane_hide_control(pane_kind: PaneKind) -> AnyElement {
         .expect("only auxiliary panes have dedicated hide controls");
 
     match pane_kind {
-        PaneKind::Project => IconButton::new("hide-files-and-git", IconName::Close)
+        PaneKind::Project => IconButton::new("hide-workspace-tools", IconName::Close)
             .size(ButtonSize::Medium)
             .icon_size(IconSize::Small)
             .tab_index(0isize)
@@ -5701,7 +5701,7 @@ fn pane_new_surface_menu_copy(
 
 fn pane_auxiliary_hide_control_copy(pane_kind: PaneKind) -> Option<&'static str> {
     match pane_kind {
-        PaneKind::Project => Some("Hide Files and Git"),
+        PaneKind::Project => Some("Hide Workspace Tools"),
         PaneKind::Agent => Some("Hide Built-in Agent"),
         PaneKind::Tabs => None,
     }
@@ -6537,7 +6537,7 @@ mod tests {
         );
         assert_eq!(
             PaneKind::Project.accessibility_label_for_app("Dez"),
-            "Files and Git"
+            "Workspace Tools"
         );
         assert_eq!(
             PaneKind::Agent.accessibility_label_for_app("Dez"),
@@ -6578,7 +6578,7 @@ mod tests {
         );
         assert_eq!(
             pane_auxiliary_hide_control_copy(PaneKind::Project),
-            Some("Hide Files and Git")
+            Some("Hide Workspace Tools")
         );
         assert_eq!(
             pane_auxiliary_hide_control_copy(PaneKind::Agent),

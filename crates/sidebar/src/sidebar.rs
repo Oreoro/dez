@@ -21,7 +21,8 @@ use agent_ui::threads_archive_view::{
 use agent_ui::{
     AcpThreadImportOnboarding, Agent, AgentPanel, AgentPanelEvent, AgentThreadItem,
     AgentThreadSource, ArchiveSelectedThread, CanvasAgentUiSettings, ConversationView,
-    CrossChannelImportOnboarding, MachineTerminalStore, ManageProfiles, NewTerminalThread,
+    CrossChannelImportOnboarding, ExternalMultiplexerSession, MachineTerminalStore, ManageProfiles,
+    MultiplexerKind, MultiplexerSessionState, MultiplexerSessionStore, NewTerminalThread,
     ObservedMachineTerminal, ObservedRepositoryEvidence, ObservedRunActivity, ObservedRunCheck,
     ObservedRunCheckStatus, ObservedRunCommand, ObservedWorkspaceEvidence, OpenAgentDiff,
     RenameSelectedThread, RunReviewBrief, RunReviewState, TerminalId, ThreadId, ThreadImportModal,
@@ -61,6 +62,7 @@ use std::mem;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
+use task::{HideStrategy, RevealStrategy, SaveStrategy, Shell, SpawnInTerminal, TaskId};
 use terminal::{
     Event as TerminalEvent,
     session_host::{
@@ -104,7 +106,7 @@ use git_ui::{
 use zed_actions::agent::OpenSettings;
 use zed_actions::assistant::{ManageSkills, OpenGlobalAgentsMdRules, OpenProjectAgentsMdRules};
 use zed_actions::editor::{MoveDown, MoveUp};
-use zed_actions::{CreateWorktree, NewWorktreeBranchTarget, OpenRecent};
+use zed_actions::{CreateWorktree, NewWorktreeBranchTarget, OpenRecent, RevealTarget};
 
 use zed_actions::sidebar::{FocusSidebarFilter, ToggleThreadSwitcher};
 
@@ -1714,9 +1716,14 @@ fn terminal_thread_status(
             agent.state,
             TerminalAgentState::Starting | TerminalAgentState::Running
         )
-    }) || runtime
-        .is_some_and(|runtime| runtime.state == TerminalRuntimeState::Reconnecting)
-    {
+    }) || runtime.is_some_and(|runtime| {
+        matches!(
+            runtime.state,
+            TerminalRuntimeState::Live
+                | TerminalRuntimeState::Detached
+                | TerminalRuntimeState::Reconnecting
+        )
+    }) {
         AgentThreadStatus::Running
     } else {
         AgentThreadStatus::Completed
@@ -2798,6 +2805,28 @@ fn machine_terminal_matches_query(terminal: &ObservedMachineTerminal, query: &st
             .is_some_and(|path| path.to_string_lossy().to_ascii_lowercase().contains(&query))
 }
 
+fn external_multiplexer_session_matches_query(
+    session: &ExternalMultiplexerSession,
+    query: &str,
+) -> bool {
+    let query = query.trim().to_ascii_lowercase();
+    if query.is_empty() {
+        return true;
+    }
+
+    session.title.to_ascii_lowercase().contains(&query)
+        || session.source_label().to_ascii_lowercase().contains(&query)
+        || session.state_label().to_ascii_lowercase().contains(&query)
+        || session
+            .foreground_command
+            .as_ref()
+            .is_some_and(|command| command.to_ascii_lowercase().contains(&query))
+        || session
+            .working_directory
+            .as_ref()
+            .is_some_and(|path| path.to_string_lossy().to_ascii_lowercase().contains(&query))
+}
+
 fn activate_observed_machine_terminal(terminal: ObservedMachineTerminal, cx: &mut App) {
     if terminal.owning_application.is_none() {
         cx.write_to_clipboard(ClipboardItem::new_string(terminal.copy_details()));
@@ -2806,6 +2835,18 @@ fn activate_observed_machine_terminal(terminal: ObservedMachineTerminal, cx: &mu
 
     cx.background_spawn(async move { terminal.reveal_owning_application() })
         .detach_and_log_err(cx);
+}
+
+fn external_multiplexer_status(state: MultiplexerSessionState) -> Option<AgentThreadStatus> {
+    match state {
+        MultiplexerSessionState::Attached
+        | MultiplexerSessionState::Detached
+        | MultiplexerSessionState::Idle
+        | MultiplexerSessionState::Working => Some(AgentThreadStatus::Running),
+        MultiplexerSessionState::NeedsAttention => Some(AgentThreadStatus::WaitingForConfirmation),
+        MultiplexerSessionState::Completed => Some(AgentThreadStatus::Completed),
+        MultiplexerSessionState::Unknown => None,
+    }
 }
 
 fn terminal_entry_source_kind(
@@ -3364,6 +3405,9 @@ impl From<TerminalEntry> for ListEntry {
 #[derive(Default)]
 struct SidebarContents {
     entries: Vec<ListEntry>,
+    /// Externally owned tmux and Herdr sessions that can be attached in a
+    /// native Main Work Area terminal without transferring process ownership.
+    multiplexer_sessions: Vec<ExternalMultiplexerSession>,
     /// Ephemeral, observation-only terminals owned by other applications on
     /// this machine. They never enter the durable Session stores.
     machine_terminals: Vec<ObservedMachineTerminal>,
@@ -3375,7 +3419,8 @@ struct SidebarContents {
     snapshot_ready: bool,
     has_open_projects: bool,
     has_attention: bool,
-    /// Managed or detected agent Sessions represented by `entries`.
+    /// Managed, detected, or safely attachable Sessions represented by this
+    /// projection.
     session_count: usize,
     /// Current read-only process observations represented by
     /// `machine_terminals`.
@@ -3526,6 +3571,26 @@ mod attention_state_tests {
                 None,
                 Some(&TerminalRuntimeInfo {
                     state: TerminalRuntimeState::Live,
+                }),
+                false,
+            ),
+            AgentThreadStatus::Running
+        );
+        assert_eq!(
+            terminal_thread_status(
+                None,
+                Some(&TerminalRuntimeInfo {
+                    state: TerminalRuntimeState::Detached,
+                }),
+                false,
+            ),
+            AgentThreadStatus::Running
+        );
+        assert_eq!(
+            terminal_thread_status(
+                None,
+                Some(&TerminalRuntimeInfo {
+                    state: TerminalRuntimeState::Exited,
                 }),
                 false,
             ),
@@ -4025,6 +4090,12 @@ impl Sidebar {
         .detach();
         if let Some(machine_terminals) = MachineTerminalStore::try_global(cx) {
             cx.observe(&machine_terminals, |this, _store, cx| {
+                this.schedule_update_entries(false, cx);
+            })
+            .detach();
+        }
+        if let Some(multiplexer_sessions) = MultiplexerSessionStore::try_global(cx) {
+            cx.observe(&multiplexer_sessions, |this, _store, cx| {
                 this.schedule_update_entries(false, cx);
             })
             .detach();
@@ -4670,7 +4741,7 @@ impl Sidebar {
     /// Properties:
     ///
     /// - Dez shows only real sessions and contentful drafts; workspace
-    ///   navigation remains in Files & Git and Recent Workspaces.
+    ///   navigation remains in Projects and Recent Workspaces.
     /// - Every visible session stays associated with its owning workspace.
     /// - After every build, active state matches the current workspace's
     ///   current terminal or agent session whenever that work is visible.
@@ -4694,14 +4765,22 @@ impl Sidebar {
             .map(|ws| ws.read(cx).project().read(cx).agent_server_store().clone());
 
         let query = self.filter_editor.read(cx).text(cx);
+        let mut multiplexer_sessions = MultiplexerSessionStore::try_global(cx)
+            .map(|store| store.read(cx).sessions().to_vec())
+            .unwrap_or_default();
         let mut machine_terminals = MachineTerminalStore::try_global(cx)
             .map(|store| store.read(cx).terminals().to_vec())
             .unwrap_or_default();
         if !query.is_empty() {
+            multiplexer_sessions
+                .retain(|session| external_multiplexer_session_matches_query(session, &query));
             machine_terminals.retain(|terminal| machine_terminal_matches_query(terminal, &query));
         }
+        let multiplexer_session_count = multiplexer_sessions.len();
         let machine_terminal_count = machine_terminals.len();
         if self.attention_only {
+            multiplexer_sessions
+                .retain(|session| session.state == MultiplexerSessionState::NeedsAttention);
             machine_terminals.clear();
         }
 
@@ -5758,11 +5837,16 @@ impl Sidebar {
         let session_count = entries
             .iter()
             .filter(|entry| matches!(entry, ListEntry::Thread(_) | ListEntry::Terminal(_)))
-            .count();
+            .count()
+            + multiplexer_session_count;
         let attention_count = entries
             .iter()
             .filter(|entry| entry_needs_attention(entry, &notified_threads, &notified_terminals))
-            .count();
+            .count()
+            + multiplexer_sessions
+                .iter()
+                .filter(|session| session.state == MultiplexerSessionState::NeedsAttention)
+                .count();
         let has_attention = attention_count > 0;
         if self.attention_only {
             (entries, project_header_indices) =
@@ -5771,6 +5855,7 @@ impl Sidebar {
 
         self.contents = SidebarContents {
             entries,
+            multiplexer_sessions,
             machine_terminals,
             notified_threads,
             notified_terminals,
@@ -13486,6 +13571,104 @@ impl Sidebar {
         workspace_focus.dispatch_action(&NewCenterTerminal::default(), window, cx);
     }
 
+    fn attach_external_multiplexer_session(
+        &mut self,
+        session: ExternalMultiplexerSession,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(multi_workspace) = self.multi_workspace.upgrade() else {
+            return;
+        };
+
+        let target_workspace = {
+            let multi_workspace = multi_workspace.read(cx);
+            let mut best_match = None;
+            if let Some(working_directory) = &session.working_directory {
+                for workspace in multi_workspace.workspaces() {
+                    for root in workspace_path_list(workspace, cx).paths() {
+                        if working_directory.starts_with(root) {
+                            let score = root.components().count();
+                            if best_match
+                                .as_ref()
+                                .map_or(true, |(best_score, _): &(usize, Entity<Workspace>)| {
+                                    score > *best_score
+                                })
+                            {
+                                best_match = Some((score, workspace.clone()));
+                            }
+                        }
+                    }
+                }
+            }
+            best_match
+                .map(|(_, workspace)| workspace)
+                .unwrap_or_else(|| multi_workspace.workspace().clone())
+        };
+
+        multi_workspace.update(cx, |multi_workspace, cx| {
+            multi_workspace.activate(target_workspace.clone(), None, window, cx);
+        });
+
+        let attach = session.attach_command();
+        let task_id = TaskId(format!("dez-external-session:{}", session.id));
+        let spawn = SpawnInTerminal {
+            id: task_id,
+            full_label: attach.label.clone(),
+            label: attach.label.clone(),
+            command: Some(attach.program),
+            args: attach.args,
+            command_label: attach.label,
+            cwd: session.working_directory.clone(),
+            env: HashMap::default(),
+            use_new_terminal: true,
+            allow_concurrent_runs: true,
+            reveal: RevealStrategy::Always,
+            reveal_target: RevealTarget::Center,
+            hide: HideStrategy::Never,
+            shell: Shell::System,
+            show_summary: false,
+            show_command: false,
+            show_rerun: false,
+            save: SaveStrategy::None,
+        };
+
+        let weak_workspace = target_workspace.downgrade();
+        let session_title = session.title;
+        let terminal_task = target_workspace.update(cx, |workspace, cx| {
+            workspace.spawn_in_terminal(spawn, window, cx)
+        });
+        cx.spawn(async move |_, cx| {
+            let failure = match terminal_task.await {
+                Some(Ok(status)) if !status.success() => {
+                    Some(format!("Attach exited with {status}"))
+                }
+                Some(Err(error)) => Some(format!("Could not attach: {error}")),
+                Some(Ok(_)) | None => None,
+            };
+
+            if let Some(failure) = failure {
+                log::error!("external terminal session attach failed: {failure}");
+                weak_workspace
+                    .update(cx, |workspace, cx| {
+                        struct ExternalSessionAttachErrorToast;
+                        workspace.show_toast(
+                            Toast::new(
+                                NotificationId::composite::<ExternalSessionAttachErrorToast>(
+                                    session_title.clone(),
+                                ),
+                                format!("{failure}. The external session was not changed."),
+                            )
+                            .autohide(),
+                            cx,
+                        );
+                    })
+                    .ok();
+            }
+        })
+        .detach();
+    }
+
     fn selected_group_key(&self) -> Option<ProjectGroupKey> {
         let ix = self.selection?;
         match self.contents.entries.get(ix) {
@@ -14145,23 +14328,31 @@ impl Sidebar {
             })
     }
 
-    fn render_machine_terminal_section(
+    fn render_external_terminal_section(
         &self,
         has_workspace_rows: bool,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
-        if self.contents.machine_terminals.is_empty() {
+        if self.contents.multiplexer_sessions.is_empty()
+            && self.contents.machine_terminals.is_empty()
+        {
             return None;
         }
 
-        let count = self.contents.machine_terminals.len();
-        let count_label = machine_terminal_count_label(self.rendered_width, count);
+        let count =
+            self.contents.multiplexer_sessions.len() + self.contents.machine_terminals.len();
+        let count_label = if self.rendered_width < RESPONSIVE_MIN_WIDTH {
+            count.to_string()
+        } else {
+            format!("{count} external")
+        };
         let supplemental_metadata_visible =
             session_rail_supplemental_metadata_visible(self.rendered_width);
         let design_system = DesignSystemSettings::get_global(cx);
         let labels_visible = session_rail_labels_visible(&design_system);
         let background = cx.theme().colors().panel_background;
+        let sidebar = cx.weak_entity();
         let project_roots = self
             .contents
             .entries
@@ -14179,14 +14370,13 @@ impl Sidebar {
             .flatten()
             .collect::<Vec<_>>();
 
-        let rows = self
+        let mut rows = self
             .contents
-            .machine_terminals
+            .multiplexer_sessions
             .iter()
             .cloned()
-            .map(|terminal| {
-                let title = terminal.display_title();
-                let project_label = terminal.working_directory.as_ref().and_then(|cwd| {
+            .map(|session| {
+                let project_label = session.working_directory.as_ref().and_then(|cwd| {
                     project_roots
                         .iter()
                         .filter(|(root, _)| cwd.starts_with(root))
@@ -14195,41 +14385,42 @@ impl Sidebar {
                 });
                 let state = project_label
                     .as_ref()
-                    .map(|project| format!("{project} · read-only"))
-                    .unwrap_or_else(|| format!("{} · read-only", terminal.tty));
-                let owner = terminal.owner_label().to_owned();
-                let location = terminal
+                    .map(|project| format!("{project} · {}", session.state_label()))
+                    .unwrap_or_else(|| session.state_label());
+                let owner = session.source_label();
+                let location = session
                     .working_directory
                     .as_ref()
                     .map(|path| path.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| "This Mac".to_owned());
-                let action_label = terminal
-                    .owning_application
-                    .as_ref()
-                    .map(|application| format!("Reveal in {application}"))
-                    .unwrap_or_else(|| "Copy observed terminal details".to_owned());
-                let action_icon = if terminal.owning_application.is_some() {
-                    IconName::ArrowUpRight
-                } else {
-                    IconName::Copy
-                };
-                let row_terminal = terminal.clone();
-                let action_terminal = terminal.clone();
+                    .unwrap_or_else(|| "External session".to_owned());
+                let action_label = format!(
+                    "Attach {} in Main Work Area. {} remains the process owner.",
+                    session.title,
+                    session.kind.display_name()
+                );
+                let status = external_multiplexer_status(session.state);
+                let icon = session
+                    .detected_agent_kind
+                    .map(terminal_agent_icon)
+                    .unwrap_or(match session.kind {
+                        MultiplexerKind::Tmux => IconName::Terminal,
+                        MultiplexerKind::Herdr => IconName::Robot,
+                    });
+                let row_session = session.clone();
+                let action_session = session.clone();
+                let row_sidebar = sidebar.clone();
+                let action_sidebar = sidebar.clone();
 
                 canvas_thread_item_style(
                     ThreadItem::new(
-                        ElementId::from(format!("machine-terminal-{}", terminal.id)),
-                        title,
+                        ElementId::from(format!("external-session-{}", session.id)),
+                        session.title,
                     ),
                     &design_system,
                 )
                 .base_bg(background)
-                .icon(
-                    terminal
-                        .detected_agent_kind
-                        .map(terminal_agent_icon)
-                        .unwrap_or(IconName::Terminal),
-                )
+                .icon(icon)
+                .when_some(status, |item, status| item.status(status))
                 .actor_label(owner)
                 .actor_label_visible(supplemental_metadata_visible)
                 .state_label(state)
@@ -14239,10 +14430,10 @@ impl Sidebar {
                 .action_slot(
                     IconButton::new(
                         (
-                            ElementId::from("machine-terminal-action"),
-                            terminal.id.clone(),
+                            ElementId::from("external-session-attach"),
+                            session.id.clone(),
                         ),
-                        action_icon,
+                        IconName::ArrowUpRight,
                     )
                     .size(ButtonSize::Medium)
                     .icon_size(IconSize::Small)
@@ -14252,43 +14443,148 @@ impl Sidebar {
                     .on_click(move |_, window, cx| {
                         cx.stop_propagation();
                         window.prevent_default();
-                        activate_observed_machine_terminal(action_terminal.clone(), cx);
+                        action_sidebar
+                            .update(cx, |sidebar, cx| {
+                                sidebar.attach_external_multiplexer_session(
+                                    action_session.clone(),
+                                    window,
+                                    cx,
+                                );
+                            })
+                            .ok();
                     }),
                 )
-                .on_click(move |_, _window, cx| {
-                    activate_observed_machine_terminal(row_terminal.clone(), cx);
+                .on_click(move |_, window, cx| {
+                    row_sidebar
+                        .update(cx, |sidebar, cx| {
+                            sidebar.attach_external_multiplexer_session(
+                                row_session.clone(),
+                                window,
+                                cx,
+                            );
+                        })
+                        .ok();
                 })
-            });
+                .into_any_element()
+            })
+            .collect::<Vec<_>>();
+
+        rows.extend(
+            self.contents
+                .machine_terminals
+                .iter()
+                .cloned()
+                .map(|terminal| {
+                    let title = terminal.display_title();
+                    let project_label = terminal.working_directory.as_ref().and_then(|cwd| {
+                        project_roots
+                            .iter()
+                            .filter(|(root, _)| cwd.starts_with(root))
+                            .max_by_key(|(root, _)| root.components().count())
+                            .map(|(_, label)| label.clone())
+                    });
+                    let state = project_label
+                        .as_ref()
+                        .map(|project| format!("{project} · read-only"))
+                        .unwrap_or_else(|| format!("{} · read-only", terminal.tty));
+                    let owner = terminal.owner_label().to_owned();
+                    let location = terminal
+                        .working_directory
+                        .as_ref()
+                        .map(|path| path.to_string_lossy().into_owned())
+                        .unwrap_or_else(|| "This Mac".to_owned());
+                    let action_label = terminal
+                        .owning_application
+                        .as_ref()
+                        .map(|application| format!("Reveal in {application}"))
+                        .unwrap_or_else(|| "Copy observed terminal details".to_owned());
+                    let action_icon = if terminal.owning_application.is_some() {
+                        IconName::ArrowUpRight
+                    } else {
+                        IconName::Copy
+                    };
+                    let row_terminal = terminal.clone();
+                    let action_terminal = terminal.clone();
+
+                    canvas_thread_item_style(
+                        ThreadItem::new(
+                            ElementId::from(format!("machine-terminal-{}", terminal.id)),
+                            title,
+                        ),
+                        &design_system,
+                    )
+                    .base_bg(background)
+                    .icon(
+                        terminal
+                            .detected_agent_kind
+                            .map(terminal_agent_icon)
+                            .unwrap_or(IconName::Terminal),
+                    )
+                    .actor_label(owner)
+                    .actor_label_visible(supplemental_metadata_visible)
+                    .state_label(state)
+                    .host_label(location)
+                    .host_label_visible(supplemental_metadata_visible)
+                    .labels_visible(labels_visible)
+                    .action_slot(
+                        IconButton::new(
+                            (
+                                ElementId::from("machine-terminal-action"),
+                                terminal.id.clone(),
+                            ),
+                            action_icon,
+                        )
+                        .size(ButtonSize::Medium)
+                        .icon_size(IconSize::Small)
+                        .tab_index(0isize)
+                        .aria_label(action_label.clone())
+                        .tooltip(Tooltip::text(action_label))
+                        .on_click(move |_, window, cx| {
+                            cx.stop_propagation();
+                            window.prevent_default();
+                            activate_observed_machine_terminal(action_terminal.clone(), cx);
+                        }),
+                    )
+                    .on_click(move |_, _window, cx| {
+                        activate_observed_machine_terminal(row_terminal.clone(), cx);
+                    })
+                    .into_any_element()
+                }),
+        );
 
         let section = v_flex()
-            .id("machine-terminal-section")
+            .id("external-terminal-section")
             .role(gpui::Role::Region)
-            .aria_label("Machine terminals")
-            .aria_description(machine_terminal_section_accessibility_description())
+            .aria_label("External terminal sessions")
+            .aria_description(
+                "tmux and Herdr sessions can be attached in the Main Work Area. Other machine terminals remain observation-only.",
+            )
             .min_h_0()
             .border_t_1()
             .border_color(cx.theme().colors().border)
             .child(
                 h_flex()
-                    .id("machine-terminal-section-header")
+                    .id("external-terminal-section-header")
                     .flex_none()
                     .h(Tab::content_height(cx))
                     .px_1p5()
                     .gap_1()
                     .justify_between()
-                    .child(Label::new("Machine Terminals").size(LabelSize::Small))
+                    .child(Label::new("External Sessions").size(LabelSize::Small))
                     .child(
                         Label::new(count_label)
                             .size(LabelSize::XSmall)
                             .color(Color::Muted),
                     )
-                    .tooltip(Tooltip::text(machine_terminal_section_tooltip_label())),
+                    .tooltip(Tooltip::text(
+                        "Attach tmux and Herdr sessions without taking process ownership. Other terminal apps are shown read-only.",
+                    )),
             )
             .child(
                 v_flex()
-                    .id("machine-terminal-list")
+                    .id("external-terminal-list")
                     .role(gpui::Role::List)
-                    .aria_label("Read-only machine terminals")
+                    .aria_label("External terminal sessions")
                     .min_h_0()
                     .flex_1()
                     .overflow_y_scroll()
@@ -15521,9 +15817,10 @@ impl Render for Sidebar {
         let rail_on_left = self.side(cx) == SidebarSide::Left;
 
         let has_workspace_rows = !self.contents.entries.is_empty();
-        let has_machine_terminal_rows = !self.contents.machine_terminals.is_empty();
+        let has_external_terminal_rows = !self.contents.multiplexer_sessions.is_empty()
+            || !self.contents.machine_terminals.is_empty();
         let total_item_count = self.contents.session_count + self.contents.observed_terminal_count;
-        let no_search_results = !has_workspace_rows && !has_machine_terminal_rows;
+        let no_search_results = !has_workspace_rows && !has_external_terminal_rows;
         let has_query = self.has_filter_query(cx);
         let search_is_focused = self.filter_editor.focus_handle(cx).is_focused(window);
         let show_session_search = session_search_visible(
@@ -15540,7 +15837,7 @@ impl Render for Sidebar {
             self.attention_only,
             self.workspace_restore_is_pending(cx),
         );
-        let machine_terminal_section = self.render_machine_terminal_section(
+        let external_terminal_section = self.render_external_terminal_section(
             has_workspace_rows || show_start_state,
             window,
             cx,
@@ -15680,7 +15977,7 @@ impl Render for Sidebar {
                                 |this, status| this.child(status),
                             )
                             .child(self.render_empty_state(cx))
-                            .when_some(machine_terminal_section, |this, section| {
+                            .when_some(external_terminal_section, |this, section| {
                                 this.child(section)
                             })
                         } else {
@@ -15755,7 +16052,7 @@ impl Render for Sidebar {
                                                         )
                                                     })
                                                     .when_some(
-                                                        machine_terminal_section,
+                                                        external_terminal_section,
                                                         |this, section| this.child(section),
                                                     )
                                                 }

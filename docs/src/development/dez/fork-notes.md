@@ -62,12 +62,12 @@ capabilities.
 Dez uses one pane grid and one supervision projection. User-facing names
 describe purpose, not the inherited dock or panel implementation:
 
-| Region              | Owns                                                               | Does not own                                                        |
-| ------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| **Projects**        | Open codebases, Agent Sessions, attention, and global navigation   | Terminal processes, editor state, or duplicate tabs                  |
-| **Workspace Tools** | Files, Outline, Git, Debug, or Built-in Agent in a contextual right pane | A second Workspace, root selection, or terminal placement       |
-| **Main work area**  | File, terminal, search, diagnostics, settings, and review Surfaces | Global project scope or sidebar-only copies of active work          |
-| **Built-in Agent**  | Native and ACP conversation Surfaces in the Workspace Tools slot   | Terminal-agent process ownership or another persistent drawer       |
+| Region              | Owns                                                                     | Does not own                                                  |
+| ------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| **Projects**        | Open codebases, Agent Sessions, attention, and global navigation         | Terminal processes, editor state, or duplicate tabs           |
+| **Workspace Tools** | Files, Outline, Git, Debug, or Built-in Agent in a contextual right pane | A second Workspace, root selection, or terminal placement     |
+| **Main work area**  | File, terminal, search, diagnostics, settings, and review Surfaces       | Global project scope or sidebar-only copies of active work    |
+| **Built-in Agent**  | Native and ACP conversation Surfaces in the Workspace Tools slot         | Terminal-agent process ownership or another persistent drawer |
 
 The final shell follows this responsive layout contract. This is the canonical
 wireframe, not a suggestion for an additional dashboard or panel system:
@@ -117,9 +117,11 @@ the existing Surface rather than opening a duplicate.
 
 The visible title is **Projects**, because the stable thing a developer
 navigates is a codebase. Agent Sessions appear beneath their owning Project;
-ordinary integrated shells stay in the Main Work Area. Read-only observations
-from other applications are separated under **Machine Terminals**, where the
-UI states that Dez does not own those PTYs.
+ordinary integrated shells stay in the Main Work Area. External terminal work
+is separated under **External Sessions**. tmux and Herdr rows expose a
+deliberate attach action while leaving the multiplexer authoritative. Other
+terminal applications remain read-only observations and state that Dez does
+not own their PTYs.
 
 Projects restoration follows this lifecycle:
 
@@ -201,9 +203,11 @@ Projects supervises agent Sessions; it is not a list of every shell.
   while leaving the terminal tab and process intact.
 - Generic shell titles, working directories, and terminal output are not agent
   evidence and must not create Session Details.
-- Dez does not capture PTYs owned by Terminal.app, iTerm2, Warp, VS Code, or
-  another application. External adoption requires an explicit protocol such as
-  a future `tmux` adapter and is outside the v0.0.2 contract.
+- Dez does not capture arbitrary PTYs owned by Terminal.app, iTerm2, Warp, VS
+  Code, or another application. Those terminals remain observation-only.
+  Explicitly shared tmux sessions and live Herdr panes can be attached through
+  their documented protocols in v0.0.4; the external multiplexer remains the
+  process and layout owner.
 
 This admission rule is enforced at every source of terminal metadata: live
 Workspace terminals, saved metadata, and detached Host sessions. Hidden
@@ -1692,6 +1696,15 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   [v0.0.3 Production Readiness Plan](./v0.0.3-production-readiness.md)
   supersedes v0.0.2 plans only as an execution order; it does not replace these
   permanent decisions.
+- **2026-07-29: External attachment is protocol-based and never implicit PTY
+  capture.** v0.0.4 adds one **External Sessions** section to Projects. tmux
+  sessions and live Herdr panes are discovered through documented interfaces
+  and open as ordinary draggable terminal tabs in the Main Work Area. The
+  multiplexer remains the process and layout owner; closing the tab or Dez
+  detaches the client and must not terminate the session. Herdr never receives
+  an automatic `--takeover`. Machine terminals remain read-only observations.
+  Dez does not add a second sidebar, pane grid, tab model, transcript store, or
+  lifecycle database for external work.
 - **2026-07-27: v0.0.2 proves the integrated loop before durable adoption.**
   The v0.0.2 release gate is one dependable in-app workflow: run a supported
   agent in an integrated terminal, supervise that same terminal through
