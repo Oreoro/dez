@@ -191,19 +191,22 @@ require_multiline_pattern assets/settings/initial_user_settings.json \
     '"icon_theme": "Dez \(Default\)".*?"markdown_preview_code_font_family": "Lilex"' \
     'first-run settings can omit the Dez icons or coherent Markdown code font'
 require_multiline_pattern assets/settings/initial_user_settings.json \
+    '"tab_bar": \{.*?"show": true.*?"show_nav_history_buttons": true.*?"show_tab_bar_buttons": true' \
+    'first-run Dez can regress to hiding native pane navigation or tab controls'
+require_multiline_pattern assets/settings/initial_user_settings.json \
     '"status_bar": \{.*?"experimental\.show": true.*?"show_active_file": true.*?"line_endings_button": true' \
     'first-run Dez can regress to hiding the native editor status hierarchy'
 require_multiline_pattern crates/zed_actions/src/lib.rs \
     'pub mod dez.*?actions!\([[:space:]]*dez.*?RestoreVisualProfile' \
     'the explicit Dez visual-profile recovery action is no longer registered'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'fn restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?ui_font_family = Some\(ui_font\).*?buffer_font_family = Some\(code_font\.clone\(\)\).*?markdown_preview_code_font_family = Some\(code_font\.clone\(\)\).*?ThemeSelection::Dynamic.*?ThemeAppearanceMode::System.*?Lumin Light.*?Lumin Blur.*?IconThemeSelection::Static.*?Dez \(Default\).*?design_system.*?CanvasDensity::Balanced.*?terminal.*?font_family = Some\(code_font\).*?status_bar\.show = Some\(true\).*?status_bar\.show_active_file = Some\(true\).*?status_bar\.line_endings_button = Some\(true\)' \
+    'fn restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?ui_font_family = Some\(ui_font\).*?buffer_font_family = Some\(code_font\.clone\(\)\).*?markdown_preview_code_font_family = Some\(code_font\.clone\(\)\).*?ThemeSelection::Dynamic.*?ThemeAppearanceMode::System.*?Lumin Light.*?Lumin Blur.*?IconThemeSelection::Static.*?Dez \(Default\).*?design_system.*?CanvasDensity::Balanced.*?terminal.*?font_family = Some\(code_font\).*?tab_bar\.show = Some\(true\).*?tab_bar\.show_nav_history_buttons = Some\(true\).*?tab_bar\.show_tab_bar_buttons = Some\(true\).*?status_bar\.show = Some\(true\).*?status_bar\.show_active_file = Some\(true\).*?status_bar\.line_endings_button = Some\(true\)' \
     'visual-profile recovery can stop restoring the complete scoped Dez identity'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'RestoreVisualProfile.*?APP_NAME == "Zed".*?update_settings_file_with_completion.*?restore_dez_visual_profile.*?completion\.await\?\?.*?Restored Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, and the editor status bar\..*?Failed to restore the Dez visual profile' \
+    'RestoreVisualProfile.*?APP_NAME == "Zed".*?update_settings_file_with_completion.*?restore_dez_visual_profile.*?completion\.await\?\?.*?Restored Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, and the editor status bar\..*?Failed to restore the Dez visual profile' \
     'visual-profile recovery can affect official Zed, report before persistence, or fail silently'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'fn dez_visual_profile_restores_identity_without_resetting_font_size.*?ui_font_size = Some\(18\.0\.into\(\)\).*?restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?Lumin Light.*?Lumin Blur.*?Dez \(Default\).*?design_system.*?density.*?balanced.*?status_bar.*?experimental\.show.*?show_active_file.*?line_endings_button.*?ui_font_size.*?18\.0' \
+    'fn dez_visual_profile_restores_identity_without_resetting_font_size.*?ui_font_size = Some\(18\.0\.into\(\)\).*?restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?Lumin Light.*?Lumin Blur.*?Dez \(Default\).*?design_system.*?density.*?balanced.*?tab_bar.*?show_nav_history_buttons.*?show_tab_bar_buttons.*?status_bar.*?experimental\.show.*?show_active_file.*?line_endings_button.*?ui_font_size.*?18\.0' \
     'the scoped visual-profile mutation is no longer covered against size resets'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'APP_NAME != "Zed".*?Restore Dez Visual Profile.*?zed_actions::dez::RestoreVisualProfile' \

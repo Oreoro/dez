@@ -1735,12 +1735,13 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   visible so editor state remains legible beneath files and terminals.
 - **2026-07-29: Pane navigation is native, contextual, and setting-led.** This
   supersedes the 2026-07-28 decision to force Back and Forward buttons into
-  every Dez pane. Pane history remains available through native mouse,
-  keyboard, and command routes, while visible header buttons obey
-  `tab_bar.show_nav_history_buttons` and default off. Workspace-tool tabs are
-  ordinary draggable, reorderable, previewable, and closeable tabs with a
-  predictable close control; they receive no persistent-tab exemption or
-  second browser-like tab strip.
+  every Dez pane regardless of preference. Pane history remains available
+  through native mouse, keyboard, and command routes. Fresh Dez profiles and
+  **Restore Dez Visual Profile** enable the native Back and Forward buttons,
+  while `tab_bar.show_nav_history_buttons` remains the user-controlled source
+  of truth. Workspace-tool tabs are ordinary draggable, reorderable,
+  previewable, and closeable tabs with a predictable close control; they
+  receive no persistent-tab exemption or second browser-like tab strip.
 - **2026-07-27: v0.0.2 proves the integrated loop before durable adoption.**
   The v0.0.2 release gate is one dependable in-app workflow: run a supported
   agent in an integrated terminal, supervise that same terminal through

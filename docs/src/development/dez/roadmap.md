@@ -3847,8 +3847,9 @@ Completed for the minimalist one-drawer shell source slice:
 
 Completed for the minimalist launch-profile source slice:
 
-- hid persistent Main Work Area Back and Forward buttons by default while
-  retaining keyboard and command navigation;
+- initially hid persistent Main Work Area Back and Forward buttons while
+  retaining keyboard and command navigation; the v0.1 profile now enables
+  those native controls by default without forcing them over user preference;
 - hid generic editor quick-action and selection-menu chrome by default while
   retaining breadcrumbs, diagnostics, Agent review, shortcuts, and commands;
 - reduced default Sessions metadata to live Agent state and latest attention,

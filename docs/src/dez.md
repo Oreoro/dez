@@ -493,7 +493,10 @@ Empty Main Work Area panes avoid a centered onboarding card: they use compact
 top-left native chrome with direct terminal, file-finder, and new-file actions.
 The Dez visual profile keeps the status bar visible and includes active-file
 and line-ending context alongside the inherited language, diagnostics, and
-cursor controls.
+cursor controls. Native Back and Forward controls are visible in every Main
+Work Area tab strip, alongside Add, tab overflow, and split controls. They
+traverse the pane's actual history of files, terminals, settings, diffs, and
+other Surfaces; Dez does not add browser chrome over the editor.
 
 ### Settings and navigation visibility
 
@@ -514,8 +517,8 @@ Agent Session.
 
 If imported settings hide that identity, **Dez → Settings → Restore Dez Visual
 Profile** restores Lumin, balanced density, IBM Plex Sans, Lilex, the built-in
-Dez icons, and the editor status bar while preserving font sizes and unrelated
-preferences.
+Dez icons, native tab navigation, and the editor status bar while preserving
+font sizes and unrelated preferences.
 
 Blur belongs to the stable window shell. On macOS the window uses the native
 under-window backdrop and follows active/inactive system state; Lumin layers sit
