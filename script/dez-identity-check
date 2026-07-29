@@ -1549,6 +1549,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let project_group_keys = groups.*?let mut projected_multiplexer_session_ids.*?let group_external_sessions = multiplexer_sessions.*?external_multiplexer_project_group\(session, &project_group_keys\).*?== Some\(group_key\).*?has_visible_rows =.*?!external_sessions\.is_empty\(\).*?external_sessions,[[:space:]]*\}\);.*?fn render_project_header\(.*?external_sessions: &\[ExternalMultiplexerSession\].*?workspace-external-session-.*?external_multiplexer_icon\(session\).*?session\.kind\.display_name\(\).*?session\.state_label\(\).*?tab_index\(0isize\).*?aria_label\(action_label\.clone\(\)\).*?open_external_multiplexer_session' \
     'external terminal and cmux activity can regress from the most specific Workspace into a flat or pointer-only inventory'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'let attention_count = entries.*?matches!\(entry, ListEntry::Thread\(_\) \| ListEntry::Terminal\(_\)\).*?entry_needs_attention.*?projected_multiplexer_session_ids\.contains\(&session\.id\).*?MultiplexerSessionState::NeedsAttention' \
+    'Workspace roll-up headers can regress to inflating the actionable attention count'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'menu\.when\(is_active.*?action\("Open Files", Box::new\(RevealFiles\)\).*?action\("Review Git Changes", Box::new\(ReviewGitChanges\)\).*?action\([[:space:]]*"Open Debug".*?ApplyCanvasLayoutRecipe.*?name: "debug"' \
     'Workspace Options can regress to hiding Files, Git, or Debug behind layout administration'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \

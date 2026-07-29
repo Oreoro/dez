@@ -882,13 +882,17 @@ fn all_session_items_accessibility_label(
     )
 }
 
-fn attention_sessions_accessibility_label(attention_count: usize) -> String {
+fn attention_items_accessibility_label(app_name: &str, attention_count: usize) -> String {
     let attention_verb = if attention_count == 1 {
         "needs"
     } else {
         "need"
     };
-    format!("Attention sessions, {attention_count} {attention_verb} attention")
+    if app_name == "Zed" {
+        format!("Attention sessions, {attention_count} {attention_verb} attention")
+    } else {
+        format!("Attention items, {attention_count} {attention_verb} attention")
+    }
 }
 
 fn attention_empty_state_copy(
@@ -1951,6 +1955,14 @@ mod workspace_header_label_tests {
         assert_eq!(
             session_overview_status_label("Dez", 3, 1, 2, false, false),
             "2 Workspaces · 1 needs attention"
+        );
+        assert_eq!(
+            attention_items_accessibility_label("Dez", 1),
+            "Attention items, 1 needs attention"
+        );
+        assert_eq!(
+            attention_items_accessibility_label("Zed", 2),
+            "Attention sessions, 2 need attention"
         );
     }
 }
@@ -6066,7 +6078,10 @@ impl Sidebar {
             + projected_multiplexer_session_ids.len();
         let attention_count = entries
             .iter()
-            .filter(|entry| entry_needs_attention(entry, &notified_threads, &notified_terminals))
+            .filter(|entry| {
+                matches!(entry, ListEntry::Thread(_) | ListEntry::Terminal(_))
+                    && entry_needs_attention(entry, &notified_threads, &notified_terminals)
+            })
             .count()
             + multiplexer_sessions
                 .iter()
@@ -14336,7 +14351,7 @@ impl Sidebar {
             self.contents.observed_terminal_count,
         );
         let attention_scope_aria_label =
-            attention_sessions_accessibility_label(self.contents.attention_count);
+            attention_items_accessibility_label(APP_NAME, self.contents.attention_count);
         let all_scope_focus = self.focus_handle.clone();
         let attention_scope_focus = self.focus_handle.clone();
         let status_color = if has_attention && !is_searching && !is_restoring {
