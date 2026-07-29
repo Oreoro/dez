@@ -86,13 +86,16 @@ Dez does not capture that terminal's transcript or arguments, accept its input,
 adopt its PTY, restore its process, or attribute its work. The row disappears
 when the external TTY does.
 
-v0.0.4 adds a narrower, explicit control boundary for tmux and Herdr. Dez
-discovers live tmux sessions through `list-panes` and live Herdr panes through
-the documented snapshot API. A session appears as **Attach Running Session…**
-only on an open Project whose root contains that session's working directory.
-Choosing it opens the documented attach command in an ordinary Main Work Area
-terminal. tmux or Herdr remains authoritative, closing the Dez tab detaches
-rather than terminates, and Dez never requests a Herdr takeover automatically.
+v0.0.4 adds a narrower, explicit control boundary for tmux, Herdr, and cmux.
+Dez discovers live tmux sessions through `list-panes`, live Herdr panes through
+the documented snapshot API, and cmux Workspaces through
+`list-workspaces --json`. An item appears under **Open Running Workspace or
+Session…** only on an open Project whose root contains its working directory.
+tmux and Herdr open the documented attach command in an ordinary Main Work Area
+terminal. A cmux Workspace opens in cmux through `select-workspace`; Dez does
+not manufacture an attachment terminal for it. The external application
+remains authoritative, closing a Dez tab detaches rather than terminates, and
+Dez never requests a Herdr takeover automatically.
 
 Reattaching a detached Session shows **Opening…** in its existing row
 immediately. Repeated clicks do not create duplicate attachment work or another

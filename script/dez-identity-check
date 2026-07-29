@@ -292,7 +292,7 @@ reject_pattern README.md \
     '^# Zed$|download Zed directly|we.re hiring|Sponsorships go directly to Zed Industries' \
     'the repository front page still presents Dez as the official upstream Zed product'
 require_multiline_pattern docs/src/dez.md \
-    '^# What is Dez\?.*?## The screen model.*?Projects.*?Main Work Area.*?Workspace Tools.*?native pane grid.*?## How coding work flows.*?Open Agent Terminal.*?## Terminal and Agent integration.*?Packaged Dez builds.*?External Sessions.*?v0\.0\.4 adds explicit attachment for tmux and Herdr only.*?The v0\.0\.4 goal.*?## Source-preview limits' \
+    '^# What is Dez\?.*?## The screen model.*?Projects.*?Main Work Area.*?Workspace Tools.*?native pane grid.*?## How coding work flows.*?Open Agent Terminal.*?## Terminal and Agent integration.*?Packaged Dez builds.*?External Sessions.*?v0\.0\.4 adds explicit project-scoped integration for tmux, Herdr, and cmux.*?The v0\.0\.4 goal.*?## Source-preview limits' \
     'the public product guide can lose the screen model, IDE integration, or honest source-preview boundary'
 require_pattern docs/src/SUMMARY.md \
     '^- \[What is Dez\?\]\(\./dez\.md\)$' \
@@ -547,20 +547,20 @@ require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'test_plain_workspace_shell_is_promoted_only_after_agent_evidence.*?!sidebar\.contents\.entries\.iter\(\)\.any.*?session_count, 0.*?set_custom_title\(Some\("Codex".*?matching_terminals, 1.*?session_count, 1' \
     'the ordinary-shell-to-agent promotion contract is no longer covered'
 require_multiline_pattern docs/src/terminal.md \
-    'What Dez can and cannot observe.*?Projects does not list arbitrary.*?current-user TTYs.*?neither.*?owned nor safely controllable.*?does not capture.*?transcript or arguments.*?accept its input.*?adopt its PTY.*?v0\.0\.4 adds a narrower, explicit control boundary for tmux and Herdr.*?list-panes.*?snapshot API.*?Attach Running Session….*?open Project whose root contains.*?remains authoritative.*?never requests.*?a.*?Herdr takeover automatically' \
+    'What Dez can and cannot observe.*?Projects does not list arbitrary.*?current-user TTYs.*?neither.*?owned nor safely controllable.*?does not capture.*?transcript or arguments.*?accept its input.*?adopt its PTY.*?v0\.0\.4 adds a narrower, explicit control boundary for tmux, Herdr, and cmux.*?list-panes.*?snapshot API.*?list-workspaces --json.*?Open Running Workspace or.*?Session….*?open Project whose root contains.*?select-workspace.*?remains authoritative.*?never requests a Herdr takeover automatically' \
     'the public product contract can regress to confusing machine terminal observation with ownership'
 require_multiline_pattern crates/agent_ui/src/machine_terminal_store.rs \
     'MACHINE_TERMINAL_REFRESH_INTERVAL.*?observation-only.*?does not own the PTY.*?ObservedMachineTerminal.*?Command::new\("/bin/ps"\).*?process_is_descendant_of.*?process_belongs_to_dez.*?/dez\.app/.*?dez-terminal-host.*?working_directories_for' \
     'machine terminal discovery can regress to implied ownership, self-duplication, or retained command context'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn external_multiplexer_session_belongs_to_project.*?project_group_key.*?path_list\(\).*?paths\(\).*?cwd\.starts_with\(root\).*?if APP_NAME != "Zed".*?multiplexer_sessions\.retain.*?external_multiplexer_session_belongs_to_project.*?machine_terminals\.clear\(\).*?let multiplexer_session_count = if APP_NAME == "Zed".*?fn attach_external_multiplexer_session.*?use_new_terminal: true.*?RevealTarget::Center' \
+    'fn external_multiplexer_session_belongs_to_project.*?project_group_key.*?path_list\(\).*?paths\(\).*?cwd\.starts_with\(root\).*?if APP_NAME != "Zed".*?multiplexer_sessions\.retain.*?external_multiplexer_session_belongs_to_project.*?machine_terminals\.clear\(\).*?let multiplexer_session_count = if APP_NAME == "Zed".*?fn open_external_multiplexer_session.*?ExternalSessionOpenMode::RevealExternal.*?std::process::Command::new.*?use_new_terminal: true.*?RevealTarget::Center' \
     'Dez can regress to leaking unrelated terminal activity into Projects or taking external process ownership'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let has_external_terminal_rows = APP_NAME == "Zed".*?let total_item_count = self\.contents\.session_count.*?if APP_NAME == "Zed".*?let external_terminal_section = \(APP_NAME == "Zed"\).*?render_external_terminal_section' \
     'arbitrary machine activity can regress to becoming a permanent Dez Projects section or Session count'
 require_multiline_pattern crates/agent_ui/src/multiplexer_session_store.rs \
-    'MULTIPLEXER_REFRESH_INTERVAL.*?TMUX_FIELD_SEPARATOR: &str = "\|:dez:\|".*?TMUX_FORMAT.*?pub enum MultiplexerKind.*?pub enum MultiplexerSessionState.*?pub struct ExternalMultiplexerSession.*?attach_command.*?"attach-session".*?"agent".*?"attach".*?"terminal".*?"session".*?"control".*?scan_tmux_sessions.*?"list-panes".*?parse_tmux_sessions.*?scan_herdr_sessions.*?"api".*?"snapshot".*?parse_herdr_snapshot.*?Some\("blocked"\) => MultiplexerSessionState::NeedsAttention' \
-    'tmux and Herdr discovery can regress to unstable identity, missing attention state, or a non-native attach path'
+    'MULTIPLEXER_REFRESH_INTERVAL.*?TMUX_FIELD_SEPARATOR: &str = "\|:dez:\|".*?TMUX_FORMAT.*?pub enum MultiplexerKind.*?Cmux.*?pub enum MultiplexerSessionState.*?Available.*?pub enum ExternalSessionOpenMode.*?AttachInTerminal.*?RevealExternal.*?pub struct ExternalMultiplexerSession.*?open_command.*?"attach-session".*?"agent".*?"attach".*?"terminal".*?"session".*?"control".*?"select-workspace".*?scan_tmux_sessions.*?"list-panes".*?scan_cmux_workspaces.*?"list-workspaces".*?"--json".*?parse_cmux_workspaces.*?parse_tmux_sessions.*?scan_herdr_sessions.*?"api".*?"snapshot".*?parse_herdr_snapshot.*?Some\("blocked"\) => MultiplexerSessionState::NeedsAttention' \
+    'external Workspace and session discovery can regress to unstable identity, missing attention state, or dishonest ownership'
 reject_pattern crates/agent_ui/src/multiplexer_session_store.rs \
     '"--takeover"' \
     'Dez can regress to seizing a Herdr pane without an explicit user decision'
@@ -1540,8 +1540,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'render_project_header_ellipsis_menu.*?terminal_launch_label\(APP_NAME\).*?workspace_built_in_agent_action_label\([[:space:]]*APP_NAME,[[:space:]]*built_in_agent_ready' \
     'Workspace Options can regress to hiding project-scoped terminal or Built-in Agent creation'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'external_multiplexer_session_belongs_to_project.*?submenu\([[:space:]]*"Attach Running Session…".*?attach_external_multiplexer_session' \
-    'a Project can regress to hiding or mis-scoping its attachable tmux and Herdr sessions'
+    'external_multiplexer_session_belongs_to_project.*?submenu\([[:space:]]*"Open Running Workspace or Session…".*?open_external_multiplexer_session' \
+    'a Project can regress to hiding or mis-scoping its external Workspaces and sessions'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'menu\.when\(is_active.*?action\("Open Files", Box::new\(RevealFiles\)\).*?action\("Review Git Changes", Box::new\(ReviewGitChanges\)\).*?action\([[:space:]]*"Open Debug".*?ApplyCanvasLayoutRecipe.*?name: "debug"' \
     'Workspace Options can regress to hiding Files, Git, or Debug behind layout administration'

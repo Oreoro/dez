@@ -77,6 +77,7 @@ Decisions for this slice:
 
 - tmux discovery uses one fixed `list-panes` format and stable session IDs;
 - Herdr discovery uses its documented local snapshot response;
+- cmux discovery uses its public JSON CLI and opens Workspaces back in cmux;
 - selecting an attachable row opens a normal draggable terminal Surface;
 - closing the tab or application detaches the client and never ends externally
   owned work;
@@ -85,13 +86,14 @@ Decisions for this slice:
 - external work does not introduce a second rail, transcript, pane grid, tab
   implementation, or session database.
 
-**Acceptance:** With a tmux session and a Herdr pane already running, the
-matching Project offers each under **Attach Running Session…**, attaches in a
-native Main Work Area terminal, and leaves the original session alive after
-the tab or Dez closes. Unrelated machine terminals do not appear. Dark, light,
-and reduced-transparency layouts retain one clear Projects/Main Work Area
-hierarchy, while Files, Git, Debug, editor, terminal, and agent views behave as
-ordinary closeable tabs without overlays or clipped controls.
+**Acceptance:** With a tmux session, Herdr pane, and cmux Workspace already
+running, the matching Project offers each under **Open Running Workspace or
+Session…**. tmux and Herdr attach in a native Main Work Area terminal; cmux
+opens its existing Workspace. Every external owner remains alive after the Dez
+tab or application closes. Unrelated machine terminals do not appear. Dark,
+light, and reduced-transparency layouts retain one clear Projects/Main Work
+Area hierarchy, while Files, Git, Debug, editor, terminal, and agent views
+behave as ordinary closeable tabs without overlays or clipped controls.
 
 ## Revised consolidated-plan intake {#revised-plan-intake}
 

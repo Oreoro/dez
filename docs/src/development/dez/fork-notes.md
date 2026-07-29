@@ -118,10 +118,10 @@ the existing Surface rather than opening a duplicate.
 The visible title is **Projects**, because the stable thing a developer
 navigates is a codebase. Agent Sessions appear beneath their owning Project;
 ordinary integrated shells stay in the Main Work Area. Path-matched tmux and
-Herdr work is available through that Project's **Attach Running Session…**
-action while leaving the multiplexer authoritative. Unrelated terminal
-applications do not appear in Projects and Dez never implies that it owns
-their PTYs.
+Herdr work and cmux Workspaces are available through that Project's **Open
+Running Workspace or Session…** action while leaving the external application
+authoritative. Unrelated terminal applications do not appear in Projects and
+Dez never implies that it owns their PTYs.
 
 Projects restoration follows this lifecycle:
 
@@ -206,7 +206,8 @@ Projects supervises agent Sessions; it is not a list of every shell.
 - Dez does not capture arbitrary PTYs owned by Terminal.app, iTerm2, Warp, VS
   Code, or another application. Those terminals remain observation-only.
   Explicitly shared tmux sessions and live Herdr panes can be attached through
-  their documented protocols in v0.0.4; the external multiplexer remains the
+  their documented protocols in v0.0.4. Path-matched cmux Workspaces can be
+  opened in cmux through its public CLI. The external application remains the
   process and layout owner.
 
 This admission rule is enforced at every source of terminal metadata: live
@@ -1708,14 +1709,20 @@ are future options only if they strengthen the terminal-to-IDE review loop.
 - **2026-07-29: External attachment is project-scoped and never implicit PTY
   capture.** v0.0.4 discovers tmux sessions and live Herdr panes through
   documented interfaces, then offers a session only from the matching
-  Project's **Attach Running Session…** menu. Attach opens an ordinary
-  draggable terminal tab in the Main Work Area. The multiplexer remains the
-  process and layout owner; closing the tab or Dez detaches the client and must
-  not terminate the session. Herdr never receives an automatic `--takeover`.
-  Arbitrary machine terminals stay out of Projects. Files, Git, Outline, Debug,
-  terminals, diffs, and agent views all use the existing closeable native tab
-  model; Dez adds no nested layout menu, second sidebar, transcript store, or
-  external lifecycle database.
+  Project's **Open Running Workspace or Session…** menu. Attach opens an
+  ordinary draggable terminal tab in the Main Work Area. The multiplexer
+  remains the process and layout owner; closing the tab or Dez detaches the
+  client and must not terminate the session. Herdr never receives an automatic
+  `--takeover`. Arbitrary machine terminals stay out of Projects. Files, Git,
+  Outline, Debug, terminals, diffs, and agent views all use the existing
+  closeable native tab model; Dez adds no nested layout menu, second sidebar,
+  transcript store, or external lifecycle database.
+- **2026-07-29: cmux integration preserves external Workspace ownership.**
+  Dez discovers cmux Workspaces through `cmux list-workspaces --json`, matches
+  only those with a working directory inside a Project, and opens the selected
+  Workspace through `cmux select-workspace`. It does not spawn an attachment
+  terminal, copy cmux's pane grid, inspect terminal content, or claim ownership
+  of the external Workspace.
 - **2026-07-29: Pane navigation is native, contextual, and setting-led.** This
   supersedes the 2026-07-28 decision to force Back and Forward buttons into
   every Dez pane. Pane history remains available through native mouse,

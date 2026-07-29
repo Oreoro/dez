@@ -199,9 +199,9 @@ footer. Empty, caught-up, search, and recovery states stay in normal sidebar
 flow and never become floating overlays. At compact widths, the caught-up
 action shortens to **Show All** and the **External Sessions** count shortens
 without losing source or status in each row. Explicit tmux and Herdr rows
-attach in the Main Work Area; observed machine terminals retain their read-only
-ownership boundary. External rows never hide the primary **Open Workspace…**
-path when no Project is open.
+attach in the Main Work Area; cmux Workspace rows open in cmux; observed
+machine terminals retain their read-only ownership boundary. External rows
+never hide the primary **Open Workspace…** path when no Project is open.
 
 The bottom Workspace status strip is evidence-driven. It does not repeat a
 global Search launcher or show a decorative checkmark when diagnostics are
@@ -471,12 +471,14 @@ reveal the owning application, but it does not read the transcript or
 arguments, intercept input, persist the row, adopt the PTY, restore the
 process, or claim ownership of its work.
 
-v0.0.4 adds explicit attachment for tmux and Herdr only. Dez discovers tmux
-sessions through the documented CLI format and Herdr panes through the local
-snapshot API, then opens the documented attach command in a normal terminal
-Surface. The multiplexer remains authoritative; closing the tab detaches,
-Herdr never receives automatic takeover, and the Projects row does not become
-a second process, transcript, or layout owner.
+v0.0.4 adds explicit project-scoped integration for tmux, Herdr, and cmux. Dez
+discovers tmux sessions through the documented CLI format, Herdr panes through
+the local snapshot API, and cmux Workspaces through its JSON CLI. tmux and
+Herdr open their documented attach command in a normal terminal Surface. cmux
+Workspaces stay in cmux and open through its `select-workspace` command. The
+external application remains authoritative; closing a Dez tab detaches, Herdr
+never receives automatic takeover, and Projects never becomes a second
+process, transcript, or layout owner.
 
 ## Visual design
 

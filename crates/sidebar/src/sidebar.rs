@@ -21,11 +21,12 @@ use agent_ui::threads_archive_view::{
 use agent_ui::{
     AcpThreadImportOnboarding, Agent, AgentPanel, AgentPanelEvent, AgentThreadItem,
     AgentThreadSource, ArchiveSelectedThread, CanvasAgentUiSettings, ConversationView,
-    CrossChannelImportOnboarding, ExternalMultiplexerSession, MachineTerminalStore, ManageProfiles,
-    MultiplexerKind, MultiplexerSessionState, MultiplexerSessionStore, NewTerminalThread,
-    ObservedMachineTerminal, ObservedRepositoryEvidence, ObservedRunActivity, ObservedRunCheck,
-    ObservedRunCheckStatus, ObservedRunCommand, ObservedWorkspaceEvidence, OpenAgentDiff,
-    RenameSelectedThread, RunReviewBrief, RunReviewState, TerminalId, ThreadId, ThreadImportModal,
+    CrossChannelImportOnboarding, ExternalMultiplexerSession, ExternalSessionOpenMode,
+    MachineTerminalStore, ManageProfiles, MultiplexerKind, MultiplexerSessionState,
+    MultiplexerSessionStore, NewTerminalThread, ObservedMachineTerminal,
+    ObservedRepositoryEvidence, ObservedRunActivity, ObservedRunCheck, ObservedRunCheckStatus,
+    ObservedRunCommand, ObservedWorkspaceEvidence, OpenAgentDiff, RenameSelectedThread,
+    RunReviewBrief, RunReviewState, TerminalId, ThreadId, ThreadImportModal,
     ThreadTitleRegenerationResult, ToggleOptionsMenu, WorkspaceEvidenceKind,
     built_in_agent_is_ready, channels_with_threads, connection_store_for_project,
     create_agent_thread_in_workspace, default_agent_session_title,
@@ -2913,7 +2914,8 @@ fn activate_observed_machine_terminal(terminal: ObservedMachineTerminal, cx: &mu
 
 fn external_multiplexer_status(state: MultiplexerSessionState) -> Option<AgentThreadStatus> {
     match state {
-        MultiplexerSessionState::Attached
+        MultiplexerSessionState::Available
+        | MultiplexerSessionState::Attached
         | MultiplexerSessionState::Detached
         | MultiplexerSessionState::Idle
         | MultiplexerSessionState::Working => Some(AgentThreadStatus::Running),
@@ -7259,7 +7261,7 @@ impl Sidebar {
                         let menu = menu.when(has_attachable_sessions, move |menu| {
                             let attach_sidebar = attach_sidebar.clone();
                             menu.submenu(
-                                "Attach Running Session…",
+                                "Open Running Workspace or Session…",
                                 move |mut submenu, _window, _cx| {
                                     for session in attachable_sessions_for_menu.clone() {
                                         let label = format!(
@@ -7272,7 +7274,7 @@ impl Sidebar {
                                         submenu = submenu.entry(label, None, move |window, cx| {
                                             attach_sidebar
                                                 .update(cx, |sidebar, cx| {
-                                                    sidebar.attach_external_multiplexer_session(
+                                                    sidebar.open_external_multiplexer_session(
                                                         session.clone(),
                                                         window,
                                                         cx,
@@ -13556,7 +13558,7 @@ impl Sidebar {
         workspace_focus.dispatch_action(&NewCenterTerminal::default(), window, cx);
     }
 
-    fn attach_external_multiplexer_session(
+    fn open_external_multiplexer_session(
         &mut self,
         session: ExternalMultiplexerSession,
         window: &mut Window,
@@ -13595,15 +13597,61 @@ impl Sidebar {
             multi_workspace.activate(target_workspace.clone(), None, window, cx);
         });
 
-        let attach = session.attach_command();
+        let open = session.open_command();
+        if open.mode == ExternalSessionOpenMode::RevealExternal {
+            let open_task = cx.background_spawn(async move {
+                std::process::Command::new(&open.program)
+                    .args(&open.args)
+                    .output()
+            });
+            let weak_workspace = target_workspace.downgrade();
+            let session_title = session.title;
+            cx.spawn(async move |_, cx| {
+                let failure = match open_task.await {
+                    Ok(output) if !output.status.success() => {
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        let detail = stderr.trim();
+                        Some(if detail.is_empty() {
+                            format!("cmux exited with {}", output.status)
+                        } else {
+                            format!("cmux could not open the Workspace: {detail}")
+                        })
+                    }
+                    Err(error) => Some(format!("Could not run cmux: {error}")),
+                    Ok(_) => None,
+                };
+
+                if let Some(failure) = failure {
+                    log::error!("external Workspace open failed: {failure}");
+                    weak_workspace
+                        .update(cx, |workspace, cx| {
+                            struct ExternalWorkspaceOpenErrorToast;
+                            workspace.show_toast(
+                                Toast::new(
+                                    NotificationId::composite::<ExternalWorkspaceOpenErrorToast>(
+                                        session_title.clone(),
+                                    ),
+                                    format!("{failure}. The external Workspace was not changed."),
+                                )
+                                .autohide(),
+                                cx,
+                            );
+                        })
+                        .ok();
+                }
+            })
+            .detach();
+            return;
+        }
+
         let task_id = TaskId(format!("dez-external-session:{}", session.id));
         let spawn = SpawnInTerminal {
             id: task_id,
-            full_label: attach.label.clone(),
-            label: attach.label.clone(),
-            command: Some(attach.program),
-            args: attach.args,
-            command_label: attach.label,
+            full_label: open.label.clone(),
+            label: open.label.clone(),
+            command: Some(open.program),
+            args: open.args,
+            command_label: open.label,
             cwd: session.working_directory.clone(),
             env: HashMap::default(),
             use_new_terminal: true,
@@ -14378,11 +14426,17 @@ impl Sidebar {
                     .as_ref()
                     .map(|path| path.to_string_lossy().into_owned())
                     .unwrap_or_else(|| "External session".to_owned());
-                let action_label = format!(
-                    "Attach {} in Main Work Area. {} remains the process owner.",
-                    session.title,
-                    session.kind.display_name()
-                );
+                let action_label = match session.kind {
+                    MultiplexerKind::Cmux => format!(
+                        "Open {} in cmux. cmux remains the Workspace owner.",
+                        session.title
+                    ),
+                    MultiplexerKind::Tmux | MultiplexerKind::Herdr => format!(
+                        "Attach {} in Main Work Area. {} remains the process owner.",
+                        session.title,
+                        session.kind.display_name()
+                    ),
+                };
                 let status = external_multiplexer_status(session.state);
                 let icon = session
                     .detected_agent_kind
@@ -14390,6 +14444,7 @@ impl Sidebar {
                     .unwrap_or(match session.kind {
                         MultiplexerKind::Tmux => IconName::Terminal,
                         MultiplexerKind::Herdr => IconName::Robot,
+                        MultiplexerKind::Cmux => IconName::Screen,
                     });
                 let row_session = session.clone();
                 let action_session = session.clone();
@@ -14429,7 +14484,7 @@ impl Sidebar {
                         window.prevent_default();
                         action_sidebar
                             .update(cx, |sidebar, cx| {
-                                sidebar.attach_external_multiplexer_session(
+                                sidebar.open_external_multiplexer_session(
                                     action_session.clone(),
                                     window,
                                     cx,
@@ -14441,7 +14496,7 @@ impl Sidebar {
                 .on_click(move |_, window, cx| {
                     row_sidebar
                         .update(cx, |sidebar, cx| {
-                            sidebar.attach_external_multiplexer_session(
+                            sidebar.open_external_multiplexer_session(
                                 row_session.clone(),
                                 window,
                                 cx,
