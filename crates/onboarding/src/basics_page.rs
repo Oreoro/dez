@@ -281,7 +281,7 @@ fn render_dez_workflow_section() -> impl IntoElement {
             v_flex()
                 .id("dez-terminal-workflow-steps")
                 .role(gpui::Role::List)
-                .aria_label("Terminal workflow steps")
+                .aria_label("Workspace agent workflow steps")
                 .w_full()
                 .gap_1()
                 .children(steps.into_iter().enumerate().map(
@@ -722,7 +722,7 @@ fn render_ai_section(cx: &mut App) -> impl IntoElement {
         .child(Label::new("Optional ACP Agents"))
         .child(
             Label::new(
-                "Connect pane-native agents here. Supported terminal agents such as Codex run in a Workspace terminal and appear in Sessions after detection.",
+                "Connect pane-native agents here. Supported terminal agents such as Codex run in a Workspace terminal and appear under that Workspace in Projects after detection.",
             )
             .color(Color::Muted),
         )

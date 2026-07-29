@@ -388,6 +388,17 @@ mod agent_session_label_tests {
         assert!(!session_scope_controls_visible("Dez", 4, 0, false));
         assert!(session_scope_controls_visible("Dez", 4, 1, false));
         assert!(session_scope_controls_visible("Dez", 4, 0, true));
+        assert_eq!(
+            session_scope_copy("Dez"),
+            (
+                "Project attention scope",
+                "Show every agent session in Projects",
+                "Show All Agent Sessions",
+                "Show only agent sessions in Projects that need attention",
+                "Show Agent Sessions Needing Attention",
+            )
+        );
+        assert_eq!(session_scope_copy("Zed").0, "Session scope");
     }
 }
 
@@ -862,6 +873,34 @@ fn session_scope_labels(
         (
             format!("All {session_count}"),
             format!("Attention {attention_count}"),
+        )
+    }
+}
+
+fn session_scope_copy(
+    app_name: &str,
+) -> (
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+) {
+    if app_name == "Zed" {
+        (
+            "Session scope",
+            "Show every session in the rail",
+            "Show All Sessions",
+            "Show only sessions that need attention",
+            "Show Attention Sessions",
+        )
+    } else {
+        (
+            "Project attention scope",
+            "Show every agent session in Projects",
+            "Show All Agent Sessions",
+            "Show only agent sessions in Projects that need attention",
+            "Show Agent Sessions Needing Attention",
         )
     }
 }
@@ -2959,10 +2998,16 @@ fn external_multiplexer_project_match_score(
     session: &ExternalMultiplexerSession,
     project_group_key: &ProjectGroupKey,
 ) -> Option<usize> {
+    local_project_group_match_score(session.working_directory.as_deref()?, project_group_key)
+}
+
+fn local_project_group_match_score(
+    working_directory: &Path,
+    project_group_key: &ProjectGroupKey,
+) -> Option<usize> {
     if project_group_key.host().is_some() {
         return None;
     }
-    let working_directory = session.working_directory.as_ref()?;
     project_group_key
         .path_list()
         .paths()
@@ -2976,15 +3021,48 @@ fn external_multiplexer_project_group<'a>(
     session: &ExternalMultiplexerSession,
     project_group_keys: &'a [ProjectGroupKey],
 ) -> Option<&'a ProjectGroupKey> {
+    best_local_project_group_for_path(session.working_directory.as_deref()?, project_group_keys)
+}
+
+fn best_local_project_group_for_path<'a>(
+    working_directory: &Path,
+    project_group_keys: &'a [ProjectGroupKey],
+) -> Option<&'a ProjectGroupKey> {
     project_group_keys
         .iter()
         .filter_map(|project_group_key| {
             Some((
-                external_multiplexer_project_match_score(session, project_group_key)?,
+                local_project_group_match_score(working_directory, project_group_key)?,
                 project_group_key,
             ))
         })
         .max_by_key(|(score, _)| *score)
+        .map(|(_, project_group_key)| project_group_key)
+}
+
+#[cfg(test)]
+mod external_multiplexer_project_group_tests {
+    use super::*;
+
+    #[test]
+    fn most_specific_workspace_root_owns_external_session() {
+        let project_group_keys = vec![
+            ProjectGroupKey::new(None, PathList::new(&[PathBuf::from("/workspace")])),
+            ProjectGroupKey::new(None, PathList::new(&[PathBuf::from("/workspace/dez")])),
+        ];
+
+        assert_eq!(
+            best_local_project_group_for_path(
+                Path::new("/workspace/dez/crates/sidebar"),
+                &project_group_keys,
+            ),
+            project_group_keys.get(1)
+        );
+        assert_eq!(
+            best_local_project_group_for_path(Path::new("/unrelated"), &project_group_keys),
+            None
+        );
+    }
 }
 
 fn activate_observed_machine_terminal(terminal: ObservedMachineTerminal, cx: &mut App) {
@@ -14349,6 +14427,13 @@ impl Sidebar {
             total_item_count,
             self.contents.attention_count,
         );
+        let (
+            scope_accessibility_label,
+            all_scope_description,
+            all_scope_tooltip,
+            attention_scope_description,
+            attention_scope_tooltip,
+        ) = session_scope_copy(paths::APP_NAME);
         let all_scope_aria_label = all_session_items_accessibility_label(
             self.contents.session_count,
             self.contents.observed_terminal_count,
@@ -14502,7 +14587,7 @@ impl Sidebar {
                             .w_full()
                             .gap_1()
                             .role(gpui::Role::Group)
-                            .aria_label("Session scope")
+                            .aria_label(scope_accessibility_label)
                             .child(
                                 div().min_w_0().flex_1().child(
                                     Button::new("all-session-scope", all_scope_label)
@@ -14518,10 +14603,10 @@ impl Sidebar {
                                         .tab_index(0isize)
                                         .aria_label(all_scope_aria_label)
                                         .aria_keyshortcuts("Shift+A")
-                                        .aria_description("Show every session in the rail")
+                                        .aria_description(all_scope_description)
                                         .tooltip(move |_window, cx| {
                                             Tooltip::for_action_in(
-                                                "Show All Sessions",
+                                                all_scope_tooltip,
                                                 &ToggleAttentionFilter,
                                                 &all_scope_focus,
                                                 cx,
@@ -14547,10 +14632,10 @@ impl Sidebar {
                                         .tab_index(0isize)
                                         .aria_label(attention_scope_aria_label)
                                         .aria_keyshortcuts("Shift+A")
-                                        .aria_description("Show only sessions that need attention")
+                                        .aria_description(attention_scope_description)
                                         .tooltip(move |_window, cx| {
                                             Tooltip::for_action_in(
-                                                "Show Attention Sessions",
+                                                attention_scope_tooltip,
                                                 &ToggleAttentionFilter,
                                                 &attention_scope_focus,
                                                 cx,
