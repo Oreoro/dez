@@ -17079,6 +17079,7 @@ dependencies = [
  "serde_json",
  "session",
  "settings",
+ "task",
  "telemetry",
  "terminal",
  "terminal_view",
