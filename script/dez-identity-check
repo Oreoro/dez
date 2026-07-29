@@ -2150,6 +2150,9 @@ require_multiline_pattern crates/recent_projects/src/recent_projects.rs \
     'pending_workspace_id: Option<WorkspaceId>.*?fn recent_workspace_index\(.*?workspace\.workspace_id == workspace_id.*?let workspace_id = this\.pending_workspace_id\.take\(\).*?recent_workspace_index\(&picker\.delegate\.workspaces, workspace_id\).*?open_recent_projects\(candidate_id, false, window, cx\).*?fn open_workspace_id\(.*?recent_workspace_index\(&picker\.delegate\.workspaces, workspace_id\).*?self\.pending_workspace_id = Some\(workspace_id\)' \
     'exact recent-Workspace opening can regress to an unstable list index or lose requests while history is loading'
 require_multiline_pattern crates/workspace/src/welcome.rs \
+    'recent_workspaces_load_failed: bool.*?recent_workspaces_load_generation: u64.*?WelcomeRecentState \{.*?Unavailable.*?recent_workspaces_load_failed \{.*?WelcomeRecentState::Unavailable.*?fn refresh_recent_workspaces\(.*?wrapping_add\(1\).*?recent_workspaces_load_generation != load_generation.*?Err\(error\).*?failed to load recent Workspaces on Home.*?fn render_recent_workspace_error\(.*?Recent Workspaces unavailable.*?retry-recent-workspaces.*?welcome_page\.refresh_recent_workspaces\(window, cx\).*?WelcomeRecentState::Unavailable' \
+    'Home recent-Workspace loading can regress to reporting a database failure as an empty history or accepting stale retry results'
+require_multiline_pattern crates/workspace/src/welcome.rs \
     'fn welcome_summary.*?"Run an agent here\. Follow it under Projects\. Review its work in Files and Git\.".*?"Open a Workspace, run an agent in its terminal, and review the work in one place\.".*?Label::new\(welcome_summary\(APP_NAME, has_workspace\)\)' \
     'the Dez welcome headline no longer explains the Workspace-to-IDE product promise'
 require_multiline_pattern crates/workspace/src/welcome.rs \

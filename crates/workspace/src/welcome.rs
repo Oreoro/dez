@@ -34,7 +34,7 @@ pub struct OpenRecentProject {
 actions!(
     zed,
     [
-        /// Show the Dez welcome screen
+        /// Show the Dez welcome screen.
         ShowWelcome
     ]
 );
@@ -408,6 +408,8 @@ pub struct WelcomePage {
     focus_handle: FocusHandle,
     fallback_to_recent_projects: bool,
     recent_workspaces: Option<Vec<RecentWorkspace>>,
+    recent_workspaces_load_failed: bool,
+    recent_workspaces_load_generation: u64,
 }
 
 const DEZ_WELCOME_COMPACT_BREAKPOINT: Pixels = px(760.);
@@ -417,6 +419,7 @@ const DEZ_WELCOME_SPLIT_BREAKPOINT: Pixels = px(980.);
 enum WelcomeRecentState {
     Hidden,
     Loading,
+    Unavailable,
     Empty,
     Ready,
 }
@@ -425,6 +428,7 @@ fn welcome_recent_state(
     app_name: &str,
     fallback_to_recent_projects: bool,
     recent_workspaces_loaded: bool,
+    recent_workspaces_load_failed: bool,
     recent_workspace_count: usize,
 ) -> WelcomeRecentState {
     if !fallback_to_recent_projects {
@@ -433,6 +437,8 @@ fn welcome_recent_state(
         WelcomeRecentState::Ready
     } else if app_name == "Zed" {
         WelcomeRecentState::Hidden
+    } else if recent_workspaces_load_failed {
+        WelcomeRecentState::Unavailable
     } else if recent_workspaces_loaded {
         WelcomeRecentState::Empty
     } else {
@@ -466,34 +472,18 @@ impl WelcomePage {
             cx.observe(&workspace, |_, _, cx| cx.notify()).detach();
         }
 
-        if fallback_to_recent_projects {
-            let fs = workspace
-                .upgrade()
-                .map(|ws| ws.read(cx).app_state().fs.clone());
-            let db = WorkspaceDb::global(cx);
-            cx.spawn_in(window, async move |this: WeakEntity<Self>, cx| {
-                let Some(fs) = fs else { return };
-                let workspaces = db
-                    .recent_project_workspaces(fs.as_ref())
-                    .await
-                    .log_err()
-                    .unwrap_or_default();
-
-                this.update(cx, |this, cx| {
-                    this.recent_workspaces = Some(workspaces);
-                    cx.notify();
-                })
-                .ok();
-            })
-            .detach();
-        }
-
-        WelcomePage {
+        let mut welcome_page = WelcomePage {
             workspace,
             focus_handle,
             fallback_to_recent_projects,
             recent_workspaces: None,
+            recent_workspaces_load_failed: false,
+            recent_workspaces_load_generation: 0,
+        };
+        if fallback_to_recent_projects {
+            welcome_page.refresh_recent_workspaces(window, cx);
         }
+        welcome_page
     }
 
     fn select_next(&mut self, _: &SelectNext, window: &mut Window, cx: &mut Context<Self>) {
@@ -504,6 +494,47 @@ impl WelcomePage {
     fn select_previous(&mut self, _: &SelectPrevious, window: &mut Window, cx: &mut Context<Self>) {
         window.focus_prev(cx);
         cx.notify();
+    }
+
+    fn refresh_recent_workspaces(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.recent_workspaces = None;
+        self.recent_workspaces_load_failed = false;
+        self.recent_workspaces_load_generation =
+            self.recent_workspaces_load_generation.wrapping_add(1);
+        let load_generation = self.recent_workspaces_load_generation;
+        cx.notify();
+
+        let Some(fs) = self
+            .workspace
+            .upgrade()
+            .map(|workspace| workspace.read(cx).app_state().fs.clone())
+        else {
+            self.recent_workspaces_load_failed = true;
+            cx.notify();
+            return;
+        };
+        let db = WorkspaceDb::global(cx);
+        cx.spawn_in(window, async move |this: WeakEntity<Self>, cx| {
+            let result = db.recent_project_workspaces(fs.as_ref()).await;
+            this.update(cx, |this, cx| {
+                if this.recent_workspaces_load_generation != load_generation {
+                    return;
+                }
+
+                match result {
+                    Ok(workspaces) => {
+                        this.recent_workspaces = Some(workspaces);
+                    }
+                    Err(error) => {
+                        log::error!("failed to load recent Workspaces on Home: {error:#}");
+                        this.recent_workspaces_load_failed = true;
+                    }
+                }
+                cx.notify();
+            })
+            .log_err();
+        })
+        .detach();
     }
 
     fn open_recent_project(
@@ -591,6 +622,33 @@ impl WelcomePage {
             )
     }
 
+    fn render_recent_workspace_error(
+        tab_index: usize,
+        welcome_page: WeakEntity<Self>,
+    ) -> impl IntoElement {
+        v_flex()
+            .w_full()
+            .gap_2()
+            .child(Self::render_recent_workspace_status(
+                "Recent Workspaces unavailable",
+                "History could not be read. Retry without leaving Home.",
+                IconName::Warning,
+            ))
+            .child(
+                Button::new("retry-recent-workspaces", "Retry")
+                    .tab_index(tab_index as isize)
+                    .full_width()
+                    .label_size(LabelSize::XSmall)
+                    .on_click(move |_, window, cx| {
+                        welcome_page
+                            .update(cx, |welcome_page, cx| {
+                                welcome_page.refresh_recent_workspaces(window, cx);
+                            })
+                            .log_err();
+                    }),
+            )
+    }
+
     fn render_recent_project(
         &self,
         project_index: usize,
@@ -637,6 +695,7 @@ impl Render for WelcomePage {
         };
         let first_section_entries = first_section.entries.len();
         let next_tab_index = first_section_entries + second_section.entries.len();
+        let welcome_page = cx.weak_entity();
 
         let recent_projects = self
             .recent_workspaces
@@ -659,6 +718,7 @@ impl Render for WelcomePage {
             APP_NAME,
             self.fallback_to_recent_projects,
             self.recent_workspaces.is_some(),
+            self.recent_workspaces_load_failed,
             recent_projects.len(),
         );
         let secondary_content = match recent_state {
@@ -673,6 +733,10 @@ impl Render for WelcomePage {
                     IconName::Clock,
                 )
                 .into_any_element(),
+            ),
+            WelcomeRecentState::Unavailable => Some(
+                Self::render_recent_workspace_error(first_section_entries, welcome_page)
+                    .into_any_element(),
             ),
             WelcomeRecentState::Empty => Some(
                 Self::render_recent_workspace_status(
@@ -1324,23 +1388,27 @@ mod tests {
         assert!(!dez_welcome_uses_split_layout("Zed", px(1400.), true));
 
         assert_eq!(
-            welcome_recent_state("Dez", true, false, 0),
+            welcome_recent_state("Dez", true, false, false, 0),
             WelcomeRecentState::Loading
         );
         assert_eq!(
-            welcome_recent_state("Dez", true, true, 0),
+            welcome_recent_state("Dez", true, true, false, 0),
             WelcomeRecentState::Empty
         );
         assert_eq!(
-            welcome_recent_state("Dez", true, true, 2),
+            welcome_recent_state("Dez", true, false, true, 0),
+            WelcomeRecentState::Unavailable
+        );
+        assert_eq!(
+            welcome_recent_state("Dez", true, true, false, 2),
             WelcomeRecentState::Ready
         );
         assert_eq!(
-            welcome_recent_state("Dez", false, true, 2),
+            welcome_recent_state("Dez", false, true, true, 2),
             WelcomeRecentState::Hidden
         );
         assert_eq!(
-            welcome_recent_state("Zed", true, true, 0),
+            welcome_recent_state("Zed", true, false, true, 0),
             WelcomeRecentState::Hidden
         );
     }
