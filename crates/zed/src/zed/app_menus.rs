@@ -23,7 +23,7 @@ fn product_menu_label(
 
 fn workspace_tools_menu_label(app_name: &str, panels_as_pane_tabs: bool) -> &'static str {
     if app_name != "Zed" {
-        "Show or Hide Workspace Tools"
+        "Toggle Workspace Tools"
     } else if panels_as_pane_tabs {
         "Toggle Project Tab"
     } else {
@@ -525,11 +525,11 @@ mod tests {
     fn dez_view_menu_names_product_surfaces_not_implementation_placement() {
         assert_eq!(
             workspace_tools_menu_label("Dez", true),
-            "Show or Hide Workspace Tools"
+            "Toggle Workspace Tools"
         );
         assert_eq!(
             workspace_tools_menu_label("Dez", false),
-            "Show or Hide Workspace Tools"
+            "Toggle Workspace Tools"
         );
         assert!(workspace_tools_are_grouped("Dez"));
         assert!(!workspace_tools_are_grouped("Zed"));

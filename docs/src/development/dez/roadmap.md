@@ -4106,7 +4106,7 @@ Completed for the coherent View-menu source slice:
 - grouped Files, Outline, Git, and Debug beneath one **Workspace Tools**
   submenu instead of presenting the drawer and its modes as unrelated
   top-level panels;
-- added **Show or Hide Workspace Tools** inside that submenu so visibility and
+- added **Toggle Workspace Tools** inside that submenu so visibility and
   mode selection share one discoverable owner;
 - kept **Editor Layout** and **Diagnostics** separate from drawer content;
 - preserved official Zed's Project Tab/Panel and Terminal Panel hierarchy;

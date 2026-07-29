@@ -1633,9 +1633,9 @@ build.
 
 Current source aligns the application View menu with the Dez shell:
 
-- **Sessions** and **Agent** remain separate regions;
+- **Projects** and the Built-in Agent remain separate regions;
 - **Workspace Tools** owns Files, Outline, Git, Debug, and one
-  **Show or Hide Workspace Tools** action;
+  **Toggle Workspace Tools** action;
 - **Editor Layout** remains the owner of Main Work Area split commands; and
 - **Diagnostics** remains separate from drawer content.
 

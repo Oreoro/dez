@@ -1474,7 +1474,7 @@ are future options only if they strengthen the terminal-to-IDE review loop.
 - **2026-07-26: View exposes regions before implementations.** Dez keeps
   **Sessions** and **Built-in Agent** as separate View-menu destinations.
   Files, Outline, Git, and Debug are modes of one **Workspace Tools** drawer
-  and therefore live in that submenu beside **Show or Hide Workspace Tools**.
+  and therefore live in that submenu beside **Toggle Workspace Tools**.
   **Editor Layout** and **Diagnostics** remain separate. Official Zed retains
   its upstream Project Tab/Panel and Terminal Panel hierarchy.
 - **2026-07-26: Agent setup belongs to Agent, not a card above it.** Provider

@@ -9181,7 +9181,7 @@ fn attention_page() -> SettingsPage {
     let attention_status_description = if paths::APP_NAME == "Zed" {
         "Show the action-needed summary in the workspace bar and Session Rail."
     } else {
-        "Show the action-needed summary in Sessions."
+        "Show the action-needed summary in Projects and native Workspace chrome."
     };
     let mut items = vec![
         SettingsPageItem::SectionHeader("Attention"),
@@ -9280,7 +9280,7 @@ fn attention_page() -> SettingsPage {
             3,
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Floating Attention Popups",
-                description: "Allow Agent attention to open a floating window over other work. Off by default because Sessions already keeps unread and action-needed state visible.",
+                description: "Allow Agent attention to open a floating window over other work. Off by default because Projects already keeps unread and action-needed state visible.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("agent_ui.floating_attention_popups"),
@@ -9383,7 +9383,7 @@ fn evidence_page() -> SettingsPage {
             description: if paths::APP_NAME == "Zed" {
                 "Reopen the last active terminal surface when its locally stored identity still resolves. Session Rail identity and attention metadata load independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database."
             } else {
-                "Reopen the last active terminal surface when its locally stored identity still resolves. Sessions identity and attention metadata load independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database."
+                "Reopen the last active terminal surface when its locally stored identity still resolves. Projects loads Session identity and attention metadata independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database."
             },
             field: Box::new(SettingField {
                 organization_override: None,
