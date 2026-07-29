@@ -553,7 +553,7 @@ require_multiline_pattern crates/agent_ui/src/machine_terminal_store.rs \
     'MACHINE_TERMINAL_REFRESH_INTERVAL.*?observation-only.*?does not own the PTY.*?ObservedMachineTerminal.*?Command::new\("/bin/ps"\).*?process_is_descendant_of.*?process_belongs_to_dez.*?/dez\.app/.*?dez-terminal-host.*?working_directories_for' \
     'machine terminal discovery can regress to implied ownership, self-duplication, or retained command context'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn external_multiplexer_session_belongs_to_project.*?project_group_key.*?path_list\(\).*?paths\(\).*?cwd\.starts_with\(root\).*?if APP_NAME != "Zed".*?multiplexer_sessions\.retain.*?external_multiplexer_session_belongs_to_project.*?machine_terminals\.clear\(\).*?let multiplexer_session_count = if APP_NAME == "Zed".*?fn open_external_multiplexer_session.*?ExternalSessionOpenMode::RevealExternal.*?std::process::Command::new.*?use_new_terminal: true.*?RevealTarget::Center' \
+    'fn external_multiplexer_session_belongs_to_project.*?external_multiplexer_project_match_score.*?fn external_multiplexer_project_match_score.*?project_group_key\.host\(\)\.is_some\(\).*?working_directory.*?path_list\(\).*?paths\(\).*?working_directory\.starts_with\(root\).*?fn external_multiplexer_project_group.*?max_by_key.*?if APP_NAME != "Zed".*?multiplexer_sessions\.retain.*?external_multiplexer_session_belongs_to_project.*?machine_terminals\.clear\(\).*?fn open_external_multiplexer_session.*?ExternalSessionOpenMode::RevealExternal.*?std::process::Command::new.*?use_new_terminal: true.*?RevealTarget::Center' \
     'Dez can regress to leaking unrelated terminal activity into Projects or taking external process ownership'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let has_external_terminal_rows = APP_NAME == "Zed".*?let total_item_count = self\.contents\.session_count.*?if APP_NAME == "Zed".*?let external_terminal_section = \(APP_NAME == "Zed"\).*?render_external_terminal_section' \
@@ -754,10 +754,10 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_project_header.*?let label = if highlight_positions\.is_empty\(\).*?Label::new.*?\.truncate\(\).*?HighlightedLabel::new.*?\.truncate\(\).*?h_flex\(\).*?\.relative\(\).*?\.min_w_0\(\).*?\.flex_1\(\).*?\.child\([[:space:]]*h_flex\(\)[[:space:]]*\.flex_none\(\)[[:space:]]*\.gap\(px\(1\.0\)\).*?render_new_session_button.*?render_project_header_ellipsis_menu' \
     'Workspace headers can regress from bounded inline truncation to overlapping title and action regions'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn workspace_header_terminal_action_visible\(has_sessions: bool, is_collapsed: bool\) -> bool \{[[:space:]]*has_sessions \|\| is_collapsed[[:space:]]*\}.*?fn render_project_header.*?workspace_header_terminal_action_visible\(has_threads, is_collapsed\).*?self\.render_new_session_button.*?if labels_visible && !is_collapsed && !has_threads.*?terminal_launch_label\(APP_NAME\)' \
-    'an expanded empty Workspace can regress to showing both compact and full terminal launchers'
+    'fn workspace_header_terminal_action_visible\(.*?app_name != "Zed" \|\| has_sessions \|\| is_collapsed.*?fn render_project_header.*?workspace_header_terminal_action_visible\([[:space:]]*APP_NAME,[[:space:]]*has_threads,[[:space:]]*is_collapsed.*?self\.render_new_session_button.*?else if APP_NAME == "Zed" && labels_visible && !is_collapsed && !has_threads.*?terminal_launch_label\(APP_NAME\)' \
+    'an empty Dez Workspace can regress from one compact native launcher to onboarding chrome'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
-    'fn empty_expanded_workspace_uses_only_the_labeled_terminal_action.*?!workspace_header_terminal_action_visible\(false, false\).*?workspace_header_terminal_action_visible\(false, true\).*?workspace_header_terminal_action_visible\(true, false\)' \
+    'fn dez_empty_workspace_keeps_one_compact_native_terminal_action.*?workspace_header_terminal_action_visible\("Dez", false, false\).*?workspace_header_terminal_action_visible\("Dez", false, true\).*?workspace_header_terminal_action_visible\("Dez", true, false\).*?!workspace_header_terminal_action_visible\("Zed", false, false\)' \
     'Workspace terminal launcher visibility can regress across empty, collapsed, and populated states'
 require_multiline_pattern crates/git_ui/src/git_panel.rs \
     'fn review_repository_position.*?active_repository.*?filter.*?changed_file_counts.*?position.*?fn review_repository_with_changes.*?repositories\(\).*?sort_by.*?review_repository_position.*?fn first_review_change.*?cached_status.*?min_by.*?fn review_prefers_the_active_dirty_repository_then_the_first_dirty_repository.*?ReviewChanges,.*?register\(workspace: &mut Workspace\).*?_: &ReviewChanges.*?review_repository_with_changes.*?repository_changed.*?set_as_active_repository.*?reveal_panel::<GitPanel>.*?GitPanelTab::Changes.*?schedule_update.*?select_first_entry_if_none.*?first_review_change.*?ProjectDiff::deploy_at' \
@@ -1072,8 +1072,8 @@ reject_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\("Ready for a session"\)' \
     'empty Workspace groups can regress to repeating readiness already stated by the overview and accessible header'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'if labels_visible && !is_collapsed && !has_threads.*?empty-project-new-terminal-\{ix\}.*?terminal_launch_label\(APP_NAME\).*?ButtonStyle::Filled.*?"\{\} in \{\}".*?terminal_launch_label\(APP_NAME\).*?workspace_new_terminal_tooltip_label\(APP_NAME\)' \
-    'an empty Workspace can regress to visually demoting or ambiguously naming its only useful action'
+    'workspace_header_terminal_action_visible\([[:space:]]*APP_NAME,[[:space:]]*has_threads,[[:space:]]*is_collapsed.*?render_new_session_button.*?else if APP_NAME == "Zed".*?empty-project-new-terminal-\{ix\}.*?fn render_new_session_button.*?workspace_new_terminal_control_label\([[:space:]]*APP_NAME,[[:space:]]*workspace_name.*?aria_label\(new_terminal_label\.clone\(\)\)' \
+    'an empty Dez Workspace can regress to visually demoting its launcher or restoring non-native onboarding chrome'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn default_new_session_target\(\) -> NewEntryTarget \{[[:space:]]*NewEntryTarget::Terminal' \
     'the Session Rail default creation path is no longer terminal-first'
@@ -1542,6 +1542,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'external_multiplexer_session_belongs_to_project.*?submenu\([[:space:]]*"Open Running Workspace or Session…".*?open_external_multiplexer_session' \
     'a Project can regress to hiding or mis-scoping its external Workspaces and sessions'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'let project_group_keys = groups.*?let mut projected_multiplexer_session_ids.*?let group_external_sessions = multiplexer_sessions.*?external_multiplexer_project_group\(session, &project_group_keys\).*?== Some\(group_key\).*?has_visible_rows =.*?!external_sessions\.is_empty\(\).*?external_sessions,[[:space:]]*\}\);.*?fn render_project_header\(.*?external_sessions: &\[ExternalMultiplexerSession\].*?workspace-external-session-.*?external_multiplexer_icon\(session\).*?session\.kind\.display_name\(\).*?session\.state_label\(\).*?tab_index\(0isize\).*?aria_label\(action_label\.clone\(\)\).*?open_external_multiplexer_session' \
+    'external terminal and cmux activity can regress from the most specific Workspace into a flat or pointer-only inventory'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'menu\.when\(is_active.*?action\("Open Files", Box::new\(RevealFiles\)\).*?action\("Review Git Changes", Box::new\(ReviewGitChanges\)\).*?action\([[:space:]]*"Open Debug".*?ApplyCanvasLayoutRecipe.*?name: "debug"' \
     'Workspace Options can regress to hiding Files, Git, or Debug behind layout administration'

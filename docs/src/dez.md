@@ -196,12 +196,14 @@ Projects uses one native titlebar label and one options menu for secondary
 destinations such as Agent Tools, Agent History, and Recent Workspaces. It does
 not repeat **Projects** inside a dashboard header or reserve a permanent
 footer. Empty, caught-up, search, and recovery states stay in normal sidebar
-flow and never become floating overlays. At compact widths, the caught-up
-action shortens to **Show All** and the **External Sessions** count shortens
-without losing source or status in each row. Explicit tmux and Herdr rows
-attach in the Main Work Area; cmux Workspace rows open in cmux; observed
-machine terminals retain their read-only ownership boundary. External rows
-never hide the primary **Open Workspace…** path when no Project is open.
+flow and never become floating overlays. An empty Workspace keeps one compact
+terminal action in its header instead of expanding into a provider onboarding
+block. At compact widths, the caught-up action shortens to **Show All** without
+losing source or status in each row. Explicit tmux and Herdr rows attach in the
+Main Work Area; cmux Workspace rows open in cmux. Each row sits beneath the
+most specific matching Workspace, while observed machine terminals retain
+their read-only ownership boundary. External rows never hide the primary
+**Open Workspace…** path when no Project is open.
 
 The bottom Workspace status strip is evidence-driven. It does not repeat a
 global Search launcher or show a decorative checkmark when diagnostics are

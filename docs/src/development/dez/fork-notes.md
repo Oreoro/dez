@@ -1723,6 +1723,11 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   Workspace through `cmux select-workspace`. It does not spawn an attachment
   terminal, copy cmux's pane grid, inspect terminal content, or claim ownership
   of the external Workspace.
+- **2026-07-29: Projects renders a Workspace-first activity tree.** Local Agent
+  Sessions and path-matched tmux, Herdr, and cmux activity sit beneath the
+  owning Workspace. Overlapping roots choose the most specific Workspace.
+  Empty Workspaces retain one compact terminal action in their header instead
+  of expanding into provider-logo onboarding chrome.
 - **2026-07-29: Pane navigation is native, contextual, and setting-led.** This
   supersedes the 2026-07-28 decision to force Back and Forward buttons into
   every Dez pane. Pane history remains available through native mouse,

@@ -27,7 +27,9 @@ Workspace instead of separate applications or hidden panel modes.
   for Permission, Reconnecting, Completed, or Error state without owning
   duplicate tabs or processes. A Project can explicitly attach a path-matched
   tmux or Herdr session, or open a path-matched cmux Workspace in cmux, without
-  taking ownership. Unrelated machine terminals do not leak into its list.
+  taking ownership. Each external item appears beneath the most specific
+  matching Workspace, beside its associated Dez terminals and agents.
+  Unrelated machine terminals do not leak into the list.
 - **Workspace tools** — Files, Outline, Git, Debug, and the optional
   provider-backed Built-in Agent are ordinary draggable and closeable native
   tabs. They are not nested panels or a mandatory second sidebar.

@@ -306,18 +306,22 @@ fn active_or_focused_workspace_keeps_its_new_terminal_action_discoverable() {
 }
 
 #[test]
-fn empty_expanded_workspace_uses_only_the_labeled_terminal_action() {
+fn dez_empty_workspace_keeps_one_compact_native_terminal_action() {
     assert!(
-        !workspace_header_terminal_action_visible(false, false),
-        "the expanded empty Workspace already renders a full-width Open Agent Terminal action"
+        workspace_header_terminal_action_visible("Dez", false, false),
+        "Dez keeps terminal creation in the Workspace header instead of an onboarding block"
     );
     assert!(
-        workspace_header_terminal_action_visible(false, true),
+        workspace_header_terminal_action_visible("Dez", false, true),
         "a collapsed empty Workspace still needs a compact terminal action in its header"
     );
     assert!(
-        workspace_header_terminal_action_visible(true, false),
+        workspace_header_terminal_action_visible("Dez", true, false),
         "a populated Workspace keeps terminal creation available in its compact header"
+    );
+    assert!(
+        !workspace_header_terminal_action_visible("Zed", false, false),
+        "upstream Zed retains its labeled empty-session action"
     );
 }
 
