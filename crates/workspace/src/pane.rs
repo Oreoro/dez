@@ -104,8 +104,8 @@ fn pane_drag_handle_visible(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
-fn pane_navigation_history_buttons_visible(app_name: &str, setting: bool) -> bool {
-    app_name != "Zed" || setting
+fn pane_navigation_history_buttons_visible(_app_name: &str, setting: bool) -> bool {
+    setting
 }
 
 fn empty_main_work_area_shows_orientation(app_name: &str, is_active_pane: bool) -> bool {
@@ -116,8 +116,8 @@ fn empty_auxiliary_surface_is_edge_anchored(app_name: &str, pane_kind: PaneKind)
     app_name != "Zed" && pane_kind != PaneKind::Tabs
 }
 
-fn pane_tab_is_persistent_workspace_tool(app_name: &str, pane_kind: PaneKind) -> bool {
-    app_name != "Zed" && pane_kind == PaneKind::Project
+fn pane_tab_is_persistent_workspace_tool(_app_name: &str, _pane_kind: PaneKind) -> bool {
+    false
 }
 
 /// A group of selected entries from project panel.
@@ -6553,9 +6553,10 @@ mod tests {
         );
         assert!(pane_drag_handle_visible("Zed"));
         assert!(
-            pane_navigation_history_buttons_visible("Dez", false),
-            "Dez should expose native Back and Forward navigation without a hidden setting"
+            !pane_navigation_history_buttons_visible("Dez", false),
+            "Dez should not repeat Back and Forward controls in every pane when the setting is off"
         );
+        assert!(pane_navigation_history_buttons_visible("Dez", true));
         assert!(pane_navigation_history_buttons_visible("Zed", true));
         assert!(!pane_navigation_history_buttons_visible("Zed", false));
         assert_eq!(
@@ -6624,10 +6625,10 @@ mod tests {
         assert!(!pane_tab_end_control_is_keyboard_focusable(
             "Zed", true, false, false
         ));
-        assert!(pane_tab_is_persistent_workspace_tool(
-            "Dez",
-            PaneKind::Project
-        ));
+        assert!(
+            !pane_tab_is_persistent_workspace_tool("Dez", PaneKind::Project),
+            "Dez workspace tools are ordinary tabs: they can be dragged, reordered, and closed"
+        );
         assert!(!pane_tab_is_persistent_workspace_tool(
             "Dez",
             PaneKind::Tabs

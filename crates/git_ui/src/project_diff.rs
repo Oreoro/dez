@@ -856,13 +856,11 @@ impl Render for ProjectDiffToolbar {
         let (additions, deletions) = project_diff.read(cx).calculate_changed_lines(cx);
         let is_multibuffer_empty = project_diff.read(cx).multibuffer(cx).read(cx).is_empty();
 
-        let stage_all_button_width = rems(5.);
-
         h_flex()
             .my_neg_1()
             .py_1()
             .gap_1p5()
-            .flex_wrap()
+            .when(paths::APP_NAME == "Zed", |this| this.flex_wrap())
             .justify_between()
             .when(!is_multibuffer_empty, |this| {
                 this.child(DiffStat::new(
@@ -903,87 +901,90 @@ impl Render for ProjectDiffToolbar {
                             })),
                     ),
             )
-            .child(Divider::vertical())
-            .child(
-                h_group_sm()
-                    .when(button_states.selection, |this| {
-                        this.child(
-                            Button::new("stage", "Toggle Staged")
-                                .tooltip(Tooltip::for_action_title_in(
-                                    "Toggle Staged",
-                                    &ToggleStaged,
-                                    &focus_handle,
-                                ))
-                                .disabled(!button_states.stage && !button_states.unstage)
-                                .on_click(cx.listener(|this, _, window, cx| {
-                                    this.dispatch_action(&ToggleStaged, window, cx)
-                                })),
-                        )
-                    })
-                    .when(!button_states.selection, |this| {
-                        this.child(
-                            Button::new("stage", "Stage")
-                                .disabled(!button_states.stage)
-                                .tooltip(Tooltip::for_action_title_in(
-                                    "Stage and Go to Next Hunk",
-                                    &StageAndNext,
-                                    &focus_handle,
-                                ))
-                                .on_click(cx.listener(|this, _, window, cx| {
-                                    this.dispatch_action(&StageAndNext, window, cx)
-                                })),
-                        )
-                        .child(
-                            Button::new("unstage", "Unstage")
-                                .disabled(!button_states.unstage)
-                                .tooltip(Tooltip::for_action_title_in(
-                                    "Unstage and Go to Next Hunk",
-                                    &UnstageAndNext,
-                                    &focus_handle,
-                                ))
-                                .on_click(cx.listener(|this, _, window, cx| {
-                                    this.dispatch_action(&UnstageAndNext, window, cx)
-                                })),
-                        )
-                    }),
-            )
-            .child(Divider::vertical())
-            .when(
-                button_states.unstage_all && !button_states.stage_all,
-                |this| {
-                    this.child(
-                        Button::new("unstage-all", "Unstage All")
-                            .width(stage_all_button_width)
-                            .tooltip(Tooltip::for_action_title_in(
-                                "Unstage All Changes",
-                                &UnstageAll,
-                                &focus_handle,
-                            ))
-                            .on_click(
-                                cx.listener(|this, _, window, cx| this.unstage_all(window, cx)),
-                            ),
+            .when(paths::APP_NAME == "Zed", |this| {
+                let stage_all_button_width = rems(5.);
+                this.child(Divider::vertical())
+                    .child(
+                        h_group_sm()
+                            .when(button_states.selection, |this| {
+                                this.child(
+                                    Button::new("stage", "Toggle Staged")
+                                        .tooltip(Tooltip::for_action_title_in(
+                                            "Toggle Staged",
+                                            &ToggleStaged,
+                                            &focus_handle,
+                                        ))
+                                        .disabled(!button_states.stage && !button_states.unstage)
+                                        .on_click(cx.listener(|this, _, window, cx| {
+                                            this.dispatch_action(&ToggleStaged, window, cx)
+                                        })),
+                                )
+                            })
+                            .when(!button_states.selection, |this| {
+                                this.child(
+                                    Button::new("stage", "Stage")
+                                        .disabled(!button_states.stage)
+                                        .tooltip(Tooltip::for_action_title_in(
+                                            "Stage and Go to Next Hunk",
+                                            &StageAndNext,
+                                            &focus_handle,
+                                        ))
+                                        .on_click(cx.listener(|this, _, window, cx| {
+                                            this.dispatch_action(&StageAndNext, window, cx)
+                                        })),
+                                )
+                                .child(
+                                    Button::new("unstage", "Unstage")
+                                        .disabled(!button_states.unstage)
+                                        .tooltip(Tooltip::for_action_title_in(
+                                            "Unstage and Go to Next Hunk",
+                                            &UnstageAndNext,
+                                            &focus_handle,
+                                        ))
+                                        .on_click(cx.listener(|this, _, window, cx| {
+                                            this.dispatch_action(&UnstageAndNext, window, cx)
+                                        })),
+                                )
+                            }),
                     )
-                },
-            )
-            .when(
-                !button_states.unstage_all || button_states.stage_all,
-                |this| {
-                    this.child(
-                        Button::new("stage-all", "Stage All")
-                            .width(stage_all_button_width)
-                            .disabled(!button_states.stage_all)
-                            .tooltip(Tooltip::for_action_title_in(
-                                "Stage All Changes",
-                                &StageAll,
-                                &focus_handle,
-                            ))
-                            .on_click(
-                                cx.listener(|this, _, window, cx| this.stage_all(window, cx)),
-                            ),
+                    .child(Divider::vertical())
+                    .when(
+                        button_states.unstage_all && !button_states.stage_all,
+                        |this| {
+                            this.child(
+                                Button::new("unstage-all", "Unstage All")
+                                    .width(stage_all_button_width)
+                                    .tooltip(Tooltip::for_action_title_in(
+                                        "Unstage All Changes",
+                                        &UnstageAll,
+                                        &focus_handle,
+                                    ))
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.unstage_all(window, cx)
+                                    })),
+                            )
+                        },
                     )
-                },
-            )
-            .child(Divider::vertical())
+                    .when(
+                        !button_states.unstage_all || button_states.stage_all,
+                        |this| {
+                            this.child(
+                                Button::new("stage-all", "Stage All")
+                                    .width(stage_all_button_width)
+                                    .disabled(!button_states.stage_all)
+                                    .tooltip(Tooltip::for_action_title_in(
+                                        "Stage All Changes",
+                                        &StageAll,
+                                        &focus_handle,
+                                    ))
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.stage_all(window, cx)
+                                    })),
+                            )
+                        },
+                    )
+                    .child(Divider::vertical())
+            })
             .child(
                 Button::new("commit", "Commit")
                     .tooltip(Tooltip::for_action_title_in(

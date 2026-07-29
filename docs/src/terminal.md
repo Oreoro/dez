@@ -7,14 +7,14 @@ description: Dez's integrated terminal with main-area tabs, splits, agent superv
 
 Dez treats terminals as first-class Surfaces beside files, search, diagnostics,
 and review. A terminal opens in the Main Work Area as a normal tab or split.
-Ordinary shells stay there. Sessions only projects a terminal after Dez detects
+Ordinary shells stay there. Projects only projects a terminal after Dez detects
 a supported foreground agent or explicitly owns it as a managed agent
 terminal.
 
-Sessions starts closed in a fresh Dez window and may restore open when that
-window previously used it. When open, **Hide Sessions** lives in the Sessions
+Projects starts closed in a fresh Dez window and may restore open when that
+window previously used it. When open, **Hide Projects** lives in the Projects
 overview; when closed, the window chrome and status bar expose **Open
-Sessions**. Compact Sessions uses icon-only utilities with named tooltips, while
+Projects**. Compact Projects uses icon-only utilities with named tooltips, while
 the detailed width restores their visible labels. This keeps supervision
 optional without hiding its recovery path.
 
@@ -32,10 +32,10 @@ and explicit `project_panel.starts_open` preferences remain respected.
 | Command palette   | `Cmd+Shift+P` | `Ctrl+Shift+P` |
 | Split terminal    | `Cmd+D`       | `Ctrl+Shift+5` |
 
-You can also choose **Open Agent Terminal** from Sessions or an empty Workspace.
+You can also choose **Open Agent Terminal** from Projects or an empty Workspace.
 This opens a normal terminal in the Main Work Area; it does not start an agent
 for you. Run `codex`, `claude`, `opencode`, or another supported CLI in that
-terminal. Dez promotes the same terminal into Sessions when it detects the
+terminal. Dez promotes the same terminal into the matching Project when it detects the
 agent. The add control stays available when focus moves to Workspace Tools or
 Agent; those auxiliary regions have their own hide controls and never present a
 second terminal destination.
@@ -49,7 +49,7 @@ You can:
 - keep it as a tab beside files;
 - split it into the same pane grid;
 - move it with other Surfaces;
-- run a supported agent and select its Sessions row to return to the existing
+- run a supported agent and select its Project Session row to return to the existing
   Surface; or
 - reattach a Host-owned terminal Session when the experimental Terminal Host
   is explicitly enabled.
@@ -57,11 +57,11 @@ You can:
 ### Foreground agents stay in the terminal
 
 Starting `codex`, `claude`, or another recognized terminal agent does not open
-an Agent panel or create a second Session. The existing terminal remains in the
-Main Work Area and is promoted to a concise Sessions row such as **Codex ·
+an Agent panel or create a second terminal. The existing terminal remains in the
+Main Work Area and is promoted to a concise Project Session row such as **Codex ·
 Running**. Selecting that row returns to the same terminal Surface. When an
 ordinary detected agent exits back to its shell, the terminal stays open in the
-Main Work Area and leaves Sessions.
+Main Work Area and leaves Projects.
 
 For Host-owned terminals, Dez observes the PTY foreground process group and
 stores only its normalized command name in the bounded Session snapshot. This
@@ -76,12 +76,11 @@ on the shell once the TUI becomes quiet.
 
 ### What Dez can and cannot observe
 
-Dez observes terminals created inside Dez and, on macOS, Projects can list
-current-user TTYs owned by another supported terminal application or IDE under
-**External Sessions**. A machine-terminal row is ephemeral and read-only. It
-may show the TTY, foreground executable, owning application, current directory
-when available, and a supported-agent hint. Selecting it reveals the owning
-application.
+Dez observes terminals created inside Dez. It may inspect bounded process
+metadata to detect supported agent work, but Projects does not list arbitrary
+current-user TTYs owned by another application. Those terminals are neither
+owned nor safely controllable by Dez and must not leak into a codebase's
+navigation.
 
 Dez does not capture that terminal's transcript or arguments, accept its input,
 adopt its PTY, restore its process, or attribute its work. The row disappears
@@ -89,10 +88,11 @@ when the external TTY does.
 
 v0.0.4 adds a narrower, explicit control boundary for tmux and Herdr. Dez
 discovers live tmux sessions through `list-panes` and live Herdr panes through
-the documented snapshot API. Selecting one opens the documented attach command
-in an ordinary Main Work Area terminal. tmux or Herdr remains authoritative,
-closing the Dez tab detaches rather than terminates, and Dez never requests a
-Herdr takeover automatically. Other machine terminals remain read-only.
+the documented snapshot API. A session appears as **Attach Running Session…**
+only on an open Project whose root contains that session's working directory.
+Choosing it opens the documented attach command in an ordinary Main Work Area
+terminal. tmux or Herdr remains authoritative, closing the Dez tab detaches
+rather than terminates, and Dez never requests a Herdr takeover automatically.
 
 Reattaching a detached Session shows **Opening…** in its existing row
 immediately. Repeated clicks do not create duplicate attachment work or another

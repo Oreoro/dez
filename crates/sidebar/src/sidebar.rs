@@ -873,9 +873,9 @@ fn attention_empty_state_copy(
         (
             "You're caught up. No agent sessions need attention.",
             "You're caught up",
-            "No agent sessions need attention. Ongoing and observed work remains under All.",
+            "No agent sessions need attention. Ongoing work remains under All.",
             "Show All",
-            "Show all Agent Sessions and observed terminals",
+            "Show all agent sessions",
         )
     }
 }
@@ -926,7 +926,7 @@ fn session_rail_accessibility_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Sessions"
     } else {
-        "Projects, agent sessions, and machine terminals"
+        "Projects and agent sessions"
     }
 }
 
@@ -1886,7 +1886,7 @@ mod session_start_state_tests {
         assert_eq!(session_rail_title("Zed"), "Sessions");
         assert_eq!(
             session_rail_accessibility_label("Dez"),
-            "Projects, agent sessions, and machine terminals"
+            "Projects and agent sessions"
         );
         assert_eq!(
             session_rail_search_label("Dez"),
@@ -1938,9 +1938,9 @@ mod session_start_state_tests {
             (
                 "You're caught up. No agent sessions need attention.",
                 "You're caught up",
-                "No agent sessions need attention. Ongoing and observed work remains under All.",
+                "No agent sessions need attention. Ongoing work remains under All.",
                 "Show All",
-                "Show all Agent Sessions and observed terminals",
+                "Show all agent sessions",
             )
         );
         assert_eq!(
@@ -2825,6 +2825,19 @@ fn external_multiplexer_session_matches_query(
             .working_directory
             .as_ref()
             .is_some_and(|path| path.to_string_lossy().to_ascii_lowercase().contains(&query))
+}
+
+fn external_multiplexer_session_belongs_to_project(
+    session: &ExternalMultiplexerSession,
+    project_group_key: &ProjectGroupKey,
+) -> bool {
+    session.working_directory.as_ref().is_some_and(|cwd| {
+        project_group_key
+            .path_list()
+            .paths()
+            .iter()
+            .any(|root| cwd.starts_with(root))
+    })
 }
 
 fn activate_observed_machine_terminal(terminal: ObservedMachineTerminal, cx: &mut App) {
@@ -4776,12 +4789,27 @@ impl Sidebar {
         let mut machine_terminals = MachineTerminalStore::try_global(cx)
             .map(|store| store.read(cx).terminals().to_vec())
             .unwrap_or_default();
+        if APP_NAME != "Zed" {
+            multiplexer_sessions.retain(|session| {
+                mw.project_group_keys().iter().any(|project_group_key| {
+                    external_multiplexer_session_belongs_to_project(session, project_group_key)
+                })
+            });
+            // Arbitrary machine PTYs are not Dez Sessions and cannot be
+            // controlled safely. Keep Projects scoped to the open codebases;
+            // tmux and Herdr remain available through each matching project.
+            machine_terminals.clear();
+        }
         if !query.is_empty() {
             multiplexer_sessions
                 .retain(|session| external_multiplexer_session_matches_query(session, &query));
             machine_terminals.retain(|terminal| machine_terminal_matches_query(terminal, &query));
         }
-        let multiplexer_session_count = multiplexer_sessions.len();
+        let multiplexer_session_count = if APP_NAME == "Zed" {
+            multiplexer_sessions.len()
+        } else {
+            0
+        };
         let machine_terminal_count = machine_terminals.len();
         if self.attention_only {
             multiplexer_sessions
@@ -7068,6 +7096,22 @@ impl Sidebar {
                             .then(|| (workspace, workspace_menu_worktree_accessible_name(labels)))
                     })
                     .collect();
+                let attachable_sessions = MultiplexerSessionStore::try_global(cx)
+                    .map(|store| {
+                        store
+                            .read(cx)
+                            .sessions()
+                            .iter()
+                            .filter(|session| {
+                                external_multiplexer_session_belongs_to_project(
+                                    session,
+                                    &project_group_key,
+                                )
+                            })
+                            .cloned()
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default();
 
                 let menu =
                     ContextMenu::build_persistent(window, cx, move |menu, _window, menu_cx| {
@@ -7174,41 +7218,46 @@ impl Sidebar {
                         }
                         .separator();
 
+                        let attach_sidebar = this_for_menu.clone();
+                        let menu = menu.when(!attachable_sessions.is_empty(), |menu| {
+                            menu.submenu(
+                                "Attach Running Session…",
+                                move |mut submenu, _window, _cx| {
+                                    for session in attachable_sessions.clone() {
+                                        let label = format!(
+                                            "{} · {} · {}",
+                                            session.title,
+                                            session.kind.display_name(),
+                                            session.state_label()
+                                        );
+                                        let attach_sidebar = attach_sidebar.clone();
+                                        submenu = submenu.entry(label, None, move |window, cx| {
+                                            attach_sidebar
+                                                .update(cx, |sidebar, cx| {
+                                                    sidebar.attach_external_multiplexer_session(
+                                                        session.clone(),
+                                                        window,
+                                                        cx,
+                                                    );
+                                                })
+                                                .ok();
+                                        });
+                                    }
+                                    submenu
+                                },
+                            )
+                            .separator()
+                        });
+
                         let menu = menu.when(is_active, |menu| {
                             menu.action("Open Files", Box::new(RevealFiles))
                                 .action("Review Git Changes", Box::new(ReviewGitChanges))
-                                .separator()
-                                .submenu("Workspace Layout", |menu, _window, _cx| {
-                                    menu.action(
-                                        "Work Area + Files",
-                                        Box::new(title_bar::ApplyCanvasFullLayout),
-                                    )
-                                    .action(
-                                        "Work Area + Built-in Agent",
-                                        Box::new(title_bar::ApplyCanvasAgentControlLayout),
-                                    )
-                                    .action(
-                                        "Focus Work Area",
-                                        Box::new(title_bar::ApplyCanvasEditorFocusLayout),
-                                    )
-                                    .action(
-                                        "Split Work Area",
-                                        Box::new(title_bar::ApplyCanvasCodeRunObserveLayout),
-                                    )
-                                    .action(
-                                        "Work Area + Git",
-                                        Box::new(title_bar::ApplyCanvasReviewLayout),
-                                    )
-                                    .separator()
-                                    .action(
-                                        workspace::workspace_layout_cycle_label(APP_NAME),
-                                        Box::new(title_bar::CycleCanvasLayout),
-                                    )
-                                    .action(
-                                        "Restore Previous Layout",
-                                        Box::new(title_bar::RestorePreviousCanvasLayout),
-                                    )
-                                })
+                                .action(
+                                    "Open Debug",
+                                    Box::new(workspace::ApplyCanvasLayoutRecipe {
+                                        name: "debug".to_owned(),
+                                    }),
+                                )
                                 .separator()
                         });
 
@@ -15836,9 +15885,15 @@ impl Render for Sidebar {
         let rail_on_left = self.side(cx) == SidebarSide::Left;
 
         let has_workspace_rows = !self.contents.entries.is_empty();
-        let has_external_terminal_rows = !self.contents.multiplexer_sessions.is_empty()
-            || !self.contents.machine_terminals.is_empty();
-        let total_item_count = self.contents.session_count + self.contents.observed_terminal_count;
+        let has_external_terminal_rows = APP_NAME == "Zed"
+            && (!self.contents.multiplexer_sessions.is_empty()
+                || !self.contents.machine_terminals.is_empty());
+        let total_item_count = self.contents.session_count
+            + if APP_NAME == "Zed" {
+                self.contents.observed_terminal_count
+            } else {
+                0
+            };
         let no_search_results = !has_workspace_rows && !has_external_terminal_rows;
         let has_query = self.has_filter_query(cx);
         let search_is_focused = self.filter_editor.focus_handle(cx).is_focused(window);
@@ -15856,11 +15911,15 @@ impl Render for Sidebar {
             self.attention_only,
             self.workspace_restore_is_pending(cx),
         );
-        let external_terminal_section = self.render_external_terminal_section(
-            has_workspace_rows || show_start_state,
-            window,
-            cx,
-        );
+        let external_terminal_section = (APP_NAME == "Zed")
+            .then(|| {
+                self.render_external_terminal_section(
+                    has_workspace_rows || show_start_state,
+                    window,
+                    cx,
+                )
+            })
+            .flatten();
 
         v_flex()
             .id("workspace-sidebar")

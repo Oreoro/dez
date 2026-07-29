@@ -1465,7 +1465,7 @@
     //     "always"
     // 3. Never show it, even if hovering it.
     //     "hidden"
-    "show_close_button": "hover",
+    "show_close_button": "always",
     // What to do after closing the current tab.
     //
     // 1. Activate the tab that was open previously (default)

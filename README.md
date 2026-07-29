@@ -24,13 +24,12 @@ Workspace instead of separate applications or hidden panel modes.
 - **Projects** — a stable, collapsible left navigator for codebases and their
   Agent Sessions. It shows provider identity and Running, Needs Input, Waiting
   for Permission, Reconnecting, Completed, or Error state without owning
-  duplicate tabs or processes. **External Sessions** can attach explicitly
-  shared tmux and Herdr work without taking ownership; other terminals remain
-  ephemeral, read-only observations.
-- **Workspace Tools** — Files, Outline, Git, and Debug use one contextual
-  right-side surface for the active Project. The optional provider-backed
-  Built-in Agent shares that contextual slot instead of becoming another
-  global sidebar.
+  duplicate tabs or processes. A Project can explicitly attach a path-matched
+  tmux or Herdr session without taking ownership. Unrelated machine terminals
+  do not leak into its list.
+- **Workspace tools** — Files, Outline, Git, Debug, and the optional
+  provider-backed Built-in Agent are ordinary draggable and closeable native
+  tabs. They are not nested panels or a mandatory second sidebar.
 - **Built-in Agent** — is distinct from terminal agents such as Codex, Claude
   Code, OpenCode, and Herdr, which start through **Open Agent Terminal**. All
   edits still land in ordinary buffers and Git changes, so the same
@@ -59,12 +58,12 @@ open a Workspace
 
 The window is deliberately not a dashboard of equal columns. Each Workspace
 owns one Project, one Main Work Area, its terminals, and its Git state.
-Projects stays global on the left; Files/Git/Outline/Debug and Built-in Agent
-are contextual on the right; actual files, commits, diffs, reviews, agent
-terminals, and ordinary terminals open as native draggable Main Work Area
-tabs. Those tabs support reorder, cross-pane drag, preview replacement,
-pinning, closing, and horizontal or vertical splits. A terminal can therefore
-sit below code without Dez manufacturing a separate multiplexer UI.
+Projects stays global on the left. Files, Git, Outline, Debug, Built-in Agent,
+commits, diffs, reviews, agent terminals, and ordinary terminals use the
+native workspace tab and pane model instead of another navigation system.
+Those tabs support reorder, cross-pane drag, preview replacement, pinning,
+closing, and horizontal or vertical splits. A terminal can therefore sit
+below code without Dez manufacturing a separate multiplexer UI.
 
 Six optional layout commands remain available through **View** and Command
 Search: **Work Area + Files**, **Work Area + Built-in Agent**, **Focus Work
@@ -121,11 +120,12 @@ and typography roles remain configurable through normal settings.
 
 The v0.0.4 source candidate contains the opinionated Dez shell,
 identity isolation, Workspace composition, persistent Projects navigation,
-contextual Workspace Tools, explicit Agent Session state, host-owned local
-terminal lifecycle, browser-like Back/Forward and native draggable tab
-navigation, first-run experience, Lumin/Plex/Lilex visual defaults, read-only
-machine-terminal discovery on macOS, protocol-based tmux and Herdr attachment,
-and a large set of static product-contract checks.
+ordinary closeable workspace-tool tabs, explicit Agent Session state,
+host-owned local terminal lifecycle, setting-controlled Back/Forward history,
+native draggable tab navigation, first-run experience, Lumin/Plex/Lilex visual
+defaults, project-scoped tmux and Herdr attachment, and a large set of static
+product-contract checks. Arbitrary machine terminals are deliberately absent
+because Dez cannot safely control or attribute them.
 
 **Live Preview is not implemented in the current candidate.** URL actions
 still open the system browser, while Markdown, SVG, and CSV use native file

@@ -117,11 +117,11 @@ the existing Surface rather than opening a duplicate.
 
 The visible title is **Projects**, because the stable thing a developer
 navigates is a codebase. Agent Sessions appear beneath their owning Project;
-ordinary integrated shells stay in the Main Work Area. External terminal work
-is separated under **External Sessions**. tmux and Herdr rows expose a
-deliberate attach action while leaving the multiplexer authoritative. Other
-terminal applications remain read-only observations and state that Dez does
-not own their PTYs.
+ordinary integrated shells stay in the Main Work Area. Path-matched tmux and
+Herdr work is available through that Project's **Attach Running Session…**
+action while leaving the multiplexer authoritative. Unrelated terminal
+applications do not appear in Projects and Dez never implies that it owns
+their PTYs.
 
 Projects restoration follows this lifecycle:
 
@@ -1696,15 +1696,25 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   [v0.0.3 Production Readiness Plan](./v0.0.3-production-readiness.md)
   supersedes v0.0.2 plans only as an execution order; it does not replace these
   permanent decisions.
-- **2026-07-29: External attachment is protocol-based and never implicit PTY
-  capture.** v0.0.4 adds one **External Sessions** section to Projects. tmux
-  sessions and live Herdr panes are discovered through documented interfaces
-  and open as ordinary draggable terminal tabs in the Main Work Area. The
-  multiplexer remains the process and layout owner; closing the tab or Dez
-  detaches the client and must not terminate the session. Herdr never receives
-  an automatic `--takeover`. Machine terminals remain read-only observations.
-  Dez does not add a second sidebar, pane grid, tab model, transcript store, or
-  lifecycle database for external work.
+- **2026-07-29: External attachment is project-scoped and never implicit PTY
+  capture.** v0.0.4 discovers tmux sessions and live Herdr panes through
+  documented interfaces, then offers a session only from the matching
+  Project's **Attach Running Session…** menu. Attach opens an ordinary
+  draggable terminal tab in the Main Work Area. The multiplexer remains the
+  process and layout owner; closing the tab or Dez detaches the client and must
+  not terminate the session. Herdr never receives an automatic `--takeover`.
+  Arbitrary machine terminals stay out of Projects. Files, Git, Outline, Debug,
+  terminals, diffs, and agent views all use the existing closeable native tab
+  model; Dez adds no nested layout menu, second sidebar, transcript store, or
+  external lifecycle database.
+- **2026-07-29: Pane navigation is native, contextual, and setting-led.** This
+  supersedes the 2026-07-28 decision to force Back and Forward buttons into
+  every Dez pane. Pane history remains available through native mouse,
+  keyboard, and command routes, while visible header buttons obey
+  `tab_bar.show_nav_history_buttons` and default off. Workspace-tool tabs are
+  ordinary draggable, reorderable, previewable, and closeable tabs with a
+  predictable close control; they receive no persistent-tab exemption or
+  second browser-like tab strip.
 - **2026-07-27: v0.0.2 proves the integrated loop before durable adoption.**
   The v0.0.2 release gate is one dependable in-app workflow: run a supported
   agent in an integrated terminal, supervise that same terminal through

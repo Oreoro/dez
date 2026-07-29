@@ -687,8 +687,8 @@ impl Render for WelcomePage {
             (
                 IconName::Diff,
                 "Review",
-                "Workspace Tools",
-                "Browse Files and Git on the right; open diffs and diagnostics in the Main Work Area.",
+                "Files & Git",
+                "Open Files or Git as native tabs; keep diffs and diagnostics in the Main Work Area.",
             ),
         ];
         let sections = if split_layout {
@@ -781,6 +781,9 @@ impl Render for WelcomePage {
                     .id("welcome-content")
                     .w_full()
                     .h_full()
+                    .when(is_dez && !has_workspace && !compact_spacing, |this| {
+                        this.justify_center()
+                    })
                     .max_w(rems_from_px(if APP_NAME == "Zed" { 640. } else { 1040. }))
                     .when(APP_NAME == "Zed", |this| this.p_6().gap_5())
                     .when(is_dez && compact_spacing, |this| this.px_3().py_4().gap_4())

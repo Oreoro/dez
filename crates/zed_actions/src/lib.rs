@@ -92,7 +92,7 @@ pub mod dez {
     actions!(
         dez,
         [
-            /// Restores the bundled Lumin, JetBrains Mono, and Dez icon visual profile.
+            /// Restores the bundled Lumin, Lilex, IBM Plex Sans, and Dez icon visual profile.
             RestoreVisualProfile
         ]
     );

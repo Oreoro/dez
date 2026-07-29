@@ -37,7 +37,7 @@ The release promise is one predictable route:
 open a Project
 -> run or reattach work in the native Main Work Area
 -> supervise its state in Projects
--> inspect Files, Git, diagnostics, and review in Workspace Tools
+-> inspect Files, Git, diagnostics, and review in native workspace tabs
 ```
 
 The implementation order is:
@@ -59,17 +59,17 @@ Decisions for this slice:
 - closing the tab or application detaches the client and never ends externally
   owned work;
 - Herdr attachment never passes `--takeover` automatically;
-- arbitrary machine terminals remain ephemeral, read-only observations; and
+- arbitrary machine terminals remain outside Projects; and
 - external work does not introduce a second rail, transcript, pane grid, tab
   implementation, or session database.
 
-**Acceptance:** With a tmux session and a Herdr pane already running, Projects
-shows each under **External Sessions**, associates available working-directory
-context, marks Herdr blocked state as needing attention, attaches in a native
-Main Work Area terminal, and leaves the original session alive after the tab
-or Dez closes. Dark, light, and reduced-transparency layouts retain one clear
-Projects/Main Work Area/Workspace Tools hierarchy without overlays or clipped
-controls.
+**Acceptance:** With a tmux session and a Herdr pane already running, the
+matching Project offers each under **Attach Running Session…**, attaches in a
+native Main Work Area terminal, and leaves the original session alive after
+the tab or Dez closes. Unrelated machine terminals do not appear. Dark, light,
+and reduced-transparency layouts retain one clear Projects/Main Work Area
+hierarchy, while Files, Git, Debug, editor, terminal, and agent views behave as
+ordinary closeable tabs without overlays or clipped controls.
 
 ## Revised consolidated-plan intake {#revised-plan-intake}
 
