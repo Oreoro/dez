@@ -2998,10 +2998,16 @@ fn external_multiplexer_project_match_score(
     session: &ExternalMultiplexerSession,
     project_group_key: &ProjectGroupKey,
 ) -> Option<usize> {
+    local_project_group_match_score(session.working_directory.as_deref()?, project_group_key)
+}
+
+fn local_project_group_match_score(
+    working_directory: &Path,
+    project_group_key: &ProjectGroupKey,
+) -> Option<usize> {
     if project_group_key.host().is_some() {
         return None;
     }
-    let working_directory = session.working_directory.as_ref()?;
     project_group_key
         .path_list()
         .paths()
@@ -3015,15 +3021,48 @@ fn external_multiplexer_project_group<'a>(
     session: &ExternalMultiplexerSession,
     project_group_keys: &'a [ProjectGroupKey],
 ) -> Option<&'a ProjectGroupKey> {
+    best_local_project_group_for_path(session.working_directory.as_deref()?, project_group_keys)
+}
+
+fn best_local_project_group_for_path<'a>(
+    working_directory: &Path,
+    project_group_keys: &'a [ProjectGroupKey],
+) -> Option<&'a ProjectGroupKey> {
     project_group_keys
         .iter()
         .filter_map(|project_group_key| {
             Some((
-                external_multiplexer_project_match_score(session, project_group_key)?,
+                local_project_group_match_score(working_directory, project_group_key)?,
                 project_group_key,
             ))
         })
         .max_by_key(|(score, _)| *score)
+        .map(|(_, project_group_key)| project_group_key)
+}
+
+#[cfg(test)]
+mod external_multiplexer_project_group_tests {
+    use super::*;
+
+    #[test]
+    fn most_specific_workspace_root_owns_external_session() {
+        let project_group_keys = vec![
+            ProjectGroupKey::new(None, PathList::new(&[PathBuf::from("/workspace")])),
+            ProjectGroupKey::new(None, PathList::new(&[PathBuf::from("/workspace/dez")])),
+        ];
+
+        assert_eq!(
+            best_local_project_group_for_path(
+                Path::new("/workspace/dez/crates/sidebar"),
+                &project_group_keys,
+            ),
+            project_group_keys.get(1)
+        );
+        assert_eq!(
+            best_local_project_group_for_path(Path::new("/unrelated"), &project_group_keys),
+            None
+        );
+    }
 }
 
 fn activate_observed_machine_terminal(terminal: ObservedMachineTerminal, cx: &mut App) {
