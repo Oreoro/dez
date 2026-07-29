@@ -1543,7 +1543,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'render_project_header_ellipsis_menu.*?terminal_launch_label\(APP_NAME\).*?workspace_built_in_agent_action_label\([[:space:]]*APP_NAME,[[:space:]]*built_in_agent_ready' \
     'Workspace Options can regress to hiding project-scoped terminal or Built-in Agent creation'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'external_multiplexer_session_belongs_to_project.*?submenu\([[:space:]]*"Open Running Workspace or Session…".*?open_external_multiplexer_session' \
+    'let project_group_keys = multi_workspace.*?project_group_keys\(\)\.to_vec\(\).*?let attachable_sessions.*?external_multiplexer_project_group\(session, &project_group_keys\).*?== Some\(&project_group_key\).*?submenu\([[:space:]]*"Open Running Workspace or Session…".*?open_external_multiplexer_session' \
     'a Project can regress to hiding or mis-scoping its external Workspaces and sessions'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let project_group_keys = groups.*?let mut projected_multiplexer_session_ids.*?let group_external_sessions = multiplexer_sessions.*?external_multiplexer_project_group\(session, &project_group_keys\).*?== Some\(group_key\).*?has_visible_rows =.*?!external_sessions\.is_empty\(\).*?external_sessions,[[:space:]]*\}\);.*?fn render_project_header\(.*?external_sessions: &\[ExternalMultiplexerSession\].*?workspace-external-session-.*?external_multiplexer_icon\(session\).*?session\.kind\.display_name\(\).*?session\.state_label\(\).*?tab_index\(0isize\).*?aria_label\(action_label\.clone\(\)\).*?open_external_multiplexer_session' \

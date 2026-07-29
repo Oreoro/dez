@@ -7390,6 +7390,11 @@ impl Sidebar {
                     .iter()
                     .map(|workspace| active_workspace.as_ref() == Some(workspace))
                     .collect();
+                let project_group_keys = multi_workspace
+                    .read_with(cx, |multi_workspace, _| {
+                        multi_workspace.project_group_keys().to_vec()
+                    })
+                    .unwrap_or_default();
                 let attachable_sessions = MultiplexerSessionStore::try_global(cx)
                     .map(|store| {
                         store
@@ -7397,10 +7402,8 @@ impl Sidebar {
                             .sessions()
                             .iter()
                             .filter(|session| {
-                                external_multiplexer_session_belongs_to_project(
-                                    session,
-                                    &project_group_key,
-                                )
+                                external_multiplexer_project_group(session, &project_group_keys)
+                                    == Some(&project_group_key)
                             })
                             .cloned()
                             .collect::<Vec<_>>()
