@@ -98,7 +98,7 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
 fn dez_settings_page_priority(title: &str) -> usize {
     match title {
         "Workspace & Privacy" => 0,
-        "Sessions & Terminal" => 1,
+        "Projects & Terminals" => 1,
         "Agents" => 2,
         "Attention" => 3,
         "Evidence" => 4,
@@ -108,7 +108,7 @@ fn dez_settings_page_priority(title: &str) -> usize {
         "Languages & Tools" => 8,
         "Search & Files" => 9,
         "Window & Layout" => 10,
-        "Workspace Tools & Agent" => 11,
+        "Files, Git & Agent" => 11,
         "Debugger" => 12,
         "Version Control" => 13,
         "Network" => 14,
@@ -227,14 +227,22 @@ fn sessions_side_setting_visible(app_name: &str, page_title: &str) -> bool {
     if app_name == "Zed" {
         page_title == "Agents"
     } else {
-        page_title == "Sessions & Terminal"
+        page_title == "Projects & Terminals"
     }
 }
 
 fn sessions_side_setting() -> SettingsPageItem {
     SettingsPageItem::SettingItem(SettingItem {
-        title: "Sessions Side",
-        description: "Which side of the window the Sessions list appears on.",
+        title: if paths::APP_NAME == "Zed" {
+            "Sessions Side"
+        } else {
+            "Projects Side"
+        },
+        description: if paths::APP_NAME == "Zed" {
+            "Which side of the window the Sessions list appears on."
+        } else {
+            "Which side of the window the Projects navigator appears on."
+        },
         field: Box::new(SettingField {
             organization_override: None,
             json_path: Some("sidebar.side"),
@@ -4069,15 +4077,8 @@ fn search_and_files_page() -> SettingsPage {
 }
 
 fn dez_sidebar_chrome_setting_visible(app_name: &str, json_path: Option<&str>) -> bool {
+    let _ = json_path;
     app_name == "Zed"
-        || matches!(
-            json_path,
-            Some(
-                "sidebar.show_project_pane_button"
-                    | "sidebar.show_menus"
-                    | "sidebar.button_layout$"
-            )
-        )
 }
 
 fn dez_network_setting_visible(app_name: &str, json_path: Option<&str>) -> bool {
@@ -6902,7 +6903,7 @@ fn panels_page() -> SettingsPage {
     }
 
     SettingsPage {
-        title: workspace_surface_copy(paths::APP_NAME, "Panels", "Workspace Tools & Agent"),
+        title: workspace_surface_copy(paths::APP_NAME, "Panels", "Files, Git & Agent"),
         items: concat_sections![
             project_panel_section(),
             outline_panel_section(),
@@ -7034,9 +7035,13 @@ fn debugger_page() -> SettingsPage {
 
 fn terminal_page() -> SettingsPage {
     fn sessions_section() -> Vec<SettingsPageItem> {
-        if sessions_side_setting_visible(paths::APP_NAME, "Sessions & Terminal") {
+        if sessions_side_setting_visible(paths::APP_NAME, "Projects & Terminals") {
             vec![
-                SettingsPageItem::SectionHeader("Sessions"),
+                SettingsPageItem::SectionHeader(if paths::APP_NAME == "Zed" {
+                    "Sessions"
+                } else {
+                    "Projects"
+                }),
                 sessions_side_setting(),
             ]
         } else {
@@ -7913,7 +7918,11 @@ fn terminal_page() -> SettingsPage {
     }
 
     SettingsPage {
-        title: "Sessions & Terminal",
+        title: workspace_surface_copy(
+            paths::APP_NAME,
+            "Sessions & Terminal",
+            "Projects & Terminals",
+        ),
         items: concat_sections![
             sessions_section(),
             environment_section(),
@@ -11443,20 +11452,11 @@ mod tests {
 
     #[test]
     fn dez_hides_settings_for_removed_session_rail_chrome() {
-        assert!(dez_sidebar_chrome_setting_visible(
-            "Dez",
-            Some("sidebar.show_project_pane_button")
-        ));
-        assert!(dez_sidebar_chrome_setting_visible(
-            "Dez",
-            Some("sidebar.show_menus")
-        ));
-        assert!(dez_sidebar_chrome_setting_visible(
-            "Dez",
-            Some("sidebar.button_layout$")
-        ));
-
         for removed_path in [
+            "sidebar.show_project_pane_button",
+            "sidebar.show_menus",
+            "sidebar.button_layout$",
+            "sidebar.button_layout",
             "sidebar.show_branch_status_icon",
             "sidebar.show_branch_name",
             "sidebar.show_worktree_name",
@@ -11543,7 +11543,7 @@ mod tests {
     fn dez_settings_put_the_product_workflow_before_ide_customization() {
         let product_pages = [
             "Workspace & Privacy",
-            "Sessions & Terminal",
+            "Projects & Terminals",
             "Agents",
             "Attention",
             "Evidence",
@@ -11554,7 +11554,7 @@ mod tests {
 
         assert!(dez_settings_page_priority("Evidence") < dez_settings_page_priority("Appearance"));
         assert!(
-            dez_settings_page_priority("Workspace Tools & Agent")
+            dez_settings_page_priority("Files, Git & Agent")
                 < dez_settings_page_priority("Advanced")
         );
         assert_eq!(dez_settings_page_priority("Unknown Compatibility Page"), 16);
@@ -11569,7 +11569,7 @@ mod tests {
 
     #[test]
     fn sessions_placement_is_configured_with_its_own_surface_in_dez() {
-        assert!(sessions_side_setting_visible("Dez", "Sessions & Terminal"));
+        assert!(sessions_side_setting_visible("Dez", "Projects & Terminals"));
         assert!(!sessions_side_setting_visible("Dez", "Agents"));
         assert!(sessions_side_setting_visible("Zed", "Agents"));
         assert!(!sessions_side_setting_visible("Zed", "Sessions & Terminal"));
@@ -11607,11 +11607,11 @@ mod tests {
     #[test]
     fn dez_settings_present_workspace_tools_and_hide_dock_only_controls() {
         assert_eq!(
-            workspace_surface_copy("Dez", "Panels", "Workspace Tools & Agent"),
-            "Workspace Tools & Agent"
+            workspace_surface_copy("Dez", "Panels", "Files, Git & Agent"),
+            "Files, Git & Agent"
         );
         assert_eq!(
-            workspace_surface_copy("Zed", "Panels", "Workspace Tools & Agent"),
+            workspace_surface_copy("Zed", "Panels", "Files, Git & Agent"),
             "Panels"
         );
 

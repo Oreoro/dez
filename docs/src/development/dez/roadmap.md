@@ -4274,3 +4274,25 @@ Completed for the Live Preview and agent-surface decision slice:
   [Live Preview and Agent Model](./live-preview-and-agent-model.md); and
 - retained source-only evidence. No build, test binary, alternate binary, or
   app launch was performed.
+
+Completed for the v0.0.3 studio-navigation source slice:
+
+- replaced the rejected three-mode Navigator with a stable global **Projects**
+  navigator, a native draggable **Main Work Area**, and one contextual
+  right-side **Workspace Tools** surface;
+- kept Files, Outline, Git, and Debug scoped to the active Project and made
+  Built-in Agent replace that contextual surface rather than creating another
+  drawer;
+- stopped Workspace Tool activation from closing Projects and moved the Files
+  surface to the right by default;
+- removed the compressed titlebar activity switcher so native work tabs keep
+  their reorder, cross-pane drag, preview replacement, pin, and close behavior;
+- centered the bounded Home content, added Herdr to the supported terminal
+  agent vocabulary, and kept the advanced layout picker out of default chrome;
+- renamed public Settings pages to **Projects & Terminals** and **Files, Git &
+  Agent** while hiding inherited sidebar controls that do not affect the Dez
+  shell;
+- preserved the tmux/Herdr ownership boundary: Projects summarizes semantic
+  state, while a real PTY remains the interactive source of truth; and
+- retained source-only evidence pending the exact tagged macOS build and
+  runtime matrix.

@@ -1531,6 +1531,7 @@ fn terminal_agent_icon(kind: TerminalAgentKind) -> IconName {
         | TerminalAgentKind::Devin
         | TerminalAgentKind::Droid
         | TerminalAgentKind::Goose
+        | TerminalAgentKind::Herdr
         | TerminalAgentKind::OpenHands
         | TerminalAgentKind::Pi
         | TerminalAgentKind::Qwen => IconName::Robot,
@@ -1680,6 +1681,45 @@ fn terminal_attention_priority(
         TerminalAttentionPriority::Urgent
     } else {
         metadata.attention.priority
+    }
+}
+
+fn terminal_thread_status(
+    agent: Option<&TerminalAgentSnapshot>,
+    runtime: Option<&TerminalRuntimeInfo>,
+    needs_attention: bool,
+) -> AgentThreadStatus {
+    if agent.is_some_and(|agent| agent.state == TerminalAgentState::Failed)
+        || runtime.is_some_and(|runtime| {
+            matches!(
+                runtime.state,
+                TerminalRuntimeState::Missing | TerminalRuntimeState::Incompatible
+            )
+        })
+    {
+        AgentThreadStatus::Error
+    } else if needs_attention
+        || agent.is_some_and(|agent| {
+            matches!(
+                agent.state,
+                TerminalAgentState::WaitingForPermission
+                    | TerminalAgentState::WaitingForInput
+                    | TerminalAgentState::Resumable
+            )
+        })
+    {
+        AgentThreadStatus::WaitingForConfirmation
+    } else if agent.is_some_and(|agent| {
+        matches!(
+            agent.state,
+            TerminalAgentState::Starting | TerminalAgentState::Running
+        )
+    }) || runtime
+        .is_some_and(|runtime| runtime.state == TerminalRuntimeState::Reconnecting)
+    {
+        AgentThreadStatus::Running
+    } else {
+        AgentThreadStatus::Completed
     }
 }
 
@@ -1947,6 +1987,10 @@ mod session_row_action_tests {
         );
         assert_eq!(
             terminal_agent_icon(TerminalAgentKind::Aider),
+            IconName::Robot
+        );
+        assert_eq!(
+            terminal_agent_icon(TerminalAgentKind::Herdr),
             IconName::Robot
         );
     }
@@ -3450,6 +3494,44 @@ mod attention_state_tests {
         assert!(!agent_status_needs_attention(AgentThreadStatus::Running));
         assert!(!agent_status_needs_attention(AgentThreadStatus::Completed));
     }
+
+    #[test]
+    fn terminal_transport_and_attention_map_to_visible_row_statuses() {
+        assert_eq!(
+            terminal_thread_status(None, None, true),
+            AgentThreadStatus::WaitingForConfirmation
+        );
+        assert_eq!(
+            terminal_thread_status(
+                None,
+                Some(&TerminalRuntimeInfo {
+                    state: TerminalRuntimeState::Reconnecting,
+                }),
+                false,
+            ),
+            AgentThreadStatus::Running
+        );
+        assert_eq!(
+            terminal_thread_status(
+                None,
+                Some(&TerminalRuntimeInfo {
+                    state: TerminalRuntimeState::Missing,
+                }),
+                false,
+            ),
+            AgentThreadStatus::Error
+        );
+        assert_eq!(
+            terminal_thread_status(
+                None,
+                Some(&TerminalRuntimeInfo {
+                    state: TerminalRuntimeState::Live,
+                }),
+                false,
+            ),
+            AgentThreadStatus::Completed
+        );
+    }
 }
 
 fn entry_needs_attention(
@@ -4588,7 +4670,7 @@ impl Sidebar {
     /// Properties:
     ///
     /// - Dez shows only real sessions and contentful drafts; workspace
-    ///   navigation remains in Workspace Tools and Recent Workspaces.
+    ///   navigation remains in Files & Git and Recent Workspaces.
     /// - Every visible session stays associated with its owning workspace.
     /// - After every build, active state matches the current workspace's
     ///   current terminal or agent session whenever that work is visible.
@@ -4685,7 +4767,7 @@ impl Sidebar {
             .collect::<Vec<_>>();
         if let Some(workspace) = pathless_workspaces.first() {
             // MultiWorkspace intentionally does not persist empty project groups.
-            // Session Rail still needs a transient group for scratch terminals,
+            // Projects still needs a transient group for scratch terminals,
             // otherwise the visible Main Work Area can contain a live terminal
             // while the supervisor incorrectly says "No sessions yet".
             groups.insert(
@@ -12431,6 +12513,15 @@ impl Sidebar {
                 supplemental_metadata_visible,
             )
         };
+        let terminal_status = if is_opening {
+            AgentThreadStatus::Running
+        } else {
+            terminal_thread_status(
+                terminal.agent.as_ref(),
+                terminal.runtime.as_ref(),
+                needs_attention,
+            )
+        };
         let context_review_workspace = review_workspace.clone();
         let context_review_brief = review_brief.clone();
         let context_files_workspace = match &terminal.workspace {
@@ -12460,6 +12551,7 @@ impl Sidebar {
 
         let terminal_item = canvas_thread_item_style(ThreadItem::new(id, title), &design_system)
             .base_bg(sidebar_bg)
+            .status(terminal_status)
             .icon(
                 terminal_agent_kind
                     .map(terminal_agent_icon)

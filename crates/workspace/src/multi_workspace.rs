@@ -33,7 +33,7 @@ use crate::open_remote_project_with_existing_connection;
 use crate::{
     CloseIntent, CloseWindow, DockPosition, Event as WorkspaceEvent, Item, ModalView, OpenMode,
     PaneKind, Panel, ToggleProjectPane, Workspace, WorkspaceId, client_side_decorations,
-    dez_uses_single_auxiliary_surface, persistence::model::MultiWorkspaceState, workspace_card_gap,
+    persistence::model::MultiWorkspaceState, workspace_card_gap,
 };
 
 actions!(
@@ -130,6 +130,7 @@ pub fn render_sidebar_header_controls(
         sidebar,
         Some(active_workspace),
         None,
+        None,
         cx,
     )
 }
@@ -152,14 +153,16 @@ pub fn render_sidebar_header_controls_with_state(
         sidebar,
         Some(active_workspace),
         None,
+        None,
         cx,
     )
 }
 
-pub fn render_sidebar_header_controls_with_project_pane_visibility(
+pub fn render_sidebar_header_controls_with_auxiliary_visibility(
     multi_workspace: Entity<MultiWorkspace>,
     sidebar: SidebarRenderState,
     project_pane_visible: bool,
+    agent_pane_visible: bool,
     cx: &mut App,
 ) -> Option<AnyElement> {
     let enabled = multi_workspace.read_with(cx, |multi_workspace, cx| {
@@ -172,6 +175,7 @@ pub fn render_sidebar_header_controls_with_project_pane_visibility(
         sidebar,
         None,
         Some(project_pane_visible),
+        Some(agent_pane_visible),
         cx,
     )
 }
@@ -180,8 +184,9 @@ fn render_sidebar_header_controls_for_state(
     multi_workspace: Entity<MultiWorkspace>,
     enabled: bool,
     sidebar: SidebarRenderState,
-    active_workspace: Option<Entity<Workspace>>,
-    project_pane_visible: Option<bool>,
+    _active_workspace: Option<Entity<Workspace>>,
+    _project_pane_visible: Option<bool>,
+    _agent_pane_visible: Option<bool>,
     cx: &mut App,
 ) -> Option<AnyElement> {
     if !enabled {
@@ -203,6 +208,12 @@ fn render_sidebar_header_controls_for_state(
     };
     let on_right = sidebar_side == SidebarSide::Right;
     let sidebar_multi_workspace = multi_workspace.clone();
+    if paths::APP_NAME != "Zed" {
+        // Dez keeps navigation in the global Projects sidebar and lets each
+        // contextual pane render its own native tabs. A second titlebar
+        // switcher would duplicate navigation and squeeze draggable work tabs.
+        return None;
+    }
 
     let sidebar_toggle_button = sidebar_side_context_menu("sidebar-toggle-menu", cx)
         .anchor(if on_right {
@@ -236,21 +247,11 @@ fn render_sidebar_header_controls_for_state(
         .into_any_element();
 
     let project_pane_toggle_button = if SidebarSettings::get_global(cx).show_project_pane_button {
-        let is_visible = project_pane_visible.or_else(|| {
-            active_workspace
-                .as_ref()
-                .map(|workspace| workspace.read(cx).panel_pane_visible(PaneKind::Project, cx))
-        })?;
-        let label = if paths::APP_NAME == "Zed" {
-            if is_visible {
-                "Hide Project Pane"
-            } else {
-                "Show Project Pane"
-            }
-        } else if is_visible {
-            "Hide Workspace Tools"
+        let is_visible = project_pane_visible?;
+        let label = if is_visible {
+            "Hide Project Pane"
         } else {
-            "Show Workspace Tools"
+            "Show Project Pane"
         };
 
         Some(
@@ -895,15 +896,14 @@ impl MultiWorkspace {
         self.apply_open_sidebar(true, cx);
     }
 
-    /// Opens Sessions through Dez's one-auxiliary-surface contract. User-facing
-    /// routes should use this method; `open_sidebar` remains the low-level
-    /// restoration/test primitive that does not have access to a Window.
+    /// Opens the global Projects navigator. Files, Git, and Agent surfaces are
+    /// contextual to the active Workspace and do not compete with this
+    /// navigator.
     pub fn open_sidebar_for_sessions_reveal(
         &mut self,
-        window: &mut Window,
+        _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.hide_dez_auxiliary_drawer_for_sessions_reveal(window, cx);
         self.open_sidebar(cx);
     }
 
@@ -917,7 +917,6 @@ impl MultiWorkspace {
         self.sidebar_auto_close_pending =
             sidebar_open && settings.auto_visibility && !settings.always_open;
         if sidebar_open || settings.always_open {
-            self.hide_dez_auxiliary_drawer_for_sessions_reveal(window, cx);
             self.apply_open_sidebar(false, cx);
         } else {
             self.apply_close_sidebar(false, window, false, cx);
@@ -1014,39 +1013,6 @@ impl MultiWorkspace {
         };
         telemetry::event!("Sidebar Toggled", action = "close", side = side);
         self.apply_close_sidebar(true, window, true, cx);
-    }
-
-    pub(crate) fn close_sidebar_for_auxiliary_surface(
-        &mut self,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.sidebar_auto_close_pending = false;
-        if !self.sidebar_open() {
-            return;
-        }
-
-        let side = match self.sidebar_side(cx) {
-            SidebarSide::Left => "left",
-            SidebarSide::Right => "right",
-        };
-        telemetry::event!("Sidebar Toggled", action = "responsive-close", side = side);
-        self.apply_close_sidebar(true, window, true, cx);
-    }
-
-    fn hide_dez_auxiliary_drawer_for_sessions_reveal(
-        &mut self,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> bool {
-        if !dez_uses_single_auxiliary_surface(paths::APP_NAME) {
-            return false;
-        }
-
-        let workspace = self.workspace().clone();
-        workspace.update(cx, |workspace, cx| {
-            workspace.hide_dez_auxiliary_drawer_for_sessions(window, cx)
-        })
     }
 
     fn apply_close_sidebar(

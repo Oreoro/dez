@@ -357,19 +357,9 @@ impl Settings for SidebarSettings {
                 settings::CanvasSide::Left => SidebarDockPosition::Left,
                 settings::CanvasSide::Right => SidebarDockPosition::Right,
             });
-        let canvas_panel_tabs = content.pane_grid.as_ref().is_some_and(|pane_grid| {
-            !pane_grid.show_legacy_docks.unwrap_or(false)
-                && pane_grid.draggable_panel_tabs.unwrap_or(true)
-                && matches!(
-                    pane_grid.panel_surface.unwrap_or_default(),
-                    settings::CanvasPanelSurface::PaneTab
-                )
-        });
-        let sidebar_starts_open = if canvas_panel_tabs {
-            false
-        } else {
-            sidebar.starts_open.unwrap()
-        };
+        // Projects is a global navigator, not a panel tab. Its startup state
+        // therefore remains independent from the contextual pane-grid model.
+        let sidebar_starts_open = sidebar.starts_open.unwrap();
         let starts_open = !session_rail_hidden && (sidebar_starts_open || session_rail_always_open);
 
         Self {

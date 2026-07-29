@@ -12,7 +12,7 @@ use crate::{
     },
     move_item,
     notifications::NotifyResultExt,
-    render_sidebar_header_controls_with_project_pane_visibility,
+    render_sidebar_header_controls_with_auxiliary_visibility,
     toolbar::Toolbar,
     workspace_settings::{
         AutosaveSetting, DesignSystemSettings, FocusFollowsMouse, PaneGridSettings, TabBarSettings,
@@ -162,7 +162,7 @@ impl PaneKind {
             (true, Self::Project) => "Project pane",
             (true, Self::Agent) => "Agent pane",
             (false, Self::Tabs) => "Main work area",
-            (false, Self::Project) => "Workspace Tools",
+            (false, Self::Project) => "Files and Git",
             (false, Self::Agent) => "Built-in Agent",
         }
     }
@@ -984,10 +984,11 @@ impl Pane {
         };
         let show_orientation =
             empty_main_work_area_shows_orientation(paths::APP_NAME, is_active_pane);
+        let is_dez = paths::APP_NAME != "Zed";
         let (title, description) = if show_orientation {
             (
-                "Run an agent in this workspace",
-                "Open an Agent Terminal, run Codex, Claude Code, OpenCode, or another supported CLI, and keep coding here. The session appears under this project when Dez detects agent work.",
+                "Start work in this project",
+                "Run Codex, Claude Code, OpenCode, Herdr, or another CLI in an Agent Terminal. Dez keeps the terminal here, its state in Projects, and its changes in Files & Git.",
             )
         } else {
             (
@@ -1014,19 +1015,20 @@ impl Pane {
             .size_full()
             .min_h_0()
             .overflow_y_scroll()
-            .items_start()
-            .justify_start()
-            .px_6()
-            .pt_8()
-            .pb_6()
+            .when(is_dez, |this| {
+                this.items_center().justify_center().px_8().py_8()
+            })
+            .when(!is_dez, |this| {
+                this.items_start().justify_start().px_6().pt_8().pb_6()
+            })
             .child(
                 v_flex()
-                    .max_w(px(600.))
+                    .max_w(px(640.))
                     .w_full()
-                    .gap_4()
+                    .gap_5()
                     .child(
                         v_flex()
-                            .max_w(px(560.))
+                            .max_w(px(600.))
                             .gap_2()
                             .child(
                                 Label::new("MAIN WORK AREA")
@@ -1040,6 +1042,56 @@ impl Pane {
                                     .color(Color::Muted),
                             ),
                     )
+                    .when(is_dez, |this| {
+                        this.child(
+                            h_flex()
+                                .w_full()
+                                .flex_wrap()
+                                .gap_4()
+                                .child(
+                                    h_flex()
+                                        .gap_1p5()
+                                        .child(
+                                            Icon::new(IconName::Terminal)
+                                                .size(IconSize::Small)
+                                                .color(Color::Accent),
+                                        )
+                                        .child(
+                                            Label::new("Run")
+                                                .size(LabelSize::Small)
+                                                .color(Color::Muted),
+                                        ),
+                                )
+                                .child(
+                                    h_flex()
+                                        .gap_1p5()
+                                        .child(
+                                            Icon::new(IconName::ListTree)
+                                                .size(IconSize::Small)
+                                                .color(Color::Muted),
+                                        )
+                                        .child(
+                                            Label::new("Supervise in Projects")
+                                                .size(LabelSize::Small)
+                                                .color(Color::Muted),
+                                        ),
+                                )
+                                .child(
+                                    h_flex()
+                                        .gap_1p5()
+                                        .child(
+                                            Icon::new(IconName::GitBranch)
+                                                .size(IconSize::Small)
+                                                .color(Color::Muted),
+                                        )
+                                        .child(
+                                            Label::new("Review in Files & Git")
+                                                .size(LabelSize::Small)
+                                                .color(Color::Muted),
+                                        ),
+                                ),
+                        )
+                    })
                     .child(
                         h_flex()
                             .w_full()
@@ -1109,7 +1161,7 @@ impl Pane {
                 "empty-project-panel-state",
                 IconName::FileTree,
                 "Workspace Tools couldn't open",
-                "No Workspace Tool is available. Close this surface and keep working in the Main Work Area.",
+                "No Files, Outline, Git, or Debug surface is available. Close Workspace Tools and keep working in the Main Work Area.",
                 "Close Workspace Tools",
                 IconName::ArrowRight,
                 KeyBinding::for_action_in(&ToggleProjectPane, &self.focus_handle, cx),
@@ -1120,7 +1172,7 @@ impl Pane {
                 "Built-in Agent couldn't open",
                 "No built-in Agent surface is available. Close it and keep working in the Main Work Area.",
                 "Close Built-in Agent",
-                IconName::ArrowLeft,
+                IconName::ArrowRight,
                 KeyBinding::for_action_in(&ToggleAgentPane, &self.focus_handle, cx),
             ),
             PaneKind::Tabs => return gpui::Empty.into_any_element(),
@@ -5444,11 +5496,19 @@ impl Pane {
                 .read(cx)
                 .panel_pane_visible_except(PaneKind::Project, &current_pane, cx)
         };
+        let agent_pane_visible = if self.pane_kind == PaneKind::Agent {
+            self.is_visible()
+        } else {
+            workspace
+                .read(cx)
+                .panel_pane_visible_except(PaneKind::Agent, &current_pane, cx)
+        };
 
-        render_sidebar_header_controls_with_project_pane_visibility(
+        render_sidebar_header_controls_with_auxiliary_visibility(
             multi_workspace,
             sidebar,
             project_pane_visible,
+            agent_pane_visible,
             cx,
         )
     }
@@ -5592,7 +5652,7 @@ fn render_auxiliary_pane_hide_control(pane_kind: PaneKind) -> AnyElement {
         .expect("only auxiliary panes have dedicated hide controls");
 
     match pane_kind {
-        PaneKind::Project => IconButton::new("hide-workspace-tools", IconName::Close)
+        PaneKind::Project => IconButton::new("hide-files-and-git", IconName::Close)
             .size(ButtonSize::Medium)
             .icon_size(IconSize::Small)
             .tab_index(0isize)
@@ -5641,7 +5701,7 @@ fn pane_new_surface_menu_copy(
 
 fn pane_auxiliary_hide_control_copy(pane_kind: PaneKind) -> Option<&'static str> {
     match pane_kind {
-        PaneKind::Project => Some("Hide Workspace Tools"),
+        PaneKind::Project => Some("Hide Files and Git"),
         PaneKind::Agent => Some("Hide Built-in Agent"),
         PaneKind::Tabs => None,
     }
@@ -6477,7 +6537,7 @@ mod tests {
         );
         assert_eq!(
             PaneKind::Project.accessibility_label_for_app("Dez"),
-            "Workspace Tools"
+            "Files and Git"
         );
         assert_eq!(
             PaneKind::Agent.accessibility_label_for_app("Dez"),
@@ -6518,7 +6578,7 @@ mod tests {
         );
         assert_eq!(
             pane_auxiliary_hide_control_copy(PaneKind::Project),
-            Some("Hide Workspace Tools")
+            Some("Hide Files and Git")
         );
         assert_eq!(
             pane_auxiliary_hide_control_copy(PaneKind::Agent),

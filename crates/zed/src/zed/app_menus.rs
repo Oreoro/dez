@@ -120,7 +120,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
 
     if workspace_tools_are_grouped(APP_NAME) {
         view_items.extend([
-            MenuItem::action("Sessions", workspace::ToggleSidebar),
+            MenuItem::action("Projects", workspace::ToggleSidebar),
             MenuItem::submenu(Menu::new("Workspace Tools").items([
                 MenuItem::action(project_pane_label, workspace::ToggleProjectPane),
                 MenuItem::separator(),
@@ -128,8 +128,9 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                 MenuItem::action(outline_surface_label, outline_panel::ToggleFocus),
                 MenuItem::action(git_surface_label, git_panel::ToggleFocus),
                 MenuItem::action(debugger_surface_label, debug_panel::ToggleFocus),
+                MenuItem::separator(),
+                MenuItem::action(agent_surface_label, assistant::ToggleFocus),
             ])),
-            MenuItem::action(agent_surface_label, assistant::ToggleFocus),
             MenuItem::separator(),
             editor_layout_menu(),
             MenuItem::separator(),

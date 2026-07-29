@@ -20,59 +20,63 @@ editing and delegated work without reconstructing context.
 
 ## The screen model
 
-The default interface has four named regions:
+The default interface has three clear ownership regions:
 
-| Region              | What it is for                                                                   |
-| ------------------- | -------------------------------------------------------------------------------- |
-| **Projects**        | Navigate codebases and supervise their detected or managed Agent Sessions        |
-| **Workspace Tools** | Inspect Files, Outline, Git, and Debug for the active Workspace                  |
-| **Main Work Area**  | Edit files and open terminal, search, settings, diagnostics, and review Surfaces |
-| **Built-in Agent**  | Use the optional provider-backed conversation surface                            |
+| Region                       | What it is for                                                                   |
+| ---------------------------- | -------------------------------------------------------------------------------- |
+| **Projects** · left          | Switch codebases and supervise their terminal and Built-in Agent Sessions        |
+| **Main Work Area** · center  | Edit files and open terminal, diff, search, settings, diagnostics, and review tabs |
+| **Workspace Tools** · right  | Browse Files, Outline, Git, Debug, or the optional Built-in Agent for one Project |
 
-These are not four separate products.
+Projects is global and collapsible. It does not turn into Files, Git, or chat,
+and opening a Workspace Tool does not dismiss it. Each codebase remains visible
+before an agent starts; its Agent Sessions appear beneath it as they are
+detected or managed.
 
-The Main Work Area is one pane grid. A file, terminal, diff, search result,
-settings page, or review can be tabbed, split, moved, and focused through the
-same rules. Sessions, Workspace Tools, and Built-in Agent share one optional
-auxiliary slot around that grid; they are never simultaneous permanent
-columns. Opening one closes the visible competitor at laptop, desktop, and
-ultrawide sizes. A
-contextual drawer is capped at 22% of visible horizontal space when room
-permits, and Dez keeps at least 60% for the Main Work Area. The same policy
-applies after resizing, reopening, and restoring a saved layout.
+Workspace Tools is contextual to the active Project. Files, Outline, Git, and
+Debug share one right-side pane. The optional provider-backed Built-in Agent
+uses that same contextual slot, so two competing right drawers cannot cover or
+squeeze the work.
+
+The Main Work Area is one native pane grid. A file, agent terminal, ordinary
+terminal, diff, search result, settings page, or review can be tabbed, split,
+moved, and focused through the same rules. Its tab strip provides native
+reorder, cross-pane drag, preview replacement, pin, and close behavior; Dez
+does not imitate browser tabs with a separate navigation system. Terminals can
+be split below or beside code while keeping their Project ownership.
+
+Projects normally starts open, Workspace Tools starts on the right, and Dez
+keeps at least 60% for the Main Work Area. Both side regions can collapse at
+compact widths, but opening one never silently closes the other. The same
+policy applies after resizing, reopening, and restoring a saved layout.
 Returning to a one-work-area recipe removes surplus empty split panes while
 preserving every pane that contains a file, terminal, or other user Surface.
 Workspace restoration applies that same cleanup to the default layout and all
 six public recipes, so stale empty splits cannot return as unexplained blank
 columns. Public multi-surface recipes arrange up to two populated work
 areas and never create an empty pane merely to satisfy a diagram.
-The public **Workspace Layout** picker names destinations instead of abstract
+Optional **Workspace Layout** commands name destinations instead of abstract
 arrangements: **Work Area + Files**, **Work Area + Built-in Agent**, **Focus
 Work Area**, **Split Work Area**, **Work Area + Git**, and **Work Area +
-Debug**. Files, Git, Debug, and Built-in Agent each select that exact native
-surface. Focus closes every auxiliary surface. Split Work Area only arranges
+Debug**. They live in **View** and Command Search rather than occupying the
+default titlebar. Files, Git, Debug, and Built-in Agent each select that exact
+native surface. Focus closes contextual tools. Split Work Area only arranges
 existing Main Work Area surfaces; it never starts a process or opens an
-unrelated tool. The three multi-surface recipes use a second work area only
-when it already contains user work, so a workflow can never open as a grid of
-unexplained blank columns. If a layout's named native panel is not registered,
-Dez collapses that empty auxiliary surface and keeps focus in the Main Work
-Area; it never substitutes a stale tab or presents a dead drawer.
-**Next Workspace Layout** advances through those same six states in that
-listed order. It does not enter inherited matrix, tiled, or implementation
-layouts, and invoking it after a custom or legacy state rejoins the public
-sequence at **Work Area + Files**. Workspace menus and command search use the
-same name.
+unrelated tool. No recipe may manufacture an empty column.
 When that work area is empty, one restrained launch panel states the product
 purpose and offers only Open Agent Terminal, Find File, and New File. It does
 not repeat Home's workflow diagram. It is an operational start state for the
 current Workspace, not a second Home screen.
-The **Projects** rail is a projection over the real owners. Each open codebase
+**Projects** is a projection over the real owners. Each open codebase
 remains visible even before an agent starts; its Agent Sessions appear beneath
 it as they are detected or managed. Selecting a Session focuses or reattaches
 its existing Surface instead of opening a duplicate. Selecting a Project
 activates that codebase; its dedicated disclosure control folds or expands its
 Sessions. An ordinary shell is not an Agent Session and does not create a
-generic row.
+generic row. Provider icons identify Codex, Claude Code, OpenCode, Herdr, and
+other detected agents. Native status treatments distinguish Running, Needs
+Input, Waiting for Permission, Reconnecting, Completed, and Error without
+rendering a second terminal transcript.
 Each Main Work Area pane keeps native Back and Forward controls in its tab
 bar. They traverse files, terminals, diffs, settings, and other native
 Surfaces without inventing a separate browser or duplicating Project
@@ -104,8 +108,8 @@ Icons support labels; they never replace them. A creation icon does not stand
 in for an object-specific Terminal or File icon, and review/details controls
 do not reuse each other's symbols. Dez does not reuse Zed-branded assistant
 marks for these controls. Command Palette labels follow the same grammar: Dez
-exposes `sessions: ...`, `files: ...`, `git: ...`, and
-`workspace tools: ...` display names instead of inherited implementation
+exposes `projects: ...`, `files: ...`, `git: ...`, and
+`navigator: ...` display names instead of inherited implementation
 namespaces. Terminal creation appears under `terminal: open agent terminal …`,
 and the six layout transitions and their management commands appear under
 `layout: ...`; neither route exposes inherited Thread or Canvas terminology.
@@ -113,7 +117,7 @@ and the six layout transitions and their management commands appear under
 Hierarchy follows the next useful action. Home places **Open Workspace**
 first when no codebase is open, or **Open Agent Terminal** first inside an
 active Workspace. These are native command rows on the editor surface, not
-filled dashboard cards. Dense Workspace Tools and Built-in Agent toolbars use
+filled dashboard cards. Dense Files & Git and Built-in Agent toolbars use
 compact icons, but every control has a specific accessible name, tooltip, and
 place in the keyboard tab order. A critical action is never available only on
 pointer hover.
@@ -161,13 +165,12 @@ overview summary and the Workspace header's accessible name instead of being
 repeated as a decorative dot-and-caption row.
 
 The Main Work Area follows the same rule. Back, Forward, Add, Switch Surface,
-Split, Zoom, and the Workspace Tools/Built-in Agent hide controls are
-keyboard-focusable and specifically named. Files, Git, Outline, and Debug are
-persistent Workspace Tool destinations: each has one icon, is keyboard
-reachable, and does not repeat a close button or editor lifecycle menu beside
-**Hide Workspace Tools**. Tool tabs stay in their dedicated strip rather than
-dragging into the Main Work Area. The active unpinned Main Work Area Surface
-keeps its close control visible in Dez; inactive tabs remain visually quiet.
+Split, Zoom, and the Workspace Tools hide controls are keyboard-focusable and
+specifically named. Files, Git, Outline, and Debug use the contextual right
+pane; each has one icon, is keyboard reachable, and does not repeat a close
+button or editor lifecycle menu. Work tabs remain native and draggable. The
+active unpinned Main Work Area Surface keeps its close control visible in Dez;
+inactive tabs remain visually quiet.
 
 Existing generated Dez profiles are upgraded consistently. A known legacy
 profile that pinned `.ZedSans`, One Light, and light-only appearance migrates
@@ -425,8 +428,8 @@ These recovery actions are keyboard reachable.
 Dez does not put the terminal inside chat.
 
 - Ordinary terminals are normal Main Work Area Surfaces.
-- Ordinary shells do not appear in Sessions.
-- A terminal is promoted into Sessions when Dez detects a supported foreground
+- Ordinary shells do not appear in Projects.
+- A terminal is promoted into Projects when Dez detects a supported foreground
   agent or explicitly owns it as a managed agent terminal.
 - Agent conversations are normal Agent Surfaces.
 - The active Workspace supplies shared Project context.
@@ -434,6 +437,12 @@ Dez does not put the terminal inside chat.
 - Structured terminal-agent adapters can add lifecycle, attention, command,
   exit, and file-target evidence without making process-name detection a source
   of truth.
+
+Codex, Claude Code, OpenCode, and Herdr keep their real terminal interfaces.
+Projects is only the low-noise switcher: it summarizes provider and semantic
+state, then returns to the existing full-size terminal when selected. On
+narrow windows Projects yields to the Main Work Area instead of competing
+with the agent's own tmux- or Herdr-style pane layout.
 
 Packaged Dez builds contain a local terminal service beside the application.
 When that helper is installed, new local interactive terminals are host-owned
@@ -451,8 +460,9 @@ application or IDE under **Machine Terminals**. These rows are ephemeral, read-o
 observations. Dez can show limited process context and reveal the owning
 application, but it does not read the transcript or arguments, intercept input,
 persist the row, adopt the PTY, restore the process, or claim ownership of its
-work. External control requires an explicit adapter—such as a future `tmux`
-integration—and is outside the v0.0.3 contract.
+work. External control requires an explicit adapter. A future tmux control-mode
+or Herdr socket adapter must distinguish observe, attach, input, detach, and end
+ownership; it is outside the v0.0.3 contract.
 
 ## Visual design
 
@@ -462,15 +472,16 @@ voice. Lilex keeps editors, terminals, prompts, and review code compact and
 legible. Users can still override any role through normal settings.
 
 If imported settings hide that identity, **Dez → Settings → Restore Dez Visual
-Profile** restores only Lumin, IBM Plex Sans, Lilex, and the built-in Dez icons
-while preserving font sizes and non-visual preferences.
+Profile** restores Lumin, balanced density, IBM Plex Sans, Lilex, and the
+built-in Dez icons while preserving font sizes and non-visual preferences.
 
 Blur belongs to the stable window shell. On macOS the window uses the native
 under-window backdrop and follows active/inactive system state; Lumin layers sit
 on top of that material rather than simulating blur with opaque panels. Focus
 borders, selected rows, active lines, pane boundaries, and scrollbars remain
-visible. Projects, Workspace Tools, Agent, the Main Work Area, tab strips, and
-elevated menus use distinct semantic layers instead of blending into one sheet.
+visible. Projects, Workspace Tools, Built-in Agent, the Main Work Area, tab
+strips, and elevated menus use distinct semantic layers instead of blending
+into one sheet.
 Controls in Lumin Light are translucent glass layers, not beige blocks.
 Error, warning, information, hidden, ignored, and predictive states use
 low-alpha semantic tints in both blurred variants, so a status callout or row

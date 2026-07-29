@@ -190,6 +190,7 @@ pub enum TerminalAgentKind {
     Goose,
     Grok,
     OpenHands,
+    Herdr,
     Pi,
     Qwen,
     Cursor,
@@ -212,6 +213,7 @@ impl TerminalAgentKind {
             Self::Goose => "Goose",
             Self::Grok => "Grok",
             Self::OpenHands => "OpenHands",
+            Self::Herdr => "Herdr",
             Self::Pi => "Pi",
             Self::Qwen => "Qwen Code",
             Self::Cursor => "Cursor Agent",
@@ -359,6 +361,8 @@ pub fn detect_terminal_agent_kind(title: &str) -> Option<TerminalAgentKind> {
         Some(TerminalAgentKind::Grok)
     } else if has_token("openhands") || compact.contains("openhands") {
         Some(TerminalAgentKind::OpenHands)
+    } else if has_token("herdr") {
+        Some(TerminalAgentKind::Herdr)
     } else if has_token("pi") {
         Some(TerminalAgentKind::Pi)
     } else if has_token("qwen") {
@@ -1147,6 +1151,10 @@ mod tests {
         assert_eq!(
             detect_terminal_agent_kind("OpenHands"),
             Some(TerminalAgentKind::OpenHands)
+        );
+        assert_eq!(
+            detect_terminal_agent_kind("herdr"),
+            Some(TerminalAgentKind::Herdr)
         );
         assert_eq!(
             detect_terminal_agent_kind("pi"),

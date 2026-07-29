@@ -688,8 +688,8 @@ impl Render for WelcomePage {
             (
                 IconName::Diff,
                 "Review",
-                "Files & Git",
-                "Files, Git, diffs, diagnostics, and Debug stay in the Main Work Area.",
+                "Workspace Tools",
+                "Browse Files and Git on the right; open diffs and diagnostics in the Main Work Area.",
             ),
         ];
         let sections = if split_layout {
@@ -745,7 +745,7 @@ impl Render for WelcomePage {
             .size_full()
             .bg(welcome_background)
             .justify_center()
-            .when(is_dez, |this| this.items_start().justify_start())
+            .when(is_dez, |this| this.items_start())
             .child(
                 v_flex()
                     .id("welcome-content")
@@ -888,7 +888,7 @@ impl Render for WelcomePage {
                                         .id("dez-supported-terminal-agents")
                                         .role(gpui::Role::List)
                                         .aria_label(
-                                            "Supported terminal agents: Codex, Claude Code, and OpenCode",
+                                            "Supported terminal agents: Codex, Claude Code, OpenCode, and Herdr",
                                         )
                                         .flex_wrap()
                                         .gap_x_3()
@@ -898,6 +898,7 @@ impl Render for WelcomePage {
                                                 (IconName::AiOpenAi, "Codex"),
                                                 (IconName::AiClaude, "Claude Code"),
                                                 (IconName::AiOpenCode, "OpenCode"),
+                                                (IconName::Robot, "Herdr"),
                                             ]
                                             .into_iter()
                                             .enumerate()

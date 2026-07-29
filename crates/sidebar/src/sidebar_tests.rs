@@ -90,7 +90,7 @@ fn dez_consolidates_session_utilities_into_one_overview_menu() {
     assert!(session_overview_uses_sessions_menu("Dez"));
     assert!(
         session_sidebar_title_in_titlebar("Dez"),
-        "Dez should use one native titlebar label instead of repeating Sessions in a dashboard block"
+        "the persistent global navigator must identify itself as Projects"
     );
     assert!(
         !session_empty_state_uses_icon_badge("Dez"),
@@ -12272,7 +12272,7 @@ async fn test_idle_worktrees_do_not_create_session_rows_after_adding_unrelated_p
     cx: &mut TestAppContext,
 ) {
     // This setup used to require an idle Workspace header in the thread
-    // switcher. Dez now keeps Workspace navigation in Workspace Tools and
+    // switcher. Dez now keeps Workspace navigation in Files & Git and
     // Recent Workspaces, so none of these idle Workspaces should masquerade as
     // a Session.
     //   AddLinkedWorktree { project_group_index: 0 }

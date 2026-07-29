@@ -64,10 +64,10 @@ describe purpose, not the inherited dock or panel implementation:
 
 | Region              | Owns                                                               | Does not own                                                        |
 | ------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| **Projects**        | Open codebases, Agent Sessions, attention, and navigation          | Terminal processes, editor state, or duplicate tabs                  |
-| **Workspace Tools** | Files, Outline, Git, and Debug tabs in a hideable left tool pane   | A second Workspace, root selection, or terminal placement           |
+| **Projects**        | Open codebases, Agent Sessions, attention, and global navigation   | Terminal processes, editor state, or duplicate tabs                  |
+| **Workspace Tools** | Files, Outline, Git, Debug, or Built-in Agent in a contextual right pane | A second Workspace, root selection, or terminal placement       |
 | **Main work area**  | File, terminal, search, diagnostics, settings, and review Surfaces | Global project scope or sidebar-only copies of active work          |
-| **Built-in Agent**  | Native and ACP conversation Surfaces in a hideable right tool pane | Terminal-agent process ownership                                    |
+| **Built-in Agent**  | Native and ACP conversation Surfaces in the Workspace Tools slot   | Terminal-agent process ownership or another persistent drawer       |
 
 The final shell follows this responsive layout contract. This is the canonical
 wireframe, not a suggestion for an additional dashboard or panel system:
@@ -76,16 +76,18 @@ wireframe, not a suggestion for an additional dashboard or panel system:
 flowchart TB
     subgraph WIDE["Wide window · 1160 logical px or more"]
         direction LR
-        WA["One auxiliary surface · optional<br/>Projects OR Workspace Tools OR Built-in Agent<br/>never side by side"]
+        WP["Projects · global and collapsible<br/>codebases · sessions · attention"]
         WM["Main Work Area · primary<br/>one tab and pane grid<br/>terminal · editor · diff · debug · review"]
-        WA --- WM
+        WT["Workspace Tools · contextual<br/>Files · Outline · Git · Debug OR Built-in Agent"]
+        WP --- WM --- WT
     end
 
     subgraph NARROW["Narrow window · below 1160 logical px"]
         direction LR
-        FA["One compact auxiliary surface · optional<br/>Projects OR Workspace Tools OR Built-in Agent"]
+        FP["Projects · collapsible"]
         FM["Main Work Area · always present<br/>at least 60% of the window"]
-        FA --- FM
+        FT["Workspace Tools · one optional contextual surface"]
+        FP --- FM --- FT
     end
 
     WIDE -->|Window narrows| NARROW
@@ -142,12 +144,13 @@ flowchart LR
     START --> RESTORED
 ```
 
-The Main Work Area is never replaced by shell navigation. Projects, Workspace
-Tools, and Built-in Agent share one optional auxiliary slot at every width.
-Opening one hides whichever of the other two is visible. The transition is
-normal layout and focus movement, never a floating overlay. Wide windows give
-their extra space to the Main Work Area instead of accumulating persistent
-columns.
+The Main Work Area is never replaced by shell navigation. Projects is a global
+navigator and remains independent from the active Project's contextual tools.
+Files, Outline, Git, Debug, and Built-in Agent share one right-side slot;
+opening Built-in Agent replaces the current Workspace Tool rather than adding
+another drawer. The transition is normal layout and focus movement, never a
+floating overlay. Wide windows give their extra space to the Main Work Area
+instead of accumulating persistent columns.
 Transient progress and notices remain bounded and nonmodal; dialogs are
 reserved for decisions that block progress.
 
@@ -229,11 +232,11 @@ Each Workspace header owns its exact terminal-creation destination, preventing
 the active Workspace from exposing the same launcher twice. Official Zed may
 retain its compatibility overview control.
 
-Workspace Tools and Built-in Agent are ordinary pane-grid regions with stable
-placement and normal focus behavior. Hiding one keeps its items available,
-returns focus to a visible editor or terminal pane, and persists the layout.
-Opening a named tool reveals the correct region and activates its existing
-tab.
+Workspace Tools is an ordinary right-side pane-grid region with stable
+placement and normal focus behavior. Files, Outline, Git, Debug, and Built-in
+Agent share it. Hiding the region keeps its items available, returns focus to a
+visible editor or terminal pane, and persists the layout. Opening a named tool
+reveals the region and activates its existing tab without dismissing Projects.
 
 ### Everyday routing {#interface-everyday-routing}
 
@@ -244,7 +247,7 @@ terminology:
 | --------------------------------------------- | ---------------------------------------------------------------------- |
 | **Open Agent Terminal**                       | Opens a terminal tab in the active Workspace's main work area          |
 | **New Built-in Agent Session…**               | Opens or focuses a provider-backed conversation in Built-in Agent      |
-| **Files**, **Outline**, **Git**, or **Debug** | Opens the named tab in left-side Workspace Tools                       |
+| **Files**, **Outline**, **Git**, or **Debug** | Opens the named tab in right-side Workspace Tools                      |
 | Select a Sessions row                         | Activates its Workspace and focuses or reattaches the existing Surface |
 | Hide Workspace Tools or Built-in Agent        | Hides that region and returns focus to an editor or terminal           |
 | Split or move a Surface                       | Rearranges the same Workspace; it does not create a second project     |
@@ -405,12 +408,13 @@ Subagents expose distinct **Stop Subagent**, **Expand Subagent Preview**, and
 **Open Subagent Session** actions; opening a Session navigates to that existing
 conversation and does not create or restart work.
 
-The everyday **Workspace Layout** menu is a workflow picker, not a diagnostics
+The optional **Workspace Layout** menu is a workflow picker, not a diagnostics
 or storage dashboard. It exposes **Work Area + Files**, **Work Area + Built-in
 Agent**, **Focus Work Area**, **Split Work Area**, **Work Area + Git**, and
-**Work Area + Debug**; saved-layout detail belongs in **Manage Saved
-Layouts…**. The active Workspace exposes this submenu through its persistent
-**Workspace Options** control in Sessions. That menu also provides direct
+**Work Area + Debug** through View and Command Search; it does not occupy the
+default titlebar. Saved-layout detail belongs in **Manage Saved Layouts…**.
+The active Workspace exposes this submenu through its persistent **Workspace
+Options** control in Projects. That menu also provides direct
 **Open Files** and **Review Git Changes** routes for the active Workspace;
 launch, review, and layout actions therefore share one project-scoped owner.
 The three destination layouts use one Main Work Area plus their named tool
@@ -422,19 +426,16 @@ Debug, and pane geometry are IDE capabilities.
 Official Zed's account and organization chrome remains unchanged compatibility
 code.
 
-Every named layout has one deterministic auxiliary owner and, when applicable,
-one selected native tab. **Work Area + Files**, **Work Area + Git**, and **Work
-Area + Debug** reveal Workspace Tools, hide Built-in Agent, and select
-ProjectPanel, GitPanel, and DebugPanel respectively. **Work Area + Built-in
-Agent** reveals Built-in Agent, hides Workspace Tools, and selects the Agent
-panel. **Focus Work Area** and **Split Work Area** hide both. Focus also closes
-Projects, leaving no auxiliary surface. Implementations must hide the
-competitor before revealing the destination; sequentially toggling both panes
-violates the label because the single-auxiliary-surface policy makes the last
-toggle win. Panel selection is fail-closed: if the named panel has not
-registered, the empty auxiliary region collapses and focus remains in the Main
-Work Area. A layout must never relabel a stale tool or strand the user in an
-empty shell.
+Every named layout has one deterministic contextual owner and, when
+applicable, one selected native tab. **Work Area + Files**, **Work Area + Git**,
+and **Work Area + Debug** reveal Workspace Tools and select ProjectPanel,
+GitPanel, and DebugPanel respectively. **Work Area + Built-in Agent** uses that
+same right-side region and selects the Agent panel. **Focus Work Area** and
+**Split Work Area** hide contextual tools; Focus may also close Projects as an
+explicit user-requested concentration mode. Panel selection is fail-closed: if
+the named panel has not registered, the empty contextual region collapses and
+focus remains in the Main Work Area. A layout must never relabel a stale tool
+or strand the user in an empty shell.
 
 The supervision and navigation surface is always named **Projects** in
 Dez-facing UI, including Home and Terminal Details. It keeps open codebases
@@ -1681,10 +1682,11 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   surface category.** Home, Projects, Workspace Tools, Main Work Area,
   Built-in Agent, terminal durability, review, Lumin material, typography,
   icons, focus, keyboard behavior, and packaging form the complete release
-  scope. Projects, Workspace Tools, and Built-in Agent continue to compete for
-  one optional auxiliary slot through every activation route, including
-  protocol and restored-panel activation. Embedded Live Preview, automation
-  dashboards, terminal adoption, and new navigation models remain deferred.
+  scope. Projects is the stable global navigator. Files, Outline, Git, Debug,
+  and Built-in Agent share one contextual right-side Workspace Tools slot,
+  while code, terminal agents, diffs, and reviews remain native draggable Main
+  Work Area tabs. Workspace Tool activation never dismisses Projects. Embedded
+  Live Preview, automation dashboards, and terminal adoption remain deferred.
   Source, Compiled, Runtime, and Released evidence stay distinct, and a
   successful older build cannot validate the active candidate. The
   [v0.0.3 Production Readiness Plan](./v0.0.3-production-readiness.md)

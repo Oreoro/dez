@@ -1,6 +1,6 @@
 // Dez settings
 //
-// Dez starts with compact Lumin chrome, IBM Plex Sans for native-feeling
+// Dez starts with balanced Lumin chrome, IBM Plex Sans for native-feeling
 // interface text, and Lilex for code and terminals. Change any value here to
 // make the experience your own.
 //
@@ -18,7 +18,7 @@
     "dark": "Lumin Blur"
   },
   "design_system": {
-    "density": "compact"
+    "density": "balanced"
   },
   "icon_theme": "Dez (Default)",
   "markdown_preview_code_font_family": "Lilex",

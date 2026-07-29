@@ -416,7 +416,7 @@ const initialSettings = fs.readFileSync(initialSettingsPath, "utf8");
 for (const settings of [defaultSettings, initialSettings]) {
   requireValue(settings.includes('"light": "Lumin Light"'), "light default must select Lumin Light");
   requireValue(settings.includes('"dark": "Lumin Blur"'), "dark default must select Lumin Blur");
-  requireValue(settings.includes('"density": "compact"'), "Dez visual defaults must use compact density");
+  requireValue(settings.includes('"density": "balanced"'), "Dez visual defaults must use balanced density");
   requireValue(
     settings.includes('"buffer_font_family": "Lilex"'),
     "editor default must select the bundled Lilex coding face",

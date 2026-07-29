@@ -37,7 +37,7 @@ pub use multi_workspace::{
     MultiWorkspaceEvent, NextProject, NextThread, PreviousProject, PreviousThread, ProjectGroup,
     ProjectGroupKey, SerializedProjectGroupState, Sidebar, SidebarEvent, SidebarHandle,
     SidebarRenderState, SidebarSide, ToggleSidebar, render_sidebar_header_controls,
-    render_sidebar_header_controls_with_project_pane_visibility,
+    render_sidebar_header_controls_with_auxiliary_visibility,
     render_sidebar_header_controls_with_state, sidebar_side_context_menu,
 };
 pub use path_list::{PathList, SerializedPathList};
@@ -238,9 +238,9 @@ fn canvas_layout_modal_row_background(cx: &App) -> Hsla {
     }
 }
 
-const AUXILIARY_PANE_MAX_INITIAL_WIDTH: f32 = 360.;
-const AUXILIARY_PANE_MIN_USABLE_WIDTH: f32 = 240.;
-const AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0.22;
+const AUXILIARY_PANE_MAX_INITIAL_WIDTH: f32 = 380.;
+const AUXILIARY_PANE_MIN_USABLE_WIDTH: f32 = 300.;
+const AUXILIARY_PANE_MAX_INITIAL_RATIO: f32 = 0.28;
 const MAIN_WORK_AREA_MINIMUM_RATIO: f32 = 0.60;
 const WORKSPACE_NOTIFICATION_SHELF_MAX_WIDTH: f32 = 400.;
 const WORKSPACE_NOTIFICATION_SHELF_MIN_WIDTH: f32 = 280.;
@@ -268,6 +268,14 @@ fn auxiliary_pane_max_ratio(available_width: Pixels) -> f32 {
 
 fn dez_uses_single_auxiliary_surface(app_name: &str) -> bool {
     app_name != "Zed"
+}
+
+fn item_belongs_in_main_work_area(
+    app_name: &str,
+    requested_pane_kind: PaneKind,
+    is_panel_item: bool,
+) -> bool {
+    app_name != "Zed" && requested_pane_kind != PaneKind::Tabs && !is_panel_item
 }
 
 fn workspace_notification_shelf_width(viewport_width: Pixels) -> Pixels {
@@ -8354,7 +8362,6 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         self.push_canvas_layout_snapshot(cx);
-        self.schedule_close_dez_sessions_for_main_work_area_destination(window, cx);
 
         if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
             self.sync_panel_panes_from_docks(window, cx);
@@ -9241,7 +9248,7 @@ impl Workspace {
         }
 
         let split_direction = match panel_pane_kind {
-            PanelPaneKind::Project => SplitDirection::Left,
+            PanelPaneKind::Project => SplitDirection::Right,
             PanelPaneKind::Agent => SplitDirection::Right,
         };
         let split_target = self
@@ -9279,69 +9286,18 @@ impl Workspace {
         )
     }
 
-    pub(crate) fn hide_dez_auxiliary_drawer_for_sessions(
-        &mut self,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> bool {
-        let mut hid_drawer = false;
-        for pane_kind in [PaneKind::Project, PaneKind::Agent] {
-            if self.panel_pane_visible(pane_kind, cx) {
-                self.toggle_panel_pane_visibility(pane_kind, window, cx);
-                hid_drawer = true;
-            }
-        }
-        hid_drawer
-    }
-
-    fn schedule_close_dez_sessions_for_main_work_area_destination(
-        &mut self,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> bool {
-        if !dez_uses_single_auxiliary_surface(paths::APP_NAME) {
-            return false;
-        }
-
-        let Some(multi_workspace) = self
-            .multi_workspace
-            .as_ref()
-            .and_then(|multi_workspace| multi_workspace.upgrade())
-        else {
-            return false;
-        };
-        if !multi_workspace.read(cx).sidebar_open() {
-            return false;
-        }
-
-        // The Workspace is already being updated while a tool pane is
-        // revealed. Defer from the Window rather than this entity's Context:
-        // `Context::defer_in` reacquires the Workspace before invoking the
-        // closure, and MultiWorkspace's sidebar cleanup updates every retained
-        // Workspace. That would double-lease this Workspace and panic.
-        window.defer(cx, move |window, cx| {
-            multi_workspace.update(cx, |multi_workspace, cx| {
-                multi_workspace.close_sidebar_for_auxiliary_surface(window, cx);
-            });
-        });
-        true
-    }
-
-    /// Applies Dez's auxiliary-region contract before any Workspace Tool or
-    /// Agent surface becomes visible. Every activation route must pass through
-    /// this method so command-palette, keyboard, remote-ID, and pointer
-    /// navigation cannot produce a different layout.
+    /// Keeps the two contextual right-side surfaces mutually exclusive. The
+    /// global Projects navigator remains visible independently.
     fn prepare_dez_auxiliary_pane_for_reveal(
         &mut self,
         pane_kind: PaneKind,
-        window: &mut Window,
+        _window: &mut Window,
         cx: &mut Context<Self>,
     ) -> bool {
         if !matches!(pane_kind, PaneKind::Project | PaneKind::Agent) {
             return false;
         }
 
-        self.schedule_close_dez_sessions_for_main_work_area_destination(window, cx);
         self.hide_competing_dez_auxiliary_pane_for_reveal(pane_kind, cx)
     }
 
@@ -9636,12 +9592,18 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let pane = if self.active_pane.read(cx).can_host_tabs() {
-            self.active_pane.clone()
-        } else {
-            self.last_tabbed_pane(cx)
-                .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx))
-        };
+        let is_panel_item = item.downcast::<PanelItem>().is_some();
+        let active_pane_kind = self.active_pane.read(cx).pane_kind();
+        let pane =
+            if item_belongs_in_main_work_area(paths::APP_NAME, active_pane_kind, is_panel_item) {
+                self.last_tabbed_pane(cx)
+                    .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx))
+            } else if self.active_pane.read(cx).can_host_tabs() {
+                self.active_pane.clone()
+            } else {
+                self.last_tabbed_pane(cx)
+                    .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx))
+            };
         self.add_item(pane, item, destination_index, false, focus_item, window, cx)
     }
 
@@ -9656,7 +9618,15 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let is_panel_item = item.downcast::<PanelItem>().is_some();
-        let pane = if pane.read(cx).can_host_tabs() || is_panel_item {
+        let requested_pane_kind = pane.read(cx).pane_kind();
+        let pane = if item_belongs_in_main_work_area(
+            paths::APP_NAME,
+            requested_pane_kind,
+            is_panel_item,
+        ) {
+            self.last_tabbed_pane(cx)
+                .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx))
+        } else if pane.read(cx).can_host_tabs() || is_panel_item {
             pane
         } else {
             self.ensure_tabbed_pane(window, cx)
@@ -17256,14 +17226,14 @@ mod tests {
     }
 
     #[test]
-    fn auxiliary_drawer_starts_compact_and_preserves_the_main_work_area() {
-        assert_eq!(auxiliary_pane_initial_width(px(2000.)), px(360.));
-        assert_eq!(auxiliary_pane_initial_width(px(1000.)), px(240.));
+    fn navigator_starts_usable_and_preserves_the_main_work_area() {
+        assert_eq!(auxiliary_pane_initial_width(px(2000.)), px(380.));
+        assert_eq!(auxiliary_pane_initial_width(px(1000.)), px(300.));
         assert_eq!(auxiliary_pane_initial_width(px(560.)), px(224.));
         assert_eq!(auxiliary_pane_initial_width(px(400.)), px(160.));
 
-        assert_eq!(auxiliary_pane_max_ratio(px(2000.)), 0.22);
-        assert_eq!(auxiliary_pane_max_ratio(px(1000.)), 0.24);
+        assert_eq!(auxiliary_pane_max_ratio(px(2000.)), 0.28);
+        assert_eq!(auxiliary_pane_max_ratio(px(1000.)), 0.30);
         assert_eq!(auxiliary_pane_max_ratio(px(560.)), 0.4);
         assert_eq!(auxiliary_pane_max_ratio(px(400.)), 0.4);
 
@@ -17272,6 +17242,35 @@ mod tests {
             after_drawer >= px(600.),
             "the optional drawer must preserve at least 60% of the Main Work Area"
         );
+    }
+
+    #[test]
+    fn dez_routes_work_tabs_out_of_navigator_surfaces() {
+        assert!(item_belongs_in_main_work_area(
+            "Dez",
+            PaneKind::Project,
+            false
+        ));
+        assert!(item_belongs_in_main_work_area(
+            "Dez",
+            PaneKind::Agent,
+            false
+        ));
+        assert!(!item_belongs_in_main_work_area(
+            "Dez",
+            PaneKind::Tabs,
+            false
+        ));
+        assert!(!item_belongs_in_main_work_area(
+            "Dez",
+            PaneKind::Project,
+            true
+        ));
+        assert!(!item_belongs_in_main_work_area(
+            "Zed",
+            PaneKind::Project,
+            false
+        ));
     }
 
     #[test]
@@ -17326,7 +17325,9 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn test_panel_panes_flank_the_editor_in_spatial_order(cx: &mut TestAppContext) {
+    async fn test_contextual_panel_panes_anchor_to_the_right_of_the_editor(
+        cx: &mut TestAppContext,
+    ) {
         init_test(cx);
 
         let fs = FakeFs::new(cx.executor());
@@ -17345,10 +17346,9 @@ mod tests {
                 .collect::<Vec<_>>()
         });
 
-        assert_eq!(
-            pane_kinds,
-            vec![PaneKind::Project, PaneKind::Tabs, PaneKind::Agent]
-        );
+        assert_eq!(pane_kinds.first(), Some(&PaneKind::Tabs));
+        assert!(pane_kinds.contains(&PaneKind::Project));
+        assert!(pane_kinds.contains(&PaneKind::Agent));
     }
 
     #[gpui::test]
@@ -17373,11 +17373,6 @@ mod tests {
             assert!(workspace.enforce_dez_auxiliary_pane_visibility_policy(cx));
             assert!(!project_pane.read(cx).is_visible());
             assert!(agent_pane.read(cx).is_visible());
-
-            project_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
-            assert!(workspace.hide_dez_auxiliary_drawer_for_sessions(window, cx));
-            assert!(!project_pane.read(cx).is_visible());
-            assert!(!agent_pane.read(cx).is_visible());
         });
     }
 
@@ -17588,7 +17583,7 @@ mod tests {
             let total = flexes.iter().sum::<f32>();
             assert!(
                 flexes[0] / total <= AUXILIARY_PANE_MAX_INITIAL_RATIO + f32::EPSILON,
-                "Workspace Tools must not dominate the Main Work Area"
+                "Files & Git must not dominate the Main Work Area"
             );
             assert!(
                 flexes[2] / total <= AUXILIARY_PANE_MAX_INITIAL_RATIO + f32::EPSILON,
@@ -17619,7 +17614,7 @@ mod tests {
             project_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
 
             let Member::Axis(axis) = &workspace.center.root else {
-                panic!("Workspace Tools and Main Work Area should share a horizontal axis");
+                panic!("Navigator and Main Work Area should share a horizontal axis");
             };
             *axis.flexes.lock() = vec![0.1, 1.9];
 
@@ -17632,7 +17627,7 @@ mod tests {
             let total = flexes.iter().sum::<f32>();
             assert!(
                 flexes[0] / total <= AUXILIARY_PANE_MAX_INITIAL_RATIO + f32::EPSILON,
-                "Reset Pane Sizes must not expand Workspace Tools to half the window"
+                "Reset Pane Sizes must not expand Files & Git to half the window"
             );
             assert!(
                 flexes[1] / total >= MAIN_WORK_AREA_MINIMUM_RATIO - f32::EPSILON,
@@ -17670,12 +17665,12 @@ mod tests {
 
             assert!(
                 !project_pane.read(cx).is_visible(),
-                "closing a pane-tab panel must hide its Workspace Tools surface"
+                "closing a pane-tab panel must hide its Files & Git surface"
             );
             assert_eq!(workspace.active_pane().read(cx).pane_kind(), PaneKind::Tabs);
             assert!(
                 workspace.active_pane().read(cx).is_visible(),
-                "closing Workspace Tools must preserve a visible editor or terminal pane"
+                "closing Files & Git must preserve a visible editor or terminal pane"
             );
 
             workspace.remove_panel(&panel, window, cx);

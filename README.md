@@ -21,18 +21,19 @@ Workspace instead of separate applications or hidden panel modes.
 
 - **Main Work Area** — files, terminals, search results, settings, diagnostics,
   previews, and reviews are ordinary movable and splittable Surfaces.
-- **Projects** — the stable navigation rail for open codebases and their Agent
-  Sessions. It shows attention and lifecycle without owning duplicate tabs or
-  processes. On macOS, a separate **Machine Terminals** section can list
-  current-user terminals from other applications as ephemeral, read-only
-  observations.
-- **Workspace Tools** — Files, Outline, Git, and Debug are different views of
-  the active Workspace's single Project.
-- **Built-in Agent** — an optional provider-backed conversation surface stays
-  beside the editor. It is distinct from terminal agents such as Codex and
-  Claude Code, which start through **Open Agent Terminal**. All edits still land
-  in ordinary buffers and Git changes, so the same diagnostics, diff, and
-  review tools apply.
+- **Projects** — a stable, collapsible left navigator for codebases and their
+  Agent Sessions. It shows provider identity and Running, Needs Input, Waiting
+  for Permission, Reconnecting, Completed, or Error state without owning
+  duplicate tabs or processes. On macOS, **Machine Terminals** can list
+  terminals from other applications as ephemeral, read-only observations.
+- **Workspace Tools** — Files, Outline, Git, and Debug use one contextual
+  right-side surface for the active Project. The optional provider-backed
+  Built-in Agent shares that contextual slot instead of becoming another
+  global sidebar.
+- **Built-in Agent** — is distinct from terminal agents such as Codex, Claude
+  Code, OpenCode, and Herdr, which start through **Open Agent Terminal**. All
+  edits still land in ordinary buffers and Git changes, so the same
+  diagnostics, diff, and review tools apply.
 - **Terminal Sessions** — terminals open in the Main Work Area. Session
   identity, deliberate close/end behavior, and honest unavailable-session
   recovery define the default. Packaged Dez builds place local interactive
@@ -57,13 +58,17 @@ open a Workspace
 
 The window is deliberately not a dashboard of equal columns. Each Workspace
 owns one Project, one Main Work Area, its terminals, and its Git state.
-Projects, Workspace Tools, and Built-in Agent compete for one optional
-auxiliary slot. The active Workspace exposes one **Workspace Layout** picker.
-Its six public layouts are named after the surfaces they show: **Work Area +
-Files**, **Work Area + Built-in Agent**, **Focus Work Area**, **Code +
-Terminal**, **Review Changes**, and **Debug**. The first three use one work
-area. The last three use at most two populated work areas and never manufacture
-an empty column.
+Projects stays global on the left; Files/Git/Outline/Debug and Built-in Agent
+are contextual on the right; actual files, commits, diffs, reviews, agent
+terminals, and ordinary terminals open as native draggable Main Work Area
+tabs. Those tabs support reorder, cross-pane drag, preview replacement,
+pinning, closing, and horizontal or vertical splits. A terminal can therefore
+sit below code without Dez manufacturing a separate multiplexer UI.
+
+Six optional layout commands remain available through **View** and Command
+Search: **Work Area + Files**, **Work Area + Built-in Agent**, **Focus Work
+Area**, **Code + Terminal**, **Review Changes**, and **Debug**. They are hidden
+from the default titlebar so the primary navigation remains obvious.
 
 From a selected Project Session row, `Enter` returns to the existing Session,
 `Shift+F` opens its Workspace files, `Shift+G` opens its change review, and
@@ -88,7 +93,10 @@ one Zed-compatible Project:
 - Projects observes and routes to those owners without copying them.
 
 A terminal is therefore not embedded in chat, and the editor is not a separate
-mode. They are peer Surfaces in one native pane grid.
+mode. They are peer Surfaces in one native pane grid. Dez detects supported
+agents running in its terminals, including Codex, Claude Code, OpenCode, and
+Herdr. Detached tmux/Herdr control is a later adapter boundary; v0.0.3 does not
+pretend an externally owned PTY is a Dez-owned recoverable Session.
 
 ## Visual baseline
 
@@ -110,11 +118,12 @@ and typography roles remain configurable through normal settings.
 ## Current status
 
 The v0.0.3 source candidate already contains the opinionated Dez shell,
-identity isolation, Workspace composition, Project navigation, session vocabulary,
-host-owned local terminal lifecycle, browser-like Back/Forward navigation,
-first-run experience, Lumin/Plex/Lilex visual defaults, read-only
-machine-terminal discovery on macOS, and a large set of static
-product-contract checks.
+identity isolation, Workspace composition, persistent Projects navigation,
+contextual Workspace Tools, explicit Agent Session state, host-owned local
+terminal lifecycle, browser-like Back/Forward and native draggable tab
+navigation, first-run experience, Lumin/Plex/Lilex visual defaults, read-only
+machine-terminal discovery on macOS, and a large set of static product-contract
+checks.
 
 **Live Preview is not implemented in the current candidate.** URL actions
 still open the system browser, while Markdown, SVG, and CSV use native file

@@ -11,9 +11,10 @@ source tree.
 
 The package version and source release train now identify v0.0.3. No packaged
 artifact currently proves the active source tree. The successful macOS action
-for `ead91e2360815b61d0cc75f3fdecb48625d48825` predates the current Projects
-navigation, auxiliary-surface arbitration, release-plan, and version changes.
-It is useful historical compile and bundle evidence only.
+for rejected candidate `v0.0.3-rc5` predates the current stable Projects
+navigator, contextual right-side Workspace Tools, Main Work Area tab routing,
+balanced density, centered onboarding, and explicit Agent Session status
+changes. It is historical compile and bundle evidence only.
 
 The active candidate may advance only when its exact commit is recorded here
 with source, compile, bundle, launch, restart, terminal survival, reattach,
@@ -48,9 +49,19 @@ hardened. Pulling them unreviewed into the release checkpoint would expand the
 candidate and invalidate the current audit. They are intentionally deferred to
 the next upstream-parity branch.
 
-The exact v0.0.3 candidate is frozen by the annotated ref `v0.0.3-rc5`. Its
-Actions build manifest must name the same commit as the tag target; branch
-names or historical successful runs are not accepted as identity evidence.
+The next exact candidate is `v0.0.3-rc6`. On 2026-07-29 its pre-freeze source
+passed `cargo fmt --all -- --check`, `git diff --check`, locked offline Cargo
+metadata resolution, Node and shell syntax checks, `dez-theme-check`, and the
+full `dez-identity-check`. Those checks cover the stable Projects navigator,
+native work-tab ownership, mutually exclusive right-side Workspace Tools and
+Built-in Agent, centered responsive Home, Lumin transparency budgets, and
+terminal-agent state vocabulary.
+
+This is source evidence only. The Actions build manifest must name the same
+commit as the annotated `v0.0.3-rc6` tag target; branch names or historical
+successful runs are not accepted as identity evidence. Compile, bundle,
+launch, restart, terminal survival, reattach, responsive layout, and visual
+matrix gates remain open until that exact artifact is inspected.
 
 ### Rejected candidates
 
@@ -106,6 +117,48 @@ Sidebar focus handle. rc5 computes restoration truth before deferral and
 schedules only the parent reconciliation through the Window. The rc4 terminal
 Host again remained alive after the GUI panic. No runtime evidence from rc4 is
 promoted to the final candidate.
+
+`v0.0.3-rc5` resolved to
+`b4d942a54de1c732483ea1237ffcb145dd0eb292`. GitHub Actions
+[run 30359680607](https://github.com/Oreoro/dez/actions/runs/30359680607)
+and job `90276079735` completed the source guards, optimized arm64 build,
+bundle verification, packaging, and artifact upload. Artifact `8690205342`,
+named
+`Dez-macOS-M2-b4d942a54de1c732483ea1237ffcb145dd0eb292`, has GitHub digest
+`sha256:8670b640788aa7964799ef793c448dcd1c9782582d191ffa11be5a2584fb2acf`.
+This proves that exact source compiled and packaged.
+
+Visual runtime review rejected rc5. Its Navigator collapsed into a tiny,
+ambiguous strip; Files/Git navigation and movable work tabs looked like one
+undifferentiated tab model; the empty Main Work Area left most of the viewport
+blank; and Agent Terminal rows did not communicate provider and
+human-intervention state strongly enough. Those are stop-ship product defects,
+not cosmetic release-note issues. The superseding source introduces one
+stable Projects navigator, keeps Files/Git/Outline/Debug and Built-in Agent in
+one contextual right slot, routes file, commit, diff, review, and terminal work
+into the native draggable Main Work Area tab strip, centers the first-run
+action cluster, hides advanced layout recipes from default chrome, uses
+balanced default density, and maps terminal runtime and agent truth to native
+row statuses. No rc5 Runtime evidence is promoted to the next candidate.
+
+The shell intentionally borrows Herdr's low-noise semantic session list without
+embedding a second terminal multiplexer: Projects summarizes actors and
+attention, native work tabs retain drag/reorder/preview behavior, and the real
+PTY remains full size in the Main Work Area. Files and Git are scoped to the
+active Project rather than competing with Projects for the same navigation
+slot.
+
+### Multiplexer boundary
+
+v0.0.3 detects Codex, Claude Code, OpenCode, Herdr, and other supported agent
+processes when they run inside a Dez Agent Terminal. Dez-owned terminals remain
+the only interactive, recoverable sessions promised by this release.
+
+Detached tmux discovery and control, and Herdr socket orchestration, are
+intentionally deferred until the hardening gates pass. A later adapter may use
+tmux control mode and Herdr's local socket API, but it must distinguish
+observation, attachment, input ownership, and process termination instead of
+presenting an external process as a Dez-owned session.
 
 ## v0.0.2 parity build evidence {#v0-0-2-parity-build-evidence}
 
@@ -1511,12 +1564,14 @@ performed for this source slice.
 Current source makes the graphical Settings window explain Dez before exposing
 the inherited IDE surface:
 
-- Workspace & Privacy, Sessions & Terminal, Agents, Attention, and Evidence are
+- Workspace & Privacy, Projects & Terminals, Agents, Attention, and Evidence are
   the first five root pages;
 - Appearance and the retained editor, language, layout, Git, network, and
   advanced pages follow without losing compatibility settings;
-- Sessions placement is configured under Sessions & Terminal instead of Agent
+- Projects placement is configured under Projects & Terminals instead of Agent
   providers;
+- nonfunctional inherited sidebar-chrome controls are hidden;
+- Files, Git & Agent owns the contextual tool settings;
 - Agent configuration starts with Agent Runtime & Providers and uses the public
   **Disable Agent Features** label; and
 - official Zed keeps its existing page order and upstream labels.

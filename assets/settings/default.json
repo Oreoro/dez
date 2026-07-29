@@ -167,7 +167,7 @@
   // an explicit `-e` (existing window) or `-n` (new window) flag.
   //
   // May take 2 values:
-  //  1. Open directories as a new workspace in the current Dez window's Session Rail
+  //  1. Open directories as a new project in the current Dez window's Navigator
   //         "cli_default_open_behavior": "existing_window"
   //  2. Open paths in a new window, unless they are subpaths of an existing project
   //         "cli_default_open_behavior": "new_window"
@@ -175,7 +175,7 @@
   // The default behavior when opening projects from the UI.
   //
   // May take 2 values:
-  //  1. Open projects as a new workspace in the current Dez window's Session Rail
+  //  1. Open projects in the current Dez window's Navigator
   //         "default_open_behavior": "existing_window"
   //  2. Open projects in a new window
   //         "default_open_behavior": "new_window"
@@ -795,7 +795,7 @@
     // Default width of the project panel.
     "default_width": 240,
     // Where to dock the project panel. Can be 'left' or 'right'.
-    "dock": "left",
+    "dock": "right",
     // Spacing between worktree entries in the project panel. Can be 'comfortable' or 'standard'.
     "entry_spacing": "comfortable",
     // Whether to show file icons in the project panel.
@@ -811,7 +811,7 @@
     // Gitignored entries are never auto revealed.
     "auto_reveal_entries": true,
     // Whether the project panel should open on startup.
-    "starts_open": false,
+    "starts_open": true,
     // Whether to fold directories automatically and show compact folders
     // (e.g. "a/b/c" ) when a directory has only one subdirectory inside.
     "auto_fold_dirs": false,
@@ -1046,8 +1046,8 @@
   "sidebar": {
     // Where to position the sidebar. Can be 'left' or 'right'.
     "side": "left",
-    // Whether Sessions should start open in new windows.
-    "starts_open": false,
+    // Whether Projects should start open in new windows.
+    "starts_open": true,
     // Whether to show the project pane toggle button in the sidebar header.
     "show_project_pane_button": true,
     // Whether to show git status indicators on the branch icon in the sidebar.
@@ -1074,7 +1074,7 @@
   // Settings for the Dez design system.
   "design_system": {
     "family": "zed_canvas",
-    "density": "compact",
+    "density": "balanced",
     "radius": "subtle",
     "motion": "system",
     "contrast": "standard",
@@ -1085,15 +1085,15 @@
   // Settings for the Canvas workspace bar.
   "workspace_bar": {
     "visibility": "always",
-    "height": "compact",
+    "height": "comfortable",
     "center_command_search": true,
-    "show_layout": true,
+    "show_layout": false,
     "show_agent_attention": true
   },
   // Settings for Sessions, the Dez supervision rail.
   "session_rail": {
     "visibility": "auto",
-    "mode": "compact",
+    "mode": "detailed",
     "position": "left",
     "group_by": "project",
     "sort_by": "manual",
