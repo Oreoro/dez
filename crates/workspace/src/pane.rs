@@ -5702,7 +5702,7 @@ fn pane_split_control_copy(app_name: &str, enabled: bool) -> (&'static str, &'st
     } else {
         (
             "Split Pane Unavailable",
-            "This Surface cannot be split or moved into a new pane",
+            "This tab cannot be split or moved to another pane",
         )
     }
 }
@@ -5711,7 +5711,7 @@ fn pane_tab_overflow_copy(app_name: &str) -> (&'static str, &'static str) {
     if app_name == "Zed" {
         ("Open Tab", "Tabs")
     } else {
-        ("Switch Surface", "Surfaces")
+        ("Switch Tab", "Tabs")
     }
 }
 
@@ -6582,17 +6582,14 @@ mod tests {
             pane_split_control_copy("Dez", false),
             (
                 "Split Pane Unavailable",
-                "This Surface cannot be split or moved into a new pane"
+                "This tab cannot be split or moved to another pane"
             )
         );
         assert_eq!(
             pane_split_control_copy("Dez", true),
             ("Split Pane", "Split Pane")
         );
-        assert_eq!(
-            pane_tab_overflow_copy("Dez"),
-            ("Switch Surface", "Surfaces")
-        );
+        assert_eq!(pane_tab_overflow_copy("Dez"), ("Switch Tab", "Tabs"));
         assert_eq!(pane_tab_overflow_copy("Zed"), ("Open Tab", "Tabs"));
         assert!(
             !pane_tab_end_control_requires_hover("Dez", true, true, false),
