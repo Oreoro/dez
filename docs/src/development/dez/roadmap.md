@@ -3697,6 +3697,14 @@ Completed for the Agent attention overlay source slice:
 - retained source-only evidence: no build, test binary, alternate binary, or
   visual launch was performed.
 
+Superseded for the v0.1 native-navigation hardening slice:
+
+- removed the visible floating-popup opt-in from Dez Settings;
+- made the legacy flag inert in Dez release builds while retaining official
+  Zed behavior and test-only coverage of the inherited implementation; and
+- kept Projects, native window attention, accessibility announcements, and
+  configured notifications as the complete Agent attention path.
+
 Completed for the terminal handoff priority source slice:
 
 - replaced the single 560 px all-label breakpoint with a progressive action

@@ -924,10 +924,11 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   full-screen layer; only their visible content occludes input, within 90% of
   viewport width, 560 px, and 30% of viewport height, with bottom clearance for
   the status bar. Modal scrims remain full-screen only when they intentionally
-  block the application. Agent attention projects into Sessions without opening
-  a floating window by default; **Floating Attention Popups** is an explicit Dez
-  opt-in. Sound policy and accessible window-attention requests remain
-  independent, and official Zed retains its upstream popup behavior.
+  block the application. Agent attention projects into Projects without
+  opening a floating window. The earlier Dez popup opt-in was removed for the
+  v0.1 hardening path; sound policy, configured notifications, and accessible
+  window-attention requests remain independent, and official Zed retains its
+  upstream popup behavior.
 - **2026-07-25: Lumin glass is a native material hierarchy.** On macOS the stable
   Dez window uses the native under-window material, blends behind the window, and
   follows active/inactive system state. Lumin then layers semantic surfaces in
@@ -1787,3 +1788,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   as the primary surface, and show setup as a normal **Set Up Dez** tab. Setup
   never toggles an unrelated dock. Users can still open Files or Projects
   directly and can opt into either startup behavior in Settings.
+- **2026-07-29: Attention stays in native navigation.** Release builds of Dez
+  use Projects, pane state, accessibility announcements, native window
+  attention, and configured notifications. They do not open floating Agent
+  attention windows, and Settings does not advertise the legacy popup flag.
+  Official Zed behavior and test-only coverage of the popup implementation
+  remain available.

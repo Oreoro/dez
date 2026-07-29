@@ -1683,6 +1683,12 @@ shell syntax, diff, and identity checks are the only local verification for
 this slice; the current remote build predates it, so rendered first-run proof
 requires the next exact candidate.
 
+The same source checkpoint removes **Floating Attention Popups** from Dez
+Settings and makes the legacy flag inert in Dez release builds. Attention
+remains available through Projects, pane state, accessibility announcements,
+native window attention, and configured notifications. Official Zed behavior
+and test-only exercise of the inherited popup implementation remain unchanged.
+
 ## 2026-07-26: integrated Agent provider setup
 
 The reachable Dez provider setup no longer uses the inherited nested

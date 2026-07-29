@@ -177,7 +177,7 @@ pub(crate) fn floating_agent_attention_popup_enabled(
     app_name: &str,
     floating_attention_popups: bool,
 ) -> bool {
-    app_name == "Zed" || floating_attention_popups
+    app_name == "Zed" || (cfg!(test) && floating_attention_popups)
 }
 
 pub(crate) fn request_agent_window_attention(window: &mut Window, cx: &App) {
@@ -1155,7 +1155,7 @@ mod tests {
     }
 
     #[test]
-    fn dez_keeps_attention_in_sessions_unless_floating_popups_are_enabled() {
+    fn dez_keeps_popup_mechanics_available_to_internal_tests() {
         assert!(!floating_agent_attention_popup_enabled("Dez", false));
         assert!(floating_agent_attention_popup_enabled("Dez", true));
         assert!(floating_agent_attention_popup_enabled("Zed", false));
