@@ -383,6 +383,10 @@ mod agent_session_label_tests {
         assert!(!terminal_activation_failure_uses_placeholder_surface("Dez"));
         assert!(session_onboarding_uses_gradient("Zed"));
         assert!(!session_onboarding_uses_gradient("Dez"));
+        assert!(session_scope_controls_visible("Zed", 1, 0, false));
+        assert!(!session_scope_controls_visible("Dez", 4, 0, false));
+        assert!(session_scope_controls_visible("Dez", 4, 1, false));
+        assert!(session_scope_controls_visible("Dez", 4, 0, true));
     }
 }
 
@@ -808,12 +812,13 @@ fn session_overview_status_icon(
 fn session_scope_controls_visible(
     app_name: &str,
     session_count: usize,
+    attention_count: usize,
     attention_only: bool,
 ) -> bool {
     if app_name == "Zed" {
         session_count > 0
     } else {
-        session_count > 1 || attention_only
+        attention_count > 0 || attention_only
     }
 }
 
@@ -1161,6 +1166,14 @@ fn canvas_thread_item_style(
     thread_item: ThreadItem,
     design_system: &DesignSystemSettings,
 ) -> ThreadItem {
+    if APP_NAME != "Zed" {
+        return thread_item
+            .density(ThreadItemDensity::Compact)
+            .radius(ThreadItemRadius::None)
+            .contrast(ThreadItemContrast::Standard)
+            .metadata_visible(false);
+    }
+
     let density = match design_system.density {
         settings::CanvasDensity::Compact => ThreadItemDensity::Compact,
         settings::CanvasDensity::Balanced => ThreadItemDensity::Balanced,
@@ -1774,6 +1787,16 @@ fn terminal_agent_kind_from_snapshot(
     }
 }
 
+fn terminal_agent_kind_from_evidence(
+    structured_adapter: Option<TerminalAgentKind>,
+    foreground_command: Option<TerminalAgentKind>,
+    terminal_title: Option<TerminalAgentKind>,
+) -> Option<TerminalAgentKind> {
+    structured_adapter
+        .or(foreground_command)
+        .or(terminal_title)
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum TerminalRuntimeState {
     Live,
@@ -2011,6 +2034,30 @@ mod session_row_action_tests {
         assert_eq!(
             terminal_agent_icon(TerminalAgentKind::Herdr),
             IconName::Robot
+        );
+    }
+
+    #[test]
+    fn authoritative_agent_evidence_outranks_terminal_title_inference() {
+        assert_eq!(
+            terminal_agent_kind_from_evidence(
+                Some(TerminalAgentKind::Claude),
+                Some(TerminalAgentKind::OpenCode),
+                Some(TerminalAgentKind::Codex),
+            ),
+            Some(TerminalAgentKind::Claude)
+        );
+        assert_eq!(
+            terminal_agent_kind_from_evidence(
+                None,
+                Some(TerminalAgentKind::OpenCode),
+                Some(TerminalAgentKind::Codex),
+            ),
+            Some(TerminalAgentKind::OpenCode)
+        );
+        assert_eq!(
+            terminal_agent_kind_from_evidence(None, None, Some(TerminalAgentKind::Codex)),
+            Some(TerminalAgentKind::Codex)
         );
     }
 
@@ -2604,7 +2651,11 @@ fn standalone_terminal_metadata(
         session_ref,
     };
 
-    let detected_agent_kind = metadata.detected_agent_kind().or(detected_agent_command);
+    let detected_agent_kind = terminal_agent_kind_from_evidence(
+        None,
+        detected_agent_command,
+        metadata.detected_agent_kind(),
+    );
     (metadata, detected_agent_kind, runtime)
 }
 
@@ -5073,13 +5124,13 @@ impl Sidebar {
                     let attention_priority = terminal_attention_priority(&metadata, agent.as_ref());
                     let detected_agent_kind = detect_terminal_agents
                         .then(|| {
-                            terminal_agent_kind_from_snapshot(agent.as_ref())
-                                .or_else(|| {
-                                    host_snapshot
-                                        .and_then(|snapshot| snapshot.foreground_command.as_deref())
-                                        .and_then(detect_terminal_agent_command)
-                                })
-                                .or_else(|| metadata.detected_agent_kind())
+                            terminal_agent_kind_from_evidence(
+                                terminal_agent_kind_from_snapshot(agent.as_ref()),
+                                host_snapshot
+                                    .and_then(|snapshot| snapshot.foreground_command.as_deref())
+                                    .and_then(detect_terminal_agent_command),
+                                metadata.detected_agent_kind(),
+                            )
                         })
                         .flatten();
                     if !terminal_entry_visible_in_session_rail(
@@ -5288,14 +5339,14 @@ impl Sidebar {
                     let agent = snapshot.agent.clone();
                     let detected_agent_kind = detect_terminal_agents
                         .then(|| {
-                            terminal_agent_kind_from_snapshot(agent.as_ref())
-                                .or_else(|| {
-                                    snapshot
-                                        .foreground_command
-                                        .as_deref()
-                                        .and_then(detect_terminal_agent_command)
-                                })
-                                .or_else(|| metadata.detected_agent_kind())
+                            terminal_agent_kind_from_evidence(
+                                terminal_agent_kind_from_snapshot(agent.as_ref()),
+                                snapshot
+                                    .foreground_command
+                                    .as_deref()
+                                    .and_then(detect_terminal_agent_command),
+                                metadata.detected_agent_kind(),
+                            )
                         })
                         .flatten();
                     if !terminal_entry_visible_in_session_rail(
@@ -6412,7 +6463,8 @@ impl Sidebar {
                     .when(labels_visible, |this| this.child(label))
                     .when_some(
                         layout_label.filter(|_| {
-                            labels_visible
+                            APP_NAME == "Zed"
+                                && labels_visible
                                 && !(is_collapsed && running_terminal_agent_label.is_some())
                         }),
                         |this, layout_label| {
@@ -6425,7 +6477,8 @@ impl Sidebar {
                         },
                     )
                     .when_some(
-                        running_terminal_agent_label.filter(|_| is_collapsed && labels_visible),
+                        running_terminal_agent_label
+                            .filter(|_| APP_NAME == "Zed" && is_collapsed && labels_visible),
                         |this, running_terminal_agent_label| {
                             this.child(
                                 Label::new(SharedString::from(
@@ -14137,6 +14190,7 @@ impl Sidebar {
                 session_scope_controls_visible(
                     paths::APP_NAME,
                     self.contents.session_count,
+                    self.contents.attention_count,
                     self.attention_only,
                 ),
                 |this| {

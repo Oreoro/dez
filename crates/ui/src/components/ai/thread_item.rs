@@ -85,6 +85,7 @@ pub struct ThreadItem {
     set_size: Option<usize>,
     hovered: bool,
     labels_visible: bool,
+    metadata_visible: bool,
     rounded: bool,
     density: ThreadItemDensity,
     radius: ThreadItemRadius,
@@ -133,6 +134,7 @@ impl ThreadItem {
             set_size: None,
             hovered: false,
             labels_visible: true,
+            metadata_visible: true,
             rounded: false,
             density: ThreadItemDensity::default(),
             radius: ThreadItemRadius::default(),
@@ -323,6 +325,13 @@ impl ThreadItem {
 
     pub fn labels_visible(mut self, visible: bool) -> Self {
         self.labels_visible = visible;
+        self
+    }
+
+    /// Controls only the visible secondary metadata row. Metadata remains in
+    /// the accessibility label and tooltip when this is disabled.
+    pub fn metadata_visible(mut self, visible: bool) -> Self {
+        self.metadata_visible = visible;
         self
     }
 
@@ -666,7 +675,8 @@ impl RenderOnce for ThreadItem {
         let has_worktree = !linked_worktrees.is_empty();
 
         let labels_visible = self.labels_visible;
-        let has_metadata = labels_visible
+        let has_metadata = self.metadata_visible
+            && labels_visible
             && (has_visible_actor_label
                 || has_state_label
                 || has_visible_host_label
