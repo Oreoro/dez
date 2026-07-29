@@ -756,8 +756,7 @@ impl Render for WelcomePage {
         let has_secondary_content = secondary_content.is_some();
         let split_layout =
             dez_welcome_uses_split_layout(APP_NAME, viewport_width, has_secondary_content);
-        let home_surface = cx.theme().colors().panel_background;
-        let home_border = cx.theme().colors().border;
+        let home_separator = cx.theme().colors().border_variant;
 
         let welcome_label = if is_dez {
             "Dez Home".to_string()
@@ -807,13 +806,7 @@ impl Render for WelcomePage {
                     div()
                         .min_w_0()
                         .flex_1()
-                        .when(is_dez, |this| {
-                            this.p_3()
-                                .rounded_lg()
-                                .border_1()
-                                .border_color(home_border)
-                                .bg(home_surface)
-                        })
+                        .when(is_dez, |this| this.px_1())
                         .child(first_section.render(
                             0,
                             &self.focus_handle,
@@ -826,11 +819,7 @@ impl Render for WelcomePage {
                             .min_w_0()
                             .flex_1()
                             .when(is_dez, |this| {
-                                this.p_3()
-                                    .rounded_lg()
-                                    .border_1()
-                                    .border_color(home_border)
-                                    .bg(home_surface)
+                                this.pl_6().border_l_1().border_color(home_separator)
                             })
                             .child(secondary_content),
                     )
@@ -845,20 +834,14 @@ impl Render for WelcomePage {
                 .when(is_dez && !has_secondary_content, |this| {
                     this.max_w(rems_from_px(520.))
                 })
-                .when(is_dez, |this| {
-                    this.p_3()
-                        .rounded_lg()
-                        .border_1()
-                        .border_color(home_border)
-                        .bg(home_surface)
-                })
                 .child(first_section.render(
                     0,
                     &self.focus_handle,
                     welcome_emphasizes_first_action(APP_NAME),
                 ))
                 .when_some(secondary_content, |this, secondary_content| {
-                    this.child(secondary_content)
+                    this.child(Divider::horizontal().color(DividerColor::BorderVariant))
+                        .child(secondary_content)
                 })
                 .into_any_element()
         };
@@ -1022,41 +1005,18 @@ impl Render for WelcomePage {
                                         )),
                                 )
                                 .child(
-                                    h_flex()
+                                    div()
                                         .id("dez-supported-terminal-agents")
-                                        .role(gpui::Role::List)
+                                        .role(gpui::Role::Region)
                                         .aria_label(
                                             "Supported terminal agents: Codex, Claude Code, OpenCode, and Herdr",
                                         )
-                                        .flex_wrap()
-                                        .gap_x_3()
-                                        .gap_y_1()
-                                        .children(
-                                            [
-                                                (IconName::AiOpenAi, "Codex"),
-                                                (IconName::AiClaude, "Claude Code"),
-                                                (IconName::AiOpenCode, "OpenCode"),
-                                                (IconName::Robot, "Herdr"),
-                                            ]
-                                            .into_iter()
-                                            .enumerate()
-                                            .map(|(index, (icon, label))| {
-                                                h_flex()
-                                                    .id(("dez-supported-terminal-agent", index))
-                                                    .role(gpui::Role::ListItem)
-                                                    .items_center()
-                                                    .gap_1()
-                                                    .child(
-                                                        Icon::new(icon)
-                                                            .size(IconSize::XSmall)
-                                                            .color(Color::Muted),
-                                                    )
-                                                    .child(
-                                                        Label::new(label)
-                                                            .size(LabelSize::XSmall)
-                                                            .color(Color::Muted),
-                                                    )
-                                            }),
+                                        .child(
+                                            Label::new(
+                                                "Terminal-first with Codex, Claude Code, OpenCode, and Herdr.",
+                                            )
+                                            .size(LabelSize::XSmall)
+                                            .color(Color::Muted),
                                         ),
                                 ),
                         )

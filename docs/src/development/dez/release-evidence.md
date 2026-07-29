@@ -419,6 +419,13 @@ replaces its Zed Assistant glyph with the neutral Robot icon and adds an
 identity regression guard. Formatting, diff, and identity checks pass;
 compiled and rendered proof remains open.
 
+The v0.1 UI-polish branch further reduces Home to native rows on the Main Work
+Area canvas. Primary Workspace actions and Recent Workspaces are separated by
+one structural divider rather than rounded panel cards, while supported
+terminal agents appear as a single muted capability line instead of an icon
+strip. Source guards preserve the responsive wide/narrow hierarchy; exact
+artifact rendering remains part of the pending macOS visual matrix.
+
 ## Runtime evidence {#runtime-evidence}
 
 The exact raw executable was launched with

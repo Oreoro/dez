@@ -1642,6 +1642,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   loading, empty, and ready states, so asynchronous history cannot make the
   layout jump from one to two columns without an explanatory state. The header
   uses a plain semantic icon rather than a bordered badge.
+- **2026-07-29: Home uses a quiet native hierarchy.** The primary Workspace
+  actions and Recent Workspaces remain ordinary native rows on the Main Work
+  Area canvas. A restrained separator replaces rounded panel cards, and one
+  muted capability line replaces the provider icon strip. Wide layouts may
+  place the two groups side by side; narrow layouts stack the same content
+  without creating a dashboard, overlay, or second navigation surface.
 - **2026-07-28: Projects is the stable navigation noun.** This supersedes the
   earlier top-level **Sessions** and **Agent Sessions** rail naming decisions.
   Open codebases remain visible in **Projects** before an agent starts; Codex,
