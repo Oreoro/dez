@@ -151,6 +151,7 @@ impl RenderOnce for TabBar {
                     .child(
                         h_flex()
                             .id("tabs")
+                            .role(gpui::Role::TabList)
                             .flex_grow_1()
                             .h_full()
                             .overflow_x_scroll()

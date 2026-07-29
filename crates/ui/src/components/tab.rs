@@ -5,8 +5,10 @@ use smallvec::SmallVec;
 
 use crate::prelude::*;
 
-const START_TAB_SLOT_SIZE: Pixels = px(12.);
-const END_TAB_SLOT_SIZE: Pixels = px(14.);
+// Keep native tab controls easy to acquire without inflating the tab row.
+// Icons remain visually small; these slots define their stable hit area.
+const START_TAB_SLOT_SIZE: Pixels = px(16.);
+const END_TAB_SLOT_SIZE: Pixels = px(18.);
 
 /// The position of a [`Tab`] within a list of tabs.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -212,7 +214,7 @@ impl RenderOnce for Tab {
     fn render(self, _: &mut Window, cx: &mut App) -> Stateful<Div> {
         let insertion_indicator = self.insertion_indicator;
         let colors = cx.theme().colors();
-        let (text_color, tab_bg, _tab_hover_bg, _tab_active_bg) = match self.selected {
+        let (text_color, tab_bg, tab_hover_bg, tab_active_bg) = match self.selected {
             false => (
                 colors.text_muted,
                 colors.tab_inactive_background,
@@ -298,6 +300,8 @@ impl RenderOnce for Tab {
                 TabPosition::Middle(Ordering::Greater) => this.border_r_1().pl_px().border_b_1(),
             })
             .cursor_pointer()
+            .hover(|style| style.bg(tab_hover_bg))
+            .active(|style| style.bg(tab_active_bg))
             .child(
                 h_flex()
                     .group("")

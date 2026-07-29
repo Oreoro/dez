@@ -7218,14 +7218,15 @@ impl Sidebar {
                         }
                         .separator();
 
+                        let has_attachable_sessions = !attachable_sessions.is_empty();
+                        let attachable_sessions_for_menu = attachable_sessions.clone();
                         let attach_sidebar = this_for_menu.clone();
-                        let menu = menu.when(!attachable_sessions.is_empty(), |menu| {
-                            let attachable_sessions = attachable_sessions.clone();
+                        let menu = menu.when(has_attachable_sessions, move |menu| {
                             let attach_sidebar = attach_sidebar.clone();
                             menu.submenu(
                                 "Attach Running Session…",
                                 move |mut submenu, _window, _cx| {
-                                    for session in attachable_sessions.clone() {
+                                    for session in attachable_sessions_for_menu.clone() {
                                         let label = format!(
                                             "{} · {} · {}",
                                             session.title,

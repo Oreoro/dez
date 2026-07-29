@@ -3428,6 +3428,7 @@ impl Pane {
         let has_file_icon = icon.is_some();
 
         let capability = item.capability(cx);
+        let accessibility_label = format!("Open {tab_accessibility_label}");
         let tab = Tab::new(ix)
             .density(canvas_tab_density(cx))
             .radius(canvas_tab_radius(cx))
@@ -3444,24 +3445,21 @@ impl Pane {
                 ClosePosition::Right => ui::TabCloseSide::End,
             })
             .toggle_state(is_active)
-            .when(is_persistent_workspace_tool_tab, |tab| {
-                let accessibility_label = format!("Open {tab_accessibility_label}");
-                tab.role(gpui::Role::Button)
-                    .tab_index(0isize)
-                    .aria_label(accessibility_label)
-                    .aria_selected(is_active)
-                    .on_key_down(cx.listener(
-                        move |pane, event: &gpui::KeyDownEvent, window, cx| {
-                            if event.keystroke.modifiers.modified() {
-                                return;
-                            }
-                            if matches!(event.keystroke.key.as_str(), "enter" | "space") {
-                                pane.activate_item(ix, true, true, window, cx);
-                                cx.stop_propagation();
-                            }
-                        },
-                    ))
-            })
+            .role(gpui::Role::Tab)
+            .tab_index(0isize)
+            .aria_label(accessibility_label)
+            .aria_selected(is_active)
+            .on_key_down(
+                cx.listener(move |pane, event: &gpui::KeyDownEvent, window, cx| {
+                    if event.keystroke.modifiers.modified() {
+                        return;
+                    }
+                    if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+                        pane.activate_item(ix, true, true, window, cx);
+                        cx.stop_propagation();
+                    }
+                }),
+            )
             .on_click(cx.listener({
                 let item_handle = item.boxed_clone();
                 move |pane: &mut Self, event: &ClickEvent, window, cx| {
