@@ -39,8 +39,8 @@ use feature_flags::{
 };
 use gpui::{
     Action as _, AnyElement, AnyView, App, ClickEvent, ClipboardItem, Context, Decorations,
-    DismissEvent, Entity, EntityId, FocusHandle, Focusable, KeyContext, ListState, Modifiers,
-    Pixels, PromptLevel, Render, SharedString, Task, TaskExt, WeakEntity, Window, WindowHandle,
+    DismissEvent, Entity, EntityId, FocusHandle, Focusable, KeyContext, ListState, Pixels,
+    PromptLevel, Render, SharedString, Task, TaskExt, WeakEntity, Window, WindowHandle,
     linear_color_stop, linear_gradient, list, prelude::*, px,
 };
 use itertools::Itertools;
@@ -80,8 +80,7 @@ use ui::{
     AgentThreadStatus, ButtonLike, Callout, CommonAnimationExt, ContextMenu, ContextMenuEntry,
     HighlightedLabel, PopoverMenu, PopoverMenuHandle, ScrollAxes, Scrollbars, Severity, Tab,
     ThreadItem, ThreadItemContrast, ThreadItemDensity, ThreadItemEvidenceStatus, ThreadItemRadius,
-    ThreadItemWorktreeInfo, TintColor, Tooltip, WithScrollbar, prelude::*, render_modifiers,
-    right_click_menu,
+    ThreadItemWorktreeInfo, TintColor, Tooltip, WithScrollbar, prelude::*, right_click_menu,
 };
 use unicode_segmentation::UnicodeSegmentation as _;
 use util::ResultExt as _;
@@ -159,6 +158,7 @@ const DETAILED_MIN_WIDTH: Pixels = px(380.0);
 const SUPPLEMENTAL_METADATA_MIN_WIDTH: Pixels = px(440.0);
 const MIN_WIDTH: Pixels = px(240.0);
 const MAX_WIDTH: Pixels = px(800.0);
+const DEZ_MAX_WIDTH: Pixels = px(380.0);
 const RESPONSIVE_MIN_WIDTH: Pixels = px(200.0);
 const SESSION_RAIL_MAX_VIEWPORT_FRACTION: f32 = 0.30;
 const SESSION_NOTICES_MAX_VIEWPORT_FRACTION: f32 = 0.42;
@@ -281,6 +281,14 @@ fn session_rail_uses_absolute_client_geometry(app_name: &str) -> bool {
 
 fn session_rail_uses_card_frame(app_name: &str) -> bool {
     app_name == "Zed"
+}
+
+fn session_rail_max_width(app_name: &str) -> Pixels {
+    if app_name == "Zed" {
+        MAX_WIDTH
+    } else {
+        DEZ_MAX_WIDTH
+    }
 }
 
 fn session_rail_shows_idle_workspaces(app_name: &str) -> bool {
@@ -908,6 +916,10 @@ fn session_search_control_visible(app_name: &str, session_count: usize) -> bool 
 
 fn session_overview_visible(_show_start_state: bool) -> bool {
     true
+}
+
+fn workspace_restore_status_visible(is_restore_pending: bool, snapshot_ready: bool) -> bool {
+    is_restore_pending && !snapshot_ready
 }
 
 fn session_sidebar_title_in_titlebar(app_name: &str) -> bool {
@@ -3781,22 +3793,6 @@ impl WorkspaceMenuWorktreeLabel {
     }
 }
 
-fn workspace_menu_worktree_accessible_name(labels: &[WorkspaceMenuWorktreeLabel]) -> String {
-    labels
-        .iter()
-        .map(|label| match &label.secondary_name {
-            Some(secondary_name) => {
-                format!(
-                    "{} / {}",
-                    label.primary_name.as_ref(),
-                    secondary_name.as_ref()
-                )
-            }
-            None => label.primary_name.as_ref().to_owned(),
-        })
-        .join(" • ")
-}
-
 fn workspace_menu_worktree_labels(
     workspace: &Entity<Workspace>,
     cx: &App,
@@ -6553,7 +6549,6 @@ impl Sidebar {
                         key,
                         is_active,
                         is_focused,
-                        has_threads,
                         &group_name,
                         &workspace_name,
                         cx,
@@ -6996,7 +6991,6 @@ impl Sidebar {
         project_group_key: &ProjectGroupKey,
         is_active: bool,
         is_focused: bool,
-        has_threads: bool,
         group_name: &SharedString,
         workspace_name: &SharedString,
         cx: &mut Context<Self>,
@@ -7085,16 +7079,6 @@ impl Sidebar {
                 let workspace_is_active: Vec<_> = open_workspaces
                     .iter()
                     .map(|workspace| active_workspace.as_ref() == Some(workspace))
-                    .collect();
-                let closable_workspaces: Vec<_> = open_workspaces
-                    .iter()
-                    .cloned()
-                    .zip(workspace_labels.iter())
-                    .zip(workspace_is_active.iter().copied())
-                    .filter_map(|((workspace, labels), is_active_workspace)| {
-                        (!is_active_workspace)
-                            .then(|| (workspace, workspace_menu_worktree_accessible_name(labels)))
-                    })
                     .collect();
                 let attachable_sessions = MultiplexerSessionStore::try_global(cx)
                     .map(|store| {
@@ -7288,67 +7272,6 @@ impl Sidebar {
                             )
                         });
 
-                        let menu = menu
-                            .custom_entry(
-                                {
-                                    move |_window, cx| {
-                                        let action = h_flex()
-                                            .opacity(0.6)
-                                            .children(render_modifiers(
-                                                &Modifiers::secondary_key(),
-                                                PlatformStyle::platform(),
-                                                None,
-                                                Some(TextSize::Default.rems(cx).into()),
-                                                false,
-                                            ))
-                                            .child(Label::new("-click").color(Color::Muted));
-
-                                        let label = if has_threads {
-                                            "Focus Last Workspace"
-                                        } else {
-                                            "Focus Workspace"
-                                        };
-
-                                        h_flex()
-                                            .w_full()
-                                            .justify_between()
-                                            .gap_4()
-                                            .child(
-                                                Label::new(label)
-                                                    .when(is_active, |s| s.color(Color::Disabled)),
-                                            )
-                                            .child(action)
-                                            .into_any_element()
-                                    }
-                                },
-                                {
-                                    let project_group_key = project_group_key.clone();
-                                    let this = this_for_menu.clone();
-                                    move |window, cx| {
-                                        if is_active {
-                                            return;
-                                        }
-                                        this.update(cx, |sidebar, cx| {
-                                            if let Some(workspace) =
-                                                sidebar.workspace_for_group(&project_group_key, cx)
-                                            {
-                                                sidebar.activate_workspace(&workspace, window, cx);
-                                            } else {
-                                                sidebar.open_workspace_for_group(
-                                                    &project_group_key,
-                                                    window,
-                                                    cx,
-                                                );
-                                            }
-                                            sidebar.selection = None;
-                                            sidebar.active_entry = None;
-                                        })
-                                        .ok();
-                                    }
-                                },
-                            )
-                            .selectable(!is_active);
-
                         let menu = if open_workspaces.is_empty() {
                             menu
                         } else {
@@ -7465,29 +7388,6 @@ impl Sidebar {
 
                             menu
                         };
-
-                        let menu = menu.when(!closable_workspaces.is_empty(), |this| {
-                            let closable_workspaces = closable_workspaces.clone();
-                            let multi_workspace = multi_workspace.clone();
-                            this.separator().submenu(
-                                "Close Worktree from Window…",
-                                move |mut submenu, _window, _cx| {
-                                    for (workspace, label) in closable_workspaces.iter().cloned() {
-                                        let multi_workspace = multi_workspace.clone();
-                                        submenu = submenu.entry(label, None, move |window, cx| {
-                                            multi_workspace
-                                                .update(cx, |multi_workspace, cx| {
-                                                    multi_workspace
-                                                        .close_workspace(&workspace, window, cx)
-                                                        .detach_and_log_err(cx);
-                                                })
-                                                .ok();
-                                        });
-                                    }
-                                    submenu
-                                },
-                            )
-                        });
 
                         let menu = menu.when(show_reorder_entries, |this| {
                             let move_up_multi_workspace = multi_workspace.clone();
@@ -13919,7 +13819,7 @@ impl Sidebar {
 
     fn render_no_results(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let has_query = self.has_filter_query(cx);
-        let is_restoring = self.workspace_restore_is_pending(cx);
+        let is_restoring = self.workspace_restore_status_is_visible(cx);
         let (icon, title, description) =
             session_empty_state_copy(APP_NAME, has_query, is_restoring);
 
@@ -14077,7 +13977,7 @@ impl Sidebar {
         let search_is_active = is_searching
             || self.session_search_open
             || self.filter_editor.focus_handle(cx).is_focused(window);
-        let is_restoring = self.workspace_restore_is_pending(cx);
+        let is_restoring = self.workspace_restore_status_is_visible(cx);
         let narrow_scope_controls = self.rendered_width < MIN_WIDTH;
         let total_item_count = self.contents.session_count + self.contents.observed_terminal_count;
         let status_label = session_overview_status_label_with_observed_terminals(
@@ -14822,6 +14722,13 @@ impl Sidebar {
         self.app_session(cx).is_some_and(|app_session| {
             app_session.read(cx).workspace_restore_state() != WorkspaceRestoreState::Ready
         })
+    }
+
+    fn workspace_restore_status_is_visible(&self, cx: &App) -> bool {
+        workspace_restore_status_visible(
+            self.workspace_restore_is_pending(cx),
+            self.contents.snapshot_ready,
+        )
     }
 
     fn unresolved_workspace_ids(&self, cx: &App) -> Vec<i64> {
@@ -15735,15 +15642,21 @@ fn render_import_onboarding_banner(
 
 impl WorkspaceSidebar for Sidebar {
     fn width(&self, cx: &App) -> Pixels {
-        SessionRailSettings::get_global(cx).width(self.width)
+        SessionRailSettings::get_global(cx)
+            .width(self.width)
+            .min(session_rail_max_width(APP_NAME))
     }
 
     fn responsive_width(&self, viewport_width: Pixels, cx: &App) -> Pixels {
-        SessionRailSettings::get_global(cx).responsive_width(self.width, viewport_width)
+        SessionRailSettings::get_global(cx)
+            .responsive_width(self.width, viewport_width)
+            .min(session_rail_max_width(APP_NAME))
     }
 
     fn set_width(&mut self, width: Option<Pixels>, cx: &mut Context<Self>) {
-        let width = width.unwrap_or(DEFAULT_WIDTH).clamp(MIN_WIDTH, MAX_WIDTH);
+        let width = width
+            .unwrap_or(DEFAULT_WIDTH)
+            .clamp(MIN_WIDTH, session_rail_max_width(APP_NAME));
         if self.width == width {
             return;
         }
@@ -15842,7 +15755,7 @@ impl WorkspaceSidebar for Sidebar {
     ) {
         if let Some(serialized) = serde_json::from_str::<SerializedSidebar>(state).log_err() {
             if let Some(width) = serialized.width {
-                self.width = px(width).clamp(MIN_WIDTH, MAX_WIDTH);
+                self.width = px(width).clamp(MIN_WIDTH, session_rail_max_width(APP_NAME));
             }
             self.manual_entry_order = serialized.manual_entry_order;
             if serialized.active_view == SerializedSidebarView::History {
@@ -15874,8 +15787,9 @@ impl Render for Sidebar {
                 .size_0()
                 .into_any_element();
         }
-        let rail_width =
-            session_rail_settings.responsive_width(self.width, window.viewport_size().width);
+        let rail_width = session_rail_settings
+            .responsive_width(self.width, window.viewport_size().width)
+            .min(session_rail_max_width(APP_NAME));
         self.rendered_width = rail_width;
 
         let ui_font = theme_settings::setup_ui_font(window, cx);
@@ -15912,7 +15826,7 @@ impl Render for Sidebar {
             self.contents.session_count,
             has_query,
             self.attention_only,
-            self.workspace_restore_is_pending(cx),
+            self.workspace_restore_status_is_visible(cx),
         );
         let external_terminal_section = (APP_NAME == "Zed")
             .then(|| {

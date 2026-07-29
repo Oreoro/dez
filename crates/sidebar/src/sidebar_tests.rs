@@ -72,6 +72,16 @@ fn session_rail_render_width_matches_reserved_width_for_each_mode() {
 }
 
 #[test]
+fn dez_projects_rail_has_a_deliberate_navigation_width_cap() {
+    assert_eq!(session_rail_max_width("Dez"), DETAILED_MIN_WIDTH);
+    assert_eq!(session_rail_max_width("Zed"), MAX_WIDTH);
+    assert!(
+        session_rail_max_width("Dez") < MAX_WIDTH,
+        "Projects should never expand into a competing work surface"
+    );
+}
+
+#[test]
 fn dez_sessions_uses_normal_flow_client_geometry() {
     assert!(!session_rail_uses_absolute_client_geometry("Dez"));
     assert!(!session_rail_uses_card_frame("Dez"));
@@ -569,6 +579,20 @@ fn session_overview_copy_distinguishes_empty_search_attention_and_caught_up_stat
         IconName::MagnifyingGlass,
         "an explicit search remains the visible status while restoration continues"
     );
+}
+
+#[test]
+fn workspace_restore_status_releases_the_rail_after_the_first_ready_snapshot() {
+    assert!(
+        workspace_restore_status_visible(true, false),
+        "the rail should communicate restore progress before it has usable local state"
+    );
+    assert!(
+        !workspace_restore_status_visible(true, true),
+        "a ready sidebar snapshot should release the visible loading state while restoration continues"
+    );
+    assert!(!workspace_restore_status_visible(false, false));
+    assert!(!workspace_restore_status_visible(false, true));
 }
 
 #[test]
@@ -2251,27 +2275,6 @@ fn workspace_header_accessibility_copy_is_state_complete_without_color() {
     assert_eq!(
         workspace_header_accessibility_label("dez", true, true, 2),
         "Workspace dez, running work, 2 sessions need attention"
-    );
-}
-
-#[test]
-fn worktree_menu_accessible_name_preserves_multi_root_scope() {
-    let labels = [
-        WorkspaceMenuWorktreeLabel {
-            icon: Some(IconName::GitWorktree),
-            primary_name: "api".into(),
-            secondary_name: Some("feature/auth".into()),
-        },
-        WorkspaceMenuWorktreeLabel {
-            icon: None,
-            primary_name: "docs".into(),
-            secondary_name: None,
-        },
-    ];
-
-    assert_eq!(
-        workspace_menu_worktree_accessible_name(&labels),
-        "api / feature/auth • docs"
     );
 }
 

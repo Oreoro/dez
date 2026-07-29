@@ -656,7 +656,7 @@ require_multiline_pattern crates/workspace/src/multi_workspace.rs \
     'fn responsive_width\(&self, viewport_width: Pixels, cx: &App\).*?sidebar_handle\.responsive_width\(window\.viewport_size\(\)\.width, cx\).*?\.w\(sidebar_width\)' \
     'the outer Sessions reservation can stop following its window-responsive width contract'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'SESSION_RAIL_MAX_VIEWPORT_FRACTION: f32 = 0\.30.*?fn responsive_width.*?viewport_width \* SESSION_RAIL_MAX_VIEWPORT_FRACTION.*?rendered_width: Pixels.*?fn responsive_width\(&self, viewport_width: Pixels, cx: &App\).*?session_rail_settings\.responsive_width\(self\.width, window\.viewport_size\(\)\.width\).*?self\.rendered_width = rail_width' \
+    'SESSION_RAIL_MAX_VIEWPORT_FRACTION: f32 = 0\.30.*?fn responsive_width.*?viewport_width \* SESSION_RAIL_MAX_VIEWPORT_FRACTION.*?rendered_width: Pixels.*?fn responsive_width\(&self, viewport_width: Pixels, cx: &App\).*?responsive_width\(self\.width, viewport_width\).*?session_rail_max_width\(APP_NAME\).*?responsive_width\(self\.width, window\.viewport_size\(\)\.width\).*?session_rail_max_width\(APP_NAME\).*?self\.rendered_width = rail_width' \
     'Sessions can regress to reserving and painting different widths or overtake the Main Work Area'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'fn session_rail_keeps_the_main_work_area_primary_on_narrow_windows.*?px\(800\.0\).*?px\(240\.0\).*?px\(600\.0\).*?RESPONSIVE_MIN_WIDTH.*?px\(1400\.0\).*?COMPACT_MAX_WIDTH' \
@@ -1288,9 +1288,6 @@ require_multiline_pattern crates/agent_ui/src/thread_import.rs \
 require_multiline_pattern crates/agent_ui/src/thread_import.rs \
     'headline\(agent_import_copy\(paths::APP_NAME\)\.headline\).*?agent_import_copy\(paths::APP_NAME\)\.empty_agents.*?agent_import_copy\(paths::APP_NAME\)\.fetching.*?agent_import_copy\(paths::APP_NAME\)\.import_action' \
     'the Agent Session import modal can regress to bypassing product-specific copy'
-require_pattern crates/sidebar/src/sidebar.rs \
-    '"Close Worktree from Window…"' \
-    'the hover-only worktree close control has no keyboard-accessible menu path'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'IconButton::new\([[:space:]]*\("close-workspace", workspace_index\).*?tab_index\(0isize\).*?aria_label\("Close Worktree from Window"\).*?Tooltip::text\([[:space:]]*"Close Worktree from Window"' \
     'the Workspace-menu close control can regress to an ambiguous or pointer-only action'
@@ -1567,6 +1564,12 @@ reject_pattern crates/sidebar/src/sidebar.rs \
 reject_multiline_pattern crates/sidebar/src/sidebar.rs \
     'render_project_header_ellipsis_menu.*?submenu\("Workspace Layout"' \
     'the everyday Project menu regressed to nesting layout recipes inside navigation'
+reject_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'render_project_header_ellipsis_menu.*?"Focus (Last )?Workspace"' \
+    'the Project menu regressed to repeating the header primary action'
+reject_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'render_project_header_ellipsis_menu.*?"Close Worktree from Window…"' \
+    'the Project menu regressed to duplicating its visible keyboard-accessible worktree close control'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'fn canvas_layout_recipe_is_available_for_app\(.*?app_name == "Zed" \|\| DEZ_PUBLIC_CANVAS_LAYOUT_CYCLE\.contains\(&recipe\).*?fn apply_canvas_layout_recipe\(.*?if !canvas_layout_recipe_is_available_for_app\(recipe, paths::APP_NAME\) \{[[:space:]]*return false;' \
     'Dez can regress to accepting hidden geometry-only layouts such as Browser Development and manufacturing empty panes'
