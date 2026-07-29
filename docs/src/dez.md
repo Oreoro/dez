@@ -45,6 +45,12 @@ reorder, cross-pane drag, preview replacement, pin, and close behavior; Dez
 does not imitate browser tabs with a separate navigation system. Terminals can
 be split below or beside code while keeping their Project ownership.
 
+The tab-strip **+** is the single **Add to Main Work Area** control. It can
+open a native agent terminal, the optional Built-in Agent, a file, Files, Git,
+Debug, Workspace search, or symbol search. Every destination is the existing
+Zed Surface in the same pane system, so it can be focused and arranged without
+creating a nested panel or a second navigation model.
+
 Projects normally starts open, Workspace Tools starts on the right, and Dez
 keeps at least 60% for the Main Work Area. Both side regions can collapse at
 compact widths, but opening one never silently closes the other. The same

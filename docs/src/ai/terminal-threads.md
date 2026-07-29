@@ -1,20 +1,21 @@
 ---
-title: Terminal Sessions - Dez
+title: Terminals - Dez
 description: Run shells, developer tools, and agent CLIs in first-class terminal Surfaces while Dez supervises their lifecycle and attention.
 ---
 
-# Terminal Sessions
+# Terminals
 
-A Terminal Session is a shell or terminal-native tool running in the **Main Work
-Area**. Its terminal Surface remains a normal part of the IDE: it can sit beside
+A Terminal is a shell or terminal-native tool running in the **Main Work
+Area**. It remains a normal native Zed Surface: it can sit beside
 files, Workspace Search, diagnostics, and Agent Review.
 
-The **Session Rail** is a compact supervisory view of that same computation. It
-shows the terminal's title, lifecycle, detected agent state, attention, and
-review evidence. Selecting the row focuses or reattaches the owning terminal;
-it does not open a second terminal inside the rail or Agent region.
+**Projects** is a compact supervisory view of that same computation. It
+adds a Session row after managed ownership or supported agent evidence exists,
+then shows lifecycle, detected agent state, attention, and review evidence.
+Selecting the row focuses or reattaches the owning Terminal; it does not open a
+second terminal inside Projects or the Built-in Agent.
 
-Use Terminal Sessions for shells, build tools, test runners, servers, and native
+Use Terminals for shells, build tools, test runners, servers, and native
 agent CLIs or TUIs. [External Agents](./external-agents.md) are different: they
 integrate through ACP and render as Agent Sessions.
 
@@ -22,8 +23,8 @@ integrate through ACP and render as Agent Sessions.
 
 Dez owns:
 
-- the terminal Surface in the Main Work Area
-- grouping and supervision in the Session Rail
+- the native Terminal Surface in the Main Work Area
+- Project ownership and supported-agent supervision in Projects
 - terminal title, Workspace placement, and lifecycle presentation
 - optional persistent Host identity, detach, reattach, and explicit termination
 - bell and supported structured attention signals
@@ -41,50 +42,53 @@ The CLI or TUI running inside the terminal owns its own:
 - MCP configuration
 
 Agent profiles, Agent permissions, Dez Skills, and Agent MCP settings do not
-automatically apply to a native CLI running in a Terminal Session.
+automatically apply to a native CLI running in a Terminal.
 
-## Opening a Terminal Session {#opening-a-terminal-thread}
+## Opening a Terminal {#opening-a-terminal-thread}
 
-Use **New Terminal** in the active Workspace header, the Session Rail's start
-state, or **Add to Main Work Area**. The terminal opens in the Main Work Area
-and the Session Rail receives one corresponding row.
+Use **Open Agent Terminal** in the active Project, or choose **Open Agent
+Terminal** from **Add to Main Work Area** in the native pane tab strip. The
+terminal opens as Zed's existing `TerminalView` in the Main Work Area; Dez
+does not wrap it in a separate terminal renderer. Projects observes that
+Surface and adds the corresponding Project-owned Session row.
 
-Opening a terminal is intentionally separate from creating a **New Agent
-Session**. The Agent region owns conversations; it is not a terminal container.
+Opening a Terminal is intentionally separate from creating a **New Agent
+Session**. The Built-in Agent owns conversations; it is not a terminal
+container.
 You can open multiple terminals and move among them like other IDE Surfaces.
 
-## Terminal Session Titles {#terminal-thread-titles}
+## Terminal Titles {#terminal-thread-titles}
 
 The terminal title updates automatically to reflect the running shell or
-process. You can set a custom name from its tab or Session Rail row. At normal
+process. You can set a custom name from its tab or Projects row. At normal
 rail widths, hover or keyboard-select the row and use its pencil. At narrow
 widths, use the row's context menu or the selected-row rename action. Editing
 the name does not freeze a running-agent or shell status prefix.
 
-The Main Work Area tab and Session Rail row receive the full title. Each visual
+The Main Work Area tab and Projects row receive the full title. Each visual
 surface truncates it only when its own available width requires it, so tooltips,
 switching, and restored Sessions retain useful context.
 
 ## Attention {#terminal-thread-notifications}
 
-When an unfocused terminal emits a bell, Dez can raise attention in the Session
-Rail and show a notification. Selecting the Session focuses its terminal
+When an unfocused terminal emits a bell, Dez can raise attention in Projects
+and show a notification. Selecting the Session focuses its terminal
 Surface. Acknowledging the notification changes presentation; it does not
 pretend the underlying work condition has been resolved.
 
 The same `agent.notify_when_agent_waiting` and `agent.play_sound_when_agent_done` settings apply.
 
-## Closing and Terminating {#closing-terminal-threads}
+## Closing and Ending {#closing-terminal-threads}
 
-Terminal Sessions are not archived into Agent History. Hover over a terminal
-row to reveal its state-specific lifecycle action, open its context menu, or
+Terminals are not archived into Agent History. Hover over a supervised row to
+reveal its state-specific lifecycle action, open its context menu, or
 select it and press {#kb agent::ArchiveSelectedThread}.
 
 The action names its actual effect:
 
 - **Detach Live Terminal** closes an attached Surface while preserving the
   persistent computation.
-- **Terminate Running Terminal…** or **Terminate Detached Terminal…** stops the
+- **End Terminal…** stops the
   shell and foreground process after a critical confirmation.
 - exited, missing, incompatible, and saved records use **Close** or **Remove**
   rather than pretending a process can still be terminated.
@@ -92,7 +96,8 @@ The action names its actual effect:
 ## CLI/TUI Setup Notes {#cli-setup}
 
 Some agent CLIs and TUIs can send terminal signals, such as bell notifications
-or title updates, that Dez uses to show useful context in the Session Rail.
+or title updates, that Dez uses to show useful context in Projects after the
+tool is recognized as supported agent work.
 
 ### Claude Code Notifications {#claude-code-notifications}
 
@@ -177,7 +182,7 @@ Restart Pi after adding the extension, or run `/reload` if the extension is in o
 ### Codex Terminal Titles {#codex-terminal-titles}
 
 Codex can update the terminal title as it works. Dez uses that title as useful
-Session Rail context, such as the Workspace, current state, branch, model, or
+Projects context, such as the Workspace, current state, branch, model, or
 task progress.
 
 To configure this from within Codex, run `/title` and use the picker to choose which fields appear and in what order. Codex saves the selection to `tui.terminal_title` in `~/.codex/config.toml`. You can also edit it directly:
@@ -192,13 +197,13 @@ terminal_title = ["spinner", "project-name", "run-state", "thread-title"]
 Credentials come from the terminal session and the CLI/TUI running inside it.
 
 In remote Workspaces, the CLI may read the remote shell environment and remote
-configuration files. In local Terminal Sessions, it reads the local shell
-environment and local configuration files. Dez does not copy API keys from
-model-provider settings into Terminal Sessions.
+configuration files. In local Terminals, it reads the local shell environment
+and local configuration files. Dez does not copy API keys from model-provider
+settings into Terminals.
 
-## When to Use Terminal Sessions {#when-to-use-terminal-threads}
+## When to Use Terminals {#when-to-use-terminal-threads}
 
-Use Terminal Sessions when:
+Use Terminals when:
 
 - you want the tool's native CLI/TUI experience
 - no ACP integration exists

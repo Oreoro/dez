@@ -459,10 +459,19 @@ controls remain available only in the upstream-compatible Zed surface. Dez
 treats those as implementation tools, not everyday product navigation.
 
 The main-area tab-bar plus control is named **Add to Main Work Area** in Dez.
-Its menu opens files, Workspace search and symbols, or a terminal in that same
-pane grid; it does not add a sidebar panel or create a second terminal model.
-It remains visible when focus moves to another region. Commands that open a
-picker or overlay use an ellipsis.
+Its menu opens a native Agent Terminal, Built-in Agent, file, Files, Git,
+Debug, Workspace search, or symbols in the existing Zed Surface system. Files,
+Git, Debug, and Built-in Agent activate their registered native panel tabs;
+files and terminals enter the Main Work Area pane grid. The control does not
+create a nested panel, a second terminal renderer, or a parallel navigation
+model. It remains visible when focus moves to another region. Commands that
+open a picker or overlay use an ellipsis.
+
+Agent Terminal uses Zed's native `TerminalView`, including its PTY, renderer,
+input, focus, search, keybindings, serialization, pane drag/reorder, and split
+behavior. Projects subscribes to that Surface and adds only Project ownership,
+provider/agent detection, lifecycle, recovery, and attention metadata. tmux
+and Herdr attach flows spawn into the same native center-terminal path.
 
 Tab-bar chrome follows region ownership. Main Work Area panes own add, split,
 and zoom. Workspace Tools and Built-in Agent never inherit those controls:
