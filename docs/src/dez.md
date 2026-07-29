@@ -51,10 +51,12 @@ Debug, Workspace search, or symbol search. Every destination is the existing
 Zed Surface in the same pane system, so it can be focused and arranged without
 creating a nested panel or a second navigation model.
 
-Projects normally starts open, Workspace Tools starts on the right, and Dez
-keeps at least 60% for the Main Work Area. Both side regions can collapse at
-compact widths, but opening one never silently closes the other. The same
-policy applies after resizing, reopening, and restoring a saved layout.
+Projects starts closed in fresh windows and remains available as an on-demand
+supervisor. Workspace Tools starts on the right, and Dez keeps at least 60%
+for the Main Work Area. Both side regions can collapse at compact widths, but
+opening one never silently closes the other. Explicitly opened and restored
+Projects layouts remain open. The same policy applies after resizing,
+reopening, and restoring a saved layout.
 Returning to a one-work-area recipe removes surplus empty split panes while
 preserving every pane that contains a file, terminal, or other user Surface.
 Workspace restoration applies that same cleanup to the default layout and all

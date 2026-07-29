@@ -1046,8 +1046,10 @@
   "sidebar": {
     // Where to position the sidebar. Can be 'left' or 'right'.
     "side": "left",
-    // Whether Projects should start open in new windows.
-    "starts_open": true,
+    // Projects is an on-demand supervisor. Fresh windows keep it closed so
+    // the native Main Work Area remains primary; restored and explicitly
+    // opened Projects layouts are still preserved.
+    "starts_open": false,
     // Whether to show the project pane toggle button in the sidebar header.
     "show_project_pane_button": true,
     // Whether to show git status indicators on the branch icon in the sidebar.
