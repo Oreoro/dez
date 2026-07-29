@@ -13351,17 +13351,17 @@ impl Workspace {
             ))
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &RevealGitChanges, window, cx| {
-                    workspace.activate_panel_for_proto_id("GitPanel", window, cx);
+                    workspace.activate_panel_for_proto_id(PanelId::GitPanel, window, cx);
                 },
             ))
             .on_action(
                 cx.listener(|workspace: &mut Workspace, _: &RevealDebug, window, cx| {
-                    workspace.activate_panel_for_proto_id("DebugPanel", window, cx);
+                    workspace.activate_panel_for_proto_id(PanelId::DebugPanel, window, cx);
                 }),
             )
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &RevealBuiltInAgent, window, cx| {
-                    workspace.activate_panel_for_proto_id("agent_panel", window, cx);
+                    workspace.activate_panel_for_proto_id(PanelId::AssistantPanel, window, cx);
                 },
             ))
             .on_action(cx.listener(Workspace::toggle_centered_layout))
