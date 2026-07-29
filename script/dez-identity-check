@@ -200,8 +200,17 @@ require_multiline_pattern assets/settings/initial_user_settings.json \
     '"tab_bar": \{.*?"show": true.*?"show_nav_history_buttons": true.*?"show_tab_bar_buttons": true' \
     'first-run Dez can regress to hiding native pane navigation or tab controls'
 require_multiline_pattern assets/settings/initial_user_settings.json \
+    '"project_panel": \{.*?"starts_open": false.*?"tab_bar"' \
+    'fresh Dez profiles can regress to opening Files before the Main Work Area'
+require_multiline_pattern assets/settings/initial_user_settings.json \
     '"status_bar": \{.*?"experimental\.show": true.*?"show_active_file": true.*?"line_endings_button": true' \
     'first-run Dez can regress to hiding the native editor status hierarchy'
+require_multiline_pattern crates/onboarding/src/onboarding.rs \
+    'fn onboarding_toggles_left_dock\(app_name: &str\) -> bool \{.*?app_name == "Zed".*?fn onboarding_surface_label.*?"Set Up Dez".*?if onboarding_toggles_left_dock\(APP_NAME\).*?workspace\.toggle_dock\(DockPosition::Left.*?fn tab_content_text.*?onboarding_surface_label\(APP_NAME\)' \
+    'Dez setup can regress to opening an unrelated dock or using generic onboarding tab identity'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'files_copy\("Starts Open", "Open Files with Workspaces"\).*?"Whether Files opens automatically when a Workspace opens\."' \
+    'Files startup settings can regress to exposing legacy dock implementation language'
 require_multiline_pattern crates/zed_actions/src/lib.rs \
     'pub mod dez.*?actions!\([[:space:]]*dez.*?RestoreVisualProfile' \
     'the explicit Dez visual-profile recovery action is no longer registered'

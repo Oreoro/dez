@@ -57,6 +57,18 @@ fn dez_onboarding_uses_compact_layout(app_name: &str, viewport_width: Pixels) ->
     app_name != "Zed" && viewport_width < DEZ_ONBOARDING_COMPACT_BREAKPOINT
 }
 
+fn onboarding_toggles_left_dock(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
+fn onboarding_surface_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Onboarding"
+    } else {
+        "Set Up Dez"
+    }
+}
+
 actions!(
     onboarding,
     [
@@ -186,7 +198,9 @@ pub fn show_onboarding_view(app_state: Arc<AppState>, cx: &mut App) -> Task<anyh
         cx,
         |workspace, window, cx| {
             {
-                workspace.toggle_dock(DockPosition::Left, window, cx);
+                if onboarding_toggles_left_dock(APP_NAME) {
+                    workspace.toggle_dock(DockPosition::Left, window, cx);
+                }
                 let onboarding_page = Onboarding::new(workspace, cx);
                 workspace.add_item_to_center(Box::new(onboarding_page.clone()), window, cx);
 
@@ -424,7 +438,7 @@ impl Item for Onboarding {
     type Event = ItemEvent;
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
-        "Onboarding".into()
+        onboarding_surface_label(APP_NAME).into()
     }
 
     fn telemetry_event_text(&self) -> Option<&'static str> {
@@ -467,6 +481,14 @@ mod tests {
         assert!(dez_onboarding_uses_compact_layout("Dez", px(759.)));
         assert!(!dez_onboarding_uses_compact_layout("Dez", px(760.)));
         assert!(!dez_onboarding_uses_compact_layout("Zed", px(320.)));
+    }
+
+    #[test]
+    fn dez_setup_stays_in_the_main_work_area() {
+        assert!(!onboarding_toggles_left_dock("Dez"));
+        assert!(onboarding_toggles_left_dock("Zed"));
+        assert_eq!(onboarding_surface_label("Dez"), "Set Up Dez");
+        assert_eq!(onboarding_surface_label("Zed"), "Onboarding");
     }
 }
 

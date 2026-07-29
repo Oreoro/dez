@@ -5575,10 +5575,10 @@ fn panels_page() -> SettingsPage {
                 files: USER,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Starts Open",
+                title: files_copy("Starts Open", "Open Files with Workspaces"),
                 description: files_copy(
                     "Whether the project panel should open on startup.",
-                    "Whether Files opens on startup when legacy docks are enabled.",
+                    "Whether Files opens automatically when a Workspace opens.",
                 ),
                 field: Box::new(SettingField {
                     organization_override: None,

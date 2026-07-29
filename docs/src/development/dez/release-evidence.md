@@ -1670,6 +1670,19 @@ Formatting, shell syntax, diff, and identity checks are the only local
 verification for this change. Exact compile, package, and rendered evidence
 remain open until the updated workflow completes.
 
+## 2026-07-29: native first-run surface
+
+Fresh Dez settings now keep Files closed alongside Projects so the Main Work
+Area remains the first-run owner. The setup path no longer toggles Zed's
+inherited left dock, and the native work tab is named **Set Up Dez** instead of
+the generic **Onboarding**. The visible Files startup setting now describes
+Workspace behavior without exposing the underlying legacy dock vocabulary.
+
+Pure product assertions and identity guards pin the Dez/Zed split. Formatting,
+shell syntax, diff, and identity checks are the only local verification for
+this slice; the current remote build predates it, so rendered first-run proof
+requires the next exact candidate.
+
 ## 2026-07-26: integrated Agent provider setup
 
 The reachable Dez provider setup no longer uses the inherited nested

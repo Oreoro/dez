@@ -21,6 +21,9 @@
     "density": "balanced"
   },
   "icon_theme": "Dez (Default)",
+  "project_panel": {
+    "starts_open": false
+  },
   "tab_bar": {
     "show": true,
     "show_nav_history_buttons": true,
