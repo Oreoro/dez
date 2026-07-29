@@ -20210,6 +20210,7 @@ mod tests {
         });
     }
 
+    #[gpui::test]
     async fn test_join_pane_into_next(cx: &mut gpui::TestAppContext) {
         init_test(cx);
 

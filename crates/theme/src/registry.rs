@@ -10,7 +10,6 @@ use thiserror::Error;
 use crate::{
     Appearance, AppearanceContent, ChevronIcons, DEFAULT_ICON_THEME_NAME, DirectoryIcons,
     IconDefinition, IconTheme, IconThemeFamilyContent, Theme, ThemeFamily, default_icon_theme,
-    dez_default_icon_theme,
 };
 
 /// The metadata for a theme.

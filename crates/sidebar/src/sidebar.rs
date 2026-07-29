@@ -1792,9 +1792,7 @@ fn terminal_agent_kind_from_evidence(
     foreground_command: Option<TerminalAgentKind>,
     terminal_title: Option<TerminalAgentKind>,
 ) -> Option<TerminalAgentKind> {
-    structured_adapter
-        .or(foreground_command)
-        .or(terminal_title)
+    structured_adapter.or(foreground_command).or(terminal_title)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -11957,8 +11955,6 @@ impl Sidebar {
 
         let id = SharedString::from(format!("thread-entry-{}", ix));
 
-        let color = cx.theme().colors();
-        let sidebar_bg = color.panel_background;
         let session_rail_settings = SessionRailSettings::get_global(cx);
         let rail_width = self.rendered_width;
         let primary_action_labels_visible = session_row_primary_action_labels_visible(rail_width);
@@ -12018,7 +12014,6 @@ impl Sidebar {
 
         let thread_item =
             canvas_thread_item_style(ThreadItem::new(id, title.clone()), &design_system)
-                .base_bg(sidebar_bg)
                 .icon(icon)
                 .when(is_draft, |this| {
                     this.icon_color(Color::Custom(cx.theme().colors().icon_muted.opacity(0.2)))
@@ -12471,8 +12466,6 @@ impl Sidebar {
             latest_agent_event_at.unwrap_or(terminal.metadata.created_at),
         );
         let is_hovered = self.hovered_thread_index == Some(ix);
-        let color = cx.theme().colors();
-        let sidebar_bg = color.panel_background;
         let metadata = terminal.metadata.clone();
         let workspace = terminal.workspace.clone();
         let source = terminal.source.clone();
@@ -12628,7 +12621,6 @@ impl Sidebar {
             };
 
         let terminal_item = canvas_thread_item_style(ThreadItem::new(id, title), &design_system)
-            .base_bg(sidebar_bg)
             .status(terminal_status)
             .icon(
                 terminal_agent_kind
@@ -14345,7 +14337,6 @@ impl Sidebar {
             session_rail_supplemental_metadata_visible(self.rendered_width);
         let design_system = DesignSystemSettings::get_global(cx);
         let labels_visible = session_rail_labels_visible(&design_system);
-        let background = cx.theme().colors().panel_background;
         let sidebar = cx.weak_entity();
         let project_roots = self
             .contents
@@ -14412,7 +14403,6 @@ impl Sidebar {
                     ),
                     &design_system,
                 )
-                .base_bg(background)
                 .icon(icon)
                 .when_some(status, |item, status| item.status(status))
                 .actor_label(owner)
@@ -14508,7 +14498,6 @@ impl Sidebar {
                             ),
                             &design_system,
                         )
-                        .base_bg(background)
                         .icon(
                             terminal
                                 .detected_agent_kind

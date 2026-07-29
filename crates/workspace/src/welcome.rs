@@ -16,8 +16,10 @@ use paths::APP_NAME;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use settings::{DefaultOpenBehavior, Settings};
-use ui::{ButtonLike, Divider, DividerColor, KeyBinding, prelude::*, theme_is_transparent};
-use util::ResultExt;
+use ui::{
+    ButtonLike, Divider, DividerColor, KeyBinding, Tooltip, prelude::*, theme_is_transparent,
+};
+use util::{ResultExt, paths::PathExt};
 use zed_actions::{Extensions, OpenKeymap, OpenOnboarding, OpenSettings, command_palette};
 
 #[derive(PartialEq, Clone, Debug, Deserialize, Serialize, JsonSchema, Action)]
@@ -78,6 +80,7 @@ struct SectionButton {
     tab_index: usize,
     focus_handle: FocusHandle,
     primary: bool,
+    meta: Option<SharedString>,
 }
 
 impl SectionButton {
@@ -96,7 +99,13 @@ impl SectionButton {
             tab_index,
             focus_handle,
             primary,
+            meta: None,
         }
+    }
+
+    fn meta(mut self, meta: impl Into<SharedString>) -> Self {
+        self.meta = Some(meta.into());
+        self
     }
 }
 
@@ -104,6 +113,7 @@ impl RenderOnce for SectionButton {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let id = format!("onb-button-{}-{}", self.label, self.tab_index);
         let action_ref: &dyn Action = &*self.action;
+        let meta = self.meta.clone();
         let icon_color = if self.primary {
             Color::Accent
         } else {
@@ -118,24 +128,47 @@ impl RenderOnce for SectionButton {
                 this.style(ButtonStyle::Filled)
                     .aria_description("Recommended first step")
             })
+            .when_some(meta.clone(), |this, meta| {
+                this.aria_description(meta.clone())
+                    .tooltip(Tooltip::text(meta))
+            })
             .full_width()
             .size(ButtonSize::Medium)
             .child(
                 h_flex()
                     .w_full()
+                    .min_w_0()
                     .justify_between()
                     .child(
                         h_flex()
+                            .min_w_0()
+                            .flex_1()
                             .gap_2()
                             .child(Icon::new(self.icon).color(icon_color).size(IconSize::Small))
                             .child(
                                 Label::new(self.label)
+                                    .truncate()
                                     .when(self.primary, |label| label.weight(FontWeight::MEDIUM)),
                             ),
                     )
                     .child(
-                        KeyBinding::for_action_in(action_ref, &self.focus_handle, cx)
-                            .size(rems_from_px(12.)),
+                        h_flex()
+                            .flex_none()
+                            .gap_2()
+                            .when_some(meta, |this, meta| {
+                                this.child(
+                                    div().max_w(rems_from_px(220.)).overflow_hidden().child(
+                                        Label::new(meta)
+                                            .truncate()
+                                            .size(LabelSize::XSmall)
+                                            .color(Color::Muted),
+                                    ),
+                                )
+                            })
+                            .child(
+                                KeyBinding::for_action_in(action_ref, &self.focus_handle, cx)
+                                    .size(rems_from_px(12.)),
+                            ),
                     ),
             )
             .on_click(move |_, window, cx| {
@@ -575,6 +608,7 @@ impl WelcomePage {
             self.focus_handle.clone(),
             false,
         )
+        .meta(recent_workspace_meta(location, paths))
     }
 }
 
@@ -1134,6 +1168,25 @@ fn project_name(paths: &PathList) -> String {
     }
 }
 
+fn recent_workspace_meta(location: &SerializedWorkspaceLocation, paths: &PathList) -> SharedString {
+    let path_summary = if paths.paths().len() > 1 {
+        format!("{} folders", paths.paths().len())
+    } else {
+        paths
+            .ordered_paths()
+            .next()
+            .map(|path| path.compact().to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Location unavailable".to_owned())
+    };
+
+    match location {
+        SerializedWorkspaceLocation::Local => path_summary.into(),
+        SerializedWorkspaceLocation::Remote(options) => {
+            format!("{} · {path_summary}", options.display_name()).into()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1162,6 +1215,21 @@ mod tests {
         // A bare root "/" has no file_name(), falls back to "Untitled"
         let paths = PathList::new(&["/"]);
         assert_eq!(project_name(&paths), "Untitled");
+    }
+
+    #[test]
+    fn recent_workspace_meta_disambiguates_local_roots() {
+        let single = PathList::new(&["/home/user/my-project"]);
+        assert!(
+            recent_workspace_meta(&SerializedWorkspaceLocation::Local, &single)
+                .ends_with("/home/user/my-project")
+        );
+
+        let multiple = PathList::new(&["/home/user/api", "/home/user/web"]);
+        assert_eq!(
+            recent_workspace_meta(&SerializedWorkspaceLocation::Local, &multiple).as_ref(),
+            "2 folders"
+        );
     }
 
     #[test]

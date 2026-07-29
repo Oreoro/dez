@@ -2,7 +2,7 @@ use super::*;
 use acp_thread::{AcpThread, PermissionOptions, StubAgentConnection};
 use agent::ThreadStore;
 use agent_ui::{
-    ThreadId,
+    DEFAULT_THREAD_TITLE, NewThread, ThreadId,
     terminal_thread_metadata_store::{
         TerminalAttentionState, TerminalThreadMetadata, TerminalThreadMetadataStore,
         TestTerminalMetadataDbName,
@@ -240,7 +240,7 @@ fn inherited_footer_uses_icons_and_detailed_footer_names_destinations() {
 
 #[test]
 fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
-    assert!(!session_scope_controls_visible("Dez", 0, false));
+    assert!(!session_scope_controls_visible("Dez", 0, 0, false));
     assert!(!session_search_visible("Dez", 0, false, false, false));
     assert!(!session_search_control_visible("Dez", 0));
     assert!(
@@ -253,15 +253,19 @@ fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
     );
 
     assert!(
-        !session_scope_controls_visible("Dez", 1, false),
+        !session_scope_controls_visible("Dez", 1, 0, false),
         "one unfiltered Session does not need two scope buttons"
     );
-    assert!(session_scope_controls_visible("Dez", 2, false));
     assert!(
-        session_scope_controls_visible("Dez", 1, true),
+        !session_scope_controls_visible("Dez", 2, 0, false),
+        "caught-up Projects should not spend a row on inert scope controls"
+    );
+    assert!(session_scope_controls_visible("Dez", 2, 1, false));
+    assert!(
+        session_scope_controls_visible("Dez", 1, 0, true),
         "an active Attention projection must retain its exit control"
     );
-    assert!(session_scope_controls_visible("Zed", 1, false));
+    assert!(session_scope_controls_visible("Zed", 1, 0, false));
     assert!(
         !session_search_visible("Dez", 1, false, false, false),
         "an idle one-session rail should not spend a permanent row on search"
@@ -658,7 +662,7 @@ fn start_state_waits_for_restore_and_only_describes_a_true_empty_app() {
     );
     assert_eq!(
         session_start_state_copy("Zed").3,
-        "Open Scratch Terminal",
+        Some("Open Scratch Terminal"),
         "official Zed retains its inherited projectless terminal wording"
     );
 }
@@ -1725,6 +1729,7 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 highlight_positions: Vec::new(),
                 layout_label: None,
                 has_running_threads: false,
+                running_terminal_agent_label: None,
                 attention_thread_count: 0,
                 has_notifications: false,
                 is_active: true,
@@ -1878,6 +1883,7 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 highlight_positions: Vec::new(),
                 layout_label: None,
                 has_running_threads: false,
+                running_terminal_agent_label: None,
                 attention_thread_count: 0,
                 has_notifications: false,
                 is_active: false,
@@ -2269,12 +2275,12 @@ fn session_rail_default_creation_is_terminal_first() {
 #[test]
 fn workspace_header_accessibility_copy_is_state_complete_without_color() {
     assert_eq!(
-        workspace_header_accessibility_label("dez", false, false, 0),
-        "Workspace dez, ready for a session"
+        workspace_header_accessibility_label("Dez", "dez", false, false, 0),
+        "Project dez, ready for a session"
     );
     assert_eq!(
-        workspace_header_accessibility_label("dez", true, true, 2),
-        "Workspace dez, running work, 2 sessions need attention"
+        workspace_header_accessibility_label("Dez", "dez", true, true, 2),
+        "Project dez, running work, 2 sessions need attention"
     );
 }
 

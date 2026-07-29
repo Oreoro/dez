@@ -2503,7 +2503,6 @@ impl TerminalView {
             .working_directory()
             .map(|path| path.to_string_lossy().into_owned());
         let session_id = terminal.session_id().to_string();
-        drop(terminal);
 
         let project = self.project.upgrade();
         let workspace_context = terminal_workspace_context(project.as_ref(), cx);

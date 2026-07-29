@@ -504,7 +504,6 @@ impl Render for ThreadSwitcher {
                         .focused(ix == selected_index)
                         .position_in_set(ix + 1)
                         .set_size(set_size)
-                        .base_bg(cx.theme().colors().elevated_surface_background)
                         .on_click(cx.listener(
                             move |this, _event: &gpui::ClickEvent, _window, cx| {
                                 this.select_and_confirm(ix, cx);

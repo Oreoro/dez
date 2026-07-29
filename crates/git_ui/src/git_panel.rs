@@ -152,7 +152,6 @@ fn review_repository_with_changes(
         .values()
         .cloned()
         .collect::<Vec<_>>();
-    drop(repositories);
 
     candidates.sort_by(|left, right| {
         left.read(cx)
