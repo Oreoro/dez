@@ -114,12 +114,9 @@ impl RenderOnce for SectionButton {
             .tab_index(self.tab_index as isize)
             .aria_label(self.label.clone())
             .when(APP_NAME != "Zed", |this| this.style(ButtonStyle::Subtle))
-            .when(self.primary && APP_NAME == "Zed", |this| {
+            .when(self.primary, |this| {
                 this.style(ButtonStyle::Filled)
                     .aria_description("Recommended first step")
-            })
-            .when(self.primary && APP_NAME != "Zed", |this| {
-                this.aria_description("Recommended first step")
             })
             .full_width()
             .size(ButtonSize::Medium)
@@ -654,6 +651,8 @@ impl Render for WelcomePage {
         let has_secondary_content = secondary_content.is_some();
         let split_layout =
             dez_welcome_uses_split_layout(APP_NAME, viewport_width, has_secondary_content);
+        let home_surface = cx.theme().colors().panel_background;
+        let home_border = cx.theme().colors().border;
 
         let welcome_label = if is_dez {
             "Dez Home".to_string()
@@ -699,13 +698,37 @@ impl Render for WelcomePage {
                 .min_w_0()
                 .items_start()
                 .gap_6()
-                .child(div().min_w_0().flex_1().child(first_section.render(
-                    0,
-                    &self.focus_handle,
-                    welcome_emphasizes_first_action(APP_NAME),
-                )))
+                .child(
+                    div()
+                        .min_w_0()
+                        .flex_1()
+                        .when(is_dez, |this| {
+                            this.p_3()
+                                .rounded_lg()
+                                .border_1()
+                                .border_color(home_border)
+                                .bg(home_surface)
+                        })
+                        .child(first_section.render(
+                            0,
+                            &self.focus_handle,
+                            welcome_emphasizes_first_action(APP_NAME),
+                        )),
+                )
                 .when_some(secondary_content, |this, secondary_content| {
-                    this.child(div().min_w_0().flex_1().child(secondary_content))
+                    this.child(
+                        div()
+                            .min_w_0()
+                            .flex_1()
+                            .when(is_dez, |this| {
+                                this.p_3()
+                                    .rounded_lg()
+                                    .border_1()
+                                    .border_color(home_border)
+                                    .bg(home_surface)
+                            })
+                            .child(secondary_content),
+                    )
                 })
                 .into_any_element()
         } else {
@@ -716,6 +739,13 @@ impl Render for WelcomePage {
                 .gap_4()
                 .when(is_dez && !has_secondary_content, |this| {
                     this.max_w(rems_from_px(520.))
+                })
+                .when(is_dez, |this| {
+                    this.p_3()
+                        .rounded_lg()
+                        .border_1()
+                        .border_color(home_border)
+                        .bg(home_surface)
                 })
                 .child(first_section.render(
                     0,

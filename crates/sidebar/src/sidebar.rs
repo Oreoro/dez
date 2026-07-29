@@ -2599,7 +2599,6 @@ fn standalone_terminal_metadata(
 fn workspace_for_local_terminal_session(
     snapshot: &TerminalSessionSnapshot,
     workspaces: &[Entity<Workspace>],
-    active_workspace: Option<&Entity<Workspace>>,
     cx: &App,
 ) -> Option<Entity<Workspace>> {
     let durable_workspace_match = snapshot.workspace_id.and_then(|workspace_id| {
@@ -2625,10 +2624,11 @@ fn workspace_for_local_terminal_session(
             .map(|(_, workspace)| workspace)
     });
 
-    durable_workspace_match
-        .or(best_path_match)
-        .or_else(|| active_workspace.cloned())
-        .or_else(|| workspaces.first().cloned())
+    // A detached process is allowed into a Project only with durable identity
+    // or path evidence. Guessing the active/first Workspace makes unrelated
+    // restored sessions appear under Empty Workspace and breaks Projects'
+    // ownership model.
+    durable_workspace_match.or(best_path_match)
 }
 
 /// Picks a single glyph to render as the icon from a detected title prefix.
@@ -4915,12 +4915,7 @@ impl Sidebar {
                 )
             })
             .filter_map(|snapshot| {
-                let workspace = workspace_for_local_terminal_session(
-                    &snapshot,
-                    &workspaces,
-                    active_workspace.as_ref(),
-                    cx,
-                )?;
+                let workspace = workspace_for_local_terminal_session(&snapshot, &workspaces, cx)?;
                 Some((snapshot, workspace))
             })
             .collect::<Vec<_>>();

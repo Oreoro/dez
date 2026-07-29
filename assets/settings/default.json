@@ -1093,7 +1093,7 @@
   // Settings for Sessions, the Dez supervision rail.
   "session_rail": {
     "visibility": "auto",
-    "mode": "detailed",
+    "mode": "compact",
     "position": "left",
     "group_by": "project",
     "sort_by": "manual",

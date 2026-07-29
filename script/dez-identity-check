@@ -839,7 +839,7 @@ require_multiline_pattern crates/workspace/src/multi_workspace_tests.rs \
     'test_restored_auto_sidebar_closes_only_after_empty_state_is_ready.*?reconcile_restored_sidebar_visibility\(false, false.*?sidebar_open.*?reconcile_restored_sidebar_visibility\(true, false.*?!multi_workspace.sidebar_open.*?test_explicit_sidebar_open_cancels_restored_auto_close.*?multi_workspace.open_sidebar.*?!multi_workspace.restored_sidebar_visibility_pending.*?multi_workspace.sidebar_open' \
     'the restored-empty and explicit-open Sessions visibility contract is no longer pinned by source assertions'
 require_multiline_pattern assets/settings/default.json \
-    '"project_panel": \{.*?"dock": "right".*?"starts_open": true.*?"sidebar": \{.*?"starts_open": true.*?"workspace_bar": \{.*?"show_layout": false.*?"session_rail": \{.*?"visibility": "auto".*?"mode": "detailed"' \
+    '"project_panel": \{.*?"dock": "right".*?"starts_open": true.*?"sidebar": \{.*?"starts_open": true.*?"workspace_bar": \{.*?"show_layout": false.*?"session_rail": \{.*?"visibility": "auto".*?"mode": "compact"' \
     'the fresh Dez studio shell can regress from stable Projects, contextual Files, or minimal titlebar defaults'
 require_multiline_pattern assets/settings/default.json \
     '"active_pane_modifiers": \{.*?"border_size": 0\.0.*?"inactive_opacity": 1\.0.*?"pane_grid": \{.*?"focus_indicator": "title"' \
@@ -1454,7 +1454,7 @@ reject_pattern crates/workspace/src/welcome.rs \
     'title: "Configure Dez"' \
     'Dez Welcome should keep Settings, Keymaps, and Extensions in normal application navigation'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'when\(APP_NAME != "Zed".*?ButtonStyle::Subtle.*?when\(self\.primary && APP_NAME == "Zed".*?ButtonStyle::Filled.*?when\(self\.primary && APP_NAME != "Zed".*?aria_description\("Recommended first step"\).*?fn welcome_emphasizes_first_action.*?app_name != "Zed".*?first_section\.render\(.*?welcome_emphasizes_first_action\(APP_NAME\)' \
+    'when\(APP_NAME != "Zed".*?ButtonStyle::Subtle.*?when\(self\.primary.*?ButtonStyle::Filled.*?aria_description\("Recommended first step"\).*?fn welcome_emphasizes_first_action.*?app_name != "Zed".*?first_section\.render\(.*?welcome_emphasizes_first_action\(APP_NAME\)' \
     'Dez Welcome can regress from native command rows or lose its recommended first transition'
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'when\(APP_NAME != "Zed".*?id\("dez-workflow"\).*?role\(gpui::Role::List\).*?aria_label\("How Dez works: Run, Supervise, Review"\).*?\.flex_wrap\(\).*?when\(compact_spacing.*?flex_col\(\).*?id\(\("dez-workflow-step", index\)\).*?role\(gpui::Role::ListItem\).*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?when\([[:space:]]*index > 0 && !compact_spacing.*?Icon::new\(IconName::ArrowRight\).*?Icon::new\(icon\)' \

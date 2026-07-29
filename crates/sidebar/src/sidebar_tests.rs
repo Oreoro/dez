@@ -457,11 +457,44 @@ async fn detached_host_session_prefers_durable_workspace_identity_over_shared_cw
         workspace_for_local_terminal_session(
             &snapshot,
             &[workspace_a.clone(), workspace_b.clone()],
-            Some(&workspace_a),
             cx,
         )
     });
     assert_eq!(resolved, Some(workspace_b));
+}
+
+#[gpui::test]
+async fn detached_host_session_without_project_evidence_stays_unassigned(cx: &mut TestAppContext) {
+    init_test(cx);
+    let fs = FakeFs::new(cx.executor());
+    fs.insert_tree("/project", serde_json::json!({ ".git": {}, "src": {} }))
+        .await;
+
+    let project = project::Project::test(fs, ["/project".as_ref()], cx).await;
+    let (multi_workspace, cx) =
+        cx.add_window_view(|window, cx| MultiWorkspace::test_new(project, window, cx));
+    let workspace =
+        multi_workspace.read_with(cx, |multi_workspace, _| multi_workspace.workspace().clone());
+    let snapshot = TerminalSessionSnapshot {
+        protocol_version: terminal::session_host::TERMINAL_SESSION_PROTOCOL_VERSION,
+        host_id: terminal::session_host::TerminalHostId::from_stable_key("unmatched-test"),
+        session_id: TerminalSessionId::new(),
+        state: TerminalSessionState::Detached,
+        title: Some("Unrelated terminal".to_owned()),
+        working_directory: Some(PathBuf::from("/elsewhere")),
+        workspace_id: None,
+        process_id: Some(43),
+        foreground_command: Some("codex".to_owned()),
+        agent: None,
+        dimensions: terminal::session_host::TerminalDimensions::DEFAULT,
+        earliest_replay_sequence: 0,
+        latest_replay_sequence: 0,
+    };
+
+    let resolved = multi_workspace.read_with(cx, |_, cx| {
+        workspace_for_local_terminal_session(&snapshot, &[workspace], cx)
+    });
+    assert_eq!(resolved, None);
 }
 
 #[test]
