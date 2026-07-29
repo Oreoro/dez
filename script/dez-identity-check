@@ -448,13 +448,13 @@ require_pattern crates/settings_ui/src/page_data.rs \
     'dez_settings_page_visible\(paths::APP_NAME, "Collaboration"\)' \
     'Dez Settings can regress to exposing the inherited Calls and Collaboration page'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
-    'if paths::APP_NAME != "Zed".*?pages\.sort_by_key\(\|page\| dez_settings_page_priority\(page\.title\)\).*?fn dez_settings_page_priority.*?"Workspace & Privacy" => 0.*?"Projects & Terminals" => 1.*?"Agents" => 2.*?"Attention" => 3.*?"Evidence" => 4.*?"Files, Git & Agent" => 11.*?"Advanced" => 15' \
+    'if paths::APP_NAME != "Zed".*?pages\.sort_by_key\(\|page\| dez_settings_page_priority\(page\.title\)\).*?fn dez_settings_page_priority.*?"Workspace & Privacy" => 0.*?"Workspaces & Terminals" => 1.*?"Agents" => 2.*?"Attention" => 3.*?"Evidence" => 4.*?"Navigation & Layout" => 10.*?"Workspace Tools" => 11.*?"Advanced" => 15' \
     'Dez Settings can regress to burying its product workflow below inherited IDE customization'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'developer_settings_page_visible\(paths::APP_NAME, cx\.feature_flag_overrides_enabled\(\)\).*?pages\.push\(developer_page\(cx\)\).*?fn developer_settings_page_visible.*?app_name == "Zed" \|\| feature_flag_overrides_enabled' \
     'Dez Settings can regress to exposing staff instrumentation in the public navigation'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
-    'fn sessions_side_setting_visible.*?app_name == "Zed".*?page_title == "Agents".*?page_title == "Projects & Terminals".*?fn sessions_side_setting.*?"Projects Side".*?Projects navigator appears on.*?json_path: Some\("sidebar\.side"\).*?fn terminal_page\(\) -> SettingsPage.*?sessions_side_setting_visible\(paths::APP_NAME, "Projects & Terminals"\).*?sessions_side_setting\(\).*?"Projects & Terminals".*?sessions_section\(\)' \
+    'fn sessions_side_setting_visible.*?app_name == "Zed".*?page_title == "Agents".*?page_title == "Workspaces & Terminals".*?fn projects_startup_setting.*?"Open Projects on Startup".*?json_path: Some\("sidebar\.starts_open"\).*?fn sessions_side_setting.*?"Projects Side".*?Projects navigator appears on.*?json_path: Some\("sidebar\.side"\).*?fn terminal_page\(\) -> SettingsPage.*?sessions_side_setting_visible\(paths::APP_NAME, "Workspaces & Terminals"\).*?sessions_side_setting\(\).*?projects_startup_setting\(\).*?"Workspaces & Terminals".*?sessions_section\(\)' \
     'the Projects placement control can regress to an unrelated Agent-provider section'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn ai_page\(cx: &App\) -> SettingsPage.*?SectionHeader\(agent_session_setting_copy.*?"General".*?"Agent Runtime & Providers".*?"Disable AI".*?"Disable Agent Features".*?sessions_side_setting_visible\(paths::APP_NAME, "Agents"\).*?title: "Agents"' \
@@ -1021,8 +1021,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_session_overview.*?IconButton::new\("hide-sessions", IconName::Close\).*?aria_label\(session_rail_hide_label\(APP_NAME\)\).*?Tooltip::for_action.*?session_rail_hide_label\(APP_NAME\).*?dispatch_action\(Box::new\(CloseSidebar\)' \
     'an open Projects rail can regress to hiding its only obvious close action in generic window chrome'
 require_multiline_pattern crates/workspace/src/multi_workspace.rs \
-    'sidebar_chrome_toggle_visible\(paths::APP_NAME, sidebar_open\).*?fn sidebar_chrome_toggle_visible.*?app_name == "Zed" \|\| !sidebar_open.*?fn dez_uses_chrome_to_open_sessions_but_not_to_duplicate_its_hide_action' \
-    'Dez can regress to duplicate Sessions controls while the rail is already open'
+    'sidebar_toggle_label\(paths::APP_NAME, sidebar_open\).*?fn sidebar_toggle_label.*?"Hide Sessions".*?"Open Sessions".*?"Hide Projects".*?"Open Projects".*?fn sidebar_chrome_toggle_visible.*?app_name == "Zed" \|\| !sidebar_open.*?fn dez_uses_chrome_to_open_projects_but_not_to_duplicate_its_hide_action' \
+    'Dez can regress to inherited Sessions wording or duplicate Projects controls while the navigator is already open'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\([[:space:]]*"open-recent-workspaces",[[:space:]]*session_rail_recent_workspaces_utility_label\(rail_width\).*?aria_label\("Open Recent Workspaces"\)' \
     'the Session Rail recent-Workspace utility can regress to an unexplained or ambiguous destination'
@@ -1048,8 +1048,8 @@ reject_pattern crates/search/src/search_status_button.rs \
     '"Search files"' \
     'healthy terminal-focused status chrome can regress to a redundant visible search label'
 require_multiline_pattern crates/workspace/src/status_bar.rs \
-    'fn render_left_tools.*?\.flex_1\(\).*?\.min_w_0\(\).*?sidebar\.show_toggle.*?div\(\).*?\.flex_none\(\).*?render_sidebar_toggle\(sidebar, cx\).*?h_flex\(\).*?\.flex_1\(\).*?\.min_w_0\(\).*?\.overflow_x_hidden\(\).*?self\.left_items.*?fn render_right_tools.*?sidebar\.show_toggle.*?div\(\).*?\.flex_none\(\).*?render_sidebar_toggle\(sidebar, cx\)' \
-    'responsive status items can regress to clipping the fixed Open Sessions recovery control'
+    'fn sidebar_toggle_label.*?app_name == "Zed".*?"Open Sessions".*?"Open Projects".*?fn render_left_tools.*?\.flex_1\(\).*?\.min_w_0\(\).*?sidebar\.show_toggle.*?div\(\).*?\.flex_none\(\).*?render_sidebar_toggle\(sidebar, cx\).*?h_flex\(\).*?\.flex_1\(\).*?\.min_w_0\(\).*?\.overflow_x_hidden\(\).*?self\.left_items.*?fn render_right_tools.*?sidebar\.show_toggle.*?div\(\).*?\.flex_none\(\).*?render_sidebar_toggle\(sidebar, cx\)' \
+    'responsive status items can regress to clipping the fixed Open Projects recovery control or inherited terminology'
 require_multiline_pattern crates/search/src/project_search.rs \
     'fn workspace_search_title.*?app_name == "Zed".*?"Project Search".*?"Workspace Search".*?fn workspace_search_loading_label.*?"Loading project…".*?"Loading workspace…".*?fn workspace_search_no_results_label.*?"No results found in this project.*?"No files in this Workspace match the current query' \
     'Workspace Search can regress to Project scope after the status-bar action opens it'
@@ -1435,8 +1435,11 @@ require_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\("new-session", "Start Terminal"\)' \
     'the primary Session Rail creation action is ambiguous'
 require_multiline_pattern crates/onboarding/src/basics_page.rs \
-    'IconName::Terminal,[[:space:]]*"Run".*?IconName::ListTree,[[:space:]]*"Supervise".*?IconName::Diff,[[:space:]]*"Review".*?\.role\(gpui::Role::Region\).*?\.aria_label\("Terminal-first workflow"\)' \
+    'IconName::Terminal,[[:space:]]*"Run".*?IconName::ListTree,[[:space:]]*"Supervise".*?"Use Projects to scan Workspace activity and attention without changing context\.".*?IconName::Diff,[[:space:]]*"Review".*?\.role\(gpui::Role::Region\).*?\.aria_label\("Workspace agent workflow"\)' \
     'the Dez first-run workflow is not exposed as a named accessibility region'
+require_pattern crates/onboarding/src/basics_page.rs \
+    'supervise it in Projects' \
+    'the Dez first-run summary can regress to inherited Sessions navigation'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'session_row_primary_action_button\([[:space:]]*"review-terminal-changes",[[:space:]]*"Review",[[:space:]]*IconName::Diff.*?session_row_primary_action_button\([[:space:]]*"review-terminal-run",[[:space:]]*"Details",[[:space:]]*IconName::Info' \
     'Terminal Session review actions can regress to contradictory icon roles'
@@ -1516,7 +1519,7 @@ require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn terminal_session_init_setting_visible\(app_name: &str\) -> bool \{[[:space:]]*app_name == "Zed".*?if terminal_session_init_setting_visible\(paths::APP_NAME\).*?Some\("agent\.terminal_init_command"\)' \
     'Dez Settings can regress to exposing the legacy Agent-Panel terminal startup control even though Main Work Area terminals do not consume it'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
-    'fn workspace_surface_setting_path_visible.*?"project_panel\.dock".*?"outline_panel\.dock".*?"git_panel\.dock".*?"agent\.dock".*?"agent\.default_height".*?fn panels_page.*?"Outline Panel",[[:space:]]*"Outline".*?"Git Panel",[[:space:]]*"Git".*?"Agent Panel",[[:space:]]*"Agent".*?title: workspace_surface_copy\(paths::APP_NAME, "Panels", "Files, Git & Agent"\)' \
+    'fn workspace_surface_setting_path_visible.*?"project_panel\.dock".*?"outline_panel\.dock".*?"git_panel\.dock".*?"agent\.dock".*?"agent\.default_height".*?fn panels_page.*?"Outline Panel",[[:space:]]*"Outline".*?"Git Panel",[[:space:]]*"Git".*?"Agent Panel",[[:space:]]*"Agent".*?title: workspace_surface_copy\(paths::APP_NAME, "Panels", "Workspace Tools"\)' \
     'Dez Settings can regress to exposing dock-only controls or inherited Panel hierarchy instead of Workspace Tools and Agent'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     '"Agent Panel Font",[[:space:]]*"Agent Typography".*?"Outline Panel Button",[[:space:]]*"Outline Control".*?"Git Panel Button",[[:space:]]*"Git Control".*?"Agent Panel Button",[[:space:]]*"Agent Control"' \

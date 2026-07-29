@@ -4355,9 +4355,9 @@ Completed for the v0.0.3 studio-navigation source slice:
   their reorder, cross-pane drag, preview replacement, pin, and close behavior;
 - centered the bounded Home content, added Herdr to the supported terminal
   agent vocabulary, and kept the advanced layout picker out of default chrome;
-- renamed public Settings pages to **Projects & Terminals** and **Files, Git &
-  Agent** while hiding inherited sidebar controls that do not affect the Dez
-  shell;
+- renamed public Settings pages to **Workspaces & Terminals** and **Workspace
+  Tools**, added an explicit Projects startup control, and hid inherited
+  sidebar controls that do not affect the Dez shell;
 - preserved the tmux/Herdr ownership boundary: Projects summarizes semantic
   state, while a real PTY remains the interactive source of truth; and
 - retained source-only evidence pending the exact tagged macOS build and

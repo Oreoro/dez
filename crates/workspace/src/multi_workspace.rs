@@ -201,11 +201,7 @@ fn render_sidebar_header_controls_for_state(
         (false, SidebarSide::Left) => IconName::SidebarLeftClosed,
         (false, SidebarSide::Right) => IconName::SidebarRightClosed,
     };
-    let sidebar_label = if sidebar_open {
-        "Hide Sessions"
-    } else {
-        "Open Sessions"
-    };
+    let sidebar_label = sidebar_toggle_label(paths::APP_NAME, sidebar_open);
     let on_right = sidebar_side == SidebarSide::Right;
     let sidebar_multi_workspace = multi_workspace.clone();
     if paths::APP_NAME != "Zed" {
@@ -292,6 +288,15 @@ fn render_sidebar_header_controls_for_state(
     )
 }
 
+fn sidebar_toggle_label(app_name: &str, sidebar_open: bool) -> &'static str {
+    match (app_name == "Zed", sidebar_open) {
+        (true, true) => "Hide Sessions",
+        (true, false) => "Open Sessions",
+        (false, true) => "Hide Projects",
+        (false, false) => "Open Projects",
+    }
+}
+
 fn sidebar_chrome_toggle_visible(app_name: &str, sidebar_open: bool) -> bool {
     app_name == "Zed" || !sidebar_open
 }
@@ -326,15 +331,20 @@ mod sidebar_chrome_tests {
     use super::{
         SIDEBAR_KEYBOARD_RESIZE_STEP, sidebar_chrome_toggle_visible,
         sidebar_keyboard_resize_target, sidebar_resize_handle_occludes_main_work_area,
+        sidebar_toggle_label,
     };
     use gpui::px;
 
     #[test]
-    fn dez_uses_chrome_to_open_sessions_but_not_to_duplicate_its_hide_action() {
+    fn dez_uses_chrome_to_open_projects_but_not_to_duplicate_its_hide_action() {
         assert!(sidebar_chrome_toggle_visible("Dez", false));
         assert!(!sidebar_chrome_toggle_visible("Dez", true));
         assert!(sidebar_chrome_toggle_visible("Zed", false));
         assert!(sidebar_chrome_toggle_visible("Zed", true));
+        assert_eq!(sidebar_toggle_label("Dez", false), "Open Projects");
+        assert_eq!(sidebar_toggle_label("Dez", true), "Hide Projects");
+        assert_eq!(sidebar_toggle_label("Zed", false), "Open Sessions");
+        assert_eq!(sidebar_toggle_label("Zed", true), "Hide Sessions");
     }
 
     #[test]

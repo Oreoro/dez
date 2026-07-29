@@ -495,6 +495,23 @@ The Dez visual profile keeps the status bar visible and includes active-file
 and line-ending context alongside the inherited language, diagnostics, and
 cursor controls.
 
+### Settings and navigation visibility
+
+Dez keeps native editor customization, but Settings starts with the product
+flow: **Workspace & Privacy**, **Workspaces & Terminals**, **Agents**,
+**Attention**, and **Evidence**. **Navigation & Layout** owns tabs, status-bar
+controls, and window behavior. **Workspace Tools** owns Files, Outline, Git,
+and the optional Built-in Agent. Inherited collaboration, staff-only
+instrumentation, legacy dock geometry, and controls for removed sidebar chrome
+stay out of the public Settings navigation.
+
+Projects is optional chrome, not a permanent editor column. Fresh windows keep
+it closed; the status bar exposes **Open Projects**, and the same toggle remains
+available through **View** and Command Search. **Settings → Workspaces &
+Terminals → Open Projects on Startup** makes it persistent for people who
+prefer that layout. Closing Projects never closes a Workspace, terminal, or
+Agent Session.
+
 If imported settings hide that identity, **Dez → Settings → Restore Dez Visual
 Profile** restores Lumin, balanced density, IBM Plex Sans, Lilex, the built-in
 Dez icons, and the editor status bar while preserving font sizes and unrelated

@@ -1564,14 +1564,16 @@ performed for this source slice.
 Current source makes the graphical Settings window explain Dez before exposing
 the inherited IDE surface:
 
-- Workspace & Privacy, Projects & Terminals, Agents, Attention, and Evidence are
+- Workspace & Privacy, Workspaces & Terminals, Agents, Attention, and Evidence are
   the first five root pages;
 - Appearance and the retained editor, language, layout, Git, network, and
   advanced pages follow without losing compatibility settings;
-- Projects placement is configured under Projects & Terminals instead of Agent
+- Projects placement and startup visibility are configured under Workspaces &
+  Terminals instead of Agent
   providers;
 - nonfunctional inherited sidebar-chrome controls are hidden;
-- Files, Git & Agent owns the contextual tool settings;
+- Workspace Tools owns the contextual Files, Outline, Git, and Built-in Agent
+  settings;
 - Agent configuration starts with Agent Runtime & Providers and uses the public
   **Disable Agent Features** label; and
 - official Zed keeps its existing page order and upstream labels.
