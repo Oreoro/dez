@@ -1,8 +1,9 @@
 use crate::{
     AddActiveFileToEvidence, CloseWindow, MultiWorkspace, NewCenterTerminal, NewFile, NewTerminal,
     OpenInTerminal, OpenOptions, OpenTerminal, OpenVisible, RemoveActiveFileFromEvidence,
-    SidebarSide, SplitDirection, ToggleAgentPane, ToggleFileFinder, ToggleProjectPane,
-    ToggleProjectSymbols, ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
+    RevealBuiltInAgent, RevealDebug, RevealFiles, RevealGitChanges, SidebarSide, SplitDirection,
+    ToggleAgentPane, ToggleFileFinder, ToggleProjectPane, ToggleProjectSymbols, ToggleZoom,
+    Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
     focus_follows_mouse::FocusFollowsMouse as _,
     invalid_item_view::InvalidItemView,
     item::{
@@ -5621,15 +5622,14 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
         .with_handle(pane.new_item_context_menu_handle.clone())
         .menu(move |window, cx| {
             Some(ContextMenu::build(window, cx, |menu, _, _| {
-                let menu = menu
-                    .action(new_file, NewFile.boxed_clone())
-                    .action(open_file, ToggleFileFinder::default().boxed_clone())
-                    .separator()
-                    .action(search_workspace, DeploySearch::default().boxed_clone())
-                    .action(search_symbols, ToggleProjectSymbols.boxed_clone())
-                    .separator();
                 if paths::APP_NAME == "Zed" {
-                    menu.action("New Terminal", NewTerminal::default().boxed_clone())
+                    menu.action(new_file, NewFile.boxed_clone())
+                        .action(open_file, ToggleFileFinder::default().boxed_clone())
+                        .separator()
+                        .action(search_workspace, DeploySearch::default().boxed_clone())
+                        .action(search_symbols, ToggleProjectSymbols.boxed_clone())
+                        .separator()
+                        .action("New Terminal", NewTerminal::default().boxed_clone())
                         .action(
                             "New Center Terminal",
                             NewCenterTerminal::default().boxed_clone(),
@@ -5639,6 +5639,17 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                         "Open Agent Terminal",
                         NewCenterTerminal::default().boxed_clone(),
                     )
+                    .action("Open Built-in Agent", RevealBuiltInAgent.boxed_clone())
+                    .separator()
+                    .action(new_file, NewFile.boxed_clone())
+                    .action(open_file, ToggleFileFinder::default().boxed_clone())
+                    .separator()
+                    .action("Open Files", RevealFiles.boxed_clone())
+                    .action("Review Git Changes", RevealGitChanges.boxed_clone())
+                    .action("Open Debug", RevealDebug.boxed_clone())
+                    .separator()
+                    .action(search_workspace, DeploySearch::default().boxed_clone())
+                    .action(search_symbols, ToggleProjectSymbols.boxed_clone())
                 }
             }))
         })
@@ -5678,7 +5689,10 @@ fn pane_new_surface_control_copy(app_name: &str) -> (&'static str, &'static str)
     if app_name == "Zed" {
         ("New Item", "New…")
     } else {
-        ("Add to Main Work Area", "Add a file, search, or terminal")
+        (
+            "Add to Main Work Area",
+            "Open a terminal, file, or workspace tool",
+        )
     }
 }
 
@@ -6559,7 +6573,10 @@ mod tests {
         assert!(!pane_navigation_history_buttons_visible("Zed", false));
         assert_eq!(
             pane_new_surface_control_copy("Dez"),
-            ("Add to Main Work Area", "Add a file, search, or terminal")
+            (
+                "Add to Main Work Area",
+                "Open a terminal, file, or workspace tool"
+            )
         );
         assert_eq!(pane_new_surface_control_copy("Zed"), ("New Item", "New…"));
         assert_eq!(

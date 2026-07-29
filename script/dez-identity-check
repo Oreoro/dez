@@ -1797,8 +1797,11 @@ require_multiline_pattern crates/workspace/src/pane.rs \
     'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?else \{.*?"Open Agent Terminal".*?NewCenterTerminal::default' \
     'the Dez New Item menu can regress from the single center-terminal model'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'fn render_new_surface_control.*?pane_new_surface_control_copy\(paths::APP_NAME\).*?IconButton::new\("plus", IconName::Plus\).*?tab_index\(0isize\).*?aria_label\(aria_label\).*?Tooltip::text\(tooltip\).*?fn pane_new_surface_control_copy.*?"New Item".*?"New…".*?"Add to Main Work Area".*?"Add a file, search, or terminal"' \
-    'the main-work-area add control can regress to an unexplained generic plus button'
+    'fn render_new_surface_control.*?pane_new_surface_control_copy\(paths::APP_NAME\).*?IconButton::new\("plus", IconName::Plus\).*?tab_index\(0isize\).*?aria_label\(aria_label\).*?Tooltip::text\(tooltip\).*?paths::APP_NAME == "Zed".*?else \{.*?"Open Agent Terminal".*?RevealBuiltInAgent.*?"Open Files".*?RevealFiles.*?"Review Git Changes".*?RevealGitChanges.*?"Open Debug".*?RevealDebug.*?fn pane_new_surface_control_copy.*?"New Item".*?"New…".*?"Add to Main Work Area".*?"Open a terminal, file, or workspace tool"' \
+    'the main-work-area plus control can regress to an unnamed button or stop opening native terminal, agent, Files, Git, and Debug surfaces'
+require_multiline_pattern crates/workspace/src/workspace.rs \
+    'RevealGitChanges.*?RevealDebug.*?RevealBuiltInAgent.*?activate_panel_for_proto_id\("GitPanel".*?activate_panel_for_proto_id\("DebugPanel".*?activate_panel_for_proto_id\("agent_panel"' \
+    'the Main Work Area plus menu can regress to dead workspace-tool actions instead of revealing native panel tabs'
 require_multiline_pattern crates/workspace/src/pane.rs \
     'fn accessibility_label_for_app.*?"Editor pane".*?"Project pane".*?"Agent pane".*?"Main work area".*?"Workspace Tools".*?"Built-in Agent".*?if paths::APP_NAME != "Zed".*?PaneKind::Project.*?render_auxiliary_pane_hide_control\(PaneKind::Project\).*?PaneKind::Agent.*?render_auxiliary_pane_hide_control\(PaneKind::Agent\).*?if !has_focus.*?Some\(add_control\).*?fn render_auxiliary_pane_hide_control.*?"hide-workspace-tools".*?tab_index\(0isize\).*?"hide-agent".*?tab_index\(0isize\).*?fn pane_auxiliary_hide_control_copy.*?"Hide Workspace Tools".*?"Hide Built-in Agent"' \
     'main-area creation controls can regress into auxiliary panes or pane landmarks can lose their product-region identity'

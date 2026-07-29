@@ -2449,6 +2449,12 @@ actions!(
         ToggleProjectPane,
         /// Reveals and focuses Files without closing an already-visible Files surface.
         RevealFiles,
+        /// Reveals and focuses Git Changes in the native Workspace Tools pane.
+        RevealGitChanges,
+        /// Reveals and focuses Debug in the native Workspace Tools pane.
+        RevealDebug,
+        /// Reveals and focuses the native Built-in Agent pane.
+        RevealBuiltInAgent,
     ]
 );
 
@@ -13341,6 +13347,21 @@ impl Workspace {
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ToggleProjectPane, window, cx| {
                     workspace.toggle_panel_pane_visibility(PaneKind::Project, window, cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &RevealGitChanges, window, cx| {
+                    workspace.activate_panel_for_proto_id("GitPanel", window, cx);
+                },
+            ))
+            .on_action(
+                cx.listener(|workspace: &mut Workspace, _: &RevealDebug, window, cx| {
+                    workspace.activate_panel_for_proto_id("DebugPanel", window, cx);
+                }),
+            )
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &RevealBuiltInAgent, window, cx| {
+                    workspace.activate_panel_for_proto_id("agent_panel", window, cx);
                 },
             ))
             .on_action(cx.listener(Workspace::toggle_centered_layout))
