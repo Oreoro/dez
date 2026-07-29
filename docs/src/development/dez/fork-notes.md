@@ -1782,7 +1782,8 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   result, runtime smoke output, manifest, or checksum. Every source commit still
   assembles the canonical bundle and must pass identity, architecture,
   signature, entry-point, and package verification before its artifact is
-  accepted.
+  accepted. Cache restore and save are non-blocking optimizations; cache service
+  or capacity failures cannot reject an otherwise valid package.
 - **2026-07-29: First run opens into native work, not surrounding chrome.**
   Fresh Dez profiles keep Projects and Files closed, leave the Main Work Area
   as the primary surface, and show setup as a normal **Set Up Dez** tab. Setup

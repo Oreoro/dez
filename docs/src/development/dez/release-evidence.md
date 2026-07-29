@@ -1664,7 +1664,8 @@ commit, workflow run, and attempt. A compatible earlier source cache can
 shorten later builds while Cargo recompiles changed crates. Canonical release
 executable paths, Dez.app, DMG, signature results, runtime smoke output,
 manifest, installation copy, and checksum remain outside the cache and are
-regenerated and verified for every candidate.
+regenerated and verified for every candidate. Restore and save are explicitly
+non-blocking, so cache availability cannot replace or prevent exact packaging.
 
 Formatting, shell syntax, diff, and identity checks are the only local
 verification for this change. Exact compile, package, and rendered evidence
