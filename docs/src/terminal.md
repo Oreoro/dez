@@ -97,6 +97,11 @@ not manufacture an attachment terminal for it. The external application
 remains authoritative, closing a Dez tab detaches rather than terminates, and
 Dez never requests a Herdr takeover automatically.
 
+For cmux installed from its DMG or Homebrew cask, Dez checks the CLI bundled at
+`/Applications/cmux.app/Contents/Resources/bin/cmux` as well as standard
+Homebrew and shell PATH locations. A separate CLI symlink is therefore not
+required for a standard `/Applications` install.
+
 Reattaching a detached Session shows **Opening…** in its existing row
 immediately. Repeated clicks do not create duplicate attachment work or another
 terminal. When attachment completes, the row returns to the observed lifecycle

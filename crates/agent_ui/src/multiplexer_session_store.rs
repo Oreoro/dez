@@ -303,7 +303,12 @@ fn scan_tmux_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
 
 fn scan_cmux_workspaces() -> Result<Vec<ExternalMultiplexerSession>> {
     let Some((executable, output)) = run_first_available(
-        &["/opt/homebrew/bin/cmux", "/usr/local/bin/cmux", "cmux"],
+        &[
+            "/Applications/cmux.app/Contents/Resources/bin/cmux",
+            "/opt/homebrew/bin/cmux",
+            "/usr/local/bin/cmux",
+            "cmux",
+        ],
         &["list-workspaces", "--json"],
     )?
     else {
