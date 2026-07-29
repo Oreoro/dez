@@ -1728,6 +1728,11 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   owning Workspace. Overlapping roots choose the most specific Workspace.
   Empty Workspaces retain one compact terminal action in their header instead
   of expanding into provider-logo onboarding chrome.
+- **2026-07-29: Empty editor panes remain native chrome, not onboarding.** The
+  active empty Main Work Area shows a compact top-left label, one sentence, and
+  terminal/file actions. Secondary empty panes use shorter copy. The Dez visual
+  profile also keeps the native status bar, active file, and line endings
+  visible so editor state remains legible beneath files and terminals.
 - **2026-07-29: Pane navigation is native, contextual, and setting-led.** This
   supersedes the 2026-07-28 decision to force Back and Forward buttons into
   every Dez pane. Pane history remains available through native mouse,

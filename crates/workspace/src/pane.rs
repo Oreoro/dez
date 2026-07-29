@@ -986,15 +986,22 @@ impl Pane {
         let show_orientation =
             empty_main_work_area_shows_orientation(paths::APP_NAME, is_active_pane);
         let is_dez = paths::APP_NAME != "Zed";
-        let (title, description) = if show_orientation {
+        let (title, description) = if is_dez && show_orientation {
+            (
+                "Main Work Area",
+                "Open a file or Agent Terminal in this Workspace.",
+            )
+        } else if is_dez {
+            ("Empty pane", "Open a file or move a tab here.")
+        } else if show_orientation {
             (
                 "Start work in this project",
-                "Run Codex, Claude Code, OpenCode, Herdr, or another CLI in an Agent Terminal. Dez keeps the terminal here, its state in Projects, and its changes in Files & Git.",
+                "Open a terminal, find a file, or create one in this work area.",
             )
         } else {
             (
                 "Open something here",
-                "Open an Agent Terminal, find a file, or create one in this work area.",
+                "Open a terminal, find a file, or create one in this work area.",
             )
         };
         let terminal_action_label = if paths::APP_NAME == "Zed" {
@@ -1016,83 +1023,49 @@ impl Pane {
             .size_full()
             .min_h_0()
             .overflow_y_scroll()
-            .when(is_dez, |this| {
-                this.items_center().justify_center().px_8().py_8()
-            })
-            .when(!is_dez, |this| {
-                this.items_start().justify_start().px_6().pt_8().pb_6()
-            })
+            .items_start()
+            .justify_start()
+            .px_6()
+            .pt_6()
+            .pb_6()
             .child(
                 v_flex()
-                    .max_w(px(640.))
+                    .max_w(px(520.))
                     .w_full()
-                    .gap_5()
+                    .gap_3()
                     .child(
                         v_flex()
-                            .max_w(px(600.))
-                            .gap_2()
-                            .child(
-                                Label::new("MAIN WORK AREA")
-                                    .size(LabelSize::XSmall)
-                                    .color(Color::Muted),
-                            )
-                            .child(Headline::new(title))
+                            .gap_1p5()
+                            .when(!is_dez, |this| {
+                                this.child(
+                                    Label::new("MAIN WORK AREA")
+                                        .size(LabelSize::XSmall)
+                                        .color(Color::Muted),
+                                )
+                                .child(Headline::new(title))
+                            })
+                            .when(is_dez, |this| {
+                                this.child(
+                                    h_flex()
+                                        .gap_2()
+                                        .child(
+                                            Icon::new(IconName::File)
+                                                .size(IconSize::Small)
+                                                .color(Color::Muted),
+                                        )
+                                        .child(Label::new(title).size(LabelSize::Small)),
+                                )
+                            })
                             .child(
                                 Label::new(description)
-                                    .size(LabelSize::Small)
+                                    .size(if is_dez {
+                                        LabelSize::XSmall
+                                    } else {
+                                        LabelSize::Small
+                                    })
                                     .color(Color::Muted),
                             ),
                     )
-                    .when(is_dez, |this| {
-                        this.child(
-                            h_flex()
-                                .w_full()
-                                .flex_wrap()
-                                .gap_4()
-                                .child(
-                                    h_flex()
-                                        .gap_1p5()
-                                        .child(
-                                            Icon::new(IconName::Terminal)
-                                                .size(IconSize::Small)
-                                                .color(Color::Accent),
-                                        )
-                                        .child(
-                                            Label::new("Run")
-                                                .size(LabelSize::Small)
-                                                .color(Color::Muted),
-                                        ),
-                                )
-                                .child(
-                                    h_flex()
-                                        .gap_1p5()
-                                        .child(
-                                            Icon::new(IconName::ListTree)
-                                                .size(IconSize::Small)
-                                                .color(Color::Muted),
-                                        )
-                                        .child(
-                                            Label::new("Supervise in Projects")
-                                                .size(LabelSize::Small)
-                                                .color(Color::Muted),
-                                        ),
-                                )
-                                .child(
-                                    h_flex()
-                                        .gap_1p5()
-                                        .child(
-                                            Icon::new(IconName::GitBranch)
-                                                .size(IconSize::Small)
-                                                .color(Color::Muted),
-                                        )
-                                        .child(
-                                            Label::new("Review in Files & Git")
-                                                .size(LabelSize::Small)
-                                                .color(Color::Muted),
-                                        ),
-                                ),
-                        )
-                    })
                     .child(
                         h_flex()
                             .w_full()
@@ -1101,7 +1074,11 @@ impl Pane {
                             .child(
                                 Button::new("empty-project-terminal", terminal_action_label)
                                     .tab_index(0isize)
-                                    .style(ButtonStyle::Filled)
+                                    .style(if is_dez {
+                                        ButtonStyle::Outlined
+                                    } else {
+                                        ButtonStyle::Filled
+                                    })
                                     .start_icon(Icon::new(IconName::Terminal))
                                     .aria_label(terminal_action_aria_label)
                                     .tooltip(move |_, cx| {

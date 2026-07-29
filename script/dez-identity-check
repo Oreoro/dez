@@ -101,8 +101,8 @@ require_multiline_pattern crates/workspace/src/workspace.rs \
     'fn item_belongs_in_main_work_area.*?app_name != "Zed" && requested_pane_kind != PaneKind::Tabs && !is_panel_item.*?fn add_item_to_active_pane.*?item_belongs_in_main_work_area.*?fn add_item\(.*?item_belongs_in_main_work_area.*?fn dez_routes_work_tabs_out_of_navigator_surfaces.*?PaneKind::Project.*?PaneKind::Agent.*?PaneKind::Tabs' \
     'files, commits, diffs, reviews, and terminals can regress into fixed Navigator mode tabs'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'fn render_empty_project_state.*?"Start work in this project".*?Codex, Claude Code, OpenCode, Herdr.*?items_center\(\).*?justify_center\(\).*?"Run".*?"Supervise in Projects".*?"Review in Files & Git"' \
-    'the Main Work Area onboarding can regress to a sparse non-native blank canvas'
+    'fn render_empty_project_state.*?"Main Work Area".*?"Open a file or Agent Terminal in this Workspace\.".*?"Empty pane".*?"Open a file or move a tab here\.".*?items_start\(\).*?justify_start\(\).*?max_w\(px\(520\.\)\).*?Button::new\("empty-project-terminal".*?ButtonStyle::Outlined.*?Button::new\("empty-project-open-file", "Find File"\).*?Button::new\("empty-project-new-file", "New File"\)' \
+    'the Main Work Area can regress from compact native empty chrome to onboarding or a blank canvas'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn terminal_thread_status.*?TerminalAgentState::Failed.*?TerminalRuntimeState::Missing.*?TerminalRuntimeState::Incompatible.*?AgentThreadStatus::Error.*?TerminalAgentState::WaitingForPermission.*?TerminalAgentState::WaitingForInput.*?AgentThreadStatus::WaitingForConfirmation.*?TerminalAgentState::Running.*?TerminalRuntimeState::Live.*?TerminalRuntimeState::Detached.*?TerminalRuntimeState::Reconnecting.*?AgentThreadStatus::Running.*?\.status\(terminal_status\)' \
     'Agent Session rows can regress to hiding running, human-intervention, reconnecting, and failed states'
@@ -190,17 +190,20 @@ require_multiline_pattern assets/settings/initial_user_settings.json \
 require_multiline_pattern assets/settings/initial_user_settings.json \
     '"icon_theme": "Dez \(Default\)".*?"markdown_preview_code_font_family": "Lilex"' \
     'first-run settings can omit the Dez icons or coherent Markdown code font'
+require_multiline_pattern assets/settings/initial_user_settings.json \
+    '"status_bar": \{.*?"experimental\.show": true.*?"show_active_file": true.*?"line_endings_button": true' \
+    'first-run Dez can regress to hiding the native editor status hierarchy'
 require_multiline_pattern crates/zed_actions/src/lib.rs \
     'pub mod dez.*?actions!\([[:space:]]*dez.*?RestoreVisualProfile' \
     'the explicit Dez visual-profile recovery action is no longer registered'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'fn restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?ui_font_family = Some\(ui_font\).*?buffer_font_family = Some\(code_font\.clone\(\)\).*?markdown_preview_code_font_family = Some\(code_font\.clone\(\)\).*?ThemeSelection::Dynamic.*?ThemeAppearanceMode::System.*?Lumin Light.*?Lumin Blur.*?IconThemeSelection::Static.*?Dez \(Default\).*?design_system.*?CanvasDensity::Balanced.*?terminal.*?font_family = Some\(code_font\)' \
+    'fn restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?ui_font_family = Some\(ui_font\).*?buffer_font_family = Some\(code_font\.clone\(\)\).*?markdown_preview_code_font_family = Some\(code_font\.clone\(\)\).*?ThemeSelection::Dynamic.*?ThemeAppearanceMode::System.*?Lumin Light.*?Lumin Blur.*?IconThemeSelection::Static.*?Dez \(Default\).*?design_system.*?CanvasDensity::Balanced.*?terminal.*?font_family = Some\(code_font\).*?status_bar\.show = Some\(true\).*?status_bar\.show_active_file = Some\(true\).*?status_bar\.line_endings_button = Some\(true\)' \
     'visual-profile recovery can stop restoring the complete scoped Dez identity'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'RestoreVisualProfile.*?APP_NAME == "Zed".*?update_settings_file_with_completion.*?restore_dez_visual_profile.*?completion\.await\?\?.*?Restored Lumin, balanced density, IBM Plex Sans, Lilex, and Dez icons\..*?Failed to restore the Dez visual profile' \
+    'RestoreVisualProfile.*?APP_NAME == "Zed".*?update_settings_file_with_completion.*?restore_dez_visual_profile.*?completion\.await\?\?.*?Restored Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, and the editor status bar\..*?Failed to restore the Dez visual profile' \
     'visual-profile recovery can affect official Zed, report before persistence, or fail silently'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'fn dez_visual_profile_restores_identity_without_resetting_font_size.*?ui_font_size = Some\(18\.0\.into\(\)\).*?restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?Lumin Light.*?Lumin Blur.*?Dez \(Default\).*?design_system.*?density.*?balanced.*?ui_font_size.*?18\.0' \
+    'fn dez_visual_profile_restores_identity_without_resetting_font_size.*?ui_font_size = Some\(18\.0\.into\(\)\).*?restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?Lumin Light.*?Lumin Blur.*?Dez \(Default\).*?design_system.*?density.*?balanced.*?status_bar.*?experimental\.show.*?show_active_file.*?line_endings_button.*?ui_font_size.*?18\.0' \
     'the scoped visual-profile mutation is no longer covered against size resets'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'APP_NAME != "Zed".*?Restore Dez Visual Profile.*?zed_actions::dez::RestoreVisualProfile' \
@@ -1973,11 +1976,11 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_container_reuses_terminal_material.*?app_name != "Zed" && transparent_theme.*?FailedToSpawnTerminal.*?\.bg\(cx\.theme\(\)\.colors\(\)\.terminal_background\).*?let terminal_container_background = if terminal_container_reuses_terminal_material\(.*?ui::theme_is_transparent\(cx\).*?gpui::transparent_black\(\).*?\.id\("terminal-unavailable-state"\).*?\.bg\(cx\.theme\(\)\.colors\(\)\.terminal_background\).*?\.id\("terminal-view-container"\).*?\.bg\(terminal_container_background\).*?fn dez_terminal_element_owns_the_translucent_terminal_material.*?terminal_container_reuses_terminal_material\("Dez", true\).*?!terminal_container_reuses_terminal_material\("Dez", false\).*?!terminal_container_reuses_terminal_material\("Zed", true\)' \
     'the terminal wrapper can regress to stacking the editor tint beneath the translucent terminal material'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    '\.id\("empty-project-state"\).*?\.size_full\(\).*?\.min_h_0\(\).*?\.overflow_y_scroll\(\).*?when\(is_dez.*?items_center\(\).*?justify_center\(\).*?px_8\(\).*?py_8\(\).*?when\(!is_dez.*?items_start\(\).*?justify_start\(\).*?px_6\(\).*?pt_8\(\).*?pb_6\(\)' \
+    '\.id\("empty-project-state"\).*?\.size_full\(\).*?\.min_h_0\(\).*?\.overflow_y_scroll\(\).*?\.items_start\(\).*?\.justify_start\(\).*?\.px_6\(\).*?\.pt_6\(\).*?\.pb_6\(\)' \
     'the empty Main Work Area can clip its primary actions in a short window'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'fn empty_main_work_area_shows_orientation.*?app_name == "Zed" \|\| is_active_pane.*?fn render_empty_project_state.*?active_pane\(\)\.entity_id\(\) == cx\.entity_id\(\).*?let show_orientation.*?empty_main_work_area_shows_orientation\(paths::APP_NAME, is_active_pane\).*?"Start work in this project".*?Codex, Claude Code, OpenCode, Herdr.*?"Open something here".*?"Open an Agent Terminal, find a file, or create one in this work area\.".*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?max_w\(px\(640\.\)\).*?\.gap_5\(\).*?max_w\(px\(600\.\)\).*?Headline::new\(title\)' \
-    'empty Main Work Areas can regress to repeated onboarding, vague copy, or a stale accessibility description'
+    'fn empty_main_work_area_shows_orientation.*?app_name == "Zed" \|\| is_active_pane.*?fn render_empty_project_state.*?active_pane\(\)\.entity_id\(\) == cx\.entity_id\(\).*?let show_orientation.*?empty_main_work_area_shows_orientation\(paths::APP_NAME, is_active_pane\).*?"Main Work Area".*?"Open a file or Agent Terminal in this Workspace\.".*?"Empty pane".*?"Open a file or move a tab here\.".*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?max_w\(px\(520\.\)\).*?\.gap_3\(\).*?when\(is_dez.*?IconName::File.*?Label::new\(title\)\.size\(LabelSize::Small\)' \
+    'empty Main Work Areas can regress to repeated onboarding, vague copy, or stale accessibility text'
 reject_pattern crates/workspace/src/pane.rs \
     'empty-project-route|workflow_route' \
     'the operational empty Main Work Area regained a duplicate workflow diagram'

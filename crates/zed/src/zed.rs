@@ -894,6 +894,10 @@ fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
     settings.design_system.get_or_insert_default().density =
         Some(settings::CanvasDensity::Balanced);
     settings.terminal.get_or_insert_default().font_family = Some(code_font);
+    let status_bar = settings.status_bar.get_or_insert_default();
+    status_bar.show = Some(true);
+    status_bar.show_active_file = Some(true);
+    status_bar.line_endings_button = Some(true);
 }
 
 fn register_actions(
@@ -1233,7 +1237,7 @@ fn register_actions(
                         workspace.show_toast(
                             Toast::new(
                                 NotificationId::unique::<RestoreDezVisualProfile>(),
-                                "Restored Lumin, balanced density, IBM Plex Sans, Lilex, and Dez icons.",
+                                "Restored Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, and the editor status bar.",
                             ),
                             cx,
                         );
@@ -2985,6 +2989,9 @@ mod tests {
         assert_eq!(settings["icon_theme"], "Dez (Default)");
         assert_eq!(settings["design_system"]["density"], "balanced");
         assert_eq!(settings["terminal"]["font_family"], "Lilex");
+        assert_eq!(settings["status_bar"]["experimental.show"], true);
+        assert_eq!(settings["status_bar"]["show_active_file"], true);
+        assert_eq!(settings["status_bar"]["line_endings_button"], true);
         assert_eq!(settings["ui_font_size"], 18.0);
     }
 

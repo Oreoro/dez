@@ -21,6 +21,11 @@
     "density": "balanced"
   },
   "icon_theme": "Dez (Default)",
+  "status_bar": {
+    "experimental.show": true,
+    "show_active_file": true,
+    "line_endings_button": true
+  },
   "markdown_preview_code_font_family": "Lilex",
   "terminal": {
     "font_family": "Lilex",

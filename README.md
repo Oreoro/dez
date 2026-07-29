@@ -120,6 +120,11 @@ Dez ships with an attributed adaptation of
 The application follows the operating system appearance by default. All theme
 and typography roles remain configurable through normal settings.
 
+The first-run visual profile keeps the native status bar visible with the
+active file, language, line endings, diagnostics, and cursor context. Empty
+Main Work Area panes use compact top-left editor chrome and direct actions
+instead of a centered onboarding or workflow overlay.
+
 ## Current status
 
 The v0.0.4 source baseline contains the opinionated Dez shell,

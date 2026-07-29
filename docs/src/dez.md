@@ -485,13 +485,20 @@ process, transcript, or layout owner.
 ## Visual design
 
 Dez follows the system appearance with **Lumin Blur** and **Lumin Light**.
-IBM Plex Sans gives native interface chrome and onboarding a calm proportional
-voice. Lilex keeps editors, terminals, prompts, and review code compact and
-legible. Users can still override any role through normal settings.
+IBM Plex Sans gives native interface chrome a calm proportional voice. Lilex
+keeps editors, terminals, prompts, and review code compact and legible. Users
+can still override any role through normal settings.
+
+Empty Main Work Area panes avoid a centered onboarding card: they use compact
+top-left native chrome with direct terminal, file-finder, and new-file actions.
+The Dez visual profile keeps the status bar visible and includes active-file
+and line-ending context alongside the inherited language, diagnostics, and
+cursor controls.
 
 If imported settings hide that identity, **Dez → Settings → Restore Dez Visual
-Profile** restores Lumin, balanced density, IBM Plex Sans, Lilex, and the
-built-in Dez icons while preserving font sizes and non-visual preferences.
+Profile** restores Lumin, balanced density, IBM Plex Sans, Lilex, the built-in
+Dez icons, and the editor status bar while preserving font sizes and unrelated
+preferences.
 
 Blur belongs to the stable window shell. On macOS the window uses the native
 under-window backdrop and follows active/inactive system state; Lumin layers sit
