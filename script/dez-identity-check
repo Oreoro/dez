@@ -2135,7 +2135,7 @@ require_pattern crates/workspace/src/welcome.rs \
     '\.aria_label\(self\.label\.clone\(\)\)' \
     'the Dez welcome actions are not named for assistive technology'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'meta: Option<SharedString>.*?fn meta\(mut self, meta: impl Into<SharedString>\).*?aria_description\(meta\.clone\(\)\).*?tooltip\(Tooltip::text\(meta\)\).*?fn recent_workspace_meta.*?path\.compact\(\).*?SerializedWorkspaceLocation::Remote.*?options\.display_name\(\).*?\.meta\(recent_workspace_meta\(location, paths\)\)' \
+    'meta: Option<SharedString>.*?fn meta\(mut self, meta: impl Into<SharedString>\).*?aria_description\(meta\.clone\(\)\).*?tooltip\(Tooltip::text\(meta\)\).*?\.meta\(recent_workspace_meta\(location, paths\)\).*?fn recent_workspace_meta.*?path\.compact\(\).*?SerializedWorkspaceLocation::Remote.*?options\.display_name\(\)' \
     'Dez Home recents can regress to ambiguous same-named Workspaces without path or remote-host context'
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'fn welcome_summary.*?"Run an agent here\. Follow it under Projects\. Review its work in Files and Git\.".*?"Open a Workspace, run an agent in its terminal, and review the work in one place\.".*?Label::new\(welcome_summary\(APP_NAME, has_workspace\)\)' \
