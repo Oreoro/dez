@@ -2137,6 +2137,18 @@ require_pattern crates/workspace/src/welcome.rs \
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'meta: Option<SharedString>.*?fn meta\(mut self, meta: impl Into<SharedString>\).*?aria_description\(meta\.clone\(\)\).*?tooltip\(Tooltip::text\(meta\)\).*?\.meta\(recent_workspace_meta\(location, paths\)\).*?fn recent_workspace_meta.*?path\.compact\(\).*?SerializedWorkspaceLocation::Remote.*?options\.display_name\(\)' \
     'Dez Home recents can regress to ambiguous same-named Workspaces without path or remote-host context'
+require_multiline_pattern crates/zed_actions/src/lib.rs \
+    'pub struct OpenRecent \{.*?pub create_new_window: Option<bool>.*?pub workspace_id: Option<i64>' \
+    'the Open Recent action can no longer carry an exact recent Workspace target'
+require_multiline_pattern crates/workspace/src/welcome.rs \
+    'SerializedWorkspaceLocation::Remote\(_\).*?window\.dispatch_action\(.*?open_remote_recent_workspace_action\(workspace\.workspace_id\).*?fn open_remote_recent_workspace_action\(workspace_id: WorkspaceId\).*?OpenRecent \{.*?create_new_window: None.*?workspace_id: Some\(workspace_id\.to_i64\(\)\)' \
+    'a remote Home recent row can regress to opening the generic recent-Workspace picker instead of its exact target'
+require_multiline_pattern crates/recent_projects/src/recent_projects.rs \
+    'let workspace_id = open_recent\.workspace_id\.map\(WorkspaceId::from_i64\).*?if let Some\(workspace_id\) = workspace_id \{.*?recent_projects\.open_workspace_id\(workspace_id, window, cx\)' \
+    'the Open Recent integration no longer routes exact Workspace targets into the native recent-Workspace controller'
+require_multiline_pattern crates/recent_projects/src/recent_projects.rs \
+    'pending_workspace_id: Option<WorkspaceId>.*?fn recent_workspace_index\(.*?workspace\.workspace_id == workspace_id.*?let workspace_id = this\.pending_workspace_id\.take\(\).*?recent_workspace_index\(&picker\.delegate\.workspaces, workspace_id\).*?open_recent_projects\(candidate_id, false, window, cx\).*?fn open_workspace_id\(.*?recent_workspace_index\(&picker\.delegate\.workspaces, workspace_id\).*?self\.pending_workspace_id = Some\(workspace_id\)' \
+    'exact recent-Workspace opening can regress to an unstable list index or lose requests while history is loading'
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'fn welcome_summary.*?"Run an agent here\. Follow it under Projects\. Review its work in Files and Git\.".*?"Open a Workspace, run an agent in its terminal, and review the work in one place\.".*?Label::new\(welcome_summary\(APP_NAME, has_workspace\)\)' \
     'the Dez welcome headline no longer explains the Workspace-to-IDE product promise'

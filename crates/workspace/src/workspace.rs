@@ -2539,6 +2539,10 @@ impl WorkspaceId {
     pub fn from_i64(value: i64) -> Self {
         Self(value)
     }
+
+    pub fn to_i64(self) -> i64 {
+        self.0
+    }
 }
 
 impl StaticColumnCount for WorkspaceId {}

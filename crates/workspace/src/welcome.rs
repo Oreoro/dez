@@ -1,6 +1,6 @@
 use crate::{
     NewCenterTerminal, NewFile, Open, OpenFolder, OpenMode, PathList, RecentWorkspace, RevealFiles,
-    SerializedWorkspaceLocation, Workspace, WorkspaceSettings,
+    SerializedWorkspaceLocation, Workspace, WorkspaceId, WorkspaceSettings,
     item::{Item, ItemEvent},
     persistence::WorkspaceDb,
 };
@@ -20,7 +20,9 @@ use ui::{
     ButtonLike, Divider, DividerColor, KeyBinding, Tooltip, prelude::*, theme_is_transparent,
 };
 use util::{ResultExt, paths::PathExt};
-use zed_actions::{Extensions, OpenKeymap, OpenOnboarding, OpenSettings, command_palette};
+use zed_actions::{
+    Extensions, OpenKeymap, OpenOnboarding, OpenRecent, OpenSettings, command_palette,
+};
 
 #[derive(PartialEq, Clone, Debug, Deserialize, Serialize, JsonSchema, Action)]
 #[action(namespace = welcome)]
@@ -512,24 +514,29 @@ impl WelcomePage {
     ) {
         if let Some(recent_workspaces) = &self.recent_workspaces {
             if let Some(workspace) = recent_workspaces.get(action.index) {
-                let is_local = matches!(workspace.location, SerializedWorkspaceLocation::Local);
-
-                if is_local {
-                    let paths = workspace.paths.paths().to_vec();
-                    let open_mode = match WorkspaceSettings::get_global(cx).default_open_behavior {
-                        DefaultOpenBehavior::ExistingWindow => OpenMode::Activate,
-                        DefaultOpenBehavior::NewWindow => OpenMode::NewWindow,
-                    };
-                    self.workspace
-                        .update(cx, |workspace, cx| {
-                            workspace
-                                .open_workspace_for_paths(open_mode, paths, window, cx)
-                                .detach_and_log_err(cx);
-                        })
-                        .log_err();
-                } else {
-                    use zed_actions::OpenRecent;
-                    window.dispatch_action(OpenRecent::default().boxed_clone(), cx);
+                match &workspace.location {
+                    SerializedWorkspaceLocation::Local => {
+                        let paths = workspace.paths.paths().to_vec();
+                        let open_mode =
+                            match WorkspaceSettings::get_global(cx).default_open_behavior {
+                                DefaultOpenBehavior::ExistingWindow => OpenMode::Activate,
+                                DefaultOpenBehavior::NewWindow => OpenMode::NewWindow,
+                            };
+                        self.workspace
+                            .update(cx, |workspace, cx| {
+                                workspace
+                                    .open_workspace_for_paths(open_mode, paths, window, cx)
+                                    .detach_and_log_err(cx);
+                            })
+                            .log_err();
+                    }
+                    SerializedWorkspaceLocation::Remote(_) => {
+                        window.dispatch_action(
+                            open_remote_recent_workspace_action(workspace.workspace_id)
+                                .boxed_clone(),
+                            cx,
+                        );
+                    }
                 }
             }
         }
@@ -1187,6 +1194,13 @@ fn recent_workspace_meta(location: &SerializedWorkspaceLocation, paths: &PathLis
     }
 }
 
+fn open_remote_recent_workspace_action(workspace_id: WorkspaceId) -> OpenRecent {
+    OpenRecent {
+        create_new_window: None,
+        workspace_id: Some(workspace_id.to_i64()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1230,6 +1244,13 @@ mod tests {
             recent_workspace_meta(&SerializedWorkspaceLocation::Local, &multiple).as_ref(),
             "2 folders"
         );
+    }
+
+    #[test]
+    fn remote_recent_workspace_action_preserves_the_exact_target() {
+        let action = open_remote_recent_workspace_action(WorkspaceId::from_i64(42));
+        assert_eq!(action.workspace_id, Some(42));
+        assert_eq!(action.create_new_window, None);
     }
 
     #[test]
