@@ -17,8 +17,11 @@ use crate::terminal_thread_metadata_store::{
 };
 
 const MULTIPLEXER_REFRESH_INTERVAL: Duration = Duration::from_secs(5);
-const TMUX_FIELD_SEPARATOR: char = '\u{1f}';
-const TMUX_FORMAT: &str = "#{session_id}\u{1f}#{session_name}\u{1f}#{session_attached}\u{1f}#{window_id}\u{1f}#{window_name}\u{1f}#{window_active}\u{1f}#{pane_id}\u{1f}#{pane_active}\u{1f}#{pane_current_path}\u{1f}#{pane_current_command}\u{1f}#{pane_title}";
+// tmux sanitizes control characters when Dez is launched from Finder's
+// minimal, locale-free environment. Keep this printable so the exact same
+// parser works from a shell, Finder, and a signed application bundle.
+const TMUX_FIELD_SEPARATOR: &str = "|:dez:|";
+const TMUX_FORMAT: &str = "#{session_id}|:dez:|#{session_name}|:dez:|#{session_attached}|:dez:|#{window_id}|:dez:|#{window_name}|:dez:|#{window_active}|:dez:|#{pane_id}|:dez:|#{pane_active}|:dez:|#{pane_current_path}|:dez:|#{pane_current_command}|:dez:|#{pane_title}";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MultiplexerKind {
