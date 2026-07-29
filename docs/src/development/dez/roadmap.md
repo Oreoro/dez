@@ -8,10 +8,11 @@ Do not erase completed evidence.
 
 ## Objective {#objective}
 
-Ship Dez v0.0.4 as a focused native IDE for developers who move between code,
-durable terminals, and terminal-native agents. Make explicit tmux and Herdr
-attachment useful without importing their navigation model or pretending Dez
-owns external processes.
+Reach Dez v0.1 as a public-quality native IDE for developers who move between
+code, durable terminals, and terminal-native agents. Preserve Zed-quality
+editing and tools, make Projects optional supervision rather than mandatory
+navigation, and prove lifecycle, integration, visual, accessibility, and
+packaging behavior through exact artifacts.
 
 ## Dependency order {#dependency-order}
 
@@ -29,7 +30,28 @@ upstream and identity gate
 Visual polish continues in small slices, but it must support truthful state and
 the product loop rather than outrun ownership foundations.
 
-## v0.0.4 active slice {#v0-0-4-active-slice}
+## v0.1 active track {#v0-1-active-track}
+
+The ordered release contract lives in
+[v0.1 Product Hardening](./v0.1-product-hardening.md). The current v0.0.4
+source and exact artifact gate are its baseline, not a competing release train.
+
+The v0.1 dependency order is:
+
+```text
+close exact v0.0.4 artifact gate
+-> simplify Home, Projects, menus, and native tab navigation
+-> prove durable terminal and Workspace recovery
+-> harden Codex, Claude Code, OpenCode, tmux, and Herdr integrations
+-> pass visual, responsive, and accessibility matrices
+-> rehearse upstream merge and exact release packaging
+```
+
+Do not advance a marketing version because source looks plausible. Each
+checkpoint must preserve the primary workflow and carry exact evidence for the
+claims it adds.
+
+## v0.0.4 baseline slice {#v0-0-4-active-slice}
 
 The release promise is one predictable route:
 

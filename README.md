@@ -11,8 +11,9 @@ and agent ecosystem, then reorganizes them around a clearer product promise:
 > See what is running, what needs attention, what changed, and what is ready
 > for review without reconstructing terminal and editor state.
 
-This repository is the **Dez v0.0.4 source candidate**. It is not yet a signed
-or supported binary release.
+This repository currently carries the **Dez v0.0.4 source baseline** and the
+active, evidence-gated path to **v0.1**. It is not yet a signed or supported
+binary release.
 
 ## What Dez does
 
@@ -118,7 +119,7 @@ and typography roles remain configurable through normal settings.
 
 ## Current status
 
-The v0.0.4 source candidate contains the opinionated Dez shell,
+The v0.0.4 source baseline contains the opinionated Dez shell,
 identity isolation, Workspace composition, persistent Projects navigation,
 ordinary closeable workspace-tool tabs, explicit Agent Session state,
 host-owned local terminal lifecycle, setting-controlled Back/Forward history,
@@ -133,20 +134,23 @@ previews. The next browser slice requires a real pane-scoped native surface and
 Workspace item; Dez deliberately does not expose the inherited
 geometry-only `BrowserDevelopment` recipe as a fake preview.
 
-Before a public binary release, the project still requires a build of the
-current source checkpoint plus rendered, restart, crash, accessibility, and
-coexistence evidence on supported platforms. The exact state and open gates are
-documented in the
-[v0.0.4 External Sessions Plan](./docs/src/development/dez/v0.0.4-external-sessions.md)
-and
+Before v0.1, every candidate must pass exact build, rendered, restart, crash,
+accessibility, integration, coexistence, and packaging evidence. The ordered
+release ladder is documented in
+[v0.1 Product Hardening](./docs/src/development/dez/v0.1-product-hardening.md);
+the current baseline gates remain in the
+[v0.0.4 External Sessions Plan](./docs/src/development/dez/v0.0.4-external-sessions.md),
+with exact results recorded in
 [release evidence](./docs/src/development/dez/release-evidence.md). The v0.0.1
 runbook remains historical evidence, not the current release plan.
 
 ## Documentation
 
 - [What is Dez?](./docs/src/dez.md) — public product guide
+- [v0.1 Product Hardening](./docs/src/development/dez/v0.1-product-hardening.md)
+  — active release ladder and acceptance gates
 - [v0.0.4 External Sessions](./docs/src/development/dez/v0.0.4-external-sessions.md)
-  — current release order and acceptance gates
+  — current source baseline and exact artifact gates
 - [v0.0.3 Production Readiness](./docs/src/development/dez/v0.0.3-production-readiness.md)
   — previous hardening train and evidence
 - [v0.0.2 Completion Plan](./docs/src/development/dez/v0.0.2-completion-plan.md)

@@ -283,7 +283,7 @@ require_pattern assets/fonts/jetbrains-mono/OFL.txt \
     '^Copyright 2020 The JetBrains Mono Project Authors' \
     'the JetBrains Mono source attribution is incomplete'
 require_multiline_pattern README.md \
-    '^# Dez.*?v0\.0\.4 source candidate.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Projects\*\*.*?path-matched.*?tmux.*?Herdr.*?Unrelated machine terminals.*?Workspace tools.*?ordinary draggable and closeable native.*?\*\*Built-in Agent\*\*.*?Open Agent Terminal.*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?Before a public binary release' \
+    '^# Dez.*?v0\.0\.4 source baseline.*?active, evidence-gated path to \*\*v0\.1\*\*.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Projects\*\*.*?path-matched.*?tmux.*?Herdr.*?Unrelated machine terminals.*?Workspace tools.*?ordinary draggable and closeable native.*?\*\*Built-in Agent\*\*.*?Open Agent Terminal.*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?Before v0\.1' \
     'the repository front page can regress to upstream branding, omit the Dez product model, or overstate release readiness'
 require_multiline_pattern README.md \
     '## Visual baseline.*?Lumin Blur.*?Lumin Light.*?IBM Plex Sans.*?Lilex.*?## Upstream relationship.*?deliberate fork.*?## License and attribution.*?independent fork' \
@@ -307,6 +307,11 @@ require_file docs/src/development/dez/v0.0.4-external-sessions.md \
 require_multiline_pattern docs/src/development/dez/v0.0.4-external-sessions.md \
     '^# Dez v0\.0\.4 external sessions.*?## Release promise.*?## Ownership contract.*?tmux session.*?Herdr pane.*?Other local terminal process.*?## Milestone 1 — external discovery.*?## Milestone 2 — safe native attach.*?Never pass Herdr `--takeover` automatically.*?## Milestone 4 — native visual and responsive pass.*?## Milestone 5 — release proof.*?## Deferred' \
     'the v0.0.4 plan can regress to implied PTY ownership, a second navigation model, or an unverified release'
+require_file docs/src/development/dez/v0.1-product-hardening.md \
+    'the active v0.1 product-hardening plan is missing'
+require_multiline_pattern docs/src/development/dez/v0.1-product-hardening.md \
+    '^# Dez v0\.1 product-hardening plan.*?not a claim that v0\.1 has shipped.*?## Product contract.*?Projects starts closed in a fresh window.*?## Non-negotiable interface rules.*?## Release ladder.*?### v0\.0\.4 — truthful ownership baseline.*?### v0\.0\.5 — product clarity and navigation.*?### v0\.0\.6 — durable lifecycle and crash hardening.*?### v0\.0\.7 — agent and multiplexer integrations.*?### v0\.0\.8 — visual system, responsiveness, and accessibility.*?### v0\.0\.9 — release candidate.*?### v0\.1 — public-quality checkpoint.*?## Backend gates.*?## Integration policy.*?## Continuous evidence ledger.*?## Explicitly outside the v0\.1 critical path' \
+    'the v0.1 plan can regress to unsequenced feature expansion without product, lifecycle, integration, visual, accessibility, and release gates'
 require_multiline_pattern docs/src/development/dez/v0.0.1-release-runbook.md \
     'there is currently no retained runnable.*?## Historical local candidate.*?future runtime.*?rebuild, identify, hash, sign, and audit a new exact candidate' \
     'the release runbook can regress to presenting removed local targets as a current runnable candidate'
@@ -1550,8 +1555,14 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_no_results.*?Button::new\("no-results-new-terminal".*?aria_label\(active_workspace_terminal_destination_label\(APP_NAME\)\).*?Tooltip::for_action\([[:space:]]*workspace_new_terminal_tooltip_label\(APP_NAME\).*?session_overview_create_action_visible.*?Button::new\("new-session".*?aria_label\(active_workspace_terminal_destination_label\([[:space:]]*APP_NAME.*?Tooltip::for_action\([[:space:]]*workspace_new_terminal_tooltip_label\(APP_NAME\)' \
     'empty and overview Sessions actions can regress to path-sized tooltips at the minimum rail width'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_scope_controls_visible\(.*?app_name == "Zed".*?session_count > 0.*?session_count > 1 \|\| attention_only.*?session_scope_controls_visible\(.*?paths::APP_NAME.*?self\.contents\.session_count.*?self\.attention_only' \
-    'a single unfiltered Dez Session can regress to wasting a full row on inert All and Attention scope controls'
+    'fn session_scope_controls_visible\(.*?app_name == "Zed".*?session_count > 0.*?attention_count > 0 \|\| attention_only.*?session_scope_controls_visible\(.*?paths::APP_NAME.*?self\.contents\.session_count.*?self\.contents\.attention_count.*?self\.attention_only' \
+    'caught-up Dez Projects can regress to wasting a full row on inert All and Attention scope controls'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn canvas_thread_item_style\(.*?APP_NAME != "Zed".*?ThreadItemDensity::Compact.*?ThreadItemRadius::None.*?ThreadItemContrast::Standard.*?metadata_visible\(false\).*?layout_label\.filter\(\|_\| \{.*?APP_NAME == "Zed".*?running_terminal_agent_label.*?APP_NAME == "Zed"' \
+    'Dez Projects rows can regress from native compact navigation into rounded metadata cards'
+require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
+    'metadata_visible: bool.*?metadata_visible: true.*?pub fn metadata_visible\(.*?Controls only the visible secondary metadata row.*?let has_metadata = self\.metadata_visible.*?&& labels_visible' \
+    'ThreadItem can no longer hide visual metadata while preserving accessible session detail'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_search_visible\(.*?app_name == "Zed".*?session_count > 0 \|\| has_query.*?has_query \|\| is_focused \|\| is_open.*?fn session_search_control_visible.*?app_name != "Zed" && session_count > 1.*?fn session_rail_search_label.*?"Search Sessions".*?"Search Projects and Sessions".*?fn focus_sidebar_filter.*?paths::APP_NAME == "Zed".*?self\.filter_editor\.focus_handle\(cx\)\.focus\(window, cx\).*?self\.session_search_open = true.*?cx\.defer_in\(window.*?filter_editor\.focus_handle\(cx\)\.focus\(window, cx\).*?let search_is_active.*?self\.session_search_open.*?session_search_control_visible\(.*?&& !search_is_active.*?IconButton::new\(.*?"open-session-search".*?IconName::MagnifyingGlass.*?tab_index\(0isize\).*?aria_label\(session_rail_search_label\(APP_NAME\)\).*?focus_sidebar_filter\(&FocusSidebarFilter.*?let dismiss_label = if paths::APP_NAME == "Zed".*?"Clear Session Search".*?"Close Session Search".*?IconButton::new\("clear-session-search", IconName::Close\).*?tab_index\(0isize\).*?aria_label\(dismiss_label\).*?this\.session_search_open = false.*?this\.focus_handle\.focus\(window, cx\)' \
     'Dez Projects search can regress to a permanent row, duplicate active control, or pointer-only disclosure without a close path'

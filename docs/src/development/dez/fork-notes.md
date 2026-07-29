@@ -1745,3 +1745,14 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   provenance. Dez and `dez-terminal-host` descendants are excluded so owned
   terminals never appear twice. This expands machine-wide visibility for
   v0.0.2 without changing the deferral of external adoption or control.
+- **2026-07-29: v0.1 is a hardening target, not a surface-count target.** The
+  v0.0.4 source and exact-artifact gates become the baseline for an ordered
+  v0.1 ladder covering product clarity, native navigation, durable lifecycle,
+  terminal-agent and multiplexer integrations, visual/accessibility quality,
+  upstream maintenance, and release packaging. Home, optional Projects,
+  native Main Work Area tabs, and registered Zed tools remain the complete
+  shell. A new integration or Surface enters the public product only after it
+  preserves ownership, has a failure path, and passes runtime evidence.
+  Version advancement never converts unchecked source intent into a shipped
+  claim. The active order lives in
+  [v0.1 Product Hardening](./v0.1-product-hardening.md).
