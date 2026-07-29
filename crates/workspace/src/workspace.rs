@@ -13351,7 +13351,7 @@ impl Workspace {
             ))
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &RevealGitChanges, window, cx| {
-                    workspace.activate_panel_for_proto_id(PanelId::GitPanel, window, cx);
+                    workspace.activate_panel_item_for_key("GitPanel", true, window, cx);
                 },
             ))
             .on_action(
