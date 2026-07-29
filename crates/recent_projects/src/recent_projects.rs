@@ -432,6 +432,7 @@ pub fn init(cx: &mut App) {
 
     cx.on_action(|open_recent: &OpenRecent, cx| {
         let create_new_window = open_recent.create_new_window;
+        let workspace_id = open_recent.workspace_id.map(WorkspaceId::from_i64);
 
         match cx
             .active_window()
@@ -454,6 +455,7 @@ pub fn init(cx: &mut App) {
                                         workspace,
                                         create_new_window,
                                         window_project_groups,
+                                        workspace_id,
                                         window,
                                         focus_handle,
                                         cx,
@@ -462,9 +464,13 @@ pub fn init(cx: &mut App) {
                                 };
 
                                 recent_projects.update(cx, |recent_projects, cx| {
-                                    recent_projects
-                                        .picker
-                                        .update(cx, |picker, cx| picker.cycle_selection(window, cx))
+                                    if let Some(workspace_id) = workspace_id {
+                                        recent_projects.open_workspace_id(workspace_id, window, cx);
+                                    } else {
+                                        recent_projects.picker.update(cx, |picker, cx| {
+                                            picker.cycle_selection(window, cx)
+                                        });
+                                    }
                                 });
                             });
                         })
@@ -479,6 +485,7 @@ pub fn init(cx: &mut App) {
                             workspace,
                             create_new_window,
                             Vec::new(),
+                            workspace_id,
                             window,
                             focus_handle,
                             cx,
@@ -487,9 +494,13 @@ pub fn init(cx: &mut App) {
                     };
 
                     recent_projects.update(cx, |recent_projects, cx| {
-                        recent_projects
-                            .picker
-                            .update(cx, |picker, cx| picker.cycle_selection(window, cx))
+                        if let Some(workspace_id) = workspace_id {
+                            recent_projects.open_workspace_id(workspace_id, window, cx);
+                        } else {
+                            recent_projects
+                                .picker
+                                .update(cx, |picker, cx| picker.cycle_selection(window, cx));
+                        }
                     });
                 });
             }
@@ -619,7 +630,17 @@ pub fn add_wsl_distro(
 
 pub struct RecentProjects {
     pub picker: Entity<Picker<RecentProjectsDelegate>>,
+    pending_workspace_id: Option<WorkspaceId>,
     _subscriptions: Vec<Subscription>,
+}
+
+fn recent_workspace_index(
+    workspaces: &[RecentWorkspace],
+    workspace_id: WorkspaceId,
+) -> Option<usize> {
+    workspaces
+        .iter()
+        .position(|workspace| workspace.workspace_id == workspace_id)
 }
 
 impl ModalView for RecentProjects {
@@ -640,6 +661,7 @@ impl RecentProjects {
         delegate: RecentProjectsDelegate,
         fs: Option<Arc<dyn Fs>>,
         rem_width: f32,
+        workspace_id: Option<WorkspaceId>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
@@ -682,9 +704,18 @@ impl RecentProjects {
                 .log_err()
                 .unwrap_or_default();
             this.update_in(cx, move |this, window, cx| {
+                let workspace_id = this.pending_workspace_id.take();
                 this.picker.update(cx, move |picker, cx| {
                     picker.delegate.set_workspaces(workspaces);
-                    picker.update_matches(picker.query(cx), window, cx)
+                    if let Some(candidate_id) = workspace_id.and_then(|workspace_id| {
+                        recent_workspace_index(&picker.delegate.workspaces, workspace_id)
+                    }) {
+                        picker
+                            .delegate
+                            .open_recent_projects(candidate_id, false, window, cx);
+                    } else {
+                        picker.update_matches(picker.query(cx), window, cx);
+                    }
                 })
             })
             .ok();
@@ -692,6 +723,7 @@ impl RecentProjects {
         .detach();
         Self {
             picker,
+            pending_workspace_id: workspace_id,
             _subscriptions: subscriptions,
         }
     }
@@ -700,6 +732,7 @@ impl RecentProjects {
         workspace: &mut Workspace,
         create_new_window: Option<bool>,
         window_project_groups: Vec<ProjectGroupKey>,
+        workspace_id: Option<WorkspaceId>,
         window: &mut Window,
         focus_handle: FocusHandle,
         cx: &mut Context<Workspace>,
@@ -720,7 +753,7 @@ impl RecentProjects {
                 ProjectPickerStyle::Modal,
             );
 
-            Self::new(delegate, fs, 42., window, cx)
+            Self::new(delegate, fs, 42., workspace_id, window, cx)
         })
     }
 
@@ -754,10 +787,34 @@ impl RecentProjects {
                 window_project_groups,
                 ProjectPickerStyle::Popover,
             );
-            let list = Self::new(delegate, fs, 20., window, cx);
+            let list = Self::new(delegate, fs, 20., None, window, cx);
             list.picker.focus_handle(cx).focus(window, cx);
             list
         })
+    }
+
+    fn open_workspace_id(
+        &mut self,
+        workspace_id: WorkspaceId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let opened = self.picker.update(cx, |picker, cx| {
+            let Some(candidate_id) =
+                recent_workspace_index(&picker.delegate.workspaces, workspace_id)
+            else {
+                return false;
+            };
+
+            picker
+                .delegate
+                .open_recent_projects(candidate_id, false, window, cx);
+            true
+        });
+
+        if !opened {
+            self.pending_workspace_id = Some(workspace_id);
+        }
     }
 
     fn handle_toggle_open_menu(
@@ -2641,6 +2698,24 @@ mod tests {
 
     fn recent_workspaces() -> Vec<RecentWorkspace> {
         (0..RECENT_PROJECT_COUNT).map(recent_workspace).collect()
+    }
+
+    #[test]
+    fn recent_workspace_index_resolves_the_stable_workspace_id() {
+        let workspaces = vec![
+            recent_workspace(7),
+            recent_workspace(42),
+            recent_workspace(3),
+        ];
+
+        assert_eq!(
+            recent_workspace_index(&workspaces, WorkspaceId::from_i64(42)),
+            Some(1)
+        );
+        assert_eq!(
+            recent_workspace_index(&workspaces, WorkspaceId::from_i64(99)),
+            None
+        );
     }
 
     fn draw(cx: &mut VisualTestContext) {

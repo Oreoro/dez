@@ -250,7 +250,7 @@ fn render_dez_workflow_section() -> impl IntoElement {
         (
             IconName::ListTree,
             "Supervise",
-            "Use Sessions to scan activity and attention without changing context.",
+            "Use Projects to scan Workspace activity and attention without changing context.",
         ),
         (
             IconName::Diff,
@@ -262,7 +262,7 @@ fn render_dez_workflow_section() -> impl IntoElement {
     v_flex()
         .id("dez-terminal-workflow")
         .role(gpui::Role::Region)
-        .aria_label("Terminal-first workflow")
+        .aria_label("Workspace agent workflow")
         .w_full()
         .gap_2()
         .child(
@@ -271,7 +271,7 @@ fn render_dez_workflow_section() -> impl IntoElement {
                 .child(Label::new("How Dez works"))
                 .child(
                     Label::new(
-                        "Run an agent in a Workspace terminal, supervise it in Sessions, then review its work in Files and Git.",
+                        "Run an agent in a Workspace terminal, supervise it in Projects, then review its work in Files and Git.",
                     )
                     .size(LabelSize::Small)
                     .color(Color::Muted),

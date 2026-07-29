@@ -485,6 +485,7 @@ impl Render for SystemWindowTabs {
                                 window.dispatch_action(
                                     Box::new(zed_actions::OpenRecent {
                                         create_new_window: Some(true),
+                                        workspace_id: None,
                                     }),
                                     cx,
                                 );

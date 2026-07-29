@@ -196,12 +196,14 @@ Projects uses one native titlebar label and one options menu for secondary
 destinations such as Agent Tools, Agent History, and Recent Workspaces. It does
 not repeat **Projects** inside a dashboard header or reserve a permanent
 footer. Empty, caught-up, search, and recovery states stay in normal sidebar
-flow and never become floating overlays. At compact widths, the caught-up
-action shortens to **Show All** and the **External Sessions** count shortens
-without losing source or status in each row. Explicit tmux and Herdr rows
-attach in the Main Work Area; observed machine terminals retain their read-only
-ownership boundary. External rows never hide the primary **Open Workspace…**
-path when no Project is open.
+flow and never become floating overlays. An empty Workspace keeps one compact
+terminal action in its header instead of expanding into a provider onboarding
+block. At compact widths, the caught-up action shortens to **Show All** without
+losing source or status in each row. Explicit tmux and Herdr rows attach in the
+Main Work Area; cmux Workspace rows open in cmux. Each row sits beneath the
+most specific matching Workspace, while observed machine terminals retain
+their read-only ownership boundary. External rows never hide the primary
+**Open Workspace…** path when no Project is open.
 
 The bottom Workspace status strip is evidence-driven. It does not repeat a
 global Search launcher or show a decorative checkmark when diagnostics are
@@ -471,23 +473,52 @@ reveal the owning application, but it does not read the transcript or
 arguments, intercept input, persist the row, adopt the PTY, restore the
 process, or claim ownership of its work.
 
-v0.0.4 adds explicit attachment for tmux and Herdr only. Dez discovers tmux
-sessions through the documented CLI format and Herdr panes through the local
-snapshot API, then opens the documented attach command in a normal terminal
-Surface. The multiplexer remains authoritative; closing the tab detaches,
-Herdr never receives automatic takeover, and the Projects row does not become
-a second process, transcript, or layout owner.
+v0.0.4 adds explicit project-scoped integration for tmux, Herdr, and cmux. Dez
+discovers tmux sessions through the documented CLI format, Herdr panes through
+the local snapshot API, and cmux Workspaces through its JSON CLI. tmux and
+Herdr open their documented attach command in a normal terminal Surface. cmux
+Workspaces stay in cmux and open through its `select-workspace` command. The
+external application remains authoritative; closing a Dez tab detaches, Herdr
+never receives automatic takeover, and Projects never becomes a second
+process, transcript, or layout owner.
 
 ## Visual design
 
 Dez follows the system appearance with **Lumin Blur** and **Lumin Light**.
-IBM Plex Sans gives native interface chrome and onboarding a calm proportional
-voice. Lilex keeps editors, terminals, prompts, and review code compact and
-legible. Users can still override any role through normal settings.
+IBM Plex Sans gives native interface chrome a calm proportional voice. Lilex
+keeps editors, terminals, prompts, and review code compact and legible. Users
+can still override any role through normal settings.
+
+Empty Main Work Area panes avoid a centered onboarding card: they use compact
+top-left native chrome with direct terminal, file-finder, and new-file actions.
+The Dez visual profile keeps the status bar visible and includes active-file
+and line-ending context alongside the inherited language, diagnostics, and
+cursor controls. Native Back and Forward controls are visible in every Main
+Work Area tab strip, alongside Add, tab overflow, and split controls. They
+traverse the pane's actual history of files, terminals, settings, diffs, and
+other Surfaces; Dez does not add browser chrome over the editor.
+
+### Settings and navigation visibility
+
+Dez keeps native editor customization, but Settings starts with the product
+flow: **Workspace & Privacy**, **Workspaces & Terminals**, **Agents**,
+**Attention**, and **Evidence**. **Navigation & Layout** owns tabs, status-bar
+controls, and window behavior. **Workspace Tools** owns Files, Outline, Git,
+and the optional Built-in Agent. Inherited collaboration, staff-only
+instrumentation, legacy dock geometry, and controls for removed sidebar chrome
+stay out of the public Settings navigation.
+
+Projects is optional chrome, not a permanent editor column. Fresh windows keep
+it closed; the status bar exposes **Open Projects**, and the same toggle remains
+available through **View** and Command Search. **Settings → Workspaces &
+Terminals → Open Projects on Startup** makes it persistent for people who
+prefer that layout. Closing Projects never closes a Workspace, terminal, or
+Agent Session.
 
 If imported settings hide that identity, **Dez → Settings → Restore Dez Visual
-Profile** restores Lumin, balanced density, IBM Plex Sans, Lilex, and the
-built-in Dez icons while preserving font sizes and non-visual preferences.
+Profile** restores Lumin, balanced density, IBM Plex Sans, Lilex, the built-in
+Dez icons, native tab navigation, and the editor status bar while preserving
+font sizes and unrelated preferences.
 
 Blur belongs to the stable window shell. On macOS the window uses the native
 under-window backdrop and follows active/inactive system state; Lumin layers sit

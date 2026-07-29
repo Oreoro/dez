@@ -2,7 +2,7 @@ use super::*;
 use acp_thread::{AcpThread, PermissionOptions, StubAgentConnection};
 use agent::ThreadStore;
 use agent_ui::{
-    ThreadId,
+    DEFAULT_THREAD_TITLE, NewThread, ThreadId,
     terminal_thread_metadata_store::{
         TerminalAttentionState, TerminalThreadMetadata, TerminalThreadMetadataStore,
         TestTerminalMetadataDbName,
@@ -240,7 +240,7 @@ fn inherited_footer_uses_icons_and_detailed_footer_names_destinations() {
 
 #[test]
 fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
-    assert!(!session_scope_controls_visible("Dez", 0, false));
+    assert!(!session_scope_controls_visible("Dez", 0, 0, false));
     assert!(!session_search_visible("Dez", 0, false, false, false));
     assert!(!session_search_control_visible("Dez", 0));
     assert!(
@@ -253,15 +253,19 @@ fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
     );
 
     assert!(
-        !session_scope_controls_visible("Dez", 1, false),
+        !session_scope_controls_visible("Dez", 1, 0, false),
         "one unfiltered Session does not need two scope buttons"
     );
-    assert!(session_scope_controls_visible("Dez", 2, false));
     assert!(
-        session_scope_controls_visible("Dez", 1, true),
+        !session_scope_controls_visible("Dez", 2, 0, false),
+        "caught-up Projects should not spend a row on inert scope controls"
+    );
+    assert!(session_scope_controls_visible("Dez", 2, 1, false));
+    assert!(
+        session_scope_controls_visible("Dez", 1, 0, true),
         "an active Attention projection must retain its exit control"
     );
-    assert!(session_scope_controls_visible("Zed", 1, false));
+    assert!(session_scope_controls_visible("Zed", 1, 0, false));
     assert!(
         !session_search_visible("Dez", 1, false, false, false),
         "an idle one-session rail should not spend a permanent row on search"
@@ -302,18 +306,22 @@ fn active_or_focused_workspace_keeps_its_new_terminal_action_discoverable() {
 }
 
 #[test]
-fn empty_expanded_workspace_uses_only_the_labeled_terminal_action() {
+fn dez_empty_workspace_keeps_one_compact_native_terminal_action() {
     assert!(
-        !workspace_header_terminal_action_visible(false, false),
-        "the expanded empty Workspace already renders a full-width Open Agent Terminal action"
+        workspace_header_terminal_action_visible("Dez", false, false),
+        "Dez keeps terminal creation in the Workspace header instead of an onboarding block"
     );
     assert!(
-        workspace_header_terminal_action_visible(false, true),
+        workspace_header_terminal_action_visible("Dez", false, true),
         "a collapsed empty Workspace still needs a compact terminal action in its header"
     );
     assert!(
-        workspace_header_terminal_action_visible(true, false),
+        workspace_header_terminal_action_visible("Dez", true, false),
         "a populated Workspace keeps terminal creation available in its compact header"
+    );
+    assert!(
+        !workspace_header_terminal_action_visible("Zed", false, false),
+        "upstream Zed retains its labeled empty-session action"
     );
 }
 
@@ -658,7 +666,7 @@ fn start_state_waits_for_restore_and_only_describes_a_true_empty_app() {
     );
     assert_eq!(
         session_start_state_copy("Zed").3,
-        "Open Scratch Terminal",
+        Some("Open Scratch Terminal"),
         "official Zed retains its inherited projectless terminal wording"
     );
 }
@@ -1725,6 +1733,7 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 highlight_positions: Vec::new(),
                 layout_label: None,
                 has_running_threads: false,
+                running_terminal_agent_label: None,
                 attention_thread_count: 0,
                 has_notifications: false,
                 is_active: true,
@@ -1878,6 +1887,7 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 highlight_positions: Vec::new(),
                 layout_label: None,
                 has_running_threads: false,
+                running_terminal_agent_label: None,
                 attention_thread_count: 0,
                 has_notifications: false,
                 is_active: false,
@@ -2269,12 +2279,12 @@ fn session_rail_default_creation_is_terminal_first() {
 #[test]
 fn workspace_header_accessibility_copy_is_state_complete_without_color() {
     assert_eq!(
-        workspace_header_accessibility_label("dez", false, false, 0),
-        "Workspace dez, ready for a session"
+        workspace_header_accessibility_label("Dez", "dez", false, false, 0),
+        "Project dez, ready for a session"
     );
     assert_eq!(
-        workspace_header_accessibility_label("dez", true, true, 2),
-        "Workspace dez, running work, 2 sessions need attention"
+        workspace_header_accessibility_label("Dez", "dez", true, true, 2),
+        "Project dez, running work, 2 sessions need attention"
     );
 }
 

@@ -118,10 +118,10 @@ the existing Surface rather than opening a duplicate.
 The visible title is **Projects**, because the stable thing a developer
 navigates is a codebase. Agent Sessions appear beneath their owning Project;
 ordinary integrated shells stay in the Main Work Area. Path-matched tmux and
-Herdr work is available through that Project's **Attach Running Session…**
-action while leaving the multiplexer authoritative. Unrelated terminal
-applications do not appear in Projects and Dez never implies that it owns
-their PTYs.
+Herdr work and cmux Workspaces are available through that Project's **Open
+Running Workspace or Session…** action while leaving the external application
+authoritative. Unrelated terminal applications do not appear in Projects and
+Dez never implies that it owns their PTYs.
 
 Projects restoration follows this lifecycle:
 
@@ -206,7 +206,8 @@ Projects supervises agent Sessions; it is not a list of every shell.
 - Dez does not capture arbitrary PTYs owned by Terminal.app, iTerm2, Warp, VS
   Code, or another application. Those terminals remain observation-only.
   Explicitly shared tmux sessions and live Herdr panes can be attached through
-  their documented protocols in v0.0.4; the external multiplexer remains the
+  their documented protocols in v0.0.4. Path-matched cmux Workspaces can be
+  opened in cmux through its public CLI. The external application remains the
   process and layout owner.
 
 This admission rule is enforced at every source of terminal metadata: live
@@ -1473,7 +1474,7 @@ are future options only if they strengthen the terminal-to-IDE review loop.
 - **2026-07-26: View exposes regions before implementations.** Dez keeps
   **Sessions** and **Built-in Agent** as separate View-menu destinations.
   Files, Outline, Git, and Debug are modes of one **Workspace Tools** drawer
-  and therefore live in that submenu beside **Show or Hide Workspace Tools**.
+  and therefore live in that submenu beside **Toggle Workspace Tools**.
   **Editor Layout** and **Diagnostics** remain separate. Official Zed retains
   its upstream Project Tab/Panel and Terminal Panel hierarchy.
 - **2026-07-26: Agent setup belongs to Agent, not a card above it.** Provider
@@ -1708,22 +1709,39 @@ are future options only if they strengthen the terminal-to-IDE review loop.
 - **2026-07-29: External attachment is project-scoped and never implicit PTY
   capture.** v0.0.4 discovers tmux sessions and live Herdr panes through
   documented interfaces, then offers a session only from the matching
-  Project's **Attach Running Session…** menu. Attach opens an ordinary
-  draggable terminal tab in the Main Work Area. The multiplexer remains the
-  process and layout owner; closing the tab or Dez detaches the client and must
-  not terminate the session. Herdr never receives an automatic `--takeover`.
-  Arbitrary machine terminals stay out of Projects. Files, Git, Outline, Debug,
-  terminals, diffs, and agent views all use the existing closeable native tab
-  model; Dez adds no nested layout menu, second sidebar, transcript store, or
-  external lifecycle database.
+  Project's **Open Running Workspace or Session…** menu. Attach opens an
+  ordinary draggable terminal tab in the Main Work Area. The multiplexer
+  remains the process and layout owner; closing the tab or Dez detaches the
+  client and must not terminate the session. Herdr never receives an automatic
+  `--takeover`. Arbitrary machine terminals stay out of Projects. Files, Git,
+  Outline, Debug, terminals, diffs, and agent views all use the existing
+  closeable native tab model; Dez adds no nested layout menu, second sidebar,
+  transcript store, or external lifecycle database.
+- **2026-07-29: cmux integration preserves external Workspace ownership.**
+  Dez discovers cmux Workspaces through `cmux list-workspaces --json`, matches
+  only those with a working directory inside a Project, and opens the selected
+  Workspace through `cmux select-workspace`. It does not spawn an attachment
+  terminal, copy cmux's pane grid, inspect terminal content, or claim ownership
+  of the external Workspace.
+- **2026-07-29: Projects renders a Workspace-first activity tree.** Local Agent
+  Sessions and path-matched tmux, Herdr, and cmux activity sit beneath the
+  owning Workspace. Overlapping roots choose the most specific Workspace.
+  Empty Workspaces retain one compact terminal action in their header instead
+  of expanding into provider-logo onboarding chrome.
+- **2026-07-29: Empty editor panes remain native chrome, not onboarding.** The
+  active empty Main Work Area shows a compact top-left label, one sentence, and
+  terminal/file actions. Secondary empty panes use shorter copy. The Dez visual
+  profile also keeps the native status bar, active file, and line endings
+  visible so editor state remains legible beneath files and terminals.
 - **2026-07-29: Pane navigation is native, contextual, and setting-led.** This
   supersedes the 2026-07-28 decision to force Back and Forward buttons into
-  every Dez pane. Pane history remains available through native mouse,
-  keyboard, and command routes, while visible header buttons obey
-  `tab_bar.show_nav_history_buttons` and default off. Workspace-tool tabs are
-  ordinary draggable, reorderable, previewable, and closeable tabs with a
-  predictable close control; they receive no persistent-tab exemption or
-  second browser-like tab strip.
+  every Dez pane regardless of preference. Pane history remains available
+  through native mouse, keyboard, and command routes. Fresh Dez profiles and
+  **Restore Dez Visual Profile** enable the native Back and Forward buttons,
+  while `tab_bar.show_nav_history_buttons` remains the user-controlled source
+  of truth. Workspace-tool tabs are ordinary draggable, reorderable,
+  previewable, and closeable tabs with a predictable close control; they
+  receive no persistent-tab exemption or second browser-like tab strip.
 - **2026-07-27: v0.0.2 proves the integrated loop before durable adoption.**
   The v0.0.2 release gate is one dependable in-app workflow: run a supported
   agent in an integrated terminal, supervise that same terminal through

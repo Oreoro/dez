@@ -101,8 +101,8 @@ require_multiline_pattern crates/workspace/src/workspace.rs \
     'fn item_belongs_in_main_work_area.*?app_name != "Zed" && requested_pane_kind != PaneKind::Tabs && !is_panel_item.*?fn add_item_to_active_pane.*?item_belongs_in_main_work_area.*?fn add_item\(.*?item_belongs_in_main_work_area.*?fn dez_routes_work_tabs_out_of_navigator_surfaces.*?PaneKind::Project.*?PaneKind::Agent.*?PaneKind::Tabs' \
     'files, commits, diffs, reviews, and terminals can regress into fixed Navigator mode tabs'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'fn render_empty_project_state.*?"Start work in this project".*?Codex, Claude Code, OpenCode, Herdr.*?items_center\(\).*?justify_center\(\).*?"Run".*?"Supervise in Projects".*?"Review in Files & Git"' \
-    'the Main Work Area onboarding can regress to a sparse non-native blank canvas'
+    'fn render_empty_project_state.*?"Main Work Area".*?"Open a file or Agent Terminal in this Workspace\.".*?"Empty pane".*?"Open a file or move a tab here\.".*?items_start\(\).*?justify_start\(\).*?max_w\(px\(520\.\)\).*?Button::new\("empty-project-terminal".*?ButtonStyle::Outlined.*?Button::new\("empty-project-open-file", "Find File"\).*?Button::new\("empty-project-new-file", "New File"\)' \
+    'the Main Work Area can regress from compact native empty chrome to onboarding or a blank canvas'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn terminal_thread_status.*?TerminalAgentState::Failed.*?TerminalRuntimeState::Missing.*?TerminalRuntimeState::Incompatible.*?AgentThreadStatus::Error.*?TerminalAgentState::WaitingForPermission.*?TerminalAgentState::WaitingForInput.*?AgentThreadStatus::WaitingForConfirmation.*?TerminalAgentState::Running.*?TerminalRuntimeState::Live.*?TerminalRuntimeState::Detached.*?TerminalRuntimeState::Reconnecting.*?AgentThreadStatus::Running.*?\.status\(terminal_status\)' \
     'Agent Session rows can regress to hiding running, human-intervention, reconnecting, and failed states'
@@ -190,17 +190,23 @@ require_multiline_pattern assets/settings/initial_user_settings.json \
 require_multiline_pattern assets/settings/initial_user_settings.json \
     '"icon_theme": "Dez \(Default\)".*?"markdown_preview_code_font_family": "Lilex"' \
     'first-run settings can omit the Dez icons or coherent Markdown code font'
+require_multiline_pattern assets/settings/initial_user_settings.json \
+    '"tab_bar": \{.*?"show": true.*?"show_nav_history_buttons": true.*?"show_tab_bar_buttons": true' \
+    'first-run Dez can regress to hiding native pane navigation or tab controls'
+require_multiline_pattern assets/settings/initial_user_settings.json \
+    '"status_bar": \{.*?"experimental\.show": true.*?"show_active_file": true.*?"line_endings_button": true' \
+    'first-run Dez can regress to hiding the native editor status hierarchy'
 require_multiline_pattern crates/zed_actions/src/lib.rs \
     'pub mod dez.*?actions!\([[:space:]]*dez.*?RestoreVisualProfile' \
     'the explicit Dez visual-profile recovery action is no longer registered'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'fn restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?ui_font_family = Some\(ui_font\).*?buffer_font_family = Some\(code_font\.clone\(\)\).*?markdown_preview_code_font_family = Some\(code_font\.clone\(\)\).*?ThemeSelection::Dynamic.*?ThemeAppearanceMode::System.*?Lumin Light.*?Lumin Blur.*?IconThemeSelection::Static.*?Dez \(Default\).*?design_system.*?CanvasDensity::Balanced.*?terminal.*?font_family = Some\(code_font\)' \
+    'fn restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?ui_font_family = Some\(ui_font\).*?buffer_font_family = Some\(code_font\.clone\(\)\).*?markdown_preview_code_font_family = Some\(code_font\.clone\(\)\).*?ThemeSelection::Dynamic.*?ThemeAppearanceMode::System.*?Lumin Light.*?Lumin Blur.*?IconThemeSelection::Static.*?Dez \(Default\).*?design_system.*?CanvasDensity::Balanced.*?terminal.*?font_family = Some\(code_font\).*?tab_bar\.show = Some\(true\).*?tab_bar\.show_nav_history_buttons = Some\(true\).*?tab_bar\.show_tab_bar_buttons = Some\(true\).*?status_bar\.show = Some\(true\).*?status_bar\.show_active_file = Some\(true\).*?status_bar\.line_endings_button = Some\(true\)' \
     'visual-profile recovery can stop restoring the complete scoped Dez identity'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'RestoreVisualProfile.*?APP_NAME == "Zed".*?update_settings_file_with_completion.*?restore_dez_visual_profile.*?completion\.await\?\?.*?Restored Lumin, balanced density, IBM Plex Sans, Lilex, and Dez icons\..*?Failed to restore the Dez visual profile' \
+    'RestoreVisualProfile.*?APP_NAME == "Zed".*?update_settings_file_with_completion.*?restore_dez_visual_profile.*?completion\.await\?\?.*?Restored Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, and the editor status bar\..*?Failed to restore the Dez visual profile' \
     'visual-profile recovery can affect official Zed, report before persistence, or fail silently'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'fn dez_visual_profile_restores_identity_without_resetting_font_size.*?ui_font_size = Some\(18\.0\.into\(\)\).*?restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?Lumin Light.*?Lumin Blur.*?Dez \(Default\).*?design_system.*?density.*?balanced.*?ui_font_size.*?18\.0' \
+    'fn dez_visual_profile_restores_identity_without_resetting_font_size.*?ui_font_size = Some\(18\.0\.into\(\)\).*?restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?Lumin Light.*?Lumin Blur.*?Dez \(Default\).*?design_system.*?density.*?balanced.*?tab_bar.*?show_nav_history_buttons.*?show_tab_bar_buttons.*?status_bar.*?experimental\.show.*?show_active_file.*?line_endings_button.*?ui_font_size.*?18\.0' \
     'the scoped visual-profile mutation is no longer covered against size resets'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'APP_NAME != "Zed".*?Restore Dez Visual Profile.*?zed_actions::dez::RestoreVisualProfile' \
@@ -292,7 +298,7 @@ reject_pattern README.md \
     '^# Zed$|download Zed directly|we.re hiring|Sponsorships go directly to Zed Industries' \
     'the repository front page still presents Dez as the official upstream Zed product'
 require_multiline_pattern docs/src/dez.md \
-    '^# What is Dez\?.*?## The screen model.*?Projects.*?Main Work Area.*?Workspace Tools.*?native pane grid.*?## How coding work flows.*?Open Agent Terminal.*?## Terminal and Agent integration.*?Packaged Dez builds.*?External Sessions.*?v0\.0\.4 adds explicit attachment for tmux and Herdr only.*?The v0\.0\.4 goal.*?## Source-preview limits' \
+    '^# What is Dez\?.*?## The screen model.*?Projects.*?Main Work Area.*?Workspace Tools.*?native pane grid.*?## How coding work flows.*?Open Agent Terminal.*?## Terminal and Agent integration.*?Packaged Dez builds.*?External Sessions.*?v0\.0\.4 adds explicit project-scoped integration for tmux, Herdr, and cmux.*?The v0\.0\.4 goal.*?## Source-preview limits' \
     'the public product guide can lose the screen model, IDE integration, or honest source-preview boundary'
 require_pattern docs/src/SUMMARY.md \
     '^- \[What is Dez\?\]\(\./dez\.md\)$' \
@@ -445,13 +451,13 @@ require_pattern crates/settings_ui/src/page_data.rs \
     'dez_settings_page_visible\(paths::APP_NAME, "Collaboration"\)' \
     'Dez Settings can regress to exposing the inherited Calls and Collaboration page'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
-    'if paths::APP_NAME != "Zed".*?pages\.sort_by_key\(\|page\| dez_settings_page_priority\(page\.title\)\).*?fn dez_settings_page_priority.*?"Workspace & Privacy" => 0.*?"Projects & Terminals" => 1.*?"Agents" => 2.*?"Attention" => 3.*?"Evidence" => 4.*?"Files, Git & Agent" => 11.*?"Advanced" => 15' \
+    'if paths::APP_NAME != "Zed".*?pages\.sort_by_key\(\|page\| dez_settings_page_priority\(page\.title\)\).*?fn dez_settings_page_priority.*?"Workspace & Privacy" => 0.*?"Workspaces & Terminals" => 1.*?"Agents" => 2.*?"Attention" => 3.*?"Evidence" => 4.*?"Navigation & Layout" => 10.*?"Workspace Tools" => 11.*?"Advanced" => 15' \
     'Dez Settings can regress to burying its product workflow below inherited IDE customization'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'developer_settings_page_visible\(paths::APP_NAME, cx\.feature_flag_overrides_enabled\(\)\).*?pages\.push\(developer_page\(cx\)\).*?fn developer_settings_page_visible.*?app_name == "Zed" \|\| feature_flag_overrides_enabled' \
     'Dez Settings can regress to exposing staff instrumentation in the public navigation'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
-    'fn sessions_side_setting_visible.*?app_name == "Zed".*?page_title == "Agents".*?page_title == "Projects & Terminals".*?fn sessions_side_setting.*?"Projects Side".*?Projects navigator appears on.*?json_path: Some\("sidebar\.side"\).*?fn terminal_page\(\) -> SettingsPage.*?sessions_side_setting_visible\(paths::APP_NAME, "Projects & Terminals"\).*?sessions_side_setting\(\).*?"Projects & Terminals".*?sessions_section\(\)' \
+    'fn sessions_side_setting_visible.*?app_name == "Zed".*?page_title == "Agents".*?page_title == "Workspaces & Terminals".*?fn projects_startup_setting.*?"Open Projects on Startup".*?json_path: Some\("sidebar\.starts_open"\).*?fn sessions_side_setting.*?"Projects Side".*?Projects navigator appears on.*?json_path: Some\("sidebar\.side"\).*?fn terminal_page\(\) -> SettingsPage.*?sessions_side_setting_visible\(paths::APP_NAME, "Workspaces & Terminals"\).*?sessions_side_setting\(\).*?projects_startup_setting\(\).*?"Workspaces & Terminals".*?sessions_section\(\)' \
     'the Projects placement control can regress to an unrelated Agent-provider section'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn ai_page\(cx: &App\) -> SettingsPage.*?SectionHeader\(agent_session_setting_copy.*?"General".*?"Agent Runtime & Providers".*?"Disable AI".*?"Disable Agent Features".*?sessions_side_setting_visible\(paths::APP_NAME, "Agents"\).*?title: "Agents"' \
@@ -547,20 +553,20 @@ require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'test_plain_workspace_shell_is_promoted_only_after_agent_evidence.*?!sidebar\.contents\.entries\.iter\(\)\.any.*?session_count, 0.*?set_custom_title\(Some\("Codex".*?matching_terminals, 1.*?session_count, 1' \
     'the ordinary-shell-to-agent promotion contract is no longer covered'
 require_multiline_pattern docs/src/terminal.md \
-    'What Dez can and cannot observe.*?Projects does not list arbitrary.*?current-user TTYs.*?neither.*?owned nor safely controllable.*?does not capture.*?transcript or arguments.*?accept its input.*?adopt its PTY.*?v0\.0\.4 adds a narrower, explicit control boundary for tmux and Herdr.*?list-panes.*?snapshot API.*?Attach Running Session….*?open Project whose root contains.*?remains authoritative.*?never requests.*?a.*?Herdr takeover automatically' \
+    'What Dez can and cannot observe.*?Projects does not list arbitrary.*?current-user TTYs.*?neither.*?owned nor safely controllable.*?does not capture.*?transcript or arguments.*?accept its input.*?adopt its PTY.*?v0\.0\.4 adds a narrower, explicit control boundary for tmux, Herdr, and cmux.*?list-panes.*?snapshot API.*?list-workspaces --json.*?Open Running Workspace or.*?Session….*?open Project whose root contains.*?select-workspace.*?remains authoritative.*?never requests a Herdr takeover automatically' \
     'the public product contract can regress to confusing machine terminal observation with ownership'
 require_multiline_pattern crates/agent_ui/src/machine_terminal_store.rs \
     'MACHINE_TERMINAL_REFRESH_INTERVAL.*?observation-only.*?does not own the PTY.*?ObservedMachineTerminal.*?Command::new\("/bin/ps"\).*?process_is_descendant_of.*?process_belongs_to_dez.*?/dez\.app/.*?dez-terminal-host.*?working_directories_for' \
     'machine terminal discovery can regress to implied ownership, self-duplication, or retained command context'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn external_multiplexer_session_belongs_to_project.*?project_group_key.*?path_list\(\).*?paths\(\).*?cwd\.starts_with\(root\).*?if APP_NAME != "Zed".*?multiplexer_sessions\.retain.*?external_multiplexer_session_belongs_to_project.*?machine_terminals\.clear\(\).*?let multiplexer_session_count = if APP_NAME == "Zed".*?fn attach_external_multiplexer_session.*?use_new_terminal: true.*?RevealTarget::Center' \
+    'fn external_multiplexer_session_belongs_to_project.*?external_multiplexer_project_match_score.*?fn external_multiplexer_project_match_score.*?project_group_key\.host\(\)\.is_some\(\).*?working_directory.*?path_list\(\).*?paths\(\).*?working_directory\.starts_with\(root\).*?fn external_multiplexer_project_group.*?max_by_key.*?if APP_NAME != "Zed".*?multiplexer_sessions\.retain.*?external_multiplexer_session_belongs_to_project.*?machine_terminals\.clear\(\).*?fn open_external_multiplexer_session.*?ExternalSessionOpenMode::RevealExternal.*?std::process::Command::new.*?use_new_terminal: true.*?RevealTarget::Center' \
     'Dez can regress to leaking unrelated terminal activity into Projects or taking external process ownership'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let has_external_terminal_rows = APP_NAME == "Zed".*?let total_item_count = self\.contents\.session_count.*?if APP_NAME == "Zed".*?let external_terminal_section = \(APP_NAME == "Zed"\).*?render_external_terminal_section' \
     'arbitrary machine activity can regress to becoming a permanent Dez Projects section or Session count'
 require_multiline_pattern crates/agent_ui/src/multiplexer_session_store.rs \
-    'MULTIPLEXER_REFRESH_INTERVAL.*?TMUX_FIELD_SEPARATOR: &str = "\|:dez:\|".*?TMUX_FORMAT.*?pub enum MultiplexerKind.*?pub enum MultiplexerSessionState.*?pub struct ExternalMultiplexerSession.*?attach_command.*?"attach-session".*?"agent".*?"attach".*?"terminal".*?"session".*?"control".*?scan_tmux_sessions.*?"list-panes".*?parse_tmux_sessions.*?scan_herdr_sessions.*?"api".*?"snapshot".*?parse_herdr_snapshot.*?Some\("blocked"\) => MultiplexerSessionState::NeedsAttention' \
-    'tmux and Herdr discovery can regress to unstable identity, missing attention state, or a non-native attach path'
+    'MULTIPLEXER_REFRESH_INTERVAL.*?TMUX_FIELD_SEPARATOR: &str = "\|:dez:\|".*?TMUX_FORMAT.*?pub enum MultiplexerKind.*?Cmux.*?pub enum MultiplexerSessionState.*?Available.*?pub enum ExternalSessionOpenMode.*?AttachInTerminal.*?RevealExternal.*?pub struct ExternalMultiplexerSession.*?open_command.*?"attach-session".*?"agent".*?"attach".*?"terminal".*?"session".*?"control".*?"select-workspace".*?scan_tmux_sessions.*?"list-panes".*?scan_cmux_workspaces.*?/Applications/cmux\.app/Contents/Resources/bin/cmux.*?"list-workspaces".*?"--json".*?parse_cmux_workspaces.*?parse_tmux_sessions.*?scan_herdr_sessions.*?"api".*?"snapshot".*?parse_herdr_snapshot.*?Some\("blocked"\) => MultiplexerSessionState::NeedsAttention' \
+    'external Workspace and session discovery can regress to unstable identity, missing attention state, or dishonest ownership'
 reject_pattern crates/agent_ui/src/multiplexer_session_store.rs \
     '"--takeover"' \
     'Dez can regress to seizing a Herdr pane without an explicit user decision'
@@ -754,10 +760,10 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_project_header.*?let label = if highlight_positions\.is_empty\(\).*?Label::new.*?\.truncate\(\).*?HighlightedLabel::new.*?\.truncate\(\).*?h_flex\(\).*?\.relative\(\).*?\.min_w_0\(\).*?\.flex_1\(\).*?\.child\([[:space:]]*h_flex\(\)[[:space:]]*\.flex_none\(\)[[:space:]]*\.gap\(px\(1\.0\)\).*?render_new_session_button.*?render_project_header_ellipsis_menu' \
     'Workspace headers can regress from bounded inline truncation to overlapping title and action regions'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn workspace_header_terminal_action_visible\(has_sessions: bool, is_collapsed: bool\) -> bool \{[[:space:]]*has_sessions \|\| is_collapsed[[:space:]]*\}.*?fn render_project_header.*?workspace_header_terminal_action_visible\(has_threads, is_collapsed\).*?self\.render_new_session_button.*?if labels_visible && !is_collapsed && !has_threads.*?terminal_launch_label\(APP_NAME\)' \
-    'an expanded empty Workspace can regress to showing both compact and full terminal launchers'
+    'fn workspace_header_terminal_action_visible\(.*?app_name != "Zed" \|\| has_sessions \|\| is_collapsed.*?fn render_project_header.*?workspace_header_terminal_action_visible\([[:space:]]*APP_NAME,[[:space:]]*has_threads,[[:space:]]*is_collapsed.*?self\.render_new_session_button.*?else if APP_NAME == "Zed" && labels_visible && !is_collapsed && !has_threads.*?terminal_launch_label\(APP_NAME\)' \
+    'an empty Dez Workspace can regress from one compact native launcher to onboarding chrome'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
-    'fn empty_expanded_workspace_uses_only_the_labeled_terminal_action.*?!workspace_header_terminal_action_visible\(false, false\).*?workspace_header_terminal_action_visible\(false, true\).*?workspace_header_terminal_action_visible\(true, false\)' \
+    'fn dez_empty_workspace_keeps_one_compact_native_terminal_action.*?workspace_header_terminal_action_visible\("Dez", false, false\).*?workspace_header_terminal_action_visible\("Dez", false, true\).*?workspace_header_terminal_action_visible\("Dez", true, false\).*?!workspace_header_terminal_action_visible\("Zed", false, false\)' \
     'Workspace terminal launcher visibility can regress across empty, collapsed, and populated states'
 require_multiline_pattern crates/git_ui/src/git_panel.rs \
     'fn review_repository_position.*?active_repository.*?filter.*?changed_file_counts.*?position.*?fn review_repository_with_changes.*?repositories\(\).*?sort_by.*?review_repository_position.*?fn first_review_change.*?cached_status.*?min_by.*?fn review_prefers_the_active_dirty_repository_then_the_first_dirty_repository.*?ReviewChanges,.*?register\(workspace: &mut Workspace\).*?_: &ReviewChanges.*?review_repository_with_changes.*?repository_changed.*?set_as_active_repository.*?reveal_panel::<GitPanel>.*?GitPanelTab::Changes.*?schedule_update.*?select_first_entry_if_none.*?first_review_change.*?ProjectDiff::deploy_at' \
@@ -817,8 +823,8 @@ reject_pattern crates/workspace/src/multi_workspace.rs \
     'reconcile_dez_auxiliary_surfaces_after_resize|dez_auxiliary_surfaces_were_window_exclusive' \
     'obsolete resize repair returned instead of enforcing one auxiliary surface at entry'
 require_multiline_pattern crates/workspace/src/multi_workspace.rs \
-    'fn sidebar_resize_handle_occludes_main_work_area.*?app_name == "Zed".*?fn sidebar_keyboard_resize_target.*?"left".*?"right".*?"enter".*?fn dez_sessions_splitter_never_becomes_an_invisible_work_area_overlay.*?!sidebar_resize_handle_occludes_main_work_area\("Dez"\).*?fn sessions_splitter_keyboard_resizing_follows_the_physical_seam.*?role\(gpui::Role::Splitter\).*?aria_label\("Resize Sessions"\).*?aria_orientation\(gpui::Orientation::Vertical\).*?tab_index\(0isize\).*?on_key_down.*?sidebar_keyboard_resize_target.*?when\([[:space:]]*sidebar_resize_handle_occludes_main_work_area\(paths::APP_NAME\).*?this\.occlude\(\)' \
-    'the Sessions seam can regress to an invisible mouse-blocking overlay or lose keyboard resizing'
+    'fn sidebar_resize_copy.*?"Resize Sessions".*?"Resize Projects".*?fn sidebar_resize_handle_occludes_main_work_area.*?app_name == "Zed".*?fn sidebar_keyboard_resize_target.*?"left".*?"right".*?"enter".*?fn dez_projects_splitter_names_the_product_navigator.*?fn dez_sessions_splitter_never_becomes_an_invisible_work_area_overlay.*?!sidebar_resize_handle_occludes_main_work_area\("Dez"\).*?fn sessions_splitter_keyboard_resizing_follows_the_physical_seam.*?sidebar_resize_copy\(paths::APP_NAME\).*?role\(gpui::Role::Splitter\).*?aria_label\(resize_label\).*?aria_orientation\(gpui::Orientation::Vertical\).*?tab_index\(0isize\).*?on_key_down.*?sidebar_keyboard_resize_target.*?when\([[:space:]]*sidebar_resize_handle_occludes_main_work_area\(paths::APP_NAME\).*?this\.occlude\(\)' \
+    'the Projects seam can regress to inherited wording, an invisible mouse-blocking overlay, or lose keyboard resizing'
 require_multiline_pattern docs/src/development/dez/fork-notes.md \
     'The final shell follows this responsive layout contract.*?canonical[[:space:]]+wireframe.*?Wide window · 1160 logical px or more.*?Projects · global and collapsible.*?Main Work Area · primary.*?Workspace Tools · contextual.*?Narrow window · below 1160 logical px.*?Main Work Area · always present.*?at least 60% of the window.*?Open Agent Terminal.*?Run Codex, Claude Code.*?Projects shows agent Sessions.*?Focus or reattach the existing.*?Running a terminal-native agent.*?terminal remains the interactive source of truth.*?Projects restoration follows this lifecycle.*?Projects visibility = Auto.*?Explicit Projects command.*?Projects is a global[[:space:]]+navigator.*?Files, Outline, Git, Debug, and Built-in Agent share one right-side slot' \
     'the permanent Dez shell contract can lose its concrete responsive layout and state transition'
@@ -1018,8 +1024,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_session_overview.*?IconButton::new\("hide-sessions", IconName::Close\).*?aria_label\(session_rail_hide_label\(APP_NAME\)\).*?Tooltip::for_action.*?session_rail_hide_label\(APP_NAME\).*?dispatch_action\(Box::new\(CloseSidebar\)' \
     'an open Projects rail can regress to hiding its only obvious close action in generic window chrome'
 require_multiline_pattern crates/workspace/src/multi_workspace.rs \
-    'sidebar_chrome_toggle_visible\(paths::APP_NAME, sidebar_open\).*?fn sidebar_chrome_toggle_visible.*?app_name == "Zed" \|\| !sidebar_open.*?fn dez_uses_chrome_to_open_sessions_but_not_to_duplicate_its_hide_action' \
-    'Dez can regress to duplicate Sessions controls while the rail is already open'
+    'sidebar_toggle_label\(paths::APP_NAME, sidebar_open\).*?fn sidebar_toggle_label.*?"Hide Sessions".*?"Open Sessions".*?"Hide Projects".*?"Open Projects".*?fn sidebar_chrome_toggle_visible.*?app_name == "Zed" \|\| !sidebar_open.*?fn dez_uses_chrome_to_open_projects_but_not_to_duplicate_its_hide_action' \
+    'Dez can regress to inherited Sessions wording or duplicate Projects controls while the navigator is already open'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\([[:space:]]*"open-recent-workspaces",[[:space:]]*session_rail_recent_workspaces_utility_label\(rail_width\).*?aria_label\("Open Recent Workspaces"\)' \
     'the Session Rail recent-Workspace utility can regress to an unexplained or ambiguous destination'
@@ -1045,8 +1051,8 @@ reject_pattern crates/search/src/search_status_button.rs \
     '"Search files"' \
     'healthy terminal-focused status chrome can regress to a redundant visible search label'
 require_multiline_pattern crates/workspace/src/status_bar.rs \
-    'fn render_left_tools.*?\.flex_1\(\).*?\.min_w_0\(\).*?sidebar\.show_toggle.*?div\(\).*?\.flex_none\(\).*?render_sidebar_toggle\(sidebar, cx\).*?h_flex\(\).*?\.flex_1\(\).*?\.min_w_0\(\).*?\.overflow_x_hidden\(\).*?self\.left_items.*?fn render_right_tools.*?sidebar\.show_toggle.*?div\(\).*?\.flex_none\(\).*?render_sidebar_toggle\(sidebar, cx\)' \
-    'responsive status items can regress to clipping the fixed Open Sessions recovery control'
+    'fn sidebar_toggle_label.*?app_name == "Zed".*?"Open Sessions".*?"Open Projects".*?fn render_left_tools.*?\.flex_1\(\).*?\.min_w_0\(\).*?sidebar\.show_toggle.*?div\(\).*?\.flex_none\(\).*?render_sidebar_toggle\(sidebar, cx\).*?h_flex\(\).*?\.flex_1\(\).*?\.min_w_0\(\).*?\.overflow_x_hidden\(\).*?self\.left_items.*?fn render_right_tools.*?sidebar\.show_toggle.*?div\(\).*?\.flex_none\(\).*?render_sidebar_toggle\(sidebar, cx\)' \
+    'responsive status items can regress to clipping the fixed Open Projects recovery control or inherited terminology'
 require_multiline_pattern crates/search/src/project_search.rs \
     'fn workspace_search_title.*?app_name == "Zed".*?"Project Search".*?"Workspace Search".*?fn workspace_search_loading_label.*?"Loading project…".*?"Loading workspace…".*?fn workspace_search_no_results_label.*?"No results found in this project.*?"No files in this Workspace match the current query' \
     'Workspace Search can regress to Project scope after the status-bar action opens it'
@@ -1072,8 +1078,8 @@ reject_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\("Ready for a session"\)' \
     'empty Workspace groups can regress to repeating readiness already stated by the overview and accessible header'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'if labels_visible && !is_collapsed && !has_threads.*?empty-project-new-terminal-\{ix\}.*?terminal_launch_label\(APP_NAME\).*?ButtonStyle::Filled.*?"\{\} in \{\}".*?terminal_launch_label\(APP_NAME\).*?workspace_new_terminal_tooltip_label\(APP_NAME\)' \
-    'an empty Workspace can regress to visually demoting or ambiguously naming its only useful action'
+    'workspace_header_terminal_action_visible\([[:space:]]*APP_NAME,[[:space:]]*has_threads,[[:space:]]*is_collapsed.*?render_new_session_button.*?else if APP_NAME == "Zed".*?empty-project-new-terminal-\{ix\}.*?fn render_new_session_button.*?workspace_new_terminal_control_label\([[:space:]]*APP_NAME,[[:space:]]*workspace_name.*?aria_label\(new_terminal_label\.clone\(\)\)' \
+    'an empty Dez Workspace can regress to visually demoting its launcher or restoring non-native onboarding chrome'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn default_new_session_target\(\) -> NewEntryTarget \{[[:space:]]*NewEntryTarget::Terminal' \
     'the Session Rail default creation path is no longer terminal-first'
@@ -1432,8 +1438,11 @@ require_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\("new-session", "Start Terminal"\)' \
     'the primary Session Rail creation action is ambiguous'
 require_multiline_pattern crates/onboarding/src/basics_page.rs \
-    'IconName::Terminal,[[:space:]]*"Run".*?IconName::ListTree,[[:space:]]*"Supervise".*?IconName::Diff,[[:space:]]*"Review".*?\.role\(gpui::Role::Region\).*?\.aria_label\("Terminal-first workflow"\)' \
+    'IconName::Terminal,[[:space:]]*"Run".*?IconName::ListTree,[[:space:]]*"Supervise".*?"Use Projects to scan Workspace activity and attention without changing context\.".*?IconName::Diff,[[:space:]]*"Review".*?\.role\(gpui::Role::Region\).*?\.aria_label\("Workspace agent workflow"\)' \
     'the Dez first-run workflow is not exposed as a named accessibility region'
+require_pattern crates/onboarding/src/basics_page.rs \
+    'supervise it in Projects' \
+    'the Dez first-run summary can regress to inherited Sessions navigation'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'session_row_primary_action_button\([[:space:]]*"review-terminal-changes",[[:space:]]*"Review",[[:space:]]*IconName::Diff.*?session_row_primary_action_button\([[:space:]]*"review-terminal-run",[[:space:]]*"Details",[[:space:]]*IconName::Info' \
     'Terminal Session review actions can regress to contradictory icon roles'
@@ -1513,7 +1522,7 @@ require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn terminal_session_init_setting_visible\(app_name: &str\) -> bool \{[[:space:]]*app_name == "Zed".*?if terminal_session_init_setting_visible\(paths::APP_NAME\).*?Some\("agent\.terminal_init_command"\)' \
     'Dez Settings can regress to exposing the legacy Agent-Panel terminal startup control even though Main Work Area terminals do not consume it'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
-    'fn workspace_surface_setting_path_visible.*?"project_panel\.dock".*?"outline_panel\.dock".*?"git_panel\.dock".*?"agent\.dock".*?"agent\.default_height".*?fn panels_page.*?"Outline Panel",[[:space:]]*"Outline".*?"Git Panel",[[:space:]]*"Git".*?"Agent Panel",[[:space:]]*"Agent".*?title: workspace_surface_copy\(paths::APP_NAME, "Panels", "Files, Git & Agent"\)' \
+    'fn workspace_surface_setting_path_visible.*?"project_panel\.dock".*?"outline_panel\.dock".*?"git_panel\.dock".*?"agent\.dock".*?"agent\.default_height".*?fn panels_page.*?"Outline Panel",[[:space:]]*"Outline".*?"Git Panel",[[:space:]]*"Git".*?"Agent Panel",[[:space:]]*"Agent".*?title: workspace_surface_copy\(paths::APP_NAME, "Panels", "Workspace Tools"\)' \
     'Dez Settings can regress to exposing dock-only controls or inherited Panel hierarchy instead of Workspace Tools and Agent'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     '"Agent Panel Font",[[:space:]]*"Agent Typography".*?"Outline Panel Button",[[:space:]]*"Outline Control".*?"Git Panel Button",[[:space:]]*"Git Control".*?"Agent Panel Button",[[:space:]]*"Agent Control"' \
@@ -1540,8 +1549,14 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'render_project_header_ellipsis_menu.*?terminal_launch_label\(APP_NAME\).*?workspace_built_in_agent_action_label\([[:space:]]*APP_NAME,[[:space:]]*built_in_agent_ready' \
     'Workspace Options can regress to hiding project-scoped terminal or Built-in Agent creation'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'external_multiplexer_session_belongs_to_project.*?submenu\([[:space:]]*"Attach Running Session…".*?attach_external_multiplexer_session' \
-    'a Project can regress to hiding or mis-scoping its attachable tmux and Herdr sessions'
+    'let project_group_keys = multi_workspace.*?project_group_keys\(\)\.to_vec\(\).*?let attachable_sessions.*?external_multiplexer_project_group\(session, &project_group_keys\).*?== Some\(&project_group_key\).*?submenu\([[:space:]]*"Open Running Workspace or Session…".*?open_external_multiplexer_session' \
+    'a Project can regress to hiding or mis-scoping its external Workspaces and sessions'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'let project_group_keys = groups.*?let mut projected_multiplexer_session_ids.*?let group_external_sessions = multiplexer_sessions.*?external_multiplexer_project_group\(session, &project_group_keys\).*?== Some\(group_key\).*?has_visible_rows =.*?!external_sessions\.is_empty\(\).*?external_sessions,[[:space:]]*\}\);.*?fn render_project_header\(.*?external_sessions: &\[ExternalMultiplexerSession\].*?workspace-external-session-.*?external_multiplexer_icon\(session\).*?session\.kind\.display_name\(\).*?session\.state_label\(\).*?tab_index\(0isize\).*?aria_label\(action_label\.clone\(\)\).*?open_external_multiplexer_session' \
+    'external terminal and cmux activity can regress from the most specific Workspace into a flat or pointer-only inventory'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'let attention_count = entries.*?matches!\(entry, ListEntry::Thread\(_\) \| ListEntry::Terminal\(_\)\).*?entry_needs_attention.*?projected_multiplexer_session_ids\.contains\(&session\.id\).*?MultiplexerSessionState::NeedsAttention' \
+    'Workspace roll-up headers can regress to inflating the actionable attention count'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'menu\.when\(is_active.*?action\("Open Files", Box::new\(RevealFiles\)\).*?action\("Review Git Changes", Box::new\(ReviewGitChanges\)\).*?action\([[:space:]]*"Open Debug".*?ApplyCanvasLayoutRecipe.*?name: "debug"' \
     'Workspace Options can regress to hiding Files, Git, or Debug behind layout administration'
@@ -1560,9 +1575,18 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn canvas_thread_item_style\(.*?APP_NAME != "Zed".*?ThreadItemDensity::Compact.*?ThreadItemRadius::None.*?ThreadItemContrast::Standard.*?metadata_visible\(false\).*?layout_label\.filter\(\|_\| \{.*?APP_NAME == "Zed".*?running_terminal_agent_label.*?APP_NAME == "Zed"' \
     'Dez Projects rows can regress from native compact navigation into rounded metadata cards'
+require_pattern crates/ui/src/components/ai/thread_item.rs \
+    '^[[:space:]]*metadata_visible: bool,$' \
+    'ThreadItem lost the flag used to hide secondary metadata in compact navigation'
+require_pattern crates/ui/src/components/ai/thread_item.rs \
+    '^[[:space:]]*metadata_visible: true,$' \
+    'ThreadItem secondary metadata no longer defaults to visible outside Dez Projects'
 require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
-    'metadata_visible: bool.*?metadata_visible: true.*?pub fn metadata_visible\(.*?Controls only the visible secondary metadata row.*?let has_metadata = self\.metadata_visible.*?&& labels_visible' \
-    'ThreadItem can no longer hide visual metadata while preserving accessible session detail'
+    'pub fn metadata_visible\(mut self, visible: bool\) -> Self \{[[:space:]]*self\.metadata_visible = visible;[[:space:]]*self[[:space:]]*\}' \
+    'ThreadItem lost its scoped secondary-metadata visibility builder'
+require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
+    'let has_metadata = self\.metadata_visible[[:space:]]*&& labels_visible' \
+    'ThreadItem visible metadata is no longer gated independently from accessible labels'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_search_visible\(.*?app_name == "Zed".*?session_count > 0 \|\| has_query.*?has_query \|\| is_focused \|\| is_open.*?fn session_search_control_visible.*?app_name != "Zed" && session_count > 1.*?fn session_rail_search_label.*?"Search Sessions".*?"Search Projects and Sessions".*?fn focus_sidebar_filter.*?paths::APP_NAME == "Zed".*?self\.filter_editor\.focus_handle\(cx\)\.focus\(window, cx\).*?self\.session_search_open = true.*?cx\.defer_in\(window.*?filter_editor\.focus_handle\(cx\)\.focus\(window, cx\).*?let search_is_active.*?self\.session_search_open.*?session_search_control_visible\(.*?&& !search_is_active.*?IconButton::new\(.*?"open-session-search".*?IconName::MagnifyingGlass.*?tab_index\(0isize\).*?aria_label\(session_rail_search_label\(APP_NAME\)\).*?focus_sidebar_filter\(&FocusSidebarFilter.*?let dismiss_label = if paths::APP_NAME == "Zed".*?"Clear Session Search".*?"Close Session Search".*?IconButton::new\("clear-session-search", IconName::Close\).*?tab_index\(0isize\).*?aria_label\(dismiss_label\).*?this\.session_search_open = false.*?this\.focus_handle\.focus\(window, cx\)' \
     'Dez Projects search can regress to a permanent row, duplicate active control, or pointer-only disclosure without a close path'
@@ -1826,10 +1850,10 @@ require_multiline_pattern crates/workspace/src/pane.rs \
     'fn pane_new_surface_menu_copy.*?"Open File…".*?"Search Workspace…".*?"Go to Symbol…"' \
     'the Main Work Area creation menu can regress to ambiguous commands that conceal a follow-up'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'let split_enabled = can_clone \|\| can_split_move.*?pane_split_control_copy\(paths::APP_NAME, split_enabled\).*?IconButton::new\("split", IconName::Split\).*?tab_index\(0isize\).*?aria_label\(split_aria_label\).*?disabled\(!split_enabled\).*?Tooltip::text\(split_tooltip\).*?fn pane_split_control_copy.*?app_name == "Zed" \|\| enabled.*?"Split Pane Unavailable".*?"This Surface cannot be split or moved into a new pane"' \
+    'let split_enabled = can_clone \|\| can_split_move.*?pane_split_control_copy\(paths::APP_NAME, split_enabled\).*?IconButton::new\("split", IconName::Split\).*?tab_index\(0isize\).*?aria_label\(split_aria_label\).*?disabled\(!split_enabled\).*?Tooltip::text\(split_tooltip\).*?fn pane_split_control_copy.*?app_name == "Zed" \|\| enabled.*?"Split Pane Unavailable".*?"This tab cannot be split or moved to another pane"' \
     'the pane split control can regress to a disabled icon with no explanation'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'pane_tab_overflow_copy\(paths::APP_NAME\).*?"pane-tab-overflow-menu-button".*?tab_index\(0isize\).*?aria_label\(overflow_control_label\).*?Tooltip::text\(overflow_control_label\).*?menu\.header\(overflow_menu_header\).*?fn pane_tab_overflow_copy.*?"Open Tab".*?"Tabs".*?"Switch Surface".*?"Surfaces"' \
+    'pane_tab_overflow_copy\(paths::APP_NAME\).*?"pane-tab-overflow-menu-button".*?tab_index\(0isize\).*?aria_label\(overflow_control_label\).*?Tooltip::text\(overflow_control_label\).*?menu\.header\(overflow_menu_header\).*?fn pane_tab_overflow_copy.*?"Open Tab".*?"Tabs".*?"Switch Tab".*?"Tabs"' \
     'the Dez Surface switcher can regress to a misleading Open Tab control'
 require_multiline_pattern crates/workspace/src/pane.rs \
     '"navigate_backward".*?tab_index\(0isize\).*?aria_label\("Go Back"\).*?"navigate_forward".*?tab_index\(0isize\).*?aria_label\("Go Forward"\).*?fn render_toggle_zoom_button.*?"toggle_zoom".*?tab_index\(0isize\).*?aria_label\(label\)' \
@@ -1961,11 +1985,11 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_container_reuses_terminal_material.*?app_name != "Zed" && transparent_theme.*?FailedToSpawnTerminal.*?\.bg\(cx\.theme\(\)\.colors\(\)\.terminal_background\).*?let terminal_container_background = if terminal_container_reuses_terminal_material\(.*?ui::theme_is_transparent\(cx\).*?gpui::transparent_black\(\).*?\.id\("terminal-unavailable-state"\).*?\.bg\(cx\.theme\(\)\.colors\(\)\.terminal_background\).*?\.id\("terminal-view-container"\).*?\.bg\(terminal_container_background\).*?fn dez_terminal_element_owns_the_translucent_terminal_material.*?terminal_container_reuses_terminal_material\("Dez", true\).*?!terminal_container_reuses_terminal_material\("Dez", false\).*?!terminal_container_reuses_terminal_material\("Zed", true\)' \
     'the terminal wrapper can regress to stacking the editor tint beneath the translucent terminal material'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    '\.id\("empty-project-state"\).*?\.size_full\(\).*?\.min_h_0\(\).*?\.overflow_y_scroll\(\).*?when\(is_dez.*?items_center\(\).*?justify_center\(\).*?px_8\(\).*?py_8\(\).*?when\(!is_dez.*?items_start\(\).*?justify_start\(\).*?px_6\(\).*?pt_8\(\).*?pb_6\(\)' \
+    '\.id\("empty-project-state"\).*?\.size_full\(\).*?\.min_h_0\(\).*?\.overflow_y_scroll\(\).*?\.items_start\(\).*?\.justify_start\(\).*?\.px_6\(\).*?\.pt_6\(\).*?\.pb_6\(\)' \
     'the empty Main Work Area can clip its primary actions in a short window'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'fn empty_main_work_area_shows_orientation.*?app_name == "Zed" \|\| is_active_pane.*?fn render_empty_project_state.*?active_pane\(\)\.entity_id\(\) == cx\.entity_id\(\).*?let show_orientation.*?empty_main_work_area_shows_orientation\(paths::APP_NAME, is_active_pane\).*?"Start work in this project".*?Codex, Claude Code, OpenCode, Herdr.*?"Open something here".*?"Open an Agent Terminal, find a file, or create one in this work area\.".*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?max_w\(px\(640\.\)\).*?\.gap_5\(\).*?max_w\(px\(600\.\)\).*?Headline::new\(title\)' \
-    'empty Main Work Areas can regress to repeated onboarding, vague copy, or a stale accessibility description'
+    'fn empty_main_work_area_shows_orientation.*?app_name == "Zed" \|\| is_active_pane.*?fn render_empty_project_state.*?active_pane\(\)\.entity_id\(\) == cx\.entity_id\(\).*?let show_orientation.*?empty_main_work_area_shows_orientation\(paths::APP_NAME, is_active_pane\).*?"Main Work Area".*?"Open a file or Agent Terminal in this Workspace\.".*?"Empty pane".*?"Open a file or move a tab here\.".*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?max_w\(px\(520\.\)\).*?\.gap_3\(\).*?when\(is_dez.*?IconName::File.*?Label::new\(title\)\.size\(LabelSize::Small\)' \
+    'empty Main Work Areas can regress to repeated onboarding, vague copy, or stale accessibility text'
 reject_pattern crates/workspace/src/pane.rs \
     'empty-project-route|workflow_route' \
     'the operational empty Main Work Area regained a duplicate workflow diagram'
@@ -1979,7 +2003,7 @@ reject_multiline_pattern crates/workspace/src/pane.rs \
     'fn render_empty_project_state.*?(\.p_5\(\).*?\.rounded_lg\(\).*?\.border_1\(\)|\.bg\(cx\.theme\(\)\.colors\(\)\.surface_background\)).*?fn render_empty_panel_state' \
     'the empty Main Work Area can regress to a floating card over its own native surface'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'let base_bg = color\.panel_background.*?let background = color\.panel_overlay_background.*?let sidebar_bg = color\.panel_background.*?let sidebar_bg = color\.panel_background.*?let \(bg, border\) =.*?let colors = cx\.theme\(\)\.colors\(\);.*?\(colors\.panel_background, colors\.border\).*?\.aria_label\(session_rail_accessibility_label\(APP_NAME\)\).*?\.bg\(bg\).*?\.border_color\(border\)' \
+    'let base_bg = color\.panel_background.*?let background = color\.panel_overlay_background.*?let \(bg, border\) =.*?let colors = cx\.theme\(\)\.colors\(\);.*?\(colors\.panel_background, colors\.border\).*?\.aria_label\(session_rail_accessibility_label\(APP_NAME\)\).*?\.bg\(bg\).*?\.border_color\(border\)' \
     'the Sessions rail can regress to painting the Main Work Area editor material'
 require_multiline_pattern crates/project_panel/src/project_panel.rs \
     'fn canvas_project_panel_background.*?CanvasContrast::Low => colors\.panel_background\.opacity\(0\.9\).*?CanvasContrast::Standard => colors\.panel_background.*?\.bg\(canvas_project_panel_background\(canvas_contrast, cx\)\)' \
@@ -2069,7 +2093,7 @@ require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'fn terminal_panel_surface_visible.*?app_name == "Zed".*?if terminal_panel_surface_visible\(APP_NAME\).*?terminal_panel::Toggle' \
     'the compatibility Terminal Panel can leak back into the Dez View menu'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
-    'fn workspace_tools_menu_label.*?"Show or Hide Workspace Tools".*?fn workspace_tools_are_grouped.*?app_name != "Zed".*?fn developer_surface_menu_label.*?if app_name != "Zed".*?dez_label' \
+    'fn workspace_tools_menu_label.*?"Toggle Workspace Tools".*?fn workspace_tools_are_grouped.*?app_name != "Zed".*?fn developer_surface_menu_label.*?if app_name != "Zed".*?dez_label' \
     'the Dez View menu can regress to implementation-flavored Project Tab and Panel labels'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'developer_surface_menu_label\([[:space:]]*APP_NAME,[[:space:]]*panels_as_pane_tabs,[[:space:]]*"Built-in Agent".*?if workspace_tools_are_grouped\(APP_NAME\).*?MenuItem::action\("Projects", workspace::ToggleSidebar\).*?Menu::new\("Workspace Tools"\).*?project_pane_label.*?project_surface_label.*?outline_surface_label.*?git_surface_label.*?debugger_surface_label.*?MenuItem::action\(agent_surface_label.*?editor_layout_menu\(\).*?Diagnostics' \
@@ -2102,7 +2126,7 @@ require_multiline_pattern crates/workspace/src/workspace.rs \
     'pub fn toggle_panel_focus<T: Panel>.*?panel_item_for::<T>.*?close_panel_on_toggle.*?self\.close_panel::<T>.*?last_tabbed_pane' \
     'pane-tab tool toggles can regress to focusing an already-focused Workspace Tool instead of hiding it'
 require_pattern crates/zed/src/zed/app_menus.rs \
-    '"Show or Hide Workspace Tools"' \
+    '"Toggle Workspace Tools"' \
     'the Dez Workspace-tools toggle regressed to upstream Project Pane copy'
 require_pattern crates/project_panel/src/project_panel.rs \
     'paths::APP_NAME == "Zed"' \
@@ -2125,6 +2149,24 @@ require_pattern crates/recent_projects/src/recent_projects.rs \
 require_pattern crates/workspace/src/welcome.rs \
     '\.aria_label\(self\.label\.clone\(\)\)' \
     'the Dez welcome actions are not named for assistive technology'
+require_multiline_pattern crates/workspace/src/welcome.rs \
+    'meta: Option<SharedString>.*?fn meta\(mut self, meta: impl Into<SharedString>\).*?aria_description\(meta\.clone\(\)\).*?tooltip\(Tooltip::text\(meta\)\).*?\.meta\(recent_workspace_meta\(location, paths\)\).*?fn recent_workspace_meta.*?path\.compact\(\).*?SerializedWorkspaceLocation::Remote.*?options\.display_name\(\)' \
+    'Dez Home recents can regress to ambiguous same-named Workspaces without path or remote-host context'
+require_multiline_pattern crates/zed_actions/src/lib.rs \
+    'pub struct OpenRecent \{.*?pub create_new_window: Option<bool>.*?pub workspace_id: Option<i64>' \
+    'the Open Recent action can no longer carry an exact recent Workspace target'
+require_multiline_pattern crates/workspace/src/welcome.rs \
+    'SerializedWorkspaceLocation::Remote\(_\).*?window\.dispatch_action\(.*?open_remote_recent_workspace_action\(workspace\.workspace_id\).*?fn open_remote_recent_workspace_action\(workspace_id: WorkspaceId\).*?OpenRecent \{.*?create_new_window: None.*?workspace_id: Some\(workspace_id\.to_i64\(\)\)' \
+    'a remote Home recent row can regress to opening the generic recent-Workspace picker instead of its exact target'
+require_multiline_pattern crates/recent_projects/src/recent_projects.rs \
+    'let workspace_id = open_recent\.workspace_id\.map\(WorkspaceId::from_i64\).*?if let Some\(workspace_id\) = workspace_id \{.*?recent_projects\.open_workspace_id\(workspace_id, window, cx\)' \
+    'the Open Recent integration no longer routes exact Workspace targets into the native recent-Workspace controller'
+require_multiline_pattern crates/recent_projects/src/recent_projects.rs \
+    'pending_workspace_id: Option<WorkspaceId>.*?fn recent_workspace_index\(.*?workspace\.workspace_id == workspace_id.*?let workspace_id = this\.pending_workspace_id\.take\(\).*?recent_workspace_index\(&picker\.delegate\.workspaces, workspace_id\).*?open_recent_projects\(candidate_id, false, window, cx\).*?fn open_workspace_id\(.*?recent_workspace_index\(&picker\.delegate\.workspaces, workspace_id\).*?self\.pending_workspace_id = Some\(workspace_id\)' \
+    'exact recent-Workspace opening can regress to an unstable list index or lose requests while history is loading'
+require_multiline_pattern crates/workspace/src/welcome.rs \
+    'recent_workspaces_load_failed: bool.*?recent_workspaces_load_generation: u64.*?WelcomeRecentState \{.*?Unavailable.*?recent_workspaces_load_failed \{.*?WelcomeRecentState::Unavailable.*?fn refresh_recent_workspaces\(.*?wrapping_add\(1\).*?recent_workspaces_load_generation != load_generation.*?Err\(error\).*?failed to load recent Workspaces on Home.*?fn render_recent_workspace_error\(.*?Recent Workspaces unavailable.*?retry-recent-workspaces.*?welcome_page\.refresh_recent_workspaces\(window, cx\).*?WelcomeRecentState::Unavailable' \
+    'Home recent-Workspace loading can regress to reporting a database failure as an empty history or accepting stale retry results'
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'fn welcome_summary.*?"Run an agent here\. Follow it under Projects\. Review its work in Files and Git\.".*?"Open a Workspace, run an agent in its terminal, and review the work in one place\.".*?Label::new\(welcome_summary\(APP_NAME, has_workspace\)\)' \
     'the Dez welcome headline no longer explains the Workspace-to-IDE product promise'

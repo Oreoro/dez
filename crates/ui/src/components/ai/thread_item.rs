@@ -1,8 +1,6 @@
 use crate::{CommonAnimationExt, DiffStat, HighlightedLabel, Tooltip, prelude::*};
 
-use gpui::{
-    Animation, AnimationExt, ClickEvent, Hsla, MouseButton, SharedString, pulsating_between,
-};
+use gpui::{Animation, AnimationExt, ClickEvent, MouseButton, SharedString, pulsating_between};
 use itertools::Itertools as _;
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
@@ -108,7 +106,6 @@ pub struct ThreadItem {
     on_click: Option<Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>>,
     on_hover: Box<dyn Fn(&bool, &mut Window, &mut App) + 'static>,
     action_slot: Option<AnyElement>,
-    base_bg: Option<Hsla>,
 }
 
 impl ThreadItem {
@@ -157,7 +154,6 @@ impl ThreadItem {
             on_click: None,
             on_hover: Box::new(|_, _, _| {}),
             action_slot: None,
-            base_bg: None,
         }
     }
 
@@ -378,22 +374,11 @@ impl ThreadItem {
         self.action_slot = Some(element.into_any_element());
         self
     }
-
-    pub fn base_bg(mut self, color: Hsla) -> Self {
-        self.base_bg = Some(color);
-        self
-    }
 }
 
 impl RenderOnce for ThreadItem {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let color = cx.theme().colors();
-        let sidebar_base_bg = color
-            .title_bar_background
-            .blend(color.panel_background.opacity(0.25));
-
-        let raw_bg = self.base_bg.unwrap_or(sidebar_base_bg);
-        let apparent_bg = color.background.blend(raw_bg);
         let selected_color = match self.contrast {
             ThreadItemContrast::Low => color.element_active.opacity(0.55),
             ThreadItemContrast::Standard => color.element_active,

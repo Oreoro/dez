@@ -114,6 +114,14 @@ fn status_bar_label(app_name: &str) -> &'static str {
     }
 }
 
+fn sidebar_toggle_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Open Sessions"
+    } else {
+        "Open Projects"
+    }
+}
+
 impl Focusable for StatusBar {
     fn focus_handle(&self, _cx: &App) -> FocusHandle {
         self.focus_handle.clone()
@@ -202,6 +210,8 @@ mod tests {
     fn dez_status_bar_names_its_workspace_scope() {
         assert_eq!(status_bar_label("Dez"), "Workspace status and navigation");
         assert_eq!(status_bar_label("Zed"), "Status bar");
+        assert_eq!(sidebar_toggle_label("Dez"), "Open Projects");
+        assert_eq!(sidebar_toggle_label("Zed"), "Open Sessions");
     }
 }
 
@@ -276,6 +286,7 @@ impl StatusBar {
         let on_right = sidebar.side == SidebarSide::Right;
         let has_notifications = sidebar.has_notifications;
         let indicator_border = cx.theme().colors().status_bar_background;
+        let toggle_label = sidebar_toggle_label(APP_NAME);
 
         let toggle = sidebar_side_context_menu("sidebar-status-toggle-menu", cx)
             .anchor(if on_right {
@@ -299,12 +310,12 @@ impl StatusBar {
                 )
                 .icon_size(IconSize::Small)
                 .tab_index(0isize)
-                .aria_label("Open Sessions")
+                .aria_label(toggle_label)
                 .when(has_notifications, |this| {
                     this.indicator(Indicator::dot().color(Color::Accent))
                         .indicator_border_color(Some(indicator_border))
                 })
-                .tooltip(move |_, cx| Tooltip::for_action("Open Sessions", &ToggleSidebar, cx))
+                .tooltip(move |_, cx| Tooltip::for_action(toggle_label, &ToggleSidebar, cx))
                 .on_click(move |_, window, cx| {
                     if let Some(multi_workspace) = window.root::<MultiWorkspace>().flatten() {
                         multi_workspace.update(cx, |multi_workspace, cx| {

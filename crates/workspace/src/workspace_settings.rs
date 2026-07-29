@@ -229,7 +229,7 @@ mod pane_grid_product_policy_tests {
             responsive_portrait_ratio: 1.,
             responsive_ultrawide_width: 1600.,
             responsive_ultrawide_ratio: 1.6,
-            responsive_recipe_overrides: HashMap::new(),
+            responsive_recipe_overrides: HashMap::default(),
         };
         assert!(!settings.shows_active_pane_border("Dez"));
         assert!(

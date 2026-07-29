@@ -27,6 +27,7 @@ const TMUX_FORMAT: &str = "#{session_id}|:dez:|#{session_name}|:dez:|#{session_a
 pub enum MultiplexerKind {
     Tmux,
     Herdr,
+    Cmux,
 }
 
 impl MultiplexerKind {
@@ -34,12 +35,14 @@ impl MultiplexerKind {
         match self {
             Self::Tmux => "tmux",
             Self::Herdr => "Herdr",
+            Self::Cmux => "cmux",
         }
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MultiplexerSessionState {
+    Available,
     Attached,
     Detached,
     Idle,
@@ -52,6 +55,7 @@ pub enum MultiplexerSessionState {
 impl MultiplexerSessionState {
     pub fn label(self) -> &'static str {
         match self {
+            Self::Available => "available",
             Self::Attached => "attached",
             Self::Detached => "detached",
             Self::Idle => "idle",
@@ -63,18 +67,25 @@ impl MultiplexerSessionState {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ExternalSessionOpenMode {
+    AttachInTerminal,
+    RevealExternal,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExternalSessionCommand {
     pub program: String,
     pub args: Vec<String>,
     pub label: String,
+    pub mode: ExternalSessionOpenMode,
 }
 
-/// An externally owned terminal session that Dez can safely attach to.
+/// An externally owned terminal session or Workspace that Dez can safely open.
 ///
-/// The external multiplexer remains authoritative. Opening the session creates
-/// a native terminal tab that acts as a client; closing that tab detaches the
-/// client and must not terminate the external session.
+/// The external multiplexer remains authoritative. tmux and Herdr sessions open
+/// as native terminal clients, while cmux Workspaces remain in cmux and are
+/// revealed through its public CLI.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExternalMultiplexerSession {
     pub id: String,
@@ -107,16 +118,18 @@ impl ExternalMultiplexerSession {
         }
     }
 
-    pub fn attach_command(&self) -> ExternalSessionCommand {
+    pub fn open_command(&self) -> ExternalSessionCommand {
         let program = self.executable.to_string_lossy().into_owned();
-        let args = match self.kind {
-            MultiplexerKind::Tmux => {
+        let (args, label, mode) = match self.kind {
+            MultiplexerKind::Tmux => (
                 vec![
                     "attach-session".to_owned(),
                     "-t".to_owned(),
                     self.target.clone(),
-                ]
-            }
+                ],
+                format!("Attach {}", self.title),
+                ExternalSessionOpenMode::AttachInTerminal,
+            ),
             MultiplexerKind::Herdr => {
                 let mut args = Vec::new();
                 if let Some(session_name) = &self.herdr_session_name {
@@ -132,14 +145,28 @@ impl ExternalMultiplexerSession {
                         self.target.clone(),
                     ]);
                 }
-                args
+                (
+                    args,
+                    format!("Attach {}", self.title),
+                    ExternalSessionOpenMode::AttachInTerminal,
+                )
             }
+            MultiplexerKind::Cmux => (
+                vec![
+                    "select-workspace".to_owned(),
+                    "--workspace".to_owned(),
+                    self.target.clone(),
+                ],
+                format!("Open {} in cmux", self.title),
+                ExternalSessionOpenMode::RevealExternal,
+            ),
         };
 
         ExternalSessionCommand {
             program,
             args,
-            label: format!("Attach {}", self.title),
+            label,
+            mode,
         }
     }
 }
@@ -231,6 +258,12 @@ fn scan_external_multiplexer_sessions() -> Result<Vec<ExternalMultiplexerSession
             log::debug!("Herdr discovery failed without changing the session: {error:#}");
         }
     }
+    match scan_cmux_workspaces() {
+        Ok(cmux_workspaces) => sessions.extend(cmux_workspaces),
+        Err(error) => {
+            log::debug!("cmux discovery failed without changing the session: {error:#}");
+        }
+    }
     sessions.sort_by(|left, right| {
         left.kind
             .display_name()
@@ -266,6 +299,124 @@ fn scan_tmux_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
         &String::from_utf8_lossy(&output.stdout),
         executable,
     ))
+}
+
+fn scan_cmux_workspaces() -> Result<Vec<ExternalMultiplexerSession>> {
+    let Some((executable, output)) = run_first_available(
+        &[
+            "/Applications/cmux.app/Contents/Resources/bin/cmux",
+            "/opt/homebrew/bin/cmux",
+            "/usr/local/bin/cmux",
+            "cmux",
+        ],
+        &["list-workspaces", "--json"],
+    )?
+    else {
+        return Ok(Vec::new());
+    };
+
+    if !output.status.success() {
+        anyhow::bail!(
+            "cmux discovery failed: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
+    }
+
+    parse_cmux_workspaces(&String::from_utf8_lossy(&output.stdout), executable)
+}
+
+fn parse_cmux_workspaces(
+    output: &str,
+    executable: PathBuf,
+) -> Result<Vec<ExternalMultiplexerSession>> {
+    let value: Value = serde_json::from_str(output).context("invalid cmux workspace JSON")?;
+    let result = value.get("result").unwrap_or(&value);
+    let workspaces = result
+        .get("workspaces")
+        .and_then(Value::as_array)
+        .or_else(|| result.as_array())
+        .context("cmux response did not contain workspaces")?;
+
+    Ok(workspaces
+        .iter()
+        .filter_map(|workspace| {
+            let target = workspace
+                .get("id")
+                .and_then(Value::as_str)
+                .or_else(|| workspace.get("ref").and_then(Value::as_str))?
+                .to_owned();
+            let working_directory = workspace
+                .get("current_directory")
+                .and_then(Value::as_str)
+                .or_else(|| workspace.get("cwd").and_then(Value::as_str))
+                .filter(|path| !path.is_empty())
+                .map(PathBuf::from);
+            let title = workspace
+                .get("title")
+                .and_then(Value::as_str)
+                .filter(|title| !title.is_empty())
+                .map(str::to_owned)
+                .or_else(|| {
+                    working_directory
+                        .as_deref()
+                        .and_then(std::path::Path::file_name)
+                        .and_then(|name| name.to_str())
+                        .map(str::to_owned)
+                })
+                .unwrap_or_else(|| "cmux Workspace".to_owned());
+            let owner_context = workspace
+                .get("description")
+                .and_then(Value::as_str)
+                .filter(|description| !description.is_empty() && *description != title)
+                .map(str::to_owned);
+            let detected_agent_kind =
+                cmux_workspace_agent_label(workspace).and_then(detect_terminal_agent_kind);
+            let needs_attention = workspace
+                .get("unread_count")
+                .and_then(Value::as_u64)
+                .is_some_and(|count| count > 0)
+                || workspace
+                    .get("needs_attention")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
+
+            Some(ExternalMultiplexerSession {
+                id: format!("cmux:{target}"),
+                kind: MultiplexerKind::Cmux,
+                target,
+                title,
+                owner_context,
+                working_directory,
+                foreground_command: None,
+                detected_agent_kind,
+                state: if needs_attention {
+                    MultiplexerSessionState::NeedsAttention
+                } else {
+                    MultiplexerSessionState::Available
+                },
+                attached_clients: None,
+                executable: executable.clone(),
+                herdr_session_name: None,
+            })
+        })
+        .collect())
+}
+
+fn cmux_workspace_agent_label(workspace: &Value) -> Option<&str> {
+    if let Some(agent) = workspace.get("agent").and_then(Value::as_str) {
+        return Some(agent);
+    }
+
+    let tags = workspace.get("tags")?;
+    if let Some(agent) = tags.get("agent").and_then(Value::as_str) {
+        return Some(agent);
+    }
+
+    tags.as_array()?
+        .iter()
+        .find(|tag| tag.get("key").and_then(Value::as_str) == Some("agent"))
+        .and_then(|tag| tag.get("value"))
+        .and_then(Value::as_str)
 }
 
 #[derive(Clone, Debug)]
@@ -552,7 +703,7 @@ mod tests {
         assert_eq!(sessions[0].working_directory, Some("/tmp/project".into()));
         assert_eq!(sessions[0].state, MultiplexerSessionState::Detached);
         assert_eq!(
-            sessions[0].attach_command().args,
+            sessions[0].open_command().args,
             ["attach-session", "-t", "$1"]
         );
     }
@@ -614,8 +765,55 @@ mod tests {
         assert_eq!(sessions[0].id, "herdr:team:pane-1");
         assert_eq!(sessions[0].state, MultiplexerSessionState::NeedsAttention);
         assert_eq!(
-            sessions[0].attach_command().args,
+            sessions[0].open_command().args,
             ["--session", "team", "agent", "attach", "pane-1"]
+        );
+    }
+
+    #[test]
+    fn parses_cmux_workspaces_as_externally_revealed_project_activity() {
+        let output = r#"{
+          "id": "workspace-list",
+          "ok": true,
+          "result": {
+            "window_id": "window-id",
+            "window_ref": "window:1",
+            "workspaces": [{
+              "id": "workspace-id",
+              "ref": "workspace:1",
+              "title": "parser",
+              "description": "Reviewing agent changes",
+              "current_directory": "/tmp/parser",
+              "unread_count": 2,
+              "tags": { "agent": "Codex" },
+              "selected": false
+            }]
+          }
+        }"#;
+
+        let sessions = parse_cmux_workspaces(output, PathBuf::from("/opt/homebrew/bin/cmux"))
+            .expect("workspace list should parse");
+
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].id, "cmux:workspace-id");
+        assert_eq!(sessions[0].working_directory, Some("/tmp/parser".into()));
+        assert_eq!(sessions[0].state, MultiplexerSessionState::NeedsAttention);
+        assert_eq!(
+            sessions[0].detected_agent_kind,
+            Some(TerminalAgentKind::Codex)
+        );
+        assert_eq!(
+            sessions[0].open_command(),
+            ExternalSessionCommand {
+                program: "/opt/homebrew/bin/cmux".to_owned(),
+                args: vec![
+                    "select-workspace".to_owned(),
+                    "--workspace".to_owned(),
+                    "workspace-id".to_owned(),
+                ],
+                label: "Open parser in cmux".to_owned(),
+                mode: ExternalSessionOpenMode::RevealExternal,
+            }
         );
     }
 }

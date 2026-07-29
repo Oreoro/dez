@@ -21,11 +21,12 @@ use agent_ui::threads_archive_view::{
 use agent_ui::{
     AcpThreadImportOnboarding, Agent, AgentPanel, AgentPanelEvent, AgentThreadItem,
     AgentThreadSource, ArchiveSelectedThread, CanvasAgentUiSettings, ConversationView,
-    CrossChannelImportOnboarding, ExternalMultiplexerSession, MachineTerminalStore, ManageProfiles,
-    MultiplexerKind, MultiplexerSessionState, MultiplexerSessionStore, NewTerminalThread,
-    ObservedMachineTerminal, ObservedRepositoryEvidence, ObservedRunActivity, ObservedRunCheck,
-    ObservedRunCheckStatus, ObservedRunCommand, ObservedWorkspaceEvidence, OpenAgentDiff,
-    RenameSelectedThread, RunReviewBrief, RunReviewState, TerminalId, ThreadId, ThreadImportModal,
+    CrossChannelImportOnboarding, ExternalMultiplexerSession, ExternalSessionOpenMode,
+    MachineTerminalStore, ManageProfiles, MultiplexerKind, MultiplexerSessionState,
+    MultiplexerSessionStore, NewTerminalThread, ObservedMachineTerminal,
+    ObservedRepositoryEvidence, ObservedRunActivity, ObservedRunCheck, ObservedRunCheckStatus,
+    ObservedRunCommand, ObservedWorkspaceEvidence, OpenAgentDiff, RenameSelectedThread,
+    RunReviewBrief, RunReviewState, TerminalId, ThreadId, ThreadImportModal,
     ThreadTitleRegenerationResult, ToggleOptionsMenu, WorkspaceEvidenceKind,
     built_in_agent_is_ready, channels_with_threads, connection_store_for_project,
     create_agent_thread_in_workspace, default_agent_session_title,
@@ -663,15 +664,24 @@ fn session_overview_status_label(
         "sessions"
     };
     if is_searching {
-        format!("{session_count} matching {session_noun}")
+        if app_name == "Zed" {
+            format!("{session_count} matching {session_noun}")
+        } else {
+            let item_noun = if session_count == 1 { "item" } else { "items" };
+            format!("{session_count} matching {item_noun}")
+        }
     } else if is_restoring {
-        "Loading sessions".to_owned()
+        if app_name == "Zed" {
+            "Loading sessions".to_owned()
+        } else {
+            "Restoring Workspaces".to_owned()
+        }
     } else if session_count == 0 {
         if app_name != "Zed" {
             return match workspace_count {
-                0 => "No projects open".to_owned(),
-                1 => "1 project ready".to_owned(),
-                count => format!("{count} projects ready"),
+                0 => "No Workspaces open".to_owned(),
+                1 => "1 Workspace · ready".to_owned(),
+                count => format!("{count} Workspaces · ready"),
             };
         }
         if workspace_count == 0 {
@@ -683,6 +693,22 @@ fn session_overview_status_label(
             "session groups"
         };
         format!("{workspace_count} {group_noun} collapsed")
+    } else if app_name != "Zed" {
+        let workspace_label = match workspace_count {
+            0 => "Scratch Workspace".to_owned(),
+            1 => "1 Workspace".to_owned(),
+            count => format!("{count} Workspaces"),
+        };
+        if attention_count > 0 {
+            let attention_verb = if attention_count == 1 {
+                "needs"
+            } else {
+                "need"
+            };
+            format!("{workspace_label} · {attention_count} {attention_verb} attention")
+        } else {
+            format!("{workspace_label} · {session_count} active")
+        }
     } else if attention_count > 0 {
         let attention_verb = if attention_count == 1 {
             "needs"
@@ -856,13 +882,17 @@ fn all_session_items_accessibility_label(
     )
 }
 
-fn attention_sessions_accessibility_label(attention_count: usize) -> String {
+fn attention_items_accessibility_label(app_name: &str, attention_count: usize) -> String {
     let attention_verb = if attention_count == 1 {
         "needs"
     } else {
         "need"
     };
-    format!("Attention sessions, {attention_count} {attention_verb} attention")
+    if app_name == "Zed" {
+        format!("Attention sessions, {attention_count} {attention_verb} attention")
+    } else {
+        format!("Attention items, {attention_count} {attention_verb} attention")
+    }
 }
 
 fn attention_empty_state_copy(
@@ -1074,8 +1104,12 @@ fn workspace_new_terminal_action_persistent(
     is_active || is_focused || is_menu_open
 }
 
-fn workspace_header_terminal_action_visible(has_sessions: bool, is_collapsed: bool) -> bool {
-    has_sessions || is_collapsed
+fn workspace_header_terminal_action_visible(
+    app_name: &str,
+    has_sessions: bool,
+    is_collapsed: bool,
+) -> bool {
+    app_name != "Zed" || has_sessions || is_collapsed
 }
 
 fn workspace_options_action_persistent(
@@ -1087,17 +1121,13 @@ fn workspace_options_action_persistent(
 }
 
 fn workspace_header_accessibility_label(
-    app_name: &str,
+    _app_name: &str,
     workspace_name: &str,
     has_sessions: bool,
     has_running_sessions: bool,
     attention_count: usize,
 ) -> String {
-    let noun = if app_name == "Zed" {
-        "Workspace"
-    } else {
-        "Project"
-    };
+    let noun = "Workspace";
     let mut label = format!("{noun} {workspace_name}");
     if !has_sessions {
         label.push_str(", ready for a session");
@@ -1792,9 +1822,7 @@ fn terminal_agent_kind_from_evidence(
     foreground_command: Option<TerminalAgentKind>,
     terminal_title: Option<TerminalAgentKind>,
 ) -> Option<TerminalAgentKind> {
-    structured_adapter
-        .or(foreground_command)
-        .or(terminal_title)
+    structured_adapter.or(foreground_command).or(terminal_title)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -1881,7 +1909,7 @@ mod workspace_header_label_tests {
         assert!(!project_header_primary_action_activates_workspace("Zed"));
         assert_eq!(
             workspace_header_accessibility_label("Dez", "compiler", false, false, 0),
-            "Project compiler, ready for a session"
+            "Workspace compiler, ready for a session"
         );
         assert_eq!(
             workspace_header_accessibility_label("Zed", "compiler", false, false, 0),
@@ -1904,8 +1932,38 @@ mod workspace_header_label_tests {
             workspace_new_terminal_tooltip_label("Dez"),
             "Open Agent Terminal"
         );
+        assert!(workspace_header_terminal_action_visible(
+            "Dez", false, false
+        ));
+        assert!(!workspace_header_terminal_action_visible(
+            "Zed", false, false
+        ));
         assert!(!workspace_new_terminal_control_label("Dez", "compiler").contains("header-group"));
         assert!(!workspace_options_control_label("compiler").contains("header-group"));
+    }
+
+    #[test]
+    fn dez_overview_leads_with_workspaces_instead_of_terminal_inventory() {
+        assert_eq!(
+            session_overview_status_label("Dez", 0, 0, 2, false, false),
+            "2 Workspaces · ready"
+        );
+        assert_eq!(
+            session_overview_status_label("Dez", 3, 0, 2, false, false),
+            "2 Workspaces · 3 active"
+        );
+        assert_eq!(
+            session_overview_status_label("Dez", 3, 1, 2, false, false),
+            "2 Workspaces · 1 needs attention"
+        );
+        assert_eq!(
+            attention_items_accessibility_label("Dez", 1),
+            "Attention items, 1 needs attention"
+        );
+        assert_eq!(
+            attention_items_accessibility_label("Zed", 2),
+            "Attention sessions, 2 need attention"
+        );
     }
 }
 
@@ -2894,13 +2952,39 @@ fn external_multiplexer_session_belongs_to_project(
     session: &ExternalMultiplexerSession,
     project_group_key: &ProjectGroupKey,
 ) -> bool {
-    session.working_directory.as_ref().is_some_and(|cwd| {
-        project_group_key
-            .path_list()
-            .paths()
-            .iter()
-            .any(|root| cwd.starts_with(root))
-    })
+    external_multiplexer_project_match_score(session, project_group_key).is_some()
+}
+
+fn external_multiplexer_project_match_score(
+    session: &ExternalMultiplexerSession,
+    project_group_key: &ProjectGroupKey,
+) -> Option<usize> {
+    if project_group_key.host().is_some() {
+        return None;
+    }
+    let working_directory = session.working_directory.as_ref()?;
+    project_group_key
+        .path_list()
+        .paths()
+        .iter()
+        .filter(|root| working_directory.starts_with(root))
+        .map(|root| root.components().count())
+        .max()
+}
+
+fn external_multiplexer_project_group<'a>(
+    session: &ExternalMultiplexerSession,
+    project_group_keys: &'a [ProjectGroupKey],
+) -> Option<&'a ProjectGroupKey> {
+    project_group_keys
+        .iter()
+        .filter_map(|project_group_key| {
+            Some((
+                external_multiplexer_project_match_score(session, project_group_key)?,
+                project_group_key,
+            ))
+        })
+        .max_by_key(|(score, _)| *score)
 }
 
 fn activate_observed_machine_terminal(terminal: ObservedMachineTerminal, cx: &mut App) {
@@ -2915,13 +2999,39 @@ fn activate_observed_machine_terminal(terminal: ObservedMachineTerminal, cx: &mu
 
 fn external_multiplexer_status(state: MultiplexerSessionState) -> Option<AgentThreadStatus> {
     match state {
-        MultiplexerSessionState::Attached
+        MultiplexerSessionState::Available
+        | MultiplexerSessionState::Attached
         | MultiplexerSessionState::Detached
         | MultiplexerSessionState::Idle
         | MultiplexerSessionState::Working => Some(AgentThreadStatus::Running),
         MultiplexerSessionState::NeedsAttention => Some(AgentThreadStatus::WaitingForConfirmation),
         MultiplexerSessionState::Completed => Some(AgentThreadStatus::Completed),
         MultiplexerSessionState::Unknown => None,
+    }
+}
+
+fn external_multiplexer_icon(session: &ExternalMultiplexerSession) -> IconName {
+    session
+        .detected_agent_kind
+        .map(terminal_agent_icon)
+        .unwrap_or(match session.kind {
+            MultiplexerKind::Tmux => IconName::Terminal,
+            MultiplexerKind::Herdr => IconName::Robot,
+            MultiplexerKind::Cmux => IconName::Screen,
+        })
+}
+
+fn external_multiplexer_action_label(session: &ExternalMultiplexerSession) -> String {
+    match session.kind {
+        MultiplexerKind::Cmux => format!(
+            "Open {} in cmux. cmux remains the Workspace owner.",
+            session.title
+        ),
+        MultiplexerKind::Tmux | MultiplexerKind::Herdr => format!(
+            "Attach {} in Main Work Area. {} remains the process owner.",
+            session.title,
+            session.kind.display_name()
+        ),
     }
 }
 
@@ -3369,6 +3479,7 @@ enum ListEntry {
         has_notifications: bool,
         is_active: bool,
         has_threads: bool,
+        external_sessions: Vec<ExternalMultiplexerSession>,
     },
     Thread(Arc<ThreadEntry>),
     Terminal(TerminalEntry),
@@ -3481,8 +3592,8 @@ impl From<TerminalEntry> for ListEntry {
 #[derive(Default)]
 struct SidebarContents {
     entries: Vec<ListEntry>,
-    /// Externally owned tmux and Herdr sessions that can be attached in a
-    /// native Main Work Area terminal without transferring process ownership.
+    /// Externally owned terminal sessions and Workspaces that Dez can open
+    /// without transferring process or layout ownership.
     multiplexer_sessions: Vec<ExternalMultiplexerSession>,
     /// Ephemeral, observation-only terminals owned by other applications on
     /// this machine. They never enter the durable Session stores.
@@ -3495,7 +3606,7 @@ struct SidebarContents {
     snapshot_ready: bool,
     has_open_projects: bool,
     has_attention: bool,
-    /// Managed, detected, or safely attachable Sessions represented by this
+    /// Managed, detected, or safely openable activity represented by this
     /// projection.
     session_count: usize,
     /// Current read-only process observations represented by
@@ -3516,6 +3627,7 @@ enum EntryShape {
         // Determines whether the "No sessions yet" row is rendered (only shown when
         // `!is_collapsed && !has_threads`).
         is_collapsed: bool,
+        external_session_count: usize,
     },
     Thread(ThreadId),
     Terminal(TerminalId),
@@ -4844,19 +4956,17 @@ impl Sidebar {
             });
             // Arbitrary machine PTYs are not Dez Sessions and cannot be
             // controlled safely. Keep Projects scoped to the open codebases;
-            // tmux and Herdr remain available through each matching project.
+            // Explicit external sessions and Workspaces remain available
+            // through the most specific matching Workspace.
             machine_terminals.clear();
         }
         if !query.is_empty() {
-            multiplexer_sessions
-                .retain(|session| external_multiplexer_session_matches_query(session, &query));
+            if APP_NAME == "Zed" {
+                multiplexer_sessions
+                    .retain(|session| external_multiplexer_session_matches_query(session, &query));
+            }
             machine_terminals.retain(|terminal| machine_terminal_matches_query(terminal, &query));
         }
-        let multiplexer_session_count = if APP_NAME == "Zed" {
-            multiplexer_sessions.len()
-        } else {
-            0
-        };
         let machine_terminal_count = machine_terminals.len();
         if self.attention_only {
             multiplexer_sessions
@@ -4938,6 +5048,11 @@ impl Sidebar {
                 },
             );
         }
+        let project_group_keys = groups
+            .iter()
+            .map(|group| group.key.clone())
+            .collect::<Vec<_>>();
+        let mut projected_multiplexer_session_ids = HashSet::new();
         let mut live_notified_terminal_ids: HashSet<TerminalId> = HashSet::new();
         let mut live_terminal_runtime: HashMap<TerminalId, TerminalRuntimeInfo> = HashMap::new();
         let mut live_workspace_terminals: HashMap<
@@ -5046,6 +5161,14 @@ impl Sidebar {
         for group in &groups {
             let group_key = &group.key;
             let group_workspaces = &group.workspaces;
+            let group_external_sessions = multiplexer_sessions
+                .iter()
+                .filter(|session| {
+                    external_multiplexer_project_group(session, &project_group_keys)
+                        == Some(group_key)
+                })
+                .cloned()
+                .collect::<Vec<_>>();
 
             let workspace_by_path_list: HashMap<PathList, &Entity<Workspace>> = group_workspaces
                 .iter()
@@ -5406,6 +5529,17 @@ impl Sidebar {
             }
 
             let label = group_key.display_name(&path_detail_map);
+            let workspace_matches_query = !query.is_empty()
+                && fuzzy_match_positions(&query, &label)
+                    .is_some_and(|positions| !positions.is_empty());
+            let external_sessions = group_external_sessions
+                .into_iter()
+                .filter(|session| {
+                    query.is_empty()
+                        || workspace_matches_query
+                        || external_multiplexer_session_matches_query(session, &query)
+                })
+                .collect::<Vec<_>>();
 
             let is_collapsed = self.is_group_collapsed(group_key, cx);
             let should_load_threads = !is_collapsed || !query.is_empty();
@@ -5718,7 +5852,18 @@ impl Sidebar {
                 }
             }
 
-            let has_visible_rows = !threads.is_empty() || !terminals.is_empty();
+            has_running_threads |= external_sessions.iter().any(|session| {
+                matches!(
+                    session.state,
+                    MultiplexerSessionState::Attached | MultiplexerSessionState::Working
+                )
+            });
+            attention_thread_count += external_sessions
+                .iter()
+                .filter(|session| session.state == MultiplexerSessionState::NeedsAttention)
+                .count();
+            let has_visible_rows =
+                !threads.is_empty() || !terminals.is_empty() || !external_sessions.is_empty();
             let has_stored_thread_rows = !should_load_threads && !has_visible_rows && {
                 let store = ThreadMetadataStore::global(cx).read(cx);
                 store
@@ -5796,6 +5941,7 @@ impl Sidebar {
                     session_rail_shows_idle_workspaces(APP_NAME) && workspace_matched;
                 if matched_threads.is_empty()
                     && matched_terminals.is_empty()
+                    && external_sessions.is_empty()
                     && !idle_workspace_match
                 {
                     continue;
@@ -5808,6 +5954,11 @@ impl Sidebar {
                 let has_terminal_notifications = matched_terminals
                     .iter()
                     .any(|terminal| terminal.needs_attention);
+                let has_external_notifications = external_sessions
+                    .iter()
+                    .any(|session| session.state == MultiplexerSessionState::NeedsAttention);
+                projected_multiplexer_session_ids
+                    .extend(external_sessions.iter().map(|session| session.id.clone()));
 
                 project_header_indices.push(entries.len());
                 entries.push(ListEntry::ProjectHeader {
@@ -5818,9 +5969,12 @@ impl Sidebar {
                     has_running_threads,
                     running_terminal_agent_label: running_terminal_agent_label.clone(),
                     attention_thread_count,
-                    has_notifications: has_thread_notifications || has_terminal_notifications,
+                    has_notifications: has_thread_notifications
+                        || has_terminal_notifications
+                        || has_external_notifications,
                     is_active,
                     has_threads,
+                    external_sessions,
                 });
 
                 Self::push_entries_by_session_rail_sort(
@@ -5841,6 +5995,9 @@ impl Sidebar {
 
                 let has_terminal_notifications =
                     terminals.iter().any(|terminal| terminal.needs_attention);
+                let has_external_notifications = external_sessions
+                    .iter()
+                    .any(|session| session.state == MultiplexerSessionState::NeedsAttention);
 
                 // When collapsed, threads aren't loaded into `threads`, so we
                 // query the store for thread IDs to check notifications and
@@ -5863,6 +6020,8 @@ impl Sidebar {
                         .iter()
                         .any(|t| notified_threads.contains(&t.metadata.thread_id))
                 };
+                projected_multiplexer_session_ids
+                    .extend(external_sessions.iter().map(|session| session.id.clone()));
 
                 project_header_indices.push(entries.len());
                 entries.push(ListEntry::ProjectHeader {
@@ -5873,9 +6032,12 @@ impl Sidebar {
                     has_running_threads,
                     running_terminal_agent_label: running_terminal_agent_label.clone(),
                     attention_thread_count,
-                    has_notifications: has_thread_notifications || has_terminal_notifications,
+                    has_notifications: has_thread_notifications
+                        || has_terminal_notifications
+                        || has_external_notifications,
                     is_active,
                     has_threads,
+                    external_sessions,
                 });
 
                 if is_collapsed {
@@ -5913,14 +6075,20 @@ impl Sidebar {
             .iter()
             .filter(|entry| matches!(entry, ListEntry::Thread(_) | ListEntry::Terminal(_)))
             .count()
-            + multiplexer_session_count;
+            + projected_multiplexer_session_ids.len();
         let attention_count = entries
             .iter()
-            .filter(|entry| entry_needs_attention(entry, &notified_threads, &notified_terminals))
+            .filter(|entry| {
+                matches!(entry, ListEntry::Thread(_) | ListEntry::Terminal(_))
+                    && entry_needs_attention(entry, &notified_threads, &notified_terminals)
+            })
             .count()
             + multiplexer_sessions
                 .iter()
-                .filter(|session| session.state == MultiplexerSessionState::NeedsAttention)
+                .filter(|session| {
+                    projected_multiplexer_session_ids.contains(&session.id)
+                        && session.state == MultiplexerSessionState::NeedsAttention
+                })
                 .count();
         let has_attention = attention_count > 0;
         if self.attention_only {
@@ -6081,7 +6249,10 @@ impl Sidebar {
     ) -> impl Iterator<Item = EntryShape> + 'a {
         self.contents.entries.iter().map(move |entry| match entry {
             ListEntry::ProjectHeader {
-                key, has_threads, ..
+                key,
+                has_threads,
+                external_sessions,
+                ..
             } => EntryShape::ProjectHeader {
                 key: key.clone(),
                 has_threads: *has_threads,
@@ -6089,6 +6260,7 @@ impl Sidebar {
                     .group_state_by_key(key)
                     .map(|state| !state.expanded)
                     .unwrap_or(false),
+                external_session_count: external_sessions.len(),
             },
             ListEntry::Thread(thread) => EntryShape::Thread(thread.metadata.thread_id),
             ListEntry::Terminal(terminal) => EntryShape::Terminal(terminal.metadata.terminal_id),
@@ -6222,6 +6394,7 @@ impl Sidebar {
                 has_notifications,
                 is_active: is_active_group,
                 has_threads,
+                external_sessions,
             } => {
                 self.project_header_menu_handles.entry(ix).or_default();
                 self.project_header_new_thread_menu_handles
@@ -6242,6 +6415,7 @@ impl Sidebar {
                     *is_active_group,
                     is_selected,
                     *has_threads,
+                    external_sessions,
                     // has_active_draft,
                     cx,
                 )
@@ -6309,6 +6483,7 @@ impl Sidebar {
         is_active: bool,
         is_focused: bool,
         has_threads: bool,
+        external_sessions: &[ExternalMultiplexerSession],
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let host = key.host();
@@ -6581,20 +6756,23 @@ impl Sidebar {
                     .flex_none()
                     .gap(px(1.0))
                     .children(
-                        workspace_header_terminal_action_visible(has_threads, is_collapsed).then(
-                            || {
-                                self.render_new_session_button(
-                                    ix,
-                                    id_prefix,
-                                    key,
-                                    &group_name,
-                                    &workspace_name,
-                                    is_active,
-                                    is_focused,
-                                    cx,
-                                )
-                            },
-                        ),
+                        workspace_header_terminal_action_visible(
+                            APP_NAME,
+                            has_threads,
+                            is_collapsed,
+                        )
+                        .then(|| {
+                            self.render_new_session_button(
+                                ix,
+                                id_prefix,
+                                key,
+                                &group_name,
+                                &workspace_name,
+                                is_active,
+                                is_focused,
+                                cx,
+                            )
+                        }),
                     )
                     .child(self.render_project_header_ellipsis_menu(
                         ix,
@@ -6634,7 +6812,86 @@ impl Sidebar {
             )
             .block_mouse_except_scroll();
 
-        if labels_visible && !is_collapsed && !has_threads {
+        if !is_sticky && labels_visible && !is_collapsed && !external_sessions.is_empty() {
+            let external_rows = external_sessions
+                .iter()
+                .map(|session| {
+                    let sidebar = cx.weak_entity();
+                    let open_session = session.clone();
+                    let action_label = external_multiplexer_action_label(session);
+                    let source_and_state = SharedString::from(format!(
+                        "{} · {}",
+                        session.kind.display_name(),
+                        session.state_label()
+                    ));
+                    ButtonLike::new(ElementId::from(format!(
+                        "workspace-external-session-{}",
+                        session.id
+                    )))
+                    .size(ButtonSize::Medium)
+                    .style(ButtonStyle::Subtle)
+                    .full_width()
+                    .tab_index(0isize)
+                    .aria_label(action_label.clone())
+                    .tooltip(Tooltip::text(action_label))
+                    .child(
+                        h_flex()
+                            .w_full()
+                            .min_w_0()
+                            .gap_2()
+                            .child(
+                                Icon::new(external_multiplexer_icon(session))
+                                    .size(IconSize::XSmall)
+                                    .color(
+                                        if session.state == MultiplexerSessionState::NeedsAttention
+                                        {
+                                            Color::Warning
+                                        } else {
+                                            Color::Muted
+                                        },
+                                    ),
+                            )
+                            .child(
+                                Label::new(session.title.clone())
+                                    .size(LabelSize::XSmall)
+                                    .truncate(),
+                            )
+                            .child(div().flex_1())
+                            .child(
+                                Label::new(source_and_state)
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Muted)
+                                    .truncate(),
+                            ),
+                    )
+                    .on_click(move |_, window, cx| {
+                        sidebar
+                            .update(cx, |sidebar, cx| {
+                                sidebar.open_external_multiplexer_session(
+                                    open_session.clone(),
+                                    window,
+                                    cx,
+                                );
+                            })
+                            .ok();
+                    })
+                    .into_any_element()
+                })
+                .collect::<Vec<_>>();
+
+            v_flex()
+                .w_full()
+                .child(header)
+                .child(
+                    v_flex()
+                        .w_full()
+                        .px_2()
+                        .pb_1()
+                        .gap_0p5()
+                        .children(external_rows),
+                )
+                .into_any_element()
+        } else if APP_NAME == "Zed" && labels_visible && !is_collapsed && !has_threads {
             v_flex()
                 .w_full()
                 .child(header)
@@ -7133,6 +7390,11 @@ impl Sidebar {
                     .iter()
                     .map(|workspace| active_workspace.as_ref() == Some(workspace))
                     .collect();
+                let project_group_keys = multi_workspace
+                    .read_with(cx, |multi_workspace, _| {
+                        multi_workspace.project_group_keys().to_vec()
+                    })
+                    .unwrap_or_default();
                 let attachable_sessions = MultiplexerSessionStore::try_global(cx)
                     .map(|store| {
                         store
@@ -7140,10 +7402,8 @@ impl Sidebar {
                             .sessions()
                             .iter()
                             .filter(|session| {
-                                external_multiplexer_session_belongs_to_project(
-                                    session,
-                                    &project_group_key,
-                                )
+                                external_multiplexer_project_group(session, &project_group_keys)
+                                    == Some(&project_group_key)
                             })
                             .cloned()
                             .collect::<Vec<_>>()
@@ -7261,7 +7521,7 @@ impl Sidebar {
                         let menu = menu.when(has_attachable_sessions, move |menu| {
                             let attach_sidebar = attach_sidebar.clone();
                             menu.submenu(
-                                "Attach Running Session…",
+                                "Open Running Workspace or Session…",
                                 move |mut submenu, _window, _cx| {
                                     for session in attachable_sessions_for_menu.clone() {
                                         let label = format!(
@@ -7274,7 +7534,7 @@ impl Sidebar {
                                         submenu = submenu.entry(label, None, move |window, cx| {
                                             attach_sidebar
                                                 .update(cx, |sidebar, cx| {
-                                                    sidebar.attach_external_multiplexer_session(
+                                                    sidebar.open_external_multiplexer_session(
                                                         session.clone(),
                                                         window,
                                                         cx,
@@ -7553,6 +7813,7 @@ impl Sidebar {
             has_notifications,
             is_active,
             has_threads,
+            external_sessions,
         } = self.contents.entries.get(header_idx)?
         else {
             return None;
@@ -7575,6 +7836,7 @@ impl Sidebar {
             *is_active,
             is_selected,
             *has_threads,
+            external_sessions,
             cx,
         );
 
@@ -11957,8 +12219,6 @@ impl Sidebar {
 
         let id = SharedString::from(format!("thread-entry-{}", ix));
 
-        let color = cx.theme().colors();
-        let sidebar_bg = color.panel_background;
         let session_rail_settings = SessionRailSettings::get_global(cx);
         let rail_width = self.rendered_width;
         let primary_action_labels_visible = session_row_primary_action_labels_visible(rail_width);
@@ -12018,7 +12278,6 @@ impl Sidebar {
 
         let thread_item =
             canvas_thread_item_style(ThreadItem::new(id, title.clone()), &design_system)
-                .base_bg(sidebar_bg)
                 .icon(icon)
                 .when(is_draft, |this| {
                     this.icon_color(Color::Custom(cx.theme().colors().icon_muted.opacity(0.2)))
@@ -12471,8 +12730,6 @@ impl Sidebar {
             latest_agent_event_at.unwrap_or(terminal.metadata.created_at),
         );
         let is_hovered = self.hovered_thread_index == Some(ix);
-        let color = cx.theme().colors();
-        let sidebar_bg = color.panel_background;
         let metadata = terminal.metadata.clone();
         let workspace = terminal.workspace.clone();
         let source = terminal.source.clone();
@@ -12628,7 +12885,6 @@ impl Sidebar {
             };
 
         let terminal_item = canvas_thread_item_style(ThreadItem::new(id, title), &design_system)
-            .base_bg(sidebar_bg)
             .status(terminal_status)
             .icon(
                 terminal_agent_kind
@@ -13564,7 +13820,7 @@ impl Sidebar {
         workspace_focus.dispatch_action(&NewCenterTerminal::default(), window, cx);
     }
 
-    fn attach_external_multiplexer_session(
+    fn open_external_multiplexer_session(
         &mut self,
         session: ExternalMultiplexerSession,
         window: &mut Window,
@@ -13603,15 +13859,61 @@ impl Sidebar {
             multi_workspace.activate(target_workspace.clone(), None, window, cx);
         });
 
-        let attach = session.attach_command();
+        let open = session.open_command();
+        if open.mode == ExternalSessionOpenMode::RevealExternal {
+            let open_task = cx.background_spawn(async move {
+                std::process::Command::new(&open.program)
+                    .args(&open.args)
+                    .output()
+            });
+            let weak_workspace = target_workspace.downgrade();
+            let session_title = session.title;
+            cx.spawn(async move |_, cx| {
+                let failure = match open_task.await {
+                    Ok(output) if !output.status.success() => {
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        let detail = stderr.trim();
+                        Some(if detail.is_empty() {
+                            format!("cmux exited with {}", output.status)
+                        } else {
+                            format!("cmux could not open the Workspace: {detail}")
+                        })
+                    }
+                    Err(error) => Some(format!("Could not run cmux: {error}")),
+                    Ok(_) => None,
+                };
+
+                if let Some(failure) = failure {
+                    log::error!("external Workspace open failed: {failure}");
+                    weak_workspace
+                        .update(cx, |workspace, cx| {
+                            struct ExternalWorkspaceOpenErrorToast;
+                            workspace.show_toast(
+                                Toast::new(
+                                    NotificationId::composite::<ExternalWorkspaceOpenErrorToast>(
+                                        session_title.clone(),
+                                    ),
+                                    format!("{failure}. The external Workspace was not changed."),
+                                )
+                                .autohide(),
+                                cx,
+                            );
+                        })
+                        .ok();
+                }
+            })
+            .detach();
+            return;
+        }
+
         let task_id = TaskId(format!("dez-external-session:{}", session.id));
         let spawn = SpawnInTerminal {
             id: task_id,
-            full_label: attach.label.clone(),
-            label: attach.label.clone(),
-            command: Some(attach.program),
-            args: attach.args,
-            command_label: attach.label,
+            full_label: open.label.clone(),
+            label: open.label.clone(),
+            command: Some(open.program),
+            args: open.args,
+            command_label: open.label,
             cwd: session.working_directory.clone(),
             env: HashMap::default(),
             use_new_terminal: true,
@@ -14052,7 +14354,7 @@ impl Sidebar {
             self.contents.observed_terminal_count,
         );
         let attention_scope_aria_label =
-            attention_sessions_accessibility_label(self.contents.attention_count);
+            attention_items_accessibility_label(APP_NAME, self.contents.attention_count);
         let all_scope_focus = self.focus_handle.clone();
         let attention_scope_focus = self.focus_handle.clone();
         let status_color = if has_attention && !is_searching && !is_restoring {
@@ -14345,7 +14647,6 @@ impl Sidebar {
             session_rail_supplemental_metadata_visible(self.rendered_width);
         let design_system = DesignSystemSettings::get_global(cx);
         let labels_visible = session_rail_labels_visible(&design_system);
-        let background = cx.theme().colors().panel_background;
         let sidebar = cx.weak_entity();
         let project_roots = self
             .contents
@@ -14387,19 +14688,9 @@ impl Sidebar {
                     .as_ref()
                     .map(|path| path.to_string_lossy().into_owned())
                     .unwrap_or_else(|| "External session".to_owned());
-                let action_label = format!(
-                    "Attach {} in Main Work Area. {} remains the process owner.",
-                    session.title,
-                    session.kind.display_name()
-                );
+                let action_label = external_multiplexer_action_label(&session);
                 let status = external_multiplexer_status(session.state);
-                let icon = session
-                    .detected_agent_kind
-                    .map(terminal_agent_icon)
-                    .unwrap_or(match session.kind {
-                        MultiplexerKind::Tmux => IconName::Terminal,
-                        MultiplexerKind::Herdr => IconName::Robot,
-                    });
+                let icon = external_multiplexer_icon(&session);
                 let row_session = session.clone();
                 let action_session = session.clone();
                 let row_sidebar = sidebar.clone();
@@ -14412,7 +14703,6 @@ impl Sidebar {
                     ),
                     &design_system,
                 )
-                .base_bg(background)
                 .icon(icon)
                 .when_some(status, |item, status| item.status(status))
                 .actor_label(owner)
@@ -14439,7 +14729,7 @@ impl Sidebar {
                         window.prevent_default();
                         action_sidebar
                             .update(cx, |sidebar, cx| {
-                                sidebar.attach_external_multiplexer_session(
+                                sidebar.open_external_multiplexer_session(
                                     action_session.clone(),
                                     window,
                                     cx,
@@ -14451,7 +14741,7 @@ impl Sidebar {
                 .on_click(move |_, window, cx| {
                     row_sidebar
                         .update(cx, |sidebar, cx| {
-                            sidebar.attach_external_multiplexer_session(
+                            sidebar.open_external_multiplexer_session(
                                 row_session.clone(),
                                 window,
                                 cx,
@@ -14508,7 +14798,6 @@ impl Sidebar {
                             ),
                             &design_system,
                         )
-                        .base_bg(background)
                         .icon(
                             terminal
                                 .detected_agent_kind

@@ -930,7 +930,6 @@ impl ThreadsArchiveView {
                     .density(thread_archive_item_density(cx))
                     .radius(thread_archive_item_radius(cx))
                     .contrast(thread_archive_item_contrast(cx))
-                    .base_bg(thread_archive_background(cx))
                     .focused(is_focused)
                     .hovered(is_hovered)
                     .on_hover(cx.listener(move |this, is_hovered, _window, cx| {

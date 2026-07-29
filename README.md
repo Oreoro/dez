@@ -26,8 +26,10 @@ Workspace instead of separate applications or hidden panel modes.
   Agent Sessions. It shows provider identity and Running, Needs Input, Waiting
   for Permission, Reconnecting, Completed, or Error state without owning
   duplicate tabs or processes. A Project can explicitly attach a path-matched
-  tmux or Herdr session without taking ownership. Unrelated machine terminals
-  do not leak into its list.
+  tmux or Herdr session, or open a path-matched cmux Workspace in cmux, without
+  taking ownership. Each external item appears beneath the most specific
+  matching Workspace, beside its associated Dez terminals and agents.
+  Unrelated machine terminals do not leak into the list.
 - **Workspace tools** — Files, Outline, Git, Debug, and the optional
   provider-backed Built-in Agent are ordinary draggable and closeable native
   tabs. They are not nested panels or a mandatory second sidebar.
@@ -96,9 +98,10 @@ one Zed-compatible Project:
 A terminal is therefore not embedded in chat, and the editor is not a separate
 mode. They are peer Surfaces in one native pane grid. Dez detects supported
 agents running in its terminals, including Codex, Claude Code, OpenCode, and
-Herdr. v0.0.4 discovers explicitly shared tmux sessions and live Herdr panes,
-then attaches them in ordinary terminal tabs while leaving process and layout
-ownership with the external multiplexer. Arbitrary PTYs remain read-only.
+Herdr. v0.0.4 discovers explicitly shared tmux sessions, live Herdr panes, and
+cmux Workspaces. tmux and Herdr attach through ordinary terminal tabs; cmux
+Workspaces open in cmux. Process and layout ownership always stays with the
+external application. Arbitrary PTYs remain read-only.
 
 ## Visual baseline
 
@@ -117,6 +120,11 @@ Dez ships with an attributed adaptation of
 The application follows the operating system appearance by default. All theme
 and typography roles remain configurable through normal settings.
 
+The first-run visual profile keeps the native status bar visible with the
+active file, language, line endings, diagnostics, and cursor context. Empty
+Main Work Area panes use compact top-left editor chrome and direct actions
+instead of a centered onboarding or workflow overlay.
+
 ## Current status
 
 The v0.0.4 source baseline contains the opinionated Dez shell,
@@ -124,9 +132,10 @@ identity isolation, Workspace composition, persistent Projects navigation,
 ordinary closeable workspace-tool tabs, explicit Agent Session state,
 host-owned local terminal lifecycle, setting-controlled Back/Forward history,
 native draggable tab navigation, first-run experience, Lumin/Plex/Lilex visual
-defaults, project-scoped tmux and Herdr attachment, and a large set of static
-product-contract checks. Arbitrary machine terminals are deliberately absent
-because Dez cannot safely control or attribute them.
+defaults, project-scoped tmux and Herdr attachment, project-scoped cmux
+Workspace opening, and a large set of static product-contract checks.
+Arbitrary machine terminals are deliberately absent because Dez cannot safely
+control or attribute them.
 
 **Live Preview is not implemented in the current candidate.** URL actions
 still open the system browser, while Markdown, SVG, and CSV use native file

@@ -1,6 +1,6 @@
 use crate::{
     NewCenterTerminal, NewFile, Open, OpenFolder, OpenMode, PathList, RecentWorkspace, RevealFiles,
-    SerializedWorkspaceLocation, Workspace, WorkspaceSettings,
+    SerializedWorkspaceLocation, Workspace, WorkspaceId, WorkspaceSettings,
     item::{Item, ItemEvent},
     persistence::WorkspaceDb,
 };
@@ -16,9 +16,13 @@ use paths::APP_NAME;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use settings::{DefaultOpenBehavior, Settings};
-use ui::{ButtonLike, Divider, DividerColor, KeyBinding, prelude::*, theme_is_transparent};
-use util::ResultExt;
-use zed_actions::{Extensions, OpenKeymap, OpenOnboarding, OpenSettings, command_palette};
+use ui::{
+    ButtonLike, Divider, DividerColor, KeyBinding, Tooltip, prelude::*, theme_is_transparent,
+};
+use util::{ResultExt, paths::PathExt};
+use zed_actions::{
+    Extensions, OpenKeymap, OpenOnboarding, OpenRecent, OpenSettings, command_palette,
+};
 
 #[derive(PartialEq, Clone, Debug, Deserialize, Serialize, JsonSchema, Action)]
 #[action(namespace = welcome)]
@@ -30,7 +34,7 @@ pub struct OpenRecentProject {
 actions!(
     zed,
     [
-        /// Show the Dez welcome screen
+        /// Show the Dez welcome screen.
         ShowWelcome
     ]
 );
@@ -78,6 +82,7 @@ struct SectionButton {
     tab_index: usize,
     focus_handle: FocusHandle,
     primary: bool,
+    meta: Option<SharedString>,
 }
 
 impl SectionButton {
@@ -96,7 +101,13 @@ impl SectionButton {
             tab_index,
             focus_handle,
             primary,
+            meta: None,
         }
+    }
+
+    fn meta(mut self, meta: impl Into<SharedString>) -> Self {
+        self.meta = Some(meta.into());
+        self
     }
 }
 
@@ -104,6 +115,7 @@ impl RenderOnce for SectionButton {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let id = format!("onb-button-{}-{}", self.label, self.tab_index);
         let action_ref: &dyn Action = &*self.action;
+        let meta = self.meta.clone();
         let icon_color = if self.primary {
             Color::Accent
         } else {
@@ -118,24 +130,47 @@ impl RenderOnce for SectionButton {
                 this.style(ButtonStyle::Filled)
                     .aria_description("Recommended first step")
             })
+            .when_some(meta.clone(), |this, meta| {
+                this.aria_description(meta.clone())
+                    .tooltip(Tooltip::text(meta))
+            })
             .full_width()
             .size(ButtonSize::Medium)
             .child(
                 h_flex()
                     .w_full()
+                    .min_w_0()
                     .justify_between()
                     .child(
                         h_flex()
+                            .min_w_0()
+                            .flex_1()
                             .gap_2()
                             .child(Icon::new(self.icon).color(icon_color).size(IconSize::Small))
                             .child(
                                 Label::new(self.label)
+                                    .truncate()
                                     .when(self.primary, |label| label.weight(FontWeight::MEDIUM)),
                             ),
                     )
                     .child(
-                        KeyBinding::for_action_in(action_ref, &self.focus_handle, cx)
-                            .size(rems_from_px(12.)),
+                        h_flex()
+                            .flex_none()
+                            .gap_2()
+                            .when_some(meta, |this, meta| {
+                                this.child(
+                                    div().max_w(rems_from_px(220.)).overflow_hidden().child(
+                                        Label::new(meta)
+                                            .truncate()
+                                            .size(LabelSize::XSmall)
+                                            .color(Color::Muted),
+                                    ),
+                                )
+                            })
+                            .child(
+                                KeyBinding::for_action_in(action_ref, &self.focus_handle, cx)
+                                    .size(rems_from_px(12.)),
+                            ),
                     ),
             )
             .on_click(move |_, window, cx| {
@@ -373,6 +408,8 @@ pub struct WelcomePage {
     focus_handle: FocusHandle,
     fallback_to_recent_projects: bool,
     recent_workspaces: Option<Vec<RecentWorkspace>>,
+    recent_workspaces_load_failed: bool,
+    recent_workspaces_load_generation: u64,
 }
 
 const DEZ_WELCOME_COMPACT_BREAKPOINT: Pixels = px(760.);
@@ -382,6 +419,7 @@ const DEZ_WELCOME_SPLIT_BREAKPOINT: Pixels = px(980.);
 enum WelcomeRecentState {
     Hidden,
     Loading,
+    Unavailable,
     Empty,
     Ready,
 }
@@ -390,6 +428,7 @@ fn welcome_recent_state(
     app_name: &str,
     fallback_to_recent_projects: bool,
     recent_workspaces_loaded: bool,
+    recent_workspaces_load_failed: bool,
     recent_workspace_count: usize,
 ) -> WelcomeRecentState {
     if !fallback_to_recent_projects {
@@ -398,6 +437,8 @@ fn welcome_recent_state(
         WelcomeRecentState::Ready
     } else if app_name == "Zed" {
         WelcomeRecentState::Hidden
+    } else if recent_workspaces_load_failed {
+        WelcomeRecentState::Unavailable
     } else if recent_workspaces_loaded {
         WelcomeRecentState::Empty
     } else {
@@ -431,34 +472,18 @@ impl WelcomePage {
             cx.observe(&workspace, |_, _, cx| cx.notify()).detach();
         }
 
-        if fallback_to_recent_projects {
-            let fs = workspace
-                .upgrade()
-                .map(|ws| ws.read(cx).app_state().fs.clone());
-            let db = WorkspaceDb::global(cx);
-            cx.spawn_in(window, async move |this: WeakEntity<Self>, cx| {
-                let Some(fs) = fs else { return };
-                let workspaces = db
-                    .recent_project_workspaces(fs.as_ref())
-                    .await
-                    .log_err()
-                    .unwrap_or_default();
-
-                this.update(cx, |this, cx| {
-                    this.recent_workspaces = Some(workspaces);
-                    cx.notify();
-                })
-                .ok();
-            })
-            .detach();
-        }
-
-        WelcomePage {
+        let mut welcome_page = WelcomePage {
             workspace,
             focus_handle,
             fallback_to_recent_projects,
             recent_workspaces: None,
+            recent_workspaces_load_failed: false,
+            recent_workspaces_load_generation: 0,
+        };
+        if fallback_to_recent_projects {
+            welcome_page.refresh_recent_workspaces(window, cx);
         }
+        welcome_page
     }
 
     fn select_next(&mut self, _: &SelectNext, window: &mut Window, cx: &mut Context<Self>) {
@@ -471,6 +496,47 @@ impl WelcomePage {
         cx.notify();
     }
 
+    fn refresh_recent_workspaces(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.recent_workspaces = None;
+        self.recent_workspaces_load_failed = false;
+        self.recent_workspaces_load_generation =
+            self.recent_workspaces_load_generation.wrapping_add(1);
+        let load_generation = self.recent_workspaces_load_generation;
+        cx.notify();
+
+        let Some(fs) = self
+            .workspace
+            .upgrade()
+            .map(|workspace| workspace.read(cx).app_state().fs.clone())
+        else {
+            self.recent_workspaces_load_failed = true;
+            cx.notify();
+            return;
+        };
+        let db = WorkspaceDb::global(cx);
+        cx.spawn_in(window, async move |this: WeakEntity<Self>, cx| {
+            let result = db.recent_project_workspaces(fs.as_ref()).await;
+            this.update(cx, |this, cx| {
+                if this.recent_workspaces_load_generation != load_generation {
+                    return;
+                }
+
+                match result {
+                    Ok(workspaces) => {
+                        this.recent_workspaces = Some(workspaces);
+                    }
+                    Err(error) => {
+                        log::error!("failed to load recent Workspaces on Home: {error:#}");
+                        this.recent_workspaces_load_failed = true;
+                    }
+                }
+                cx.notify();
+            })
+            .log_err();
+        })
+        .detach();
+    }
+
     fn open_recent_project(
         &mut self,
         action: &OpenRecentProject,
@@ -479,24 +545,29 @@ impl WelcomePage {
     ) {
         if let Some(recent_workspaces) = &self.recent_workspaces {
             if let Some(workspace) = recent_workspaces.get(action.index) {
-                let is_local = matches!(workspace.location, SerializedWorkspaceLocation::Local);
-
-                if is_local {
-                    let paths = workspace.paths.paths().to_vec();
-                    let open_mode = match WorkspaceSettings::get_global(cx).default_open_behavior {
-                        DefaultOpenBehavior::ExistingWindow => OpenMode::Activate,
-                        DefaultOpenBehavior::NewWindow => OpenMode::NewWindow,
-                    };
-                    self.workspace
-                        .update(cx, |workspace, cx| {
-                            workspace
-                                .open_workspace_for_paths(open_mode, paths, window, cx)
-                                .detach_and_log_err(cx);
-                        })
-                        .log_err();
-                } else {
-                    use zed_actions::OpenRecent;
-                    window.dispatch_action(OpenRecent::default().boxed_clone(), cx);
+                match &workspace.location {
+                    SerializedWorkspaceLocation::Local => {
+                        let paths = workspace.paths.paths().to_vec();
+                        let open_mode =
+                            match WorkspaceSettings::get_global(cx).default_open_behavior {
+                                DefaultOpenBehavior::ExistingWindow => OpenMode::Activate,
+                                DefaultOpenBehavior::NewWindow => OpenMode::NewWindow,
+                            };
+                        self.workspace
+                            .update(cx, |workspace, cx| {
+                                workspace
+                                    .open_workspace_for_paths(open_mode, paths, window, cx)
+                                    .detach_and_log_err(cx);
+                            })
+                            .log_err();
+                    }
+                    SerializedWorkspaceLocation::Remote(_) => {
+                        window.dispatch_action(
+                            open_remote_recent_workspace_action(workspace.workspace_id)
+                                .boxed_clone(),
+                            cx,
+                        );
+                    }
                 }
             }
         }
@@ -551,6 +622,33 @@ impl WelcomePage {
             )
     }
 
+    fn render_recent_workspace_error(
+        tab_index: usize,
+        welcome_page: WeakEntity<Self>,
+    ) -> impl IntoElement {
+        v_flex()
+            .w_full()
+            .gap_2()
+            .child(Self::render_recent_workspace_status(
+                "Recent Workspaces unavailable",
+                "History could not be read. Retry without leaving Home.",
+                IconName::Warning,
+            ))
+            .child(
+                Button::new("retry-recent-workspaces", "Retry")
+                    .tab_index(tab_index as isize)
+                    .full_width()
+                    .label_size(LabelSize::XSmall)
+                    .on_click(move |_, window, cx| {
+                        welcome_page
+                            .update(cx, |welcome_page, cx| {
+                                welcome_page.refresh_recent_workspaces(window, cx);
+                            })
+                            .log_err();
+                    }),
+            )
+    }
+
     fn render_recent_project(
         &self,
         project_index: usize,
@@ -575,6 +673,7 @@ impl WelcomePage {
             self.focus_handle.clone(),
             false,
         )
+        .meta(recent_workspace_meta(location, paths))
     }
 }
 
@@ -596,6 +695,7 @@ impl Render for WelcomePage {
         };
         let first_section_entries = first_section.entries.len();
         let next_tab_index = first_section_entries + second_section.entries.len();
+        let welcome_page = cx.weak_entity();
 
         let recent_projects = self
             .recent_workspaces
@@ -618,6 +718,7 @@ impl Render for WelcomePage {
             APP_NAME,
             self.fallback_to_recent_projects,
             self.recent_workspaces.is_some(),
+            self.recent_workspaces_load_failed,
             recent_projects.len(),
         );
         let secondary_content = match recent_state {
@@ -632,6 +733,10 @@ impl Render for WelcomePage {
                     IconName::Clock,
                 )
                 .into_any_element(),
+            ),
+            WelcomeRecentState::Unavailable => Some(
+                Self::render_recent_workspace_error(first_section_entries, welcome_page)
+                    .into_any_element(),
             ),
             WelcomeRecentState::Empty => Some(
                 Self::render_recent_workspace_status(
@@ -1134,6 +1239,32 @@ fn project_name(paths: &PathList) -> String {
     }
 }
 
+fn recent_workspace_meta(location: &SerializedWorkspaceLocation, paths: &PathList) -> SharedString {
+    let path_summary = if paths.paths().len() > 1 {
+        format!("{} folders", paths.paths().len())
+    } else {
+        paths
+            .ordered_paths()
+            .next()
+            .map(|path| path.compact().to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Location unavailable".to_owned())
+    };
+
+    match location {
+        SerializedWorkspaceLocation::Local => path_summary.into(),
+        SerializedWorkspaceLocation::Remote(options) => {
+            format!("{} · {path_summary}", options.display_name()).into()
+        }
+    }
+}
+
+fn open_remote_recent_workspace_action(workspace_id: WorkspaceId) -> OpenRecent {
+    OpenRecent {
+        create_new_window: None,
+        workspace_id: Some(workspace_id.to_i64()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1162,6 +1293,28 @@ mod tests {
         // A bare root "/" has no file_name(), falls back to "Untitled"
         let paths = PathList::new(&["/"]);
         assert_eq!(project_name(&paths), "Untitled");
+    }
+
+    #[test]
+    fn recent_workspace_meta_disambiguates_local_roots() {
+        let single = PathList::new(&["/home/user/my-project"]);
+        assert!(
+            recent_workspace_meta(&SerializedWorkspaceLocation::Local, &single)
+                .ends_with("/home/user/my-project")
+        );
+
+        let multiple = PathList::new(&["/home/user/api", "/home/user/web"]);
+        assert_eq!(
+            recent_workspace_meta(&SerializedWorkspaceLocation::Local, &multiple).as_ref(),
+            "2 folders"
+        );
+    }
+
+    #[test]
+    fn remote_recent_workspace_action_preserves_the_exact_target() {
+        let action = open_remote_recent_workspace_action(WorkspaceId::from_i64(42));
+        assert_eq!(action.workspace_id, Some(42));
+        assert_eq!(action.create_new_window, None);
     }
 
     #[test]
@@ -1235,23 +1388,27 @@ mod tests {
         assert!(!dez_welcome_uses_split_layout("Zed", px(1400.), true));
 
         assert_eq!(
-            welcome_recent_state("Dez", true, false, 0),
+            welcome_recent_state("Dez", true, false, false, 0),
             WelcomeRecentState::Loading
         );
         assert_eq!(
-            welcome_recent_state("Dez", true, true, 0),
+            welcome_recent_state("Dez", true, true, false, 0),
             WelcomeRecentState::Empty
         );
         assert_eq!(
-            welcome_recent_state("Dez", true, true, 2),
+            welcome_recent_state("Dez", true, false, true, 0),
+            WelcomeRecentState::Unavailable
+        );
+        assert_eq!(
+            welcome_recent_state("Dez", true, true, false, 2),
             WelcomeRecentState::Ready
         );
         assert_eq!(
-            welcome_recent_state("Dez", false, true, 2),
+            welcome_recent_state("Dez", false, true, true, 2),
             WelcomeRecentState::Hidden
         );
         assert_eq!(
-            welcome_recent_state("Zed", true, true, 0),
+            welcome_recent_state("Zed", true, false, true, 0),
             WelcomeRecentState::Hidden
         );
     }

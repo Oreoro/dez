@@ -98,7 +98,7 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
 fn dez_settings_page_priority(title: &str) -> usize {
     match title {
         "Workspace & Privacy" => 0,
-        "Projects & Terminals" => 1,
+        "Workspaces & Terminals" => 1,
         "Agents" => 2,
         "Attention" => 3,
         "Evidence" => 4,
@@ -107,8 +107,8 @@ fn dez_settings_page_priority(title: &str) -> usize {
         "Editor" => 7,
         "Languages & Tools" => 8,
         "Search & Files" => 9,
-        "Window & Layout" => 10,
-        "Files, Git & Agent" => 11,
+        "Navigation & Layout" => 10,
+        "Workspace Tools" => 11,
         "Debugger" => 12,
         "Version Control" => 13,
         "Network" => 14,
@@ -227,8 +227,25 @@ fn sessions_side_setting_visible(app_name: &str, page_title: &str) -> bool {
     if app_name == "Zed" {
         page_title == "Agents"
     } else {
-        page_title == "Projects & Terminals"
+        page_title == "Workspaces & Terminals"
     }
+}
+
+fn projects_startup_setting() -> SettingsPageItem {
+    SettingsPageItem::SettingItem(SettingItem {
+        title: "Open Projects on Startup",
+        description: "Open the Projects navigator in fresh windows. Restored and explicitly opened layouts keep their own state.",
+        field: Box::new(SettingField {
+            organization_override: None,
+            json_path: Some("sidebar.starts_open"),
+            pick: |settings_content| settings_content.sidebar.as_ref()?.starts_open.as_ref(),
+            write: |settings_content, value, _| {
+                settings_content.sidebar.get_or_insert_default().starts_open = value;
+            },
+        }),
+        metadata: None,
+        files: USER,
+    })
 }
 
 fn sessions_side_setting() -> SettingsPageItem {
@@ -5302,7 +5319,7 @@ fn window_and_layout_page() -> SettingsPage {
     }
 
     SettingsPage {
-        title: "Window & Layout",
+        title: workspace_surface_copy(paths::APP_NAME, "Window & Layout", "Navigation & Layout"),
         items: concat_sections![
             status_bar_section(),
             sidebar_chrome_section(),
@@ -6903,7 +6920,7 @@ fn panels_page() -> SettingsPage {
     }
 
     SettingsPage {
-        title: workspace_surface_copy(paths::APP_NAME, "Panels", "Files, Git & Agent"),
+        title: workspace_surface_copy(paths::APP_NAME, "Panels", "Workspace Tools"),
         items: concat_sections![
             project_panel_section(),
             outline_panel_section(),
@@ -7035,14 +7052,15 @@ fn debugger_page() -> SettingsPage {
 
 fn terminal_page() -> SettingsPage {
     fn sessions_section() -> Vec<SettingsPageItem> {
-        if sessions_side_setting_visible(paths::APP_NAME, "Projects & Terminals") {
+        if sessions_side_setting_visible(paths::APP_NAME, "Workspaces & Terminals") {
             vec![
                 SettingsPageItem::SectionHeader(if paths::APP_NAME == "Zed" {
                     "Sessions"
                 } else {
-                    "Projects"
+                    "Projects Navigator"
                 }),
                 sessions_side_setting(),
+                projects_startup_setting(),
             ]
         } else {
             Vec::new()
@@ -7921,7 +7939,7 @@ fn terminal_page() -> SettingsPage {
         title: workspace_surface_copy(
             paths::APP_NAME,
             "Sessions & Terminal",
-            "Projects & Terminals",
+            "Workspaces & Terminals",
         ),
         items: concat_sections![
             sessions_section(),
@@ -9163,7 +9181,7 @@ fn attention_page() -> SettingsPage {
     let attention_status_description = if paths::APP_NAME == "Zed" {
         "Show the action-needed summary in the workspace bar and Session Rail."
     } else {
-        "Show the action-needed summary in Sessions."
+        "Show the action-needed summary in Projects and native Workspace chrome."
     };
     let mut items = vec![
         SettingsPageItem::SectionHeader("Attention"),
@@ -9262,7 +9280,7 @@ fn attention_page() -> SettingsPage {
             3,
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Floating Attention Popups",
-                description: "Allow Agent attention to open a floating window over other work. Off by default because Sessions already keeps unread and action-needed state visible.",
+                description: "Allow Agent attention to open a floating window over other work. Off by default because Projects already keeps unread and action-needed state visible.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("agent_ui.floating_attention_popups"),
@@ -9365,7 +9383,7 @@ fn evidence_page() -> SettingsPage {
             description: if paths::APP_NAME == "Zed" {
                 "Reopen the last active terminal surface when its locally stored identity still resolves. Session Rail identity and attention metadata load independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database."
             } else {
-                "Reopen the last active terminal surface when its locally stored identity still resolves. Sessions identity and attention metadata load independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database."
+                "Reopen the last active terminal surface when its locally stored identity still resolves. Projects loads Session identity and attention metadata independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database."
             },
             field: Box::new(SettingField {
                 organization_override: None,
@@ -11543,7 +11561,7 @@ mod tests {
     fn dez_settings_put_the_product_workflow_before_ide_customization() {
         let product_pages = [
             "Workspace & Privacy",
-            "Projects & Terminals",
+            "Workspaces & Terminals",
             "Agents",
             "Attention",
             "Evidence",
@@ -11554,8 +11572,7 @@ mod tests {
 
         assert!(dez_settings_page_priority("Evidence") < dez_settings_page_priority("Appearance"));
         assert!(
-            dez_settings_page_priority("Files, Git & Agent")
-                < dez_settings_page_priority("Advanced")
+            dez_settings_page_priority("Workspace Tools") < dez_settings_page_priority("Advanced")
         );
         assert_eq!(dez_settings_page_priority("Unknown Compatibility Page"), 16);
     }
@@ -11569,7 +11586,10 @@ mod tests {
 
     #[test]
     fn sessions_placement_is_configured_with_its_own_surface_in_dez() {
-        assert!(sessions_side_setting_visible("Dez", "Projects & Terminals"));
+        assert!(sessions_side_setting_visible(
+            "Dez",
+            "Workspaces & Terminals"
+        ));
         assert!(!sessions_side_setting_visible("Dez", "Agents"));
         assert!(sessions_side_setting_visible("Zed", "Agents"));
         assert!(!sessions_side_setting_visible("Zed", "Sessions & Terminal"));
@@ -11607,11 +11627,11 @@ mod tests {
     #[test]
     fn dez_settings_present_workspace_tools_and_hide_dock_only_controls() {
         assert_eq!(
-            workspace_surface_copy("Dez", "Panels", "Files, Git & Agent"),
-            "Files, Git & Agent"
+            workspace_surface_copy("Dez", "Panels", "Workspace Tools"),
+            "Workspace Tools"
         );
         assert_eq!(
-            workspace_surface_copy("Zed", "Panels", "Files, Git & Agent"),
+            workspace_surface_copy("Zed", "Panels", "Workspace Tools"),
             "Panels"
         );
 

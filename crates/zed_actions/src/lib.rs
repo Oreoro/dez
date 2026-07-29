@@ -684,6 +684,8 @@ pub mod assistant {
 pub struct OpenRecent {
     #[serde(default)]
     pub create_new_window: Option<bool>,
+    #[serde(default)]
+    pub workspace_id: Option<i64>,
 }
 
 /// Creates a project from a selected template.

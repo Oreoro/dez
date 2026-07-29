@@ -201,11 +201,7 @@ fn render_sidebar_header_controls_for_state(
         (false, SidebarSide::Left) => IconName::SidebarLeftClosed,
         (false, SidebarSide::Right) => IconName::SidebarRightClosed,
     };
-    let sidebar_label = if sidebar_open {
-        "Hide Sessions"
-    } else {
-        "Open Sessions"
-    };
+    let sidebar_label = sidebar_toggle_label(paths::APP_NAME, sidebar_open);
     let on_right = sidebar_side == SidebarSide::Right;
     let sidebar_multi_workspace = multi_workspace.clone();
     if paths::APP_NAME != "Zed" {
@@ -292,6 +288,31 @@ fn render_sidebar_header_controls_for_state(
     )
 }
 
+fn sidebar_toggle_label(app_name: &str, sidebar_open: bool) -> &'static str {
+    match (app_name == "Zed", sidebar_open) {
+        (true, true) => "Hide Sessions",
+        (true, false) => "Open Sessions",
+        (false, true) => "Hide Projects",
+        (false, false) => "Open Projects",
+    }
+}
+
+fn sidebar_resize_copy(app_name: &str) -> (&'static str, &'static str, &'static str) {
+    if app_name == "Zed" {
+        (
+            "Resize Sessions",
+            "Use Left and Right Arrow to resize Sessions. Press Enter to reset.",
+            "Resize Sessions · Arrow keys resize · Enter resets",
+        )
+    } else {
+        (
+            "Resize Projects",
+            "Use Left and Right Arrow to resize Projects. Press Enter to reset.",
+            "Resize Projects · Arrow keys resize · Enter resets",
+        )
+    }
+}
+
 fn sidebar_chrome_toggle_visible(app_name: &str, sidebar_open: bool) -> bool {
     app_name == "Zed" || !sidebar_open
 }
@@ -325,16 +346,28 @@ fn sidebar_keyboard_resize_target(
 mod sidebar_chrome_tests {
     use super::{
         SIDEBAR_KEYBOARD_RESIZE_STEP, sidebar_chrome_toggle_visible,
-        sidebar_keyboard_resize_target, sidebar_resize_handle_occludes_main_work_area,
+        sidebar_keyboard_resize_target, sidebar_resize_copy,
+        sidebar_resize_handle_occludes_main_work_area, sidebar_toggle_label,
     };
     use gpui::px;
 
     #[test]
-    fn dez_uses_chrome_to_open_sessions_but_not_to_duplicate_its_hide_action() {
+    fn dez_uses_chrome_to_open_projects_but_not_to_duplicate_its_hide_action() {
         assert!(sidebar_chrome_toggle_visible("Dez", false));
         assert!(!sidebar_chrome_toggle_visible("Dez", true));
         assert!(sidebar_chrome_toggle_visible("Zed", false));
         assert!(sidebar_chrome_toggle_visible("Zed", true));
+        assert_eq!(sidebar_toggle_label("Dez", false), "Open Projects");
+        assert_eq!(sidebar_toggle_label("Dez", true), "Hide Projects");
+        assert_eq!(sidebar_toggle_label("Zed", false), "Open Sessions");
+        assert_eq!(sidebar_toggle_label("Zed", true), "Hide Sessions");
+    }
+
+    #[test]
+    fn dez_projects_splitter_names_the_product_navigator() {
+        assert_eq!(sidebar_resize_copy("Dez").0, "Resize Projects");
+        assert!(sidebar_resize_copy("Dez").1.contains("resize Projects"));
+        assert_eq!(sidebar_resize_copy("Zed").0, "Resize Sessions");
     }
 
     #[test]
@@ -2641,13 +2674,14 @@ fn render_sidebar_resize_handle(
     let resize_handle_focus = cx.theme().colors().border_focused.opacity(0.2);
     let keyboard_weak = weak.clone();
     let mouse_weak = weak;
+    let (resize_label, resize_description, resize_tooltip) = sidebar_resize_copy(paths::APP_NAME);
 
     deferred(
         div()
             .id("sidebar-resize-handle")
             .role(gpui::Role::Splitter)
-            .aria_label("Resize Sessions")
-            .aria_description("Use Left and Right Arrow to resize Sessions. Press Enter to reset.")
+            .aria_label(resize_label)
+            .aria_description(resize_description)
             .aria_orientation(gpui::Orientation::Vertical)
             .aria_numeric_value(f64::from(sidebar_width))
             .aria_numeric_value_step(f64::from(SIDEBAR_KEYBOARD_RESIZE_STEP))
@@ -2665,9 +2699,7 @@ fn render_sidebar_resize_handle(
             .cursor_col_resize()
             .hover(|style| style.bg(resize_handle_hover))
             .focus_visible(|style| style.bg(resize_handle_focus))
-            .tooltip(Tooltip::text(
-                "Resize Sessions · Arrow keys resize · Enter resets",
-            ))
+            .tooltip(Tooltip::text(resize_tooltip))
             .on_key_down(move |event, _, cx| {
                 if event.keystroke.modifiers.modified() {
                     return;
