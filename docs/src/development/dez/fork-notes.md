@@ -1774,3 +1774,11 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   Version advancement never converts unchecked source intent into a shipped
   claim. The active order lives in
   [v0.1 Product Hardening](./v0.1-product-hardening.md).
+- **2026-07-29: Remote build reuse never substitutes for exact packaging.**
+  The macOS workflow may restore Cargo fingerprints, build-script outputs, and
+  dependency artifacts from the same toolchain and lockfile. It never caches
+  the canonical release executable paths, application bundle, DMG, signature
+  result, runtime smoke output, manifest, or checksum. Every source commit still
+  assembles the canonical bundle and must pass identity, architecture,
+  signature, entry-point, and package verification before its artifact is
+  accepted.

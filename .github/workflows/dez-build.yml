@@ -65,6 +65,20 @@ jobs:
           restore-keys: |
             dez-cargo-macos-arm64-
 
+      - name: Restore Rust release intermediates
+        id: rust-release-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            target/aarch64-apple-darwin/release/.fingerprint
+            target/aarch64-apple-darwin/release/build
+            target/aarch64-apple-darwin/release/deps
+          key: dez-rust-release-macos-arm64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            dez-rust-release-macos-arm64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-
+            dez-rust-release-macos-arm64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-
+            dez-rust-release-macos-arm64-${{ hashFiles('rust-toolchain.toml') }}-
+
       - name: Verify the Apple M2 build target
         run: |
           set -euo pipefail
@@ -88,9 +102,20 @@ jobs:
           ./script/dez-identity-check
 
       - name: Build the optimized Dez application bundle
+        id: build-dez
         run: |
           set -euo pipefail
           ./script/bundle-mac aarch64-apple-darwin
+
+      - name: Save Rust release intermediates
+        if: ${{ !cancelled() && (steps.build-dez.outcome == 'success' || steps.build-dez.outcome == 'failure') && steps.rust-release-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            target/aarch64-apple-darwin/release/.fingerprint
+            target/aarch64-apple-darwin/release/build
+            target/aarch64-apple-darwin/release/deps
+          key: dez-rust-release-macos-arm64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Verify and package the launchable application
         run: |

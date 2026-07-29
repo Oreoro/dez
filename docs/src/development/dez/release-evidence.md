@@ -1650,6 +1650,26 @@ No build, test binary, alternate binary, or new visual launch was performed.
 Rendered pointer, keyboard, idempotent reveal, dismissal, and focus-return proof
 remains open for the consolidated build.
 
+## 2026-07-29: source-aware remote build reuse
+
+GitHub Actions run
+[`30472063584`](https://github.com/Oreoro/dez/actions/runs/30472063584)
+passed setup, target, and source guards and entered compilation for exact source
+`36bee432d054e99e5cdd3a536f15c51d7deb1b49`, then was cancelled externally.
+It is not compile, package, runtime, or release evidence.
+
+The macOS workflow now restores and saves only Cargo fingerprints, build-script
+outputs, and dependency artifacts keyed by Rust toolchain, lockfile, source
+commit, workflow run, and attempt. A compatible earlier source cache can
+shorten later builds while Cargo recompiles changed crates. Canonical release
+executable paths, Dez.app, DMG, signature results, runtime smoke output,
+manifest, installation copy, and checksum remain outside the cache and are
+regenerated and verified for every candidate.
+
+Formatting, shell syntax, diff, and identity checks are the only local
+verification for this change. Exact compile, package, and rendered evidence
+remain open until the updated workflow completes.
+
 ## 2026-07-26: integrated Agent provider setup
 
 The reachable Dez provider setup no longer uses the inherited nested

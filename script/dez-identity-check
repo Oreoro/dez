@@ -2314,9 +2314,15 @@ require_pattern .github/workflows/dez-build.yml \
 require_pattern .github/workflows/dez-build.yml \
     '^  CARGO_PROFILE_RELEASE_STRIP: symbols$' \
     'the downloadable macOS workflow no longer strips release symbols'
+require_multiline_pattern .github/workflows/dez-build.yml \
+    'Restore Rust release intermediates.*?actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830.*?target/aarch64-apple-darwin/release/\.fingerprint.*?target/aarch64-apple-darwin/release/build.*?target/aarch64-apple-darwin/release/deps.*?dez-rust-release-macos-arm64-.*?github\.sha.*?restore-keys' \
+    'the remote macOS build no longer reuses source-aware Rust release intermediates'
 require_pattern .github/workflows/dez-build.yml \
     '\./script/bundle-mac aarch64-apple-darwin' \
     'the manual macOS workflow bypasses the canonical application bundler'
+require_multiline_pattern .github/workflows/dez-build.yml \
+    'Build the optimized Dez application bundle.*?id: build-dez.*?Save Rust release intermediates.*?!cancelled\(\).*?steps\.build-dez\.outcome.*?steps\.rust-release-cache\.outputs\.cache-hit.*?actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830.*?target/aarch64-apple-darwin/release/\.fingerprint.*?target/aarch64-apple-darwin/release/build.*?target/aarch64-apple-darwin/release/deps.*?github\.sha.*?Verify and package the launchable application' \
+    'the remote macOS build no longer preserves reusable compilation work before exact-package verification'
 require_multiline_pattern .github/workflows/dez-build.yml \
     'hdiutil verify.*?Dez\.app.*?Contents/MacOS/dez-terminal-host.*?CFBundleIdentifier.*?dev\.dez\.Dez.*?codesign --verify --deep --strict' \
     'the manual macOS workflow does not verify its DMG, identity, helper, and signature'
