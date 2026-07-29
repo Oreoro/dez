@@ -65,11 +65,14 @@ require_pattern crates/paths/src/paths.rs \
     '^pub const APP_STORAGE_NAME: &str = "Superzed";' \
     'the documented legacy storage boundary changed without a migration'
 require_pattern crates/zed/Cargo.toml \
-    '^version = "0\.0\.4"$' \
-    'application version is not 0.0.4'
+    '^version = "0\.1\.0"$' \
+    'application version is not 0.1.0'
 require_multiline_pattern Cargo.lock \
-    '\[\[package\]\][[:space:]]*name = "zed"[[:space:]]*version = "0\.0\.4"' \
-    'the locked Dez package version does not match 0.0.4'
+    '\[\[package\]\][[:space:]]*name = "zed"[[:space:]]*version = "0\.1\.0"' \
+    'the locked Dez package version does not match 0.1.0'
+require_pattern crates/zed/Cargo.toml \
+    '^description = "A native IDE for terminal-native developers\."$' \
+    'the package description no longer communicates the Dez product identity'
 require_pattern crates/zed/Cargo.toml \
     '^default-run = "dez"$' \
     'default executable is not dez'
@@ -310,7 +313,7 @@ require_pattern assets/fonts/jetbrains-mono/OFL.txt \
     '^Copyright 2020 The JetBrains Mono Project Authors' \
     'the JetBrains Mono source attribution is incomplete'
 require_multiline_pattern README.md \
-    '^# Dez.*?v0\.0\.4 source baseline.*?active, evidence-gated path to \*\*v0\.1\*\*.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Projects\*\*.*?path-matched.*?tmux.*?Herdr.*?Unrelated machine terminals.*?Workspace tools.*?ordinary draggable and closeable native.*?\*\*Built-in Agent\*\*.*?Open Agent Terminal.*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?Before v0\.1' \
+    '^# Dez.*?v0\.1\.0 source candidate.*?not yet a signed or supported binary release.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Projects\*\*.*?path-matched.*?tmux.*?Herdr.*?Unrelated machine terminals.*?Workspace tools.*?ordinary draggable and closeable native.*?\*\*Built-in Agent\*\*.*?Open Agent Terminal.*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?A public v0\.1 release' \
     'the repository front page can regress to upstream branding, omit the Dez product model, or overstate release readiness'
 require_multiline_pattern README.md \
     '## Visual baseline.*?Lumin Blur.*?Lumin Light.*?IBM Plex Sans.*?Lilex.*?## Upstream relationship.*?deliberate fork.*?## License and attribution.*?independent fork' \
@@ -319,7 +322,7 @@ reject_pattern README.md \
     '^# Zed$|download Zed directly|we.re hiring|Sponsorships go directly to Zed Industries' \
     'the repository front page still presents Dez as the official upstream Zed product'
 require_multiline_pattern docs/src/dez.md \
-    '^# What is Dez\?.*?## The screen model.*?Projects.*?Main Work Area.*?Workspace Tools.*?native pane grid.*?## How coding work flows.*?Open Agent Terminal.*?## Terminal and Agent integration.*?Packaged Dez builds.*?External Sessions.*?v0\.0\.4 adds explicit project-scoped integration for tmux, Herdr, and cmux.*?The v0\.0\.4 goal.*?## Source-preview limits' \
+    '^# What is Dez\?.*?## The screen model.*?Projects.*?Main Work Area.*?Workspace Tools.*?native pane grid.*?## How coding work flows.*?Open Agent Terminal.*?## Terminal and Agent integration.*?Packaged Dez builds.*?External Sessions.*?Dez v0\.1 retains explicit project-scoped integration for tmux, Herdr, and cmux.*?The v0\.1 product promise.*?## Source-preview limits' \
     'the public product guide can lose the screen model, IDE integration, or honest source-preview boundary'
 require_pattern docs/src/SUMMARY.md \
     '^- \[What is Dez\?\]\(\./dez\.md\)$' \
@@ -330,7 +333,7 @@ require_multiline_pattern docs/src/development/dez/v0.0.3-production-readiness.m
     '^# Dez v0\.0\.3 production readiness.*?v0\.0\.3 is a hardening release, not a feature expansion.*?## Milestone 1 — startup and durable terminal truth.*?## Milestone 2 — one coherent shell.*?## Milestone 3 — responsive and visual production pass.*?## Milestone 6 — exact build and public-preview package.*?## Stop-ship defects' \
     'the v0.0.3 plan can regress to feature expansion without reliability, visual, package, and stop-ship gates'
 require_file docs/src/development/dez/v0.0.4-external-sessions.md \
-    'the active v0.0.4 external-sessions plan is missing'
+    'the historical v0.0.4 external-sessions plan is missing'
 require_multiline_pattern docs/src/development/dez/v0.0.4-external-sessions.md \
     '^# Dez v0\.0\.4 external sessions.*?## Release promise.*?## Ownership contract.*?tmux session.*?Herdr pane.*?Other local terminal process.*?## Milestone 1 — external discovery.*?## Milestone 2 — safe native attach.*?Never pass Herdr `--takeover` automatically.*?## Milestone 4 — native visual and responsive pass.*?## Milestone 5 — release proof.*?## Deferred' \
     'the v0.0.4 plan can regress to implied PTY ownership, a second navigation model, or an unverified release'
@@ -2348,7 +2351,7 @@ require_multiline_pattern .github/workflows/dez-build.yml \
     'hdiutil verify.*?Dez\.app.*?Contents/MacOS/dez-terminal-host.*?CFBundleIdentifier.*?dev\.dez\.Dez.*?codesign --verify --deep --strict' \
     'the manual macOS workflow does not verify its DMG, identity, helper, and signature'
 require_multiline_pattern .github/workflows/dez-build.yml \
-    '"\$main" --system-specs.*?"\$cli" --dez "\$app" --version.*?"\$terminal_host" --help.*?runtime-smoke\.txt.*?grep -F "Dez: v0\.0\.4".*?grep -F "Dez 0\.0\.4".*?grep -F "Usage: dez-terminal-host"' \
+    '"\$main" --system-specs.*?"\$cli" --dez "\$app" --version.*?"\$terminal_host" --help.*?runtime-smoke\.txt.*?grep -F "Dez: v0\.1\.0".*?grep -F "Dez 0\.1\.0".*?grep -F "Usage: dez-terminal-host"' \
     'the public macOS workflow no longer executes and verifies every packaged Dez entry point'
 require_multiline_pattern .github/workflows/dez-build.yml \
     'Dez-macOS-M2\.dmg.*?INSTALL\.txt.*?SHA256SUMS\.txt.*?compression-level: 0' \

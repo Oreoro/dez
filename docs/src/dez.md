@@ -473,13 +473,13 @@ reveal the owning application, but it does not read the transcript or
 arguments, intercept input, persist the row, adopt the PTY, restore the
 process, or claim ownership of its work.
 
-v0.0.4 adds explicit project-scoped integration for tmux, Herdr, and cmux. Dez
-discovers tmux sessions through the documented CLI format, Herdr panes through
-the local snapshot API, and cmux Workspaces through its JSON CLI. tmux and
-Herdr open their documented attach command in a normal terminal Surface. cmux
-Workspaces stay in cmux and open through its `select-workspace` command. The
-external application remains authoritative; closing a Dez tab detaches, Herdr
-never receives automatic takeover, and Projects never becomes a second
+Dez v0.1 retains explicit project-scoped integration for tmux, Herdr, and cmux.
+Dez discovers tmux sessions through the documented CLI format, Herdr panes
+through the local snapshot API, and cmux Workspaces through its JSON CLI. tmux
+and Herdr open their documented attach command in a normal terminal Surface.
+cmux Workspaces stay in cmux and open through its `select-workspace` command.
+The external application remains authoritative; closing a Dez tab detaches,
+Herdr never receives automatic takeover, and Projects never becomes a second
 process, transcript, or layout owner.
 
 ## Visual design
@@ -569,8 +569,9 @@ Dez is not:
 - a claim that arbitrary terminals owned by other applications survive through
   Dez.
 
-The v0.0.4 goal is a complete native IDE with one sharp wedge: trustworthy
-supervision, reattachment, and review of terminal-native and agent-driven work.
+The v0.1 product promise is a complete native IDE with one sharp wedge:
+trustworthy supervision, reattachment, and review of terminal-native and
+agent-driven work.
 
 ## Source-preview limits
 
@@ -581,6 +582,7 @@ restart, crash, accessibility, upgrade, and coexistence evidence.
 For precise implementation state, read:
 
 - [Fork Notes](./development/dez/fork-notes.md)
+- [v0.1 Product Hardening](./development/dez/v0.1-product-hardening.md)
 - [v0.0.4 External Sessions](./development/dez/v0.0.4-external-sessions.md)
 - [Architecture Baseline](./development/dez/architecture-baseline.md)
 - [Roadmap](./development/dez/roadmap.md)

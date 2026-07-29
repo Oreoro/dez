@@ -11,8 +11,8 @@ documents according to their authority, not their age.
    release train and its ordered acceptance gates. It does not override Fork
    Notes or claim that the target release already exists.
 3. [v0.0.4 External Sessions](./v0.0.4-external-sessions.md) preserves the
-   current source baseline and the exact build/runtime gates that must close
-   before the v0.1 ladder advances.
+   historical ownership baseline and the exact build/runtime gates that fed the
+   v0.1 candidate.
 4. [v0.0.3 Production Readiness](./v0.0.3-production-readiness.md) preserves
    the previous hardening train and its evidence. It is historical input, not a
    competing execution order.
@@ -44,7 +44,7 @@ documents according to their authority, not their age.
     records how the revised long-range plan was adopted, adapted, deferred, or
     rejected. It is an intake record, not a competing source of truth.
 14. [Dez v0.0.1](../dez-v0.0.1.md) is the historical first-release snapshot
-    and launch checklist. It does not describe the active v0.0.4 train.
+    and launch checklist. It does not describe the active v0.1 train.
 15. [Release Evidence](./release-evidence.md) records direct build, runtime,
     visual, coexistence, and packaging proof for the current release candidate.
 16. [v0.0.1 Release Runbook](./v0.0.1-release-runbook.md) preserves historical

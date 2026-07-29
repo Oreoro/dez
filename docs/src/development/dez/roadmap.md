@@ -33,13 +33,13 @@ the product loop rather than outrun ownership foundations.
 ## v0.1 active track {#v0-1-active-track}
 
 The ordered release contract lives in
-[v0.1 Product Hardening](./v0.1-product-hardening.md). The current v0.0.4
-source and exact artifact gate are its baseline, not a competing release train.
+[v0.1 Product Hardening](./v0.1-product-hardening.md). The v0.0.4 source and
+artifact evidence are its historical baseline, not a competing release train.
 
 The v0.1 dependency order is:
 
 ```text
-close exact v0.0.4 artifact gate
+validate the exact v0.1.0 source candidate
 -> simplify Home, Projects, menus, and native tab navigation
 -> prove durable terminal and Workspace recovery
 -> harden Codex, Claude Code, OpenCode, tmux, and Herdr integrations

@@ -11,9 +11,9 @@ and agent ecosystem, then reorganizes them around a clearer product promise:
 > See what is running, what needs attention, what changed, and what is ready
 > for review without reconstructing terminal and editor state.
 
-This repository currently carries the **Dez v0.0.4 source baseline** and the
-active, evidence-gated path to **v0.1**. It is not yet a signed or supported
-binary release.
+This repository currently carries the **Dez v0.1.0 source candidate**. It is
+not yet a signed or supported binary release; promotion depends on the exact
+remote artifact and evidence gates documented below.
 
 ## What Dez does
 
@@ -98,8 +98,8 @@ one Zed-compatible Project:
 A terminal is therefore not embedded in chat, and the editor is not a separate
 mode. They are peer Surfaces in one native pane grid. Dez detects supported
 agents running in its terminals, including Codex, Claude Code, OpenCode, and
-Herdr. v0.0.4 discovers explicitly shared tmux sessions, live Herdr panes, and
-cmux Workspaces. tmux and Herdr attach through ordinary terminal tabs; cmux
+Herdr. Dez v0.1 discovers explicitly shared tmux sessions, live Herdr panes,
+and cmux Workspaces. tmux and Herdr attach through ordinary terminal tabs; cmux
 Workspaces open in cmux. Process and layout ownership always stays with the
 external application. Arbitrary PTYs remain read-only.
 
@@ -127,7 +127,7 @@ instead of a centered onboarding or workflow overlay.
 
 ## Current status
 
-The v0.0.4 source baseline contains the opinionated Dez shell,
+The v0.1.0 source candidate contains the opinionated Dez shell,
 identity isolation, Workspace composition, persistent Projects navigation,
 ordinary closeable workspace-tool tabs, explicit Agent Session state,
 host-owned local terminal lifecycle, setting-controlled Back/Forward history,
@@ -143,11 +143,11 @@ previews. The next browser slice requires a real pane-scoped native surface and
 Workspace item; Dez deliberately does not expose the inherited
 geometry-only `BrowserDevelopment` recipe as a fake preview.
 
-Before v0.1, every candidate must pass exact build, rendered, restart, crash,
+A public v0.1 release still requires exact build, rendered, restart, crash,
 accessibility, integration, coexistence, and packaging evidence. The ordered
-release ladder is documented in
+release ladder and open gates are documented in
 [v0.1 Product Hardening](./docs/src/development/dez/v0.1-product-hardening.md);
-the current baseline gates remain in the
+the completed ownership baseline remains in the historical
 [v0.0.4 External Sessions Plan](./docs/src/development/dez/v0.0.4-external-sessions.md),
 with exact results recorded in
 [release evidence](./docs/src/development/dez/release-evidence.md). The v0.0.1
@@ -159,7 +159,7 @@ runbook remains historical evidence, not the current release plan.
 - [v0.1 Product Hardening](./docs/src/development/dez/v0.1-product-hardening.md)
   — active release ladder and acceptance gates
 - [v0.0.4 External Sessions](./docs/src/development/dez/v0.0.4-external-sessions.md)
-  — current source baseline and exact artifact gates
+  — historical ownership baseline and artifact gates
 - [v0.0.3 Production Readiness](./docs/src/development/dez/v0.0.3-production-readiness.md)
   — previous hardening train and evidence
 - [v0.0.2 Completion Plan](./docs/src/development/dez/v0.0.2-completion-plan.md)
@@ -221,7 +221,7 @@ flow from Zed.
 
 ## Contributing
 
-The public contributor workflow is being prepared for v0.0.4. Until its
+The public contributor workflow is being prepared for v0.1. Until its
 fork-specific policy is complete, use [CONTRIBUTING.md](./CONTRIBUTING.md) for
 the inherited engineering workflow and include:
 
