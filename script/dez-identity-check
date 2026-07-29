@@ -208,6 +208,9 @@ require_multiline_pattern assets/settings/initial_user_settings.json \
 require_multiline_pattern crates/onboarding/src/onboarding.rs \
     'fn onboarding_toggles_left_dock\(app_name: &str\) -> bool \{.*?app_name == "Zed".*?fn onboarding_surface_label.*?"Set Up Dez".*?if onboarding_toggles_left_dock\(APP_NAME\).*?workspace\.toggle_dock\(DockPosition::Left.*?fn tab_content_text.*?onboarding_surface_label\(APP_NAME\)' \
     'Dez setup can regress to opening an unrelated dock or using generic onboarding tab identity'
+reject_multiline_pattern crates/onboarding/src/onboarding.rs \
+    'when\(is_dez && !compact_layout.*?\.size_8\(\).*?\.rounded_md\(\).*?Icon::new\(IconName::Settings\).*?Headline::new\("Set up Dez"\)' \
+    'Dez setup can regress to wrapping its native Settings glyph in decorative web-card chrome'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'files_copy\("Starts Open", "Open Files with Workspaces"\).*?"Whether Files opens automatically when a Workspace opens\."' \
     'Files startup settings can regress to exposing legacy dock implementation language'

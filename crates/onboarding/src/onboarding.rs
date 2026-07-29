@@ -370,12 +370,6 @@ impl Render for Onboarding {
                                                     .flex()
                                                     .items_center()
                                                     .justify_center()
-                                                    .rounded_md()
-                                                    .border_1()
-                                                    .border_color(
-                                                        cx.theme().colors().border_variant,
-                                                    )
-                                                    .bg(cx.theme().colors().element_background)
                                                     .child(
                                                         Icon::new(IconName::Settings)
                                                             .size(IconSize::Small)

@@ -1795,3 +1795,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   attention windows, and Settings does not advertise the legacy popup flag.
   Official Zed behavior and test-only coverage of the popup implementation
   remain available.
+- **2026-07-29: Calm hierarchy is adapted through native Zed surfaces.** Dez
+  uses restrained separators, low-contrast selection, compact grouped Projects,
+  a generous Main Work Area, and one contextual Workspace Tools region. Setup
+  uses a plain semantic glyph instead of a framed web-style icon tile. This
+  direction does not introduce a Studio/Projects mode switcher, chat shell,
+  custom tab system, floating inspector, or permanent three-column layout.

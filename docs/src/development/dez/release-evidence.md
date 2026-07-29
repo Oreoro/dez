@@ -1690,6 +1690,12 @@ remains available through Projects, pane state, accessibility announcements,
 native window attention, and configured notifications. Official Zed behavior
 and test-only exercise of the inherited popup implementation remain unchanged.
 
+The visual-reference pass keeps its calm density, quiet separators,
+low-contrast selection, central-work emphasis, and contextual-inspector
+hierarchy, but maps them only onto native Zed regions. It removes the remaining
+framed Settings glyph from **Set Up Dez** and explicitly rejects the reference's
+custom mode switcher, chat shell, permanent inspector, and non-native tab model.
+
 ## 2026-07-26: integrated Agent provider setup
 
 The reachable Dez provider setup no longer uses the inherited nested
