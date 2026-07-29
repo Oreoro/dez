@@ -7220,6 +7220,8 @@ impl Sidebar {
 
                         let attach_sidebar = this_for_menu.clone();
                         let menu = menu.when(!attachable_sessions.is_empty(), |menu| {
+                            let attachable_sessions = attachable_sessions.clone();
+                            let attach_sidebar = attach_sidebar.clone();
                             menu.submenu(
                                 "Attach Running Session…",
                                 move |mut submenu, _window, _cx| {
