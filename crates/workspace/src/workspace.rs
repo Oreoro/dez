@@ -2402,6 +2402,12 @@ pub struct NewCenterTerminal {
     /// If true, creates a local terminal even in remote projects.
     #[serde(default)]
     pub local: bool,
+    /// Optional command to run after the configured shell is ready.
+    ///
+    /// Dez uses this for terminal-native agent launchers while preserving the
+    /// user's shell initialization and the native terminal emulator.
+    #[serde(default)]
+    pub startup_command: Option<String>,
 }
 
 /// Opens a new terminal.

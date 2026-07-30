@@ -4,13 +4,14 @@ pub mod terminal_panel;
 mod terminal_path_like_target;
 pub mod terminal_scrollbar;
 
+use agent_settings::AgentSettings;
 use anyhow::{Result, anyhow};
 use collections::HashMap;
 use editor::{
     Editor, EditorSettings, actions::SelectAll, blink_manager::BlinkManager,
     ui_scrollbar_settings_from_raw,
 };
-use futures::{channel::oneshot, future::join_all};
+use futures::{FutureExt as _, channel::oneshot, future::join_all};
 use git_ui::git_panel::ReviewChanges as ReviewGitChanges;
 use gpui::{
     Action, Anchor, AnyElement, App, AsyncApp, AsyncWindowContext, ClipboardEntry, ClipboardItem,
@@ -90,12 +91,67 @@ fn viewport_line_for_point(point: Point, display_offset: usize) -> Option<usize>
 }
 
 const CURSOR_BLINK_INTERVAL: Duration = Duration::from_millis(500);
+const TERMINAL_STARTUP_COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
 const TERMINAL_HOST_RESTORE_ATTEMPTS: usize = 40;
 const TERMINAL_HOST_RESTORE_INTERVAL: Duration = Duration::from_millis(50);
 const TERMINAL_CONTEXT_ACTIVITY_LABEL_MIN_WIDTH: Pixels = px(360.);
 const TERMINAL_CONTEXT_PRIMARY_ACTION_LABEL_MIN_WIDTH: Pixels = px(480.);
 const TERMINAL_CONTEXT_SECONDARY_ACTION_LABEL_MIN_WIDTH: Pixels = px(720.);
 const TERMINAL_CONTEXT_DETAILS_LABEL_MIN_WIDTH: Pixels = px(920.);
+
+fn resolve_terminal_startup_command(
+    requested: Option<String>,
+    configured: Option<String>,
+    app_name: &str,
+) -> Option<String> {
+    requested
+        .or_else(|| (app_name != "Zed").then_some(configured).flatten())
+        .filter(|command| !command.trim().is_empty())
+}
+
+fn terminal_startup_command_input(command: String) -> Vec<u8> {
+    let mut input = command.into_bytes();
+    input.push(b'\x0d');
+    input
+}
+
+#[cfg(test)]
+mod startup_command_tests {
+    use super::*;
+
+    #[test]
+    fn dez_uses_the_configured_agent_command_without_overriding_explicit_choices() {
+        assert_eq!(
+            resolve_terminal_startup_command(None, Some("codex".to_owned()), "Dez").as_deref(),
+            Some("codex")
+        );
+        assert_eq!(
+            resolve_terminal_startup_command(
+                Some("claude".to_owned()),
+                Some("codex".to_owned()),
+                "Dez",
+            )
+            .as_deref(),
+            Some("claude")
+        );
+        assert_eq!(
+            resolve_terminal_startup_command(Some(String::new()), Some("codex".to_owned()), "Dez",),
+            None
+        );
+        assert_eq!(
+            resolve_terminal_startup_command(None, Some("codex".to_owned()), "Zed"),
+            None
+        );
+    }
+
+    #[test]
+    fn terminal_agent_commands_submit_once_after_shell_startup() {
+        assert_eq!(
+            terminal_startup_command_input("opencode".to_owned()),
+            b"opencode\r"
+        );
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 struct TerminalContextActionLabelVisibility {
@@ -1124,13 +1180,58 @@ impl TerminalView {
         cx: &mut Context<Workspace>,
     ) {
         let local = action.local;
+        let startup_command = resolve_terminal_startup_command(
+            action.startup_command.clone(),
+            AgentSettings::get_global(cx).terminal_init_command.clone(),
+            paths::APP_NAME,
+        );
         let working_directory = default_working_directory(workspace, cx);
-        add_terminal_to_active_pane(workspace, window, cx, move |project, cx| {
-            if local {
-                project.create_local_terminal(cx)
-            } else {
-                project.create_terminal_shell(working_directory, cx)
+        let terminal_task =
+            add_terminal_to_active_pane(workspace, window, cx, move |project, cx| {
+                if local {
+                    project.create_local_terminal(cx)
+                } else {
+                    project.create_terminal_shell(working_directory, cx)
+                }
+            });
+
+        let Some(startup_command) = startup_command else {
+            terminal_task.detach_and_log_err(cx);
+            return;
+        };
+
+        cx.spawn(async move |_, cx| {
+            let terminal = terminal_task
+                .await?
+                .upgrade()
+                .ok_or_else(|| anyhow!("terminal closed before its startup command ran"))?;
+            let input = terminal_startup_command_input(startup_command);
+            let is_pty = terminal.read_with(cx, |terminal, _cx| terminal.is_pty())?;
+
+            if !is_pty {
+                terminal.update(cx, |terminal, _cx| terminal.write_init_command(input))?;
+                return anyhow::Ok(());
             }
+
+            let startup = terminal.update(cx, |terminal, _cx| {
+                terminal.start_init_command_startup_handshake()
+            })?;
+            let timeout = cx
+                .background_executor()
+                .timer(TERMINAL_STARTUP_COMMAND_TIMEOUT);
+            futures::select_biased! {
+                _ = startup.fuse() => {}
+                _ = timeout.fuse() => {}
+            }
+
+            terminal.update(cx, move |terminal, cx| {
+                if !terminal.write_init_command_after_startup(input, cx) {
+                    log::debug!(
+                        "skipping terminal startup command because the terminal is no longer eligible"
+                    );
+                }
+            })?;
+            anyhow::Ok(())
         })
         .detach_and_log_err(cx);
     }

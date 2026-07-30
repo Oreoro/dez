@@ -153,14 +153,14 @@ fn terminal_session_init_setting_copy(app_name: &str) -> (&'static str, &'static
         )
     } else {
         (
-            "Terminal Session Startup Command",
-            "Command to run when Dez starts a new Terminal Session. Runs in your configured shell.",
+            "Default Agent Terminal Command",
+            "Command to run after Dez opens a native Workspace terminal. Use codex, claude, opencode, or another terminal-native agent; leave blank for your shell.",
         )
     }
 }
 
-fn terminal_session_init_setting_visible(app_name: &str) -> bool {
-    app_name == "Zed"
+fn terminal_session_init_setting_visible(_app_name: &str) -> bool {
+    true
 }
 
 fn agent_session_setting_copy(
@@ -11602,14 +11602,14 @@ mod tests {
     }
 
     #[test]
-    fn legacy_terminal_startup_setting_is_hidden_in_dez() {
-        assert!(!terminal_session_init_setting_visible("Dez"));
+    fn terminal_startup_setting_exposes_the_native_dez_agent_launcher() {
+        assert!(terminal_session_init_setting_visible("Dez"));
         assert!(terminal_session_init_setting_visible("Zed"));
         assert_eq!(
             terminal_session_init_setting_copy("Dez"),
             (
-                "Terminal Session Startup Command",
-                "Command to run when Dez starts a new Terminal Session. Runs in your configured shell.",
+                "Default Agent Terminal Command",
+                "Command to run after Dez opens a native Workspace terminal. Use codex, claude, opencode, or another terminal-native agent; leave blank for your shell.",
             )
         );
         assert_eq!(

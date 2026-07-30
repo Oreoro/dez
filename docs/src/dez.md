@@ -285,6 +285,15 @@ subscription, authentication, TUI, commands, and plugins remain intact. Use
 conversation for planning, Project questions, edits, or tool calls beside the
 editor. It is optional and requires a usable provider and model.
 
+Workspace Options exposes one native **Open Agent Terminal** submenu:
+**Default**, **Native Shell**, **Codex**, **Claude Code**, and **OpenCode**.
+The default command is editable under **Settings → Agents →
+Default Agent Terminal Command**; leaving it blank keeps a normal shell.
+Provider shortcuts are per-launch choices and never rewrite that setting.
+Dez waits for the configured shell startup before submitting the selected
+command, so login-shell initialization, remote/WSL behavior, and native PTY
+keyboard handling remain intact.
+
 Both paths edit the same Project and return evidence to the same Files, Git,
 diagnostics, diff, and review surfaces. Starting a terminal agent does not
 require creating a Built-in Agent Session, and opening the Built-in Agent does
@@ -452,6 +461,20 @@ Projects is only the low-noise switcher: it summarizes provider and semantic
 state, then returns to the existing full-size terminal when selected. On
 narrow windows Projects yields to the Main Work Area instead of competing
 with the agent's own tmux- or Herdr-style pane layout.
+
+Dez follows the upstream
+[native terminal model](https://zed.dev/docs/terminal): terminal tabs use the
+built-in emulator, the current Project directory, standard TUI line height,
+alternate-screen scrolling, title breadcrumbs, path links, search, and task
+integration. cmux is not configured as the shell because its documented
+[CLI contract](https://github.com/manaflow-ai/cmux/blob/main/docs/cli-contract.md)
+defines a separate macOS workspace and terminal application. Instead,
+**Open Workspace in cmux** is the first external-workspace action in Workspace
+Options. It invokes the documented `cmux <path>` handoff, keeps Dez open, and
+then refreshes path-matched cmux activity. Existing cmux Workspaces remain
+selectable beneath their associated Dez Workspace. This preserves native Dez
+editing and review while making cmux a first-class opt-in owner for users who
+want its `claude-teams`, `codex-teams`, or `omo` workflows.
 
 Packaged Dez builds contain a local terminal service beside the application.
 When that helper is installed, new local interactive terminals are host-owned

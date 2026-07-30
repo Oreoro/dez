@@ -43,7 +43,9 @@ Workspace instead of separate applications or hidden panel modes.
   shells under a small process-owning terminal service, so closing or
   accidentally losing the GUI does not end the computation. Reopening Dez
   reattaches the same Session; task and remote terminals keep their existing
-  lifecycle semantics.
+  lifecycle semantics. Workspace Options can launch the configured default,
+  a plain shell, Codex, Claude Code, or OpenCode in the native terminal, and
+  can hand the Workspace path to cmux without pretending cmux is a shell.
 - **Evidence and review** — Dez distinguishes observed facts from reported or
   unknown state, then uses Workspace, terminal, command, check, file, and Git
   evidence to make review safer.

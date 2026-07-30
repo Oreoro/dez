@@ -208,6 +208,21 @@ require_multiline_pattern assets/settings/initial_user_settings.json \
 require_multiline_pattern assets/settings/initial_user_settings.json \
     '"status_bar": \{.*?"experimental\.show": true.*?"show_active_file": true.*?"line_endings_button": true' \
     'first-run Dez can regress to hiding the native editor status hierarchy'
+require_multiline_pattern assets/settings/initial_user_settings.json \
+    '"terminal": \{.*?"font_family": "Lilex".*?"line_height": "standard".*?"alternate_scroll": "on".*?"button": true.*?"toolbar": \{.*?"breadcrumbs": true' \
+    'first-run Dez can regress from the native TUI-optimized terminal profile'
+require_multiline_pattern crates/zed/src/zed.rs \
+    'fn restore_dez_visual_profile.*?terminal\.line_height = Some\(settings::TerminalLineHeight::Standard\).*?terminal\.alternate_scroll = Some\(settings::AlternateScroll::On\).*?terminal\.button = Some\(true\).*?terminal\.toolbar\.get_or_insert_default\(\)\.breadcrumbs = Some\(true\)' \
+    'visual-profile recovery can regress from restoring native TUI terminal chrome'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'fn resolve_terminal_startup_command.*?app_name != "Zed".*?AgentSettings::get_global\(cx\)\.terminal_init_command\.clone\(\).*?start_init_command_startup_handshake.*?TERMINAL_STARTUP_COMMAND_TIMEOUT.*?write_init_command_after_startup' \
+    'native agent launchers can regress to bypassing the configured shell or startup handshake'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'Default Agent Terminal Command.*?Use codex, claude, opencode.*?fn terminal_session_init_setting_visible.*?true' \
+    'Settings can regress to hiding the native Dez agent-terminal default'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn open_workspace_path_in_cmux.*?/Applications/cmux\.app/Contents/Resources/bin/cmux.*?Command::new\(program\)\.arg\(path\)\.output\(\).*?Open Workspace in cmux.*?configured_terminal_launcher_label.*?Native Shell.*?Codex.*?Claude Code.*?OpenCode' \
+    'Workspace Options can regress from explicit cmux handoff and native agent launch choices'
 require_multiline_pattern crates/onboarding/src/onboarding.rs \
     'fn onboarding_toggles_left_dock\(app_name: &str\) -> bool \{.*?app_name == "Zed".*?fn onboarding_surface_label.*?"Set Up Dez".*?if onboarding_toggles_left_dock\(APP_NAME\).*?workspace\.toggle_dock\(DockPosition::Left.*?fn tab_content_text.*?onboarding_surface_label\(APP_NAME\)' \
     'Dez setup can regress to opening an unrelated dock or using generic onboarding tab identity'
@@ -230,7 +245,7 @@ require_multiline_pattern crates/zed/src/zed.rs \
     'fn restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?ui_font_family = Some\(ui_font\).*?buffer_font_family = Some\(code_font\.clone\(\)\).*?markdown_preview_code_font_family = Some\(code_font\.clone\(\)\).*?ThemeSelection::Dynamic.*?ThemeAppearanceMode::System.*?Lumin Light.*?Lumin Blur.*?IconThemeSelection::Static.*?Dez \(Default\).*?design_system.*?CanvasDensity::Balanced.*?terminal.*?font_family = Some\(code_font\).*?tab_bar\.show = Some\(true\).*?tab_bar\.show_nav_history_buttons = Some\(true\).*?tab_bar\.show_tab_bar_buttons = Some\(true\).*?status_bar\.show = Some\(true\).*?status_bar\.show_active_file = Some\(true\).*?status_bar\.line_endings_button = Some\(true\)' \
     'visual-profile recovery can stop restoring the complete scoped Dez identity'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'RestoreVisualProfile.*?APP_NAME == "Zed".*?update_settings_file_with_completion.*?restore_dez_visual_profile.*?completion\.await\?\?.*?Restored Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, and the editor status bar\..*?Failed to restore the Dez visual profile' \
+    'RestoreVisualProfile.*?APP_NAME == "Zed".*?update_settings_file_with_completion.*?restore_dez_visual_profile.*?completion\.await\?\?.*?Restored Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the editor status bar\..*?Failed to restore the Dez visual profile' \
     'visual-profile recovery can affect official Zed, report before persistence, or fail silently'
 require_multiline_pattern crates/zed/src/zed.rs \
     'fn dez_visual_profile_restores_identity_without_resetting_font_size.*?ui_font_size = Some\(18\.0\.into\(\)\).*?restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?Lumin Light.*?Lumin Blur.*?Dez \(Default\).*?design_system.*?density.*?balanced.*?tab_bar.*?show_nav_history_buttons.*?show_tab_bar_buttons.*?status_bar.*?experimental\.show.*?show_active_file.*?line_endings_button.*?ui_font_size.*?18\.0' \
@@ -1117,7 +1132,7 @@ require_pattern crates/sidebar/src/sidebar.rs \
     'menu = menu\.header\(terminal_launch_menu_header\(APP_NAME\)\)' \
     'the Workspace creation picker has regressed to an ambiguous thread action'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn workspace_built_in_agent_action_label.*?"New Agent Thread".*?built_in_agent_ready.*?"New Built-in Agent Session…".*?"Configure Built-in Agent…".*?let built_in_agent_ready = built_in_agent_is_ready\(menu_cx\).*?let menu = if APP_NAME == "Zed".*?workspace_built_in_agent_action_label\([[:space:]]*APP_NAME,[[:space:]]*built_in_agent_ready.*?else.*?terminal_launch_label\(APP_NAME\).*?NewTerminalThread.*?NewEntryTarget::Terminal.*?separator\(\).*?workspace_built_in_agent_action_label\([[:space:]]*APP_NAME,[[:space:]]*built_in_agent_ready.*?NewEntryTarget::AgentThread' \
+    'fn workspace_built_in_agent_action_label.*?"New Agent Thread".*?built_in_agent_ready.*?"New Built-in Agent Session…".*?"Configure Built-in Agent…".*?let built_in_agent_ready = built_in_agent_is_ready\(menu_cx\).*?let menu = if APP_NAME == "Zed".*?workspace_built_in_agent_action_label\([[:space:]]*APP_NAME,[[:space:]]*built_in_agent_ready.*?else.*?Open Workspace in cmux.*?submenu\([[:space:]]*terminal_launch_label\(APP_NAME\).*?Native Shell.*?Codex.*?Claude Code.*?OpenCode.*?separator\(\).*?workspace_built_in_agent_action_label\([[:space:]]*APP_NAME,[[:space:]]*built_in_agent_ready.*?NewEntryTarget::AgentThread' \
     'Workspace options can regress to leading with the optional built-in Agent, hiding the terminal-first distinction, or offering a dead model-less session'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn create_new_thread.*?APP_NAME != "Zed" && !built_in_agent_is_ready\(cx\).*?OpenSettingsAt.*?path: "llm_providers".*?return;.*?create_agent_thread_in_workspace' \
@@ -1549,8 +1564,8 @@ require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn collaboration_panel_section\(\) -> Vec<SettingsPageItem> \{.*?!dez_settings_page_visible\(paths::APP_NAME, "Collaboration"\).*?return Vec::new\(\);' \
     'the Panels page still exposes controls for the removed Dez Collaboration Panel'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
-    'fn terminal_session_init_setting_visible\(app_name: &str\) -> bool \{[[:space:]]*app_name == "Zed".*?if terminal_session_init_setting_visible\(paths::APP_NAME\).*?Some\("agent\.terminal_init_command"\)' \
-    'Dez Settings can regress to exposing the legacy Agent-Panel terminal startup control even though Main Work Area terminals do not consume it'
+    'fn terminal_session_init_setting_visible\(_app_name: &str\) -> bool \{[[:space:]]*true.*?if terminal_session_init_setting_visible\(paths::APP_NAME\).*?Some\("agent\.terminal_init_command"\)' \
+    'Dez Settings can regress to hiding or misnaming the native Main Work Area agent-terminal default'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn workspace_surface_setting_path_visible.*?"project_panel\.dock".*?"outline_panel\.dock".*?"git_panel\.dock".*?"agent\.dock".*?"agent\.default_height".*?fn panels_page.*?"Outline Panel",[[:space:]]*"Outline".*?"Git Panel",[[:space:]]*"Git".*?"Agent Panel",[[:space:]]*"Agent".*?title: workspace_surface_copy\(paths::APP_NAME, "Panels", "Workspace Tools"\)' \
     'Dez Settings can regress to exposing dock-only controls or inherited Panel hierarchy instead of Workspace Tools and Agent'
@@ -1570,7 +1585,7 @@ require_pattern crates/sidebar/src/sidebar.rs \
     'session_overview_visible\(show_start_state\)' \
     'the empty Session Rail can regress to duplicating its creation action'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn create_new_terminal.*?multi_workspace\.activate\(workspace\.clone\(\).*?workspace_focus\.dispatch_action\(&NewCenterTerminal::default\(\)' \
+    'fn create_new_terminal.*?create_new_terminal_with_startup_command\(workspace, None.*?fn create_new_terminal_with_startup_command.*?multi_workspace\.activate\(workspace\.clone\(\).*?workspace_focus\.dispatch_action\([[:space:]]*&NewCenterTerminal \{[[:space:]]*local: false,[[:space:]]*startup_command' \
     'Workspace-scoped Session Rail actions can regress to opening inherited Agent terminal threads instead of main-area terminals'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_new_terminal_action_persistent.*?is_active \|\| is_focused \|\| is_menu_open.*?fn workspace_options_action_persistent.*?is_active \|\| is_focused \|\| is_menu_open.*?fn workspace_new_terminal_control_label.*?workspace_name.*?terminal_launch_label\(app_name\).*?fn workspace_options_control_label.*?"Workspace Options for \{workspace_name\}".*?render_new_session_button.*?workspace_name.*?workspace_new_terminal_control_label\([[:space:]]*APP_NAME,[[:space:]]*workspace_name.*?tab_index\(0isize\).*?aria_label\(new_terminal_label\.clone\(\)\).*?!workspace_new_terminal_action_persistent\(is_active, is_focused, is_menu_open\).*?render_project_header_ellipsis_menu.*?workspace_name.*?tab_index\(0isize\).*?aria_label\(workspace_options_label\.clone\(\)\).*?!workspace_options_action_persistent\(is_active, is_focused, is_menu_open\)' \

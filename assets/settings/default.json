@@ -1353,10 +1353,10 @@
     //
     // Default: true
     "expand_terminal_card": true,
-    // Command to run when Dez creates a terminal-agent shell.
-    // The command is sent to the shell as if typed, so it is interpreted by your
-    // configured shell (including on Windows and remote/WSL projects).
-    // Set to "" to disable.
+    // Default command to run after Dez opens a native agent terminal.
+    // The command is sent after the configured shell is ready, including on
+    // remote/WSL projects. Use "codex", "claude", "opencode", or another
+    // terminal-native agent. Set to "" to open the shell without an agent.
     //
     // Example: "terminal_init_command": "claude"
     "terminal_init_command": "",

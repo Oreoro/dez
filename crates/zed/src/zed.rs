@@ -893,7 +893,12 @@ fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
     ));
     settings.design_system.get_or_insert_default().density =
         Some(settings::CanvasDensity::Balanced);
-    settings.terminal.get_or_insert_default().font_family = Some(code_font);
+    let terminal = settings.terminal.get_or_insert_default();
+    terminal.font_family = Some(code_font);
+    terminal.line_height = Some(settings::TerminalLineHeight::Standard);
+    terminal.alternate_scroll = Some(settings::AlternateScroll::On);
+    terminal.button = Some(true);
+    terminal.toolbar.get_or_insert_default().breadcrumbs = Some(true);
     let tab_bar = settings.tab_bar.get_or_insert_default();
     tab_bar.show = Some(true);
     tab_bar.show_nav_history_buttons = Some(true);
@@ -1241,7 +1246,7 @@ fn register_actions(
                         workspace.show_toast(
                             Toast::new(
                                 NotificationId::unique::<RestoreDezVisualProfile>(),
-                                "Restored Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, and the editor status bar.",
+                                "Restored Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the editor status bar.",
                             ),
                             cx,
                         );
@@ -2993,6 +2998,10 @@ mod tests {
         assert_eq!(settings["icon_theme"], "Dez (Default)");
         assert_eq!(settings["design_system"]["density"], "balanced");
         assert_eq!(settings["terminal"]["font_family"], "Lilex");
+        assert_eq!(settings["terminal"]["line_height"], "standard");
+        assert_eq!(settings["terminal"]["alternate_scroll"], "on");
+        assert_eq!(settings["terminal"]["button"], true);
+        assert_eq!(settings["terminal"]["toolbar"]["breadcrumbs"], true);
         assert_eq!(settings["tab_bar"]["show"], true);
         assert_eq!(settings["tab_bar"]["show_nav_history_buttons"], true);
         assert_eq!(settings["tab_bar"]["show_tab_bar_buttons"], true);

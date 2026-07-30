@@ -38,6 +38,14 @@ impl MultiplexerKind {
             Self::Cmux => "cmux",
         }
     }
+
+    fn workspace_priority(self) -> u8 {
+        match self {
+            Self::Cmux => 0,
+            Self::Herdr => 1,
+            Self::Tmux => 2,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -300,8 +308,8 @@ fn scan_external_multiplexer_sessions() -> Result<Vec<ExternalMultiplexerSession
     }
     sessions.sort_by(|left, right| {
         left.kind
-            .display_name()
-            .cmp(right.kind.display_name())
+            .workspace_priority()
+            .cmp(&right.kind.workspace_priority())
             .then_with(|| left.title.cmp(&right.title))
             .then_with(|| left.id.cmp(&right.id))
     });
@@ -885,6 +893,18 @@ mod tests {
                 label: "Open parser in cmux".to_owned(),
                 mode: ExternalSessionOpenMode::RevealExternal,
             }
+        );
+    }
+
+    #[test]
+    fn cmux_is_the_first_external_workspace_choice() {
+        assert!(
+            MultiplexerKind::Cmux.workspace_priority()
+                < MultiplexerKind::Herdr.workspace_priority()
+        );
+        assert!(
+            MultiplexerKind::Herdr.workspace_priority()
+                < MultiplexerKind::Tmux.workspace_priority()
         );
     }
 }

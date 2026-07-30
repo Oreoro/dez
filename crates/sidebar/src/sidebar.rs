@@ -1078,6 +1078,18 @@ fn terminal_launch_label(app_name: &str) -> &'static str {
     }
 }
 
+fn configured_terminal_launcher_label(command: Option<&str>) -> String {
+    let command = command.map(str::trim).filter(|command| !command.is_empty());
+    let launcher = match command {
+        None => "Native Shell",
+        Some("codex") => "Codex",
+        Some("claude") => "Claude Code",
+        Some("opencode") => "OpenCode",
+        Some(_) => "Custom Command",
+    };
+    format!("Default · {launcher}")
+}
+
 fn terminal_launch_in_main_work_area_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Start Terminal Session in Main Work Area"
@@ -1300,14 +1312,14 @@ enum SerializedSidebarView {
     History,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 enum NewEntryTarget {
-    Terminal,
+    Terminal(Option<String>),
     AgentThread,
 }
 
 fn default_new_session_target() -> NewEntryTarget {
-    NewEntryTarget::Terminal
+    NewEntryTarget::Terminal(None)
 }
 
 #[derive(Default, Serialize, Deserialize)]
@@ -1979,6 +1991,18 @@ mod workspace_header_label_tests {
         ));
         assert!(!workspace_new_terminal_control_label("Dez", "compiler").contains("header-group"));
         assert!(!workspace_options_control_label("compiler").contains("header-group"));
+        assert_eq!(
+            configured_terminal_launcher_label(None),
+            "Default · Native Shell"
+        );
+        assert_eq!(
+            configured_terminal_launcher_label(Some(" claude ")),
+            "Default · Claude Code"
+        );
+        assert_eq!(
+            configured_terminal_launcher_label(Some("my-agent --resume")),
+            "Default · Custom Command"
+        );
     }
 
     #[test]
@@ -3111,6 +3135,32 @@ fn external_multiplexer_action_label(session: &ExternalMultiplexerSession) -> St
             session.kind.display_name()
         ),
     }
+}
+
+fn open_workspace_path_in_cmux(path: &Path) -> Result<(), String> {
+    for program in [
+        "/Applications/cmux.app/Contents/Resources/bin/cmux",
+        "/opt/homebrew/bin/cmux",
+        "/usr/local/bin/cmux",
+        "cmux",
+    ] {
+        match std::process::Command::new(program).arg(path).output() {
+            Ok(output) if output.status.success() => return Ok(()),
+            Ok(output) => {
+                let detail = String::from_utf8_lossy(&output.stderr);
+                let detail = detail.trim();
+                return Err(if detail.is_empty() {
+                    format!("cmux exited with {}.", output.status)
+                } else {
+                    format!("cmux could not open this Workspace: {detail}")
+                });
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) => return Err(format!("Could not start cmux: {error}")),
+        }
+    }
+
+    Err("cmux is not installed. Dez kept the Workspace open here.".to_owned())
 }
 
 fn terminal_entry_source_kind(
@@ -4976,7 +5026,13 @@ impl Sidebar {
         cx.spawn_in(window, async move |this, cx| {
             let workspace = task.await?;
             this.update_in(cx, |this, window, cx| match target {
-                NewEntryTarget::Terminal => this.create_new_terminal(&workspace, window, cx),
+                NewEntryTarget::Terminal(startup_command) => this
+                    .create_new_terminal_with_startup_command(
+                        &workspace,
+                        startup_command,
+                        window,
+                        cx,
+                    ),
                 NewEntryTarget::AgentThread => this.create_new_thread(&workspace, window, cx),
             })?;
             anyhow::Ok(())
@@ -7043,7 +7099,7 @@ impl Sidebar {
                                     } else {
                                         this.open_workspace_and_create_entry(
                                             &key_for_empty_terminal,
-                                            NewEntryTarget::Terminal,
+                                            NewEntryTarget::Terminal(None),
                                             window,
                                             cx,
                                         );
@@ -7501,9 +7557,6 @@ impl Sidebar {
                         let new_agent_key = project_group_key.clone();
                         let new_agent_sidebar = this_for_menu.clone();
                         let new_agent_menu = weak_menu.clone();
-                        let new_terminal_key = project_group_key.clone();
-                        let new_terminal_sidebar = this_for_menu.clone();
-                        let new_terminal_menu = weak_menu.clone();
                         let built_in_agent_ready = built_in_agent_is_ready(menu_cx);
                         let menu = if APP_NAME == "Zed" {
                             menu.entry(
@@ -7537,31 +7590,63 @@ impl Sidebar {
                                 },
                             )
                         } else {
-                            menu.entry(
-                                terminal_launch_label(APP_NAME),
-                                Some(Box::new(NewTerminalThread)),
-                                move |window, cx| {
-                                    new_terminal_sidebar
+                            let cmux_key = project_group_key.clone();
+                            let cmux_sidebar = this_for_menu.clone();
+                            let cmux_menu = weak_menu.clone();
+                            let menu = menu.when(project_group_key.host().is_none(), |menu| {
+                                menu.entry("Open Workspace in cmux", None, move |window, cx| {
+                                    cmux_sidebar
                                         .update(cx, |sidebar, cx| {
-                                            sidebar.set_group_expanded(&new_terminal_key, true, cx);
-                                            sidebar.selection = None;
-                                            if let Some(workspace) =
-                                                sidebar.workspace_for_group(&new_terminal_key, cx)
-                                            {
-                                                sidebar.create_new_terminal(&workspace, window, cx);
-                                            } else {
-                                                sidebar.open_workspace_and_create_entry(
-                                                    &new_terminal_key,
-                                                    NewEntryTarget::Terminal,
-                                                    window,
-                                                    cx,
-                                                );
-                                            }
+                                            sidebar
+                                                .open_project_group_in_cmux(&cmux_key, window, cx);
                                         })
                                         .ok();
-                                    new_terminal_menu
-                                        .update(cx, |_, cx| cx.emit(DismissEvent))
-                                        .ok();
+                                    cmux_menu.update(cx, |_, cx| cx.emit(DismissEvent)).ok();
+                                })
+                                .separator()
+                            });
+
+                            let terminal_sidebar = this_for_menu.clone();
+                            let terminal_key = project_group_key.clone();
+                            let terminal_menu = weak_menu.clone();
+                            let configured_command = AgentSettings::get_global(menu_cx)
+                                .terminal_init_command
+                                .clone();
+                            menu.submenu(
+                                terminal_launch_label(APP_NAME),
+                                move |mut submenu, _window, _cx| {
+                                    for (label, startup_command) in [
+                                        (
+                                            configured_terminal_launcher_label(
+                                                configured_command.as_deref(),
+                                            ),
+                                            None,
+                                        ),
+                                        ("Native Shell".to_owned(), Some(String::new())),
+                                        ("Codex".to_owned(), Some("codex".to_owned())),
+                                        ("Claude Code".to_owned(), Some("claude".to_owned())),
+                                        ("OpenCode".to_owned(), Some("opencode".to_owned())),
+                                    ] {
+                                        let terminal_sidebar = terminal_sidebar.clone();
+                                        let terminal_key = terminal_key.clone();
+                                        let terminal_menu = terminal_menu.clone();
+                                        submenu = submenu.entry(label, None, move |window, cx| {
+                                            terminal_sidebar
+                                                .update(cx, |sidebar, cx| {
+                                                    sidebar.create_terminal_in_project_group(
+                                                        &terminal_key,
+                                                        startup_command.clone(),
+                                                        window,
+                                                        cx,
+                                                    );
+                                                })
+                                                .ok();
+                                            terminal_menu
+                                                .update(cx, |_, cx| cx.emit(DismissEvent))
+                                                .ok();
+                                        });
+                                    }
+                                    submenu
                                 },
                             )
                             .separator()
@@ -13516,7 +13601,12 @@ impl Sidebar {
             if let Some(workspace) = self.workspace_for_group(&key, cx) {
                 self.create_new_terminal(&workspace, window, cx);
             } else {
-                self.open_workspace_and_create_entry(&key, NewEntryTarget::Terminal, window, cx);
+                self.open_workspace_and_create_entry(
+                    &key,
+                    NewEntryTarget::Terminal(None),
+                    window,
+                    cx,
+                );
             }
         } else if let Some(workspace) = self.active_workspace(cx) {
             self.create_new_terminal(&workspace, window, cx);
@@ -13912,6 +14002,16 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.create_new_terminal_with_startup_command(workspace, None, window, cx);
+    }
+
+    fn create_new_terminal_with_startup_command(
+        &mut self,
+        workspace: &Entity<Workspace>,
+        startup_command: Option<String>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         if workspace_path_list(workspace, cx).paths().is_empty() {
             return;
         }
@@ -13925,7 +14025,102 @@ impl Sidebar {
         });
 
         let workspace_focus = workspace.read(cx).focus_handle(cx);
-        workspace_focus.dispatch_action(&NewCenterTerminal::default(), window, cx);
+        workspace_focus.dispatch_action(
+            &NewCenterTerminal {
+                local: false,
+                startup_command,
+            },
+            window,
+            cx,
+        );
+    }
+
+    fn create_terminal_in_project_group(
+        &mut self,
+        project_group_key: &ProjectGroupKey,
+        startup_command: Option<String>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.set_group_expanded(project_group_key, true, cx);
+        self.selection = None;
+        if let Some(workspace) = self.workspace_for_group(project_group_key, cx) {
+            self.create_new_terminal_with_startup_command(&workspace, startup_command, window, cx);
+        } else {
+            self.open_workspace_and_create_entry(
+                project_group_key,
+                NewEntryTarget::Terminal(startup_command),
+                window,
+                cx,
+            );
+        }
+    }
+
+    fn open_project_group_in_cmux(
+        &mut self,
+        project_group_key: &ProjectGroupKey,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(path) = project_group_key
+            .path_list()
+            .ordered_paths()
+            .next()
+            .cloned()
+        else {
+            return;
+        };
+        let Some(multi_workspace) = self.multi_workspace.upgrade() else {
+            return;
+        };
+        let target_workspace = multi_workspace.read(cx).workspace().clone();
+        let toast_key = path.to_string_lossy().into_owned();
+        struct CmuxWorkspaceOpenToast;
+        target_workspace.update(cx, |workspace, cx| {
+            workspace.show_toast(
+                Toast::new(
+                    NotificationId::composite::<CmuxWorkspaceOpenToast>(toast_key.clone()),
+                    "Opening this Workspace in cmux…",
+                )
+                .autohide(),
+                cx,
+            );
+        });
+
+        let path_label = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("Workspace")
+            .to_owned();
+        let open_task = cx.background_spawn(async move { open_workspace_path_in_cmux(&path) });
+        let weak_workspace = target_workspace.downgrade();
+        let multiplexer_store = MultiplexerSessionStore::try_global(cx);
+        cx.spawn_in(window, async move |_this, cx| {
+            let outcome = open_task.await;
+            if let Err(error) = &outcome {
+                log::error!("cmux Workspace open failed: {error}");
+            }
+            weak_workspace
+                .update(cx, |workspace, cx| {
+                    let message = match outcome {
+                        Ok(()) => format!("Opened {path_label} in cmux."),
+                        Err(error) => error,
+                    };
+                    workspace.show_toast(
+                        Toast::new(
+                            NotificationId::composite::<CmuxWorkspaceOpenToast>(toast_key),
+                            message,
+                        )
+                        .autohide(),
+                        cx,
+                    );
+                })
+                .ok();
+            if let Some(store) = multiplexer_store {
+                store.update(cx, |store, cx| store.refresh(cx)).ok();
+            }
+        })
+        .detach();
     }
 
     fn open_external_multiplexer_session(
