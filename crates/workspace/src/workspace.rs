@@ -9566,12 +9566,13 @@ impl Workspace {
             }
         }
 
-        if let Some(active_item_id) = active_item_id
-            && let Some(active_item_index) = destination
+        let active_item_index = active_item_id.and_then(|active_item_id| {
+            destination
                 .read(cx)
                 .items()
                 .position(|item| item.item_id() == active_item_id)
-        {
+        });
+        if let Some(active_item_index) = active_item_index {
             destination.update(cx, |pane, cx| {
                 pane.activate_item(active_item_index, true, false, window, cx);
             });
