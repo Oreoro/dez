@@ -7648,7 +7648,7 @@ impl Sidebar {
                             let multiplexer_store = multiplexer_store.clone();
                             menu.entry("Refresh External Activity", None, move |_window, cx| {
                                 if let Some(store) = &multiplexer_store {
-                                    store.update(cx, |store, cx| store.refresh(cx)).log_err();
+                                    store.update(cx, |store, cx| store.refresh(cx));
                                 }
                                 refresh_menu
                                     .update(cx, |_, cx| cx.emit(DismissEvent))
