@@ -414,6 +414,7 @@ pub struct WelcomePage {
 
 const DEZ_WELCOME_COMPACT_BREAKPOINT: Pixels = px(760.);
 const DEZ_WELCOME_SPLIT_BREAKPOINT: Pixels = px(980.);
+const DEZ_RECENT_WORKSPACES_LOAD_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum WelcomeRecentState {
@@ -515,7 +516,20 @@ impl WelcomePage {
         };
         let db = WorkspaceDb::global(cx);
         cx.spawn_in(window, async move |this: WeakEntity<Self>, cx| {
-            let result = db.recent_project_workspaces(fs.as_ref()).await;
+            let recent_workspaces =
+                futures::FutureExt::fuse(db.recent_project_workspaces(fs.as_ref()));
+            let timeout = futures::FutureExt::fuse(
+                cx.background_executor()
+                    .timer(DEZ_RECENT_WORKSPACES_LOAD_TIMEOUT),
+            );
+            futures::pin_mut!(recent_workspaces, timeout);
+            let result = futures::select_biased! {
+                result = recent_workspaces => result,
+                _ = timeout => Err(anyhow::anyhow!(
+                    "recent Workspace history did not load within {} seconds",
+                    DEZ_RECENT_WORKSPACES_LOAD_TIMEOUT.as_secs()
+                )),
+            };
             this.update(cx, |this, cx| {
                 if this.recent_workspaces_load_generation != load_generation {
                     return;
