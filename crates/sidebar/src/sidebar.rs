@@ -7473,7 +7473,12 @@ impl Sidebar {
                         multi_workspace.project_group_keys().to_vec()
                     })
                     .unwrap_or_default();
-                let attachable_sessions = MultiplexerSessionStore::try_global(cx)
+                let multiplexer_store = MultiplexerSessionStore::try_global(cx);
+                let external_activity_refreshing = multiplexer_store
+                    .as_ref()
+                    .is_some_and(|store| store.read(cx).is_refreshing());
+                let attachable_sessions = multiplexer_store
+                    .as_ref()
                     .map(|store| {
                         store
                             .read(cx)
@@ -7597,12 +7602,13 @@ impl Sidebar {
                         let attach_sidebar = this_for_menu.clone();
                         let menu = if attachable_sessions.is_empty() {
                             menu.item(
-                                ContextMenuEntry::new(
-                                    "No path-matched tmux, Herdr, or cmux activity",
-                                )
+                                ContextMenuEntry::new(if external_activity_refreshing {
+                                    "Checking tmux, Herdr, and cmux…"
+                                } else {
+                                    "No matching tmux, Herdr, or cmux session"
+                                })
                                 .disabled(true),
                             )
-                            .separator()
                         } else {
                             let attach_sidebar = attach_sidebar.clone();
                             menu.submenu(
@@ -7631,8 +7637,25 @@ impl Sidebar {
                                     submenu
                                 },
                             )
-                            .separator()
                         };
+                        let refresh_menu = weak_menu.clone();
+                        let menu = if external_activity_refreshing {
+                            menu.item(
+                                ContextMenuEntry::new("Refreshing external activity…")
+                                    .disabled(true),
+                            )
+                        } else {
+                            let multiplexer_store = multiplexer_store.clone();
+                            menu.entry("Refresh External Activity", None, move |_window, cx| {
+                                if let Some(store) = &multiplexer_store {
+                                    store.update(cx, |store, cx| store.refresh(cx)).log_err();
+                                }
+                                refresh_menu
+                                    .update(cx, |_, cx| cx.emit(DismissEvent))
+                                    .log_err();
+                            })
+                        }
+                        .separator();
 
                         let menu = menu.when(is_active, |menu| {
                             menu.action("Open Files", Box::new(RevealFiles))

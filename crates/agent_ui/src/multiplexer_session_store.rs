@@ -175,6 +175,7 @@ impl Global for GlobalMultiplexerSessionStore {}
 
 pub struct MultiplexerSessionStore {
     sessions: Vec<ExternalMultiplexerSession>,
+    refreshing: bool,
     _refresh_task: Task<()>,
 }
 
@@ -197,6 +198,51 @@ impl MultiplexerSessionStore {
         &self.sessions
     }
 
+    pub fn is_refreshing(&self) -> bool {
+        self.refreshing
+    }
+
+    pub fn refresh(&mut self, cx: &mut Context<Self>) {
+        if self.refreshing {
+            return;
+        }
+
+        self.refreshing = true;
+        cx.notify();
+        cx.spawn(async move |this, cx| {
+            let scan = cx
+                .background_executor()
+                .spawn(async { scan_external_multiplexer_sessions() })
+                .await;
+            if let Err(error) = this.update(cx, |store, cx| {
+                store.refreshing = false;
+                store.apply_scan(scan, cx);
+                cx.notify();
+            }) {
+                log::debug!("external terminal refresh finished after its store closed: {error:#}");
+            }
+        })
+        .detach();
+    }
+
+    fn apply_scan(
+        &mut self,
+        scan: Result<Vec<ExternalMultiplexerSession>>,
+        cx: &mut Context<Self>,
+    ) {
+        let sessions = match scan {
+            Ok(sessions) => sessions,
+            Err(error) => {
+                log::debug!("failed to discover external terminal sessions: {error:#}");
+                return;
+            }
+        };
+        if self.sessions != sessions {
+            self.sessions = sessions;
+            cx.notify();
+        }
+    }
+
     fn new(cx: &mut Context<Self>) -> Self {
         let refresh_task = cx.spawn(async move |this, cx| {
             loop {
@@ -207,19 +253,7 @@ impl MultiplexerSessionStore {
 
                 if this
                     .update(cx, |store, cx| {
-                        let sessions = match scan {
-                            Ok(sessions) => sessions,
-                            Err(error) => {
-                                log::debug!(
-                                    "failed to discover external terminal sessions: {error:#}"
-                                );
-                                return;
-                            }
-                        };
-                        if store.sessions != sessions {
-                            store.sessions = sessions;
-                            cx.notify();
-                        }
+                        store.apply_scan(scan, cx);
                     })
                     .is_err()
                 {
@@ -234,6 +268,7 @@ impl MultiplexerSessionStore {
 
         Self {
             sessions: Vec::new(),
+            refreshing: false,
             _refresh_task: refresh_task,
         }
     }

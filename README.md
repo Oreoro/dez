@@ -106,8 +106,11 @@ mode. They are peer Surfaces in one native pane grid. Dez detects supported
 agents running in its terminals, including Codex, Claude Code, OpenCode, and
 Herdr. Dez v0.1 discovers explicitly shared tmux sessions, live Herdr panes,
 and cmux Workspaces. tmux and Herdr attach through ordinary terminal tabs; cmux
-Workspaces open in cmux. Process and layout ownership always stays with the
-external application. Arbitrary PTYs remain read-only.
+Workspaces open in cmux. Discovery updates automatically and can be refreshed
+explicitly from a Workspace's Projects menu. The menu shows when it is checking
+and explains when no external session matches instead of silently removing the
+integration. Process and layout ownership always stays with the external
+application. Arbitrary PTYs remain read-only.
 
 ## Visual baseline
 

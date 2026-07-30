@@ -592,8 +592,11 @@ require_multiline_pattern crates/agent_ui/src/multiplexer_session_store.rs \
     'MULTIPLEXER_REFRESH_INTERVAL.*?TMUX_FIELD_SEPARATOR: &str = "\|:dez:\|".*?TMUX_FORMAT.*?pub enum MultiplexerKind.*?Cmux.*?pub enum MultiplexerSessionState.*?Available.*?pub enum ExternalSessionOpenMode.*?AttachInTerminal.*?RevealExternal.*?pub struct ExternalMultiplexerSession.*?open_command.*?"attach-session".*?"agent".*?"attach".*?"terminal".*?"attach".*?"select-workspace".*?scan_tmux_sessions.*?"list-panes".*?scan_cmux_workspaces.*?/Applications/cmux\.app/Contents/Resources/bin/cmux.*?"list-workspaces".*?"--json".*?parse_cmux_workspaces.*?parse_tmux_sessions.*?scan_herdr_sessions.*?"api".*?"snapshot".*?parse_herdr_snapshot.*?terminal_id.*?Some\("blocked"\) => MultiplexerSessionState::NeedsAttention.*?opens_non_agent_herdr_panes_with_the_interactive_terminal_client' \
     'external Workspace and session discovery can regress to unstable identity, missing attention state, or dishonest ownership'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'No path-matched tmux, Herdr, or cmux activity.*?fn open_external_multiplexer_session.*?ExternalSessionOpenMode::RevealExternal.*?Opening \{\} in cmux….*?cmux could not open the Workspace.*?Opened \{session_title\} in cmux\..*?The external Workspace was not changed' \
+    'Checking tmux, Herdr, and cmux….*?No matching tmux, Herdr, or cmux session.*?Refresh External Activity.*?store\.refresh\(cx\).*?fn open_external_multiplexer_session.*?ExternalSessionOpenMode::RevealExternal.*?Opening \{\} in cmux….*?cmux could not open the Workspace.*?Opened \{session_title\} in cmux\..*?The external Workspace was not changed' \
     'external Workspace actions can regress to silent no-op or failure behavior'
+require_multiline_pattern crates/agent_ui/src/multiplexer_session_store.rs \
+    'pub fn is_refreshing.*?pub fn refresh.*?self\.refreshing = true.*?scan_external_multiplexer_sessions.*?store\.refreshing = false.*?MULTIPLEXER_REFRESH_INTERVAL' \
+    'external session discovery can regress to a timer-only path without explicit refresh feedback'
 reject_pattern crates/agent_ui/src/multiplexer_session_store.rs \
     '"--takeover"' \
     'Dez can regress to seizing a Herdr pane without an explicit user decision'

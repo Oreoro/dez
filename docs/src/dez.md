@@ -476,6 +476,9 @@ Dez discovers tmux sessions through the documented CLI format, Herdr panes
 through the local snapshot API, and cmux Workspaces through its JSON CLI. tmux
 and Herdr open their documented attach command in a normal terminal Surface.
 cmux Workspaces stay in cmux and open through its `select-workspace` command.
+Discovery updates automatically; **Refresh External Activity** in a
+Workspace's Projects menu requests an immediate scan, shows when discovery is
+running, and explains when no path-matched activity exists.
 The external application remains authoritative; closing a Dez tab detaches,
 Herdr never receives automatic takeover, and Projects never becomes a second
 process, transcript, or layout owner.
