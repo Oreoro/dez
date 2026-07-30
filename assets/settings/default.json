@@ -1101,7 +1101,7 @@
     "position": "left",
     "group_by": "project",
     "sort_by": "manual",
-    "metadata": ["agent_state", "latest_attention"]
+    "metadata": ["branch", "agent_state", "latest_attention"]
   },
   // Settings for native Workspace pane layouts.
   "pane_grid": {

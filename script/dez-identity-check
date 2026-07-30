@@ -92,8 +92,8 @@ require_multiline_pattern assets/settings/default.json \
     '"toolbar": \{.*?"quick_actions": false,.*?"selections_menu": false,.*?"agent_review": true,.*?"code_actions": false' \
     'the default editor toolbar no longer follows the minimal Dez action hierarchy'
 require_multiline_pattern assets/settings/default.json \
-    '"session_rail": \{.*?"metadata": \["agent_state", "latest_attention"\]' \
-    'Sessions no longer defaults to supervision-only metadata'
+    '"session_rail": \{.*?"metadata": \["branch", "agent_state", "latest_attention"\]' \
+    'Workspace navigation no longer defaults to repository identity and supervision metadata'
 require_multiline_pattern assets/settings/default.json \
     '"tab_bar": \{.*?"show": true,.*?"show_nav_history_buttons": true,.*?"show_tab_bar_buttons": true' \
     'the Main Work Area tab bar can regress from native Back, Forward, Add, overflow, and split navigation'
@@ -1959,11 +1959,20 @@ require_multiline_pattern crates/workspace/src/pane.rs \
 require_multiline_pattern crates/workspace/src/pane.rs \
     'fn render_new_surface_control.*?pane_new_surface_control_copy\(paths::APP_NAME\).*?IconButton::new\("plus", IconName::Plus\).*?tab_index\(0isize\).*?aria_label\(aria_label\).*?Tooltip::text\(tooltip\).*?paths::APP_NAME == "Zed".*?else \{.*?"Open Agent Terminal".*?RevealBuiltInAgent.*?"Open Files".*?RevealFiles.*?"Review Git Changes".*?RevealGitChanges.*?"Open Debug".*?RevealDebug.*?fn pane_new_surface_control_copy.*?"New Item".*?"New…".*?"Add to Main Work Area".*?"Open a terminal, file, or workspace tool"' \
     'the main-work-area plus control can regress to an unnamed button or stop opening native terminal, agent, Files, Git, and Debug surfaces'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    'fn pane_new_surface_control_is_adjacent\(app_name: &str, pane_kind: PaneKind\).*?app_name != "Zed" && pane_kind == PaneKind::Tabs.*?fn render_unpinned_tabs_container.*?pane_new_surface_control_is_adjacent\(paths::APP_NAME, self\.pane_kind\).*?then\(\|\| render_new_surface_control\(self\)\).*?\.children\(unpinned_tabs\).*?\.children\(adjacent_new_surface_control\).*?\.child\(self\.render_tab_bar_drop_target.*?fn default_render_tab_bar_buttons.*?if !has_focus \{[[:space:]]*return \(None, None\);.*?\.when\(paths::APP_NAME == "Zed".*?render_new_surface_control\(pane\)' \
+    'Dez can regress to placing New at the far edge of pane chrome instead of directly after native tabs'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn workspace_header_uses_card_frame\(app_name: &str\).*?app_name == "Zed".*?fn session_rail_open_workspace_control_visible\(app_name: &str\).*?app_name != "Zed".*?fn workspace_repository_summary_label.*?"\{branch\} · \{count\} changes".*?fn workspace_group_repository_summary.*?root_repository_snapshots\(workspace, cx\).*?repository\.status_summary\(\)\.count.*?let layout_label = if APP_NAME != "Zed".*?show_worktree_metadata.*?workspace_group_repository_summary\(group_workspaces, cx\).*?workspace_header_uses_card_frame\(APP_NAME\).*?this\.border_l_1\(\).*?session_rail_open_workspace_control_visible\(APP_NAME\).*?IconButton::new\("open-workspace", IconName::Plus\).*?aria_label\("Open Workspace"\).*?create_new_window: Some\(false\)' \
+    'the Workspace navigator can regress to card-styled project rows, stale repository metadata, or a non-native add action'
+require_multiline_pattern assets/settings/default.json \
+    '"session_rail": \{.*?"visibility": "auto".*?"group_by": "project".*?"metadata": \["branch", "agent_state", "latest_attention"\]' \
+    'fresh Dez profiles can lose the Workspace branch metadata needed by the compact navigator'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'RevealGitChanges.*?RevealDebug.*?RevealBuiltInAgent.*?activate_panel_item_for_key\("GitPanel", true.*?activate_panel_for_proto_id\(PanelId::DebugPanel.*?activate_panel_for_proto_id\(PanelId::AssistantPanel' \
     'the Main Work Area plus menu can regress from registered Git lookup or typed Debug and Agent activation'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'fn accessibility_label_for_app.*?"Editor pane".*?"Project pane".*?"Agent pane".*?"Main work area".*?"Workspace Tools".*?"Built-in Agent".*?if paths::APP_NAME != "Zed".*?PaneKind::Project.*?render_auxiliary_pane_hide_control\(PaneKind::Project\).*?PaneKind::Agent.*?render_auxiliary_pane_hide_control\(PaneKind::Agent\).*?if !has_focus.*?Some\(add_control\).*?fn render_auxiliary_pane_hide_control.*?"hide-workspace-tools".*?tab_index\(0isize\).*?"hide-agent".*?tab_index\(0isize\).*?fn pane_auxiliary_hide_control_copy.*?"Hide Workspace Tools".*?"Hide Built-in Agent"' \
+    'fn accessibility_label_for_app.*?"Editor pane".*?"Project pane".*?"Agent pane".*?"Main work area".*?"Workspace Tools".*?"Built-in Agent".*?if paths::APP_NAME != "Zed".*?PaneKind::Project.*?render_auxiliary_pane_hide_control\(PaneKind::Project\).*?PaneKind::Agent.*?render_auxiliary_pane_hide_control\(PaneKind::Agent\).*?if !has_focus.*?return \(None, None\).*?fn render_auxiliary_pane_hide_control.*?"hide-workspace-tools".*?tab_index\(0isize\).*?"hide-agent".*?tab_index\(0isize\).*?fn pane_auxiliary_hide_control_copy.*?"Hide Workspace Tools".*?"Hide Built-in Agent"' \
     'main-area creation controls can regress into auxiliary panes or pane landmarks can lose their product-region identity'
 require_multiline_pattern crates/workspace/src/pane.rs \
     'fn pane_drag_handle_visible.*?app_name == "Zed".*?fn render_pane_drag_handle.*?id\("pane_drag_handle"\).*?\.absolute\(\).*?\.on_drag.*?when\(pane_drag_handle_visible\(paths::APP_NAME\).*?child\(self\.render_pane_drag_handle\(cx\)\).*?!pane_drag_handle_visible\("Dez"\).*?pane_drag_handle_visible\("Zed"\)' \

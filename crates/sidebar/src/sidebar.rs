@@ -284,6 +284,14 @@ fn session_rail_uses_card_frame(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn workspace_header_uses_card_frame(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
+fn session_rail_open_workspace_control_visible(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
 fn session_rail_max_width(app_name: &str) -> Pixels {
     if app_name == "Zed" {
         MAX_WIDTH
@@ -1286,6 +1294,20 @@ fn project_header_primary_action_activates_workspace(app_name: &str) -> bool {
     app_name != "Zed"
 }
 
+fn workspace_repository_summary_label(
+    branch_label: Option<&str>,
+    changed_file_count: usize,
+) -> Option<SharedString> {
+    match (branch_label, changed_file_count) {
+        (Some(branch), 0) => Some(branch.to_owned().into()),
+        (Some(branch), 1) => Some(format!("{branch} · 1 change").into()),
+        (Some(branch), count) => Some(format!("{branch} · {count} changes").into()),
+        (None, 0) => None,
+        (None, 1) => Some("1 change".into()),
+        (None, count) => Some(format!("{count} changes").into()),
+    }
+}
+
 fn merge_unambiguous_branch(
     branches: &mut HashMap<PathBuf, SharedString>,
     ambiguous_paths: &mut HashSet<PathBuf>,
@@ -2022,6 +2044,23 @@ mod workspace_header_label_tests {
     fn workspace_controls_name_their_actual_workspace() {
         assert!(project_header_primary_action_activates_workspace("Dez"));
         assert!(!project_header_primary_action_activates_workspace("Zed"));
+        assert!(!workspace_header_uses_card_frame("Dez"));
+        assert!(workspace_header_uses_card_frame("Zed"));
+        assert!(session_rail_open_workspace_control_visible("Dez"));
+        assert!(!session_rail_open_workspace_control_visible("Zed"));
+        assert_eq!(
+            workspace_repository_summary_label(Some("main"), 2).as_deref(),
+            Some("main · 2 changes")
+        );
+        assert_eq!(
+            workspace_repository_summary_label(Some("main"), 0).as_deref(),
+            Some("main")
+        );
+        assert_eq!(
+            workspace_repository_summary_label(None, 1).as_deref(),
+            Some("1 change")
+        );
+        assert_eq!(workspace_repository_summary_label(None, 0), None);
         assert_eq!(
             workspace_header_accessibility_label("Dez", "compiler", false, false, 0),
             "Workspace compiler, ready for a session"
@@ -4106,6 +4145,35 @@ fn root_repository_snapshots(
     })
 }
 
+fn workspace_group_repository_summary(
+    workspaces: &[Entity<Workspace>],
+    cx: &App,
+) -> Option<SharedString> {
+    let mut repository_paths = HashSet::new();
+    let mut branch_names = HashSet::new();
+    let mut changed_file_count = 0usize;
+
+    for workspace in workspaces {
+        for repository in root_repository_snapshots(workspace, cx) {
+            if !repository_paths.insert(repository.work_directory_abs_path.to_path_buf()) {
+                continue;
+            }
+            if let Some(branch) = repository.branch.as_ref() {
+                branch_names.insert(branch.name().to_owned());
+            }
+            changed_file_count =
+                changed_file_count.saturating_add(repository.status_summary().count);
+        }
+    }
+
+    let branch_label = match branch_names.len() {
+        0 => None,
+        1 => branch_names.into_iter().next(),
+        count => Some(format!("{count} branches")),
+    };
+    workspace_repository_summary_label(branch_label.as_deref(), changed_file_count)
+}
+
 fn workspace_path_list(workspace: &Entity<Workspace>, cx: &App) -> PathList {
     PathList::new(&workspace.read(cx).root_paths(cx))
 }
@@ -5772,38 +5840,48 @@ impl Sidebar {
             let is_active = active_workspace
                 .as_ref()
                 .is_some_and(|active| group_workspaces.contains(active));
-            let layout_label = show_layout_metadata
-                .then(|| {
-                    let active_layout_label = active_workspace
-                        .as_ref()
-                        .filter(|active| group_workspaces.contains(active))
-                        .into_iter()
-                        .chain(group_workspaces.iter())
-                        .find_map(|workspace| {
-                            let recipe_id = workspace.read(cx).active_canvas_layout_recipe_id()?;
-                            Some(canvas_layout_recipe_label(recipe_id)?.to_string())
-                        });
-                    let saved_layout_count = group_workspaces
-                        .iter()
-                        .map(|workspace| workspace.read(cx).saved_canvas_layout_count())
-                        .sum::<usize>();
+            let layout_label = if APP_NAME != "Zed" {
+                session_rail_settings
+                    .show_worktree_metadata
+                    .then(|| workspace_group_repository_summary(group_workspaces, cx))
+                    .flatten()
+            } else {
+                show_layout_metadata
+                    .then(|| {
+                        let active_layout_label = active_workspace
+                            .as_ref()
+                            .filter(|active| group_workspaces.contains(active))
+                            .into_iter()
+                            .chain(group_workspaces.iter())
+                            .find_map(|workspace| {
+                                let recipe_id =
+                                    workspace.read(cx).active_canvas_layout_recipe_id()?;
+                                Some(canvas_layout_recipe_label(recipe_id)?.to_string())
+                            });
+                        let saved_layout_count = group_workspaces
+                            .iter()
+                            .map(|workspace| workspace.read(cx).saved_canvas_layout_count())
+                            .sum::<usize>();
 
-                    match (active_layout_label, saved_layout_count) {
-                        (Some(layout), 0) => Some(SharedString::from(format!("Layout: {layout}"))),
-                        (Some(layout), 1) => {
-                            Some(SharedString::from(format!("Layout: {layout} · Saved: 1")))
+                        match (active_layout_label, saved_layout_count) {
+                            (Some(layout), 0) => {
+                                Some(SharedString::from(format!("Layout: {layout}")))
+                            }
+                            (Some(layout), 1) => {
+                                Some(SharedString::from(format!("Layout: {layout} · Saved: 1")))
+                            }
+                            (Some(layout), count) => Some(SharedString::from(format!(
+                                "Layout: {layout} · Saved: {count}"
+                            ))),
+                            (None, 1) => Some(SharedString::from("Saved: 1")),
+                            (None, count) if count > 1 => {
+                                Some(SharedString::from(format!("Saved: {count}")))
+                            }
+                            (None, _) => None,
                         }
-                        (Some(layout), count) => Some(SharedString::from(format!(
-                            "Layout: {layout} · Saved: {count}"
-                        ))),
-                        (None, 1) => Some(SharedString::from("Saved: 1")),
-                        (None, count) if count > 1 => {
-                            Some(SharedString::from(format!("Saved: {count}")))
-                        }
-                        (None, _) => None,
-                    }
-                })
-                .flatten();
+                    })
+                    .flatten()
+            };
 
             // Collect live thread infos from all workspaces in this group.
             let live_infos = group_workspaces
@@ -6739,6 +6817,15 @@ impl Sidebar {
                     LabelSize::Small,
                 ),
             };
+        let header_height = if APP_NAME == "Zed" {
+            header_height
+        } else {
+            match design_system.density {
+                settings::CanvasDensity::Compact => px(36.0),
+                settings::CanvasDensity::Balanced => px(40.0),
+                settings::CanvasDensity::Spacious => px(44.0),
+            }
+        };
 
         let id_prefix = if is_sticky { "sticky-" } else { "" };
         let id = SharedString::from(format!("{id_prefix}project-header-{ix}"));
@@ -6823,23 +6910,33 @@ impl Sidebar {
             .pl(header_padding_left)
             .pr(header_padding_right)
             .justify_between()
-            .border_1()
             .map(|this| {
-                if is_focused {
-                    this.border_color(focused_border_color)
+                if workspace_header_uses_card_frame(APP_NAME) {
+                    this.border_1()
+                        .map(|this| {
+                            if is_focused {
+                                this.border_color(focused_border_color)
+                            } else {
+                                this.border_color(gpui::transparent_black())
+                            }
+                        })
+                        .when(
+                            design_system.radius == settings::CanvasRadius::Subtle,
+                            |this| this.rounded_sm(),
+                        )
+                        .when(
+                            design_system.radius == settings::CanvasRadius::Rounded,
+                            |this| this.rounded_lg(),
+                        )
                 } else {
-                    this.border_color(gpui::transparent_black())
+                    this.border_l_1().border_color(if is_focused {
+                        focused_border_color
+                    } else {
+                        gpui::transparent_black()
+                    })
                 }
             })
             .when(is_active, |this| this.bg(active_background))
-            .when(
-                design_system.radius == settings::CanvasRadius::Subtle,
-                |this| this.rounded_sm(),
-            )
-            .when(
-                design_system.radius == settings::CanvasRadius::Rounded,
-                |this| this.rounded_lg(),
-            )
             .when(!has_filter, |this| this.hover(|s| s.bg(hover_solid)))
             .child(
                 h_flex()
@@ -6847,6 +6944,43 @@ impl Sidebar {
                     .min_w_0()
                     .flex_1()
                     .gap(header_gap)
+                    .when(!has_filter, |this| {
+                        if project_header_primary_action_activates_workspace(APP_NAME) {
+                            let disclosure_label = if is_collapsed {
+                                format!("Expand Workspace {}", workspace_name.as_ref())
+                            } else {
+                                format!("Collapse Workspace {}", workspace_name.as_ref())
+                            };
+                            this.child(
+                                IconButton::new(
+                                    SharedString::from(format!(
+                                        "{id_prefix}project-disclosure-{ix}"
+                                    )),
+                                    disclosure_icon,
+                                )
+                                .size(ButtonSize::Medium)
+                                .icon_size(IconSize::Small)
+                                .tab_index(0isize)
+                                .aria_label(disclosure_label.clone())
+                                .tooltip(Tooltip::text(disclosure_label))
+                                .on_click(cx.listener(
+                                    move |this, _, window, cx| {
+                                        cx.stop_propagation();
+                                        window.prevent_default();
+                                        this.toggle_collapse(&key_for_disclosure, window, cx);
+                                    },
+                                )),
+                            )
+                        } else {
+                            this.child(
+                                div().child(
+                                    Icon::new(disclosure_icon)
+                                        .size(IconSize::Small)
+                                        .color(Color::Muted),
+                                ),
+                            )
+                        }
+                    })
                     .when(!labels_visible, |this| {
                         this.child(
                             Icon::new(IconName::FolderOpen)
@@ -6860,22 +6994,22 @@ impl Sidebar {
                                 .color(Color::Muted),
                         )
                     })
-                    .when(labels_visible, |this| this.child(label))
-                    .when_some(
-                        layout_label.filter(|_| {
-                            APP_NAME == "Zed"
-                                && labels_visible
-                                && !(is_collapsed && running_terminal_agent_label.is_some())
-                        }),
-                        |this, layout_label| {
-                            this.child(
-                                Label::new(SharedString::from(layout_label.as_ref()))
-                                    .size(LabelSize::XSmall)
-                                    .color(Color::Muted)
-                                    .truncate(),
-                            )
-                        },
-                    )
+                    .when(labels_visible, |this| {
+                        this.child(v_flex().min_w_0().gap(px(1.0)).child(label).when_some(
+                            layout_label.filter(|_| {
+                                APP_NAME != "Zed"
+                                    || !(is_collapsed && running_terminal_agent_label.is_some())
+                            }),
+                            |this, layout_label| {
+                                this.child(
+                                    Label::new(SharedString::from(layout_label.as_ref()))
+                                        .size(LabelSize::XSmall)
+                                        .color(Color::Muted)
+                                        .truncate(),
+                                )
+                            },
+                        ))
+                    })
                     .when_some(
                         running_terminal_agent_label
                             .filter(|_| APP_NAME == "Zed" && is_collapsed && labels_visible),
@@ -6937,43 +7071,6 @@ impl Sidebar {
                                 )
                             },
                         )
-                    })
-                    .when(!has_filter, |this| {
-                        if project_header_primary_action_activates_workspace(APP_NAME) {
-                            let disclosure_label = if is_collapsed {
-                                format!("Expand project {}", workspace_name.as_ref())
-                            } else {
-                                format!("Collapse project {}", workspace_name.as_ref())
-                            };
-                            this.child(
-                                IconButton::new(
-                                    SharedString::from(format!(
-                                        "{id_prefix}project-disclosure-{ix}"
-                                    )),
-                                    disclosure_icon,
-                                )
-                                .size(ButtonSize::Medium)
-                                .icon_size(IconSize::Small)
-                                .tab_index(0isize)
-                                .aria_label(disclosure_label.clone())
-                                .tooltip(Tooltip::text(disclosure_label))
-                                .on_click(cx.listener(
-                                    move |this, _, window, cx| {
-                                        cx.stop_propagation();
-                                        window.prevent_default();
-                                        this.toggle_collapse(&key_for_disclosure, window, cx);
-                                    },
-                                )),
-                            )
-                        } else {
-                            this.child(
-                                div().child(
-                                    Icon::new(disclosure_icon)
-                                        .size(IconSize::Small)
-                                        .color(Color::Muted),
-                                ),
-                            )
-                        }
                     }),
             )
             .child(
@@ -15796,6 +15893,36 @@ impl Sidebar {
                 )
             })
             .child(div().flex_1())
+            .when(
+                session_rail_open_workspace_control_visible(APP_NAME),
+                |this| {
+                    this.child(
+                        IconButton::new("open-workspace", IconName::Plus)
+                            .size(ButtonSize::Medium)
+                            .icon_size(IconSize::Small)
+                            .tab_index(0isize)
+                            .aria_label("Open Workspace")
+                            .tooltip(|_, cx| {
+                                Tooltip::for_action(
+                                    "Open Workspace",
+                                    &OpenFolder {
+                                        create_new_window: Some(false),
+                                    },
+                                    cx,
+                                )
+                            })
+                            .on_click(|_, window, cx| {
+                                window.dispatch_action(
+                                    OpenFolder {
+                                        create_new_window: Some(false),
+                                    }
+                                    .boxed_clone(),
+                                    cx,
+                                );
+                            }),
+                    )
+                },
+            )
             .when(show_search_control, |this| {
                 this.child(
                     IconButton::new("open-session-search", IconName::MagnifyingGlass)

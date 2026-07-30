@@ -109,6 +109,10 @@ fn pane_navigation_history_buttons_visible(_app_name: &str, setting: bool) -> bo
     setting
 }
 
+fn pane_new_surface_control_is_adjacent(app_name: &str, pane_kind: PaneKind) -> bool {
+    app_name != "Zed" && pane_kind == PaneKind::Tabs
+}
+
 fn empty_main_work_area_shows_orientation(app_name: &str, is_active_pane: bool) -> bool {
     app_name == "Zed" || is_active_pane
 }
@@ -4348,6 +4352,10 @@ impl Pane {
         tab_count: usize,
         cx: &mut Context<Pane>,
     ) -> impl IntoElement {
+        let adjacent_new_surface_control =
+            pane_new_surface_control_is_adjacent(paths::APP_NAME, self.pane_kind)
+                .then(|| render_new_surface_control(self));
+
         h_flex()
             .id("unpinned tabs")
             .overflow_x_scroll()
@@ -4357,6 +4365,7 @@ impl Pane {
                 this.suppress_scroll = true;
             }))
             .children(unpinned_tabs)
+            .children(adjacent_new_surface_control)
             .child(self.render_tab_bar_drop_target(tab_count, cx))
     }
 
@@ -5522,13 +5531,8 @@ fn default_render_tab_bar_buttons(
     }
 
     let has_focus = pane.has_focus(window, cx) || pane.context_menu_focused(window, cx);
-    let add_control = render_new_surface_control(pane);
     if !has_focus {
-        return if paths::APP_NAME == "Zed" {
-            (None, None)
-        } else {
-            (None, Some(add_control))
-        };
+        return (None, None);
     }
 
     let (can_clone, can_split_move) = match pane.active_item() {
@@ -5543,7 +5547,9 @@ fn default_render_tab_bar_buttons(
     let right_children = h_flex()
         // Instead we need to replicate the spacing from the [TabBar]'s `end_slot` here.
         .gap(DynamicSpacing::Base04.rems(cx))
-        .child(add_control)
+        .when(paths::APP_NAME == "Zed", |this| {
+            this.child(render_new_surface_control(pane))
+        })
         .child(
             PopoverMenu::new("pane-tab-bar-split")
                 .trigger_with_tooltip(
@@ -6541,6 +6547,16 @@ mod tests {
             "Dez should keep pane movement in explicit layout controls instead of overlaying every header"
         );
         assert!(pane_drag_handle_visible("Zed"));
+        assert!(pane_new_surface_control_is_adjacent("Dez", PaneKind::Tabs));
+        assert!(!pane_new_surface_control_is_adjacent(
+            "Dez",
+            PaneKind::Project
+        ));
+        assert!(!pane_new_surface_control_is_adjacent(
+            "Dez",
+            PaneKind::Agent
+        ));
+        assert!(!pane_new_surface_control_is_adjacent("Zed", PaneKind::Tabs));
         assert!(
             !pane_navigation_history_buttons_visible("Dez", false),
             "Dez should not repeat Back and Forward controls in every pane when the setting is off"
