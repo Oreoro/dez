@@ -730,9 +730,16 @@ fn session_overview_status_label(
             } else {
                 "need"
             };
-            format!("{workspace_label} · {attention_count} {attention_verb} attention")
+            let attention_noun = if attention_count == 1 {
+                "session"
+            } else {
+                "sessions"
+            };
+            format!(
+                "{workspace_label} · {attention_count} {attention_noun} {attention_verb} attention"
+            )
         } else {
-            format!("{workspace_label} · {session_count} active")
+            format!("{workspace_label} · {session_count} {session_noun} active")
         }
     } else if attention_count > 0 {
         let attention_verb = if attention_count == 1 {
@@ -1280,6 +1287,19 @@ fn workspace_header_accessibility_label(
     label
 }
 
+fn workspace_navigation_label(
+    app_name: &str,
+    full_name: &str,
+    primary_name: &str,
+    root_count: usize,
+) -> SharedString {
+    if app_name == "Zed" || root_count <= 1 {
+        return full_name.to_owned().into();
+    }
+
+    format!("{primary_name} · {root_count} roots").into()
+}
+
 fn workspace_new_terminal_control_label(app_name: &str, workspace_name: &str) -> String {
     format!("{} in {workspace_name}", terminal_launch_label(app_name))
 }
@@ -1344,7 +1364,7 @@ fn canvas_thread_item_style(
             .density(ThreadItemDensity::Compact)
             .radius(ThreadItemRadius::None)
             .contrast(ThreadItemContrast::Standard)
-            .metadata_visible(false);
+            .metadata_visible(true);
     }
 
     let density = match design_system.density {
@@ -2087,6 +2107,18 @@ mod workspace_header_label_tests {
             workspace_options_control_label("compiler"),
             "Workspace Options for compiler"
         );
+        assert_eq!(
+            workspace_navigation_label("Dez", "zed 3.0, ideas", "zed 3.0", 2),
+            "zed 3.0 · 2 roots"
+        );
+        assert_eq!(
+            workspace_navigation_label("Dez", "compiler", "compiler", 1),
+            "compiler"
+        );
+        assert_eq!(
+            workspace_navigation_label("Zed", "zed 3.0, ideas", "zed 3.0", 2),
+            "zed 3.0, ideas"
+        );
         assert_eq!(workspace_options_tooltip_label(), "Workspace Options");
         assert_eq!(
             workspace_new_terminal_tooltip_label("Dez"),
@@ -2122,11 +2154,11 @@ mod workspace_header_label_tests {
         );
         assert_eq!(
             session_overview_status_label("Dez", 3, 0, 2, false, false),
-            "2 Workspaces · 3 active"
+            "2 Workspaces · 3 sessions active"
         );
         assert_eq!(
             session_overview_status_label("Dez", 3, 1, 2, false, false),
-            "2 Workspaces · 1 needs attention"
+            "2 Workspaces · 1 session needs attention"
         );
         assert_eq!(
             attention_items_accessibility_label("Dez", 1),
@@ -3738,6 +3770,7 @@ enum ListEntry {
     ProjectHeader {
         key: ProjectGroupKey,
         label: SharedString,
+        full_label: SharedString,
         highlight_positions: Vec<usize>,
         layout_label: Option<SharedString>,
         has_running_threads: bool,
@@ -5830,9 +5863,27 @@ impl Sidebar {
                 continue;
             }
 
-            let label = group_key.display_name(&path_detail_map);
+            let full_label = group_key.display_name(&path_detail_map);
+            let primary_label = group_key
+                .path_list()
+                .ordered_paths()
+                .next()
+                .map(|path| {
+                    ProjectGroupKey::new(
+                        group_key.host(),
+                        PathList::new(std::slice::from_ref(path)),
+                    )
+                    .display_name(&path_detail_map)
+                })
+                .unwrap_or_else(|| full_label.clone());
+            let label = workspace_navigation_label(
+                APP_NAME,
+                full_label.as_ref(),
+                primary_label.as_ref(),
+                group_key.path_list().paths().len(),
+            );
             let workspace_matches_query = !query.is_empty()
-                && fuzzy_match_positions(&query, &label)
+                && fuzzy_match_positions(&query, &full_label)
                     .is_some_and(|positions| !positions.is_empty());
             let external_sessions = group_external_sessions
                 .into_iter()
@@ -6196,7 +6247,7 @@ impl Sidebar {
             if !query.is_empty() {
                 let workspace_highlight_positions =
                     fuzzy_match_positions(&query, &label).unwrap_or_default();
-                let workspace_matched = !workspace_highlight_positions.is_empty();
+                let workspace_matched = workspace_matches_query;
 
                 let mut matched_threads: Vec<Arc<ThreadEntry>> = Vec::new();
                 for mut thread in threads {
@@ -6276,6 +6327,7 @@ impl Sidebar {
                 entries.push(ListEntry::ProjectHeader {
                     key: group_key.clone(),
                     label,
+                    full_label,
                     highlight_positions: workspace_highlight_positions,
                     layout_label: layout_label.clone(),
                     has_running_threads,
@@ -6339,6 +6391,7 @@ impl Sidebar {
                 entries.push(ListEntry::ProjectHeader {
                     key: group_key.clone(),
                     label,
+                    full_label,
                     highlight_positions: Vec::new(),
                     layout_label: layout_label.clone(),
                     has_running_threads,
@@ -6698,6 +6751,7 @@ impl Sidebar {
             ListEntry::ProjectHeader {
                 key,
                 label,
+                full_label,
                 highlight_positions,
                 layout_label,
                 has_running_threads,
@@ -6718,6 +6772,7 @@ impl Sidebar {
                     false,
                     key,
                     label,
+                    full_label,
                     highlight_positions,
                     layout_label.as_ref(),
                     *has_running_threads,
@@ -6786,6 +6841,7 @@ impl Sidebar {
         is_sticky: bool,
         key: &ProjectGroupKey,
         label: &SharedString,
+        full_label: &SharedString,
         highlight_positions: &[usize],
         layout_label: Option<&SharedString>,
         has_running_threads: bool,
@@ -6840,13 +6896,20 @@ impl Sidebar {
         let id = SharedString::from(format!("{id_prefix}project-header-{ix}"));
         let group_name = SharedString::from(format!("{id_prefix}header-group-{ix}"));
         let workspace_name = label.clone();
+        let workspace_accessibility_name = if label == full_label {
+            workspace_name.clone()
+        } else {
+            format!("{workspace_name}; roots {full_label}").into()
+        };
         let workspace_accessibility_label = workspace_header_accessibility_label(
             APP_NAME,
-            workspace_name.as_ref(),
+            workspace_accessibility_name.as_ref(),
             has_threads,
             has_running_threads,
             attention_thread_count,
         );
+        let workspace_roots_tooltip =
+            (label != full_label).then(|| format!("Workspace roots: {full_label}"));
 
         let is_collapsed = self.is_group_collapsed(key, cx);
         let disclosure_icon = if is_collapsed {
@@ -7004,20 +7067,30 @@ impl Sidebar {
                         )
                     })
                     .when(labels_visible, |this| {
-                        this.child(v_flex().min_w_0().gap(px(1.0)).child(label).when_some(
-                            layout_label.filter(|_| {
-                                APP_NAME != "Zed"
-                                    || !(is_collapsed && running_terminal_agent_label.is_some())
-                            }),
-                            |this, layout_label| {
-                                this.child(
-                                    Label::new(SharedString::from(layout_label.as_ref()))
-                                        .size(LabelSize::XSmall)
-                                        .color(Color::Muted)
-                                        .truncate(),
+                        this.child(
+                            v_flex()
+                                .min_w_0()
+                                .gap(px(1.0))
+                                .child(label)
+                                .when_some(
+                                    layout_label.filter(|_| {
+                                        APP_NAME != "Zed"
+                                            || !(is_collapsed
+                                                && running_terminal_agent_label.is_some())
+                                    }),
+                                    |this, layout_label| {
+                                        this.child(
+                                            Label::new(SharedString::from(layout_label.as_ref()))
+                                                .size(LabelSize::XSmall)
+                                                .color(Color::Muted)
+                                                .truncate(),
+                                        )
+                                    },
                                 )
-                            },
-                        ))
+                                .when_some(workspace_roots_tooltip.clone(), |this, tooltip| {
+                                    this.tooltip(Tooltip::text(tooltip))
+                                }),
+                        )
                     })
                     .when_some(
                         running_terminal_agent_label
@@ -8195,6 +8268,7 @@ impl Sidebar {
         let ListEntry::ProjectHeader {
             key,
             label,
+            full_label,
             highlight_positions,
             layout_label,
             has_running_threads,
@@ -8217,6 +8291,7 @@ impl Sidebar {
             true,
             key,
             &label,
+            &full_label,
             &highlight_positions,
             layout_label.as_ref(),
             *has_running_threads,

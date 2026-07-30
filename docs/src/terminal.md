@@ -18,6 +18,13 @@ Workspaces**. Compact Workspaces uses icon-only utilities with named tooltips, w
 the detailed width restores their visible labels. This keeps supervision
 optional without hiding its recovery path.
 
+Workspace headers stay useful at narrow widths. A multi-root Workspace shows
+the first root followed by a root count instead of joining every root into one
+clipped title. Search still matches every root, and the full root list remains
+in the header tooltip and accessibility label. Agent provider and lifecycle
+state use the row beneath a terminal or Session title, so status never competes
+with the primary navigation label.
+
 Workspace Tools and Agent also begin closed in a fresh default Workspace, so
 the terminal or editor remains the obvious primary surface. **Files**,
 **Outline**, **Git**, and **Debug** reveal Workspace Tools on demand; repeating

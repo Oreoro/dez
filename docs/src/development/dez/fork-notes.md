@@ -68,6 +68,13 @@ describe purpose, not the inherited dock or panel implementation:
 | **Main work area**  | File, terminal, Files, Outline, Git, Debug, Built-in Agent, settings, and review native tabs | Global project scope or sidebar-only copies of active work |
 | **Workspace tools** | The contextual Files, Outline, Git, Debug, and Built-in Agent tab category                   | A fixed column, second Workspace, or nested tab system     |
 
+Workspaces uses bounded navigation labels. A multi-root Workspace leads with
+its first root and a root count rather than presenting a comma-separated path
+inventory as its identity. All roots remain searchable and available to
+assistive technology. Agent provider and lifecycle state use ThreadItem's
+secondary metadata line, preserving the terminal or Session title as the
+primary target.
+
 The final shell follows this responsive layout contract. This is the canonical
 wireframe, not a suggestion for an additional dashboard or panel system:
 

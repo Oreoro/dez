@@ -1738,6 +1738,7 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
             ListEntry::ProjectHeader {
                 key: ProjectGroupKey::new(None, expanded_path.clone()),
                 label: "expanded-project".into(),
+                full_label: "expanded-project".into(),
                 highlight_positions: Vec::new(),
                 layout_label: None,
                 has_running_threads: false,
@@ -1746,6 +1747,7 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 has_notifications: false,
                 is_active: true,
                 has_threads: true,
+                external_sessions: Vec::new(),
             },
             ListEntry::Thread(Arc::new(ThreadEntry {
                 metadata: ThreadMetadata {
@@ -1892,6 +1894,7 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
             ListEntry::ProjectHeader {
                 key: ProjectGroupKey::new(None, collapsed_path.clone()),
                 label: "collapsed-project".into(),
+                full_label: "collapsed-project".into(),
                 highlight_positions: Vec::new(),
                 layout_label: None,
                 has_running_threads: false,
@@ -1900,6 +1903,7 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 has_notifications: false,
                 is_active: false,
                 has_threads: false,
+                external_sessions: Vec::new(),
             },
         ];
 

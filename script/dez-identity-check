@@ -388,7 +388,7 @@ require_pattern assets/fonts/jetbrains-mono/OFL.txt \
     '^Copyright 2020 The JetBrains Mono Project Authors' \
     'the JetBrains Mono source attribution is incomplete'
 require_multiline_pattern README.md \
-    '^# Dez.*?v0\.1\.0 source candidate.*?not yet a signed or supported binary release.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Workspaces\*\*.*?path-matched.*?tmux.*?Herdr.*?Unrelated machine terminals.*?Workspace tools.*?ordinary draggable and closeable native.*?\*\*Built-in Agent\*\*.*?Open Agent Terminal.*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?A public v0\.1 release' \
+    '^# Dez.*?v0\.1\.0 source candidate.*?not yet a signed or supported binary release.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Workspaces\*\*.*?path-matched.*?tmux.*?Herdr.*?Unrelated.*?machine terminals.*?Workspace tools.*?ordinary draggable and closeable native.*?\*\*Built-in Agent\*\*.*?Open Agent Terminal.*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?A public v0\.1 release' \
     'the repository front page can regress to upstream branding, omit the Dez product model, or overstate release readiness'
 require_multiline_pattern README.md \
     '## Visual baseline.*?Lumin Blur.*?Lumin Light.*?IBM Plex Sans.*?Lilex.*?## Upstream relationship.*?deliberate fork.*?## License and attribution.*?independent fork' \
@@ -824,6 +824,12 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_sidebar_title_in_titlebar\(app_name: &str\).*?app_name != "Zed".*?fn session_rail_title\(app_name: &str\).*?"Sessions".*?"Workspaces".*?fn session_rail_accessibility_label\(app_name: &str\).*?"Workspaces and agent sessions".*?fn session_rail_search_label.*?"Search Workspaces".*?fn session_rail_search_placeholder.*?"Search Workspaces…".*?fn session_notices_accessibility_label.*?"Workspace notices".*?fn session_rail_hide_label.*?"Hide Workspaces".*?fn session_rail_menu_label.*?"Workspaces Menu".*?fn session_empty_state_uses_icon_badge\(app_name: &str\).*?app_name == "Zed".*?when\(!session_sidebar_title_in_titlebar\(APP_NAME\).*?Label::new\(session_rail_title\(APP_NAME\)\).*?fn render_sidebar_header.*?when\(session_sidebar_title_in_titlebar\(APP_NAME\).*?Label::new\(session_rail_title\(APP_NAME\)\)' \
     'Dez Workspaces can regress to losing its native title or using inconsistent navigation labels'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn workspace_navigation_label.*?root_count <= 1.*?format!\("\{primary_name\} · \{root_count\} roots"\).*?let full_label = group_key\.display_name\(&path_detail_map\).*?fuzzy_match_positions\(&query, &full_label\).*?full_label,[[:space:]]*highlight_positions.*?Workspace roots: \{full_label\}' \
+    'multi-root Workspaces can regress to a clipped comma-separated identity or stop matching every root'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn session_overview_status_label.*?\{attention_count\} \{attention_noun\} \{attention_verb\} attention.*?\{workspace_label\} · \{session_count\} \{session_noun\} active.*?fn canvas_thread_item_style.*?if APP_NAME != "Zed".*?metadata_visible\(true\)' \
+    'Workspace counts can lose their noun or provider state can return to competing with the primary Session title'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'fn dez_consolidates_session_utilities_into_one_overview_menu.*?session_sidebar_title_in_titlebar\("Dez"\).*?!session_empty_state_uses_icon_badge\("Dez"\).*?!session_sidebar_title_in_titlebar\("Zed"\).*?session_empty_state_uses_icon_badge\("Zed"\)' \
     'the native Sessions title and plain empty-state presentation are no longer product-gated'
@@ -1719,11 +1725,11 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_scope_controls_visible\(.*?app_name == "Zed".*?session_count > 0.*?attention_count > 0 \|\| attention_only.*?session_scope_controls_visible\(.*?paths::APP_NAME.*?self\.contents\.session_count.*?self\.contents\.attention_count.*?self\.attention_only' \
     'caught-up Dez Workspaces can regress to wasting a full row on inert All and Attention scope controls'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn canvas_thread_item_style\(.*?APP_NAME != "Zed".*?ThreadItemDensity::Compact.*?ThreadItemRadius::None.*?ThreadItemContrast::Standard.*?metadata_visible\(false\).*?layout_label\.filter\(\|_\| \{.*?APP_NAME == "Zed".*?running_terminal_agent_label.*?APP_NAME == "Zed"' \
-    'Dez Workspace rows can regress from native compact navigation into rounded metadata cards'
+    'fn canvas_thread_item_style\(.*?APP_NAME != "Zed".*?ThreadItemDensity::Compact.*?ThreadItemRadius::None.*?ThreadItemContrast::Standard.*?metadata_visible\(true\).*?layout_label\.filter\(\|_\| \{.*?APP_NAME == "Zed".*?running_terminal_agent_label.*?APP_NAME == "Zed"' \
+    'Dez Workspace rows can regress from compact native rows with separate status into rounded metadata cards or a crowded title line'
 require_pattern crates/ui/src/components/ai/thread_item.rs \
     '^[[:space:]]*metadata_visible: bool,$' \
-    'ThreadItem lost the flag used to hide secondary metadata in compact navigation'
+    'ThreadItem lost the flag used to separate secondary metadata from primary navigation labels'
 require_pattern crates/ui/src/components/ai/thread_item.rs \
     '^[[:space:]]*metadata_visible: true,$' \
     'ThreadItem secondary metadata no longer defaults to visible outside Dez Workspaces'

@@ -7,6 +7,20 @@ The
 the current release order. Historical artifacts below do not validate a newer
 source tree.
 
+## 2026-07-30: bounded Workspace navigation labels
+
+The active v0.2 source-polish lane now gives a multi-root Workspace one bounded
+visible identity: its first root plus the number of roots. The unabridged root
+list remains in search, the header tooltip, and the accessibility label.
+Workspace overview counts name sessions explicitly, and agent provider/state
+metadata renders below the primary terminal or Session title through the native
+ThreadItem layout.
+
+This is source evidence only. Formatting, diff hygiene, shell syntax, theme,
+identity, and the remote source guard may validate the patch, but no local
+application build or visual claim is recorded here. Runtime and visual proof
+remain open for the exact candidate artifact.
+
 ## v0.0.3 candidate status {#v0-0-3-candidate-status}
 
 The package version and source release train now identify v0.0.3. No packaged

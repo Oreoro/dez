@@ -24,12 +24,15 @@ Workspace instead of separate applications or hidden panel modes.
   previews, and reviews are ordinary movable and splittable Surfaces.
 - **Workspaces** — a stable, collapsible left navigator for codebases and their
   Agent Sessions. It shows provider identity and Running, Needs Input, Waiting
-  for Permission, Reconnecting, Completed, or Error state without owning
-  duplicate tabs or processes. A Workspace can explicitly attach a path-matched
-  tmux or Herdr session, or open a path-matched cmux Workspace in cmux, without
+  for Permission, Reconnecting, Completed, or Error state on a secondary row,
+  leaving the terminal or Session title as the primary navigation label. A
+  multi-root Workspace leads with its first root and a bounded root count; all
+  root names remain searchable and available in the header tooltip and
+  accessibility label. A Workspace can explicitly attach a path-matched tmux
+  or Herdr session, or open a path-matched cmux Workspace in cmux, without
   taking ownership. Each external item appears beneath the most specific
-  matching Workspace, beside its associated Dez terminals and agents.
-  Unrelated machine terminals do not leak into the list.
+  matching Workspace, beside its associated Dez terminals and agents. Unrelated
+  machine terminals do not leak into the list.
 - **Workspace tools** — Files, Outline, Git, Debug, and the optional
   provider-backed Built-in Agent are ordinary draggable and closeable native
   tabs. They are not nested panels or a mandatory second sidebar.
