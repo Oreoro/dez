@@ -14117,7 +14117,7 @@ impl Sidebar {
                 })
                 .ok();
             if let Some(store) = multiplexer_store {
-                store.update(cx, |store, cx| store.refresh(cx)).ok();
+                store.update(cx, |store, cx| store.refresh(cx));
             }
         })
         .detach();
