@@ -1962,12 +1962,30 @@ require_multiline_pattern crates/workspace/src/pane.rs \
 require_multiline_pattern crates/workspace/src/pane.rs \
     'fn pane_new_surface_control_is_adjacent\(app_name: &str, pane_kind: PaneKind\).*?app_name != "Zed" && pane_kind == PaneKind::Tabs.*?fn render_unpinned_tabs_container.*?pane_new_surface_control_is_adjacent\(paths::APP_NAME, self\.pane_kind\).*?then\(\|\| render_new_surface_control\(self\)\).*?\.children\(unpinned_tabs\).*?\.children\(adjacent_new_surface_control\).*?\.child\(self\.render_tab_bar_drop_target.*?fn default_render_tab_bar_buttons.*?if !has_focus \{[[:space:]]*return \(None, None\);.*?\.when\(paths::APP_NAME == "Zed".*?render_new_surface_control\(pane\)' \
     'Dez can regress to placing New at the far edge of pane chrome instead of directly after native tabs'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    'let Some\(pane_handle\) = pane\.upgrade\(\) else \{.*?Self::save_item\(.*?pane_handle.*?pub async fn save_item\(.*?pane: Entity<Pane>.*?let Some\(item_ix\) = pane\.read_with.*?Ok\(pane\.update\(cx.*?Event::UserSavedItem' \
+    'an async save can regress to retaining only a weak pane and fail after a suspended prompt or filesystem operation'
+require_multiline_pattern crates/workspace/src/workspace.rs \
+    'fn save_all_internal.*?Some\(\(pane\.clone\(\), item\.boxed_clone\(\)\).*?Pane::save_item\(project\.clone\(\), pane.*?fn save_active_item.*?let pane = self\.active_pane\(\)\.clone\(\).*?Pane::save_item\(project, pane' \
+    'Workspace save entry points can regress to dropping the strong pane retained by the async save contract'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    '"Unlock Tab".*?"This will make this tab editable".*?"Locked Tab".*?"This tab is read-only".*?"Read-Only Tab".*?"Make Tab Read-Only".*?"Make Tab Editable"' \
+    'editor-local lock controls can regress to misleading filesystem permission language'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_header_uses_card_frame\(app_name: &str\).*?app_name == "Zed".*?fn session_rail_open_workspace_control_visible\(app_name: &str\).*?app_name != "Zed".*?fn workspace_repository_summary_label.*?"\{branch\} · \{count\} changes".*?fn workspace_group_repository_summary.*?root_repository_snapshots\(workspace, cx\).*?repository\.status_summary\(\)\.count.*?let layout_label = if APP_NAME != "Zed".*?show_worktree_metadata.*?workspace_group_repository_summary\(group_workspaces, cx\).*?workspace_header_uses_card_frame\(APP_NAME\).*?this\.border_l_1\(\).*?session_rail_open_workspace_control_visible\(APP_NAME\).*?IconButton::new\("open-workspace", IconName::Plus\).*?aria_label\("Open Workspace"\).*?create_new_window: Some\(false\)' \
     'the Workspace navigator can regress to card-styled project rows, stale repository metadata, or a non-native add action'
 require_multiline_pattern assets/settings/default.json \
     '"session_rail": \{.*?"visibility": "auto".*?"group_by": "project".*?"metadata": \["branch", "agent_state", "latest_attention"\]' \
     'fresh Dez profiles can lose the Workspace branch metadata needed by the compact navigator'
+require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
+    'TerminalEvent::CloseTerminal.*?request_close_terminal_from_terminal_event\(terminal_id, cx\).*?fn request_close_terminal_from_terminal_event.*?AgentPanelEvent::TerminalCloseRequested \{ metadata \}.*?pub enum AgentPanelEvent.*?TerminalCloseRequested \{ metadata: TerminalThreadMetadata \}' \
+    'shell-driven agent terminal exits can bypass the navigator ownership path'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'AgentPanelEvent::TerminalCloseRequested \{ metadata \}.*?this\.close_terminal\(.*?TerminalEntrySource::AgentPanel.*?fn close_terminal_entry.*?let defer_draft_activation = activate_panel_draft && is_active && neighbor\.is_some\(\).*?close_terminal_without_activating_draft.*?neighbor.*?activate_entry.*?panel\.activate_draft' \
+    'closing an active agent terminal can regress to leaving an uninitialized surface instead of activating its neighbor'
+require_pattern crates/sidebar/src/sidebar_tests.rs \
+    'async fn test_terminal_close_event_activates_neighbor' \
+    'the shell-driven agent terminal neighbor-activation regression no longer has source coverage'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'RevealGitChanges.*?RevealDebug.*?RevealBuiltInAgent.*?activate_panel_item_for_key\("GitPanel", true.*?activate_panel_for_proto_id\(PanelId::DebugPanel.*?activate_panel_for_proto_id\(PanelId::AssistantPanel' \
     'the Main Work Area plus menu can regress from registered Git lookup or typed Debug and Agent activation'
@@ -2484,6 +2502,9 @@ require_multiline_pattern .github/workflows/dez-build.yml \
 require_multiline_pattern .github/workflows/dez-build.yml \
     'hdiutil verify.*?Dez\.app.*?Contents/MacOS/dez-terminal-host.*?CFBundleIdentifier.*?dev\.dez\.Dez.*?codesign --verify --deep --strict' \
     'the manual macOS workflow does not verify its DMG, identity, helper, and signature'
+require_multiline_pattern .github/workflows/dez-build.yml \
+    'MACOS_SIGNING_IDENTITY: \$\{\{ secrets\.MACOS_SIGNING_IDENTITY \}\}.*?MACOS_CERTIFICATE: \$\{\{ secrets\.MACOS_CERTIFICATE \}\}.*?APPLE_NOTARIZATION_KEY: \$\{\{ secrets\.APPLE_NOTARIZATION_KEY \}\}.*?codesign -dv --verbose=4.*?\^Authority=.*?release_signed=true.*?spctl --assess --type execute.*?signature=Developer ID \(notarized\).*?rebuilt ad-hoc apps do not have a stable Apple signing.*?protected folders.*?~/Developer' \
+    'the macOS artifact can regress to hiding whether its signing identity can retain protected-folder permission'
 require_multiline_pattern .github/workflows/dez-build.yml \
     '"\$main" --system-specs.*?"\$cli" --dez "\$app" --version.*?"\$terminal_host" --help.*?runtime-smoke\.txt.*?grep -F "Dez: v0\.1\.0".*?grep -F "Dez 0\.1\.0".*?grep -F "Usage: dez-terminal-host"' \
     'the public macOS workflow no longer executes and verifies every packaged Dez entry point'

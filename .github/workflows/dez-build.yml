@@ -18,6 +18,12 @@ env:
   CARGO_TERM_COLOR: always
   DEZ_BUNDLE_CHANNEL: stable
   DEZ_BUNDLE_SKIP_REMOTE_SERVER: "true"
+  MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+  MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+  MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+  APPLE_NOTARIZATION_KEY: ${{ secrets.APPLE_NOTARIZATION_KEY }}
+  APPLE_NOTARIZATION_KEY_ID: ${{ secrets.APPLE_NOTARIZATION_KEY_ID }}
+  APPLE_NOTARIZATION_ISSUER_ID: ${{ secrets.APPLE_NOTARIZATION_ISSUER_ID }}
   RUST_BACKTRACE: "1"
   RUSTFLAGS: "-C symbol-mangling-version=v0 --cfg tokio_unstable -C target-cpu=apple-m2"
 
@@ -156,6 +162,12 @@ jobs:
           done
 
           codesign --verify --deep --strict --verbose=2 "$app"
+          if codesign -dv --verbose=4 "$app" 2>&1 | grep -q '^Authority='; then
+            release_signed=true
+            spctl --assess --type execute --verbose=2 "$app"
+          else
+            release_signed=false
+          fi
 
           artifact_dir=target/dez-macos-m2
           mkdir -p "$artifact_dir"
@@ -184,7 +196,11 @@ jobs:
             echo "bundle_name=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")"
             echo "bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")"
             echo "bundle_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")"
-            echo "signature=ad-hoc (not notarized)"
+            if [[ "$release_signed" = true ]]; then
+              echo "signature=Developer ID (notarized)"
+            else
+              echo "signature=ad-hoc (not notarized)"
+            fi
             rustc --version
             cargo --version
             file "$main" "$cli" "$terminal_host" "$git_binary"
@@ -198,15 +214,26 @@ jobs:
             echo
             echo "1. Open Dez-macOS-M2.dmg."
             echo "2. Drag Dez.app to Applications."
-            echo "3. For the first launch, Control-click Dez in Applications,"
-            echo "   choose Open, then choose Open again."
             echo
-            echo "This development snapshot is ad-hoc signed and is not notarized."
-            echo "macOS may therefore require the Control-click Open flow. If Finder"
-            echo "reports that the app is damaged after you trust this exact build,"
-            echo "run:"
-            echo
-            echo "    xattr -dr com.apple.quarantine /Applications/Dez.app"
+            if [[ "$release_signed" = true ]]; then
+              echo "3. Open Dez from Applications."
+              echo
+              echo "This build has a stable Developer ID signature and notarization."
+              echo "macOS can therefore retain protected-folder decisions across"
+              echo "upgrades that keep the same Dez signing identity."
+            else
+              echo "3. Control-click Dez in Applications, choose Open, then Open."
+              echo
+              echo "This development snapshot is ad-hoc signed and is not notarized."
+              echo "Because rebuilt ad-hoc apps do not have a stable Apple signing"
+              echo "identity, macOS can ask again before accessing protected folders"
+              echo "such as Documents. Keep active code under ~/Developer to avoid"
+              echo "that protected-folder prompt, or use a Developer ID signed build."
+              echo
+              echo "If Finder reports that this exact trusted build is damaged, run:"
+              echo
+              echo "    xattr -dr com.apple.quarantine /Applications/Dez.app"
+            fi
             echo
             echo "The application, CLI, terminal host, Git helper, resources, bundle"
             echo "identifier, arm64 architecture, deep signature, and packaged"
