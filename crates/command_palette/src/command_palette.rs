@@ -997,10 +997,10 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
         "sidebar::NewThreadInGroup" => {
             return "built_in_agent::NewSessionInWorkspace".to_owned();
         }
-        "sidebar::ToggleThreadSwitcher" => return "projects::SwitchSessions".to_owned(),
-        "sidebar::ToggleThreadHistory" => return "projects::ToggleAgentHistory".to_owned(),
+        "sidebar::ToggleThreadSwitcher" => return "workspaces::SwitchSessions".to_owned(),
+        "sidebar::ToggleThreadHistory" => return "workspaces::ToggleAgentHistory".to_owned(),
         "sidebar::OpenSelectedReviewBrief" => {
-            return "projects::OpenSelectedSessionDetails".to_owned();
+            return "workspaces::OpenSelectedSessionDetails".to_owned();
         }
         "workspace::RevealFiles" => return "files::Open".to_owned(),
         "zed_actions::OpenProjectSettings" => return "workspace::OpenSettings".to_owned(),
@@ -1010,7 +1010,7 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
 
     for (source, product) in [
         ("zed_actions::", "dez::"),
-        ("sidebar::", "projects::"),
+        ("sidebar::", "workspaces::"),
         ("agent_panel::", "built_in_agent::"),
         ("debug_panel::", "debug::"),
         ("git_panel::", "git::"),
@@ -1261,7 +1261,7 @@ mod tests {
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::ToggleAttentionFilter", "Dez"),
-            "projects: toggle attention filter"
+            "workspaces: toggle attention filter"
         );
         assert_eq!(
             humanize_action_name_for_product("workspace::AddFolderToProject", "Dez"),
@@ -1289,27 +1289,27 @@ mod tests {
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::ToggleThreadHistory", "Dez"),
-            "projects: toggle agent history"
+            "workspaces: toggle agent history"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::ToggleThreadSwitcher", "Dez"),
-            "projects: switch sessions"
+            "workspaces: switch sessions"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::ReturnToSelectedSession", "Dez"),
-            "projects: return to selected session"
+            "workspaces: return to selected session"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::OpenSelectedSessionFiles", "Dez"),
-            "projects: open selected session files"
+            "workspaces: open selected session files"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::ReviewSelectedSessionChanges", "Dez"),
-            "projects: review selected session changes"
+            "workspaces: review selected session changes"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::OpenSelectedReviewBrief", "Dez"),
-            "projects: open selected session details"
+            "workspaces: open selected session details"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::OpenSelectedReviewBrief", "Zed"),
@@ -1426,6 +1426,10 @@ mod tests {
         );
         assert_eq!(
             CommandCategory::for_action_name("workspace::ToggleZoom"),
+            Some(CommandCategory::Workspace)
+        );
+        assert_eq!(
+            CommandCategory::for_action_name("workspaces::SwitchSessions"),
             Some(CommandCategory::Workspace)
         );
         assert_eq!(

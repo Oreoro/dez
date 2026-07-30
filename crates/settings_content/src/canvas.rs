@@ -528,15 +528,15 @@ pub struct WorkspaceBarSettingsContent {
 #[with_fallible_options]
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, MergeFrom)]
 pub struct SessionRailSettingsContent {
-    /// Projects navigator visibility.
+    /// Workspaces navigator visibility.
     ///
     /// Default: auto
     pub visibility: Option<CanvasVisibility>,
-    /// Projects navigator display mode.
+    /// Workspaces navigator display mode.
     ///
     /// Default: compact
     pub mode: Option<CanvasVisibility>,
-    /// Which side hosts Projects.
+    /// Which side hosts Workspaces.
     ///
     /// Default: left
     pub position: Option<CanvasSide>,
@@ -548,7 +548,7 @@ pub struct SessionRailSettingsContent {
     ///
     /// Default: manual
     pub sort_by: Option<SessionRailSorting>,
-    /// Metadata fields to show on Projects entries.
+    /// Metadata fields to show on Workspaces entries.
     ///
     /// Default: ["agent_state", "latest_attention"]
     pub metadata: Option<Vec<String>>,
@@ -683,7 +683,7 @@ pub struct AgentUiSettingsContent {
     ///
     /// Default: true
     pub detect_terminal_agents: Option<bool>,
-    /// Whether detected terminal agents should surface in Projects.
+    /// Whether detected terminal agents should surface in Workspaces.
     ///
     /// Default: true
     pub show_terminal_agents_in_session_rail: Option<bool>,
@@ -702,7 +702,7 @@ pub struct AgentUiSettingsContent {
     /// Default: true
     pub notify_on_attention: Option<bool>,
     /// Whether Dez may open floating attention popup windows in addition to
-    /// keeping the condition visible in Projects.
+    /// keeping the condition visible in Workspaces.
     ///
     /// Official Zed retains its existing popup policy. Dez defaults this to
     /// false so background work does not cover the Main Work Area; users who

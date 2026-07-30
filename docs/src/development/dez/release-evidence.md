@@ -11,7 +11,7 @@ source tree.
 
 The package version and source release train now identify v0.0.3. No packaged
 artifact currently proves the active source tree. The successful macOS action
-for rejected candidate `v0.0.3-rc5` predates the current stable Projects
+for rejected candidate `v0.0.3-rc5` predates the current stable Workspaces
 navigator, contextual right-side Workspace Tools, Main Work Area tab routing,
 balanced density, centered onboarding, and explicit Agent Session status
 changes. It is historical compile and bundle evidence only.
@@ -52,7 +52,7 @@ the next upstream-parity branch.
 The next exact candidate is `v0.0.3-rc6`. On 2026-07-29 its pre-freeze source
 passed `cargo fmt --all -- --check`, `git diff --check`, locked offline Cargo
 metadata resolution, Node and shell syntax checks, `dez-theme-check`, and the
-full `dez-identity-check`. Those checks cover the stable Projects navigator,
+full `dez-identity-check`. Those checks cover the stable Workspaces navigator,
 native work-tab ownership, mutually exclusive right-side Workspace Tools and
 Built-in Agent, centered responsive Home, Lumin transparency budgets, and
 terminal-agent state vocabulary.
@@ -134,7 +134,7 @@ undifferentiated tab model; the empty Main Work Area left most of the viewport
 blank; and Agent Terminal rows did not communicate provider and
 human-intervention state strongly enough. Those are stop-ship product defects,
 not cosmetic release-note issues. The superseding source introduces one
-stable Projects navigator, keeps Files/Git/Outline/Debug and Built-in Agent in
+stable Workspaces navigator, keeps Files/Git/Outline/Debug and Built-in Agent in
 one contextual right slot, routes file, commit, diff, review, and terminal work
 into the native draggable Main Work Area tab strip, centers the first-run
 action cluster, hides advanced layout recipes from default chrome, uses
@@ -142,10 +142,10 @@ balanced default density, and maps terminal runtime and agent truth to native
 row statuses. No rc5 Runtime evidence is promoted to the next candidate.
 
 The shell intentionally borrows Herdr's low-noise semantic session list without
-embedding a second terminal multiplexer: Projects summarizes actors and
+embedding a second terminal multiplexer: Workspaces summarizes actors and
 attention, native work tabs retain drag/reorder/preview behavior, and the real
 PTY remains full size in the Main Work Area. Files and Git are scoped to the
-active Project rather than competing with Projects for the same navigation
+active Workspace rather than competing with Workspaces for the same navigation
 slot.
 
 ### Multiplexer boundary
@@ -1575,7 +1575,7 @@ the inherited IDE surface:
   the first five root pages;
 - Appearance and the retained editor, language, layout, Git, network, and
   advanced pages follow without losing compatibility settings;
-- Projects placement and startup visibility are configured under Workspaces &
+- Workspaces placement and startup visibility are configured under Workspaces &
   Terminals instead of Agent
   providers;
 - nonfunctional inherited sidebar-chrome controls are hidden;
@@ -1640,7 +1640,7 @@ build.
 
 Current source aligns the application View menu with the Dez shell:
 
-- **Projects** and the Built-in Agent remain separate regions;
+- **Workspaces** and the Built-in Agent remain separate regions;
 - **Workspace Tools** owns Files, Outline, Git, Debug, and one
   **Toggle Workspace Tools** action;
 - **Editor Layout** remains the owner of Main Work Area split commands; and
@@ -1680,7 +1680,7 @@ remain open until the updated workflow completes.
 
 ## 2026-07-29: native first-run surface
 
-Fresh Dez settings now keep Files closed alongside Projects so the Main Work
+Fresh Dez settings now keep Files closed alongside Workspaces so the Main Work
 Area remains the first-run owner. The setup path no longer toggles Zed's
 inherited left dock, and the native work tab is named **Set Up Dez** instead of
 the generic **Onboarding**. The visible Files startup setting now describes
@@ -1693,7 +1693,7 @@ requires the next exact candidate.
 
 The same source checkpoint removes **Floating Attention Popups** from Dez
 Settings and makes the legacy flag inert in Dez release builds. Attention
-remains available through Projects, pane state, accessibility announcements,
+remains available through Workspaces, pane state, accessibility announcements,
 native window attention, and configured notifications. Official Zed behavior
 and test-only exercise of the inherited popup implementation remain unchanged.
 

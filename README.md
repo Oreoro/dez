@@ -22,10 +22,10 @@ Workspace instead of separate applications or hidden panel modes.
 
 - **Main Work Area** — files, terminals, search results, settings, diagnostics,
   previews, and reviews are ordinary movable and splittable Surfaces.
-- **Projects** — a stable, collapsible left navigator for codebases and their
+- **Workspaces** — a stable, collapsible left navigator for codebases and their
   Agent Sessions. It shows provider identity and Running, Needs Input, Waiting
   for Permission, Reconnecting, Completed, or Error state without owning
-  duplicate tabs or processes. A Project can explicitly attach a path-matched
+  duplicate tabs or processes. A Workspace can explicitly attach a path-matched
   tmux or Herdr session, or open a path-matched cmux Workspace in cmux, without
   taking ownership. Each external item appears beneath the most specific
   matching Workspace, beside its associated Dez terminals and agents.
@@ -55,7 +55,7 @@ The result is an IDE that can follow the full loop:
 ```text
 open a Workspace
 → edit or delegate work
-→ observe the Project and its agent Sessions
+→ observe the Workspace and its agent Sessions
 → inspect files, diagnostics, commands, and Git changes
 → review the result
 → resume without rebuilding context
@@ -63,7 +63,7 @@ open a Workspace
 
 The window is deliberately not a dashboard of equal columns. Each Workspace
 owns one Project, one Main Work Area, its terminals, and its Git state.
-Projects stays global on the left. Files, Git, Outline, Debug, Built-in Agent,
+Workspaces stays global on the left. Files, Git, Outline, Debug, Built-in Agent,
 commits, diffs, reviews, agent terminals, and ordinary terminals use the
 native workspace tab and pane model instead of another navigation system.
 Those tabs support reorder, cross-pane drag, preview replacement, pinning,
@@ -86,12 +86,13 @@ Vim or Helix editing. Vim and Helix share native leader destinations for
 recent tabs (`Space b`), files (`Space f`), the configured agent terminal
 (`Space t`), a shell (`Space T`), and Workspace search (`Space /`).
 
-From a selected Project Session row, `Enter` returns to the existing Session,
-`Shift+F` opens its Workspace files, `Shift+G` opens its change review, and
-`Shift+V` opens evidence-backed Session details. The same Files, Review Changes,
-and Session Details handoff appears on standalone terminals; it never creates a
-duplicate shell or project. If the owning Workspace is closed, Files restores
-that Workspace and the exact selected Session before revealing the tree.
+From a selected Agent Session row in Workspaces, `Enter` returns to the
+existing Session, `Shift+F` opens its Workspace files, `Shift+G` opens its
+change review, and `Shift+V` opens evidence-backed Session details. The same
+Files, Review Changes, and Session Details handoff appears on standalone
+terminals; it never creates a duplicate shell or project. If the owning
+Workspace is closed, Files restores that Workspace and the exact selected
+Session before revealing the tree.
 
 Read [What is Dez?](./docs/src/dez.md) for the product model and a concrete
 workflow.
@@ -106,7 +107,8 @@ one Zed-compatible Project:
 - Files, Outline, Search, Git, tasks, and Debug inspect the same Project;
 - Agent context comes from the active Workspace;
 - Agent edits become normal buffers and Git changes;
-- Projects observes and routes to those owners without copying them.
+- The Workspaces navigator observes and routes to those owners without copying
+  them.
 
 A terminal is therefore not embedded in chat, and the editor is not a separate
 mode. They are peer Surfaces in one native pane grid. Dez detects supported
@@ -114,7 +116,7 @@ agents running in its terminals, including Codex, Claude Code, OpenCode, and
 Herdr. Dez v0.1 discovers explicitly shared tmux sessions, live Herdr panes,
 and cmux Workspaces. tmux and Herdr attach through ordinary terminal tabs; cmux
 Workspaces open in cmux. Discovery updates automatically and can be refreshed
-explicitly from a Workspace's Projects menu. The menu shows when it is checking
+explicitly from a Workspace's options menu. The menu shows when it is checking
 and explains when no external session matches instead of silently removing the
 integration. Process and layout ownership always stays with the external
 application. Arbitrary PTYs remain read-only.
@@ -129,7 +131,8 @@ Dez ships with an attributed adaptation of
 - **IBM Plex Sans** for native interface chrome and readable Settings;
 - **Lilex** for editor, terminal, prompt, and review code;
 - **Dez (Default)** as the product-facing built-in file and folder icon set;
-- distinct Projects navigation, Main Work Area, native tab, and elevated-menu surfaces;
+- distinct Workspaces navigation, Main Work Area, native tab, and elevated-menu
+  surfaces;
 - restrained structural boundaries, with ordered hover, active, selection,
   scrollbar, and focus signals.
 
@@ -150,7 +153,7 @@ for a durable folder grant.
 ## Current status
 
 The v0.1.0 source candidate contains the opinionated Dez shell,
-identity isolation, Workspace composition, persistent Projects navigation,
+identity isolation, Workspace composition, persistent Workspaces navigation,
 ordinary closeable workspace-tool tabs, explicit Agent Session state,
 host-owned local terminal lifecycle, setting-controlled Back/Forward history,
 native draggable tab navigation, first-run experience, Lumin/Plex/Lilex visual

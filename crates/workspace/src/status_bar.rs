@@ -118,7 +118,7 @@ fn sidebar_toggle_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Open Sessions"
     } else {
-        "Open Projects"
+        "Open Workspaces"
     }
 }
 
@@ -210,7 +210,7 @@ mod tests {
     fn dez_status_bar_names_its_workspace_scope() {
         assert_eq!(status_bar_label("Dez"), "Workspace status and navigation");
         assert_eq!(status_bar_label("Zed"), "Status bar");
-        assert_eq!(sidebar_toggle_label("Dez"), "Open Projects");
+        assert_eq!(sidebar_toggle_label("Dez"), "Open Workspaces");
         assert_eq!(sidebar_toggle_label("Zed"), "Open Sessions");
     }
 }

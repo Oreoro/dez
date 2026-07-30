@@ -77,7 +77,7 @@ fn dez_projects_rail_has_a_deliberate_navigation_width_cap() {
     assert_eq!(session_rail_max_width("Zed"), MAX_WIDTH);
     assert!(
         session_rail_max_width("Dez") < MAX_WIDTH,
-        "Projects should never expand into a competing work surface"
+        "Workspaces should never expand into a competing work surface"
     );
 }
 
@@ -100,7 +100,7 @@ fn dez_consolidates_session_utilities_into_one_overview_menu() {
     assert!(session_overview_uses_sessions_menu("Dez"));
     assert!(
         session_sidebar_title_in_titlebar("Dez"),
-        "the persistent global navigator must identify itself as Projects"
+        "the persistent global navigator must identify itself as Workspaces"
     );
     assert!(
         !session_empty_state_uses_icon_badge("Dez"),
@@ -258,7 +258,7 @@ fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
     );
     assert!(
         !session_scope_controls_visible("Dez", 2, 0, false),
-        "caught-up Projects should not spend a row on inert scope controls"
+        "caught-up Workspaces should not spend a row on inert scope controls"
     );
     assert!(session_scope_controls_visible("Dez", 2, 1, false));
     assert!(
@@ -624,7 +624,7 @@ fn session_scope_accessibility_copy_keeps_control_names_stable() {
     );
     assert_eq!(
         all_session_items_accessibility_label("Dez", 1, 2),
-        "All Projects activity, 1 agent session and 2 observed terminals"
+        "All Workspaces activity, 1 agent session and 2 observed terminals"
     );
 }
 

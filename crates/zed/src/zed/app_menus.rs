@@ -120,7 +120,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
 
     if workspace_tools_are_grouped(APP_NAME) {
         view_items.extend([
-            MenuItem::action("Projects", workspace::ToggleSidebar),
+            MenuItem::action("Workspaces", workspace::ToggleSidebar),
             MenuItem::submenu(Menu::new("Workspace Tools").items([
                 MenuItem::action(project_surface_label, project_panel::ToggleFocus),
                 MenuItem::action(outline_surface_label, outline_panel::ToggleFocus),

@@ -180,7 +180,7 @@ pub struct SettingsContent {
     /// Settings for native Workspace attention and navigation.
     pub workspace_bar: Option<WorkspaceBarSettingsContent>,
 
-    /// Settings for Projects, the optional Dez Workspace navigator.
+    /// Settings for Workspaces, the optional Dez Workspace navigator.
     pub session_rail: Option<SessionRailSettingsContent>,
 
     /// Settings for native Workspace pane layouts.

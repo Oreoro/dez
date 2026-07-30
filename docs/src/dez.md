@@ -24,17 +24,17 @@ The default interface has two persistent ownership regions:
 
 | Region              | What it is for                                                                                                 |
 | ------------------- | -------------------------------------------------------------------------------------------------------------- |
-| **Projects** · left | Optionally switch codebases and supervise their terminal and Built-in Agent Sessions                           |
+| **Workspaces** · left | Optionally switch codebases and supervise their terminal and Built-in Agent Sessions                         |
 | **Main Work Area**  | Edit files and use terminal, Files, Outline, Git, Debug, Built-in Agent, settings, diagnostics, and review tabs |
 
-Projects is global and collapsible. It does not turn into Files, Git, or chat,
+Workspaces is global and collapsible. It does not turn into Files, Git, or chat,
 and opening a Workspace Tool does not dismiss it. Each codebase remains visible
 before an agent starts; its Agent Sessions appear beneath it as they are
 detected or managed.
 
 Workspace Tools is a category, not another fixed column. Files, Outline, Git,
 Debug, and the optional provider-backed Built-in Agent open in the active
-Project's Main Work Area tab strip. A restored pre-v0.1 tool drawer is migrated
+Workspace's Main Work Area tab strip. A restored pre-v0.1 tool drawer is migrated
 into that strip, so reopening a Workspace cannot recreate an unexplained
 side-by-side pane.
 
@@ -43,7 +43,7 @@ terminal, diff, search result, settings page, or review can be tabbed, split,
 moved, and focused through the same rules. Its tab strip provides native
 reorder, cross-pane drag, preview replacement, pin, and close behavior; Dez
 does not imitate browser tabs with a separate navigation system. Terminals can
-be split below or beside code while keeping their Project ownership.
+be split below or beside code while keeping their Workspace ownership.
 
 The tab-strip **+** is the single **Add to Main Work Area** control. It can
 open a native agent terminal, the optional Built-in Agent, a file, Files, Git,
@@ -51,9 +51,9 @@ Debug, Workspace search, or symbol search. Every destination is the existing
 Zed Surface in the same pane system, so it can be focused and arranged without
 creating a nested panel or a second navigation model.
 
-Projects starts closed in fresh windows and remains available as an on-demand
+Workspaces starts closed in fresh windows and remains available as an on-demand
 supervisor. Workspace Tools start closed and open as ordinary Main Work Area
-tabs. Explicitly opened and restored Projects layouts remain open. The same
+tabs. Explicitly opened and restored Workspaces layouts remain open. The same
 policy applies after resizing, reopening, and restoring a saved layout.
 Returning to a one-work-area destination consolidates every populated split
 into the Main Work Area tab strip; files, terminals, diffs, and tools remain
@@ -74,10 +74,10 @@ When that work area is empty, one restrained launch panel states the product
 purpose and offers only Open Agent Terminal, Find File, and New File. It does
 not repeat Home's workflow diagram. It is an operational start state for the
 current Workspace, not a second Home screen.
-**Projects** is a projection over the real owners. Each open codebase
+**Workspaces** is a projection over the real owners. Each open codebase
 remains visible even before an agent starts; its Agent Sessions appear beneath
 it as they are detected or managed. Selecting a Session focuses or reattaches
-its existing Surface instead of opening a duplicate. Selecting a Project
+its existing Surface instead of opening a duplicate. Selecting a Workspace
 activates that codebase; its dedicated disclosure control folds or expands its
 Sessions. An ordinary shell is not an Agent Session and does not create a
 generic row. Provider icons identify Codex, Claude Code, OpenCode, Herdr, and
@@ -86,7 +86,7 @@ Input, Waiting for Permission, Reconnecting, Completed, and Error without
 rendering a second terminal transcript.
 Each Main Work Area pane keeps native Back and Forward controls in its tab
 bar. They traverse files, terminals, diffs, settings, and other native
-Surfaces without inventing a separate browser or duplicating Project
+Surfaces without inventing a separate browser or duplicating Workspace
 navigation.
 Home and Terminal Details use that same name so **Supervise** never implies
 that Dez captures or relocates every shell on the machine.
@@ -193,18 +193,18 @@ compact terminal action remains in each Workspace header while the Sessions
 overview stays focused on status and All/Attention scope. Dez does not repeat a
 global launcher for the already-active Workspace.
 
-Projects uses one native titlebar label and one options menu for secondary
+Workspaces uses one native titlebar label and one options menu for secondary
 destinations such as Agent Tools, Agent History, and Recent Workspaces. It does
-not repeat **Projects** inside a dashboard header or reserve a permanent
+not repeat **Workspaces** inside a dashboard header or reserve a permanent
 footer. Empty, caught-up, search, and recovery states stay in normal sidebar
 flow and never become floating overlays. An empty Workspace keeps one compact
 terminal action in its header instead of expanding into a provider onboarding
 block. At compact widths, the caught-up action shortens to **Show All** without
 losing source or status in each row. Explicit tmux and Herdr rows attach in the
 Main Work Area; cmux Workspace rows open in cmux. Each row sits beneath the
-most specific matching Workspace, while observed machine terminals retain
-their read-only ownership boundary. External rows never hide the primary
-**Open Workspace…** path when no Project is open.
+most specific matching Workspace. Unrelated machine terminals do not render.
+Explicit external rows never hide the primary **Open Workspace…** path when no
+Workspace is open.
 
 The bottom Workspace status strip is evidence-driven. It does not repeat a
 global Search launcher or show a decorative checkmark when diagnostics are
@@ -218,7 +218,7 @@ does not expand routine healthy state into another row of controls or prose.
 You only need four concepts for everyday use:
 
 - A **Workspace** is project-scoped human context: its Surfaces, pane layout,
-  focus, navigation history, and Project scope.
+  focus, navigation history, and repository scope.
 - A **Surface** is something you can work with in the pane grid, such as a
   file, terminal, search result, debugger, settings page, Agent Session, or
   review.
@@ -243,10 +243,10 @@ context, and Agent context.
 
 **Open Workspace** accepts folders and keeps the current Dez window so existing
 Sessions stay visible. Opening a folder therefore enables one coherent IDE
-scope. Files, Outline, Git, and Debug are views of the same Project, not
+scope. Files, Outline, Git, and Debug are views of the same Workspace, not
 separate roots. **Open Files** always reveals and focuses Files; repeating it
 does not close the destination. The Agent region uses this exact recovery
-route when it needs Project context, so its **Open Workspace** control cannot
+route when it needs Workspace context, so its **Open Workspace** control cannot
 quietly accept a loose file or move the work into another window. Its Open and
 Clone recovery actions are keyboard-reachable.
 
@@ -285,7 +285,7 @@ Start with **Open Agent Terminal**. It is the durable default for Codex, Claude
 Code, OpenCode, and other terminal-native tools because their real PTY,
 subscription, authentication, TUI, commands, and plugins remain intact. Use
 **Built-in Agent** when you specifically want a structured, provider-backed
-conversation for planning, Project questions, edits, or tool calls beside the
+conversation for planning, Workspace questions, edits, or tool calls beside the
 editor. It is optional and requires a usable provider and model.
 
 Workspace Options exposes one native **Open Agent Terminal** submenu:
@@ -301,7 +301,7 @@ Dez waits for the configured shell startup before submitting the selected
 command, so login-shell initialization, remote/WSL behavior, and native PTY
 keyboard handling remain intact.
 
-Both paths edit the same Project and return evidence to the same Files, Git,
+Both paths edit the same Workspace and return evidence to the same Files, Git,
 diagnostics, diff, and review surfaces. Starting a terminal agent does not
 require creating a Built-in Agent Session, and opening the Built-in Agent does
 not wrap or replace the terminal.
@@ -451,25 +451,25 @@ These recovery actions are keyboard reachable.
 Dez does not put the terminal inside chat.
 
 - Ordinary terminals are normal Main Work Area Surfaces.
-- Ordinary shells do not appear in Projects.
-- A terminal is promoted into Projects when Dez detects a supported foreground
+- Ordinary shells do not appear in Workspaces.
+- A terminal is promoted into Workspaces when Dez detects a supported foreground
   agent or explicitly owns it as a managed agent terminal.
 - Agent conversations are normal Agent Surfaces.
-- The active Workspace supplies shared Project context.
+- The active Workspace supplies shared repository context.
 - Agent edits appear in the same buffers and Git repository the developer uses.
 - Structured terminal-agent adapters can add lifecycle, attention, command,
   exit, and file-target evidence without making process-name detection a source
   of truth.
 
 Codex, Claude Code, OpenCode, and Herdr keep their real terminal interfaces.
-Projects is only the low-noise switcher: it summarizes provider and semantic
+Workspaces is only the low-noise switcher: it summarizes provider and semantic
 state, then returns to the existing full-size terminal when selected. On
-narrow windows Projects yields to the Main Work Area instead of competing
+narrow windows Workspaces yields to the Main Work Area instead of competing
 with the agent's own tmux- or Herdr-style pane layout.
 
 Dez follows the upstream
 [native terminal model](https://zed.dev/docs/terminal): terminal tabs use the
-built-in emulator, the current Project directory, standard TUI line height,
+built-in emulator, the current Workspace directory, standard TUI line height,
 alternate-screen scrolling, title breadcrumbs, path links, search, and task
 integration. cmux is not configured as the shell because its documented
 [CLI contract](https://github.com/manaflow-ai/cmux/blob/main/docs/cli-contract.md)
@@ -498,12 +498,10 @@ Workspace terminals appear inert. Legacy unavailable terminal tabs are
 skipped during restore; opening a fresh terminal creates a current
 v0.1-owned Session.
 
-On macOS, Projects can list current-user TTYs from another supported terminal
-application or IDE under **External Sessions**. These machine rows are
-ephemeral, read-only observations. Dez can show limited process context and
-reveal the owning application, but it does not read the transcript or
-arguments, intercept input, persist the row, adopt the PTY, restore the
-process, or claim ownership of its work.
+Workspaces does not list arbitrary current-user TTYs from Terminal.app, iTerm,
+Warp, another IDE, or an unrelated application. Those processes are neither
+owned nor safely controllable by Dez, so they never become Workspace or Agent
+Session rows.
 
 Dez v0.1 retains explicit project-scoped integration for tmux, Herdr, and cmux.
 Dez discovers tmux sessions through the documented CLI format, Herdr panes
@@ -511,10 +509,10 @@ through the local snapshot API, and cmux Workspaces through its JSON CLI. tmux
 and Herdr open their documented attach command in a normal terminal Surface.
 cmux Workspaces stay in cmux and open through its `select-workspace` command.
 Discovery updates automatically; **Refresh External Activity** in a
-Workspace's Projects menu requests an immediate scan, shows when discovery is
+Workspace's options menu requests an immediate scan, shows when discovery is
 running, and explains when no path-matched activity exists.
 The external application remains authoritative; closing a Dez tab detaches,
-Herdr never receives automatic takeover, and Projects never becomes a second
+Herdr never receives automatic takeover, and Workspaces never becomes a second
 process, transcript, or layout owner.
 
 ## Visual design
@@ -544,11 +542,11 @@ Inherited collaboration, staff-only
 instrumentation, legacy dock geometry, and controls for removed sidebar chrome
 stay out of the public Settings navigation.
 
-Projects is optional chrome, not a permanent editor column. Fresh windows keep
-it closed; the status bar exposes **Open Projects**, and the same toggle remains
-available through **View** and Command Search. **Settings → Workspaces &
-Terminals → Open Projects on Startup** makes it persistent for people who
-prefer that layout. Closing Projects never closes a Workspace, terminal, or
+Workspaces is optional chrome, not a permanent editor column. Fresh windows
+keep it closed; the status bar exposes **Open Workspaces**, and the same toggle
+remains available through **View** and Command Search. **Settings → Workspaces
+& Terminals → Open Workspaces on Startup** makes it persistent for people who
+prefer that layout. Closing Workspaces never closes a Workspace, terminal, or
 Agent Session.
 
 If imported settings hide that identity, **Dez → Settings → Restore Dez Visual
@@ -562,7 +560,7 @@ Dez keeps Zed's native command and keymap system rather than adding a shortcut
 layer. **Settings → Keyboard & Vim** can search actions, record bindings, show
 conflicts, choose a base keymap, and enable native Vim or Helix editing. Vim is
 optional rather than forced on new users; enabling it preserves motions, text
-objects, registers, macros, marks, command mode, and Project-aware navigation.
+objects, registers, macros, marks, command mode, and Workspace-aware navigation.
 
 The default tab model follows familiar browser behavior:
 
@@ -572,7 +570,7 @@ The default tab model follows familiar browser behavior:
 | Recent-tab switcher | `Ctrl+Tab` | `Ctrl+Tab` | `[b` / `]b` |
 | Previous / next tab | `⌘{` / `⌘}` | `Ctrl+PageUp` / `Ctrl+PageDown` | `gT` / `gt` |
 | Move between split panes | `⌘K`, then arrow | `Ctrl+K`, then arrow | `Ctrl+W`, then `h/j/k/l` |
-| Projects | `⌘B` | `Ctrl+B` | Command Search |
+| Workspaces | `⌘B` | `Ctrl+B` | Command Search |
 | Files | `⌘⇧E` | `Ctrl+Shift+E` | `Space f` |
 | Open configured agent terminal | `` Ctrl+` `` | `` Ctrl+` `` | `Space t` |
 | Open shell terminal | `` Ctrl+Shift+` `` | `` Ctrl+Shift+` `` | `Space T` |
@@ -593,7 +591,7 @@ Blur belongs to the stable window shell. On macOS the window uses the native
 under-window backdrop and follows active/inactive system state; Lumin layers sit
 on top of that material rather than simulating blur with opaque panels. Focus
 borders, selected rows, active lines, pane boundaries, and scrollbars remain
-visible. Projects, the Main Work Area, native tabs, and elevated menus use
+visible. Workspaces, the Main Work Area, native tabs, and elevated menus use
 distinct semantic layers instead of blending into one sheet.
 Controls in Lumin Light are translucent glass layers, not beige blocks.
 Error, warning, information, hidden, ignored, and predictive states use
@@ -614,7 +612,7 @@ a small top shelf inside the Main Work Area, and toasts sit above the status bar
 without reserving an invisible full-screen interaction layer. On glass windows,
 nonblocking feedback uses lighter elevation and no modal shadow.
 
-Agent attention stays in Projects instead of opening a shaped window over the
+Agent attention stays in Workspaces instead of opening a shaped window over the
 editor or terminal. Unread state, action-needed counts, sound policy, configured
 notifications, and accessible window-attention requests remain independent.
 Dez release builds do not add a floating Agent navigation surface.
@@ -633,7 +631,7 @@ Dez is not:
 - an agent chat product with a terminal attachment;
 - a replacement Git database;
 - a process-name guesser presented as reliable agent state;
-- a second project tree hidden in Projects; or
+- a second project tree hidden in Workspaces; or
 - a claim that arbitrary terminals owned by other applications survive through
   Dez.
 

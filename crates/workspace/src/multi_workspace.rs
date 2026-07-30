@@ -281,8 +281,8 @@ fn sidebar_toggle_label(app_name: &str, sidebar_open: bool) -> &'static str {
     match (app_name == "Zed", sidebar_open) {
         (true, true) => "Hide Sessions",
         (true, false) => "Open Sessions",
-        (false, true) => "Hide Projects",
-        (false, false) => "Open Projects",
+        (false, true) => "Hide Workspaces",
+        (false, false) => "Open Workspaces",
     }
 }
 
@@ -304,9 +304,9 @@ fn sidebar_resize_copy(app_name: &str) -> (&'static str, &'static str, &'static 
         )
     } else {
         (
-            "Resize Projects",
-            "Use Left and Right Arrow to resize Projects. Press Enter to reset.",
-            "Resize Projects · Arrow keys resize · Enter resets",
+            "Resize Workspaces",
+            "Use Left and Right Arrow to resize Workspaces. Press Enter to reset.",
+            "Resize Workspaces · Arrow keys resize · Enter resets",
         )
     }
 }
@@ -355,8 +355,8 @@ mod sidebar_chrome_tests {
         assert!(sidebar_chrome_toggle_visible("Dez", true));
         assert!(sidebar_chrome_toggle_visible("Zed", false));
         assert!(sidebar_chrome_toggle_visible("Zed", true));
-        assert_eq!(sidebar_toggle_label("Dez", false), "Open Projects");
-        assert_eq!(sidebar_toggle_label("Dez", true), "Hide Projects");
+        assert_eq!(sidebar_toggle_label("Dez", false), "Open Workspaces");
+        assert_eq!(sidebar_toggle_label("Dez", true), "Hide Workspaces");
         assert_eq!(sidebar_toggle_label("Zed", false), "Open Sessions");
         assert_eq!(sidebar_toggle_label("Zed", true), "Hide Sessions");
         assert_eq!(
@@ -372,8 +372,8 @@ mod sidebar_chrome_tests {
 
     #[test]
     fn dez_projects_splitter_names_the_product_navigator() {
-        assert_eq!(sidebar_resize_copy("Dez").0, "Resize Projects");
-        assert!(sidebar_resize_copy("Dez").1.contains("resize Projects"));
+        assert_eq!(sidebar_resize_copy("Dez").0, "Resize Workspaces");
+        assert!(sidebar_resize_copy("Dez").1.contains("resize Workspaces"));
         assert_eq!(sidebar_resize_copy("Zed").0, "Resize Sessions");
     }
 
@@ -936,7 +936,7 @@ impl MultiWorkspace {
         self.apply_open_sidebar(true, cx);
     }
 
-    /// Opens the global Projects navigator. Files, Git, and Agent surfaces are
+    /// Opens the global Workspaces navigator. Files, Git, and Agent surfaces are
     /// contextual to the active Workspace and do not compete with this
     /// navigator.
     pub fn open_sidebar_for_sessions_reveal(

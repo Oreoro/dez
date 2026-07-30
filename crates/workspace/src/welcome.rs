@@ -231,7 +231,7 @@ fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Write. Delegate. Watch. Verify."
     } else if has_workspace {
-        "Run an agent here. Follow it under Projects. Review its work in Files and Git."
+        "Run an agent here. Follow it under Workspaces. Review its work in Files and Git."
     } else {
         "Open a Workspace, run an agent in its terminal, and review the work in one place."
     }
@@ -777,12 +777,12 @@ impl Render for WelcomePage {
         let supervise_surface = if APP_NAME == "Zed" {
             "Sessions"
         } else {
-            "Projects"
+            "Workspaces"
         };
         let supervise_description = if APP_NAME == "Zed" {
             "Sessions keeps live state, attention, and recovery visible."
         } else {
-            "Projects keeps every codebase and its agent sessions together without moving terminals out of the Main Work Area."
+            "The Workspaces navigator keeps every codebase and its agent sessions together without moving terminals out of the Main Work Area."
         };
         let workflow_steps = [
             (
@@ -1294,7 +1294,7 @@ mod tests {
         );
         assert_eq!(
             welcome_summary("Dez", true),
-            "Run an agent here. Follow it under Projects. Review its work in Files and Git."
+            "Run an agent here. Follow it under Workspaces. Review its work in Files and Git."
         );
         assert_eq!(
             welcome_summary("Zed", true),

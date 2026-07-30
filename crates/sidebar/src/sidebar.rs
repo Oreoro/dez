@@ -399,10 +399,10 @@ mod agent_session_label_tests {
         assert_eq!(
             session_scope_copy("Dez"),
             (
-                "Project attention scope",
-                "Show every agent session in Projects",
+                "Workspace attention scope",
+                "Show every agent session in Workspaces",
                 "Show All Agent Sessions",
-                "Show only agent sessions in Projects that need attention",
+                "Show only agent sessions in Workspaces that need attention",
                 "Show Agent Sessions Needing Attention",
             )
         );
@@ -654,17 +654,17 @@ fn workspace_restore_status_presentation(
         0 => None,
         1 => Some(WorkspaceRestoreStatusPresentation {
             title: "Workspace could not reopen".to_owned(),
-            description: "Dez kept a recovery entry. Open Recent Workspaces to try again, or remove the recovery entry from Projects without deleting recent Workspace data.",
+            description: "Dez kept a recovery entry. Open Recent Workspaces to try again, or remove the recovery entry from Workspaces without deleting recent Workspace data.",
             remove_label: "Remove Recovery Entry",
             remove_aria_label: "Remove Unavailable Workspace Recovery Entry".to_owned(),
-            remove_tooltip: "Remove only the unavailable recovery entry from Projects; recent Workspace data remains available",
+            remove_tooltip: "Remove only the unavailable recovery entry from Workspaces; recent Workspace data remains available",
         }),
         count => Some(WorkspaceRestoreStatusPresentation {
             title: format!("{count} Workspaces could not reopen"),
-            description: "Dez kept recovery entries. Open Recent Workspaces to try again, or remove the recovery entries from Projects without deleting recent Workspace data.",
+            description: "Dez kept recovery entries. Open Recent Workspaces to try again, or remove the recovery entries from Workspaces without deleting recent Workspace data.",
             remove_label: "Remove Recovery Entries",
             remove_aria_label: format!("Remove {count} Unavailable Workspace Recovery Entries"),
-            remove_tooltip: "Remove only the unavailable recovery entries from Projects; recent Workspace data remains available",
+            remove_tooltip: "Remove only the unavailable recovery entries from Workspaces; recent Workspace data remains available",
         }),
     }
 }
@@ -831,8 +831,8 @@ fn session_empty_state_copy(
         } else {
             (
                 IconName::ListX,
-                "No matching Projects",
-                "Try another term or clear the search to return to your open projects.",
+                "No matching Workspaces",
+                "Try another term or clear the search to return to your open Workspaces.",
             )
         }
     } else if is_restoring {
@@ -935,10 +935,10 @@ fn session_scope_copy(
         )
     } else {
         (
-            "Projects attention scope",
-            "Show every agent session in Projects",
+            "Workspaces attention scope",
+            "Show every agent session in Workspaces",
             "Show All Agent Sessions",
-            "Show only agent sessions in Projects that need attention",
+            "Show only agent sessions in Workspaces that need attention",
             "Show Agent Sessions Needing Attention",
         )
     }
@@ -960,7 +960,7 @@ fn all_session_items_accessibility_label(
             "agent sessions"
         };
         if observed_terminal_count == 0 {
-            return format!("All Projects activity, {session_count} {session_noun}");
+            return format!("All Workspaces activity, {session_count} {session_noun}");
         }
         let terminal_noun = if observed_terminal_count == 1 {
             "observed terminal"
@@ -968,7 +968,7 @@ fn all_session_items_accessibility_label(
             "observed terminals"
         };
         return format!(
-            "All Projects activity, {session_count} {session_noun} and {observed_terminal_count} {terminal_noun}"
+            "All Workspaces activity, {session_count} {session_noun} and {observed_terminal_count} {terminal_noun}"
         );
     }
     if observed_terminal_count == 0 {
@@ -1060,7 +1060,7 @@ fn session_rail_title(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Sessions"
     } else {
-        "Projects"
+        "Workspaces"
     }
 }
 
@@ -1068,7 +1068,7 @@ fn session_rail_accessibility_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Sessions"
     } else {
-        "Projects and agent sessions"
+        "Workspaces and agent sessions"
     }
 }
 
@@ -1076,7 +1076,7 @@ fn session_rail_search_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Search Sessions"
     } else {
-        "Search Projects"
+        "Search Workspaces"
     }
 }
 
@@ -1084,7 +1084,7 @@ fn session_rail_search_placeholder(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Search sessions…"
     } else {
-        "Search Projects…"
+        "Search Workspaces…"
     }
 }
 
@@ -1100,7 +1100,7 @@ fn session_search_dismiss_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Clear Session Search"
     } else {
-        "Close Projects Search"
+        "Close Workspaces Search"
     }
 }
 
@@ -1108,7 +1108,7 @@ fn session_utilities_accessibility_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Session utilities"
     } else {
-        "Projects utilities"
+        "Workspaces utilities"
     }
 }
 
@@ -1116,7 +1116,7 @@ fn session_rail_hide_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Hide Sessions"
     } else {
-        "Hide Projects"
+        "Hide Workspaces"
     }
 }
 
@@ -1124,7 +1124,7 @@ fn session_rail_menu_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Agent Tools and Settings"
     } else {
-        "Projects Menu"
+        "Workspaces Menu"
     }
 }
 
@@ -2145,26 +2145,29 @@ mod session_start_state_tests {
     fn start_state_has_one_primary_action_and_workspace_copy() {
         assert!(session_start_state_visible(false, 0, false, false, false));
         assert!(!session_start_state_visible(false, 1, false, false, false));
-        assert_eq!(session_rail_title("Dez"), "Projects");
+        assert_eq!(session_rail_title("Dez"), "Workspaces");
         assert_eq!(session_rail_title("Zed"), "Sessions");
         assert_eq!(
             session_rail_accessibility_label("Dez"),
-            "Projects and agent sessions"
+            "Workspaces and agent sessions"
         );
-        assert_eq!(session_rail_search_label("Dez"), "Search Projects");
-        assert_eq!(session_rail_search_placeholder("Dez"), "Search Projects…");
+        assert_eq!(session_rail_search_label("Dez"), "Search Workspaces");
+        assert_eq!(session_rail_search_placeholder("Dez"), "Search Workspaces…");
         assert_eq!(
             session_notices_accessibility_label("Dez"),
             "Workspace notices"
         );
-        assert_eq!(session_search_dismiss_label("Dez"), "Close Projects Search");
+        assert_eq!(
+            session_search_dismiss_label("Dez"),
+            "Close Workspaces Search"
+        );
         assert_eq!(
             session_utilities_accessibility_label("Dez"),
-            "Projects utilities"
+            "Workspaces utilities"
         );
         assert_eq!(
             all_session_items_accessibility_label("Dez", 2, 1),
-            "All Projects activity, 2 agent sessions and 1 observed terminal"
+            "All Workspaces activity, 2 agent sessions and 1 observed terminal"
         );
         assert!(!session_search_control_visible("Dez", 1));
         assert!(session_search_control_visible("Dez", 2));
@@ -2172,16 +2175,16 @@ mod session_start_state_tests {
             session_empty_state_copy("Dez", true, false),
             (
                 IconName::ListX,
-                "No matching Projects",
-                "Try another term or clear the search to return to your open projects.",
+                "No matching Workspaces",
+                "Try another term or clear the search to return to your open Workspaces.",
             )
         );
         assert_eq!(
             session_empty_state_copy("Zed", true, false).1,
             "No matching sessions"
         );
-        assert_eq!(session_rail_hide_label("Dez"), "Hide Projects");
-        assert_eq!(session_rail_menu_label("Dez"), "Projects Menu");
+        assert_eq!(session_rail_hide_label("Dez"), "Hide Workspaces");
+        assert_eq!(session_rail_menu_label("Dez"), "Workspaces Menu");
         assert_eq!(session_rail_search_label("Zed"), "Search Sessions");
         assert_eq!(session_rail_search_placeholder("Zed"), "Search sessions…");
         assert_eq!(
@@ -2469,9 +2472,9 @@ mod workspace_restore_status_tests {
         assert_eq!(singular.title, "Workspace could not reopen");
         assert_eq!(singular.remove_label, "Remove Recovery Entry");
         assert!(singular.description.contains("Open Recent Workspaces"));
-        assert!(singular.description.contains("from Projects"));
+        assert!(singular.description.contains("from Workspaces"));
         assert!(singular.description.contains("without deleting"));
-        assert!(singular.remove_tooltip.contains("entry from Projects"));
+        assert!(singular.remove_tooltip.contains("entry from Workspaces"));
 
         let plural = workspace_restore_status_presentation(3).unwrap();
         assert_eq!(plural.title, "3 Workspaces could not reopen");
@@ -2480,7 +2483,7 @@ mod workspace_restore_status_tests {
             plural.remove_aria_label,
             "Remove 3 Unavailable Workspace Recovery Entries"
         );
-        assert!(plural.remove_tooltip.contains("entries from Projects"));
+        assert!(plural.remove_tooltip.contains("entries from Workspaces"));
         assert!(!plural.description.contains("Session reference"));
     }
 }
@@ -2940,7 +2943,7 @@ fn workspace_for_local_terminal_session(
 
     // A detached process is allowed into a Project only with durable identity
     // or path evidence. Guessing the active/first Workspace makes unrelated
-    // restored sessions appear under Empty Workspace and breaks Projects'
+    // restored sessions appear under Empty Workspace and breaks Workspaces'
     // ownership model.
     durable_workspace_match.or(best_path_match)
 }
@@ -4389,7 +4392,7 @@ pub struct Sidebar {
     attention_only: bool,
     session_search_open: bool,
     /// Ordinary machine terminals are secondary context, not project
-    /// navigation. Keep them behind an explicit disclosure so Projects stays
+    /// navigation. Keep them behind an explicit disclosure so Workspaces stays
     /// focused on codebases and actionable agent sessions.
     external_activity_expanded: bool,
     /// The index of the list item that currently has the keyboard focus
@@ -5211,7 +5214,7 @@ impl Sidebar {
     /// Properties:
     ///
     /// - Dez shows only real sessions and contentful drafts; workspace
-    ///   navigation remains in Projects and Recent Workspaces.
+    ///   navigation remains in Workspaces and Recent Workspaces.
     /// - Every visible session stays associated with its owning workspace.
     /// - After every build, active state matches the current workspace's
     ///   current terminal or agent session whenever that work is visible.
@@ -5248,7 +5251,7 @@ impl Sidebar {
                 })
             });
             // Arbitrary machine PTYs are not Dez Sessions and cannot be
-            // controlled safely. Keep Projects scoped to the open codebases;
+            // controlled safely. Keep Workspaces scoped to the open codebases;
             // Explicit external sessions and Workspaces remain available
             // through the most specific matching Workspace.
             machine_terminals.clear();
@@ -5329,7 +5332,7 @@ impl Sidebar {
             .collect::<Vec<_>>();
         if let Some(workspace) = pathless_workspaces.first() {
             // MultiWorkspace intentionally does not persist empty project groups.
-            // Projects still needs a transient group for scratch terminals,
+            // Workspaces still needs a transient group for scratch terminals,
             // otherwise the visible Main Work Area can contain a live terminal
             // while the supervisor incorrectly says "No sessions yet".
             groups.insert(
@@ -16990,7 +16993,7 @@ impl Render for Sidebar {
                                             .aria_label(if APP_NAME == "Zed" {
                                                 "Workspace Sessions"
                                             } else {
-                                                "Projects and Agent Sessions"
+                                                "Workspaces and Agent Sessions"
                                             })
                                             .relative()
                                             .flex_1()

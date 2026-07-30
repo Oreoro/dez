@@ -229,8 +229,8 @@ fn sessions_side_setting_visible(app_name: &str, page_title: &str) -> bool {
 
 fn projects_startup_setting() -> SettingsPageItem {
     SettingsPageItem::SettingItem(SettingItem {
-        title: "Open Projects on Startup",
-        description: "Open the Projects navigator in fresh windows. Restored and explicitly opened layouts keep their own state.",
+        title: "Open Workspaces on Startup",
+        description: "Open the Workspaces navigator in fresh windows. Restored and explicitly opened layouts keep their own state.",
         field: Box::new(SettingField {
             organization_override: None,
             json_path: Some("sidebar.starts_open"),
@@ -249,12 +249,12 @@ fn sessions_side_setting() -> SettingsPageItem {
         title: if paths::APP_NAME == "Zed" {
             "Sessions Side"
         } else {
-            "Projects Side"
+            "Workspaces Side"
         },
         description: if paths::APP_NAME == "Zed" {
             "Which side of the window the Sessions list appears on."
         } else {
-            "Which side of the window the Projects navigator appears on."
+            "Which side of the window the Workspaces navigator appears on."
         },
         field: Box::new(SettingField {
             organization_override: None,
@@ -7047,7 +7047,7 @@ fn terminal_page() -> SettingsPage {
                 SettingsPageItem::SectionHeader(if paths::APP_NAME == "Zed" {
                     "Sessions"
                 } else {
-                    "Projects Navigator"
+                    "Workspaces Navigator"
                 }),
                 sessions_side_setting(),
                 projects_startup_setting(),
@@ -9183,7 +9183,7 @@ fn attention_page() -> SettingsPage {
     let attention_status_description = if paths::APP_NAME == "Zed" {
         "Show the action-needed summary in the workspace bar and Session Rail."
     } else {
-        "Show the action-needed summary in Projects and native Workspace chrome."
+        "Show the action-needed summary in Workspaces and native Workspace chrome."
     };
     let items = vec![
         SettingsPageItem::SectionHeader("Attention"),
@@ -9357,7 +9357,7 @@ fn evidence_page() -> SettingsPage {
             description: if paths::APP_NAME == "Zed" {
                 "Reopen the last active terminal surface when its locally stored identity still resolves. Session Rail identity and attention metadata load independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database."
             } else {
-                "Reopen the last active terminal surface when its locally stored identity still resolves. Projects loads Session identity and attention metadata independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database."
+                "Reopen the last active terminal surface when its locally stored identity still resolves. The Workspaces navigator loads Session identity and attention metadata independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database."
             },
             field: Box::new(SettingField {
                 organization_override: None,

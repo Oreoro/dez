@@ -2851,7 +2851,7 @@ impl TerminalView {
                     })
                     .when(paths::APP_NAME != "Zed", |menu| {
                         menu.label(
-                            "Supervise · Projects keeps each codebase and its agent sessions together.",
+                            "Supervise · the Workspaces navigator keeps each codebase and its agent sessions together.",
                         )
                     })
                     .when(details_has_workspace_files, |menu| {

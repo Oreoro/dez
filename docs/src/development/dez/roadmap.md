@@ -10,7 +10,7 @@ Do not erase completed evidence.
 
 Reach Dez v0.1 as a public-quality native IDE for developers who move between
 code, durable terminals, and terminal-native agents. Preserve Zed-quality
-editing and tools, make Projects optional supervision rather than mandatory
+editing and tools, make Workspaces optional supervision rather than mandatory
 navigation, and prove lifecycle, integration, visual, accessibility, and
 packaging behavior through exact artifacts.
 
@@ -40,7 +40,7 @@ The v0.1 dependency order is:
 
 ```text
 validate the exact v0.1.0 source candidate
--> simplify Home, Projects, menus, and native tab navigation
+-> simplify Home, Workspaces, menus, and native tab navigation
 -> prove durable terminal and Workspace recovery
 -> harden Codex, Claude Code, OpenCode, tmux, and Herdr integrations
 -> pass visual, responsive, and accessibility matrices
@@ -56,9 +56,9 @@ claims it adds.
 The release promise is one predictable route:
 
 ```text
-open a Project
+open a Workspace
 -> run or reattach work in the native Main Work Area
--> supervise its state in Projects
+-> supervise its state in Workspaces
 -> inspect Files, Git, diagnostics, and review in native workspace tabs
 ```
 
@@ -82,16 +82,16 @@ Decisions for this slice:
 - closing the tab or application detaches the client and never ends externally
   owned work;
 - Herdr attachment never passes `--takeover` automatically;
-- arbitrary machine terminals remain outside Projects; and
+- arbitrary machine terminals remain outside Workspaces; and
 - external work does not introduce a second rail, transcript, pane grid, tab
   implementation, or session database.
 
 **Acceptance:** With a tmux session, Herdr pane, and cmux Workspace already
-running, the matching Project offers each under **Open Running Workspace or
+running, the matching Workspace offers each under **Open Running Workspace or
 Session…**. tmux and Herdr attach in a native Main Work Area terminal; cmux
 opens its existing Workspace. Every external owner remains alive after the Dez
 tab or application closes. Unrelated machine terminals do not appear. Dark,
-light, and reduced-transparency layouts retain one clear Projects/Main Work
+light, and reduced-transparency layouts retain one clear Workspaces/Main Work
 Area hierarchy, while Files, Git, Debug, editor, terminal, and agent views
 behave as ordinary closeable tabs without overlays or clipped controls.
 
@@ -3702,7 +3702,7 @@ Superseded for the v0.1 native-navigation hardening slice:
 - removed the visible floating-popup opt-in from Dez Settings;
 - made the legacy flag inert in Dez release builds while retaining official
   Zed behavior and test-only coverage of the inherited implementation; and
-- kept Projects, native window attention, accessibility announcements, and
+- kept Workspaces, native window attention, accessibility announcements, and
   configured notifications as the complete Agent attention path.
 
 Completed for the terminal handoff priority source slice:
@@ -4352,22 +4352,22 @@ Completed for the Live Preview and agent-surface decision slice:
 
 Completed for the v0.0.3 studio-navigation source slice:
 
-- replaced the rejected three-mode Navigator with a stable global **Projects**
+- replaced the rejected three-mode Navigator with a stable global **Workspaces**
   navigator, a native draggable **Main Work Area**, and one contextual
   right-side **Workspace Tools** surface;
 - kept Files, Outline, Git, and Debug scoped to the active Project and made
   Built-in Agent replace that contextual surface rather than creating another
   drawer;
-- stopped Workspace Tool activation from closing Projects and moved the Files
+- stopped Workspace Tool activation from closing Workspaces and moved the Files
   surface to the right by default;
 - removed the compressed titlebar activity switcher so native work tabs keep
   their reorder, cross-pane drag, preview replacement, pin, and close behavior;
 - centered the bounded Home content, added Herdr to the supported terminal
   agent vocabulary, and kept the advanced layout picker out of default chrome;
 - renamed public Settings pages to **Workspaces & Terminals** and **Workspace
-  Tools**, added an explicit Projects startup control, and hid inherited
+  Tools**, added an explicit Workspaces startup control, and hid inherited
   sidebar controls that do not affect the Dez shell;
-- preserved the tmux/Herdr ownership boundary: Projects summarizes semantic
+- preserved the tmux/Herdr ownership boundary: Workspaces summarizes semantic
   state, while a real PTY remains the interactive source of truth; and
 - retained source-only evidence pending the exact tagged macOS build and
   runtime matrix.

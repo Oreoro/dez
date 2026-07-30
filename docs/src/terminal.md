@@ -7,14 +7,14 @@ description: Dez's integrated terminal with main-area tabs, splits, agent superv
 
 Dez treats terminals as first-class Surfaces beside files, search, diagnostics,
 and review. A terminal opens in the Main Work Area as a normal tab or split.
-Ordinary shells stay there. Projects only projects a terminal after Dez detects
+Ordinary shells stay there. Workspaces only lists a terminal after Dez detects
 a supported foreground agent or explicitly owns it as a managed agent
 terminal.
 
-Projects starts closed in a fresh Dez window and may restore open when that
-window previously used it. When open, **Hide Projects** lives in the Projects
-overview; when closed, the window chrome and status bar expose **Open
-Projects**. Compact Projects uses icon-only utilities with named tooltips, while
+Workspaces starts closed in a fresh Dez window and may restore open when that
+window previously used it. When open, **Hide Workspaces** lives in the
+Workspaces overview; when closed, the window chrome and status bar expose **Open
+Workspaces**. Compact Workspaces uses icon-only utilities with named tooltips, while
 the detailed width restores their visible labels. This keeps supervision
 optional without hiding its recovery path.
 
@@ -38,10 +38,10 @@ the **Default Agent Terminal Command** after the configured shell is ready. A
 blank command keeps the shell prompt. Command Search also exposes **Open
 Shell**, **Launch Codex**, **Launch Claude Code**, and **Launch OpenCode**, so
 switching providers does not require changing the default. These commands,
-Projects, the tab-strip add control, and an empty Workspace all converge on the
+Workspaces, the tab-strip add control, and an empty Workspace all converge on the
 same native terminal Surface.
 
-Dez promotes that terminal into the matching Project when it detects a
+Dez lists that terminal under the matching Workspace when it detects a
 supported agent. The add control stays available when focus moves to Workspace
 Tools or Built-in Agent; those auxiliary regions have their own hide controls
 and never present a second terminal destination.
@@ -55,8 +55,8 @@ You can:
 - keep it as a tab beside files;
 - split it into the same pane grid;
 - move it with other Surfaces;
-- run a supported agent and select its Project Session row to return to the existing
-  Surface; or
+- run a supported agent and select its Agent Session row to return to the
+  existing Surface; or
 - reattach a Host-owned terminal Session when the experimental Terminal Host
   is explicitly enabled.
 
@@ -64,10 +64,10 @@ You can:
 
 Starting `codex`, `claude`, or another recognized terminal agent does not open
 an Agent panel or create a second terminal. The existing terminal remains in the
-Main Work Area and is promoted to a concise Project Session row such as **Codex ·
+Main Work Area and is listed as a concise Agent Session row such as **Codex ·
 Running**. Selecting that row returns to the same terminal Surface. When an
-ordinary detected agent exits back to its shell, the terminal stays open in the
-Main Work Area and leaves Projects.
+ordinary detected agent exits back to its shell, the terminal stays open in
+the Main Work Area and leaves Workspaces.
 
 For Host-owned terminals, Dez observes the PTY foreground process group and
 stores only its normalized command name in the bounded Session snapshot. This
@@ -83,20 +83,20 @@ on the shell once the TUI becomes quiet.
 ### What Dez can and cannot observe
 
 Dez observes terminals created inside Dez. It may inspect bounded process
-metadata to detect supported agent work, but Projects does not list arbitrary
+metadata to detect supported agent work, but Workspaces does not list arbitrary
 current-user TTYs owned by another application. Those terminals are neither
 owned nor safely controllable by Dez and must not leak into a codebase's
 navigation.
 
 Dez does not capture that terminal's transcript or arguments, accept its input,
-adopt its PTY, restore its process, or attribute its work. The row disappears
-when the external TTY does.
+adopt its PTY, restore its process, or attribute its work. No Workspaces row is
+created for an unrelated external TTY.
 
 v0.0.4 adds a narrower, explicit control boundary for tmux, Herdr, and cmux.
 Dez discovers live tmux sessions through `list-panes`, live Herdr panes through
 the documented snapshot API, and cmux Workspaces through
 `list-workspaces --json`. An item appears under **Open Running Workspace or
-Session…** only on an open Project whose root contains its working directory.
+Session…** only on an open Workspace whose root contains its working directory.
 tmux and Herdr open the documented attach command in an ordinary Main Work Area
 terminal. A cmux Workspace opens in cmux through `select-workspace`; Dez does
 not manufacture an attachment terminal for it. The external application
@@ -121,13 +121,13 @@ state and the restored terminal receives focus.
 If the saved computation is no longer available, Dez keeps the current Main
 Work Area intact and changes the existing row to **Missing**. It does not open
 a placeholder terminal. Select the row again to retry after its Host returns,
-or remove the dead reference from Projects.
+or remove the dead reference from Workspaces.
 
 ### Moving from a Session into the IDE
 
 The selected agent Session and its active terminal expose one shared handoff:
 
-| Intent                         | Projects shortcut        |
+| Intent                         | Workspaces shortcut      |
 | ------------------------------ | ------------------------ |
 | Return to the existing Session | `Enter` or `Shift+Enter` |
 | Open its Workspace files       | `Shift+F`                |
