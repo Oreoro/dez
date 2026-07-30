@@ -128,14 +128,14 @@ require_multiline_pattern crates/workspace/src/pane.rs \
     'let Some\(project\) = self\.project\.upgrade\(\) else \{.*?\.id\(\("detached-pane", cx\.entity_id\(\)\)\).*?\.role\(gpui::Role::Pane\).*?\.aria_label\(self\.pane_kind\.accessibility_label\(\)\).*?\.track_focus\(&self\.focus_handle\(cx\)\)' \
     'a detached startup Pane can regress to a focused element without an accessibility node'
 require_multiline_pattern assets/settings/default.json \
-    'Projects is an on-demand supervisor\..*?Fresh windows keep it closed.*?"starts_open": false.*?Settings for Sessions, the Dez supervision rail\.' \
+    'Projects is an on-demand supervisor\..*?Fresh windows keep it closed.*?"starts_open": false.*?Settings for Projects, the optional Dez Workspace navigator\.' \
     'bundled Settings comments can regress from the public Projects navigation model'
 require_multiline_pattern crates/settings_content/src/settings_content.rs \
-    'Settings for Sessions, the Dez supervision rail\.' \
-    'generated Settings schema comments can regress to public Session Rail terminology'
+    'Settings for Projects, the optional Dez Workspace navigator\.' \
+    'generated Settings schema comments can regress from public Projects terminology'
 require_multiline_pattern crates/settings_content/src/canvas.rs \
-    'Whether detected terminal agents should surface in Sessions\.' \
-    'Agent settings schema comments can regress to public Session Rail terminology'
+    'Whether detected terminal agents should surface in Projects\.' \
+    'Agent settings schema comments can regress from public Projects terminology'
 require_pattern assets/settings/default.json \
     '^  "auto_connect": false,$' \
     'upstream cloud auto-connect is enabled by default'
@@ -215,11 +215,11 @@ require_multiline_pattern assets/settings/initial_user_settings.json \
     '"status_bar": \{.*?"experimental\.show": true.*?"show_active_file": true.*?"line_endings_button": true' \
     'first-run Dez can regress to hiding the native editor status hierarchy'
 require_multiline_pattern assets/settings/initial_user_settings.json \
-    '"terminal": \{.*?"font_family": "Lilex".*?"line_height": "standard".*?"alternate_scroll": "on".*?"button": true.*?"toolbar": \{.*?"breadcrumbs": true' \
+    '"terminal": \{.*?"font_family": "Lilex".*?"line_height": "standard".*?"alternate_scroll": "on".*?"button": true.*?"toolbar": \{.*?"breadcrumbs": false' \
     'first-run Dez can regress from the native TUI-optimized terminal profile'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'fn restore_dez_visual_profile.*?terminal\.line_height = Some\(settings::TerminalLineHeight::Standard\).*?terminal\.alternate_scroll = Some\(settings::AlternateScroll::On\).*?terminal\.button = Some\(true\).*?terminal\.toolbar\.get_or_insert_default\(\)\.breadcrumbs = Some\(true\)' \
-    'visual-profile recovery can regress from restoring native TUI terminal chrome'
+    'fn restore_dez_visual_profile.*?terminal\.line_height = Some\(settings::TerminalLineHeight::Standard\).*?terminal\.alternate_scroll = Some\(settings::AlternateScroll::On\).*?terminal\.button = Some\(true\).*?terminal\.toolbar\.get_or_insert_default\(\)\.breadcrumbs = Some\(false\)' \
+    'visual-profile recovery can regress to duplicating the terminal title above its native tab'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn resolve_terminal_startup_command.*?app_name != "Zed".*?AgentSettings::get_global\(cx\)\.terminal_init_command\.clone\(\).*?start_init_command_startup_handshake.*?TERMINAL_STARTUP_COMMAND_TIMEOUT.*?write_init_command_after_startup' \
     'native agent launchers can regress to bypassing the configured shell or startup handshake'
@@ -540,11 +540,11 @@ require_multiline_pattern crates/title_bar/src/title_bar.rs \
     'sidebar_project_identity_visible\(\s*paths::APP_NAME' \
     'Dez can regress to duplicating project identity in the Session Rail footer'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
-    'dez_sidebar_chrome_setting_visible\(\s*paths::APP_NAME' \
-    'Dez Settings can regress to exposing controls for removed Session Rail chrome'
+    'fn sidebar_chrome_section\(\).*?if !dez_sidebar_chrome_setting_visible\(paths::APP_NAME, None\) \{.*?return Vec::new\(\)' \
+    'Dez Settings can regress to rendering an empty or inherited Session Rail chrome section'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
-    'let sessions_chrome_header = if paths::APP_NAME == "Zed".*?"Session Rail Chrome".*?"Sessions Appearance".*?let branch_status_description = if paths::APP_NAME == "Zed".*?Session Rail\..*?Sessions\..*?let menus_description = if paths::APP_NAME == "Zed".*?Session Rail header\..*?Sessions header\.' \
-    'Dez Settings can regress to presenting Sessions chrome as inherited Session Rail chrome'
+    'Terminal Title.*?Show Terminal Title Row.*?shell-emitted title in the native pane toolbar.*?off by default because the tab already identifies the terminal' \
+    'Dez Settings can regress to treating a duplicate terminal title row as primary chrome'
 require_pattern crates/settings_ui/src/page_data.rs \
     'dez_settings_page_visible\(paths::APP_NAME, "Collaboration"\)' \
     'Dez Settings can regress to exposing the inherited Calls and Collaboration page'
@@ -1140,7 +1140,7 @@ require_multiline_pattern crates/workspace/src/multi_workspace.rs \
     'sidebar_toggle_label\(paths::APP_NAME, sidebar_open\).*?fn sidebar_toggle_label.*?"Hide Sessions".*?"Open Sessions".*?"Hide Projects".*?"Open Projects".*?fn sidebar_chrome_toggle_visible.*?true.*?fn native_sidebar_chrome_keeps_its_toggle_available_in_both_states' \
     'Dez can regress to inherited Sessions wording or lose its native Projects toggle while the sidebar is open'
 require_multiline_pattern crates/workspace/src/multi_workspace.rs \
-    'let project_pane_toggle_button = if SidebarSettings::get_global\(cx\)\.show_project_pane_button.*?project_pane_visible\.map\(.*?Some\([[:space:]]*h_flex\(\).*?sidebar_toggle_button' \
+    'let project_pane_toggle_button = if SidebarSettings::get_global\(cx\)\.show_project_pane_button.*?project_pane_toggle_label\(paths::APP_NAME, is_visible\).*?Some\([[:space:]]*h_flex\(\).*?sidebar_toggle_button.*?fn project_pane_toggle_label.*?"Hide Project Pane".*?"Show Project Pane".*?"Hide Workspace Tools".*?"Show Workspace Tools"' \
     'an unavailable Project-pane state can regress to suppressing the native Projects toggle'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\([[:space:]]*"open-recent-workspaces",[[:space:]]*session_rail_recent_workspaces_utility_label\(rail_width\).*?aria_label\("Open Recent Workspaces"\)' \
@@ -1707,7 +1707,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_search_visible\(.*?app_name == "Zed".*?session_count > 0 \|\| has_query.*?has_query \|\| is_focused \|\| is_open.*?fn session_search_control_visible.*?app_name != "Zed" && session_count > 1.*?fn session_rail_search_label.*?"Search Sessions".*?"Search Projects and Sessions"' \
     'Dez Projects search can regress to a permanent row or inherited Sessions vocabulary'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn render_sidebar_header.*?let search_is_active.*?self\.session_search_open.*?session_search_control_visible\(.*?&& !search_is_active.*?IconButton::new\("open-session-search", IconName::MagnifyingGlass\).*?tab_index\(0isize\).*?aria_label\(session_rail_search_label\(APP_NAME\)\).*?focus_sidebar_filter\(&FocusSidebarFilter' \
+    'fn render_sidebar_header.*?let search_is_active.*?self\.session_search_open.*?let searchable_item_count =.*?project_header_indices\.len\(\).*?session_search_control_visible\(paths::APP_NAME, searchable_item_count\).*?&& !search_is_active.*?IconButton::new\("open-session-search", IconName::MagnifyingGlass\).*?tab_index\(0isize\).*?aria_label\(session_rail_search_label\(APP_NAME\)\).*?focus_sidebar_filter\(&FocusSidebarFilter' \
     'Dez Projects search can regress to a duplicate active control or pointer-only disclosure'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_session_search.*?let dismiss_label = if paths::APP_NAME == "Zed".*?"Clear Session Search".*?"Close Session Search".*?IconButton::new\("clear-session-search", IconName::Close\).*?tab_index\(0isize\).*?aria_label\(dismiss_label\).*?this\.session_search_open = false.*?this\.focus_handle\.focus\(window, cx\)' \

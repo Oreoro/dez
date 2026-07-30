@@ -238,11 +238,7 @@ fn render_sidebar_header_controls_for_state(
 
     let project_pane_toggle_button = if SidebarSettings::get_global(cx).show_project_pane_button {
         project_pane_visible.map(|is_visible| {
-            let label = if is_visible {
-                "Hide Project Pane"
-            } else {
-                "Show Project Pane"
-            };
+            let label = project_pane_toggle_label(paths::APP_NAME, is_visible);
 
             IconButton::new("project-pane-toggle", IconName::FileTree)
                 .size(ButtonSize::Medium)
@@ -287,6 +283,15 @@ fn sidebar_toggle_label(app_name: &str, sidebar_open: bool) -> &'static str {
         (true, false) => "Open Sessions",
         (false, true) => "Hide Projects",
         (false, false) => "Open Projects",
+    }
+}
+
+fn project_pane_toggle_label(app_name: &str, pane_open: bool) -> &'static str {
+    match (app_name == "Zed", pane_open) {
+        (true, true) => "Hide Project Pane",
+        (true, false) => "Show Project Pane",
+        (false, true) => "Hide Workspace Tools",
+        (false, false) => "Show Workspace Tools",
     }
 }
 
@@ -338,7 +343,7 @@ fn sidebar_keyboard_resize_target(
 #[cfg(test)]
 mod sidebar_chrome_tests {
     use super::{
-        SIDEBAR_KEYBOARD_RESIZE_STEP, sidebar_chrome_toggle_visible,
+        SIDEBAR_KEYBOARD_RESIZE_STEP, project_pane_toggle_label, sidebar_chrome_toggle_visible,
         sidebar_keyboard_resize_target, sidebar_resize_copy,
         sidebar_resize_handle_occludes_main_work_area, sidebar_toggle_label,
     };
@@ -354,6 +359,15 @@ mod sidebar_chrome_tests {
         assert_eq!(sidebar_toggle_label("Dez", true), "Hide Projects");
         assert_eq!(sidebar_toggle_label("Zed", false), "Open Sessions");
         assert_eq!(sidebar_toggle_label("Zed", true), "Hide Sessions");
+        assert_eq!(
+            project_pane_toggle_label("Dez", false),
+            "Show Workspace Tools"
+        );
+        assert_eq!(
+            project_pane_toggle_label("Dez", true),
+            "Hide Workspace Tools"
+        );
+        assert_eq!(project_pane_toggle_label("Zed", false), "Show Project Pane");
     }
 
     #[test]

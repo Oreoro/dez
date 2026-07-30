@@ -472,9 +472,9 @@ pub struct DesignSystemSettingsContent {
     pub family: Option<String>,
     /// Overall UI density profile.
     ///
-    /// Default: compact in Dez's bundled settings.
+    /// Default: balanced in Dez's bundled settings.
     pub density: Option<CanvasDensity>,
-    /// Global radius treatment for Canvas surfaces.
+    /// Global radius treatment for Dez surfaces.
     ///
     /// Default: subtle
     pub radius: Option<CanvasRadius>,
@@ -482,7 +482,7 @@ pub struct DesignSystemSettingsContent {
     ///
     /// Default: system
     pub motion: Option<CanvasMotion>,
-    /// Contrast policy for Canvas components.
+    /// Contrast policy for Dez components.
     ///
     /// Default: standard
     pub contrast: Option<CanvasContrast>,
@@ -503,13 +503,13 @@ pub struct DesignSystemSettingsContent {
 #[with_fallible_options]
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, MergeFrom)]
 pub struct WorkspaceBarSettingsContent {
-    /// Workspace bar visibility.
+    /// Native Workspace attention row visibility.
     ///
     /// Default: always
     pub visibility: Option<CanvasVisibility>,
-    /// Workspace bar height profile.
+    /// Native Workspace attention row height profile.
     ///
-    /// Default: compact
+    /// Default: comfortable in Dez's bundled settings.
     pub height: Option<WorkspaceBarHeight>,
     /// Whether the center area should expose command search.
     ///
@@ -519,7 +519,7 @@ pub struct WorkspaceBarSettingsContent {
     ///
     /// Default: true
     pub show_layout: Option<bool>,
-    /// Whether to surface agent attention in the workspace bar.
+    /// Whether to surface agent attention in native Workspace navigation.
     ///
     /// Default: true
     pub show_agent_attention: Option<bool>,
@@ -528,15 +528,15 @@ pub struct WorkspaceBarSettingsContent {
 #[with_fallible_options]
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, MergeFrom)]
 pub struct SessionRailSettingsContent {
-    /// Session rail visibility.
+    /// Projects navigator visibility.
     ///
     /// Default: auto
     pub visibility: Option<CanvasVisibility>,
-    /// Session rail display mode.
+    /// Projects navigator display mode.
     ///
     /// Default: compact
     pub mode: Option<CanvasVisibility>,
-    /// Which side hosts the rail.
+    /// Which side hosts Projects.
     ///
     /// Default: left
     pub position: Option<CanvasSide>,
@@ -548,7 +548,7 @@ pub struct SessionRailSettingsContent {
     ///
     /// Default: manual
     pub sort_by: Option<SessionRailSorting>,
-    /// Metadata fields to show on rail entries.
+    /// Metadata fields to show on Projects entries.
     ///
     /// Default: ["agent_state", "latest_attention"]
     pub metadata: Option<Vec<String>>,
@@ -557,18 +557,18 @@ pub struct SessionRailSettingsContent {
 #[with_fallible_options]
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, MergeFrom)]
 pub struct CanvasResponsiveProfileSettingsContent {
-    /// Workspace width below which horizontal Canvas recipe splits reflow into
+    /// Workspace width below which horizontal layout splits reflow into
     /// vertical splits.
     #[schemars(range(min = 1.0))]
     pub narrow_width: Option<f32>,
-    /// Maximum width-to-height ratio treated as portrait for Canvas reflow.
+    /// Maximum width-to-height ratio treated as portrait for Workspace reflow.
     #[schemars(range(min = 0.1))]
     pub portrait_ratio: Option<f32>,
-    /// Workspace width above which eligible Canvas recipes use ultrawide
+    /// Workspace width above which eligible layouts use ultrawide
     /// variants.
     #[schemars(range(min = 1.0))]
     pub ultrawide_width: Option<f32>,
-    /// Minimum width-to-height ratio treated as ultrawide for Canvas reflow.
+    /// Minimum width-to-height ratio treated as ultrawide for Workspace reflow.
     #[schemars(range(min = 0.1))]
     pub ultrawide_ratio: Option<f32>,
 }
@@ -613,29 +613,29 @@ pub struct PaneGridSettingsContent {
     ///
     /// Default: false
     pub auto_hide_single_tab_bar: Option<bool>,
-    /// Workspace width below which horizontal Canvas recipe splits reflow into
+    /// Workspace width below which horizontal layout splits reflow into
     /// vertical splits.
     ///
     /// Default: 900
     #[schemars(range(min = 1.0))]
     pub responsive_narrow_width: Option<f32>,
-    /// Maximum width-to-height ratio treated as portrait for Canvas reflow.
+    /// Maximum width-to-height ratio treated as portrait for Workspace reflow.
     ///
     /// Default: 1.0
     #[schemars(range(min = 0.1))]
     pub responsive_portrait_ratio: Option<f32>,
-    /// Workspace width above which eligible Canvas recipes use ultrawide
+    /// Workspace width above which eligible layouts use ultrawide
     /// variants.
     ///
     /// Default: 1600
     #[schemars(range(min = 1.0))]
     pub responsive_ultrawide_width: Option<f32>,
-    /// Minimum width-to-height ratio treated as ultrawide for Canvas reflow.
+    /// Minimum width-to-height ratio treated as ultrawide for Workspace reflow.
     ///
     /// Default: 1.6
     #[schemars(range(min = 0.1))]
     pub responsive_ultrawide_ratio: Option<f32>,
-    /// Per-recipe responsive profile overrides, keyed by Canvas recipe id.
+    /// Per-layout responsive profile overrides, keyed by layout recipe id.
     /// Supported ids match `workspace::ApplyCanvasLayoutRecipe`, such as
     /// `main_top`, `debug`, `four_agent_matrix`, or `worktree_matrix`.
     ///
@@ -683,7 +683,7 @@ pub struct AgentUiSettingsContent {
     ///
     /// Default: true
     pub detect_terminal_agents: Option<bool>,
-    /// Whether detected terminal agents should surface in Sessions.
+    /// Whether detected terminal agents should surface in Projects.
     ///
     /// Default: true
     pub show_terminal_agents_in_session_rail: Option<bool>,
@@ -702,7 +702,7 @@ pub struct AgentUiSettingsContent {
     /// Default: true
     pub notify_on_attention: Option<bool>,
     /// Whether Dez may open floating attention popup windows in addition to
-    /// keeping the condition visible in Sessions.
+    /// keeping the condition visible in Projects.
     ///
     /// Official Zed retains its existing popup policy. Dez defaults this to
     /// false so background work does not cover the Main Work Area; users who
@@ -719,7 +719,7 @@ pub struct MultiplexerSettingsContent {
     ///
     /// Default: false
     pub prefix_mode: Option<bool>,
-    /// The prefix key sequence shown in Canvas command hints.
+    /// The prefix key sequence shown in native Workspace command hints.
     ///
     /// Default: ctrl-b
     pub prefix: Option<String>,

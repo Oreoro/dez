@@ -2034,6 +2034,8 @@ mod session_start_state_tests {
             session_rail_search_label("Dez"),
             "Search Projects and Sessions"
         );
+        assert!(!session_search_control_visible("Dez", 1));
+        assert!(session_search_control_visible("Dez", 2));
         assert_eq!(
             session_empty_state_copy("Dez", true, false),
             (
@@ -15586,8 +15588,10 @@ impl Sidebar {
             || self.session_search_open
             || self.filter_editor.focus_handle(cx).is_focused(window);
         let total_item_count = self.contents.session_count + self.contents.observed_terminal_count;
+        let searchable_item_count = total_item_count + self.contents.project_header_indices.len();
         let show_search_control =
-            session_search_control_visible(paths::APP_NAME, total_item_count) && !search_is_active;
+            session_search_control_visible(paths::APP_NAME, searchable_item_count)
+                && !search_is_active;
         let is_restoring = self.workspace_restore_status_is_visible(cx);
         let status_label = session_overview_status_label_with_observed_terminals(
             APP_NAME,

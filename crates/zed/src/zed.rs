@@ -898,7 +898,7 @@ fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
     terminal.line_height = Some(settings::TerminalLineHeight::Standard);
     terminal.alternate_scroll = Some(settings::AlternateScroll::On);
     terminal.button = Some(true);
-    terminal.toolbar.get_or_insert_default().breadcrumbs = Some(true);
+    terminal.toolbar.get_or_insert_default().breadcrumbs = Some(false);
     let tab_bar = settings.tab_bar.get_or_insert_default();
     tab_bar.show = Some(true);
     tab_bar.show_nav_history_buttons = Some(true);
@@ -3076,7 +3076,7 @@ mod tests {
         assert_eq!(settings["terminal"]["line_height"], "standard");
         assert_eq!(settings["terminal"]["alternate_scroll"], "on");
         assert_eq!(settings["terminal"]["button"], true);
-        assert_eq!(settings["terminal"]["toolbar"]["breadcrumbs"], true);
+        assert_eq!(settings["terminal"]["toolbar"]["breadcrumbs"], false);
         assert_eq!(settings["tab_bar"]["show"], true);
         assert_eq!(settings["tab_bar"]["show_nav_history_buttons"], true);
         assert_eq!(settings["tab_bar"]["show_tab_bar_buttons"], true);

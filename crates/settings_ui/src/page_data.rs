@@ -4355,51 +4355,15 @@ fn window_and_layout_page() -> SettingsPage {
     }
 
     fn sidebar_chrome_section() -> Vec<SettingsPageItem> {
-        let project_pane_title = if paths::APP_NAME == "Zed" {
-            "Project Pane Button"
-        } else {
-            "Workspace Tools Button"
-        };
-        let project_pane_description = if paths::APP_NAME == "Zed" {
-            "Show the project pane toggle button in the Session Rail header."
-        } else {
-            "Show the Workspace tools toggle button in the Sessions header."
-        };
-        let sessions_chrome_header = if paths::APP_NAME == "Zed" {
-            "Session Rail Chrome"
-        } else {
-            "Sessions Appearance"
-        };
-        let branch_status_description = if paths::APP_NAME == "Zed" {
-            "Show Git status indicators on the branch icon in the Session Rail."
-        } else {
-            "Show Git status indicators on the branch icon in Sessions."
-        };
-        let branch_name_description = if paths::APP_NAME == "Zed" {
-            "Show the branch name button in the Session Rail."
-        } else {
-            "Show the branch name button in Sessions."
-        };
-        let onboarding_description = if paths::APP_NAME == "Zed" {
-            "Show relevant feature guidance in the Session Rail."
-        } else {
-            "Show relevant feature guidance in Sessions."
-        };
-        let menus_description = if paths::APP_NAME == "Zed" {
-            "Show application menus in the Session Rail header."
-        } else {
-            "Show application menus in the Sessions header."
-        };
-        let button_layout_description = if paths::APP_NAME == "Zed" {
-            "(Linux only) choose how window control buttons are laid out in the Session Rail."
-        } else {
-            "(Linux only) choose how window control buttons are laid out in Sessions."
-        };
+        if !dez_sidebar_chrome_setting_visible(paths::APP_NAME, None) {
+            return Vec::new();
+        }
+
         [
-            SettingsPageItem::SectionHeader(sessions_chrome_header),
+            SettingsPageItem::SectionHeader("Session Rail Chrome"),
             SettingsPageItem::SettingItem(SettingItem {
-                title: project_pane_title,
-                description: project_pane_description,
+                title: "Project Pane Button",
+                description: "Show the project pane toggle button in the Session Rail header.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_project_pane_button"),
@@ -4422,7 +4386,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Branch Status Icon",
-                description: branch_status_description,
+                description: "Show Git status indicators on the branch icon in the Session Rail.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_branch_status_icon"),
@@ -4445,7 +4409,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Branch Name",
-                description: branch_name_description,
+                description: "Show the branch name button in the Session Rail.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_branch_name"),
@@ -4490,16 +4454,8 @@ fn window_and_layout_page() -> SettingsPage {
                 files: USER,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-                title: if paths::APP_NAME == "Zed" {
-                    "Show Project Items"
-                } else {
-                    "Show Workspace Identity"
-                },
-                description: if paths::APP_NAME == "Zed" {
-                    "Show the Workspace host and project name in the Session Rail."
-                } else {
-                    "Show Workspace identity in Sessions."
-                },
+                title: "Show Project Items",
+                description: "Show the Workspace host and project name in the Session Rail.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_project_items"),
@@ -4522,7 +4478,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Onboarding Banner",
-                description: onboarding_description,
+                description: "Show relevant feature guidance in the Session Rail.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_onboarding_banner"),
@@ -4545,7 +4501,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Menus",
-                description: menus_description,
+                description: "Show application menus in the Session Rail header.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_menus"),
@@ -4566,7 +4522,8 @@ fn window_and_layout_page() -> SettingsPage {
                 discriminant: SettingItem {
                     files: USER,
                     title: "Button Layout",
-                    description: button_layout_description,
+                    description:
+                        "(Linux only) choose how window control buttons are laid out in the Session Rail.",
                     field: Box::new(SettingField {
                         organization_override: None,
                         json_path: Some("sidebar.button_layout$"),
@@ -7902,10 +7859,22 @@ fn terminal_page() -> SettingsPage {
 
     fn toolbar_section() -> [SettingsPageItem; 2] {
         [
-            SettingsPageItem::SectionHeader("Toolbar"),
+            SettingsPageItem::SectionHeader(workspace_surface_copy(
+                paths::APP_NAME,
+                "Toolbar",
+                "Terminal Title",
+            )),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Breadcrumbs",
-                description: "Display the terminal title in breadcrumbs inside the terminal pane.",
+                title: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Breadcrumbs",
+                    "Show Terminal Title Row",
+                ),
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Display the terminal title in breadcrumbs inside the terminal pane.",
+                    "Show the shell-emitted title in the native pane toolbar. This is off by default because the tab already identifies the terminal.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("terminal.toolbar.breadcrumbs"),

@@ -1,8 +1,9 @@
 // Dez settings
 //
-// Dez starts with balanced Lumin chrome, IBM Plex Sans for native-feeling
-// interface text, and Lilex for code and terminals. Change any value here to
-// make the experience your own.
+// Dez starts with one native Main Work Area for files, terminals, tools, and
+// review. Projects stays closed until cross-Workspace supervision is useful.
+// Balanced Lumin chrome, IBM Plex Sans interface text, and Lilex code and
+// terminal text keep those native surfaces visually coherent.
 //
 // To see every Dez default without changing your custom settings, run
 // `dez: open default settings` from the
@@ -42,7 +43,7 @@
     "alternate_scroll": "on",
     "button": true,
     "toolbar": {
-      "breadcrumbs": true
+      "breadcrumbs": false
     }
   }
 }
