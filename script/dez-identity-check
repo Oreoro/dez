@@ -238,6 +238,30 @@ require_multiline_pattern assets/keymaps/default-linux.json \
 require_multiline_pattern assets/keymaps/default-windows.json \
     '"ctrl-shift-`": "terminal::OpenShellTerminal".*?"ctrl-`": "terminal::OpenAgentTerminal"' \
     'Windows can regress from workspace-first agent and explicit shell terminal shortcuts'
+require_multiline_pattern crates/title_bar/src/application_menu.rs \
+    'fn application_menu_name_for_product.*?app_name != "Zed" && menu_name == "Zed".*?pub fn open_menu_name.*?application_menu_name_for_product\(&menu_name, paths::APP_NAME\).*?fn inherited_application_menu_shortcuts_follow_the_product_name.*?application_menu_name_for_product\("Zed", "Dez"\).*?"Dez"' \
+    'Linux and Windows F10 can regress to looking for a nonexistent Zed menu in Dez'
+require_pattern assets/keymaps/default-linux.json \
+    '"f10": \["app_menu::OpenApplicationMenu", "Zed"\]' \
+    'the Linux inherited application-menu shortcut changed without updating its product alias contract'
+require_pattern assets/keymaps/default-windows.json \
+    '"f10": \["app_menu::OpenApplicationMenu", "Zed"\]' \
+    'the Windows inherited application-menu shortcut changed without updating its product alias contract'
+require_multiline_pattern assets/keymaps/vim.json \
+    '"context": "vim_mode == normal".*?"space b": "tab_switcher::ToggleAll".*?"space f": "file_finder::Toggle".*?"space t": "terminal::OpenAgentTerminal".*?"space shift-t": "terminal::OpenShellTerminal".*?"space /": "pane::DeploySearch"' \
+    'regular Vim can regress to losing the documented native Workspace leader destinations'
+require_multiline_pattern assets/keymaps/vim.json \
+    '// Space mode.*?"space b": "tab_switcher::ToggleAll".*?"space f": "file_finder::Toggle".*?"space t": "terminal::OpenAgentTerminal".*?"space shift-t": "terminal::OpenShellTerminal".*?"space /": "pane::DeploySearch"' \
+    'Helix can regress to a different terminal and navigation grammar from Vim'
+require_multiline_pattern assets/keymaps/vim.json \
+    '"context": "!Editor && !Terminal".*?"space b": "tab_switcher::ToggleAll".*?"space f": "file_finder::Toggle".*?"space t": "terminal::OpenAgentTerminal".*?"space shift-t": "terminal::OpenShellTerminal".*?"space /": "pane::DeploySearch"' \
+    'Vim navigation can regress when focus moves from the editor into a native Workspace surface'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'title: "Vim Mode".*?Space b for recent tabs.*?Space f for files.*?Space t for the agent terminal.*?Space T for a shell.*?Space / for Workspace search.*?title: "Helix Mode".*?same Dez Workspace leaders as Vim' \
+    'Keyboard & Vim settings can regress to hiding the native Workspace leader grammar'
+require_multiline_pattern docs/src/dez.md \
+    'Open configured agent terminal.*?`Space t`.*?Open shell terminal.*?`Space T`.*?Regular Vim and Helix mode share the same native leader destinations.*?`Space b`.*?`Space f`.*?`Space t`.*?`Space T`.*?`Space /`' \
+    'the product guide can regress from the implemented Vim and Helix leader grammar'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn open_workspace_path_in_cmux.*?/Applications/cmux\.app/Contents/Resources/bin/cmux.*?Command::new\(program\)\.arg\(path\)\.output\(\).*?Open Workspace in cmux.*?configured_terminal_launcher_label.*?Native Shell.*?Codex.*?Claude Code.*?OpenCode' \
     'Workspace Options can regress from explicit cmux handoff and native agent launch choices'

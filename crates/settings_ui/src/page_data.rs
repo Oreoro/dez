@@ -1800,7 +1800,11 @@ fn keymap_page() -> SettingsPage {
             SettingsPageItem::SectionHeader("Modal Editing"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Vim Mode",
-                description: "Enable native Vim motions, text objects, registers, macros, marks, command mode, and key bindings.",
+                description: if paths::APP_NAME == "Zed" {
+                    "Enable native Vim motions, text objects, registers, macros, marks, command mode, and key bindings."
+                } else {
+                    "Enable native Vim motions, text objects, registers, macros, marks, and command mode. Dez leader actions use Space b for recent tabs, Space f for files, Space t for the agent terminal, Space T for a shell, and Space / for Workspace search."
+                },
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("vim_mode"),
@@ -1812,7 +1816,11 @@ fn keymap_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Helix Mode",
-                description: "Enable Helix mode and key bindings.",
+                description: if paths::APP_NAME == "Zed" {
+                    "Enable Helix mode and key bindings."
+                } else {
+                    "Enable Helix selection and key bindings with the same Dez Workspace leaders as Vim: Space b, Space f, Space t, Space T, and Space /."
+                },
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("helix_mode"),

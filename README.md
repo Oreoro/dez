@@ -82,7 +82,9 @@ Zed chords, `Ctrl+\`` opens the configured agent terminal, and
 `Ctrl+Shift+\`` always opens a shell. Command Search can launch Codex, Claude
 Code, OpenCode, a shell, or cmux directly. **Settings → Keyboard & Vim**
 exposes shortcut search, conflict inspection, base keymaps, and optional full
-Vim or Helix editing.
+Vim or Helix editing. Vim and Helix share native leader destinations for
+recent tabs (`Space b`), files (`Space f`), the configured agent terminal
+(`Space t`), a shell (`Space T`), and Workspace search (`Space /`).
 
 From a selected Project Session row, `Enter` returns to the existing Session,
 `Shift+F` opens its Workspace files, `Shift+G` opens its change review, and

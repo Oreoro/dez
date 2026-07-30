@@ -567,14 +567,20 @@ The default tab model follows familiar browser behavior:
 | Move between split panes | `⌘K`, then arrow | `Ctrl+K`, then arrow | `Ctrl+W`, then `h/j/k/l` |
 | Projects | `⌘B` | `Ctrl+B` | Command Search |
 | Files | `⌘⇧E` | `Ctrl+Shift+E` | `Space f` |
-| Open configured agent terminal | `` Ctrl+` `` | `` Ctrl+` `` | Command Search |
-| Open shell terminal | `` Ctrl+Shift+` `` | `` Ctrl+Shift+` `` | Command Search |
+| Open configured agent terminal | `` Ctrl+` `` | `` Ctrl+` `` | `Space t` |
+| Open shell terminal | `` Ctrl+Shift+` `` | `` Ctrl+Shift+` `` | `Space T` |
 | Edit shortcuts | `⌘K ⌘S` | `Ctrl+K Ctrl+S` | Command Search |
 
 Number shortcuts activate tabs in the focused native pane; deliberate split
 navigation remains on the pane-navigation chords. This keeps one-pane work as
 simple as a browser while retaining Zed's full multi-pane model for code,
 terminals, diffs, Debug, and review.
+
+Regular Vim and Helix mode share the same native leader destinations:
+`Space b` opens the recent-tab switcher, `Space f` finds a file, `Space t`
+opens the configured agent terminal, `Space T` opens a shell, and `Space /`
+searches the Workspace. The bindings dispatch normal Zed actions, so they stay
+customizable and appear in Keyboard & Vim conflict inspection.
 
 Blur belongs to the stable window shell. On macOS the window uses the native
 under-window backdrop and follows active/inactive system state; Lumin layers sit
