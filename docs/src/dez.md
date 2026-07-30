@@ -49,7 +49,8 @@ The tab-strip **+** is the single **Add to Main Work Area** control. It can
 open a native agent terminal, the optional Built-in Agent, a file, Files, Git,
 Debug, Workspace search, or symbol search. Every destination is the existing
 Zed Surface in the same pane system, so it can be focused and arranged without
-creating a nested panel or a second navigation model.
+creating a nested panel or a second navigation model. The tab strip and Add
+control remain visible on an empty Main Work Area, including first-run Home.
 
 Workspaces starts closed in fresh windows and remains available as an on-demand
 supervisor. Workspace Tools start closed and open as ordinary Main Work Area
@@ -72,7 +73,7 @@ existing Main Work Area surfaces; it never starts a process or opens an
 unrelated tool. No recipe may manufacture an empty column.
 When that work area is empty, one restrained launch panel states the product
 purpose and offers only Open Agent Terminal, Find File, and New File. It does
-not repeat Home's workflow diagram. It is an operational start state for the
+not repeat Home's product summary. It is an operational start state for the
 current Workspace, not a second Home screen.
 **Workspaces** is a projection over the real owners. Each open codebase
 remains visible even before an agent starts; its Agent Sessions appear beneath
@@ -88,7 +89,7 @@ Each Main Work Area pane keeps native Back and Forward controls in its tab
 bar. They traverse files, terminals, diffs, settings, and other native
 Surfaces without inventing a separate browser or duplicating Workspace
 navigation.
-Home and Terminal Details use that same name so **Supervise** never implies
+Home and Terminal Details name Workspaces directly so the product never implies
 that Dez captures or relocates every shell on the machine.
 Notifications and toasts are bounded transient shelves over the Main Work
 Area. They never become another full-height column, and overflowing alerts
@@ -146,12 +147,14 @@ a Workspace, the actions become **Open Agent Terminal**, **Open Files**, and
 start a supported agent CLI. The terminal enters Sessions only after agent
 evidence exists.
 
-Home is a normal Main Work Area surface, not a modal dashboard. It always
-teaches the compact **Run → Supervise → Review** route, stacks that route below
-760 px, and names its tab **Home**. Recent Workspaces reserve a stable native
-section while local history loads, state clearly when no history exists, and
-become ordinary keyboard-reachable rows when ready. The section never appears
-as a floating card or repaints the Lumin window material.
+Home is a normal, top-anchored Main Work Area surface, not a modal dashboard or
+persistent walkthrough. One sentence states the terminal → Workspaces → review
+loop, then native command rows own every action. It names its explicit tab
+**Home**. Recent Workspaces reserve a stable native section while local history
+loads, state clearly when no history exists, and become ordinary
+keyboard-reachable rows when ready. Multi-root rows lead with the first root
+and a root count while their full paths remain available as metadata. The
+section never appears as a floating card or repaints the Lumin window material.
 
 The empty Sessions region follows the same activation loop. **No Workspace
 open** explains that a codebase supplies context to agent work and review.

@@ -293,16 +293,15 @@ normal chrome, but do not compete with the release-defining start loop. Its
 headline is a concrete product promise rather than a second copy of the
 three-step guide: before a Workspace, it explains that opening one connects
 terminal and Agent work with files, Git, diagnostics, and diffs; inside one, it
-says that work stays connected and reviewable in the IDE. **Run · Terminal →
-Supervise · Sessions → Review · Files & Git** is one compact passive route. It
-has no enclosing card, section divider, paragraph stack, numbered selection
-pill, or control background.
+says that work stays connected and reviewable in the IDE. One sentence names
+the terminal → Workspaces → review loop; Home does not persist a step diagram,
+provider promotion, enclosing card, or control-like walkthrough.
 
 The active empty Main Work Area uses the same **Open Agent Terminal**
 vocabulary. Its orientation is part of the native work surface, not a bordered
-card floating over it. The focused empty work area says **Run an agent in this
-Workspace**, explains detection in one sentence, and presents only the three
-immediate actions. It does not repeat Welcome's workflow diagram. In an
+card floating over it. The focused empty work area is headed **Main Work
+Area**, names what can open there in one sentence, and presents only the three
+immediate actions. It does not repeat Home's product summary. In an
 explicit multi-pane layout, inactive empty work areas say **Open something
 here** and keep the same operational actions. The action row owns all
 interactive styling. Copy describes live terminal and Agent state without
@@ -906,9 +905,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
     when an imported setting requests it; title, selected-tab, and control focus
     remain visible. Official Zed retains its configurable upstream pane border.
     The active empty Main Work Area is one top-anchored native launch region
-    headed **Run an agent in this Workspace**, with only the three immediate
-    Workspace actions and one sentence explaining automatic Session detection.
-    It does not repeat Welcome's workflow route. Inactive empty panes keep the
+    headed **Main Work Area**, with only the three immediate Workspace actions
+    and one sentence explaining what can open there. It does not repeat Home's
+    product summary. Inactive empty panes keep the
     same actions under **Open something here\*\*, preventing repeated onboarding
     from turning an explicit split layout into multiple dashboards. Neither
     presentation has an enclosing card.
@@ -1814,6 +1813,15 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   as the primary surface, and show setup as a normal **Set Up Dez** tab. Setup
   never toggles an unrelated dock. Users can still open Files or Workspaces
   directly and can opt into either startup behavior in Settings.
+- **2026-07-30: Home is a launcher, not persistent onboarding.** This
+  supersedes the earlier Home workflow-strip decision. Home begins at the Main
+  Work Area edge, states the terminal → Workspaces → review loop in one
+  sentence, and proceeds directly to native Workspace actions and Recent
+  Workspaces. It paints no step diagram or provider promotion. Multi-root
+  recent rows use the first root plus a root count while their full paths remain
+  in row metadata. An empty Dez Main Work Area keeps the native tab strip and
+  adjacent Add control visible, so the first Surface enters the same navigation
+  frame users keep afterward.
 - **2026-07-29: Attention stays in native navigation.** Release builds of Dez
   use Workspaces, pane state, accessibility announcements, native window
   attention, and configured notifications. They do not open floating Agent

@@ -113,6 +113,10 @@ fn pane_new_surface_control_is_adjacent(app_name: &str, pane_kind: PaneKind) -> 
     app_name != "Zed" && pane_kind == PaneKind::Tabs
 }
 
+fn pane_keeps_tab_bar_when_empty(app_name: &str, pane_kind: PaneKind) -> bool {
+    app_name != "Zed" && pane_kind == PaneKind::Tabs
+}
+
 fn empty_main_work_area_shows_orientation(app_name: &str, is_active_pane: bool) -> bool {
     app_name == "Zed" || is_active_pane
 }
@@ -5780,8 +5784,13 @@ impl Render for Pane {
         let active_item_forces_tab_bar = self
             .active_item()
             .is_some_and(|item| item.force_show_tab_bar(cx));
+        let keeps_empty_tab_bar = pane_keeps_tab_bar_when_empty(paths::APP_NAME, self.pane_kind)
+            && self.active_item().is_none();
         let display_tab_bar = should_display_tab_bar(window, cx)
-            && !(auto_hide_single_tab_bar && self.items_len() <= 1 && !active_item_forces_tab_bar);
+            && (keeps_empty_tab_bar
+                || !(auto_hide_single_tab_bar
+                    && self.items_len() <= 1
+                    && !active_item_forces_tab_bar));
         let Some(project) = self.project.upgrade() else {
             return div()
                 .id(("detached-pane", cx.entity_id()))
@@ -5956,10 +5965,13 @@ impl Render for Pane {
                     cx.propagate();
                 }
             }))
-            .when(self.active_item().is_some() && display_tab_bar, |element| {
-                let header = (self.render_tab_bar.clone())(self, window, cx);
-                element.child(self.render_header_with_traffic_light_spacer(header, window, cx))
-            })
+            .when(
+                (self.active_item().is_some() || keeps_empty_tab_bar) && display_tab_bar,
+                |element| {
+                    let header = (self.render_tab_bar.clone())(self, window, cx);
+                    element.child(self.render_header_with_traffic_light_spacer(header, window, cx))
+                },
+            )
             .child({
                 let has_worktrees = project.read(cx).visible_worktrees(cx).next().is_some();
                 let body_accepts_dragged_selection = self.pane_kind != PaneKind::Project;
@@ -6559,6 +6571,9 @@ mod tests {
             PaneKind::Agent
         ));
         assert!(!pane_new_surface_control_is_adjacent("Zed", PaneKind::Tabs));
+        assert!(pane_keeps_tab_bar_when_empty("Dez", PaneKind::Tabs));
+        assert!(!pane_keeps_tab_bar_when_empty("Dez", PaneKind::Project));
+        assert!(!pane_keeps_tab_bar_when_empty("Zed", PaneKind::Tabs));
         assert!(
             !pane_navigation_history_buttons_visible("Dez", false),
             "Dez should not repeat Back and Forward controls in every pane when the setting is off"

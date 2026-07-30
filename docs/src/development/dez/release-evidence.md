@@ -21,6 +21,19 @@ identity, and the remote source guard may validate the patch, but no local
 application build or visual claim is recorded here. Runtime and visual proof
 remain open for the exact candidate artifact.
 
+## 2026-07-30: native Home launcher and empty tab frame
+
+The active source lane removes Home's persistent workflow strip and provider
+promotion. Home is top-anchored, states the product loop once, and moves
+directly into native Workspace actions and Recent Workspaces. Multi-root recent
+rows use a bounded first-root identity while preserving every compact path in
+row metadata. Empty Dez Main Work Areas now keep the native tab strip and its
+adjacent Add control visible even before the first Item opens.
+
+This is source evidence only. Runtime tab focus, Add-menu placement, narrow
+layout, light/dark appearance, and first-launch behavior remain open for the
+exact candidate artifact.
+
 ## v0.0.3 candidate status {#v0-0-3-candidate-status}
 
 The package version and source release train now identify v0.0.3. No packaged

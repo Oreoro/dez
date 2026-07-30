@@ -150,11 +150,13 @@ active file, language, line endings, diagnostics, and cursor context. Empty
 Main Work Area panes use compact top-left editor chrome and direct actions
 instead of a centered onboarding or workflow overlay.
 
-Fresh Dez windows open the native launchpad and do not auto-read a previous
-Workspace folder. This avoids turning a stale recent path into a macOS privacy
-prompt at startup. Development snapshots are ad-hoc signed, so macOS can ask
-again when the build identity changes; a publisher-signed release is required
-for a durable folder grant.
+Fresh Dez windows open the top-anchored native Home launcher inside the normal
+Main Work Area tab frame. The tab strip and its adjacent Add control remain
+visible before the first file or terminal opens. Home does not auto-read a
+previous Workspace folder, avoiding a macOS privacy prompt for a stale recent
+path. Development snapshots are ad-hoc signed, so macOS can ask again when the
+build identity changes; a publisher-signed release is required for a durable
+folder grant.
 
 ## Current status
 

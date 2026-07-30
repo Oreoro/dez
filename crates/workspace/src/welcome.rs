@@ -34,7 +34,7 @@ pub struct OpenRecentProject {
 actions!(
     zed,
     [
-        /// Show the Dez welcome screen.
+        /// Opens Home.
         ShowWelcome
     ]
 );
@@ -63,7 +63,7 @@ impl RenderOnce for SectionHeader {
             .child(
                 div().flex_none().child(
                     Label::new(self.title.to_ascii_uppercase())
-                        .buffer_font(cx)
+                        .when(APP_NAME == "Zed", |label| label.buffer_font(cx))
                         .color(Color::Muted)
                         .size(LabelSize::XSmall),
                 ),
@@ -113,7 +113,7 @@ impl SectionButton {
 
 impl RenderOnce for SectionButton {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let id = format!("onb-button-{}-{}", self.label, self.tab_index);
+        let id = format!("home-action-{}-{}", self.label, self.tab_index);
         let action_ref: &dyn Action = &*self.action;
         let meta = self.meta.clone();
         let icon_color = if self.primary {
@@ -231,9 +231,19 @@ fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Write. Delegate. Watch. Verify."
     } else if has_workspace {
-        "Run an agent here. Follow it under Workspaces. Review its work in Files and Git."
+        "Run an agent in a native terminal, follow it in Workspaces, and review its files and Git changes here."
     } else {
-        "Open a Workspace, run an agent in its terminal, and review the work in one place."
+        "Open a codebase to run agents in native terminals and review their work without leaving the Workspace."
+    }
+}
+
+fn welcome_title(app_name: &str, has_workspace: bool) -> &'static str {
+    if app_name == "Zed" {
+        "Terminal-native development"
+    } else if has_workspace {
+        "This Workspace"
+    } else {
+        "Open a Workspace"
     }
 }
 
@@ -243,20 +253,6 @@ fn welcome_surface_label(app_name: &str) -> &'static str {
 
 fn welcome_emphasizes_first_action(app_name: &str) -> bool {
     app_name != "Zed"
-}
-
-fn welcome_run_step_description(app_name: &str, has_workspace: bool) -> &'static str {
-    if app_name == "Zed" {
-        if has_workspace {
-            "Start a Terminal Session in this Workspace."
-        } else {
-            "Open a Workspace, then start a Terminal Session in its codebase."
-        }
-    } else if has_workspace {
-        "Open an Agent Terminal here, then run Codex, Claude Code, or OpenCode."
-    } else {
-        "Open a Workspace, then run an agent in its Main Work Area."
-    }
 }
 
 const ZED_CONTENT: (Section, Section) = (
@@ -774,36 +770,6 @@ impl Render for WelcomePage {
         } else {
             format!("Welcome to {APP_NAME}")
         };
-        let supervise_surface = if APP_NAME == "Zed" {
-            "Sessions"
-        } else {
-            "Workspaces"
-        };
-        let supervise_description = if APP_NAME == "Zed" {
-            "Sessions keeps live state, attention, and recovery visible."
-        } else {
-            "The Workspaces navigator keeps every codebase and its agent sessions together without moving terminals out of the Main Work Area."
-        };
-        let workflow_steps = [
-            (
-                IconName::Terminal,
-                "Run",
-                "Terminal",
-                welcome_run_step_description(APP_NAME, has_workspace),
-            ),
-            (
-                IconName::ListTree,
-                "Supervise",
-                supervise_surface,
-                supervise_description,
-            ),
-            (
-                IconName::Diff,
-                "Review",
-                "Files & Git",
-                "Open Files or Git as native tabs; keep diffs and diagnostics in the Main Work Area.",
-            ),
-        ];
         let sections = if split_layout {
             h_flex()
                 .id("welcome-sections")
@@ -878,9 +844,6 @@ impl Render for WelcomePage {
                     .id("welcome-content")
                     .w_full()
                     .h_full()
-                    .when(is_dez && !has_workspace && !compact_spacing, |this| {
-                        this.justify_center()
-                    })
                     .max_w(rems_from_px(if APP_NAME == "Zed" { 640. } else { 1040. }))
                     .when(APP_NAME == "Zed", |this| this.p_6().gap_5())
                     .when(is_dez && compact_spacing, |this| this.px_3().py_4().gap_4())
@@ -905,7 +868,7 @@ impl Render for WelcomePage {
                                     .min_w_0()
                                     .gap_0p5()
                                     .child(
-                                        Label::new("Terminal-native development")
+                                        Label::new(welcome_title(APP_NAME, has_workspace))
                                             .size(LabelSize::XSmall)
                                             .color(Color::Muted),
                                     )
@@ -945,12 +908,8 @@ impl Render for WelcomePage {
                                     .gap_1()
                                     .child(
                                         div().font_weight(FontWeight::MEDIUM).child(
-                                            Headline::new(if has_workspace {
-                                                "Run an agent in this Workspace"
-                                            } else {
-                                                "Run agents in your codebase"
-                                            })
-                                            .size(HeadlineSize::Large),
+                                            Headline::new(welcome_title(APP_NAME, has_workspace))
+                                                .size(HeadlineSize::Large),
                                         ),
                                     )
                                     .child(
@@ -960,75 +919,6 @@ impl Render for WelcomePage {
                                     ),
                             )
                             .into_any_element()
-                    })
-                    .when(APP_NAME != "Zed", |this| {
-                        this.child(
-                            v_flex()
-                                .w_full()
-                                .gap_2()
-                                .child(
-                                    h_flex()
-                                        .id("dez-workflow")
-                                        .role(gpui::Role::List)
-                                        .aria_label("How Dez works: Run, Supervise, Review")
-                                        .w_full()
-                                        .flex_wrap()
-                                        .items_center()
-                                        .gap_x_2()
-                                        .gap_y_1()
-                                        .when(compact_spacing, |this| {
-                                            this.flex_col().items_start().gap_y_2()
-                                        })
-                                        .children(workflow_steps.into_iter().enumerate().map(
-                                            |(
-                                                index,
-                                                (icon, title, destination, description),
-                                            )| {
-                                                h_flex()
-                                                    .id(("dez-workflow-step", index))
-                                                    .role(gpui::Role::ListItem)
-                                                    .aria_label(format!("{title}. {description}"))
-                                                    .items_center()
-                                                    .gap_1()
-                                                    .when(
-                                                        index > 0 && !compact_spacing,
-                                                        |this| {
-                                                            this.child(
-                                                                Icon::new(IconName::ArrowRight)
-                                                                    .size(IconSize::XSmall)
-                                                                    .color(Color::Muted),
-                                                            )
-                                                        },
-                                                    )
-                                                    .child(
-                                                        Icon::new(icon).size(IconSize::XSmall),
-                                                    )
-                                                    .child(
-                                                        Label::new(format!(
-                                                            "{title} in {destination}"
-                                                        ))
-                                                        .size(LabelSize::XSmall)
-                                                        .color(Color::Muted),
-                                                    )
-                                            },
-                                        )),
-                                )
-                                .child(
-                                    div()
-                                        .id("dez-supported-terminal-agents")
-                                        .role(gpui::Role::Region)
-                                        .aria_label(
-                                            "Supported terminal agents: Codex, Claude Code, OpenCode, and Herdr",
-                                        )
-                                        .child(
-                                            Label::new(
-                                                "Terminal-first with Codex, Claude Code, OpenCode, and Herdr.",
-                                            )
-                                            .size(LabelSize::XSmall)
-                                            .color(Color::Muted),
-                                        ),
-                                ),
-                        )
                     })
                     .child(sections)
                     .when(
@@ -1068,7 +958,11 @@ impl Item for WelcomePage {
     }
 
     fn telemetry_event_text(&self) -> Option<&'static str> {
-        Some("New Welcome Page Opened")
+        Some(if APP_NAME == "Zed" {
+            "New Welcome Page Opened"
+        } else {
+            "Home Page Opened"
+        })
     }
 
     fn show_toolbar(&self) -> bool {
@@ -1195,28 +1089,29 @@ mod persistence {
 }
 
 fn project_name(paths: &PathList) -> String {
-    let joined = paths
-        .paths()
-        .iter()
-        .filter_map(|p| p.file_name().map(|n| n.to_string_lossy().to_string()))
-        .collect::<Vec<_>>()
-        .join(", ");
-    if joined.is_empty() {
-        "Untitled".to_string()
-    } else {
-        joined
+    let names = paths
+        .ordered_paths()
+        .filter_map(|path| {
+            path.file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+        })
+        .collect::<Vec<_>>();
+    match names.as_slice() {
+        [] => "Untitled".to_owned(),
+        [name] => name.clone(),
+        [primary, ..] => format!("{primary} · {} roots", names.len()),
     }
 }
 
 fn recent_workspace_meta(location: &SerializedWorkspaceLocation, paths: &PathList) -> SharedString {
-    let path_summary = if paths.paths().len() > 1 {
-        format!("{} folders", paths.paths().len())
+    let compact_paths = paths
+        .ordered_paths()
+        .map(|path| path.compact().to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+    let path_summary = if compact_paths.is_empty() {
+        "Location unavailable".to_owned()
     } else {
-        paths
-            .ordered_paths()
-            .next()
-            .map(|path| path.compact().to_string_lossy().into_owned())
-            .unwrap_or_else(|| "Location unavailable".to_owned())
+        compact_paths.join(" · ")
     };
 
     match location {
@@ -1252,9 +1147,8 @@ mod tests {
 
     #[test]
     fn test_project_name_multiple() {
-        // PathList sorts lexicographically, so filenames appear in alpha order
         let paths = PathList::new(&["/home/user/zed", "/home/user/api"]);
-        assert_eq!(project_name(&paths), "api, zed");
+        assert_eq!(project_name(&paths), "zed · 2 roots");
     }
 
     #[test]
@@ -1273,10 +1167,9 @@ mod tests {
         );
 
         let multiple = PathList::new(&["/home/user/api", "/home/user/web"]);
-        assert_eq!(
-            recent_workspace_meta(&SerializedWorkspaceLocation::Local, &multiple).as_ref(),
-            "2 folders"
-        );
+        let meta = recent_workspace_meta(&SerializedWorkspaceLocation::Local, &multiple);
+        assert!(meta.contains("/home/user/api"));
+        assert!(meta.contains("/home/user/web"));
     }
 
     #[test]
@@ -1287,19 +1180,22 @@ mod tests {
     }
 
     #[test]
-    fn dez_welcome_summary_teaches_the_workflow_without_a_promotion_card() {
+    fn dez_home_states_the_workflow_without_a_persistent_walkthrough() {
         assert_eq!(
             welcome_summary("Dez", false),
-            "Open a Workspace, run an agent in its terminal, and review the work in one place."
+            "Open a codebase to run agents in native terminals and review their work without leaving the Workspace."
         );
         assert_eq!(
             welcome_summary("Dez", true),
-            "Run an agent here. Follow it under Workspaces. Review its work in Files and Git."
+            "Run an agent in a native terminal, follow it in Workspaces, and review its files and Git changes here."
         );
         assert_eq!(
             welcome_summary("Zed", true),
             "Write. Delegate. Watch. Verify."
         );
+        assert_eq!(welcome_title("Dez", false), "Open a Workspace");
+        assert_eq!(welcome_title("Dez", true), "This Workspace");
+        assert_eq!(welcome_title("Zed", false), "Terminal-native development");
         assert_eq!(welcome_surface_label("Dez"), "Home");
         assert_eq!(welcome_surface_label("Zed"), "Welcome");
         assert_eq!(DEZ_CONTENT.0.entries[0].title, "Open Workspace");
@@ -1331,18 +1227,6 @@ mod tests {
         assert_eq!(OPEN_WORKSPACE.create_new_window, Some(false));
         assert!(welcome_emphasizes_first_action("Dez"));
         assert!(!welcome_emphasizes_first_action("Zed"));
-        assert_eq!(
-            welcome_run_step_description("Dez", true),
-            "Open an Agent Terminal here, then run Codex, Claude Code, or OpenCode."
-        );
-        assert_eq!(
-            welcome_run_step_description("Dez", false),
-            "Open a Workspace, then run an agent in its Main Work Area."
-        );
-        assert_eq!(
-            welcome_run_step_description("Zed", true),
-            "Start a Terminal Session in this Workspace."
-        );
     }
 
     #[test]
