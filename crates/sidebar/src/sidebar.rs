@@ -646,17 +646,17 @@ fn workspace_restore_status_presentation(
         0 => None,
         1 => Some(WorkspaceRestoreStatusPresentation {
             title: "Workspace could not reopen".to_owned(),
-            description: "Dez kept a recovery entry. Open Recent Workspaces to try again, or remove the recovery entry from this rail without deleting recent Workspace data.",
+            description: "Dez kept a recovery entry. Open Recent Workspaces to try again, or remove the recovery entry from Projects without deleting recent Workspace data.",
             remove_label: "Remove Recovery Entry",
             remove_aria_label: "Remove Unavailable Workspace Recovery Entry".to_owned(),
-            remove_tooltip: "Remove only the unavailable recovery entry from this rail; recent Workspace data remains available",
+            remove_tooltip: "Remove only the unavailable recovery entry from Projects; recent Workspace data remains available",
         }),
         count => Some(WorkspaceRestoreStatusPresentation {
             title: format!("{count} Workspaces could not reopen"),
-            description: "Dez kept recovery entries. Open Recent Workspaces to try again, or remove the recovery entries from this rail without deleting recent Workspace data.",
+            description: "Dez kept recovery entries. Open Recent Workspaces to try again, or remove the recovery entries from Projects without deleting recent Workspace data.",
             remove_label: "Remove Recovery Entries",
             remove_aria_label: format!("Remove {count} Unavailable Workspace Recovery Entries"),
-            remove_tooltip: "Remove only the unavailable recovery entries from this rail; recent Workspace data remains available",
+            remove_tooltip: "Remove only the unavailable recovery entries from Projects; recent Workspace data remains available",
         }),
     }
 }
@@ -747,7 +747,14 @@ fn session_overview_status_label_with_observed_terminals(
         return format!("{matching_count} matching {noun}");
     }
     if is_restoring {
-        return "Loading sessions".to_owned();
+        return session_overview_status_label(
+            app_name,
+            session_count,
+            attention_count,
+            workspace_count,
+            false,
+            true,
+        );
     }
     if observed_terminal_count == 0 {
         return session_overview_status_label(
@@ -758,6 +765,22 @@ fn session_overview_status_label_with_observed_terminals(
             false,
             false,
         );
+    }
+    if app_name != "Zed" {
+        let workspace_status = session_overview_status_label(
+            app_name,
+            session_count,
+            attention_count,
+            workspace_count,
+            false,
+            false,
+        );
+        let terminal_noun = if observed_terminal_count == 1 {
+            "terminal"
+        } else {
+            "terminals"
+        };
+        return format!("{workspace_status} · {observed_terminal_count} {terminal_noun} observed");
     }
     if session_count == 0 {
         let noun = if observed_terminal_count == 1 {
@@ -800,16 +823,24 @@ fn session_empty_state_copy(
         } else {
             (
                 IconName::ListX,
-                "No matching projects or sessions",
+                "No matching Projects",
                 "Try another term or clear the search to return to your open projects.",
             )
         }
     } else if is_restoring {
-        (
-            IconName::ArrowCircle,
-            "Loading sessions",
-            "Restoring Workspaces and saved terminals.",
-        )
+        if app_name == "Zed" {
+            (
+                IconName::ArrowCircle,
+                "Loading sessions",
+                "Restoring Workspaces and saved terminals.",
+            )
+        } else {
+            (
+                IconName::ArrowCircle,
+                "Restoring Workspaces",
+                "Reconnecting saved terminals and Workspace activity.",
+            )
+        }
     } else {
         if app_name == "Zed" {
             (
@@ -896,7 +927,7 @@ fn session_scope_copy(
         )
     } else {
         (
-            "Project attention scope",
+            "Projects attention scope",
             "Show every agent session in Projects",
             "Show All Agent Sessions",
             "Show only agent sessions in Projects that need attention",
@@ -910,9 +941,28 @@ fn all_sessions_accessibility_label(session_count: usize) -> String {
 }
 
 fn all_session_items_accessibility_label(
+    app_name: &str,
     session_count: usize,
     observed_terminal_count: usize,
 ) -> String {
+    if app_name != "Zed" {
+        let session_noun = if session_count == 1 {
+            "agent session"
+        } else {
+            "agent sessions"
+        };
+        if observed_terminal_count == 0 {
+            return format!("All Projects activity, {session_count} {session_noun}");
+        }
+        let terminal_noun = if observed_terminal_count == 1 {
+            "observed terminal"
+        } else {
+            "observed terminals"
+        };
+        return format!(
+            "All Projects activity, {session_count} {session_noun} and {observed_terminal_count} {terminal_noun}"
+        );
+    }
     if observed_terminal_count == 0 {
         return all_sessions_accessibility_label(session_count);
     }
@@ -1038,6 +1088,22 @@ fn session_notices_accessibility_label(app_name: &str) -> &'static str {
     }
 }
 
+fn session_search_dismiss_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Clear Session Search"
+    } else {
+        "Close Projects Search"
+    }
+}
+
+fn session_utilities_accessibility_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Session utilities"
+    } else {
+        "Projects utilities"
+    }
+}
+
 fn session_rail_hide_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Hide Sessions"
@@ -1137,7 +1203,7 @@ fn session_start_state_copy(
         )
     } else {
         (
-            "No project open",
+            "No Workspace open",
             "Open a Workspace first. Then run an agent in its Main Work Area and supervise it here.",
             "Open Workspace…",
             None,
@@ -2052,13 +2118,22 @@ mod session_start_state_tests {
             session_notices_accessibility_label("Dez"),
             "Workspace notices"
         );
+        assert_eq!(session_search_dismiss_label("Dez"), "Close Projects Search");
+        assert_eq!(
+            session_utilities_accessibility_label("Dez"),
+            "Projects utilities"
+        );
+        assert_eq!(
+            all_session_items_accessibility_label("Dez", 2, 1),
+            "All Projects activity, 2 agent sessions and 1 observed terminal"
+        );
         assert!(!session_search_control_visible("Dez", 1));
         assert!(session_search_control_visible("Dez", 2));
         assert_eq!(
             session_empty_state_copy("Dez", true, false),
             (
                 IconName::ListX,
-                "No matching projects or sessions",
+                "No matching Projects",
                 "Try another term or clear the search to return to your open projects.",
             )
         );
@@ -2074,6 +2149,11 @@ mod session_start_state_tests {
             session_notices_accessibility_label("Zed"),
             "Session notices"
         );
+        assert_eq!(session_search_dismiss_label("Zed"), "Clear Session Search");
+        assert_eq!(
+            session_utilities_accessibility_label("Zed"),
+            "Session utilities"
+        );
         assert_eq!(session_rail_hide_label("Zed"), "Hide Sessions");
         assert!(!session_overview_create_action_visible("Dez", 0));
         assert!(!session_overview_create_action_visible("Dez", 1));
@@ -2081,7 +2161,7 @@ mod session_start_state_tests {
         assert_eq!(
             session_start_state_copy("Dez"),
             (
-                "No project open",
+                "No Workspace open",
                 "Open a Workspace first. Then run an agent in its Main Work Area and supervise it here.",
                 "Open Workspace…",
                 None
@@ -2350,9 +2430,9 @@ mod workspace_restore_status_tests {
         assert_eq!(singular.title, "Workspace could not reopen");
         assert_eq!(singular.remove_label, "Remove Recovery Entry");
         assert!(singular.description.contains("Open Recent Workspaces"));
-        assert!(singular.description.contains("from this rail"));
+        assert!(singular.description.contains("from Projects"));
         assert!(singular.description.contains("without deleting"));
-        assert!(singular.remove_tooltip.contains("entry from this rail"));
+        assert!(singular.remove_tooltip.contains("entry from Projects"));
 
         let plural = workspace_restore_status_presentation(3).unwrap();
         assert_eq!(plural.title, "3 Workspaces could not reopen");
@@ -2361,7 +2441,7 @@ mod workspace_restore_status_tests {
             plural.remove_aria_label,
             "Remove 3 Unavailable Workspace Recovery Entries"
         );
-        assert!(plural.remove_tooltip.contains("entries from this rail"));
+        assert!(plural.remove_tooltip.contains("entries from Projects"));
         assert!(!plural.description.contains("Session reference"));
     }
 }
@@ -14690,6 +14770,7 @@ impl Sidebar {
             attention_scope_tooltip,
         ) = session_scope_copy(paths::APP_NAME);
         let all_scope_aria_label = all_session_items_accessibility_label(
+            APP_NAME,
             self.contents.session_count,
             self.contents.observed_terminal_count,
         );
@@ -14934,11 +15015,7 @@ impl Sidebar {
 
     fn render_session_search(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let has_query = self.has_filter_query(cx);
-        let dismiss_label = if paths::APP_NAME == "Zed" {
-            "Clear Session Search"
-        } else {
-            "Close Session Search"
-        };
+        let dismiss_label = session_search_dismiss_label(APP_NAME);
 
         h_flex()
             .id("session-search")
@@ -16040,7 +16117,7 @@ impl Sidebar {
                 h_flex()
                     .id("session-rail-utilities")
                     .role(gpui::Role::Group)
-                    .aria_label("Session utilities")
+                    .aria_label(session_utilities_accessibility_label(APP_NAME))
                     .w_full()
                     .gap_1()
                     .when(on_right, |this| this.flex_row_reverse())

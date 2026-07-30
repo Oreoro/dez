@@ -527,15 +527,15 @@ fn session_overview_copy_distinguishes_empty_search_attention_and_caught_up_stat
     );
     assert_eq!(
         session_overview_status_label("Dez", 3, 1, 2, false, false),
-        "1 needs attention · 3 total"
+        "2 Workspaces · 1 needs attention"
     );
     assert_eq!(
         session_overview_status_label("Dez", 3, 2, 2, false, false),
-        "2 need attention · 3 total"
+        "2 Workspaces · 2 need attention"
     );
     assert_eq!(
         session_overview_status_label("Dez", 3, 0, 2, false, false),
-        "3 sessions · caught up"
+        "2 Workspaces · 3 active"
     );
     assert_eq!(
         session_overview_status_label("Zed", 0, 0, 2, false, false),
@@ -551,7 +551,7 @@ fn session_overview_copy_distinguishes_empty_search_attention_and_caught_up_stat
     );
     assert_eq!(
         session_empty_state_copy("Dez", false, true).1,
-        "Loading sessions"
+        "Restoring Workspaces"
     );
     assert_eq!(
         session_empty_state_copy("Dez", false, false).1,
@@ -563,19 +563,23 @@ fn session_overview_copy_distinguishes_empty_search_attention_and_caught_up_stat
     );
     assert_eq!(
         session_overview_status_label("Dez", 0, 0, 2, false, false),
-        "2 projects ready"
+        "2 Workspaces · ready"
     );
     assert_eq!(
         session_overview_status_label_with_observed_terminals("Dez", 0, 2, 0, 0, false, false),
-        "2 terminals observed · read-only"
+        "No Workspaces open · 2 terminals observed"
     );
     assert_eq!(
         session_overview_status_label_with_observed_terminals("Dez", 1, 2, 0, 1, false, false),
-        "1 session · 2 observed"
+        "1 Workspace · 1 active · 2 terminals observed"
     );
     assert_eq!(
         session_overview_status_label_with_observed_terminals("Dez", 1, 2, 0, 1, true, false),
         "3 matching items"
+    );
+    assert_eq!(
+        session_overview_status_label_with_observed_terminals("Dez", 1, 2, 0, 1, false, true),
+        "Restoring Workspaces"
     );
     assert_eq!(
         session_overview_status_icon(false, true, true, 3),
@@ -607,16 +611,20 @@ fn workspace_restore_status_releases_the_rail_after_the_first_ready_snapshot() {
 fn session_scope_accessibility_copy_keeps_control_names_stable() {
     assert_eq!(all_sessions_accessibility_label(3), "All sessions, 3 total");
     assert_eq!(
-        attention_sessions_accessibility_label(1),
+        attention_items_accessibility_label("Zed", 1),
         "Attention sessions, 1 needs attention"
     );
     assert_eq!(
-        attention_sessions_accessibility_label(2),
+        attention_items_accessibility_label("Zed", 2),
         "Attention sessions, 2 need attention"
     );
     assert_eq!(
-        all_session_items_accessibility_label(1, 2),
+        all_session_items_accessibility_label("Zed", 1, 2),
         "All session items, 1 managed and 2 observed on this Mac"
+    );
+    assert_eq!(
+        all_session_items_accessibility_label("Dez", 1, 2),
+        "All Projects activity, 1 agent session and 2 observed terminals"
     );
 }
 
