@@ -1206,16 +1206,16 @@ impl TerminalView {
                 .upgrade()
                 .ok_or_else(|| anyhow!("terminal closed before its startup command ran"))?;
             let input = terminal_startup_command_input(startup_command);
-            let is_pty = terminal.read_with(cx, |terminal, _cx| terminal.is_pty())?;
+            let is_pty = terminal.read_with(cx, |terminal, _cx| terminal.is_pty());
 
             if !is_pty {
-                terminal.update(cx, |terminal, _cx| terminal.write_init_command(input))?;
+                terminal.update(cx, |terminal, _cx| terminal.write_init_command(input));
                 return anyhow::Ok(());
             }
 
             let startup = terminal.update(cx, |terminal, _cx| {
                 terminal.start_init_command_startup_handshake()
-            })?;
+            });
             let timeout = cx
                 .background_executor()
                 .timer(TERMINAL_STARTUP_COMMAND_TIMEOUT);
@@ -1230,7 +1230,7 @@ impl TerminalView {
                         "skipping terminal startup command because the terminal is no longer eligible"
                     );
                 }
-            })?;
+            });
             anyhow::Ok(())
         })
         .detach_and_log_err(cx);
