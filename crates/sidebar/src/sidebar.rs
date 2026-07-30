@@ -7593,10 +7593,17 @@ impl Sidebar {
                         }
                         .separator();
 
-                        let has_attachable_sessions = !attachable_sessions.is_empty();
                         let attachable_sessions_for_menu = attachable_sessions.clone();
                         let attach_sidebar = this_for_menu.clone();
-                        let menu = menu.when(has_attachable_sessions, move |menu| {
+                        let menu = if attachable_sessions.is_empty() {
+                            menu.item(
+                                ContextMenuEntry::new(
+                                    "No path-matched tmux, Herdr, or cmux activity",
+                                )
+                                .disabled(true),
+                            )
+                            .separator()
+                        } else {
                             let attach_sidebar = attach_sidebar.clone();
                             menu.submenu(
                                 "Open Running Workspace or Session…",
@@ -7625,7 +7632,7 @@ impl Sidebar {
                                 },
                             )
                             .separator()
-                        });
+                        };
 
                         let menu = menu.when(is_active, |menu| {
                             menu.action("Open Files", Box::new(RevealFiles))
@@ -13939,6 +13946,20 @@ impl Sidebar {
 
         let open = session.open_command();
         if open.mode == ExternalSessionOpenMode::RevealExternal {
+            struct ExternalWorkspaceOpenToast;
+            target_workspace.update(cx, |workspace, cx| {
+                workspace.show_toast(
+                    Toast::new(
+                        NotificationId::composite::<ExternalWorkspaceOpenToast>(
+                            session.title.clone(),
+                        ),
+                        format!("Opening {} in cmux…", session.title),
+                    )
+                    .autohide(),
+                    cx,
+                );
+            });
+
             let open_task = cx.background_spawn(async move {
                 std::process::Command::new(&open.program)
                     .args(&open.args)
@@ -13947,38 +13968,43 @@ impl Sidebar {
             let weak_workspace = target_workspace.downgrade();
             let session_title = session.title;
             cx.spawn(async move |_, cx| {
-                let failure = match open_task.await {
+                let outcome = match open_task.await {
                     Ok(output) if !output.status.success() => {
                         let stderr = String::from_utf8_lossy(&output.stderr);
                         let detail = stderr.trim();
-                        Some(if detail.is_empty() {
+                        Err(if detail.is_empty() {
                             format!("cmux exited with {}", output.status)
                         } else {
                             format!("cmux could not open the Workspace: {detail}")
                         })
                     }
-                    Err(error) => Some(format!("Could not run cmux: {error}")),
-                    Ok(_) => None,
+                    Err(error) => Err(format!("Could not run cmux: {error}")),
+                    Ok(_) => Ok(format!("Opened {session_title} in cmux.")),
                 };
 
-                if let Some(failure) = failure {
+                if let Err(failure) = &outcome {
                     log::error!("external Workspace open failed: {failure}");
-                    weak_workspace
-                        .update(cx, |workspace, cx| {
-                            struct ExternalWorkspaceOpenErrorToast;
-                            workspace.show_toast(
-                                Toast::new(
-                                    NotificationId::composite::<ExternalWorkspaceOpenErrorToast>(
-                                        session_title.clone(),
-                                    ),
-                                    format!("{failure}. The external Workspace was not changed."),
-                                )
-                                .autohide(),
-                                cx,
-                            );
-                        })
-                        .ok();
                 }
+                weak_workspace
+                    .update(cx, |workspace, cx| {
+                        let message = match &outcome {
+                            Ok(success) => success.clone(),
+                            Err(failure) => {
+                                format!("{failure}. The external Workspace was not changed.")
+                            }
+                        };
+                        workspace.show_toast(
+                            Toast::new(
+                                NotificationId::composite::<ExternalWorkspaceOpenToast>(
+                                    session_title.clone(),
+                                ),
+                                message,
+                            )
+                            .autohide(),
+                            cx,
+                        );
+                    })
+                    .ok();
             })
             .detach();
             return;

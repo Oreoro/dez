@@ -62,12 +62,11 @@ capabilities.
 Dez uses one pane grid and one supervision projection. User-facing names
 describe purpose, not the inherited dock or panel implementation:
 
-| Region              | Owns                                                                     | Does not own                                                  |
-| ------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------- |
-| **Projects**        | Open codebases, Agent Sessions, attention, and global navigation         | Terminal processes, editor state, or duplicate tabs           |
-| **Workspace Tools** | Files, Outline, Git, Debug, or Built-in Agent in a contextual right pane | A second Workspace, root selection, or terminal placement     |
-| **Main work area**  | File, terminal, search, diagnostics, settings, and review Surfaces       | Global project scope or sidebar-only copies of active work    |
-| **Built-in Agent**  | Native and ACP conversation Surfaces in the Workspace Tools slot         | Terminal-agent process ownership or another persistent drawer |
+| Region              | Owns                                                                                         | Does not own                                               |
+| ------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **Projects**        | Open codebases, Agent Sessions, attention, and global navigation                             | Terminal processes, editor state, or duplicate tabs        |
+| **Main work area**  | File, terminal, Files, Outline, Git, Debug, Built-in Agent, settings, and review native tabs | Global project scope or sidebar-only copies of active work |
+| **Workspace tools** | The contextual Files, Outline, Git, Debug, and Built-in Agent tab category                   | A fixed column, second Workspace, or nested tab system     |
 
 The final shell follows this responsive layout contract. This is the canonical
 wireframe, not a suggestion for an additional dashboard or panel system:
@@ -77,17 +76,15 @@ flowchart TB
     subgraph WIDE["Wide window · 1160 logical px or more"]
         direction LR
         WP["Projects · global and collapsible<br/>codebases · sessions · attention"]
-        WM["Main Work Area · primary<br/>one tab and pane grid<br/>terminal · editor · diff · debug · review"]
-        WT["Workspace Tools · contextual<br/>Files · Outline · Git · Debug OR Built-in Agent"]
-        WP --- WM --- WT
+        WM["Main Work Area · primary<br/>one Chrome-like native tab strip<br/>terminal · editor · Files · Git · Agent · review"]
+        WP --- WM
     end
 
     subgraph NARROW["Narrow window · below 1160 logical px"]
         direction LR
         FP["Projects · collapsible"]
-        FM["Main Work Area · always present<br/>at least 60% of the window"]
-        FT["Workspace Tools · one optional contextual surface"]
-        FP --- FM --- FT
+        FM["Main Work Area · always present<br/>tools remain ordinary tabs"]
+        FP --- FM
     end
 
     WIDE -->|Window narrows| NARROW
@@ -148,11 +145,11 @@ flowchart LR
 
 The Main Work Area is never replaced by shell navigation. Projects is a global
 navigator and remains independent from the active Project's contextual tools.
-Files, Outline, Git, Debug, and Built-in Agent share one right-side slot;
-opening Built-in Agent replaces the current Workspace Tool rather than adding
-another drawer. The transition is normal layout and focus movement, never a
-floating overlay. Wide windows give their extra space to the Main Work Area
-instead of accumulating persistent columns.
+Files, Outline, Git, Debug, and Built-in Agent use the same native tab strip as
+files, terminals, diffs, and settings. Opening one selects that tab instead of
+adding a drawer or nested tab bar. Restoring an older Workspace migrates its
+tool items into the Main Work Area and removes the obsolete auxiliary column.
+The transition is normal tab focus, never a floating overlay.
 Transient progress and notices remain bounded and nonmodal; dialogs are
 reserved for decisions that block progress.
 
@@ -237,11 +234,11 @@ Each Workspace header owns its exact terminal-creation destination, preventing
 the active Workspace from exposing the same launcher twice. Official Zed may
 retain its compatibility overview control.
 
-Workspace Tools is an ordinary right-side pane-grid region with stable
-placement and normal focus behavior. Files, Outline, Git, Debug, and Built-in
-Agent share it. Hiding the region keeps its items available, returns focus to a
-visible editor or terminal pane, and persists the layout. Opening a named tool
-reveals the region and activates its existing tab without dismissing Projects.
+Workspace Tools are ordinary native tabs with stable identity and normal focus
+behavior. Files, Outline, Git, Debug, and Built-in Agent live beside editor,
+terminal, diff, settings, and review tabs. Closing one removes that tab without
+hiding the rest of the Main Work Area. Opening a named tool activates its
+existing tab without dismissing Projects or creating another column.
 
 ### Everyday routing {#interface-everyday-routing}
 
@@ -252,9 +249,9 @@ terminology:
 | --------------------------------------------- | ---------------------------------------------------------------------- |
 | **Open Agent Terminal**                       | Opens a terminal tab in the active Workspace's main work area          |
 | **New Built-in Agent Session…**               | Opens or focuses a provider-backed conversation in Built-in Agent      |
-| **Files**, **Outline**, **Git**, or **Debug** | Opens the named tab in right-side Workspace Tools                      |
+| **Files**, **Outline**, **Git**, or **Debug** | Opens the named tab in the active Main Work Area                       |
 | Select a Sessions row                         | Activates its Workspace and focuses or reattaches the existing Surface |
-| Hide Workspace Tools or Built-in Agent        | Hides that region and returns focus to an editor or terminal           |
+| Close a Workspace Tool or Built-in Agent tab  | Closes only that tab and keeps the Main Work Area visible              |
 | Split or move a Surface                       | Rearranges the same Workspace; it does not create a second project     |
 
 The active or keyboard-focused Workspace keeps **Open Agent Terminal** and
@@ -422,25 +419,24 @@ The active Workspace exposes this submenu through its persistent **Workspace
 Options** control in Projects. That menu also provides direct
 **Open Files** and **Review Git Changes** routes for the active Workspace;
 launch, review, and layout actions therefore share one project-scoped owner.
-The three destination layouts use one Main Work Area plus their named tool
-surface. Split Work Area arranges at most two populated work areas instead of
-preallocating a blank column. It never starts a terminal process; **Open Agent
-Terminal** remains the explicit process-creation action. These layouts remain
-available when provider-backed AI is disabled because Files, terminal, Git,
-Debug, and pane geometry are IDE capabilities.
+The destination layouts select their named native Main Work Area tab. Split
+Work Area is the explicit command for arranging at most two populated work
+areas instead of preallocating a blank column. It never starts a terminal
+process; **Open Agent Terminal** remains the explicit process-creation action.
+These layouts remain available when provider-backed AI is disabled because
+Files, terminal, Git, Debug, and pane geometry are IDE capabilities.
 Official Zed's account and organization chrome remains unchanged compatibility
 code.
 
 Every named layout has one deterministic contextual owner and, when
 applicable, one selected native tab. **Work Area + Files**, **Work Area + Git**,
-and **Work Area + Debug** reveal Workspace Tools and select ProjectPanel,
-GitPanel, and DebugPanel respectively. **Work Area + Built-in Agent** uses that
-same right-side region and selects the Agent panel. **Focus Work Area** and
-**Split Work Area** hide contextual tools; Focus may also close Projects as an
-explicit user-requested concentration mode. Panel selection is fail-closed: if
-the named panel has not registered, the empty contextual region collapses and
-focus remains in the Main Work Area. A layout must never relabel a stale tool
-or strand the user in an empty shell.
+**Work Area + Debug**, and **Work Area + Built-in Agent** select ProjectPanel,
+GitPanel, DebugPanel, or Agent in the active Main Work Area tab strip.
+**Focus Work Area** may close Projects as an explicit user-requested
+concentration mode. **Split Work Area** only arranges existing populated work.
+Panel selection is fail-closed: if the named panel has not registered, focus
+remains in the Main Work Area. A layout must never relabel a stale tool,
+manufacture an empty column, or strand the user in an empty shell.
 
 The supervision and navigation surface is always named **Projects** in
 Dez-facing UI, including Home and Terminal Details. It keeps open codebases
@@ -1807,3 +1803,10 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   uses a plain semantic glyph instead of a framed web-style icon tile. This
   direction does not introduce a Studio/Projects mode switcher, chat shell,
   custom tab system, floating inspector, or permanent three-column layout.
+- **2026-07-30: Workspace Tools become Main Work Area tabs.** Runtime validation
+  showed that the contextual region still produced an unexplained second
+  full-height pane and nested tab ownership. Files, Outline, Git, Debug, and
+  Built-in Agent now open in the native Main Work Area tab strip. Restored
+  Project and Agent tool panes migrate into that strip; only an explicit split
+  command creates another work area. This decision supersedes the earlier
+  drawer geometry while preserving Projects as optional global navigation.

@@ -140,8 +140,7 @@ impl ExternalMultiplexerSession {
                 } else {
                     args.extend([
                         "terminal".to_owned(),
-                        "session".to_owned(),
-                        "control".to_owned(),
+                        "attach".to_owned(),
                         self.target.clone(),
                     ]);
                 }
@@ -602,6 +601,10 @@ fn parse_herdr_snapshot(
         .flatten()
         .filter_map(|pane| {
             let pane_id = pane.get("pane_id")?.as_str()?.to_owned();
+            let terminal_id = pane
+                .get("terminal_id")
+                .and_then(Value::as_str)
+                .map(str::to_owned);
             let workspace_id = pane.get("workspace_id")?.as_str()?;
             let tab_id = pane.get("tab_id")?.as_str()?;
             let workspace_label = workspace_labels.get(workspace_id).cloned();
@@ -630,6 +633,11 @@ fn parse_herdr_snapshot(
                     .as_deref()
                     .and_then(detect_terminal_agent_command)
             });
+            let target = if detected_agent_kind.is_some() {
+                pane_id.clone()
+            } else {
+                terminal_id.unwrap_or_else(|| pane_id.clone())
+            };
             let working_directory = pane
                 .get("foreground_cwd")
                 .and_then(Value::as_str)
@@ -646,7 +654,7 @@ fn parse_herdr_snapshot(
             Some(ExternalMultiplexerSession {
                 id: format!("herdr:{server_key}:{pane_id}"),
                 kind: MultiplexerKind::Herdr,
-                target: pane_id,
+                target,
                 title,
                 owner_context: workspace_label,
                 working_directory,
@@ -767,6 +775,34 @@ mod tests {
         assert_eq!(
             sessions[0].open_command().args,
             ["--session", "team", "agent", "attach", "pane-1"]
+        );
+    }
+
+    #[test]
+    fn opens_non_agent_herdr_panes_with_the_interactive_terminal_client() {
+        let output = r#"{
+          "result": {
+            "snapshot": {
+              "workspaces": [{"workspace_id": "ws-1", "label": "compiler"}],
+              "tabs": [{"tab_id": "tab-1", "label": "shell"}],
+              "panes": [{
+                "pane_id": "pane-1",
+                "terminal_id": "terminal-1",
+                "workspace_id": "ws-1",
+                "tab_id": "tab-1",
+                "cwd": "/tmp/compiler"
+              }]
+            }
+          }
+        }"#;
+
+        let sessions = parse_herdr_snapshot(output, PathBuf::from("/opt/homebrew/bin/herdr"), None)
+            .expect("snapshot should parse");
+
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(
+            sessions[0].open_command().args,
+            ["terminal", "attach", "terminal-1"]
         );
     }
 

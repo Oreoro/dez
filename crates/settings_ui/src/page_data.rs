@@ -103,7 +103,7 @@ fn dez_settings_page_priority(title: &str) -> usize {
         "Attention" => 3,
         "Evidence" => 4,
         "Appearance" => 5,
-        "Keymap" => 6,
+        "Keyboard & Vim" => 6,
         "Editor" => 7,
         "Languages & Tools" => 8,
         "Search & Files" => 9,
@@ -1722,12 +1722,15 @@ fn appearance_page() -> SettingsPage {
 }
 
 fn keymap_page() -> SettingsPage {
-    fn keybindings_section() -> [SettingsPageItem; 2] {
+    fn keybindings_section() -> [SettingsPageItem; 3] {
         [
-            SettingsPageItem::SectionHeader("Keybindings"),
+            SettingsPageItem::SectionHeader("Keyboard Shortcuts"),
             SettingsPageItem::ActionLink(ActionLink {
                 title: "Edit Keybindings".into(),
-                description: Some("Customize keybindings in the keymap editor.".into()),
+                description: Some(
+                    "Search actions, inspect conflicts, and record a shortcut in the native keymap editor."
+                        .into(),
+                ),
                 button_text: "Open Keymap".into(),
                 on_click: Arc::new(|settings_window, window, cx| {
                     let Some(original_window) = settings_window.original_window else {
@@ -1737,6 +1740,28 @@ fn keymap_page() -> SettingsPage {
                         .update(cx, |_workspace, original_window, cx| {
                             original_window
                                 .dispatch_action(zed_actions::OpenKeymap.boxed_clone(), cx);
+                            original_window.activate_window();
+                        })
+                        .ok();
+                    window.remove_window();
+                }),
+                files: USER,
+            }),
+            SettingsPageItem::ActionLink(ActionLink {
+                title: "Default Keyboard Shortcuts".into(),
+                description: Some(
+                    "Browse the complete native shortcut map for files, terminals, tabs, panes, Git, Debug, and agents."
+                        .into(),
+                ),
+                button_text: "View Defaults".into(),
+                on_click: Arc::new(|settings_window, window, cx| {
+                    let Some(original_window) = settings_window.original_window else {
+                        return;
+                    };
+                    original_window
+                        .update(cx, |_workspace, original_window, cx| {
+                            original_window
+                                .dispatch_action(zed_actions::OpenDefaultKeymap.boxed_clone(), cx);
                             original_window.activate_window();
                         })
                         .ok();
@@ -1775,7 +1800,7 @@ fn keymap_page() -> SettingsPage {
             SettingsPageItem::SectionHeader("Modal Editing"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Vim Mode",
-                description: "Enable Vim mode and key bindings.",
+                description: "Enable native Vim motions, text objects, registers, macros, marks, command mode, and key bindings.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("vim_mode"),
@@ -1807,7 +1832,7 @@ fn keymap_page() -> SettingsPage {
     );
 
     SettingsPage {
-        title: "Keymap",
+        title: workspace_surface_copy(paths::APP_NAME, "Keymap", "Keyboard & Vim"),
         items,
     }
 }
@@ -11537,6 +11562,9 @@ mod tests {
         }
 
         assert!(dez_settings_page_priority("Evidence") < dez_settings_page_priority("Appearance"));
+        assert!(
+            dez_settings_page_priority("Keyboard & Vim") < dez_settings_page_priority("Editor")
+        );
         assert!(
             dez_settings_page_priority("Workspace Tools") < dez_settings_page_priority("Advanced")
         );

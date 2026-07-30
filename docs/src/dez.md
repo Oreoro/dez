@@ -20,23 +20,23 @@ editing and delegated work without reconstructing context.
 
 ## The screen model
 
-The default interface has three clear ownership regions:
+The default interface has two persistent ownership regions:
 
-| Region                      | What it is for                                                                     |
-| --------------------------- | ---------------------------------------------------------------------------------- |
-| **Projects** · left         | Switch codebases and supervise their terminal and Built-in Agent Sessions          |
-| **Main Work Area** · center | Edit files and open terminal, diff, search, settings, diagnostics, and review tabs |
-| **Workspace Tools** · right | Browse Files, Outline, Git, Debug, or the optional Built-in Agent for one Project  |
+| Region              | What it is for                                                                                                 |
+| ------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Projects** · left | Optionally switch codebases and supervise their terminal and Built-in Agent Sessions                           |
+| **Main Work Area**  | Edit files and use terminal, Files, Outline, Git, Debug, Built-in Agent, settings, diagnostics, and review tabs |
 
 Projects is global and collapsible. It does not turn into Files, Git, or chat,
 and opening a Workspace Tool does not dismiss it. Each codebase remains visible
 before an agent starts; its Agent Sessions appear beneath it as they are
 detected or managed.
 
-Workspace Tools is contextual to the active Project. Files, Outline, Git, and
-Debug share one right-side pane. The optional provider-backed Built-in Agent
-uses that same contextual slot, so two competing right drawers cannot cover or
-squeeze the work.
+Workspace Tools is a category, not another fixed column. Files, Outline, Git,
+Debug, and the optional provider-backed Built-in Agent open in the active
+Project's Main Work Area tab strip. A restored pre-v0.1 tool drawer is migrated
+into that strip, so reopening a Workspace cannot recreate an unexplained
+side-by-side pane.
 
 The Main Work Area is one native pane grid. A file, agent terminal, ordinary
 terminal, diff, search result, settings page, or review can be tabbed, split,
@@ -52,11 +52,9 @@ Zed Surface in the same pane system, so it can be focused and arranged without
 creating a nested panel or a second navigation model.
 
 Projects starts closed in fresh windows and remains available as an on-demand
-supervisor. Workspace Tools starts on the right, and Dez keeps at least 60%
-for the Main Work Area. Both side regions can collapse at compact widths, but
-opening one never silently closes the other. Explicitly opened and restored
-Projects layouts remain open. The same policy applies after resizing,
-reopening, and restoring a saved layout.
+supervisor. Workspace Tools start closed and open as ordinary Main Work Area
+tabs. Explicitly opened and restored Projects layouts remain open. The same
+policy applies after resizing, reopening, and restoring a saved layout.
 Returning to a one-work-area recipe removes surplus empty split panes while
 preserving every pane that contains a file, terminal, or other user Surface.
 Workspace restoration applies that same cleanup to the default layout and all
@@ -380,9 +378,9 @@ expansion for a longer message. View Diff, stage/unstage, commit, remote, and
 split-menu controls remain keyboard reachable and announce their action and
 open state.
 
-Git History uses the same drawer hierarchy. Its tab is keyboard reachable and
+Git History uses the same native tab hierarchy. Its tab is keyboard reachable and
 announces whether it is selected. Missing-repository, loading, no-commit, and
-load-failure states begin at the drawer edge with a specific title and next-step
+load-failure states begin at the tab content edge with a specific title and next-step
 explanation instead of switching to a generic centered label.
 
 If a saved Session owns a closed Workspace, **Files** restores that exact
@@ -503,8 +501,9 @@ other Surfaces; Dez does not add browser chrome over the editor.
 Dez keeps native editor customization, but Settings starts with the product
 flow: **Workspace & Privacy**, **Workspaces & Terminals**, **Agents**,
 **Attention**, and **Evidence**. **Navigation & Layout** owns tabs, status-bar
-controls, and window behavior. **Workspace Tools** owns Files, Outline, Git,
-and the optional Built-in Agent. Inherited collaboration, staff-only
+controls, and window behavior. **Workspace Tools** configures Files, Outline,
+Git, and the optional Built-in Agent without assigning them a separate region.
+Inherited collaboration, staff-only
 instrumentation, legacy dock geometry, and controls for removed sidebar chrome
 stay out of the public Settings navigation.
 
@@ -520,13 +519,38 @@ Profile** restores Lumin, balanced density, IBM Plex Sans, Lilex, the built-in
 Dez icons, native tab navigation, and the editor status bar while preserving
 font sizes and unrelated preferences.
 
+### Keyboard and Vim
+
+Dez keeps Zed's native command and keymap system rather than adding a shortcut
+layer. **Settings → Keyboard & Vim** can search actions, record bindings, show
+conflicts, choose a base keymap, and enable native Vim or Helix editing. Vim is
+optional rather than forced on new users; enabling it preserves motions, text
+objects, registers, macros, marks, command mode, and Project-aware navigation.
+
+The default tab model follows familiar browser behavior:
+
+| Intent | macOS | Linux and Windows | Vim |
+| --- | --- | --- | --- |
+| Open tab 1–8 / last tab | `⌘1`–`⌘8` / `⌘9` | `Alt+1`–`Alt+8` / `Alt+9` | `[b`, `]b`, `gt`, `gT` |
+| Recent-tab switcher | `Ctrl+Tab` | `Ctrl+Tab` | `[b` / `]b` |
+| Previous / next tab | `⌘{` / `⌘}` | `Ctrl+PageUp` / `Ctrl+PageDown` | `gT` / `gt` |
+| Move between split panes | `⌘K`, then arrow | `Ctrl+K`, then arrow | `Ctrl+W`, then `h/j/k/l` |
+| Projects | `⌘B` | `Ctrl+B` | Command Search |
+| Files | `⌘⇧E` | `Ctrl+Shift+E` | `Space f` |
+| New Terminal | `` Ctrl+` `` | `` Ctrl+` `` | Command Search |
+| Edit shortcuts | `⌘K ⌘S` | `Ctrl+K Ctrl+S` | Command Search |
+
+Number shortcuts activate tabs in the focused native pane; deliberate split
+navigation remains on the pane-navigation chords. This keeps one-pane work as
+simple as a browser while retaining Zed's full multi-pane model for code,
+terminals, diffs, Debug, and review.
+
 Blur belongs to the stable window shell. On macOS the window uses the native
 under-window backdrop and follows active/inactive system state; Lumin layers sit
 on top of that material rather than simulating blur with opaque panels. Focus
 borders, selected rows, active lines, pane boundaries, and scrollbars remain
-visible. Projects, Workspace Tools, Built-in Agent, the Main Work Area, tab
-strips, and elevated menus use distinct semantic layers instead of blending
-into one sheet.
+visible. Projects, the Main Work Area, native tabs, and elevated menus use
+distinct semantic layers instead of blending into one sheet.
 Controls in Lumin Light are translucent glass layers, not beige blocks.
 Error, warning, information, hidden, ignored, and predictive states use
 low-alpha semantic tints in both blurred variants, so a status callout or row

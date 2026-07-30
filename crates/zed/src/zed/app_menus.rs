@@ -122,8 +122,6 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
         view_items.extend([
             MenuItem::action("Projects", workspace::ToggleSidebar),
             MenuItem::submenu(Menu::new("Workspace Tools").items([
-                MenuItem::action(project_pane_label, workspace::ToggleProjectPane),
-                MenuItem::separator(),
                 MenuItem::action(project_surface_label, project_panel::ToggleFocus),
                 MenuItem::action(outline_surface_label, outline_panel::ToggleFocus),
                 MenuItem::action(git_surface_label, git_panel::ToggleFocus),
@@ -195,9 +193,22 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
         ),
         MenuItem::action("Open Default Settings", super::OpenDefaultSettings),
         MenuItem::separator(),
-        MenuItem::action("Open Keymap", zed_actions::OpenKeymap),
-        MenuItem::action("Open Keymap File", zed_actions::OpenKeymapFile),
-        MenuItem::action("Open Default Key Bindings", zed_actions::OpenDefaultKeymap),
+        MenuItem::action(
+            product_menu_label(APP_NAME, "Keyboard Shortcuts", "Open Keymap"),
+            zed_actions::OpenKeymap,
+        ),
+        MenuItem::action(
+            product_menu_label(APP_NAME, "Edit Shortcut File", "Open Keymap File"),
+            zed_actions::OpenKeymapFile,
+        ),
+        MenuItem::action(
+            product_menu_label(
+                APP_NAME,
+                "Default Keyboard Shortcuts",
+                "Open Default Key Bindings",
+            ),
+            zed_actions::OpenDefaultKeymap,
+        ),
         MenuItem::separator(),
         MenuItem::action(
             "Select Theme...",

@@ -73,6 +73,12 @@ Search: **Work Area + Files**, **Work Area + Built-in Agent**, **Focus Work
 Area**, **Code + Terminal**, **Review Changes**, and **Debug**. They are hidden
 from the default titlebar so the primary navigation remains obvious.
 
+Keyboard navigation remains first-class: macOS `⌘1`–`⌘8` selects native tabs
+and `⌘9` selects the last tab; Linux and Windows use `Alt+1`–`Alt+9`.
+`Ctrl+Tab` opens the recent-tab switcher, split-pane focus keeps the native
+Zed chords, and **Settings → Keyboard & Vim** exposes shortcut search,
+conflict inspection, base keymaps, and optional full Vim or Helix editing.
+
 From a selected Project Session row, `Enter` returns to the existing Session,
 `Shift+F` opens its Workspace files, `Shift+G` opens its change review, and
 `Shift+V` opens evidence-backed Session details. The same Files, Review Changes,
@@ -113,7 +119,7 @@ Dez ships with an attributed adaptation of
 - **IBM Plex Sans** for native interface chrome and readable onboarding;
 - **Lilex** for editor, terminal, prompt, and review code;
 - **Dez (Default)** as the product-facing built-in file and folder icon set;
-- distinct rail/drawer, Main Work Area, tab, and elevated-overlay surfaces;
+- distinct Projects navigation, Main Work Area, native tab, and elevated-menu surfaces;
 - restrained structural boundaries, with ordered hover, active, selection,
   scrollbar, and focus signals.
 

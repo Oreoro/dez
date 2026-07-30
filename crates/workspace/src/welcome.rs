@@ -303,7 +303,7 @@ const ZED_CONTENT: (Section, Section) = (
             },
             SectionEntry {
                 icon: IconName::Keyboard,
-                title: "Customize Keymaps",
+                title: "Keyboard Shortcuts",
                 action: &OpenKeymap,
                 visibility_guard: SectionVisibility::Always,
             },
@@ -505,19 +505,11 @@ impl WelcomePage {
         let load_generation = self.recent_workspaces_load_generation;
         cx.notify();
 
-        let Some(fs) = self
-            .workspace
-            .upgrade()
-            .map(|workspace| workspace.read(cx).app_state().fs.clone())
-        else {
-            self.recent_workspaces_load_failed = true;
-            cx.notify();
-            return;
-        };
         let db = WorkspaceDb::global(cx);
         cx.spawn_in(window, async move |this: WeakEntity<Self>, cx| {
-            let recent_workspaces =
-                futures::FutureExt::fuse(db.recent_project_workspaces(fs.as_ref()));
+            let recent_workspaces = futures::FutureExt::fuse(
+                cx.background_spawn(async move { db.persisted_recent_project_workspaces() }),
+            );
             let timeout = futures::FutureExt::fuse(
                 cx.background_executor()
                     .timer(DEZ_RECENT_WORKSPACES_LOAD_TIMEOUT),
