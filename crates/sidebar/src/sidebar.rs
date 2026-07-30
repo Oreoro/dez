@@ -988,8 +988,14 @@ fn session_search_control_visible(app_name: &str, session_count: usize) -> bool 
     app_name != "Zed" && session_count > 1
 }
 
-fn session_overview_visible(_show_start_state: bool) -> bool {
-    true
+fn session_overview_visible(
+    app_name: &str,
+    session_count: usize,
+    attention_count: usize,
+    attention_only: bool,
+) -> bool {
+    app_name == "Zed"
+        || session_scope_controls_visible(app_name, session_count, attention_count, attention_only)
 }
 
 fn workspace_restore_status_visible(is_restore_pending: bool, snapshot_ready: bool) -> bool {
@@ -2027,6 +2033,10 @@ mod workspace_header_label_tests {
             attention_items_accessibility_label("Zed", 2),
             "Attention sessions, 2 need attention"
         );
+        assert!(!session_overview_visible("Dez", 3, 0, false));
+        assert!(session_overview_visible("Dez", 3, 1, false));
+        assert!(session_overview_visible("Dez", 3, 0, true));
+        assert!(session_overview_visible("Zed", 3, 0, false));
     }
 }
 
@@ -14705,79 +14715,86 @@ impl Sidebar {
             .gap_1p5()
             .border_b_1()
             .border_color(cx.theme().colors().border)
-            .child(
-                h_flex()
-                    .w_full()
-                    .justify_between()
-                    .gap_2()
-                    .child(
-                        v_flex()
-                            .min_w_0()
-                            .when(!session_sidebar_title_in_titlebar(APP_NAME), |this| {
-                                this.gap_0p5().child(
-                                    Label::new(session_rail_title(APP_NAME)).size(LabelSize::Small),
-                                )
-                            })
-                            .child(
-                                h_flex()
-                                    .id("session-rail-status")
-                                    .min_w_0()
-                                    .gap_1()
-                                    .role(gpui::Role::Status)
-                                    .aria_label(status_label.clone())
-                                    .tooltip(Tooltip::text(status_label.clone()))
-                                    .child(
-                                        Icon::new(status_icon)
-                                            .size(IconSize::XSmall)
-                                            .color(status_color),
+            .when(paths::APP_NAME == "Zed", |this| {
+                this.child(
+                    h_flex()
+                        .w_full()
+                        .justify_between()
+                        .gap_2()
+                        .child(
+                            v_flex()
+                                .min_w_0()
+                                .when(!session_sidebar_title_in_titlebar(APP_NAME), |this| {
+                                    this.gap_0p5().child(
+                                        Label::new(session_rail_title(APP_NAME))
+                                            .size(LabelSize::Small),
                                     )
-                                    .child(
-                                        Label::new(status_label)
-                                            .size(LabelSize::XSmall)
-                                            .color(status_color)
-                                            .truncate(),
-                                    ),
-                            ),
-                    )
-                    .when(
-                        session_overview_create_action_visible(
-                            paths::APP_NAME,
-                            self.contents.session_count,
-                        ),
-                        |this| {
-                            this.child(
-                                Button::new("new-session", "Start Terminal")
-                                    .size(ButtonSize::Medium)
-                                    .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
-                                    .start_icon(
-                                        Icon::new(IconName::Terminal).size(IconSize::XSmall),
-                                    )
-                                    .tab_index(0isize)
-                                    .aria_label(active_workspace_terminal_destination_label(
-                                        APP_NAME,
-                                    ))
-                                    .tooltip(|_, cx| {
-                                        Tooltip::for_action(
-                                            workspace_new_terminal_tooltip_label(APP_NAME),
-                                            &NewCenterTerminal::default(),
-                                            cx,
+                                })
+                                .child(
+                                    h_flex()
+                                        .id("session-rail-status")
+                                        .min_w_0()
+                                        .gap_1()
+                                        .role(gpui::Role::Status)
+                                        .aria_label(status_label.clone())
+                                        .tooltip(Tooltip::text(status_label.clone()))
+                                        .child(
+                                            Icon::new(status_icon)
+                                                .size(IconSize::XSmall)
+                                                .color(status_color),
                                         )
-                                    })
-                                    .on_click(|_, window, cx| {
-                                        window.dispatch_action(
-                                            NewCenterTerminal::default().boxed_clone(),
-                                            cx,
-                                        );
-                                    }),
-                            )
-                        },
-                    )
-                    .when(
-                        session_search_control_visible(paths::APP_NAME, total_item_count)
-                            && !search_is_active,
-                        |this| {
-                            this.child(
-                                IconButton::new("open-session-search", IconName::MagnifyingGlass)
+                                        .child(
+                                            Label::new(status_label)
+                                                .size(LabelSize::XSmall)
+                                                .color(status_color)
+                                                .truncate(),
+                                        ),
+                                ),
+                        )
+                        .when(
+                            session_overview_create_action_visible(
+                                paths::APP_NAME,
+                                self.contents.session_count,
+                            ),
+                            |this| {
+                                this.child(
+                                    Button::new("new-session", "Start Terminal")
+                                        .size(ButtonSize::Medium)
+                                        .style(ButtonStyle::OutlinedCustom(
+                                            cx.theme().colors().border,
+                                        ))
+                                        .start_icon(
+                                            Icon::new(IconName::Terminal).size(IconSize::XSmall),
+                                        )
+                                        .tab_index(0isize)
+                                        .aria_label(active_workspace_terminal_destination_label(
+                                            APP_NAME,
+                                        ))
+                                        .tooltip(|_, cx| {
+                                            Tooltip::for_action(
+                                                workspace_new_terminal_tooltip_label(APP_NAME),
+                                                &NewCenterTerminal::default(),
+                                                cx,
+                                            )
+                                        })
+                                        .on_click(|_, window, cx| {
+                                            window.dispatch_action(
+                                                NewCenterTerminal::default().boxed_clone(),
+                                                cx,
+                                            );
+                                        }),
+                                )
+                            },
+                        )
+                        .when(
+                            session_search_control_visible(paths::APP_NAME, total_item_count)
+                                && !search_is_active,
+                            |this| {
+                                this.child(
+                                    IconButton::new(
+                                        "open-session-search",
+                                        IconName::MagnifyingGlass,
+                                    )
                                     .size(ButtonSize::Medium)
                                     .icon_size(IconSize::Small)
                                     .tab_index(0isize)
@@ -14789,34 +14806,41 @@ impl Sidebar {
                                             cx,
                                         )
                                     })
-                                    .on_click(cx.listener(|this, _, window, cx| {
-                                        this.focus_sidebar_filter(&FocusSidebarFilter, window, cx);
-                                    })),
-                            )
-                        },
-                    )
-                    .when(
-                        session_overview_uses_sessions_menu(paths::APP_NAME),
-                        |this| this.child(self.render_agent_options_menu("", cx)),
-                    )
-                    .child(
-                        IconButton::new("hide-sessions", IconName::Close)
-                            .size(ButtonSize::Medium)
-                            .icon_size(IconSize::Small)
-                            .tab_index(0isize)
-                            .aria_label(session_rail_hide_label(APP_NAME))
-                            .tooltip(|_, cx| {
-                                Tooltip::for_action(
-                                    session_rail_hide_label(APP_NAME),
-                                    &ToggleSidebar,
-                                    cx,
+                                    .on_click(cx.listener(
+                                        |this, _, window, cx| {
+                                            this.focus_sidebar_filter(
+                                                &FocusSidebarFilter,
+                                                window,
+                                                cx,
+                                            );
+                                        },
+                                    )),
                                 )
-                            })
-                            .on_click(|_, window, cx| {
-                                window.dispatch_action(Box::new(CloseSidebar), cx);
-                            }),
-                    ),
-            )
+                            },
+                        )
+                        .when(
+                            session_overview_uses_sessions_menu(paths::APP_NAME),
+                            |this| this.child(self.render_agent_options_menu("", cx)),
+                        )
+                        .child(
+                            IconButton::new("hide-sessions", IconName::Close)
+                                .size(ButtonSize::Medium)
+                                .icon_size(IconSize::Small)
+                                .tab_index(0isize)
+                                .aria_label(session_rail_hide_label(APP_NAME))
+                                .tooltip(|_, cx| {
+                                    Tooltip::for_action(
+                                        session_rail_hide_label(APP_NAME),
+                                        &ToggleSidebar,
+                                        cx,
+                                    )
+                                })
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(Box::new(CloseSidebar), cx);
+                                }),
+                        ),
+                )
+            })
             .when(
                 session_scope_controls_visible(
                     paths::APP_NAME,
@@ -15581,6 +15605,34 @@ impl Sidebar {
         let left_window_controls = !cfg!(target_os = "macos") && not_fullscreen && sidebar_on_left;
         let right_window_controls =
             !cfg!(target_os = "macos") && not_fullscreen && sidebar_on_right;
+        let has_query = self.has_filter_query(cx);
+        let search_is_active = has_query
+            || self.session_search_open
+            || self.filter_editor.focus_handle(cx).is_focused(window);
+        let total_item_count = self.contents.session_count + self.contents.observed_terminal_count;
+        let show_search_control =
+            session_search_control_visible(paths::APP_NAME, total_item_count) && !search_is_active;
+        let is_restoring = self.workspace_restore_status_is_visible(cx);
+        let status_label = session_overview_status_label_with_observed_terminals(
+            APP_NAME,
+            self.contents.session_count,
+            self.contents.observed_terminal_count,
+            self.contents.attention_count,
+            self.contents.project_header_indices.len(),
+            has_query,
+            is_restoring,
+        );
+        let status_color = if self.contents.has_attention && !has_query && !is_restoring {
+            Color::Warning
+        } else {
+            Color::Muted
+        };
+        let status_icon = session_overview_status_icon(
+            has_query,
+            is_restoring,
+            self.contents.has_attention,
+            total_item_count,
+        );
         let traffic_light_buttons = if traffic_lights {
             self.multi_workspace.upgrade().and_then(|multi_workspace| {
                 render_sidebar_header_controls_with_state(multi_workspace, sidebar_state, cx)
@@ -15631,12 +15683,61 @@ impl Sidebar {
             .when_some(left_header_buttons, |this, buttons| this.child(buttons))
             .when(session_sidebar_title_in_titlebar(APP_NAME), |this| {
                 this.child(
-                    Label::new(session_rail_title(APP_NAME))
-                        .size(LabelSize::Small)
-                        .truncate(),
+                    h_flex()
+                        .min_w_0()
+                        .gap_1()
+                        .child(
+                            Label::new(session_rail_title(APP_NAME))
+                                .size(LabelSize::Small)
+                                .truncate(),
+                        )
+                        .child(
+                            h_flex()
+                                .id("session-rail-header-status")
+                                .min_w_0()
+                                .gap_1()
+                                .role(gpui::Role::Status)
+                                .aria_label(status_label.clone())
+                                .tooltip(Tooltip::text(status_label.clone()))
+                                .child(
+                                    Icon::new(status_icon)
+                                        .size(IconSize::XSmall)
+                                        .color(status_color),
+                                )
+                                .when(self.rendered_width >= DETAILED_MIN_WIDTH, |this| {
+                                    this.child(
+                                        Label::new(status_label.clone())
+                                            .size(LabelSize::XSmall)
+                                            .color(status_color)
+                                            .truncate(),
+                                    )
+                                }),
+                        ),
                 )
             })
             .child(div().flex_1())
+            .when(show_search_control, |this| {
+                this.child(
+                    IconButton::new("open-session-search", IconName::MagnifyingGlass)
+                        .size(ButtonSize::Medium)
+                        .icon_size(IconSize::Small)
+                        .tab_index(0isize)
+                        .aria_label(session_rail_search_label(APP_NAME))
+                        .tooltip(|_, cx| {
+                            Tooltip::for_action(
+                                session_rail_search_label(APP_NAME),
+                                &FocusSidebarFilter,
+                                cx,
+                            )
+                        })
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.focus_sidebar_filter(&FocusSidebarFilter, window, cx);
+                        })),
+                )
+            })
+            .when(paths::APP_NAME != "Zed", |this| {
+                this.child(self.render_agent_options_menu("", cx))
+            })
             .when_some(right_header_buttons, |this, buttons| this.child(buttons))
             .when(right_window_controls, |this| {
                 this.children(Self::render_right_window_controls(window, cx))
@@ -16634,9 +16735,15 @@ impl Render for Sidebar {
             .child(self.render_sidebar_header(window, cx))
             .map(|this| match &self.view {
                 SidebarView::ThreadList => this
-                    .when(session_overview_visible(show_start_state), |this| {
-                        this.child(self.render_session_overview(window, cx))
-                    })
+                    .when(
+                        session_overview_visible(
+                            paths::APP_NAME,
+                            self.contents.session_count,
+                            self.contents.attention_count,
+                            self.attention_only,
+                        ),
+                        |this| this.child(self.render_session_overview(window, cx)),
+                    )
                     .map(|this| {
                         if show_start_state {
                             this.when_some(

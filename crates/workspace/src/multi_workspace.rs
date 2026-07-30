@@ -189,7 +189,7 @@ fn render_sidebar_header_controls_for_state(
     _agent_pane_visible: Option<bool>,
     cx: &mut App,
 ) -> Option<AnyElement> {
-    if !enabled {
+    if !enabled && paths::APP_NAME == "Zed" {
         return None;
     }
 
@@ -204,12 +204,6 @@ fn render_sidebar_header_controls_for_state(
     let sidebar_label = sidebar_toggle_label(paths::APP_NAME, sidebar_open);
     let on_right = sidebar_side == SidebarSide::Right;
     let sidebar_multi_workspace = multi_workspace.clone();
-    if paths::APP_NAME != "Zed" {
-        // Dez keeps navigation in the global Projects sidebar and lets each
-        // contextual pane render its own native tabs. A second titlebar
-        // switcher would duplicate navigation and squeeze draggable work tabs.
-        return None;
-    }
 
     let sidebar_toggle_button = sidebar_side_context_menu("sidebar-toggle-menu", cx)
         .anchor(if on_right {
@@ -243,14 +237,13 @@ fn render_sidebar_header_controls_for_state(
         .into_any_element();
 
     let project_pane_toggle_button = if SidebarSettings::get_global(cx).show_project_pane_button {
-        let is_visible = project_pane_visible?;
-        let label = if is_visible {
-            "Hide Project Pane"
-        } else {
-            "Show Project Pane"
-        };
+        project_pane_visible.map(|is_visible| {
+            let label = if is_visible {
+                "Hide Project Pane"
+            } else {
+                "Show Project Pane"
+            };
 
-        Some(
             IconButton::new("project-pane-toggle", IconName::FileTree)
                 .size(ButtonSize::Medium)
                 .icon_size(IconSize::Medium)
@@ -267,8 +260,8 @@ fn render_sidebar_header_controls_for_state(
                 .on_click(|_, window, cx| {
                     window.dispatch_action(Box::new(ToggleProjectPane), cx);
                 })
-                .into_any_element(),
-        )
+                .into_any_element()
+        })
     } else {
         None
     };
@@ -313,8 +306,8 @@ fn sidebar_resize_copy(app_name: &str) -> (&'static str, &'static str, &'static 
     }
 }
 
-fn sidebar_chrome_toggle_visible(app_name: &str, sidebar_open: bool) -> bool {
-    app_name == "Zed" || !sidebar_open
+fn sidebar_chrome_toggle_visible(_app_name: &str, _sidebar_open: bool) -> bool {
+    true
 }
 
 fn sidebar_resize_handle_occludes_main_work_area(app_name: &str) -> bool {
@@ -352,9 +345,9 @@ mod sidebar_chrome_tests {
     use gpui::px;
 
     #[test]
-    fn dez_uses_chrome_to_open_projects_but_not_to_duplicate_its_hide_action() {
+    fn native_sidebar_chrome_keeps_its_toggle_available_in_both_states() {
         assert!(sidebar_chrome_toggle_visible("Dez", false));
-        assert!(!sidebar_chrome_toggle_visible("Dez", true));
+        assert!(sidebar_chrome_toggle_visible("Dez", true));
         assert!(sidebar_chrome_toggle_visible("Zed", false));
         assert!(sidebar_chrome_toggle_visible("Zed", true));
         assert_eq!(sidebar_toggle_label("Dez", false), "Open Projects");
