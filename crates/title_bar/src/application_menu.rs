@@ -56,6 +56,7 @@ pub struct ApplicationMenu {
     _settings_subscription: Subscription,
 }
 
+#[cfg(any(not(target_os = "macos"), test))]
 fn application_menu_name_for_product<'a>(menu_name: &'a str, app_name: &'a str) -> &'a str {
     if app_name != "Zed" && menu_name == "Zed" {
         app_name

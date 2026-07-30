@@ -1810,3 +1810,16 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   Project and Agent tool panes migrate into that strip; only an explicit split
   command creates another work area. This decision supersedes the earlier
   drawer geometry while preserving Projects as optional global navigation.
+- **2026-07-30: v0.2 makes one work area the destination invariant.** Work Area
+  + Files, Work Area + Built-in Agent, Focus Work Area, Work Area + Git, and
+  Work Area + Debug consolidate every populated center pane into the native
+  Main Work Area tab strip. The operation preserves each open surface as a tab
+  instead of hiding it. Restoring one of those named states applies the same
+  repair. Split Work Area remains the only public state that may retain
+  multiple populated work areas.
+- **2026-07-30: Terminal context chrome is evidence-driven.** A clean active
+  terminal in a connected Workspace relies on the native tab strip and status
+  bar, so Dez does not repeat Workspace and repository metadata above it. The
+  compact terminal context strip appears only for actionable state: agent or
+  task activity, Git changes, a non-active lifecycle state, or a scratch
+  terminal that can be connected to a Workspace.

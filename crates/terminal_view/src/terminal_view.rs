@@ -341,6 +341,14 @@ fn terminal_context_action_label_visibility(
     }
 }
 
+fn terminal_context_strip_is_relevant(
+    activity_label: Option<&str>,
+    has_workspace_files: bool,
+    changed_files: usize,
+) -> bool {
+    activity_label.is_some() || !has_workspace_files || changed_files > 0
+}
+
 fn terminal_surface_tab_label(app_name: &str, title: &str) -> SharedString {
     let title = title.trim();
     if app_name == "Zed" || title.is_empty() || title == "Terminal" {
@@ -2734,6 +2742,13 @@ impl TerminalView {
         let changed_files = workspace_context.changed_files;
         let changes_label = changed_files_label(changed_files);
         let has_workspace_files = workspace_context.workspace_label.is_some();
+        if !terminal_context_strip_is_relevant(
+            activity_label.as_deref(),
+            has_workspace_files,
+            changed_files,
+        ) {
+            return None;
+        }
         let action_label_visibility = terminal_context_action_label_visibility(
             context_width,
             has_workspace_files,
@@ -4343,6 +4358,14 @@ mod tests {
         assert_eq!(changed_files_label(0), "0 changes");
         assert_eq!(changed_files_label(1), "1 change");
         assert_eq!(changed_files_label(5), "5 changes");
+        assert!(!terminal_context_strip_is_relevant(None, true, 0));
+        assert!(terminal_context_strip_is_relevant(
+            Some("Codex running"),
+            true,
+            0
+        ));
+        assert!(terminal_context_strip_is_relevant(None, true, 2));
+        assert!(terminal_context_strip_is_relevant(None, false, 0));
         assert_eq!(
             terminal_surface_tab_label("Dez", "Codex"),
             SharedString::from("Terminal · Codex")

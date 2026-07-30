@@ -167,8 +167,10 @@ geometry-only `BrowserDevelopment` recipe as a fake preview.
 
 A public v0.1 release still requires exact build, rendered, restart, crash,
 accessibility, integration, coexistence, and packaging evidence. The ordered
-release ladder and open gates are documented in
-[v0.1 Product Hardening](./docs/src/development/dez/v0.1-product-hardening.md);
+release ladder and open gates remain documented in
+[v0.1 Product Hardening](./docs/src/development/dez/v0.1-product-hardening.md).
+The active source-polish lane is
+[v0.2 Workspace Polish](./docs/src/development/dez/v0.2-workspace-polish.md);
 the completed ownership baseline remains in the historical
 [v0.0.4 External Sessions Plan](./docs/src/development/dez/v0.0.4-external-sessions.md),
 with exact results recorded in
@@ -178,8 +180,10 @@ runbook remains historical evidence, not the current release plan.
 ## Documentation
 
 - [What is Dez?](./docs/src/dez.md) — public product guide
+- [v0.2 Workspace Polish](./docs/src/development/dez/v0.2-workspace-polish.md)
+  — active native Workspace shell and source-polish contract
 - [v0.1 Product Hardening](./docs/src/development/dez/v0.1-product-hardening.md)
-  — active release ladder and acceptance gates
+  — preserved release ladder and acceptance gates
 - [v0.0.4 External Sessions](./docs/src/development/dez/v0.0.4-external-sessions.md)
   — historical ownership baseline and artifact gates
 - [v0.0.3 Production Readiness](./docs/src/development/dez/v0.0.3-production-readiness.md)

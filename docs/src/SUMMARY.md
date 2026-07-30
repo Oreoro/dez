@@ -229,6 +229,7 @@
   - [Superzed Canvas Implementation Plan](./development/superzed-canvas-plan.md)
   - [Dez Development](./development/dez/index.md)
     - [Fork Notes](./development/dez/fork-notes.md)
+    - [v0.2 Workspace Polish](./development/dez/v0.2-workspace-polish.md)
     - [v0.1 Product Hardening](./development/dez/v0.1-product-hardening.md)
     - [v0.0.4 External Sessions](./development/dez/v0.0.4-external-sessions.md)
     - [v0.0.3 Production Readiness](./development/dez/v0.0.3-production-readiness.md)

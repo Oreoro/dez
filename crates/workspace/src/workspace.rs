@@ -405,6 +405,17 @@ fn next_dez_public_canvas_layout(active_layout: Option<CanvasLayoutRecipe>) -> C
         .unwrap_or(CanvasLayoutRecipe::Full)
 }
 
+fn dez_layout_uses_single_work_area(recipe: CanvasLayoutRecipe) -> bool {
+    matches!(
+        recipe,
+        CanvasLayoutRecipe::Full
+            | CanvasLayoutRecipe::AgentControl
+            | CanvasLayoutRecipe::EditorFocus
+            | CanvasLayoutRecipe::Review
+            | CanvasLayoutRecipe::Debug
+    )
+}
+
 const FOUR_AGENT_MATRIX_SPLIT_DIRECTIONS: &[SplitDirection] = &[
     SplitDirection::Right,
     SplitDirection::Down,
@@ -7513,6 +7524,39 @@ impl Workspace {
             return false;
         }
 
+        if self
+            .active_canvas_layout_recipe
+            .is_some_and(dez_layout_uses_single_work_area)
+        {
+            let visible_panes_before = self
+                .center
+                .panes()
+                .into_iter()
+                .filter(|pane| pane.read(cx).pane_kind() == PaneKind::Tabs)
+                .map(|pane| pane.entity_id())
+                .collect::<Vec<_>>();
+            let destination = if self.active_pane.read(cx).pane_kind() == PaneKind::Tabs
+                && self.pane_is_in_center(&self.active_pane)
+            {
+                self.active_pane.clone()
+            } else {
+                self.last_tabbed_pane(cx)
+                    .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx))
+            };
+            let destination = self.consolidate_dez_main_work_area(destination, window, cx);
+            if !self.active_pane.read(cx).is_visible() {
+                self.set_active_pane(&destination, window, cx);
+            }
+            let visible_panes_after = self
+                .center
+                .panes()
+                .into_iter()
+                .filter(|pane| pane.read(cx).pane_kind() == PaneKind::Tabs)
+                .map(|pane| pane.entity_id())
+                .collect::<Vec<_>>();
+            return visible_panes_before != visible_panes_after;
+        }
+
         let main_work_area_limit = match self.active_canvas_layout_recipe {
             Some(recipe) => {
                 let Some(limit) = recipe.main_work_area_limit_for_app(paths::APP_NAME) else {
@@ -8299,6 +8343,11 @@ impl Workspace {
     }
 
     pub fn apply_canvas_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if paths::APP_NAME != "Zed" {
+            self.apply_dez_single_work_area_destination(CanvasLayoutRecipe::Full, window, cx);
+            return;
+        }
+
         self.push_canvas_layout_snapshot(cx);
 
         if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
@@ -8329,6 +8378,15 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if paths::APP_NAME != "Zed" {
+            self.apply_dez_single_work_area_destination(
+                CanvasLayoutRecipe::AgentControl,
+                window,
+                cx,
+            );
+            return;
+        }
+
         self.push_canvas_layout_snapshot(cx);
 
         let center_pane = self
@@ -8394,6 +8452,11 @@ impl Workspace {
             .into_iter()
             .next()
             .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
+        let center_pane = if paths::APP_NAME == "Zed" {
+            center_pane
+        } else {
+            self.consolidate_dez_main_work_area(center_pane, window, cx)
+        };
         self.set_active_pane(&center_pane, window, cx);
         center_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
 
@@ -8596,6 +8659,11 @@ impl Workspace {
     }
 
     pub fn apply_canvas_review_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if paths::APP_NAME != "Zed" {
+            self.apply_dez_single_work_area_destination(CanvasLayoutRecipe::Review, window, cx);
+            return;
+        }
+
         let (pane_count, split_directions) =
             essential_canvas_recipe_geometry_for_app(CanvasLayoutRecipe::Review, paths::APP_NAME)
                 .expect("Review Changes must define product geometry");
@@ -8614,6 +8682,11 @@ impl Workspace {
     }
 
     pub fn apply_canvas_debug_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if paths::APP_NAME != "Zed" {
+            self.apply_dez_single_work_area_destination(CanvasLayoutRecipe::Debug, window, cx);
+            return;
+        }
+
         let (pane_count, split_directions) =
             essential_canvas_recipe_geometry_for_app(CanvasLayoutRecipe::Debug, paths::APP_NAME)
                 .expect("Debug must define product geometry");
@@ -8881,6 +8954,55 @@ impl Workspace {
         let split_directions =
             self.reflow_canvas_split_directions(layout_recipe, split_directions, cx);
         self.ensure_visible_tabbed_panes(tabbed_pane_count, &split_directions, window, cx)
+    }
+
+    fn apply_dez_single_work_area_destination(
+        &mut self,
+        layout_recipe: CanvasLayoutRecipe,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.push_canvas_layout_snapshot(cx);
+
+        if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
+            self.sync_panel_panes_from_docks(window, cx);
+            self.close_legacy_docks_for_canvas(window, cx);
+        }
+
+        let destination = self
+            .last_tabbed_pane(cx)
+            .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
+        let destination = self.consolidate_dez_main_work_area(destination, window, cx);
+        self.select_dez_essential_canvas_recipe_panel(layout_recipe, window, cx);
+        let destination = self.last_tabbed_pane(cx).unwrap_or(destination);
+        self.focus_canvas_pane(&destination, window, cx);
+        self.finish_canvas_recipe(Some(layout_recipe), window, cx);
+    }
+
+    fn consolidate_dez_main_work_area(
+        &mut self,
+        destination: Entity<Pane>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<Pane> {
+        if paths::APP_NAME == "Zed" {
+            return destination;
+        }
+
+        let source_panes = self
+            .center
+            .panes()
+            .into_iter()
+            .filter(|pane| pane.read(cx).pane_kind() == PaneKind::Tabs && *pane != &destination)
+            .cloned()
+            .collect::<Vec<_>>();
+        for source_pane in source_panes {
+            join_pane_into_active(&destination, &source_pane, window, cx);
+        }
+
+        destination.update(cx, |pane, cx| pane.set_visible(true, cx));
+        self.center.mark_positions(cx);
+        destination
     }
 
     fn close_legacy_docks_for_canvas(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -17275,6 +17397,11 @@ mod tests {
             CanvasLayoutRecipe::Full,
             "an inherited or custom legacy layout rejoins the public cycle at Work Area + Files"
         );
+        assert!(dez_layout_uses_single_work_area(CanvasLayoutRecipe::Full));
+        assert!(dez_layout_uses_single_work_area(CanvasLayoutRecipe::Review));
+        assert!(!dez_layout_uses_single_work_area(
+            CanvasLayoutRecipe::CodeRunObserve
+        ));
     }
 
     #[test]
@@ -17623,9 +17750,7 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn test_restore_removes_empty_leftovers_from_curated_dez_layouts(
-        cx: &mut TestAppContext,
-    ) {
+    async fn test_restore_consolidates_single_work_area_dez_layouts(cx: &mut TestAppContext) {
         init_test(cx);
 
         let fs = FakeFs::new(cx.executor());
@@ -17653,9 +17778,11 @@ mod tests {
                 "a public multi-surface recipe must arrange work, not restore an unexplained blank column"
             );
 
+            let restored_review_pane =
+                workspace.split_pane(primary_pane.clone(), SplitDirection::Right, window, cx);
             let review_item = cx.new(|cx| TestItem::new(cx).with_label("review.diff"));
             workspace.add_item(
-                surplus_empty_pane.clone(),
+                restored_review_pane.clone(),
                 Box::new(review_item),
                 None,
                 false,
@@ -17663,14 +17790,16 @@ mod tests {
                 window,
                 cx,
             );
-            surplus_empty_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+            restored_review_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+            workspace.active_canvas_layout_recipe = Some(CanvasLayoutRecipe::Review);
 
-            assert!(
-                !workspace.normalize_restored_dez_main_work_area(window, cx),
-                "two populated Review Changes work areas should remain stable"
-            );
+            assert!(workspace.normalize_restored_dez_main_work_area(window, cx));
             assert!(primary_pane.read(cx).is_visible());
-            assert!(surplus_empty_pane.read(cx).is_visible());
+            assert_eq!(primary_pane.read(cx).items_len(), 1);
+            assert!(
+                !workspace.pane_is_in_center(&restored_review_pane),
+                "restored Review Changes content should become a native Main Work Area tab"
+            );
         });
     }
 

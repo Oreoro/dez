@@ -55,12 +55,13 @@ Projects starts closed in fresh windows and remains available as an on-demand
 supervisor. Workspace Tools start closed and open as ordinary Main Work Area
 tabs. Explicitly opened and restored Projects layouts remain open. The same
 policy applies after resizing, reopening, and restoring a saved layout.
-Returning to a one-work-area recipe removes surplus empty split panes while
-preserving every pane that contains a file, terminal, or other user Surface.
-Workspace restoration applies that same cleanup to the default layout and all
-six public recipes, so stale empty splits cannot return as unexplained blank
-columns. Public multi-surface recipes arrange up to two populated work
-areas and never create an empty pane merely to satisfy a diagram.
+Returning to a one-work-area destination consolidates every populated split
+into the Main Work Area tab strip; files, terminals, diffs, and tools remain
+open as native tabs. Workspace restoration applies the same repair to those
+destination layouts, so a stale review or tool split cannot return as an
+unexplained second column. **Split Work Area** alone may retain up to two
+already-populated work areas and never creates an empty pane merely to satisfy
+a diagram.
 Optional **Workspace Layout** commands name destinations instead of abstract
 arrangements: **Work Area + Files**, **Work Area + Built-in Agent**, **Focus
 Work Area**, **Split Work Area**, **Work Area + Git**, and **Work Area +
@@ -649,6 +650,7 @@ restart, crash, accessibility, upgrade, and coexistence evidence.
 For precise implementation state, read:
 
 - [Fork Notes](./development/dez/fork-notes.md)
+- [v0.2 Workspace Polish](./development/dez/v0.2-workspace-polish.md)
 - [v0.1 Product Hardening](./development/dez/v0.1-product-hardening.md)
 - [v0.0.4 External Sessions](./development/dez/v0.0.4-external-sessions.md)
 - [Architecture Baseline](./development/dez/architecture-baseline.md)

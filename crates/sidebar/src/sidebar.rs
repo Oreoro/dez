@@ -962,14 +962,6 @@ fn attention_empty_state_copy(
     }
 }
 
-fn machine_terminal_count_label(rail_width: Pixels, count: usize) -> String {
-    if rail_width < DETAILED_MIN_WIDTH {
-        format!("{count} observed")
-    } else {
-        format!("{count} observed · read-only")
-    }
-}
-
 fn session_search_visible(
     app_name: &str,
     session_count: usize,
@@ -1104,14 +1096,6 @@ fn terminal_launch_in_main_work_area_label(app_name: &str) -> &'static str {
     }
 }
 
-fn terminal_launch_in_this_workspace_label(app_name: &str) -> &'static str {
-    if app_name == "Zed" {
-        "Start Terminal Session in This Workspace"
-    } else {
-        "Open Agent Terminal in This Workspace"
-    }
-}
-
 fn terminal_launch_menu_header(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Start Terminal Session In…"
@@ -1218,14 +1202,6 @@ fn workspace_options_tooltip_label() -> &'static str {
 
 fn project_header_primary_action_activates_workspace(app_name: &str) -> bool {
     app_name != "Zed"
-}
-
-fn machine_terminal_section_accessibility_description() -> &'static str {
-    "Read-only terminals observed from the local process table. Dez does not own these PTYs."
-}
-
-fn machine_terminal_section_tooltip_label() -> &'static str {
-    "Machine terminals are read-only; select one to return to its owning app"
 }
 
 fn merge_unambiguous_branch(

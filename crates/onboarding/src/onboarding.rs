@@ -284,9 +284,9 @@ impl Render for Onboarding {
         };
 
         div()
+            .image_cache(gpui::retain_all("onboarding-page"))
             .id("onboarding-page")
             .role(gpui::Role::Main)
-            .image_cache(gpui::retain_all("onboarding-page"))
             .key_context({
                 let mut ctx = KeyContext::new_with_defaults();
                 ctx.add("Onboarding");
