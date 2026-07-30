@@ -271,7 +271,10 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
     app_items.push(MenuItem::action(format!("Quit {APP_NAME}"), Quit));
 
     let mut help_items = vec![
-        MenuItem::action("Getting Started", onboarding::ShowWelcome),
+        MenuItem::action(
+            product_menu_label(APP_NAME, "Workspace Guide", "Getting Started"),
+            onboarding::ShowWelcome,
+        ),
         MenuItem::action(
             product_menu_label(APP_NAME, "Release Notes", "View Release Notes Locally"),
             auto_update_ui::ViewReleaseNotesLocally,
@@ -579,6 +582,10 @@ mod tests {
         assert_eq!(
             product_menu_label("Dez", "Open Local Diagnostics Log", "View Telemetry"),
             "Open Local Diagnostics Log"
+        );
+        assert_eq!(
+            product_menu_label("Dez", "Workspace Guide", "Getting Started"),
+            "Workspace Guide"
         );
         assert_eq!(
             product_menu_label("Zed", "Close Workspace", "Close Project"),

@@ -412,7 +412,7 @@ exists in the inspected locations.
 
 Commit `699cbd1bc8` removes the remaining upstream onboarding entry points from
 Dez chrome. Title-bar promotion banners and Return to Onboarding render only
-for official Zed. Dez Help exposes **Getting Started**, and the optional
+for official Zed. Dez Help exposes **Workspace Guide**, and the optional
 welcome surface uses Open Workspace, Recent Workspaces, and supervision copy
 that names worktree isolation and review evidence. Follow-up `869cddcce0`
 replaces its Zed Assistant glyph with the neutral Robot icon and adds an

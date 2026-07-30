@@ -609,7 +609,7 @@ require_pattern crates/command_palette/src/command_palette.rs \
     'TypeId::of::<NewCenterTerminal>\(\)' \
     'the Dez Command Palette exposes a duplicate internal center-terminal command'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
-    'fn action_name_for_product.*?"workspace::ToggleProjectPane".*?"workspace_tools::Toggle".*?"zed_actions::", "dez::".*?"sidebar::", "sessions::".*?"agent_panel::", "built_in_agent::".*?"debug_panel::", "debug::".*?"git_panel::", "git::".*?"outline_panel::", "outline::".*?"project_panel::", "files::".*?"project_search::", "workspace_search::"' \
+    'fn action_name_for_product.*?"workspace::ToggleProjectPane".*?"workspace_tools::Toggle".*?"zed_actions::", "dez::".*?"sidebar::", "projects::".*?"agent_panel::", "built_in_agent::".*?"debug_panel::", "debug::".*?"git_panel::", "git::".*?"outline_panel::", "outline::".*?"project_panel::", "files::".*?"project_search::", "workspace_search::"' \
     'the Dez Command Palette can regress to internal sidebar, tool-panel, project-panel, or zed-actions namespaces'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
     '"zed::ApplyCanvasFullLayout".*?"layout::WorkAreaAndFiles".*?"zed::ApplyCanvasAgentControlLayout".*?"layout::WorkAreaAndBuiltInAgent".*?"zed::ApplyCanvasEditorFocusLayout".*?"layout::FocusWorkArea".*?"zed::ApplyCanvasCodeRunObserveLayout".*?"layout::SplitWorkArea".*?"zed::ApplyCanvasReviewLayout".*?"layout::WorkAreaAndGit".*?"zed::ApplyCanvasDebugLayout".*?"layout::WorkAreaAndDebug".*?"zed::CycleCanvasLayout".*?"layout::NextWorkspaceLayout".*?"workspace::SaveCurrentCanvasLayoutAs".*?"layout::SaveWorkspaceLayoutAs".*?"workspace::ManageSavedCanvasLayouts".*?"layout::ManageSavedWorkspaceLayouts".*?"zed::RestorePreviousCanvasLayout".*?"layout::RestorePreviousWorkspaceLayout"' \
@@ -792,7 +792,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_sidebar_header.*?\.h\(Tab::container_height\(cx\)\).*?\.bg\(cx\.theme\(\)\.colors\(\)\.tab_bar_background\).*?\.border_b_1\(\).*?\.border_color\(cx\.theme\(\)\.colors\(\)\.border\)' \
     'the Sessions header can lose its native inline divider'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_sidebar_title_in_titlebar\(app_name: &str\).*?app_name != "Zed".*?fn session_rail_title\(app_name: &str\).*?"Sessions".*?"Projects".*?fn session_rail_accessibility_label\(app_name: &str\).*?"Projects and agent sessions".*?fn session_rail_search_label.*?"Search Projects and Sessions".*?fn session_rail_hide_label.*?"Hide Projects".*?fn session_rail_menu_label.*?"Projects Menu".*?fn session_empty_state_uses_icon_badge\(app_name: &str\).*?app_name == "Zed".*?when\(!session_sidebar_title_in_titlebar\(APP_NAME\).*?Label::new\(session_rail_title\(APP_NAME\)\).*?fn render_sidebar_header.*?when\(session_sidebar_title_in_titlebar\(APP_NAME\).*?Label::new\(session_rail_title\(APP_NAME\)\)' \
+    'fn session_sidebar_title_in_titlebar\(app_name: &str\).*?app_name != "Zed".*?fn session_rail_title\(app_name: &str\).*?"Sessions".*?"Projects".*?fn session_rail_accessibility_label\(app_name: &str\).*?"Projects and agent sessions".*?fn session_rail_search_label.*?"Search Projects".*?fn session_rail_search_placeholder.*?"Search Projects…".*?fn session_notices_accessibility_label.*?"Workspace notices".*?fn session_rail_hide_label.*?"Hide Projects".*?fn session_rail_menu_label.*?"Projects Menu".*?fn session_empty_state_uses_icon_badge\(app_name: &str\).*?app_name == "Zed".*?when\(!session_sidebar_title_in_titlebar\(APP_NAME\).*?Label::new\(session_rail_title\(APP_NAME\)\).*?fn render_sidebar_header.*?when\(session_sidebar_title_in_titlebar\(APP_NAME\).*?Label::new\(session_rail_title\(APP_NAME\)\)' \
     'Dez Projects can regress to losing its native title or using inconsistent navigation labels'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'fn dez_consolidates_session_utilities_into_one_overview_menu.*?session_sidebar_title_in_titlebar\("Dez"\).*?!session_empty_state_uses_icon_badge\("Dez"\).*?!session_sidebar_title_in_titlebar\("Zed"\).*?session_empty_state_uses_icon_badge\("Zed"\)' \
@@ -1221,10 +1221,10 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     '"Agent Profiles".*?agent_session_label\([[:space:]]*APP_NAME,[[:space:]]*"Open Settings",[[:space:]]*"Agent Settings".*?if !is_dez.*?"Toggle Sidebar"' \
     'the Sessions Menu can regress to ambiguous Agent settings or duplicate Dez layout actions'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
-    '"workspace::NewTerminal".*?"terminal::OpenAgentTerminal".*?"agent::RenameSelectedThread".*?"sessions::RenameSelectedSession".*?"agent::NewTerminalThread".*?"terminal::OpenAgentTerminalInWorkspace".*?"sidebar::NewSessionInGroup".*?"terminal::OpenAgentTerminalInSelectedWorkspace".*?"sidebar::NewThreadInGroup".*?"built_in_agent::NewSessionInWorkspace".*?"sidebar::ToggleThreadSwitcher".*?"sessions::SwitchSessions".*?"sidebar::ToggleThreadHistory".*?"sessions::ToggleAgentHistory"' \
+    '"workspace::NewTerminal".*?"terminal::OpenAgentTerminal".*?"agent::RenameSelectedThread".*?"agent_sessions::RenameSelectedSession".*?"agent::NewTerminalThread".*?"terminal::OpenAgentTerminalInWorkspace".*?"sidebar::NewSessionInGroup".*?"terminal::OpenAgentTerminalInSelectedWorkspace".*?"sidebar::NewThreadInGroup".*?"built_in_agent::NewSessionInWorkspace".*?"sidebar::ToggleThreadSwitcher".*?"projects::SwitchSessions".*?"sidebar::ToggleThreadHistory".*?"projects::ToggleAgentHistory"' \
     'the mixed Session Rail rename action can regress to Thread terminology or one Session type'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
-    '"agent::ArchiveSelectedThread".*?"sessions::RemoveSelectedSession"' \
+    '"agent::ArchiveSelectedThread".*?"agent_sessions::RemoveSelectedSession"' \
     'the mixed Session Rail removal action can regress to presenting every selected row as an Agent archive'
 require_multiline_pattern crates/agent_ui/src/draft_prompt_store.rs \
     'fn empty_draft_placeholder_for_product.*?app_name == "Zed".*?New \{agent_name\} Thread.*?New \{agent_name\} Session' \
@@ -1545,7 +1545,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn open_workspace_and_activate_thread_with_destination.*?this\.activate_thread\(metadata, &workspace, false, window, cx\);.*?if reveal_files \{.*?RevealFiles.*?fn open_workspace_and_activate_terminal_with_destination.*?this\.activate_terminal_in_workspace\(&workspace, metadata, false, window, cx\);.*?if reveal_files \{.*?RevealFiles' \
     'Files can regress to dispatching before a closed Session Workspace has been restored'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
-    '"sidebar::OpenSelectedReviewBrief".*?"sessions::OpenSelectedSessionDetails".*?"sidebar::ReturnToSelectedSession".*?"sessions: return to selected session".*?"sidebar::OpenSelectedSessionFiles".*?"sessions: open selected session files".*?"sidebar::ReviewSelectedSessionChanges".*?"sessions: review selected session changes"' \
+    '"agent::ArchiveSelectedThread".*?"agent_sessions::RemoveSelectedSession".*?"sidebar::OpenSelectedReviewBrief".*?"projects::OpenSelectedSessionDetails".*?\("sidebar::", "projects::"\).*?"sidebar::ReturnToSelectedSession".*?"projects: return to selected session".*?"sidebar::OpenSelectedSessionFiles".*?"projects: open selected session files".*?"sidebar::ReviewSelectedSessionChanges".*?"projects: review selected session changes"' \
     'the Command Palette can regress to implementation-shaped selected-session actions'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
     '"workspace::RevealFiles".*?"files::Open".*?humanize_action_name_for_product\("workspace::RevealFiles", "Dez"\).*?"files: open"' \
@@ -1704,7 +1704,7 @@ require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
     'let has_metadata = self\.metadata_visible[[:space:]]*&& labels_visible' \
     'ThreadItem visible metadata is no longer gated independently from accessible labels'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_search_visible\(.*?app_name == "Zed".*?session_count > 0 \|\| has_query.*?has_query \|\| is_focused \|\| is_open.*?fn session_search_control_visible.*?app_name != "Zed" && session_count > 1.*?fn session_rail_search_label.*?"Search Sessions".*?"Search Projects and Sessions"' \
+    'fn session_search_visible\(.*?app_name == "Zed".*?session_count > 0 \|\| has_query.*?has_query \|\| is_focused \|\| is_open.*?fn session_search_control_visible.*?app_name != "Zed" && session_count > 1.*?fn session_rail_search_label.*?"Search Sessions".*?"Search Projects".*?fn session_rail_search_placeholder.*?"Search sessions…".*?"Search Projects…".*?set_placeholder_text\(session_rail_search_placeholder\(APP_NAME\)' \
     'Dez Projects search can regress to a permanent row or inherited Sessions vocabulary'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_sidebar_header.*?let search_is_active.*?self\.session_search_open.*?let searchable_item_count =.*?project_header_indices\.len\(\).*?session_search_control_visible\(paths::APP_NAME, searchable_item_count\).*?&& !search_is_active.*?IconButton::new\("open-session-search", IconName::MagnifyingGlass\).*?tab_index\(0isize\).*?aria_label\(session_rail_search_label\(APP_NAME\)\).*?focus_sidebar_filter\(&FocusSidebarFilter' \
@@ -2140,7 +2140,7 @@ require_multiline_pattern crates/debugger_ui/src/canvas.rs \
     'fn debugger_background.*?CanvasContrast::Low => colors\.panel_background\.opacity\(0\.9\).*?CanvasContrast::Standard => colors\.panel_background.*?fn debugger_row_background.*?false, settings::CanvasContrast::Low.*?colors\.panel_background\.opacity\(0\.9\).*?false, settings::CanvasContrast::Standard.*?colors\.panel_background' \
     'Debug can regress to the Main Work Area editor material'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'const SESSION_NOTICES_MAX_VIEWPORT_FRACTION: f32 = 0\.42;.*?fn render_session_notices.*?\.id\("session-rail-notices"\).*?\.role\(gpui::Role::Region\).*?\.aria_label\("Session notices"\).*?\.max_h\(vh\(SESSION_NOTICES_MAX_VIEWPORT_FRACTION, window\)\).*?\.overflow_y_scroll\(\)' \
+    'const SESSION_NOTICES_MAX_VIEWPORT_FRACTION: f32 = 0\.42;.*?fn session_notices_accessibility_label\(app_name: &str\).*?"Session notices".*?"Workspace notices".*?fn render_session_notices.*?\.id\("session-rail-notices"\).*?\.role\(gpui::Role::Region\).*?\.aria_label\(session_notices_accessibility_label\(APP_NAME\)\).*?\.max_h\(vh\(SESSION_NOTICES_MAX_VIEWPORT_FRACTION, window\)\).*?\.overflow_y_scroll\(\)' \
     'simultaneous recovery notices can consume the Session Rail instead of yielding to its primary list'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_session_notices.*?impl Render for Sidebar.*?self\.render_session_notices\(window, cx\).*?self\.render_session_notices\(window, cx\)' \

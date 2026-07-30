@@ -1018,7 +1018,23 @@ fn session_rail_search_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Search Sessions"
     } else {
-        "Search Projects and Sessions"
+        "Search Projects"
+    }
+}
+
+fn session_rail_search_placeholder(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Search sessions…"
+    } else {
+        "Search Projects…"
+    }
+}
+
+fn session_notices_accessibility_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Session notices"
+    } else {
+        "Workspace notices"
     }
 }
 
@@ -2030,9 +2046,11 @@ mod session_start_state_tests {
             session_rail_accessibility_label("Dez"),
             "Projects and agent sessions"
         );
+        assert_eq!(session_rail_search_label("Dez"), "Search Projects");
+        assert_eq!(session_rail_search_placeholder("Dez"), "Search Projects…");
         assert_eq!(
-            session_rail_search_label("Dez"),
-            "Search Projects and Sessions"
+            session_notices_accessibility_label("Dez"),
+            "Workspace notices"
         );
         assert!(!session_search_control_visible("Dez", 1));
         assert!(session_search_control_visible("Dez", 2));
@@ -2051,6 +2069,11 @@ mod session_start_state_tests {
         assert_eq!(session_rail_hide_label("Dez"), "Hide Projects");
         assert_eq!(session_rail_menu_label("Dez"), "Projects Menu");
         assert_eq!(session_rail_search_label("Zed"), "Search Sessions");
+        assert_eq!(session_rail_search_placeholder("Zed"), "Search sessions…");
+        assert_eq!(
+            session_notices_accessibility_label("Zed"),
+            "Session notices"
+        );
         assert_eq!(session_rail_hide_label("Zed"), "Hide Sessions");
         assert!(!session_overview_create_action_visible("Dez", 0));
         assert!(!session_overview_create_action_visible("Dez", 1));
@@ -4302,7 +4325,7 @@ impl Sidebar {
 
         let filter_editor = cx.new(|cx| {
             let mut editor = Editor::single_line(window, cx);
-            editor.set_placeholder_text("Search sessions…", window, cx);
+            editor.set_placeholder_text(session_rail_search_placeholder(APP_NAME), window, cx);
             editor
         });
         let thread_rename_editor = cx.new(|cx| Editor::single_line(window, cx));
@@ -15556,7 +15579,7 @@ impl Sidebar {
             v_flex()
                 .id("session-rail-notices")
                 .role(gpui::Role::Region)
-                .aria_label("Session notices")
+                .aria_label(session_notices_accessibility_label(APP_NAME))
                 .flex_none()
                 .min_h_0()
                 .max_h(vh(SESSION_NOTICES_MAX_VIEWPORT_FRACTION, window))

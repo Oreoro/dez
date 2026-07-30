@@ -2188,7 +2188,7 @@ code, all launch gates pass, and known limitations are documented.
 Completed for the responsive recovery-surface slice:
 
 - simultaneous Workspace and terminal-service failures render inside one
-  labeled **Session notices** region;
+  labeled **Workspace notices** region;
 - the notice region scrolls and is capped below half the viewport, leaving most
   of the window for the session list and Main Work Area;
 - empty Main Work Area and unavailable-terminal recovery surfaces scroll
