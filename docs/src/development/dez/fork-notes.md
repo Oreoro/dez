@@ -1657,6 +1657,17 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   explicit path-matched tmux, Herdr, and cmux activity remains attached to its
   owning Workspace. This also supersedes the **Machine Terminals** visibility
   decisions below.
+- **2026-07-30: Agent Session import is explicit, not promotional.** Dez does
+  not insert ACP or cross-channel import banners into Workspaces. Compatible
+  session import remains available from the native Agent History surface, so
+  the capability stays discoverable without turning navigation into
+  onboarding. Official Zed retains its inherited promotions.
+- **2026-07-30: Unrelated TTY observation is disabled, not merely hidden.**
+  Dez does not initialize the legacy machine-terminal store or poll `/bin/ps`
+  every five seconds for rows the product excludes. Explicit path-matched
+  tmux, Herdr, and cmux discovery remains available through documented
+  interfaces and preserves external ownership. This supersedes the earlier
+  machine-terminal observation decisions below.
 - **2026-07-28: Workspace rows navigate; disclosure controls fold.** Selecting
   or confirming a Workspace row activates that codebase in the Main Work Area.
   Expansion is a separate chevron action and remains available through the

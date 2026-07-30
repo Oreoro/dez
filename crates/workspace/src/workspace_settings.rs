@@ -357,7 +357,7 @@ impl Settings for SidebarSettings {
                 settings::CanvasSide::Left => SidebarDockPosition::Left,
                 settings::CanvasSide::Right => SidebarDockPosition::Right,
             });
-        // Projects is a global navigator, not a panel tab. Its startup state
+        // Workspaces is a global navigator, not a panel tab. Its startup state
         // therefore remains independent from the contextual pane-grid model.
         let sidebar_starts_open = sidebar.starts_open.unwrap();
         let starts_open = !session_rail_hidden && (sidebar_starts_open || session_rail_always_open);

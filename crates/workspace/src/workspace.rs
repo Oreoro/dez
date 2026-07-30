@@ -9410,7 +9410,7 @@ impl Workspace {
     }
 
     /// Keeps the two contextual right-side surfaces mutually exclusive. The
-    /// global Projects navigator remains visible independently.
+    /// global Workspaces navigator remains visible independently.
     fn prepare_dez_auxiliary_pane_for_reveal(
         &mut self,
         pane_kind: PaneKind,

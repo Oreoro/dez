@@ -321,6 +321,10 @@ fn session_onboarding_uses_gradient(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
+fn session_import_promotions_visible(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 fn agent_session_label(
     app_name: &str,
     upstream_thread_label: &'static str,
@@ -392,6 +396,8 @@ mod agent_session_label_tests {
         assert!(!terminal_activation_failure_uses_placeholder_surface("Dez"));
         assert!(session_onboarding_uses_gradient("Zed"));
         assert!(!session_onboarding_uses_gradient("Dez"));
+        assert!(session_import_promotions_visible("Zed"));
+        assert!(!session_import_promotions_visible("Dez"));
         assert!(session_scope_controls_visible("Zed", 1, 0, false));
         assert!(!session_scope_controls_visible("Dez", 4, 0, false));
         assert!(session_scope_controls_visible("Dez", 4, 1, false));
@@ -16379,6 +16385,10 @@ impl Sidebar {
     }
 
     fn should_render_acp_import_onboarding(&self, cx: &App) -> bool {
+        if !session_import_promotions_visible(APP_NAME) {
+            return false;
+        }
+
         let has_external_agents = self
             .active_workspace(cx)
             .map(|ws| {
@@ -16419,7 +16429,7 @@ impl Sidebar {
     }
 
     fn should_render_cross_channel_import_onboarding(&self, cx: &App) -> bool {
-        APP_NAME == "Zed"
+        session_import_promotions_visible(APP_NAME)
             && !CrossChannelImportOnboarding::dismissed(cx)
             && !self.cross_channel_import_channels.is_empty()
     }
