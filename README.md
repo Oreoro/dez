@@ -126,7 +126,7 @@ Dez ships with an attributed adaptation of
 
 - **Lumin Blur** in dark mode;
 - **Lumin Light** in light mode;
-- **IBM Plex Sans** for native interface chrome and readable onboarding;
+- **IBM Plex Sans** for native interface chrome and readable Settings;
 - **Lilex** for editor, terminal, prompt, and review code;
 - **Dez (Default)** as the product-facing built-in file and folder icon set;
 - distinct Projects navigation, Main Work Area, native tab, and elevated-menu surfaces;
@@ -140,6 +140,12 @@ The first-run visual profile keeps the native status bar visible with the
 active file, language, line endings, diagnostics, and cursor context. Empty
 Main Work Area panes use compact top-left editor chrome and direct actions
 instead of a centered onboarding or workflow overlay.
+
+Fresh Dez windows open the native launchpad and do not auto-read a previous
+Workspace folder. This avoids turning a stale recent path into a macOS privacy
+prompt at startup. Development snapshots are ad-hoc signed, so macOS can ask
+again when the build identity changes; a publisher-signed release is required
+for a durable folder grant.
 
 ## Current status
 

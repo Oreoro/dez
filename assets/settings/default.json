@@ -155,14 +155,16 @@
   // Whether to confirm before quitting Dez.
   "confirm_quit": false,
   // Whether to restore the last closed project when a fresh Dez instance opens.
-  // May take 3 values:
+  // May take 4 values:
   //  1. All workspaces open during last session
   //         "restore_on_startup": "last_session"
   //  2. The workspace opened
   //         "restore_on_startup": "last_workspace",
   //  3. Do not restore previous workspaces
   //         "restore_on_startup": "none",
-  "restore_on_startup": "last_session",
+  //  4. Open the native launchpad without touching previous Workspace folders
+  //         "restore_on_startup": "launchpad",
+  "restore_on_startup": "launchpad",
   // The default behavior when opening paths from the CLI without
   // an explicit `-e` (existing window) or `-n` (new window) flag.
   //

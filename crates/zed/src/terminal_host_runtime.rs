@@ -22,6 +22,7 @@ use uuid::Uuid;
 
 const TERMINAL_HOST_CONNECT_ATTEMPTS: usize = 40;
 const TERMINAL_HOST_CONNECT_INTERVAL: Duration = Duration::from_millis(50);
+const DEZ_TERMINAL_HOST_RUNTIME_DIRECTORY: &str = "dez-terminal-host-v0.1";
 
 struct GlobalTerminalHostRuntime(Entity<TerminalHostRuntime>);
 
@@ -181,12 +182,20 @@ struct TerminalHostRuntimePaths {
 }
 
 fn prepare_runtime_paths() -> Result<TerminalHostRuntimePaths> {
-    let directory = paths::state_dir().join("terminal-host");
+    let directory = terminal_host_runtime_directory(paths::state_dir(), paths::APP_NAME);
     create_private_directory(&directory)?;
     Ok(TerminalHostRuntimePaths {
         socket: directory.join("local.sock"),
         token: directory.join("auth.token"),
     })
+}
+
+fn terminal_host_runtime_directory(state_dir: &Path, app_name: &str) -> PathBuf {
+    if app_name == "Zed" {
+        state_dir.join("terminal-host")
+    } else {
+        state_dir.join(DEZ_TERMINAL_HOST_RUNTIME_DIRECTORY)
+    }
 }
 
 #[cfg(unix)]
@@ -317,4 +326,22 @@ fn terminal_host_executable() -> Result<PathBuf> {
         helper.display()
     );
     Ok(helper)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dez_v0_1_does_not_reuse_a_legacy_terminal_host_socket() {
+        let state_dir = Path::new("/state");
+        assert_eq!(
+            terminal_host_runtime_directory(state_dir, "Dez"),
+            state_dir.join("dez-terminal-host-v0.1")
+        );
+        assert_eq!(
+            terminal_host_runtime_directory(state_dir, "Zed"),
+            state_dir.join("terminal-host")
+        );
+    }
 }

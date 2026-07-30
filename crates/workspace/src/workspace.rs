@@ -519,11 +519,7 @@ impl CanvasLayoutRecipe {
             return None;
         }
 
-        match self {
-            Self::Full | Self::AgentControl | Self::EditorFocus => Some(1),
-            Self::CodeRunObserve | Self::Review | Self::Debug => Some(2),
-            _ => None,
-        }
+        Some(1)
     }
 
     fn root_axis_for_size(
@@ -17337,7 +17333,7 @@ mod tests {
         );
         assert_eq!(
             CanvasLayoutRecipe::Review.main_work_area_limit_for_app("Dez"),
-            Some(2)
+            Some(1)
         );
         assert_eq!(
             CanvasLayoutRecipe::Review.main_work_area_limit_for_app("Zed"),

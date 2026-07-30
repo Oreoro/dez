@@ -128,12 +128,14 @@ compact icons, but every control has a specific accessible name, tooltip, and
 place in the keyboard tab order. A critical action is never available only on
 pointer hover.
 
-First run follows the same rule. Setup is a top-anchored editor page for theme,
-keymap, optional Agent providers, imports, and trust preferences. A short
-in-flow list explains the Run, Supervise, Review loop. It does not open a
-pathless terminal, expose hook installation, or place a promotional card over
-the Workspace. **Finish Setup** returns to the normal Workspace activation
-flow.
+First run follows the same rule. Dez opens its native Home/launchpad rather
+than a separate setup page, modal tour, floating card, or restored split.
+Theme, keymap, optional Agent providers, imports, and trust preferences stay in
+native Settings. The launchpad does not touch a previous Workspace folder
+until the user opens it, avoiding a startup privacy prompt for a stale recent
+path. A stable signed release can retain the resulting macOS folder grant;
+ad-hoc development snapshots may be asked again after their code identity
+changes.
 
 Home keeps that first choice concrete. Without a Workspace, its start
 actions are **Open Workspace** and **Clone Repository**. Dez does not offer an
@@ -430,12 +432,10 @@ Session in the Agent work area.
 ### 5. Resume honestly
 
 Workspace composition and agent-session metadata are restored where the source
-owns them. If a saved terminal cannot be reconnected, Dez preserves its title
-and displays one **Terminal unavailable** warning. It does not silently start a
-replacement shell or print fake recovery text into the terminal grid.
-
-**Start Fresh Terminal** creates separate computation in the Main Work Area; it
-does not claim to reconnect, replay, or replace the unavailable Session.
+owns them. If a saved terminal cannot be reconnected, Dez drops that stale
+restored tab instead of silently starting a replacement shell, printing fake
+recovery text, or filling the Main Work Area with unavailable placeholders. A
+fresh terminal is always separate computation.
 
 If the terminal service itself is connecting, reconnecting, or failed, Sessions
 states whether any shell started and whether running processes were touched.
@@ -490,6 +490,12 @@ reconnecting state with diagnostics instead. Source or partial installations
 without the helper retain the ordinary in-process path. Task terminals remain
 GUI-owned because retaining a task after the UI reports cancellation would be
 dishonest, and remote terminals retain their remote owner.
+
+The v0.1 helper uses a versioned Dez runtime socket. A helper left alive by a
+pre-v0.1 mounted snapshot cannot accept a newer GUI connection and make
+Workspace terminals appear inert. Legacy unavailable terminal tabs are
+skipped during restore; opening a fresh terminal creates a current
+v0.1-owned Session.
 
 On macOS, Projects can list current-user TTYs from another supported terminal
 application or IDE under **External Sessions**. These machine rows are

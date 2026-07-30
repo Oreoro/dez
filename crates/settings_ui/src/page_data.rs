@@ -551,7 +551,11 @@ fn general_page(cx: &App) -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Restore On Startup",
-                description: "What to restore from the previous App Session when opening Dez.",
+                description: if paths::APP_NAME == "Zed" {
+                    "What to restore from the previous App Session when opening Zed."
+                } else {
+                    "Choose whether Dez opens the permission-safe launchpad, one previous Workspace, or a previous App Session. Launchpad is the default and does not touch Workspace folders until you open one."
+                },
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("restore_on_startup"),
