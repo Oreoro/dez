@@ -138,6 +138,9 @@ Dez ships with an attributed adaptation of
 
 The application follows the operating system appearance by default. All theme
 and typography roles remain configurable through normal settings.
+**Settings → Appearance → Restore Native Dez Appearance** provides one scoped
+recovery route for the full visual profile, while **Navigation & Layout →
+Show Status Bar** exposes the native status strip directly.
 
 The first-run visual profile keeps the native status bar visible with the
 active file, language, line endings, diagnostics, and cursor context. Empty

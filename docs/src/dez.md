@@ -549,10 +549,12 @@ remains available through **View** and Command Search. **Settings → Workspaces
 prefer that layout. Closing Workspaces never closes a Workspace, terminal, or
 Agent Session.
 
-If imported settings hide that identity, **Dez → Settings → Restore Dez Visual
-Profile** restores Lumin, balanced density, IBM Plex Sans, Lilex, the built-in
-Dez icons, native tab navigation, and the editor status bar while preserving
-font sizes and unrelated preferences.
+If imported settings hide that identity, **Settings → Appearance → Restore
+Native Dez Appearance** restores Lumin, balanced density, IBM Plex Sans, Lilex,
+the built-in Dez icons, native tab navigation, and the editor status bar while
+preserving font sizes and unrelated preferences. The same recovery remains
+available from **Dez → Settings → Restore Dez Visual Profile** and Command
+Search.
 
 ### Keyboard and Vim
 

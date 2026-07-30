@@ -205,6 +205,9 @@ require_multiline_pattern assets/settings/default.json \
 require_multiline_pattern assets/settings/initial_user_settings.json \
     '"ui_font_family": "IBM Plex Sans".*?"buffer_font_family": "Lilex".*?"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"design_system": \{.*?"density": "balanced".*?"terminal": \{.*?"font_family": "Lilex".*?"font_size": 14' \
     'first-run settings can override Dez with stale themes or typography'
+require_pattern assets/settings/initial_user_settings.json \
+    'Workspaces stays closed until cross-Workspace supervision is useful' \
+    'the generated first-run settings can regress to inherited Projects vocabulary'
 require_multiline_pattern assets/settings/initial_user_settings.json \
     '"icon_theme": "Dez \(Default\)".*?"markdown_preview_code_font_family": "Lilex"' \
     'first-run settings can omit the Dez icons or coherent Markdown code font'
@@ -554,6 +557,12 @@ require_pattern crates/settings_ui/src/page_data.rs \
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'if paths::APP_NAME != "Zed".*?pages\.sort_by_key\(\|page\| dez_settings_page_priority\(page\.title\)\).*?fn dez_settings_page_priority.*?"Workspace & Privacy" => 0.*?"Workspaces & Terminals" => 1.*?"Agents" => 2.*?"Attention" => 3.*?"Evidence" => 4.*?"Navigation & Layout" => 10.*?"Workspace Tools" => 11.*?"Advanced" => 15' \
     'Dez Settings can regress to burying its product workflow below inherited IDE customization'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'fn appearance_page\(\) -> SettingsPage.*?fn dez_visual_profile_section.*?paths::APP_NAME == "Zed".*?return Vec::new\(\).*?SectionHeader\("Dez Visual Profile"\).*?title: "Restore Native Dez Appearance".*?button_text: "Restore Profile".*?zed_actions::dez::RestoreVisualProfile\.boxed_clone\(\).*?original_window\.activate_window\(\).*?window\.remove_window\(\).*?dez_visual_profile_section\(\).*?theme_section\(\)' \
+    'graphical Appearance settings can regress to losing the scoped Dez visual-profile recovery action'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'fn status_bar_visibility_setting_visible\(app_name: &str, json_path: Option<&str>\).*?app_name != "Zed" \|\| json_path != Some\("status_bar\.experimental\.show"\).*?fn status_bar_section.*?SectionHeader\("Status Bar"\).*?title: "Show Status Bar".*?native Workspace status bar.*?json_path: Some\("status_bar\.experimental\.show"\).*?status_bar\.as_ref\(\)\?\.show\.as_ref\(\).*?status_bar\.get_or_insert_default\(\)\.show = value.*?status_bar_visibility_setting_visible' \
+    'Dez Settings can regress to hiding the native status-bar recovery preference'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'developer_settings_page_visible\(paths::APP_NAME, cx\.feature_flag_overrides_enabled\(\)\).*?pages\.push\(developer_page\(cx\)\).*?fn developer_settings_page_visible.*?app_name == "Zed" \|\| feature_flag_overrides_enabled' \
     'Dez Settings can regress to exposing staff instrumentation in the public navigation'

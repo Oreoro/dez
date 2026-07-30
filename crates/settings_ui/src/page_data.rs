@@ -726,6 +726,43 @@ fn general_page(cx: &App) -> SettingsPage {
 }
 
 fn appearance_page() -> SettingsPage {
+    fn dez_visual_profile_section() -> Vec<SettingsPageItem> {
+        if paths::APP_NAME == "Zed" {
+            return Vec::new();
+        }
+
+        vec![
+            SettingsPageItem::SectionHeader("Dez Visual Profile"),
+            SettingsPageItem::ActionLink(ActionLink {
+                title: "Restore Native Dez Appearance".into(),
+                description: Some(
+                    "Restore Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the editor status bar. Font sizes and unrelated preferences stay unchanged."
+                        .into(),
+                ),
+                button_text: "Restore Profile".into(),
+                on_click: Arc::new(|settings_window, window, cx| {
+                    let Some(original_window) = settings_window.original_window else {
+                        return;
+                    };
+                    if let Err(error) =
+                        original_window.update(cx, |_multi_workspace, original_window, cx| {
+                            original_window.dispatch_action(
+                                zed_actions::dez::RestoreVisualProfile.boxed_clone(),
+                                cx,
+                            );
+                            original_window.activate_window();
+                        })
+                    {
+                        log::error!("failed to restore the Dez visual profile: {error}");
+                        return;
+                    }
+                    window.remove_window();
+                }),
+                files: USER,
+            }),
+        ]
+    }
+
     fn theme_section() -> [SettingsPageItem; 3] {
         [
             SettingsPageItem::SectionHeader("Theme"),
@@ -1708,6 +1745,7 @@ fn appearance_page() -> SettingsPage {
     }
 
     let items: Box<[SettingsPageItem]> = concat_sections!(
+        dez_visual_profile_section(),
         theme_section(),
         buffer_font_section(),
         ui_font_section(),
@@ -4147,10 +4185,30 @@ fn dez_terminal_panel_setting_visible(app_name: &str, json_path: Option<&str>) -
         )
 }
 
+fn status_bar_visibility_setting_visible(app_name: &str, json_path: Option<&str>) -> bool {
+    app_name != "Zed" || json_path != Some("status_bar.experimental.show")
+}
+
 fn window_and_layout_page() -> SettingsPage {
     fn status_bar_section() -> Vec<SettingsPageItem> {
         [
             SettingsPageItem::SectionHeader("Status Bar"),
+            SettingsPageItem::SettingItem(SettingItem {
+                title: "Show Status Bar",
+                description: "Keep the native Workspace status bar visible for active file, diagnostics, language, line endings, and cursor position.",
+                field: Box::new(SettingField {
+                    organization_override: None,
+                    json_path: Some("status_bar.experimental.show"),
+                    pick: |settings_content| {
+                        settings_content.status_bar.as_ref()?.show.as_ref()
+                    },
+                    write: |settings_content, value, _| {
+                        settings_content.status_bar.get_or_insert_default().show = value;
+                    },
+                }),
+                metadata: None,
+                files: USER,
+            }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Active Language Button",
                 description: "Show the active language button in the status bar.",
@@ -4345,6 +4403,10 @@ fn window_and_layout_page() -> SettingsPage {
         .filter(|item| match item {
             SettingsPageItem::SettingItem(item) => {
                 dez_terminal_panel_setting_visible(paths::APP_NAME, item.field.json_path())
+                    && status_bar_visibility_setting_visible(
+                        paths::APP_NAME,
+                        item.field.json_path(),
+                    )
             }
             SettingsPageItem::SectionHeader(_)
             | SettingsPageItem::SubPageLink(_)
@@ -11507,6 +11569,18 @@ mod tests {
         assert!(dez_terminal_panel_setting_visible(
             "Dez",
             Some("terminal.shell$")
+        ));
+        assert!(status_bar_visibility_setting_visible(
+            "Dez",
+            Some("status_bar.experimental.show")
+        ));
+        assert!(!status_bar_visibility_setting_visible(
+            "Zed",
+            Some("status_bar.experimental.show")
+        ));
+        assert!(status_bar_visibility_setting_visible(
+            "Zed",
+            Some("status_bar.active_language_button")
         ));
 
         assert!(!dez_privacy_setting_visible(

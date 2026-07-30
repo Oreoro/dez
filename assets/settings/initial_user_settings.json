@@ -1,7 +1,7 @@
 // Dez settings
 //
 // Dez starts with one native Main Work Area for files, terminals, tools, and
-// review. Projects stays closed until cross-Workspace supervision is useful.
+// review. Workspaces stays closed until cross-Workspace supervision is useful.
 // Balanced Lumin chrome, IBM Plex Sans interface text, and Lilex code and
 // terminal text keep those native surfaces visually coherent.
 //

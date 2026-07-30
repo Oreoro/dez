@@ -623,12 +623,14 @@ defaults. They must not pin a stale upstream theme or oversized typography that
 makes a fresh install look different from the intended Dez experience. Users
 remain free to override every role through normal settings.
 
-The app menu and command palette expose **Restore Dez Visual Profile** as an
-explicit recovery path. It writes only the system-selected Lumin Light/Lumin
-Blur pair, compact density, **Dez (Default)** icons, IBM Plex Sans for the
-interface, and Lilex for buffer, terminal, and Markdown code roles. It
+Graphical **Settings → Appearance**, the app menu, and Command Search expose
+the scoped Dez visual-profile recovery action. It writes only the
+system-selected Lumin Light/Lumin Blur pair, balanced density, **Dez
+(Default)** icons, IBM Plex Sans for the interface, Lilex for buffer, terminal,
+and Markdown code roles, native tab controls, and the editor status bar. It
 preserves sizes and unrelated settings, waits for persistence, and shows
-success only after the write completes.
+success only after the write completes. **Navigation & Layout → Show Status
+Bar** also exposes the underlying native visibility preference directly.
 
 The upgrade path recognizes only known exact Dez-generated profile signatures.
 The first used `.ZedSans` beside Lumin; the earlier installed profile also
