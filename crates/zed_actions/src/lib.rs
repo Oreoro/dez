@@ -93,7 +93,29 @@ pub mod dez {
         dez,
         [
             /// Restores the bundled Lumin, Lilex, IBM Plex Sans, and Dez icon visual profile.
-            RestoreVisualProfile
+            RestoreVisualProfile,
+            /// Opens the active local Workspace in cmux while keeping Dez open.
+            OpenWorkspaceInCmux
+        ]
+    );
+}
+
+pub mod terminal {
+    use gpui::actions;
+
+    actions!(
+        terminal,
+        [
+            /// Opens the configured agent command in a native Main Work Area terminal.
+            OpenAgentTerminal,
+            /// Opens the configured shell in a native Main Work Area terminal.
+            OpenShellTerminal,
+            /// Opens Codex in a native Main Work Area terminal.
+            OpenCodexTerminal,
+            /// Opens Claude Code in a native Main Work Area terminal.
+            OpenClaudeCodeTerminal,
+            /// Opens OpenCode in a native Main Work Area terminal.
+            OpenOpenCodeTerminal
         ]
     );
 }

@@ -218,11 +218,32 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn resolve_terminal_startup_command.*?app_name != "Zed".*?AgentSettings::get_global\(cx\)\.terminal_init_command\.clone\(\).*?start_init_command_startup_handshake.*?TERMINAL_STARTUP_COMMAND_TIMEOUT.*?write_init_command_after_startup' \
     'native agent launchers can regress to bypassing the configured shell or startup handshake'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
-    'Default Agent Terminal Command.*?Use codex, claude, opencode.*?fn terminal_session_init_setting_visible.*?true' \
+    'Default Agent Terminal Command.*?Ctrl\+`.*?Command Search.*?Codex, Claude Code, or OpenCode.*?fn terminal_session_init_setting_visible.*?true' \
     'Settings can regress to hiding the native Dez agent-terminal default'
+require_multiline_pattern crates/zed_actions/src/lib.rs \
+    'pub mod dez.*?OpenWorkspaceInCmux.*?pub mod terminal.*?OpenAgentTerminal.*?OpenShellTerminal.*?OpenCodexTerminal.*?OpenClaudeCodeTerminal.*?OpenOpenCodeTerminal' \
+    'Dez can regress from first-class native terminal and cmux actions to buried menu-only launchers'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'register_action\(open_agent_terminal\).*?register_action\(open_shell_terminal\).*?register_action\(open_codex_terminal\).*?register_action\(open_claude_code_terminal\).*?register_action\(open_opencode_terminal\).*?fn open_agent_terminal.*?paths::APP_NAME == "Zed".*?new_terminal.*?prepare_agent_terminal_workspace.*?TerminalView::deploy.*?fn open_shell_terminal.*?prepare_agent_terminal_workspace.*?startup_command: Some\(String::new\(\)\).*?fn open_codex_terminal.*?prepare_agent_terminal_workspace.*?"codex".*?fn open_claude_code_terminal.*?prepare_agent_terminal_workspace.*?"claude".*?fn open_opencode_terminal.*?prepare_agent_terminal_workspace.*?"opencode".*?fn prepare_agent_terminal_workspace.*?worktrees\(cx\).*?paths::APP_NAME == "Zed" \|\| has_workspace.*?OpenWorkspace \{.*?create_new_window: Some\(false\)' \
+    'native provider launchers can regress to the wrong terminal surface, ignore the configured default, or disappear from Workspace action routing'
+require_multiline_pattern crates/command_palette/src/command_palette.rs \
+    'TypeId::of::<zed_actions::terminal::OpenAgentTerminal>.*?TypeId::of::<zed_actions::terminal::OpenOpenCodeTerminal>.*?TypeId::of::<NewTerminal>.*?"terminal::OpenShellTerminal".*?"terminal::OpenShell".*?"terminal::OpenCodexTerminal".*?"terminal::LaunchCodex".*?"terminal::OpenClaudeCodeTerminal".*?"terminal::LaunchClaudeCode".*?"terminal::OpenOpenCodeTerminal".*?"terminal::LaunchOpenCode".*?"dez::OpenWorkspaceInCmux".*?"workspace::OpenInCmux"' \
+    'Command Search can regress to exposing the obsolete terminal action or hiding product-named provider and cmux launchers'
+require_multiline_pattern assets/keymaps/default-macos.json \
+    '"ctrl-~": "terminal::OpenShellTerminal".*?"ctrl-`": "terminal::OpenAgentTerminal"' \
+    'macOS can regress from workspace-first agent and explicit shell terminal shortcuts'
+require_multiline_pattern assets/keymaps/default-linux.json \
+    '"ctrl-~": "terminal::OpenShellTerminal".*?"ctrl-`": "terminal::OpenAgentTerminal"' \
+    'Linux can regress from workspace-first agent and explicit shell terminal shortcuts'
+require_multiline_pattern assets/keymaps/default-windows.json \
+    '"ctrl-shift-`": "terminal::OpenShellTerminal".*?"ctrl-`": "terminal::OpenAgentTerminal"' \
+    'Windows can regress from workspace-first agent and explicit shell terminal shortcuts'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn open_workspace_path_in_cmux.*?/Applications/cmux\.app/Contents/Resources/bin/cmux.*?Command::new\(program\)\.arg\(path\)\.output\(\).*?Open Workspace in cmux.*?configured_terminal_launcher_label.*?Native Shell.*?Codex.*?Claude Code.*?OpenCode' \
     'Workspace Options can regress from explicit cmux handoff and native agent launch choices'
+require_multiline_pattern crates/zed/src/zed.rs \
+    'OpenWorkspaceInCmux.*?project_group_key\(cx\).*?ordered_paths\(\).*?cmux handoff needs a local Workspace.*?Opening this Workspace in cmux.*?sidebar::open_workspace_path_in_cmux.*?MultiplexerSessionStore::try_global.*?Opened \{path_label\} in cmux.*?store\.refresh' \
+    'the global cmux action can regress to a dead command, silent failure, or stale external Session state'
 require_multiline_pattern crates/onboarding/src/onboarding.rs \
     'fn onboarding_toggles_left_dock\(app_name: &str\) -> bool \{.*?app_name == "Zed".*?fn onboarding_surface_label.*?"Set Up Dez".*?if onboarding_toggles_left_dock\(APP_NAME\).*?workspace\.toggle_dock\(DockPosition::Left.*?fn tab_content_text.*?onboarding_surface_label\(APP_NAME\)' \
     'Dez setup can regress to opening an unrelated dock or using generic onboarding tab identity'
@@ -2150,7 +2171,7 @@ require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'fn product_menu_label.*?if app_name == "Zed".*?zed_label.*?dez_label.*?"Open Workspace Settings".*?"Add Folder to Workspace…".*?"Close Workspace".*?"Find in Workspace"' \
     'top-level Dez menus can regress to upstream Project vocabulary'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
-    'product_menu_label\(APP_NAME, "Sessions", "Session Rail"\).*?product_menu_label\(APP_NAME, "Open Agent Terminal", "New Terminal"\)' \
+    'product_menu_label\(APP_NAME, "Sessions", "Session Rail"\).*?if APP_NAME == "Zed".*?MenuItem::action\("New Terminal", workspace::NewTerminal::default\(\)\).*?MenuItem::action\(.*?"Open Agent Terminal".*?zed_actions::terminal::OpenAgentTerminal' \
     'top-level Dez menus can regress to architectural rail jargon or ambiguous terminal creation copy'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     '"Open Local Diagnostics Log".*?"Open Source Licenses".*?Menu::new\("Upstream Zed"\).*?"Documentation".*?"Repository"' \

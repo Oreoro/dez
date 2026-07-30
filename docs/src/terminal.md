@@ -26,19 +26,25 @@ and explicit `project_panel.starts_open` preferences remain respected.
 
 ## Opening Terminals
 
-| Action            | macOS         | Linux/Windows  |
-| ----------------- | ------------- | -------------- |
-| Open new terminal | `` Ctrl+` ``  | `` Ctrl+` ``   |
-| Command palette   | `Cmd+Shift+P` | `Ctrl+Shift+P` |
-| Split terminal    | `Cmd+D`       | `Ctrl+Shift+5` |
+| Action                         | macOS               | Linux/Windows       |
+| ------------------------------ | ------------------- | ------------------- |
+| Open configured agent terminal | `` Ctrl+` ``        | `` Ctrl+` ``        |
+| Open shell terminal            | `` Ctrl+Shift+` ``  | `` Ctrl+Shift+` ``  |
+| Command palette                | `Cmd+Shift+P`       | `Ctrl+Shift+P`      |
+| Split terminal                 | `Cmd+D`             | `Ctrl+Shift+5`      |
 
-You can also choose **Open Agent Terminal** from Projects or an empty Workspace.
-This opens a normal terminal in the Main Work Area; it does not start an agent
-for you. Run `codex`, `claude`, `opencode`, or another supported CLI in that
-terminal. Dez promotes the same terminal into the matching Project when it detects the
-agent. The add control stays available when focus moves to Workspace Tools or
-Agent; those auxiliary regions have their own hide controls and never present a
-second terminal destination.
+**Open Agent Terminal** opens a normal terminal in the Main Work Area and runs
+the **Default Agent Terminal Command** after the configured shell is ready. A
+blank command keeps the shell prompt. Command Search also exposes **Open
+Shell**, **Launch Codex**, **Launch Claude Code**, and **Launch OpenCode**, so
+switching providers does not require changing the default. These commands,
+Projects, the tab-strip add control, and an empty Workspace all converge on the
+same native terminal Surface.
+
+Dez promotes that terminal into the matching Project when it detects a
+supported agent. The add control stays available when focus moves to Workspace
+Tools or Built-in Agent; those auxiliary regions have their own hide controls
+and never present a second terminal destination.
 
 ### One Terminal Model
 
@@ -96,6 +102,11 @@ terminal. A cmux Workspace opens in cmux through `select-workspace`; Dez does
 not manufacture an attachment terminal for it. The external application
 remains authoritative, closing a Dez tab detaches rather than terminates, and
 Dez never requests a Herdr takeover automatically.
+
+For the current local codebase, **Workspace: Open in cmux** in Command Search
+hands the Workspace path to cmux and keeps the Dez window intact. It reports
+success or the exact launch failure through a native toast and refreshes the
+external Session projection afterward.
 
 For cmux installed from its DMG or Homebrew cask, Dez checks the CLI bundled at
 `/Applications/cmux.app/Contents/Resources/bin/cmux` as well as standard

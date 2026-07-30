@@ -75,6 +75,10 @@ use workspace::{
         Direction, SearchEvent, SearchOptions, SearchToken, SearchableItem, SearchableItemHandle,
     },
 };
+use zed_actions::terminal::{
+    OpenAgentTerminal, OpenClaudeCodeTerminal, OpenCodexTerminal, OpenOpenCodeTerminal,
+    OpenShellTerminal,
+};
 
 struct ImeState {
     marked_text: String,
@@ -577,6 +581,11 @@ pub fn init(cx: &mut App) {
         workspace.set_terminal_provider(WorkspaceTerminalProvider(terminal_provider));
         workspace.register_action(TerminalView::deploy);
         workspace.register_action(new_terminal);
+        workspace.register_action(open_agent_terminal);
+        workspace.register_action(open_shell_terminal);
+        workspace.register_action(open_codex_terminal);
+        workspace.register_action(open_claude_code_terminal);
+        workspace.register_action(open_opencode_terminal);
         workspace.register_action(open_terminal);
         if let Some(window) = window
             && let Some((database_id, serialization_key)) = workspace
@@ -839,6 +848,112 @@ fn new_terminal(
         }
     })
     .detach_and_log_err(cx);
+}
+
+fn open_agent_terminal(
+    workspace: &mut Workspace,
+    _: &OpenAgentTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if paths::APP_NAME == "Zed" {
+        new_terminal(workspace, &NewTerminal::default(), window, cx);
+    } else if prepare_agent_terminal_workspace(workspace, window, cx) {
+        TerminalView::deploy(workspace, &NewCenterTerminal::default(), window, cx);
+    }
+}
+
+fn open_shell_terminal(
+    workspace: &mut Workspace,
+    _: &OpenShellTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    TerminalView::deploy(
+        workspace,
+        &NewCenterTerminal {
+            local: false,
+            startup_command: Some(String::new()),
+        },
+        window,
+        cx,
+    );
+}
+
+fn open_codex_terminal(
+    workspace: &mut Workspace,
+    _: &OpenCodexTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "codex", window, cx);
+}
+
+fn open_claude_code_terminal(
+    workspace: &mut Workspace,
+    _: &OpenClaudeCodeTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "claude", window, cx);
+}
+
+fn open_opencode_terminal(
+    workspace: &mut Workspace,
+    _: &OpenOpenCodeTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "opencode", window, cx);
+}
+
+fn prepare_agent_terminal_workspace(
+    workspace: &Workspace,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) -> bool {
+    let has_workspace = workspace.project().read(cx).worktrees(cx).next().is_some();
+    if paths::APP_NAME == "Zed" || has_workspace {
+        return true;
+    }
+
+    window.dispatch_action(
+        OpenWorkspace {
+            create_new_window: Some(false),
+        }
+        .boxed_clone(),
+        cx,
+    );
+    false
+}
+
+fn open_terminal_with_startup_command(
+    workspace: &mut Workspace,
+    startup_command: &str,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    TerminalView::deploy(
+        workspace,
+        &NewCenterTerminal {
+            local: false,
+            startup_command: Some(startup_command.to_owned()),
+        },
+        window,
+        cx,
+    );
 }
 
 fn open_terminal(

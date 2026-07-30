@@ -78,8 +78,11 @@ from the default titlebar so the primary navigation remains obvious.
 Keyboard navigation remains first-class: macOS `⌘1`–`⌘8` selects native tabs
 and `⌘9` selects the last tab; Linux and Windows use `Alt+1`–`Alt+9`.
 `Ctrl+Tab` opens the recent-tab switcher, split-pane focus keeps the native
-Zed chords, and **Settings → Keyboard & Vim** exposes shortcut search,
-conflict inspection, base keymaps, and optional full Vim or Helix editing.
+Zed chords, `Ctrl+\`` opens the configured agent terminal, and
+`Ctrl+Shift+\`` always opens a shell. Command Search can launch Codex, Claude
+Code, OpenCode, a shell, or cmux directly. **Settings → Keyboard & Vim**
+exposes shortcut search, conflict inspection, base keymaps, and optional full
+Vim or Helix editing.
 
 From a selected Project Session row, `Enter` returns to the existing Session,
 `Shift+F` opens its Workspace files, `Shift+G` opens its change review, and

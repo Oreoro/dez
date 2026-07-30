@@ -154,7 +154,7 @@ fn terminal_session_init_setting_copy(app_name: &str) -> (&'static str, &'static
     } else {
         (
             "Default Agent Terminal Command",
-            "Command to run after Dez opens a native Workspace terminal. Use codex, claude, opencode, or another terminal-native agent; leave blank for your shell.",
+            "Command Dez runs in a native Workspace terminal from Ctrl+` or Open Agent Terminal. Leave blank for your shell, or use Command Search to open Shell, launch Codex, Claude Code, or OpenCode directly.",
         )
     }
 }

@@ -319,10 +319,14 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             name: "File".into(),
             disabled: false,
             items: vec![
-                MenuItem::action(
-                    product_menu_label(APP_NAME, "Open Agent Terminal", "New Terminal"),
-                    workspace::NewTerminal::default(),
-                ),
+                if APP_NAME == "Zed" {
+                    MenuItem::action("New Terminal", workspace::NewTerminal::default())
+                } else {
+                    MenuItem::action(
+                        "Open Agent Terminal",
+                        zed_actions::terminal::OpenAgentTerminal,
+                    )
+                },
                 MenuItem::action("New File", workspace::NewFile),
                 MenuItem::action("New Window", workspace::NewWindow),
                 MenuItem::separator(),

@@ -3137,7 +3137,7 @@ fn external_multiplexer_action_label(session: &ExternalMultiplexerSession) -> St
     }
 }
 
-fn open_workspace_path_in_cmux(path: &Path) -> Result<(), String> {
+pub fn open_workspace_path_in_cmux(path: &Path) -> Result<(), String> {
     for program in [
         "/Applications/cmux.app/Contents/Resources/bin/cmux",
         "/opt/homebrew/bin/cmux",

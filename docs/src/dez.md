@@ -290,6 +290,10 @@ Workspace Options exposes one native **Open Agent Terminal** submenu:
 The default command is editable under **Settings → Agents →
 Default Agent Terminal Command**; leaving it blank keeps a normal shell.
 Provider shortcuts are per-launch choices and never rewrite that setting.
+The same choices are native Command Search actions: **Terminal: Open Agent
+Terminal**, **Open Shell**, **Launch Codex**, **Launch Claude Code**, and
+**Launch OpenCode**. **Workspace: Open in cmux** hands the active local
+Workspace to cmux without replacing or closing Dez.
 Dez waits for the configured shell startup before submitting the selected
 command, so login-shell initialization, remote/WSL behavior, and native PTY
 keyboard handling remain intact.
@@ -563,7 +567,8 @@ The default tab model follows familiar browser behavior:
 | Move between split panes | `⌘K`, then arrow | `Ctrl+K`, then arrow | `Ctrl+W`, then `h/j/k/l` |
 | Projects | `⌘B` | `Ctrl+B` | Command Search |
 | Files | `⌘⇧E` | `Ctrl+Shift+E` | `Space f` |
-| New Terminal | `` Ctrl+` `` | `` Ctrl+` `` | Command Search |
+| Open configured agent terminal | `` Ctrl+` `` | `` Ctrl+` `` | Command Search |
+| Open shell terminal | `` Ctrl+Shift+` `` | `` Ctrl+Shift+` `` | Command Search |
 | Edit shortcuts | `⌘K ⌘S` | `Ctrl+K Ctrl+S` | Command Search |
 
 Number shortcuts activate tabs in the focused native pane; deliberate split

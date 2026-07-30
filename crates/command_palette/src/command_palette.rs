@@ -28,7 +28,9 @@ use postage::{sink::Sink, stream::Stream};
 use settings::Settings;
 use ui::{HighlightedLabel, KeyBinding, ListItem, ListItemSpacing, prelude::*};
 use util::ResultExt;
-use workspace::{DesignSystemSettings, ModalView, NewCenterTerminal, Workspace, WorkspaceSettings};
+use workspace::{
+    DesignSystemSettings, ModalView, NewCenterTerminal, NewTerminal, Workspace, WorkspaceSettings,
+};
 use zed_actions::{
     GetMerch, OpenAccountSettings, OpenDocs, OpenStatusPage, OpenZedUrl, command_palette::Toggle,
 };
@@ -53,7 +55,14 @@ fn product_hidden_action_namespaces(app_name: &str) -> &'static [&'static str] {
 
 fn product_hidden_action_types(app_name: &str) -> Vec<TypeId> {
     if app_name == "Zed" {
-        Vec::new()
+        vec![
+            TypeId::of::<zed_actions::dez::OpenWorkspaceInCmux>(),
+            TypeId::of::<zed_actions::terminal::OpenAgentTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenShellTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenCodexTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenClaudeCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenOpenCodeTerminal>(),
+        ]
     } else {
         vec![
             TypeId::of::<OpenAccountSettings>(),
@@ -61,6 +70,7 @@ fn product_hidden_action_types(app_name: &str) -> Vec<TypeId> {
             TypeId::of::<OpenStatusPage>(),
             TypeId::of::<GetMerch>(),
             TypeId::of::<NewCenterTerminal>(),
+            TypeId::of::<NewTerminal>(),
         ]
     }
 }
@@ -932,6 +942,15 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
 
     match name {
         "workspace::NewTerminal" => return "terminal::OpenAgentTerminal".to_owned(),
+        "terminal::OpenShellTerminal" => return "terminal::OpenShell".to_owned(),
+        "terminal::OpenCodexTerminal" => return "terminal::LaunchCodex".to_owned(),
+        "terminal::OpenClaudeCodeTerminal" => {
+            return "terminal::LaunchClaudeCode".to_owned();
+        }
+        "terminal::OpenOpenCodeTerminal" => {
+            return "terminal::LaunchOpenCode".to_owned();
+        }
+        "dez::OpenWorkspaceInCmux" => return "workspace::OpenInCmux".to_owned(),
         "zed::ApplyCanvasFullLayout" => return "layout::WorkAreaAndFiles".to_owned(),
         "zed::ApplyCanvasAgentControlLayout" => {
             return "layout::WorkAreaAndBuiltInAgent".to_owned();
@@ -1151,8 +1170,28 @@ mod tests {
             "files: open"
         );
         assert_eq!(
-            humanize_action_name_for_product("workspace::NewTerminal", "Dez"),
+            humanize_action_name_for_product("terminal::OpenAgentTerminal", "Dez"),
             "terminal: open agent terminal"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenShellTerminal", "Dez"),
+            "terminal: open shell"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenCodexTerminal", "Dez"),
+            "terminal: launch codex"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenClaudeCodeTerminal", "Dez"),
+            "terminal: launch claude code"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenOpenCodeTerminal", "Dez"),
+            "terminal: launch open code"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("dez::OpenWorkspaceInCmux", "Dez"),
+            "workspace: open in cmux"
         );
         assert_eq!(
             humanize_action_name_for_product("zed::ApplyCanvasFullLayout", "Dez"),
@@ -1297,7 +1336,7 @@ mod tests {
     }
 
     #[test]
-    fn dez_hides_inherited_cloud_and_promotion_commands() {
+    fn each_product_hides_commands_that_do_not_belong_to_it() {
         assert_eq!(
             product_hidden_action_namespaces("Dez"),
             &["collab", "feedback", "terminal_panel"]
@@ -1311,10 +1350,22 @@ mod tests {
             TypeId::of::<OpenStatusPage>(),
             TypeId::of::<GetMerch>(),
             TypeId::of::<NewCenterTerminal>(),
+            TypeId::of::<NewTerminal>(),
         ] {
             assert!(hidden_types.contains(&action_type));
         }
-        assert!(product_hidden_action_types("Zed").is_empty());
+
+        let hidden_types = product_hidden_action_types("Zed");
+        for action_type in [
+            TypeId::of::<zed_actions::dez::OpenWorkspaceInCmux>(),
+            TypeId::of::<zed_actions::terminal::OpenAgentTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenShellTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenCodexTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenClaudeCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenOpenCodeTerminal>(),
+        ] {
+            assert!(hidden_types.contains(&action_type));
+        }
     }
 
     #[test]

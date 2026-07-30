@@ -1261,6 +1261,81 @@ fn register_actions(
                 );
             }
         })
+        .register_action(
+            |workspace: &mut Workspace,
+             _: &zed_actions::dez::OpenWorkspaceInCmux,
+             window,
+             cx| {
+                if APP_NAME == "Zed" {
+                    cx.propagate();
+                    return;
+                }
+
+                struct OpenWorkspaceInCmux;
+
+                let project_group_key = workspace.project_group_key(cx);
+                let Some(path) = project_group_key
+                    .path_list()
+                    .ordered_paths()
+                    .next()
+                    .cloned()
+                else {
+                    workspace.show_toast(
+                        Toast::new(
+                            NotificationId::unique::<OpenWorkspaceInCmux>(),
+                            "cmux handoff needs a local Workspace. Open a folder first.",
+                        )
+                        .autohide(),
+                        cx,
+                    );
+                    return;
+                };
+
+                let toast_key = path.to_string_lossy().into_owned();
+                workspace.show_toast(
+                    Toast::new(
+                        NotificationId::composite::<OpenWorkspaceInCmux>(toast_key.clone()),
+                        "Opening this Workspace in cmux…",
+                    )
+                    .autohide(),
+                    cx,
+                );
+
+                let path_label = path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("Workspace")
+                    .to_owned();
+                let open_task =
+                    cx.background_spawn(async move { sidebar::open_workspace_path_in_cmux(&path) });
+                let multiplexer_store = agent_ui::MultiplexerSessionStore::try_global(cx);
+                cx.spawn_in(window, async move |workspace, cx| {
+                    let outcome = open_task.await;
+                    if let Err(error) = &outcome {
+                        log::error!("cmux Workspace open failed: {error}");
+                    }
+                    workspace.update_in(cx, |workspace, _, cx| {
+                        let message = match outcome {
+                            Ok(()) => format!("Opened {path_label} in cmux."),
+                            Err(error) => error,
+                        };
+                        workspace.show_toast(
+                            Toast::new(
+                                NotificationId::composite::<OpenWorkspaceInCmux>(toast_key),
+                                message,
+                            )
+                            .autohide(),
+                            cx,
+                        );
+                    })?;
+                    if let Some(store) = multiplexer_store {
+                        store.update(cx, |store, cx| store.refresh(cx));
+                    }
+                    anyhow::Ok(())
+                })
+                .detach_and_log_err(cx);
+            },
+        )
         .register_action(|_, _: &install_cli::RegisterDezScheme, window, cx| {
             cx.spawn_in(window, async move |workspace, cx| {
                 install_cli::register_dez_scheme(cx).await?;
