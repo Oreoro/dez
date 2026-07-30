@@ -1837,3 +1837,17 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   compact terminal context strip appears only for actionable state: agent or
   task activity, Git changes, a non-active lifecycle state, or a scratch
   terminal that can be connected to a Workspace.
+- **2026-07-30: Workspaces stays quiet until it has owned work to show.**
+  Automatic Agent Session import promotions do not appear in the Workspaces
+  navigator; compatible imports remain an explicit action in native Agent
+  History. Dez also leaves the legacy machine-wide terminal observer dormant,
+  superseding the 2026-07-27 visibility experiment. Explicit path-matched
+  tmux, Herdr, and cmux discovery remains available without periodically
+  inventorying unrelated applications through `/bin/ps`.
+- **2026-07-30: The active Workspace owns agent integration configuration.**
+  Extension-provided MCP setup is routed through the active application window
+  and opens a modal only in its active Workspace. The Settings window resolves
+  MCP and external-agent stores from that same Workspace project rather than
+  the first retained Workspace or an empty launchpad. Background Workspaces
+  never receive hidden setup UI, and switching Workspace changes the
+  project-scoped integration state Settings presents.
