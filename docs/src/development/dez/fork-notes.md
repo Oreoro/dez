@@ -305,8 +305,8 @@ immediate actions. It does not repeat Home's product summary. In an
 explicit multi-pane layout, inactive empty work areas say **Open something
 here** and keep the same operational actions. The action row owns all
 interactive styling. Copy describes live terminal and Agent state without
-calling the default GUI-owned terminal durable; durability is shown only when
-an external Host actually owns the exact Session.
+assuming either GUI or Host ownership; durability is shown only when an
+external Host actually owns the exact Session.
 
 Empty primary regions use compact, top-anchored recovery guidance rather than
 floating a small prompt in the middle of an empty pane. The heading names the
@@ -1788,7 +1788,7 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   provenance. Dez and `dez-terminal-host` descendants are excluded so owned
   terminals never appear twice. This expands machine-wide visibility for
   v0.0.2 without changing the deferral of external adoption or control.
-- **2026-07-29: v0.1 is a hardening target, not a surface-count target.** The
+- **2026-07-29: v0.1 was a hardening target, not a surface-count target.** The
   v0.0.4 source and exact-artifact gates become the baseline for an ordered
   v0.1 ladder covering product clarity, native navigation, durable lifecycle,
   terminal-agent and multiplexer integrations, visual/accessibility quality,
@@ -1797,7 +1797,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   shell. A new integration or Surface enters the public product only after it
   preserves ownership, has a failure path, and passes runtime evidence.
   Version advancement never converts unchecked source intent into a shipped
-  claim. The active order lives in
+  claim. This ladder remains historical release-gate input. The active source
+  contract lives in [v0.2 Workspace Polish](./v0.2-workspace-polish.md), with
+  unresolved runtime gates retained in
   [v0.1 Product Hardening](./v0.1-product-hardening.md).
 - **2026-07-29: Remote build reuse never substitutes for exact packaging.**
   The macOS workflow may restore Cargo fingerprints, build-script outputs, and
@@ -1868,3 +1870,39 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   the first retained Workspace or an empty launchpad. Background Workspaces
   never receive hidden setup UI, and switching Workspace changes the
   project-scoped integration state Settings presents.
+- **2026-07-31: Installation and Workspace access are startup gates.** On
+  macOS, a packaged Dez bundle must be installed in `/Applications` before
+  Workspace restoration or durable-terminal startup. A DMG, App Translocation,
+  temporary, or user-local launch opens native Home with **Install and
+  Relaunch** and starts no persistent helper. After relaunch, each restored
+  local root is read-preflighted once. A denied root becomes one
+  **Workspace access required** state with **Choose Workspace…**; Git, search,
+  LSP, Agent, and terminal startup do not proceed against a half-open Workspace.
+  Granting one root clears only that root, permission diagnostics are aggregated,
+  and pending Workspace searches are cancelled during quit.
+- **2026-07-31: Terminal Host generation and endpoint are one ownership
+  boundary.** `TerminalHostId` includes the Host generation, and one
+  `TerminalHostEndpoint` supplies that connection's socket and token-file paths
+  to every terminal-agent hook. A newer GUI never rewrites or claims an older
+  Host's process. Workspaces keeps that process visible as **Legacy · Access
+  blocked** and offers only **Open New Shell Here**, **Keep Running**, or the
+  confirmed **Terminate Legacy Session…** action. Replacement shells are
+  separate computation.
+- **2026-07-31: Open Tabs is a native navigation projection.** When expanded in
+  Workspaces, Open Tabs lists the active Workspace's real Main Work Area items
+  and groups them only when real panes exist. Selecting a row calls native item
+  activation. The pane remains the owner of order, drag, preview, pin, close,
+  dirty state, and split membership; Workspaces stores no duplicate tab model.
+- **2026-08-01: External multiplexer discovery fails per source.** tmux, Herdr,
+  and cmux reconcile independently. A failed or timed-out source preserves only
+  its own rows as **last known**, while an authoritative successful empty scan
+  removes them. Periodic and manual refresh share one guarded scan. A native
+  provider warning explains retained rows and exposes a non-destructive
+  **Retry**. Selection refreshes stale data before attach, failed attach exposes
+  **Retry Attach**, and no retry starts a duplicate attachment automatically.
+  The external tool remains the process and layout owner.
+- **2026-08-01: Hosted terminal state remains authoritative across failure.**
+  A failed event stream clears the previous Host cursor and requires a fresh
+  list before incremental events resume. **End Terminal** does not convert a
+  hosted item into a closed display until the Host returns an exited snapshot;
+  an error keeps the terminal visible with retry guidance.

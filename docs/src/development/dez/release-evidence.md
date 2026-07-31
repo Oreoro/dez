@@ -18,16 +18,20 @@ architecture, deep ad-hoc signature, packaged app/CLI/terminal-Host entry
 points, the `0.2.0` runtime version, portable checksum, and artifact upload all
 passed.
 
-Artifact `8792258542` is named
+GitHub artifact `8792258542` is named
 `Dez-preview-macOS-M2-a21ad2b62a47beaf0d13e03208f3d1ab095d8435`, is
-145,156,781 bytes, and has SHA-256
+145,156,781 bytes, and reports archive SHA-256 digest
 `337c1f45ece29aa46d0811d203d1f714eddfbe8b6464626071ad691b3ae69442`.
 It is an ad-hoc-signed Preview, not a signed or notarized v0.2 release.
+That archive digest is not the DMG checksum. The workflow generated and checked
+`SHA256SUMS.txt` inside the artifact, but this ledger did not separately record
+its DMG value; a future release record must preserve both values explicitly.
 
 This proves compilation and packaging for that exact historical baseline.
-It does not prove a later access-recovery patch, interactive first launch,
-protected-folder recovery, terminal survival or attachment, keyboard and
-screen-reader behavior, or rendered light/dark/reduced-transparency layouts.
+It does not prove any later source commit, including Workspace-access and
+multiplexer-reconciliation changes. It also does not prove interactive first
+launch, protected-folder recovery, terminal survival or attachment, keyboard
+and screen-reader behavior, or rendered light/dark/reduced-transparency layouts.
 
 ## 2026-07-31: rejected native-navigation compile baseline
 
@@ -1828,8 +1832,14 @@ subscription. Herdr and tmux attach terminals retain rerun, expose a manual
 **Retry Attach** action after failure, and refresh discovery after completion.
 Raw non-agent Herdr terminals are represented as **Available**.
 
+Source after the packaged baseline also reconciles tmux, Herdr, and cmux
+independently. A failed or timed-out source preserves only its own rows as
+**last known**, an authoritative successful empty scan removes them, and stale
+selection refreshes before attach. This is source evidence only: the packaged
+Preview above predates these changes and supplies no runtime proof for them.
+
 The macOS workflow now defaults to a Preview artifact and labels ad-hoc output
-as not being a v0.1 release. Stable selection fails when any signing or
+as not being a v0.2 release. Stable selection fails when any signing or
 notarization secret is absent and validates Developer ID authority,
 TeamIdentifier, Gatekeeper acceptance, and the stapled notarization ticket
 before upload.
