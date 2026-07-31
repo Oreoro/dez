@@ -8,6 +8,30 @@ active source lane. The preserved
 release order and remaining runtime gates. Historical artifacts below do not
 validate a newer source tree.
 
+## 2026-08-01: v0.2.2 source candidate
+
+Commit `262fcc4c7516bd65cd464681ffecadc80d1f5d8b` is the exact v0.2.2
+implementation candidate. The following source-only checks passed before that
+commit was recorded:
+
+- `cargo fmt --all -- --check`;
+- `cargo metadata --locked --no-deps --format-version 1`;
+- `bash -n script/dez-identity-check`;
+- `bash script/dez-identity-check`, including the Dez theme contract;
+- `jq empty assets/dez/codex-hooks.json`;
+- `git diff --check`; and
+- Prettier checks for every changed YAML, JSON, and current/public Markdown
+  document.
+
+No local compilation, test suite, optimized package, signature, notarization,
+application launch, protected-folder recovery, terminal-survival scenario,
+workflow dispatch, or rendered visual inspection was run for this commit.
+Compilation, runtime, packaging, signing, and exact-artifact evidence remain
+assigned to GitHub Actions and candidate inspection. Older Preview and source
+records below do not validate this newer source tree. This ledger-only
+follow-up does not change application, helper, workflow, manifest, or lockfile
+inputs.
+
 ## 2026-08-01: v0.2.1 source candidate
 
 Commit `3e395267517eadc255889a80683de9ff6372f139` is the exact v0.2.1
