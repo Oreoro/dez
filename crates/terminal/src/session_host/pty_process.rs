@@ -3,7 +3,11 @@ use std::{
     io::{self, ErrorKind, Read as _, Write as _},
     num::NonZeroUsize,
     path::PathBuf,
-    sync::{Arc, mpsc},
+    sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+        mpsc,
+    },
     thread,
     time::{Duration, Instant},
 };
@@ -20,6 +24,8 @@ use polling::{Event, Events, PollMode, Poller};
 use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 
 const PTY_READ_BUFFER_BYTES: usize = 64 * 1024;
+const PTY_INPUT_QUEUE_CAPACITY: usize = 256;
+const MAX_PTY_QUEUED_INPUT_BYTES: usize = 4 * 1024 * 1024;
 const FOREGROUND_PROCESS_REFRESH_INTERVAL: Duration = Duration::from_millis(200);
 const FOREGROUND_PROCESS_WATCH_DURATION: Duration = Duration::from_secs(2);
 // `EventedPty` assigns these fixed polling keys during registration, but the
@@ -115,8 +121,7 @@ impl ForegroundProcessObserver {
     }
 }
 
-enum TerminalHostPtyCommand {
-    Input(Vec<u8>),
+enum TerminalHostPtyControl {
     Resize {
         columns: u16,
         rows: u16,
@@ -128,11 +133,13 @@ enum TerminalHostPtyCommand {
 
 /// Process handle owned by a terminal host rather than a GPUI entity.
 ///
-/// The underlying PTY and child live on their I/O thread. Dropping the final
-/// handle closes the command channel, which deliberately terminates the PTY;
-/// a long-lived helper must retain one handle per hosted session.
+/// The underlying PTY and child live on their I/O thread. Dropping the handle
+/// requests termination through the priority control channel, so a long-lived
+/// helper must retain one handle per hosted session.
 pub struct TerminalHostPtyHandle {
-    command_tx: mpsc::Sender<TerminalHostPtyCommand>,
+    input_tx: mpsc::SyncSender<Vec<u8>>,
+    control_tx: mpsc::Sender<TerminalHostPtyControl>,
+    queued_input_bytes: Arc<AtomicUsize>,
     poller: Arc<Poller>,
     process_id: Option<u32>,
 }
@@ -140,8 +147,8 @@ pub struct TerminalHostPtyHandle {
 impl Drop for TerminalHostPtyHandle {
     fn drop(&mut self) {
         if self
-            .command_tx
-            .send(TerminalHostPtyCommand::Terminate { completion: None })
+            .control_tx
+            .send(TerminalHostPtyControl::Terminate { completion: None })
             .is_ok()
             && let Err(error) = self.poller.notify()
         {
@@ -177,16 +184,30 @@ impl TerminalHostPtyHandle {
         };
         let pty = tty::new(&options, window_size, 0)?;
         let process_id = pty_process_id(&pty);
-        let (command_tx, command_rx) = mpsc::channel();
+        let (input_tx, input_rx) = mpsc::sync_channel(PTY_INPUT_QUEUE_CAPACITY);
+        let (control_tx, control_rx) = mpsc::channel();
+        let queued_input_bytes = Arc::new(AtomicUsize::new(0));
         let poller = Arc::new(Poller::new()?);
         thread::Builder::new()
             .name("dez terminal host PTY".to_owned())
             .spawn({
                 let poller = poller.clone();
-                move || run_pty(pty, command_rx, poller, event_handler)
+                let queued_input_bytes = queued_input_bytes.clone();
+                move || {
+                    run_pty(
+                        pty,
+                        input_rx,
+                        control_rx,
+                        queued_input_bytes,
+                        poller,
+                        event_handler,
+                    )
+                }
             })?;
         Ok(Self {
-            command_tx,
+            input_tx,
+            control_tx,
+            queued_input_bytes,
             poller,
             process_id,
         })
@@ -197,24 +218,53 @@ impl TerminalHostPtyHandle {
     }
 
     pub fn input(&self, bytes: Vec<u8>) -> io::Result<()> {
-        self.send_command(TerminalHostPtyCommand::Input(bytes))
+        if bytes.is_empty() {
+            return Ok(());
+        }
+        let byte_count = bytes.len();
+        self.queued_input_bytes
+            .fetch_update(Ordering::AcqRel, Ordering::Acquire, |queued| {
+                queued
+                    .checked_add(byte_count)
+                    .filter(|total| *total <= MAX_PTY_QUEUED_INPUT_BYTES)
+            })
+            .map_err(|_| {
+                io::Error::new(
+                    ErrorKind::WouldBlock,
+                    "terminal host PTY input buffer is full",
+                )
+            })?;
+        if let Err(error) = self.input_tx.try_send(bytes) {
+            self.queued_input_bytes
+                .fetch_sub(byte_count, Ordering::AcqRel);
+            return Err(match error {
+                mpsc::TrySendError::Full(_) => io::Error::new(
+                    ErrorKind::WouldBlock,
+                    "terminal host PTY input queue is full",
+                ),
+                mpsc::TrySendError::Disconnected(_) => {
+                    io::Error::new(ErrorKind::BrokenPipe, "terminal host PTY closed")
+                }
+            });
+        }
+        self.poller.notify()
     }
 
     pub fn resize(&self, columns: u16, rows: u16) -> io::Result<()> {
-        self.send_command(TerminalHostPtyCommand::Resize { columns, rows })
+        self.send_control(TerminalHostPtyControl::Resize { columns, rows })
     }
 
     pub fn terminate(&self) -> io::Result<async_channel::Receiver<()>> {
         let (completion_tx, completion_rx) = async_channel::bounded(1);
-        self.send_command(TerminalHostPtyCommand::Terminate {
+        self.send_control(TerminalHostPtyControl::Terminate {
             completion: Some(completion_tx),
         })?;
         Ok(completion_rx)
     }
 
-    fn send_command(&self, command: TerminalHostPtyCommand) -> io::Result<()> {
-        self.command_tx
-            .send(command)
+    fn send_control(&self, control: TerminalHostPtyControl) -> io::Result<()> {
+        self.control_tx
+            .send(control)
             .map_err(|_| io::Error::new(ErrorKind::BrokenPipe, "terminal host PTY closed"))?;
         self.poller.notify()
     }
@@ -222,7 +272,9 @@ impl TerminalHostPtyHandle {
 
 fn run_pty(
     mut pty: tty::Pty,
-    command_rx: mpsc::Receiver<TerminalHostPtyCommand>,
+    input_rx: mpsc::Receiver<Vec<u8>>,
+    control_rx: mpsc::Receiver<TerminalHostPtyControl>,
+    queued_input_bytes: Arc<AtomicUsize>,
     poller: Arc<Poller>,
     event_handler: impl Fn(TerminalHostPtyEvent),
 ) {
@@ -263,30 +315,32 @@ fn run_pty(
             break;
         }
 
+        let mut latest_resize = None;
         loop {
-            match command_rx.try_recv() {
-                Ok(TerminalHostPtyCommand::Input(bytes)) => {
-                    if !bytes.is_empty() {
-                        pending_input.push_back((bytes, 0));
-                        foreground_process_watch_until =
-                            Some(Instant::now() + FOREGROUND_PROCESS_WATCH_DURATION);
-                    }
+            match control_rx.try_recv() {
+                Ok(TerminalHostPtyControl::Resize { columns, rows }) => {
+                    latest_resize = Some((columns, rows));
                 }
-                Ok(TerminalHostPtyCommand::Resize { columns, rows }) => {
-                    pty.on_resize(WindowSize {
-                        num_lines: rows.max(1),
-                        num_cols: columns.max(1),
-                        cell_width: 8,
-                        cell_height: 16,
-                    });
-                }
-                Ok(TerminalHostPtyCommand::Terminate { completion }) => {
+                Ok(TerminalHostPtyControl::Terminate { completion }) => {
                     termination_completion = completion;
                     break 'host;
                 }
                 Err(mpsc::TryRecvError::Empty) => break,
                 Err(mpsc::TryRecvError::Disconnected) => break 'host,
             }
+        }
+        if let Some((columns, rows)) = latest_resize {
+            pty.on_resize(WindowSize {
+                num_lines: rows.max(1),
+                num_cols: columns.max(1),
+                cell_width: 8,
+                cell_height: 16,
+            });
+        }
+        while let Ok(bytes) = input_rx.try_recv() {
+            pending_input.push_back((bytes, 0));
+            foreground_process_watch_until =
+                Some(Instant::now() + FOREGROUND_PROCESS_WATCH_DURATION);
         }
 
         for event in events.iter() {
@@ -318,7 +372,8 @@ fn run_pty(
                         break 'host;
                     }
                     if event.writable
-                        && let Err(error) = write_pending_input(&mut pty, &mut pending_input)
+                        && let Err(error) =
+                            write_pending_input(&mut pty, &mut pending_input, &queued_input_bytes)
                     {
                         event_handler(TerminalHostPtyEvent::Failed(error.to_string()));
                         break 'host;
@@ -377,12 +432,14 @@ fn drain_pty_output(
 fn write_pending_input(
     pty: &mut tty::Pty,
     pending_input: &mut VecDeque<(Vec<u8>, usize)>,
+    queued_input_bytes: &AtomicUsize,
 ) -> io::Result<()> {
     while let Some((bytes, offset)) = pending_input.front_mut() {
         match pty.writer().write(bytes.get(*offset..).unwrap_or_default()) {
             Ok(0) => return Ok(()),
             Ok(written) => {
                 *offset += written;
+                queued_input_bytes.fetch_sub(written, Ordering::AcqRel);
                 if *offset >= bytes.len() {
                     pending_input.pop_front();
                 }

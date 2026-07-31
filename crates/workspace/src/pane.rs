@@ -1,6 +1,6 @@
 use crate::{
-    AddActiveFileToEvidence, CloseWindow, FocusSidebar, MultiWorkspace, NewCenterTerminal, NewFile,
-    NewTerminal, OpenInTerminal, OpenOptions, OpenTerminal, OpenVisible,
+    AddActiveFileToEvidence, BrowseRunningSessions, CloseWindow, MultiWorkspace, NewCenterTerminal,
+    NewFile, NewTerminal, OpenInTerminal, OpenOptions, OpenTerminal, OpenVisible,
     RemoveActiveFileFromEvidence, RevealBuiltInAgent, RevealDebug, RevealFiles, RevealGitChanges,
     SidebarSide, SplitDirection, ToggleAgentPane, ToggleFileFinder, ToggleProjectPane,
     ToggleProjectSymbols, ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
@@ -109,7 +109,7 @@ fn pane_navigation_history_buttons_visible(_app_name: &str, setting: bool) -> bo
     setting
 }
 
-fn pane_new_surface_control_is_adjacent(app_name: &str, pane_kind: PaneKind) -> bool {
+fn pane_new_surface_control_belongs_in_tab_strip(app_name: &str, pane_kind: PaneKind) -> bool {
     app_name != "Zed" && pane_kind == PaneKind::Tabs
 }
 
@@ -986,6 +986,7 @@ impl Pane {
     fn render_empty_project_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let open_file_focus = self.focus_handle.clone();
         let new_file_focus = self.focus_handle.clone();
+        let review_changes_focus = self.focus_handle.clone();
         let terminal_focus = self.focus_handle.clone();
         let is_active_pane = match self.workspace.upgrade() {
             Some(workspace) => workspace.read(cx).active_pane().entity_id() == cx.entity_id(),
@@ -997,7 +998,7 @@ impl Pane {
         let (title, description) = if is_dez && show_orientation {
             (
                 "Main Work Area",
-                "Open a terminal, file, or review tab in this Workspace.",
+                "Open a terminal, find a file, or review changes in this Workspace.",
             )
         } else if is_dez {
             ("Empty pane", "Open or move a tab here.")
@@ -1127,9 +1128,32 @@ impl Pane {
                                         );
                                     }),
                             )
+                            .when(is_dez, |this| {
+                                this.child(
+                                    Button::new("empty-project-review-changes", "Review Changes")
+                                        .tab_index(2isize)
+                                        .style(ButtonStyle::Outlined)
+                                        .start_icon(Icon::new(IconName::Diff))
+                                        .aria_label("Review Workspace Changes")
+                                        .tooltip(|_, cx| {
+                                            Tooltip::for_action(
+                                                "Review Workspace Changes",
+                                                &RevealGitChanges,
+                                                cx,
+                                            )
+                                        })
+                                        .on_click(move |_, window, cx| {
+                                            review_changes_focus.dispatch_action(
+                                                &RevealGitChanges,
+                                                window,
+                                                cx,
+                                            );
+                                        }),
+                                )
+                            })
                             .child(
                                 Button::new("empty-project-new-file", "New File")
-                                    .tab_index(2isize)
+                                    .tab_index(if is_dez { 3isize } else { 2isize })
                                     .style(ButtonStyle::Subtle)
                                     .start_icon(Icon::new(IconName::File))
                                     .aria_label("New File")
@@ -4225,14 +4249,6 @@ impl Pane {
             })
     }
 
-    fn configure_fixed_new_surface_control(&self, tab_bar: TabBar) -> TabBar {
-        if pane_new_surface_control_is_adjacent(paths::APP_NAME, self.pane_kind) {
-            tab_bar.end_child(render_new_surface_control(self))
-        } else {
-            tab_bar
-        }
-    }
-
     fn render_single_row_tab_bar(
         &mut self,
         pinned_tabs: Vec<AnyElement>,
@@ -4244,9 +4260,14 @@ impl Pane {
         window: &mut Window,
         cx: &mut Context<Pane>,
     ) -> AnyElement {
-        let tab_bar = self.configure_fixed_new_surface_control(canvas_tab_bar("tab_bar", cx));
         let tab_bar = self
-            .configure_tab_bar_start(tab_bar, navigate_backward, navigate_forward, window, cx)
+            .configure_tab_bar_start(
+                canvas_tab_bar("tab_bar", cx),
+                navigate_backward,
+                navigate_forward,
+                window,
+                cx,
+            )
             .children(pinned_tabs.len().ne(&0).then(|| {
                 let max_scroll = self.tab_bar_scroll_handle.max_offset().x;
                 // We need to check both because offset returns delta values even when the scroll handle is not scrollable
@@ -4290,10 +4311,14 @@ impl Pane {
             .render_tab_overflow_menu_button(window, cx)
             .into_any_element();
 
-        let tab_bar =
-            self.configure_fixed_new_surface_control(canvas_tab_bar("stacked_tab_bar", cx));
         let tab_bar = self
-            .configure_tab_bar_start(tab_bar, navigate_backward, navigate_forward, window, cx)
+            .configure_tab_bar_start(
+                canvas_tab_bar("stacked_tab_bar", cx),
+                navigate_backward,
+                navigate_forward,
+                window,
+                cx,
+            )
             .children(pinned_tabs.len().ne(&0).then(|| {
                 h_flex()
                     .children(pinned_tabs)
@@ -4334,8 +4359,7 @@ impl Pane {
                     .children(pinned_tabs)
                     .child(self.render_pinned_tab_bar_drop_target(cx)),
             );
-        let unpinned_tab_bar = self
-            .configure_fixed_new_surface_control(canvas_tab_bar("unpinned_tab_bar", cx))
+        let unpinned_tab_bar = canvas_tab_bar("unpinned_tab_bar", cx)
             .child(self.render_unpinned_tabs_container(unpinned_tabs, tab_count, cx));
         let unpinned_tab_bar = if show_tab_overflow_menu {
             unpinned_tab_bar.end_child(
@@ -4360,8 +4384,34 @@ impl Pane {
         tab_count: usize,
         cx: &mut Context<Pane>,
     ) -> impl IntoElement {
-        h_flex()
+        let add_control_belongs_in_tab_strip =
+            pane_new_surface_control_belongs_in_tab_strip(paths::APP_NAME, self.pane_kind);
+        let tabs_overflow = self.tab_bar_scroll_handle.max_offset().x > px(2.0);
+        let inline_new_surface_control =
+            (add_control_belongs_in_tab_strip && !tabs_overflow).then(|| {
+                h_flex()
+                    .id("pane-tab-bar-add-slot")
+                    .flex_none()
+                    .h_full()
+                    .px(DynamicSpacing::Base04.rems(cx))
+                    .child(render_new_surface_control(self))
+                    .into_any_element()
+            });
+        let fixed_new_surface_control =
+            (add_control_belongs_in_tab_strip && tabs_overflow).then(|| {
+                h_flex()
+                    .id("pane-tab-bar-add-slot")
+                    .flex_none()
+                    .h_full()
+                    .px(DynamicSpacing::Base04.rems(cx))
+                    .child(render_new_surface_control(self))
+                    .into_any_element()
+            });
+
+        let scrollable_tabs = h_flex()
             .id("unpinned tabs")
+            .min_w_0()
+            .flex_1()
             .overflow_x_scroll()
             .w_full()
             .track_scroll(&self.tab_bar_scroll_handle)
@@ -4369,7 +4419,14 @@ impl Pane {
                 this.suppress_scroll = true;
             }))
             .children(unpinned_tabs)
-            .child(self.render_tab_bar_drop_target(tab_count, cx))
+            .child(self.render_tab_bar_drop_target(tab_count, inline_new_surface_control, cx));
+
+        h_flex()
+            .id("unpinned-tabs-container")
+            .min_w_0()
+            .w_full()
+            .child(scrollable_tabs)
+            .children(fixed_new_surface_control)
     }
 
     fn render_tab_overflow_menu_button(
@@ -4434,6 +4491,7 @@ impl Pane {
     fn render_tab_bar_drop_target(
         &self,
         tab_count: usize,
+        leading_child: Option<AnyElement>,
         cx: &mut Context<Pane>,
     ) -> impl IntoElement {
         div()
@@ -4442,6 +4500,7 @@ impl Pane {
             .min_w_6()
             .h(canvas_tab_bar_height(cx))
             .flex_grow_1()
+            .children(leading_child)
             // HACK: This empty child is currently necessary to force the drop target to appear
             // despite us setting a min width above.
             .child("")
@@ -5592,6 +5651,7 @@ fn default_render_tab_bar_buttons(
 
 fn render_new_surface_control(pane: &Pane) -> AnyElement {
     let (aria_label, tooltip) = pane_new_surface_control_copy(paths::APP_NAME);
+    let workspace = pane.workspace();
     let (new_file, open_file, search_workspace, search_symbols) =
         pane_new_surface_menu_copy(paths::APP_NAME);
 
@@ -5607,7 +5667,22 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
         .anchor(Anchor::TopRight)
         .with_handle(pane.new_item_context_menu_handle.clone())
         .menu(move |window, cx| {
-            Some(ContextMenu::build(window, cx, |menu, _, _| {
+            let startup_ready = crate::workspace_startup_is_ready(cx);
+            let workspace_location = workspace.upgrade().map(|workspace| {
+                let project_group_key = workspace.read(cx).project_group_key(cx);
+                (
+                    project_group_key.host().is_none(),
+                    project_group_key
+                        .path_list()
+                        .ordered_paths()
+                        .next()
+                        .is_some(),
+                )
+            });
+            let has_workspace_root = workspace_location.is_some_and(|(_, has_root)| has_root);
+            let cmux_handoff_applicable =
+                workspace_location.is_some_and(|(is_local, has_root)| is_local && has_root);
+            Some(ContextMenu::build(window, cx, move |menu, _, _| {
                 if paths::APP_NAME == "Zed" {
                     menu.action(new_file, NewFile.boxed_clone())
                         .action(open_file, ToggleFileFinder::default().boxed_clone())
@@ -5619,6 +5694,25 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                         .action(
                             "New Center Terminal",
                             NewCenterTerminal::default().boxed_clone(),
+                        )
+                } else if !startup_ready {
+                    menu.header("Finish Setup").action(
+                        "Install and Relaunch",
+                        zed_actions::dez::InstallAndRelaunch.boxed_clone(),
+                    )
+                } else if !has_workspace_root {
+                    menu.header("Start with a Workspace")
+                        .action("Open Home", crate::welcome::ShowWelcome.boxed_clone())
+                        .action(
+                            "Open Workspace…",
+                            crate::OpenFolder {
+                                create_new_window: Some(false),
+                            }
+                            .boxed_clone(),
+                        )
+                        .action(
+                            "Open Recent Workspaces…",
+                            zed_actions::OpenRecent::default().boxed_clone(),
                         )
                 } else {
                     menu.action("Open Home", crate::welcome::ShowWelcome.boxed_clone())
@@ -5654,11 +5748,16 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                                 zed_actions::terminal::OpenOpenCodeTerminal.boxed_clone(),
                             )
                         })
-                        .action("Browse External Sessions…", FocusSidebar.boxed_clone())
                         .action(
-                            "Open Workspace in cmux",
-                            zed_actions::dez::OpenWorkspaceInCmux.boxed_clone(),
+                            "Browse Running Sessions…",
+                            BrowseRunningSessions.boxed_clone(),
                         )
+                        .when(cmux_handoff_applicable, |menu| {
+                            menu.action(
+                                "Open Workspace in cmux",
+                                zed_actions::dez::OpenWorkspaceInCmux.boxed_clone(),
+                            )
+                        })
                         .action("Open Built-in Agent", RevealBuiltInAgent.boxed_clone())
                         .separator()
                         .action(new_file, NewFile.boxed_clone())
@@ -6592,16 +6691,6 @@ mod tests {
             "Dez should keep pane movement in explicit layout controls instead of overlaying every header"
         );
         assert!(pane_drag_handle_visible("Zed"));
-        assert!(pane_new_surface_control_is_adjacent("Dez", PaneKind::Tabs));
-        assert!(!pane_new_surface_control_is_adjacent(
-            "Dez",
-            PaneKind::Project
-        ));
-        assert!(!pane_new_surface_control_is_adjacent(
-            "Dez",
-            PaneKind::Agent
-        ));
-        assert!(!pane_new_surface_control_is_adjacent("Zed", PaneKind::Tabs));
         assert!(pane_keeps_tab_bar_when_empty("Dez", PaneKind::Tabs));
         assert!(!pane_keeps_tab_bar_when_empty("Dez", PaneKind::Project));
         assert!(!pane_keeps_tab_bar_when_empty("Zed", PaneKind::Tabs));
@@ -6693,6 +6782,26 @@ mod tests {
         assert!(!pane_tab_is_persistent_workspace_tool(
             "Zed",
             PaneKind::Project
+        ));
+    }
+
+    #[test]
+    fn dez_new_surface_control_belongs_in_the_main_tab_strip() {
+        assert!(pane_new_surface_control_belongs_in_tab_strip(
+            "Dez",
+            PaneKind::Tabs
+        ));
+        assert!(!pane_new_surface_control_belongs_in_tab_strip(
+            "Dez",
+            PaneKind::Project
+        ));
+        assert!(!pane_new_surface_control_belongs_in_tab_strip(
+            "Dez",
+            PaneKind::Agent
+        ));
+        assert!(!pane_new_surface_control_belongs_in_tab_strip(
+            "Zed",
+            PaneKind::Tabs
         ));
     }
 

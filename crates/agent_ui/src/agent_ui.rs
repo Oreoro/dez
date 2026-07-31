@@ -88,7 +88,8 @@ pub use crate::machine_terminal_store::{MachineTerminalStore, ObservedMachineTer
 pub use crate::message_editor::MessageEditorEvent;
 pub use crate::multiplexer_session_store::{
     ExternalMultiplexerSession, ExternalSessionCommand, ExternalSessionOpenMode, MultiplexerKind,
-    MultiplexerSessionState, MultiplexerSessionStore, MultiplexerSourceIssue,
+    MultiplexerSessionState, MultiplexerSessionStore, MultiplexerSourceAvailability,
+    MultiplexerSourceIssue, MultiplexerSourceStatus,
 };
 pub use crate::run_review::{
     ObservedRepositoryEvidence, ObservedRunActivity, ObservedRunCheck, ObservedRunCheckStatus,

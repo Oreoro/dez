@@ -39,6 +39,23 @@ pub struct MultiplexerSourceIssue {
     pub had_successful_scan: bool,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MultiplexerSourceAvailability {
+    MissingExecutable,
+    AvailableEmpty,
+    Failed,
+    Ready,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MultiplexerSourceStatus {
+    pub kind: MultiplexerKind,
+    pub availability: MultiplexerSourceAvailability,
+    pub session_count: usize,
+    pub summary: Option<String>,
+    pub had_successful_scan: bool,
+}
+
 impl MultiplexerKind {
     pub fn display_name(self) -> &'static str {
         match self {
@@ -203,15 +220,42 @@ impl Global for GlobalMultiplexerSessionStore {}
 pub struct MultiplexerSessionStore {
     sessions: Vec<ExternalMultiplexerSession>,
     source_issues: Vec<MultiplexerSourceIssue>,
+    source_statuses: Vec<MultiplexerSourceStatus>,
     successful_sources: HashSet<MultiplexerKind>,
     refreshing: bool,
     _refresh_task: Task<()>,
 }
 
+struct AvailableMultiplexerScan {
+    sessions: Vec<ExternalMultiplexerSession>,
+    warnings: Vec<MultiplexerScanWarning>,
+    successful_endpoint_count: usize,
+}
+
+struct MultiplexerScanWarning {
+    herdr_session_name: Option<String>,
+    summary: String,
+}
+
+enum MultiplexerScanOutcome {
+    MissingExecutable,
+    Available(AvailableMultiplexerScan),
+}
+
 struct ExternalMultiplexerScan {
-    tmux: Result<Vec<ExternalMultiplexerSession>>,
-    herdr: Result<Vec<ExternalMultiplexerSession>>,
-    cmux: Result<Vec<ExternalMultiplexerSession>>,
+    tmux: Result<MultiplexerScanOutcome>,
+    herdr: Result<MultiplexerScanOutcome>,
+    cmux: Result<MultiplexerScanOutcome>,
+}
+
+impl AvailableMultiplexerScan {
+    fn complete(sessions: Vec<ExternalMultiplexerSession>) -> Self {
+        Self {
+            sessions,
+            warnings: Vec::new(),
+            successful_endpoint_count: 1,
+        }
+    }
 }
 
 impl MultiplexerSessionStore {
@@ -241,6 +285,16 @@ impl MultiplexerSessionStore {
         &self.source_issues
     }
 
+    pub fn source_statuses(&self) -> &[MultiplexerSourceStatus] {
+        &self.source_statuses
+    }
+
+    pub fn source_status(&self, kind: MultiplexerKind) -> Option<&MultiplexerSourceStatus> {
+        self.source_statuses
+            .iter()
+            .find(|status| status.kind == kind)
+    }
+
     pub fn refresh(&mut self, cx: &mut Context<Self>) {
         if self.refreshing {
             return;
@@ -266,12 +320,16 @@ impl MultiplexerSessionStore {
     }
 
     fn apply_scan(&mut self, scan: ExternalMultiplexerScan, cx: &mut Context<Self>) {
-        let (sessions, source_issues, successful_sources) =
+        let (sessions, source_issues, source_statuses, successful_sources) =
             reconcile_external_multiplexer_sessions(&self.sessions, scan, &self.successful_sources);
         self.successful_sources.extend(successful_sources);
-        if self.sessions != sessions || self.source_issues != source_issues {
+        if self.sessions != sessions
+            || self.source_issues != source_issues
+            || self.source_statuses != source_statuses
+        {
             self.sessions = sessions;
             self.source_issues = source_issues;
+            self.source_statuses = source_statuses;
             cx.notify();
         }
     }
@@ -292,6 +350,7 @@ impl MultiplexerSessionStore {
         Self {
             sessions: Vec::new(),
             source_issues: Vec::new(),
+            source_statuses: Vec::new(),
             successful_sources: HashSet::new(),
             refreshing: false,
             _refresh_task: refresh_task,
@@ -315,9 +374,9 @@ async fn scan_external_multiplexer_sessions(
 
 async fn bounded_multiplexer_scan(
     source: &'static str,
-    scan: impl Future<Output = Result<Vec<ExternalMultiplexerSession>>>,
+    scan: impl Future<Output = Result<MultiplexerScanOutcome>>,
     executor: &BackgroundExecutor,
-) -> Result<Vec<ExternalMultiplexerSession>> {
+) -> Result<MultiplexerScanOutcome> {
     let timeout = executor.timer(MULTIPLEXER_COMMAND_TIMEOUT);
     futures::pin_mut!(scan, timeout);
     match futures::future::select(scan, timeout).await {
@@ -335,10 +394,12 @@ fn reconcile_external_multiplexer_sessions(
 ) -> (
     Vec<ExternalMultiplexerSession>,
     Vec<MultiplexerSourceIssue>,
+    Vec<MultiplexerSourceStatus>,
     Vec<MultiplexerKind>,
 ) {
     let mut sessions = Vec::new();
     let mut source_issues = Vec::new();
+    let mut source_statuses = Vec::new();
     let mut newly_successful_sources = Vec::new();
     for (kind, result) in [
         (MultiplexerKind::Tmux, scan.tmux),
@@ -346,28 +407,125 @@ fn reconcile_external_multiplexer_sessions(
         (MultiplexerKind::Cmux, scan.cmux),
     ] {
         match result {
-            Ok(scanned_sessions) => {
-                sessions.extend(scanned_sessions);
-                newly_successful_sources.push(kind);
+            Ok(MultiplexerScanOutcome::MissingExecutable) => {
+                let last_known_sessions = previous_sessions
+                    .iter()
+                    .filter(|session| session.kind == kind)
+                    .map(|session| {
+                        let mut session = session.clone();
+                        session.discovery_stale = true;
+                        session
+                    })
+                    .collect::<Vec<_>>();
+                let session_count = last_known_sessions.len();
+                sessions.extend(last_known_sessions);
+                source_statuses.push(MultiplexerSourceStatus {
+                    kind,
+                    availability: MultiplexerSourceAvailability::MissingExecutable,
+                    session_count,
+                    summary: Some(format!("{} executable was not found", kind.display_name())),
+                    had_successful_scan: successful_sources.contains(&kind),
+                });
             }
-            Err(error) => {
-                log::debug!(
-                    "{} discovery failed; preserving its last known sessions: {error:#}",
-                    kind.display_name()
-                );
-                sessions.extend(
+            Ok(MultiplexerScanOutcome::Available(mut scan)) if scan.warnings.is_empty() => {
+                let session_count = scan.sessions.len();
+                let availability = if scan.sessions.is_empty() {
+                    MultiplexerSourceAvailability::AvailableEmpty
+                } else {
+                    MultiplexerSourceAvailability::Ready
+                };
+                sessions.append(&mut scan.sessions);
+                newly_successful_sources.push(kind);
+                source_statuses.push(MultiplexerSourceStatus {
+                    kind,
+                    availability,
+                    session_count,
+                    summary: None,
+                    had_successful_scan: true,
+                });
+            }
+            Ok(MultiplexerScanOutcome::Available(mut scan)) => {
+                let current_session_ids = scan
+                    .sessions
+                    .iter()
+                    .map(|session| session.id.clone())
+                    .collect::<HashSet<_>>();
+                let failed_herdr_session_names = scan
+                    .warnings
+                    .iter()
+                    .map(|warning| warning.herdr_session_name.clone())
+                    .collect::<Vec<_>>();
+                scan.sessions.extend(
                     previous_sessions
                         .iter()
-                        .filter(|session| session.kind == kind)
+                        .filter(|session| {
+                            session.kind == kind
+                                && !current_session_ids.contains(&session.id)
+                                && failed_herdr_session_names.iter().any(|name| {
+                                    session.herdr_session_name.as_ref() == name.as_ref()
+                                })
+                        })
                         .map(|session| {
                             let mut session = session.clone();
                             session.discovery_stale = true;
                             session
                         }),
                 );
+                let summary = concise_discovery_message(
+                    &scan
+                        .warnings
+                        .iter()
+                        .map(|warning| warning.summary.as_str())
+                        .collect::<Vec<_>>()
+                        .join("; "),
+                );
+                let had_successful_scan =
+                    successful_sources.contains(&kind) || scan.successful_endpoint_count > 0;
+                if scan.successful_endpoint_count > 0 {
+                    newly_successful_sources.push(kind);
+                }
+                let session_count = scan.sessions.len();
+                sessions.append(&mut scan.sessions);
                 source_issues.push(MultiplexerSourceIssue {
                     kind,
-                    summary: concise_discovery_error(&error),
+                    summary: summary.clone(),
+                    had_successful_scan,
+                });
+                source_statuses.push(MultiplexerSourceStatus {
+                    kind,
+                    availability: MultiplexerSourceAvailability::Failed,
+                    session_count,
+                    summary: Some(summary),
+                    had_successful_scan,
+                });
+            }
+            Err(error) => {
+                log::debug!(
+                    "{} discovery failed; preserving its last known sessions: {error:#}",
+                    kind.display_name()
+                );
+                let last_known_sessions = previous_sessions
+                    .iter()
+                    .filter(|session| session.kind == kind)
+                    .map(|session| {
+                        let mut session = session.clone();
+                        session.discovery_stale = true;
+                        session
+                    })
+                    .collect::<Vec<_>>();
+                let session_count = last_known_sessions.len();
+                sessions.extend(last_known_sessions);
+                let summary = concise_discovery_error(&error);
+                source_issues.push(MultiplexerSourceIssue {
+                    kind,
+                    summary: summary.clone(),
+                    had_successful_scan: successful_sources.contains(&kind),
+                });
+                source_statuses.push(MultiplexerSourceStatus {
+                    kind,
+                    availability: MultiplexerSourceAvailability::Failed,
+                    session_count,
+                    summary: Some(summary),
                     had_successful_scan: successful_sources.contains(&kind),
                 });
             }
@@ -380,15 +538,21 @@ fn reconcile_external_multiplexer_sessions(
             .then_with(|| left.title.cmp(&right.title))
             .then_with(|| left.id.cmp(&right.id))
     });
-    (sessions, source_issues, newly_successful_sources)
+    (
+        sessions,
+        source_issues,
+        source_statuses,
+        newly_successful_sources,
+    )
 }
 
 fn concise_discovery_error(error: &anyhow::Error) -> String {
+    concise_discovery_message(&format!("{error:#}"))
+}
+
+fn concise_discovery_message(message: &str) -> String {
     const MAX_CHARS: usize = 180;
-    let message = format!("{error:#}")
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ");
+    let message = message.split_whitespace().collect::<Vec<_>>().join(" ");
     if message.chars().count() <= MAX_CHARS {
         message
     } else {
@@ -396,25 +560,32 @@ fn concise_discovery_error(error: &anyhow::Error) -> String {
     }
 }
 
-async fn scan_tmux_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
+async fn scan_tmux_sessions() -> Result<MultiplexerScanOutcome> {
     let Some((executable, output)) = run_first_available(
         &["/opt/homebrew/bin/tmux", "/usr/local/bin/tmux", "tmux"],
         &["list-panes", "-a", "-F", TMUX_FORMAT],
     )
     .await?
     else {
-        return Ok(Vec::new());
+        return Ok(MultiplexerScanOutcome::MissingExecutable);
     };
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         if tmux_failure_is_no_server(output.status.code(), &stderr) {
-            return Ok(Vec::new());
+            return Ok(MultiplexerScanOutcome::Available(
+                AvailableMultiplexerScan::complete(Vec::new()),
+            ));
         }
         anyhow::bail!("tmux discovery failed: {}", stderr.trim());
     }
 
-    parse_tmux_sessions(&String::from_utf8_lossy(&output.stdout), executable)
+    Ok(MultiplexerScanOutcome::Available(
+        AvailableMultiplexerScan::complete(parse_tmux_sessions(
+            &String::from_utf8_lossy(&output.stdout),
+            executable,
+        )?),
+    ))
 }
 
 fn tmux_failure_is_no_server(exit_code: Option<i32>, stderr: &str) -> bool {
@@ -427,7 +598,7 @@ fn tmux_failure_is_no_server(exit_code: Option<i32>, stderr: &str) -> bool {
         || stderr.contains("error connecting to") && stderr.contains("no such file or directory")
 }
 
-async fn scan_cmux_workspaces() -> Result<Vec<ExternalMultiplexerSession>> {
+async fn scan_cmux_workspaces() -> Result<MultiplexerScanOutcome> {
     let Some((executable, output)) = run_first_available(
         &[
             "/Applications/cmux.app/Contents/Resources/bin/cmux",
@@ -439,7 +610,7 @@ async fn scan_cmux_workspaces() -> Result<Vec<ExternalMultiplexerSession>> {
     )
     .await?
     else {
-        return Ok(Vec::new());
+        return Ok(MultiplexerScanOutcome::MissingExecutable);
     };
 
     if !output.status.success() {
@@ -449,7 +620,12 @@ async fn scan_cmux_workspaces() -> Result<Vec<ExternalMultiplexerSession>> {
         );
     }
 
-    parse_cmux_workspaces(&String::from_utf8_lossy(&output.stdout), executable)
+    Ok(MultiplexerScanOutcome::Available(
+        AvailableMultiplexerScan::complete(parse_cmux_workspaces(
+            &String::from_utf8_lossy(&output.stdout),
+            executable,
+        )?),
+    ))
 }
 
 fn parse_cmux_workspaces(
@@ -640,7 +816,14 @@ fn parse_tmux_sessions(
         .collect())
 }
 
-async fn scan_herdr_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
+async fn scan_herdr_sessions() -> Result<MultiplexerScanOutcome> {
+    let Some(executable) =
+        first_available_program(&["/opt/homebrew/bin/herdr", "/usr/local/bin/herdr", "herdr"])
+            .await?
+    else {
+        return Ok(MultiplexerScanOutcome::MissingExecutable);
+    };
+
     let herdr_root = paths::home_dir().join(".config").join("herdr");
     let mut server_names = Vec::new();
     let default_socket = herdr_root.join("herdr.sock");
@@ -687,19 +870,18 @@ async fn scan_herdr_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
         }
     }
 
+    server_names.sort();
     if server_names.is_empty() {
-        return Ok(Vec::new());
+        return Ok(MultiplexerScanOutcome::Available(
+            AvailableMultiplexerScan::complete(Vec::new()),
+        ));
     }
 
-    let Some(executable) =
-        first_available_program(&["/opt/homebrew/bin/herdr", "/usr/local/bin/herdr", "herdr"])
-            .await?
-    else {
-        anyhow::bail!("Herdr sockets were found, but the Herdr CLI is unavailable");
-    };
-
     let mut sessions = Vec::new();
+    let mut warnings = Vec::new();
+    let mut successful_endpoint_count = 0usize;
     for server_name in server_names {
+        let server_label = server_name.clone().unwrap_or_else(|| "default".to_owned());
         let mut args = Vec::new();
         if let Some(name) = &server_name {
             args.extend(["--session".to_owned(), name.clone()]);
@@ -708,26 +890,50 @@ async fn scan_herdr_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
 
         let mut command = util::command::new_command(&executable);
         command.args(&args).kill_on_drop(true);
-        let output = command
-            .output()
-            .await
-            .with_context(|| format!("failed to query {}", executable.display()))?;
+        let output = match command.output().await {
+            Ok(output) => output,
+            Err(error) => {
+                warnings.push(MultiplexerScanWarning {
+                    herdr_session_name: server_name,
+                    summary: format!("Herdr session discovery failed for {server_label}: {error}"),
+                });
+                continue;
+            }
+        };
         if !output.status.success() {
-            anyhow::bail!(
-                "Herdr session discovery failed for {}: {}",
-                server_name.as_deref().unwrap_or("default"),
-                String::from_utf8_lossy(&output.stderr).trim()
-            );
+            warnings.push(MultiplexerScanWarning {
+                herdr_session_name: server_name,
+                summary: format!(
+                    "Herdr session discovery failed for {server_label}: {}",
+                    String::from_utf8_lossy(&output.stderr).trim()
+                ),
+            });
+            continue;
         }
 
-        sessions.extend(parse_herdr_snapshot(
+        match parse_herdr_snapshot(
             &String::from_utf8_lossy(&output.stdout),
             executable.clone(),
-            server_name,
-        )?);
+            server_name.clone(),
+        ) {
+            Ok(scanned_sessions) => {
+                sessions.extend(scanned_sessions);
+                successful_endpoint_count += 1;
+            }
+            Err(error) => warnings.push(MultiplexerScanWarning {
+                herdr_session_name: server_name,
+                summary: format!("Herdr session discovery failed for {server_label}: {error:#}"),
+            }),
+        }
     }
 
-    Ok(sessions)
+    Ok(MultiplexerScanOutcome::Available(
+        AvailableMultiplexerScan {
+            sessions,
+            warnings,
+            successful_endpoint_count,
+        },
+    ))
 }
 
 fn parse_herdr_snapshot(
@@ -903,6 +1109,12 @@ mod tests {
         }
     }
 
+    fn complete_scan(sessions: Vec<ExternalMultiplexerSession>) -> Result<MultiplexerScanOutcome> {
+        Ok(MultiplexerScanOutcome::Available(
+            AvailableMultiplexerScan::complete(sessions),
+        ))
+    }
+
     #[test]
     fn a_failed_integration_scan_preserves_only_its_last_known_sessions() {
         let previous_sessions = vec![
@@ -911,13 +1123,13 @@ mod tests {
             external_session(MultiplexerKind::Cmux, "old-cmux"),
         ];
         let successful_sources = HashSet::from([MultiplexerKind::Herdr]);
-        let (sessions, source_issues, newly_successful_sources) =
+        let (sessions, source_issues, source_statuses, newly_successful_sources) =
             reconcile_external_multiplexer_sessions(
                 &previous_sessions,
                 ExternalMultiplexerScan {
-                    tmux: Ok(vec![external_session(MultiplexerKind::Tmux, "new-tmux")]),
+                    tmux: complete_scan(vec![external_session(MultiplexerKind::Tmux, "new-tmux")]),
                     herdr: Err(anyhow::anyhow!("Herdr is temporarily unavailable")),
-                    cmux: Ok(Vec::new()),
+                    cmux: complete_scan(Vec::new()),
                 },
                 &successful_sources,
             );
@@ -936,10 +1148,122 @@ mod tests {
         assert_eq!(source_issues[0].kind, MultiplexerKind::Herdr);
         assert_eq!(source_issues[0].summary, "Herdr is temporarily unavailable");
         assert!(source_issues[0].had_successful_scan);
+        assert_eq!(source_statuses.len(), 3);
+        assert_eq!(
+            source_statuses[0].availability,
+            MultiplexerSourceAvailability::Ready
+        );
+        assert_eq!(
+            source_statuses[1].availability,
+            MultiplexerSourceAvailability::Failed
+        );
+        assert_eq!(source_statuses[1].session_count, 1);
+        assert_eq!(
+            source_statuses[2].availability,
+            MultiplexerSourceAvailability::AvailableEmpty
+        );
         assert_eq!(
             newly_successful_sources,
             [MultiplexerKind::Tmux, MultiplexerKind::Cmux]
         );
+    }
+
+    #[test]
+    fn source_availability_distinguishes_missing_empty_and_ready() {
+        let previous_sessions = vec![external_session(MultiplexerKind::Tmux, "old-tmux")];
+        let (sessions, source_issues, source_statuses, newly_successful_sources) =
+            reconcile_external_multiplexer_sessions(
+                &previous_sessions,
+                ExternalMultiplexerScan {
+                    tmux: Ok(MultiplexerScanOutcome::MissingExecutable),
+                    herdr: complete_scan(Vec::new()),
+                    cmux: complete_scan(vec![external_session(
+                        MultiplexerKind::Cmux,
+                        "ready-cmux",
+                    )]),
+                },
+                &HashSet::from([MultiplexerKind::Tmux]),
+            );
+
+        assert!(source_issues.is_empty());
+        assert_eq!(
+            sessions
+                .iter()
+                .map(|session| session.id.as_str())
+                .collect::<Vec<_>>(),
+            ["ready-cmux", "old-tmux"]
+        );
+        assert!(!sessions[0].discovery_stale);
+        assert!(sessions[1].discovery_stale);
+        assert_eq!(
+            source_statuses
+                .iter()
+                .map(|status| status.availability)
+                .collect::<Vec<_>>(),
+            [
+                MultiplexerSourceAvailability::MissingExecutable,
+                MultiplexerSourceAvailability::AvailableEmpty,
+                MultiplexerSourceAvailability::Ready,
+            ]
+        );
+        assert_eq!(source_statuses[0].session_count, 1);
+        assert!(source_statuses[0].had_successful_scan);
+        assert_eq!(source_statuses[1].session_count, 0);
+        assert_eq!(source_statuses[2].session_count, 1);
+        assert_eq!(
+            newly_successful_sources,
+            [MultiplexerKind::Herdr, MultiplexerKind::Cmux]
+        );
+    }
+
+    #[test]
+    fn a_failed_herdr_endpoint_preserves_only_that_exact_endpoints_sessions() {
+        let mut previous_failed = external_session(MultiplexerKind::Herdr, "herdr:alpha:old");
+        previous_failed.herdr_session_name = Some("alpha".to_owned());
+        let mut previous_healthy =
+            external_session(MultiplexerKind::Herdr, "herdr:alpha:child:old");
+        previous_healthy.herdr_session_name = Some("alpha:child".to_owned());
+        let mut current_healthy = external_session(MultiplexerKind::Herdr, "herdr:alpha:child:new");
+        current_healthy.herdr_session_name = Some("alpha:child".to_owned());
+        let previous_sessions = vec![previous_failed, previous_healthy];
+        let (sessions, source_issues, source_statuses, newly_successful_sources) =
+            reconcile_external_multiplexer_sessions(
+                &previous_sessions,
+                ExternalMultiplexerScan {
+                    tmux: Ok(MultiplexerScanOutcome::MissingExecutable),
+                    herdr: Ok(MultiplexerScanOutcome::Available(
+                        AvailableMultiplexerScan {
+                            sessions: vec![current_healthy],
+                            warnings: vec![MultiplexerScanWarning {
+                                herdr_session_name: Some("alpha".to_owned()),
+                                summary: "Herdr session discovery failed for alpha: unavailable"
+                                    .to_owned(),
+                            }],
+                            successful_endpoint_count: 1,
+                        },
+                    )),
+                    cmux: Ok(MultiplexerScanOutcome::MissingExecutable),
+                },
+                &HashSet::new(),
+            );
+
+        assert_eq!(
+            sessions
+                .iter()
+                .map(|session| (session.id.as_str(), session.discovery_stale))
+                .collect::<Vec<_>>(),
+            [("herdr:alpha:child:new", false), ("herdr:alpha:old", true),]
+        );
+        assert_eq!(source_issues.len(), 1);
+        assert_eq!(source_issues[0].kind, MultiplexerKind::Herdr);
+        assert!(source_issues[0].had_successful_scan);
+        assert_eq!(
+            source_statuses[1].availability,
+            MultiplexerSourceAvailability::Failed
+        );
+        assert_eq!(source_statuses[1].session_count, 2);
+        assert!(source_statuses[1].had_successful_scan);
+        assert_eq!(newly_successful_sources, [MultiplexerKind::Herdr]);
     }
 
     #[test]

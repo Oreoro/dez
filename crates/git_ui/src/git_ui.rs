@@ -340,6 +340,18 @@ pub fn init(cx: &mut App) {
             });
         });
         workspace.register_action(|workspace, _action: &git::Clone, window, cx| {
+            if !workspace::workspace_startup_is_ready(cx) {
+                struct InstallationRequiredForGitClone;
+                workspace.show_toast(
+                    Toast::new(
+                        NotificationId::unique::<InstallationRequiredForGitClone>(),
+                        "Install and relaunch Dez before cloning a Workspace.",
+                    )
+                    .autohide(),
+                    cx,
+                );
+                return;
+            }
             let Some(panel) = workspace.panel::<git_panel::GitPanel>(cx) else {
                 return;
             };

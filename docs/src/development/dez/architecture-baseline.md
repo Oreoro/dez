@@ -21,6 +21,15 @@ truth. Update it when a source change moves an ownership boundary.
 | Remote execution                                           | `remote::RemoteClient` and `remote_server::HeadlessProject`                        | Reconnectable SSH, WSL, Docker, and mock transports can preserve a remote project server                                                                                             | The remote project transport is not yet a vendor-neutral Host and terminal-session service                                          |
 | Workspaces navigation                                      | `sidebar::Sidebar`                                                                 | Derived projection over open codebases, Agent Sessions, terminal metadata, live terminal entities, helper snapshots, notifications, and transient review briefs                      | Structured Codex activity is functional in source; file/Git provenance, a second adapter, and live restart verification remain open |
 
+`agent_ui::MultiplexerSessionStore` owns per-source tmux, Herdr, and cmux
+discovery truth as `MissingExecutable`, `AvailableEmpty`, `Failed`, or `Ready`.
+`sidebar::Sidebar` projects current rows beneath the most specific matching
+Workspace and places pathless or unmatched rows in **Other Running Sessions**.
+It does not treat arbitrary machine PTYs as external integration records.
+**Browse Running Sessions…** resets transient navigator filtering, expands
+matching Workspace groups, requests a store refresh, and focuses Workspaces;
+it does not create or attach a session by itself.
+
 Workspaces now also constructs a transient `RunReviewBrief` from those
 authoritative owners. It does not persist another Run record. The brief opens
 as a normal Markdown pane and identifies observed actor, state, host/session,
@@ -122,7 +131,8 @@ session::AppSession previous launch ID and window stack
 The path restores ordering, active workspace selection, window grouping,
 scratch workspaces, pane data, and workspace-local UI state. Tests in
 `workspace::persistence` cover several of these pieces. A consolidated build
-and live restart scenario have not run for the current dirty product slice.
+and live restart scenario have not run for the exact v0.2.2 implementation
+candidate.
 
 Startup now treats restoration as a barrier rather than an alternative to an
 initial CLI or URL request. `AppSession` is the source of truth for the ordered
@@ -197,9 +207,10 @@ falling back to a GUI-owned PTY.
 
 On macOS, Dez requires the app bundle to be installed in `/Applications` before
 Workspace restoration or terminal-Host startup. A DMG, translocated, temporary,
-or user-local launch enters `InstallationRequired`, opens native Home with the
-install-and-relaunch decision, and ignores deferred open requests. No helper is
-started under the temporary code identity.
+or user-local launch enters `InstallationRequired`, renders the install and
+relaunch decision as an inline native Home callout, and ignores deferred open
+requests. It does not open a startup dialog, prompt, modal, or overlay. No
+helper is started under the temporary code identity.
 
 The Host runtime creates one `TerminalHostEndpoint` containing generation,
 socket path, and token-file path. The generation also participates in
@@ -214,9 +225,14 @@ baseline and a separately authenticated event subscription. Reconnect resumes
 after the last delivered cursor; retention loss triggers a full list resync,
 and peers without event-stream capability retain bounded polling. Display-side
 input, resize, detach, and terminate route through the Host connection without
-giving GPUI process ownership. After transport loss, ordered commands wait for
-a fresh handshake; an uncertain command is never replayed. Connecting, Failed,
-and Reconnecting states remain visible in Workspaces with copyable diagnostics.
+giving GPUI process ownership. Connection, reconnection, and command cycles are
+bounded. An uncertain command is never replayed, and work queued behind a
+transport failure is rejected as stale instead of running after a later
+handshake. PTY input is bounded by 256 queued messages and four mebibytes,
+supports partial writes, and waits for writable readiness before continuing.
+Input saturation returns explicit backpressure, while resize and termination
+use a separate control channel. Connecting, Failed, and Reconnecting states
+remain visible in Workspaces with copyable diagnostics.
 
 Workspace access is a separate startup boundary. Restore preflights each local
 root once. A denied root enters `WorkspaceAccessState::AccessRequired`, is not

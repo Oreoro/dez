@@ -33,10 +33,10 @@ mod workspace_settings;
 
 pub use dock::Panel;
 pub use multi_workspace::{
-    CloseSidebar, DraggedSidebar, FocusSidebar, MoveProjectToNewWindow, MultiWorkspace,
-    MultiWorkspaceEvent, NextProject, NextThread, PreviousProject, PreviousThread, ProjectGroup,
-    ProjectGroupKey, SerializedProjectGroupState, Sidebar, SidebarEvent, SidebarHandle,
-    SidebarRenderState, SidebarSide, ToggleSidebar, render_sidebar_header_controls,
+    BrowseRunningSessions, CloseSidebar, DraggedSidebar, FocusSidebar, MoveProjectToNewWindow,
+    MultiWorkspace, MultiWorkspaceEvent, NextProject, NextThread, PreviousProject, PreviousThread,
+    ProjectGroup, ProjectGroupKey, SerializedProjectGroupState, Sidebar, SidebarEvent,
+    SidebarHandle, SidebarRenderState, SidebarSide, ToggleSidebar, render_sidebar_header_controls,
     render_sidebar_header_controls_with_auxiliary_visibility,
     render_sidebar_header_controls_with_state, sidebar_side_context_menu,
 };
@@ -203,6 +203,47 @@ pub fn set_workspace_access_state(state: WorkspaceAccessState, cx: &mut App) {
     }
     cx.set_global(state);
     cx.refresh_windows();
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum WorkspaceStartupState {
+    #[default]
+    Ready,
+    InstallationRequired {
+        message: String,
+    },
+}
+
+impl Global for WorkspaceStartupState {}
+
+pub fn workspace_startup_state(cx: &App) -> WorkspaceStartupState {
+    cx.try_global::<WorkspaceStartupState>()
+        .cloned()
+        .unwrap_or_default()
+}
+
+pub fn set_workspace_startup_state(state: WorkspaceStartupState, cx: &mut App) {
+    if cx
+        .try_global::<WorkspaceStartupState>()
+        .is_some_and(|current| current == &state)
+    {
+        return;
+    }
+    cx.set_global(state);
+    cx.refresh_windows();
+}
+
+pub fn workspace_startup_is_ready(cx: &App) -> bool {
+    matches!(workspace_startup_state(cx), WorkspaceStartupState::Ready)
+}
+
+pub fn ensure_workspace_startup_ready(cx: &App) -> anyhow::Result<()> {
+    match workspace_startup_state(cx) {
+        WorkspaceStartupState::Ready => Ok(()),
+        WorkspaceStartupState::InstallationRequired { .. } => anyhow::bail!(
+            "Install and relaunch Dez before opening a Workspace or starting a terminal"
+        ),
+    }
 }
 
 fn remaining_inaccessible_workspace_roots(
@@ -14110,11 +14151,13 @@ impl Workspace {
             &self.right_dock,
             &self.region_focus_handles.right_dock,
         ));
-        // The status bar is an ARIA toolbar, so region navigation lands on its
-        // first control rather than the toolbar container.
-        parts.push(FocusablePart::toolbar(
-            self.status_bar.read(cx).focus_handle(cx),
-        ));
+        if self.status_bar_visible(cx) {
+            // The status bar is an ARIA toolbar, so region navigation lands on its
+            // first control rather than the toolbar container.
+            parts.push(FocusablePart::toolbar(
+                self.status_bar.read(cx).focus_handle(cx),
+            ));
+        }
         parts
     }
 
@@ -16093,6 +16136,9 @@ pub fn open_paths(
     mut open_options: OpenOptions,
     cx: &mut App,
 ) -> Task<anyhow::Result<OpenResult>> {
+    if let Err(error) = ensure_workspace_startup_ready(cx) {
+        return Task::ready(Err(error));
+    }
     let abs_paths = abs_paths.to_vec();
     #[cfg(target_os = "windows")]
     let wsl_path = abs_paths

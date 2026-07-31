@@ -6544,13 +6544,13 @@ impl ThreadView {
                                         .tooltip(Tooltip::text(if paths::APP_NAME == "Zed" {
                                             "Restores all files in the project to the content they had at this point in the conversation."
                                         } else {
-                                            "Restores all files in the workspace to the content they had at this point in the conversation."
+                                            "Restores every Workspace file to its content at this point in the Agent Session."
                                         }))
                                         .on_click(cx.listener(move |_this, _, window, cx| {
                                             let detail = if paths::APP_NAME == "Zed" {
                                                 "This replaces all project files with their content at this point in the conversation."
                                             } else {
-                                                "This replaces all Workspace files with their content at this point in the Agent Session."
+                                                "This replaces every Workspace file with its content at this point in the Agent Session."
                                             };
                                             let prompt = window.prompt(
                                                 gpui::PromptLevel::Warning,

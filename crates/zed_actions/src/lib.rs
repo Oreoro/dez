@@ -94,6 +94,8 @@ pub mod dez {
         [
             /// Restores the bundled Lumin, Lilex, IBM Plex Sans, and Dez icon visual profile.
             RestoreVisualProfile,
+            /// Installs a temporary macOS app bundle in /Applications and relaunches it.
+            InstallAndRelaunch,
             /// Opens the active local Workspace in cmux while keeping Dez open.
             OpenWorkspaceInCmux
         ]

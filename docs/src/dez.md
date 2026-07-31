@@ -5,18 +5,30 @@ description: Learn how Dez combines a native IDE, integrated terminals, coding a
 
 # What is Dez?
 
-Dez is a native development environment for people who edit code themselves
-and supervise coding agents running in integrated terminals.
+Dez is a native, Workspace-first development environment for editing code and
+supervising coding agents that run in real terminals.
 
-Its job is simple to state:
+Its product promise is simple:
 
-> Keep a Workspace's codebase, active agent work, attention, changes, and review
-> evidence visible in one native Workspace.
+> Keep code, running work, attention, and review evidence together without
+> replacing the editor or terminal with a dashboard.
 
-Dez inherits Zed's fast editor, language support, Git, debugger, tasks, remote
-infrastructure, collaboration substrate, and agent ecosystem. It changes the
-product model around those capabilities so a developer can move between direct
-editing and delegated work without reconstructing context.
+Built on Zed, Dez keeps its fast editor, language tooling, Git, debugger, tasks,
+remote development, and native pane system. Dez adds a Workspace-first
+navigation model for moving between direct editing, terminal-native agents,
+attention, and review without reconstructing context.
+
+The main journey uses native surfaces throughout:
+
+1. If Dez asks, choose **Install and Relaunch** before restoring a Workspace or
+   starting durable terminals.
+2. **Open Workspace** to establish the codebase, Git, and working-directory
+   context.
+3. Use **Open Terminal** or the tab-strip **+** to open the configured default,
+   a native shell, tmux, Codex, Claude Code, or OpenCode in native tabs. Use
+   **Open Workspace in cmux** for an explicit external handoff.
+4. Monitor terminal and Built-in Agent Sessions in **Workspaces**.
+5. Open **Files** for context or **Review Changes** to inspect the result.
 
 ## The screen model
 
@@ -50,13 +62,16 @@ The tab-strip **+** is the single **Add to Main Work Area** control. Its
 **Open Terminal** submenu launches the **Default Terminal**, a **Native Shell**,
 a Workspace-named tmux session, Codex, Claude Code, or OpenCode. It also opens
 the optional Built-in Agent, a file, Files, Changes, Debug, Workspace search,
-or symbol search. **Browse External Sessions…** focuses Workspaces, where each
-discovered external session remains attached to its owning Workspace.
-**Open Workspace in cmux** performs the explicit external handoff. Every
-destination is the existing Zed Surface in the same pane system, so it can be
-focused and arranged without creating a nested panel or a second navigation
-model. The tab strip and Add control remain visible on an empty Main Work
-Area, including first-run Home.
+or symbol search. The control follows the final tab while space remains and
+stays pinned to the tab viewport edge when tabs overflow. **Browse Running
+Sessions…** clears temporary filters,
+refreshes discovery, and focuses Workspaces. Path-matched Sessions stay beneath
+their Workspace; unmatched or pathless Sessions stay in **Other Running
+Sessions**. **Open Workspace in cmux** performs an explicit external handoff.
+Every destination uses the existing native pane system, so it can be focused
+and arranged without creating a nested panel or a second navigation model. The
+tab strip and Add control remain visible on an empty Main Work Area, including
+Home.
 
 Workspaces starts closed in fresh windows and remains available as an on-demand
 supervisor. Workspace Tools start closed and open as ordinary Main Work Area
@@ -78,7 +93,7 @@ native surface. Focus closes contextual tools. Split Work Area only arranges
 existing Main Work Area surfaces; it never starts a process or opens an
 unrelated tool. No recipe may manufacture an empty column.
 When that work area is empty, one restrained launch panel states the product
-purpose and offers only Open Terminal, Find File, and New File. It does
+purpose and offers Open Terminal, Find File, Review Changes, and New File. It does
 not repeat Home's product summary. It is an operational start state for the
 current Workspace, not a second Home screen.
 **Workspaces** is a projection over the real owners. Each open codebase
@@ -147,34 +162,22 @@ compact icons, but every control has a specific accessible name, tooltip, and
 place in the keyboard tab order. A critical action is never available only on
 pointer hover.
 
-First run follows the same rule. Dez opens its native Home/launchpad rather
-than a separate setup page, modal tour, floating card, or restored split.
+First run follows the same rule. Dez opens **Home** as a normal Main Work Area
+tab, not a setup modal, tour, floating card, or restored split. When the app is
+running from a temporary location, Home shows one inline **Install and
+Relaunch** action and does not restore Workspaces or start durable terminals.
 Theme, keymap, optional Agent providers, imports, and trust preferences stay in
-native Settings. The launchpad does not touch a previous Workspace folder
-until the user opens it, avoiding a startup privacy prompt for a stale recent
-path. A stable signed release can retain the resulting macOS folder grant;
-ad-hoc development snapshots may be asked again after their code identity
-changes.
+native Settings.
 
-Home keeps that first choice concrete. Without a Workspace, **Start a
-Workspace** offers **Open Workspace** and **Clone Repository**. Dez does not
-offer a Terminal until a codebase can supply file and Git review context.
-Inside a Workspace, **In this Workspace** offers **Open Terminal**, **Browse
-Files**, **Review Changes**, and **New File**. The terminal action uses the
-configured **Default Terminal Command** when one is set;
-otherwise it opens the normal Workspace shell. Explicit Shell, tmux, Codex,
-Claude Code, and OpenCode routes remain available from the adjacent **+** menu
-and Command Palette. A terminal appears beneath its owning Workspace only after
-agent evidence exists.
-
-Home is a normal, top-anchored Main Work Area surface, not a modal dashboard or
-persistent walkthrough. One sentence states the Workspace → run → review loop,
-then native command rows own every action. It names its explicit tab
-**Home**. Recent Workspaces reserve a stable native section while local history
-loads, state clearly when no history exists, and become ordinary
-keyboard-reachable rows when ready. Multi-root rows lead with the first root
-and a root count while their full paths remain available as metadata. The
-section never appears as a floating card or repaints the Lumin window material.
+Without a Workspace, Home offers **Open Workspace** and **Clone Repository**.
+It does not offer a pathless terminal before a codebase can supply file, Git,
+and working-directory context. Inside a Workspace, Home offers **Open
+Terminal**, **Open Files**, **Review Changes**, and **New File**. **Open
+Terminal** uses the configured **Default Terminal Command**, or the native shell
+when that setting is blank. The adjacent **+** and Command Palette keep Native
+Shell, tmux, Codex, Claude Code, and OpenCode available as one-off launches.
+Recent Workspaces remain ordinary keyboard-reachable rows rather than a
+separate dashboard.
 
 The empty Workspaces navigator follows the same activation loop. **No Workspace
 open** explains that a codebase supplies context to agent work and review.
@@ -226,11 +229,12 @@ flow and never become floating overlays. An empty Workspace keeps one compact
 terminal action in its header instead of expanding into a provider onboarding
 block. At compact widths, the caught-up action shortens to **Show All** without
 losing source or status in each row. Explicit tmux and Herdr rows attach in the
-Main Work Area; cmux Workspace rows open in cmux. Each row sits beneath the
-most specific matching Workspace and uses its secondary metadata row for
-source, semantic state, working directory or worktree, and attention. The
-Workspace header owns Git branch and changed-file metadata. Unrelated machine
-terminals do not render.
+Main Work Area; cmux Workspace rows open in cmux. A row with a current path sits
+beneath the most specific matching Workspace and uses its secondary metadata
+row for source, semantic state, working directory or worktree, and attention.
+Pathless and unmatched discovered rows remain in **Other Running Sessions**.
+The Workspace header owns Git branch and changed-file metadata. Unrelated
+machine terminals do not render.
 Explicit external rows never hide the primary **Open Workspace…** path when no
 Workspace is open.
 
@@ -264,6 +268,13 @@ their ownership and truth.
 
 ## How coding work flows
 
+### Before you begin: install and relaunch when asked
+
+Dez must run from `/Applications` before it restores a Workspace or starts its
+durable Terminal Host. A temporary or DMG launch shows this requirement inline
+on Home. Choose **Install and Relaunch**; there is no setup overlay or
+“continue anyway” path.
+
 ### 1. Open a Workspace
 
 A Workspace supplies one Zed-compatible Project. That Project owns language
@@ -286,11 +297,13 @@ menu. Center-terminal and compatibility-panel launch paths use the same
 hierarchy, so a failure never turns into a centered promotional card or a
 different workflow.
 
-### 2. Work directly or delegate
+### 2. Run or attach work in native tabs
 
-Open a file to edit directly, choose **Open Terminal** and run Codex, Claude
-Code, or another terminal agent in the Main Work Area, or start a provider-backed
-Agent Session in **Built-in Agent**.
+Open a file to edit directly, choose **Open Terminal** for the configured
+default, or use the adjacent **+** for a Native Shell, tmux, Codex, Claude Code,
+or OpenCode. Each opens in a native Main Work Area terminal tab. Use
+**Built-in Agent** only when you want a provider-backed Agent Session beside the
+editor.
 
 Agent edits land in ordinary buffers and Git changes. A terminal starts in the
 Workspace's working-directory context. Both sit beside files in the same pane
@@ -313,17 +326,17 @@ model picker.
 Start with **Open Terminal**. It opens the configured default and falls back to
 the native Workspace shell. Codex, Claude Code, OpenCode, and other
 terminal-native tools keep their real PTY, subscription, authentication, TUI,
-commands, and plugins. Use
-**Built-in Agent** when you specifically want a structured, provider-backed
-conversation for planning, Workspace questions, edits, or tool calls beside the
-editor. It is optional and requires a usable provider and model.
+commands, and plugins. Use **Built-in Agent** for a structured, provider-backed
+conversation beside the editor. It is optional and requires a usable provider
+and model.
 
 The tab-strip **+** exposes native terminal launch choices: **Default
 Terminal**, **Native Shell**, **tmux Session**, **Codex**, **Claude Code**, and
 **OpenCode**. Workspace Options identifies the configured default command and
 keeps a separate native-shell choice beside the explicit providers.
-The default command is editable under **Settings → Agents →
-Default Terminal Command**; leaving it blank keeps a normal shell.
+The default command is editable under **Settings → Workspaces & Terminals →
+Terminal Launch → Default Terminal Command**; leaving it blank keeps a normal
+shell.
 Provider shortcuts are per-launch choices and never rewrite that setting.
 The same choices are native Command Palette actions: **Terminal: Open
 Terminal**, **Open Native Shell**, **Open tmux Session**, **Launch Codex**,
@@ -331,8 +344,10 @@ Terminal**, **Open Native Shell**, **Open tmux Session**, **Launch Codex**,
 `tmux new-session -A -s <workspace>` after the native login shell is ready, so
 each codebase gets a stable attach-or-create destination. **Workspace: Open in
 cmux** hands the active local Workspace to cmux without replacing or closing
-Dez. **Browse External Sessions…** opens Workspaces for an exact discovered
-session instead of guessing which target the user intended.
+Dez. **Browse Running Sessions…** opens or refocuses Workspaces, removes
+temporary search and attention filters, refreshes all supported sources, and
+reveals their current destinations instead of guessing which target the user
+intended.
 Dez waits for the configured shell startup before submitting the selected
 command, so login-shell initialization, remote/WSL behavior, and native PTY
 keyboard handling remain intact.
@@ -343,7 +358,7 @@ require creating a Built-in Agent Session, and opening the Built-in Agent does
 not wrap or replace the terminal.
 
 An embedded **Live Preview** is planned as a normal Main Work Area Surface but
-is not present in the v0.2.1 source candidate. URL actions currently open the
+is not present in the v0.2.2 source candidate. URL actions currently open the
 system browser, while Markdown, SVG, and CSV use native file previews. A real
 Live Preview must own pane-scoped browser navigation without owning or
 restarting the terminal's dev-server process. The platform and security gate is
@@ -389,7 +404,7 @@ shows **Brief** when observed evidence is available. Rename, archive, and the
 complete action set remain available through the selected-Session commands and
 context menu.
 
-### 4. Review with the IDE
+### 4. Open Files or Review Changes
 
 Use Files and Outline to understand structure, diagnostics and Debug to inspect
 behavior, Search to trace relationships, and Git to review the actual changes.
@@ -542,11 +557,22 @@ exited snapshot. A rejected, dropped, or timed-out request leaves the terminal
 visible with bounded retry guidance because Dez cannot assume which side of an
 interrupted transport won the race.
 
+Host connection, reconnection, and command cycles have deadlines and bounded
+queues. A command with an uncertain outcome is never replayed, and work queued
+behind a failed transport is rejected as stale instead of running later
+against changed state. PTY input uses a bounded queue by both message count and
+bytes. Saturation returns explicit backpressure rather than blocking the UI or
+growing memory without limit, while resize and termination continue through a
+separate control lane. Partial PTY writes resume only after the descriptor is
+writable again.
+
 An app bundle must be installed in `/Applications` before this service starts
 or Workspaces restore. A DMG, App Translocation, temporary, or user-local app
-launch opens native Home and a native Dez prompt for **Install and
-Relaunch**. Dez does not provide a “continue anyway” path because a temporary
-process owner cannot provide durable terminal or protected-folder identity.
+launch opens native Home with one inline **Install Dez to continue** callout
+and **Install and Relaunch** action. It does not open a startup dialog, prompt,
+modal, or overlay. Dez does not provide a “continue anyway” path because a
+temporary process owner cannot provide durable terminal or protected-folder
+identity.
 
 The current helper uses one generated `TerminalHostEndpoint`: generation,
 socket path, token-file path, and stable Host identity advance together.
@@ -572,19 +598,22 @@ Warp, another IDE, or an unrelated application. Those processes are neither
 owned nor safely controllable by Dez, so they never become Workspace or Agent
 Session rows.
 
-Dez v0.2 retains explicit Workspace-scoped integration for tmux, Herdr, and cmux.
-Each discovery source updates independently: a failed source preserves only its
-rows, labels them **last known**, and lets successful tmux, Herdr, or cmux scans
-continue to update. An authoritative successful empty scan removes that
-source's stale rows. Each source has a bounded command deadline shorter than
-the refresh interval; a hung CLI is cancelled and becomes a visible last-known
-state rather than blocking every later refresh. tmux is empty only after its
-canonical missing-server response. Permission, protocol, Herdr socket, and
-Herdr query errors are failures and preserve prior rows instead of masquerading
-as an authoritative empty scan. Workspaces combines concurrent and periodic
-refreshes into one scan, then shows one native warning for the unavailable
-providers. **Retry** scans tmux, Herdr, and cmux again without starting,
-attaching, selecting, or terminating any external session.
+Dez v0.2 retains explicit integration for tmux, Herdr, and cmux. Each source
+updates independently and reports one truthful state:
+
+- **Missing** — the source executable is unavailable;
+- **Empty** — the source is available and authoritatively returned no sessions;
+- **Failed** — discovery did not complete, with any previous rows retained as
+  **last known**; or
+- **Ready** — discovery returned one or more current sessions.
+
+A failed source does not freeze or erase successful peer integrations. Each
+source has a bounded command deadline shorter than the refresh interval; a
+hung CLI is cancelled and becomes **Failed** rather than blocking every later
+refresh. tmux is empty only after its canonical missing-server response.
+Permission, protocol, Herdr socket, and Herdr query errors are failures rather
+than authoritative empty scans. **Retry** scans tmux, Herdr, and cmux again
+without starting, attaching, selecting, or terminating any external session.
 The explicit **Open Workspace in cmux** handoff is separately bounded to eight
 seconds. A timeout leaves the Workspace unchanged and replaces the progress
 notice with actionable failure copy.
@@ -597,7 +626,7 @@ Dez discovers tmux sessions through the documented CLI format, Herdr panes
 through the local snapshot API, and cmux Workspaces through its JSON CLI. tmux
 and Herdr open their documented attach command in a normal terminal Surface.
 cmux Workspaces stay in cmux and open through its `select-workspace` command.
-Discovery updates automatically; **Refresh External Activity** in a
+Discovery updates automatically; **Refresh Running Sessions** in a
 Workspace's options menu requests an immediate scan, shows when discovery is
 running, and explains when no path-matched activity exists.
 Attach terminals keep the native rerun control. Failure shows an explicit
@@ -608,12 +637,26 @@ The external application remains authoritative; closing a Dez tab detaches,
 Herdr never receives automatic takeover, and Workspaces never becomes a second
 process, transcript, or layout owner.
 
+Workspaces projects each discovered session by ownership evidence. A current
+working directory inside an open root places the item beneath the most
+specific matching Workspace. A session with no working directory, a directory
+outside every open root, or no current Workspace match appears under **Other
+Running Sessions**. Arbitrary current-user PTYs remain excluded. **Browse
+Running Sessions…** switches to the Workspaces list, clears temporary search,
+scope, and attention filters, expands Workspace groups that own discovered
+sessions, requests a fresh scan, and focuses the navigator.
+
 ### External session prerequisites and troubleshooting
 
-External activity appears only when its working directory belongs to an open
-local Workspace. **No matching tmux, Herdr, or cmux session** can therefore mean
-that the tool is not installed, its service is not running, or its current pane
-is outside every open Workspace; it does not mean Dez adopted or ended anything.
+The empty-state copy distinguishes source availability from Workspace matching.
+**Running session status is not ready** appears before any source has reported.
+**Install tmux, Herdr, or cmux to browse running sessions** means every source
+executable is missing. **Running session discovery needs attention** means at least one
+source failed. **No running session matches this Workspace** means a ready
+source has activity, but none belongs beneath the selected Workspace; check
+**Other Running Sessions** for unmatched or pathless items. **No running tmux,
+Herdr, or cmux sessions** means the available sources returned no activity. No
+state means Dez adopted or ended an external process.
 
 - tmux is discovered at `/opt/homebrew/bin/tmux`, `/usr/local/bin/tmux`, or on
   `PATH`. Start or attach to a tmux server and ensure the pane's working
@@ -622,7 +665,7 @@ is outside every open Workspace; it does not mean Dez adopted or ended anything.
   session explicitly.
 - cmux is discovered at
   `/Applications/cmux.app/Contents/Resources/bin/cmux`,
-  `/opt/homebrew/bin/cmux`, `/usr/local/bin/cmux`, or on `PATH`. Open the project
+  `/opt/homebrew/bin/cmux`, `/usr/local/bin/cmux`, or on `PATH`. Open the Workspace
   in cmux first, or use **Open Workspace in cmux**; Dez leaves the Workspace
   open if the handoff fails or times out.
 - Herdr requires the `herdr` CLI plus its default
@@ -630,7 +673,7 @@ is outside every open Workspace; it does not mean Dez adopted or ended anything.
   `~/.config/herdr/sessions/<name>/herdr.sock`. Start the matching Herdr server
   before refreshing activity.
 
-Use **Retry** in the provider warning or **Refresh External Activity** after
+Use **Retry** in the provider warning or **Refresh Running Sessions** after
 correcting a prerequisite. A **last known** row means that source's latest scan
 failed and the external application may still own the session. Refresh that
 source before selecting the row again; if attach fails, use **Retry Attach**
@@ -692,7 +735,7 @@ Native Dez Appearance** restores Lumin, balanced density, IBM Plex Sans, Lilex,
 the built-in Dez icons, native tab navigation, and the editor status bar while
 preserving font sizes and unrelated preferences. The same recovery remains
 available from **Dez → Settings → Restore Dez Visual Profile** and Command
-Search.
+Palette.
 
 ### Keyboard and Vim
 

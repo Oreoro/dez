@@ -6644,6 +6644,7 @@ dependencies = [
  "language",
  "menu",
  "open_path_prompt",
+ "paths",
  "picker",
  "picker_preview",
  "pretty_assertions",
@@ -23210,7 +23211,7 @@ dependencies = [
 
 [[package]]
 name = "zed"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "acp_thread",
  "acp_tools",

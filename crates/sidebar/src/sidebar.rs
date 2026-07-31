@@ -23,7 +23,8 @@ use agent_ui::{
     AgentThreadSource, ArchiveSelectedThread, CanvasAgentUiSettings, ConversationView,
     CrossChannelImportOnboarding, ExternalMultiplexerSession, ExternalSessionOpenMode,
     MachineTerminalStore, ManageProfiles, MultiplexerKind, MultiplexerSessionState,
-    MultiplexerSessionStore, MultiplexerSourceIssue, NewTerminalThread, ObservedMachineTerminal,
+    MultiplexerSessionStore, MultiplexerSourceAvailability, MultiplexerSourceIssue,
+    MultiplexerSourceStatus, NewTerminalThread, ObservedMachineTerminal,
     ObservedRepositoryEvidence, ObservedRunActivity, ObservedRunCheck, ObservedRunCheckStatus,
     ObservedRunCommand, ObservedWorkspaceEvidence, OpenAgentDiff, RenameSelectedThread,
     RunReviewBrief, RunReviewState, TerminalId, ThreadId, ThreadImportModal,
@@ -88,10 +89,11 @@ use unicode_segmentation::UnicodeSegmentation as _;
 use util::ResultExt as _;
 use util::path_list::PathList;
 use workspace::{
-    CloseSidebar, CloseWindow, DesignSystemSettings, MultiWorkspace, MultiWorkspaceEvent,
-    NewCenterTerminal, NextProject, NextThread, OpenFolder, OpenLog, OpenMode, PreviousProject,
-    PreviousThread, ProjectGroupKey, RevealFiles, SaveIntent, Sidebar as WorkspaceSidebar,
-    SidebarRenderState, SidebarSettings, SidebarSide, Toast, ToggleSidebar, Workspace,
+    BrowseRunningSessions, CloseSidebar, CloseWindow, DesignSystemSettings, MultiWorkspace,
+    MultiWorkspaceEvent, NewCenterTerminal, NextProject, NextThread, OpenFolder, OpenLog, OpenMode,
+    PreviousProject, PreviousThread, ProjectGroupKey, RevealFiles, SaveIntent,
+    Sidebar as WorkspaceSidebar, SidebarRenderState, SidebarSettings, SidebarSide, Toast,
+    ToggleSidebar, Workspace,
     evidence::{
         WorkspaceEvidenceKind as AuthoritativeWorkspaceEvidenceKind, WorkspaceEvidenceLifecycle,
         WorkspaceEvidenceProvenance,
@@ -407,10 +409,10 @@ mod agent_session_label_tests {
             session_scope_copy("Dez"),
             (
                 "Workspace attention scope",
-                "Show every agent session in Workspaces",
-                "Show All Agent Sessions",
-                "Show only agent sessions in Workspaces that need attention",
-                "Show Agent Sessions Needing Attention",
+                "Show every session in Workspaces",
+                "Show All Sessions",
+                "Show only sessions in Workspaces that need attention",
+                "Show Sessions Needing Attention",
             )
         );
         assert_eq!(session_scope_copy("Zed").0, "Session scope");
@@ -430,7 +432,11 @@ fn session_rail_supplemental_metadata_visible(width: Pixels) -> bool {
 }
 
 fn session_rail_supplemental_metadata_visible_for_product(app_name: &str, width: Pixels) -> bool {
-    app_name != "Zed" || session_rail_supplemental_metadata_visible(width)
+    if app_name == "Zed" {
+        session_rail_supplemental_metadata_visible(width)
+    } else {
+        width >= PRIMARY_ACTION_LABELS_MIN_WIDTH
+    }
 }
 
 fn session_rail_agent_tools_utility_label(width: Pixels) -> &'static str {
@@ -857,8 +863,8 @@ fn session_empty_state_copy(
         } else {
             (
                 IconName::ListX,
-                "No matching Workspaces",
-                "Try another term or clear the search to return to your open Workspaces.",
+                "No matching Workspaces or sessions",
+                "Try another term or clear the search to show your current Workspace activity.",
             )
         }
     } else if is_restoring {
@@ -885,8 +891,8 @@ fn session_empty_state_copy(
         } else {
             (
                 IconName::Terminal,
-                "No agent sessions",
-                "Open a terminal and run Codex, Claude Code, OpenCode, or another supported CLI. Dez adds it here when an agent is detected.",
+                "No sessions yet",
+                "Open a terminal and run Codex, Claude Code, OpenCode, or another CLI. Workspaces adds supported activity here automatically.",
             )
         }
     }
@@ -962,10 +968,10 @@ fn session_scope_copy(
     } else {
         (
             "Workspaces attention scope",
-            "Show every agent session in Workspaces",
-            "Show All Agent Sessions",
-            "Show only agent sessions in Workspaces that need attention",
-            "Show Agent Sessions Needing Attention",
+            "Show every session in Workspaces",
+            "Show All Sessions",
+            "Show only sessions in Workspaces that need attention",
+            "Show Sessions Needing Attention",
         )
     }
 }
@@ -981,9 +987,9 @@ fn all_session_items_accessibility_label(
 ) -> String {
     if app_name != "Zed" {
         let session_noun = if session_count == 1 {
-            "agent session"
+            "session"
         } else {
-            "agent sessions"
+            "sessions"
         };
         if observed_terminal_count == 0 {
             return format!("All Workspaces activity, {session_count} {session_noun}");
@@ -1037,11 +1043,11 @@ fn attention_empty_state_copy(
         )
     } else {
         (
-            "You're caught up. No agent sessions need attention.",
+            "You're caught up. No sessions need attention.",
             "You're caught up",
-            "No agent sessions need attention. Ongoing work remains under All.",
+            "No sessions need attention. Ongoing work remains under All.",
             "Show All",
-            "Show all agent sessions",
+            "Show all Workspace sessions",
         )
     }
 }
@@ -1103,7 +1109,7 @@ fn session_rail_accessibility_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Sessions"
     } else {
-        "Workspaces and Agent Sessions"
+        "Workspaces and Sessions"
     }
 }
 
@@ -1134,7 +1140,7 @@ fn session_rail_search_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Search Sessions"
     } else {
-        "Search Workspaces"
+        "Search Workspaces and Sessions"
     }
 }
 
@@ -1142,7 +1148,7 @@ fn session_rail_search_placeholder(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Search sessions…"
     } else {
-        "Search Workspaces…"
+        "Search Workspaces or sessions…"
     }
 }
 
@@ -1252,6 +1258,18 @@ fn terminal_launch_menu_header(app_name: &str) -> &'static str {
     }
 }
 
+fn dez_installation_required(cx: &App) -> bool {
+    APP_NAME != "Zed"
+        && matches!(
+            workspace::workspace_startup_state(cx),
+            workspace::WorkspaceStartupState::InstallationRequired { .. }
+        )
+}
+
+fn sidebar_workspace_actions_available(cx: &App) -> bool {
+    !dez_installation_required(cx)
+}
+
 fn session_start_state_copy(
     app_name: &str,
 ) -> (
@@ -1270,7 +1288,7 @@ fn session_start_state_copy(
     } else {
         (
             "No Workspace open",
-            "Open a Workspace, then start a terminal. Agent activity appears here automatically.",
+            "Open a Workspace, then start a terminal. Terminal and agent activity appear here automatically.",
             "Open Workspace…",
             None,
         )
@@ -2272,7 +2290,7 @@ mod session_start_state_tests {
         assert_eq!(session_rail_title("Zed"), "Sessions");
         assert_eq!(
             session_rail_accessibility_label("Dez"),
-            "Workspaces and Agent Sessions"
+            "Workspaces and Sessions"
         );
         assert_eq!(workspace_tabs_section_title("Dez"), "Workspace Tabs");
         assert_eq!(workspace_tabs_section_title("Zed"), "Open Tabs");
@@ -2287,8 +2305,14 @@ mod session_start_state_tests {
             workspace_pane_navigation_label(1, 3).as_deref(),
             Some("Pane 2")
         );
-        assert_eq!(session_rail_search_label("Dez"), "Search Workspaces");
-        assert_eq!(session_rail_search_placeholder("Dez"), "Search Workspaces…");
+        assert_eq!(
+            session_rail_search_label("Dez"),
+            "Search Workspaces and Sessions"
+        );
+        assert_eq!(
+            session_rail_search_placeholder("Dez"),
+            "Search Workspaces or sessions…"
+        );
         assert_eq!(
             session_notices_accessibility_label("Dez"),
             "Workspace notices"
@@ -2303,7 +2327,7 @@ mod session_start_state_tests {
         );
         assert_eq!(
             all_session_items_accessibility_label("Dez", 2, 1),
-            "All Workspaces activity, 2 agent sessions and 1 observed terminal"
+            "All Workspaces activity, 2 sessions and 1 observed terminal"
         );
         assert!(!session_search_control_visible("Dez", 1));
         assert!(session_search_control_visible("Dez", 2));
@@ -2311,8 +2335,8 @@ mod session_start_state_tests {
             session_empty_state_copy("Dez", true, false),
             (
                 IconName::ListX,
-                "No matching Workspaces",
-                "Try another term or clear the search to return to your open Workspaces.",
+                "No matching Workspaces or sessions",
+                "Try another term or clear the search to show your current Workspace activity.",
             )
         );
         assert_eq!(
@@ -2340,7 +2364,7 @@ mod session_start_state_tests {
             session_start_state_copy("Dez"),
             (
                 "No Workspace open",
-                "Open a Workspace, then start a terminal. Agent activity appears here automatically.",
+                "Open a Workspace, then start a terminal. Terminal and agent activity appear here automatically.",
                 "Open Workspace…",
                 None
             ),
@@ -2361,11 +2385,11 @@ mod session_start_state_tests {
         assert_eq!(
             attention_empty_state_copy("Dez"),
             (
-                "You're caught up. No agent sessions need attention.",
+                "You're caught up. No sessions need attention.",
                 "You're caught up",
-                "No agent sessions need attention. Ongoing work remains under All.",
+                "No sessions need attention. Ongoing work remains under All.",
                 "Show All",
-                "Show all agent sessions",
+                "Show all Workspace sessions",
             )
         );
         assert_eq!(
@@ -2391,6 +2415,10 @@ mod session_start_state_tests {
         assert!(session_rail_supplemental_metadata_visible_for_product(
             "Dez",
             DEFAULT_WIDTH
+        ));
+        assert!(!session_rail_supplemental_metadata_visible_for_product(
+            "Dez",
+            RESPONSIVE_MIN_WIDTH
         ));
         assert!(!session_rail_supplemental_metadata_visible_for_product(
             "Zed",
@@ -3305,13 +3333,6 @@ fn external_multiplexer_session_matches_query(
             .is_some_and(|path| path.to_string_lossy().to_ascii_lowercase().contains(&query))
 }
 
-fn external_multiplexer_session_belongs_to_project(
-    session: &ExternalMultiplexerSession,
-    project_group_key: &ProjectGroupKey,
-) -> bool {
-    external_multiplexer_project_match_score(session, project_group_key).is_some()
-}
-
 fn external_multiplexer_project_match_score(
     session: &ExternalMultiplexerSession,
     project_group_key: &ProjectGroupKey,
@@ -3362,6 +3383,19 @@ fn best_local_project_group_for_path<'a>(
 mod external_multiplexer_project_group_tests {
     use super::*;
 
+    fn source_status(
+        kind: MultiplexerKind,
+        availability: MultiplexerSourceAvailability,
+    ) -> MultiplexerSourceStatus {
+        MultiplexerSourceStatus {
+            kind,
+            availability,
+            session_count: 0,
+            summary: None,
+            had_successful_scan: false,
+        }
+    }
+
     #[test]
     fn most_specific_workspace_root_owns_external_session() {
         let project_group_keys = vec![
@@ -3379,6 +3413,54 @@ mod external_multiplexer_project_group_tests {
         assert_eq!(
             best_local_project_group_for_path(Path::new("/unrelated"), &project_group_keys),
             None
+        );
+    }
+
+    #[test]
+    fn empty_external_session_copy_distinguishes_setup_from_activity() {
+        let missing = [
+            source_status(
+                MultiplexerKind::Tmux,
+                MultiplexerSourceAvailability::MissingExecutable,
+            ),
+            source_status(
+                MultiplexerKind::Herdr,
+                MultiplexerSourceAvailability::MissingExecutable,
+            ),
+            source_status(
+                MultiplexerKind::Cmux,
+                MultiplexerSourceAvailability::MissingExecutable,
+            ),
+        ];
+        assert_eq!(
+            external_sessions_empty_label(false, &missing),
+            "Install tmux, Herdr, or cmux to browse running sessions"
+        );
+
+        let empty = [source_status(
+            MultiplexerKind::Tmux,
+            MultiplexerSourceAvailability::AvailableEmpty,
+        )];
+        assert_eq!(
+            external_sessions_empty_label(false, &empty),
+            "No running tmux, Herdr, or cmux sessions"
+        );
+
+        let ready = [source_status(
+            MultiplexerKind::Cmux,
+            MultiplexerSourceAvailability::Ready,
+        )];
+        assert_eq!(
+            external_sessions_empty_label(false, &ready),
+            "No running session matches this Workspace"
+        );
+        assert_eq!(
+            external_sessions_empty_label(true, &ready),
+            "Checking tmux, Herdr, and cmux…"
+        );
+        assert_eq!(
+            other_running_sessions_empty_label(false, &ready),
+            "All running sessions belong to open Workspaces"
         );
     }
 }
@@ -3448,6 +3530,52 @@ fn external_activity_issue_description(issue: &MultiplexerSourceIssue) -> String
         issue.kind.display_name(),
         issue.summary.trim_end_matches(&['.', '!', '?'][..])
     )
+}
+
+fn external_sessions_empty_label(
+    refreshing: bool,
+    statuses: &[MultiplexerSourceStatus],
+) -> &'static str {
+    if refreshing {
+        return "Checking tmux, Herdr, and cmux…";
+    }
+    if statuses.is_empty() {
+        return "Running session status is not ready";
+    }
+    if statuses
+        .iter()
+        .all(|status| status.availability == MultiplexerSourceAvailability::MissingExecutable)
+    {
+        return "Install tmux, Herdr, or cmux to browse running sessions";
+    }
+    if statuses
+        .iter()
+        .any(|status| status.availability == MultiplexerSourceAvailability::Failed)
+    {
+        return "Running session discovery needs attention";
+    }
+    if statuses
+        .iter()
+        .any(|status| status.availability == MultiplexerSourceAvailability::Ready)
+    {
+        return "No running session matches this Workspace";
+    }
+    "No running tmux, Herdr, or cmux sessions"
+}
+
+fn other_running_sessions_empty_label(
+    refreshing: bool,
+    statuses: &[MultiplexerSourceStatus],
+) -> &'static str {
+    if !refreshing
+        && statuses
+            .iter()
+            .any(|status| status.availability == MultiplexerSourceAvailability::Ready)
+    {
+        "All running sessions belong to open Workspaces"
+    } else {
+        external_sessions_empty_label(refreshing, statuses)
+    }
 }
 
 const CMUX_HANDOFF_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
@@ -4697,6 +4825,7 @@ pub struct Sidebar {
     /// navigation. Keep them behind an explicit disclosure so Workspaces stays
     /// focused on codebases and actionable agent sessions.
     external_activity_expanded: bool,
+    reveal_running_sessions_after_refresh: bool,
     /// The active Workspace's center-pane tabs are a native projection rather
     /// than a second source of tab state. This only persists the disclosure.
     workspace_tabs_expanded: bool,
@@ -4866,7 +4995,26 @@ impl Sidebar {
             .detach();
         }
         if let Some(multiplexer_sessions) = MultiplexerSessionStore::try_global(cx) {
-            cx.observe(&multiplexer_sessions, |this, _store, cx| {
+            cx.observe(&multiplexer_sessions, |this, store, cx| {
+                if this.reveal_running_sessions_after_refresh && !store.read(cx).is_refreshing() {
+                    this.reveal_running_sessions_after_refresh = false;
+                    if let Some(multi_workspace) = this.multi_workspace.upgrade() {
+                        let project_group_keys =
+                            multi_workspace.read(cx).project_group_keys().to_vec();
+                        for project_group_key in &project_group_keys {
+                            if store.read(cx).sessions().iter().any(|session| {
+                                external_multiplexer_project_group(session, &project_group_keys)
+                                    == Some(project_group_key)
+                            }) {
+                                this.set_group_expanded(project_group_key, true, cx);
+                            }
+                        }
+                    }
+                    this.update_entries(cx);
+                    this.reveal_first_running_session_group();
+                    cx.notify();
+                    return;
+                }
                 this.schedule_update_entries(false, cx);
             })
             .detach();
@@ -4957,6 +5105,7 @@ impl Sidebar {
             attention_only: false,
             session_search_open: false,
             external_activity_expanded: false,
+            reveal_running_sessions_after_refresh: false,
             workspace_tabs_expanded: false,
             selection: None,
             active_entry: None,
@@ -5566,15 +5715,10 @@ impl Sidebar {
             .map(|store| store.read(cx).terminals().to_vec())
             .unwrap_or_default();
         if APP_NAME != "Zed" {
-            multiplexer_sessions.retain(|session| {
-                mw.project_group_keys().iter().any(|project_group_key| {
-                    external_multiplexer_session_belongs_to_project(session, project_group_key)
-                })
-            });
             // Arbitrary machine PTYs are not Dez Sessions and cannot be
             // controlled safely. Keep Workspaces scoped to the open codebases;
-            // Explicit external sessions and Workspaces remain available
-            // through the most specific matching Workspace.
+            // explicitly discovered multiplexer sessions remain available
+            // under their closest Workspace or Other Running Sessions.
             machine_terminals.clear();
         }
         if !query.is_empty() {
@@ -5669,7 +5813,7 @@ impl Sidebar {
             .iter()
             .map(|group| group.key.clone())
             .collect::<Vec<_>>();
-        let mut projected_multiplexer_session_ids = HashSet::new();
+        let mut visible_multiplexer_session_ids = HashSet::new();
         let mut live_notified_terminal_ids: HashSet<TerminalId> = HashSet::new();
         let mut live_terminal_runtime: HashMap<TerminalId, TerminalRuntimeInfo> = HashMap::new();
         let mut live_workspace_terminals: HashMap<
@@ -6624,9 +6768,8 @@ impl Sidebar {
                 let has_external_notifications = external_sessions
                     .iter()
                     .any(|session| session.state == MultiplexerSessionState::NeedsAttention);
-                projected_multiplexer_session_ids
+                visible_multiplexer_session_ids
                     .extend(external_sessions.iter().map(|session| session.id.clone()));
-
                 project_header_indices.push(entries.len());
                 entries.push(ListEntry::ProjectHeader {
                     key: group_key.clone(),
@@ -6666,6 +6809,8 @@ impl Sidebar {
                 let has_external_notifications = external_sessions
                     .iter()
                     .any(|session| session.state == MultiplexerSessionState::NeedsAttention);
+                visible_multiplexer_session_ids
+                    .extend(external_sessions.iter().map(|session| session.id.clone()));
 
                 // When collapsed, threads aren't loaded into `threads`, so we
                 // query the store for thread IDs to check notifications and
@@ -6688,9 +6833,6 @@ impl Sidebar {
                         .iter()
                         .any(|t| notified_threads.contains(&t.metadata.thread_id))
                 };
-                projected_multiplexer_session_ids
-                    .extend(external_sessions.iter().map(|session| session.id.clone()));
-
                 project_header_indices.push(entries.len());
                 entries.push(ListEntry::ProjectHeader {
                     key: group_key.clone(),
@@ -6740,11 +6882,24 @@ impl Sidebar {
 
         self.live_thread_statuses = new_live_statuses;
 
+        visible_multiplexer_session_ids.extend(
+            multiplexer_sessions
+                .iter()
+                .filter(|session| {
+                    (APP_NAME == "Zed"
+                        || external_multiplexer_project_group(session, &project_group_keys)
+                            .is_none())
+                        && (query.is_empty()
+                            || external_multiplexer_session_matches_query(session, &query))
+                })
+                .map(|session| session.id.clone()),
+        );
+
         let session_count = entries
             .iter()
             .filter(|entry| matches!(entry, ListEntry::Thread(_) | ListEntry::Terminal(_)))
             .count()
-            + projected_multiplexer_session_ids.len();
+            + visible_multiplexer_session_ids.len();
         let attention_count = entries
             .iter()
             .filter(|entry| {
@@ -6755,7 +6910,7 @@ impl Sidebar {
             + multiplexer_sessions
                 .iter()
                 .filter(|session| {
-                    projected_multiplexer_session_ids.contains(&session.id)
+                    visible_multiplexer_session_ids.contains(&session.id)
                         && session.state == MultiplexerSessionState::NeedsAttention
                 })
                 .count();
@@ -7028,6 +7183,22 @@ impl Sidebar {
                     Some(0)
                 }
             });
+    }
+
+    fn reveal_first_running_session_group(&mut self) {
+        let matching_group = self.contents.entries.iter().position(|entry| {
+            matches!(
+                entry,
+                ListEntry::ProjectHeader {
+                    external_sessions,
+                    ..
+                } if !external_sessions.is_empty()
+            )
+        });
+        self.selection = matching_group;
+        if let Some(index) = matching_group {
+            self.list_state.scroll_to_reveal_item(index);
+        }
     }
 
     fn render_list_entry(
@@ -7531,7 +7702,7 @@ impl Sidebar {
             )
             .block_mouse_except_scroll();
 
-        if !is_sticky && labels_visible && !is_collapsed && !external_sessions.is_empty() {
+        if !is_sticky && !is_collapsed && !external_sessions.is_empty() {
             let external_rows = external_sessions
                 .iter()
                 .map(|session| {
@@ -7592,15 +7763,21 @@ impl Sidebar {
                                     .gap(px(1.0))
                                     .child(
                                         Label::new(session.title.clone())
-                                            .size(LabelSize::XSmall)
+                                            .size(if labels_visible {
+                                                LabelSize::XSmall
+                                            } else {
+                                                LabelSize::Small
+                                            })
                                             .truncate(),
                                     )
-                                    .child(
-                                        Label::new(source_and_state)
-                                            .size(LabelSize::XSmall)
-                                            .color(Color::Muted)
-                                            .truncate(),
-                                    ),
+                                    .when(labels_visible, |this| {
+                                        this.child(
+                                            Label::new(source_and_state)
+                                                .size(LabelSize::XSmall)
+                                                .color(Color::Muted)
+                                                .truncate(),
+                                        )
+                                    }),
                             ),
                     )
                     .on_click(move |_, window, cx| {
@@ -8138,6 +8315,10 @@ impl Sidebar {
                 let external_activity_refreshing = multiplexer_store
                     .as_ref()
                     .is_some_and(|store| store.read(cx).is_refreshing());
+                let external_source_statuses = multiplexer_store
+                    .as_ref()
+                    .map(|store| store.read(cx).source_statuses().to_vec())
+                    .unwrap_or_default();
                 let attachable_sessions = multiplexer_store
                     .as_ref()
                     .map(|store| {
@@ -8157,6 +8338,12 @@ impl Sidebar {
                 let menu =
                     ContextMenu::build_persistent(window, cx, move |menu, _window, menu_cx| {
                         let menu = menu.end_slot_action(Box::new(menu::SecondaryConfirm));
+                        if dez_installation_required(menu_cx) {
+                            return menu.header(session_rail_title(APP_NAME)).action(
+                                "Install and Relaunch",
+                                Box::new(zed_actions::dez::InstallAndRelaunch),
+                            );
+                        }
                         let weak_menu = menu_cx.weak_entity();
 
                         let new_agent_key = project_group_key.clone();
@@ -8217,6 +8404,17 @@ impl Sidebar {
                             let configured_command = AgentSettings::get_global(menu_cx)
                                 .terminal_init_command
                                 .clone();
+                            let tmux_session_name =
+                                terminal_view::tmux_session_name_from_workspace_label(
+                                    project_group_key
+                                        .path_list()
+                                        .ordered_paths()
+                                        .next()
+                                        .and_then(|path| path.file_name())
+                                        .and_then(|name| name.to_str()),
+                                );
+                            let tmux_startup_command =
+                                format!("tmux new-session -A -s {tmux_session_name}");
                             menu.submenu(
                                 terminal_launch_label(APP_NAME),
                                 move |mut submenu, _window, _cx| {
@@ -8228,6 +8426,10 @@ impl Sidebar {
                                             None,
                                         ),
                                         ("Native Shell".to_owned(), Some(String::new())),
+                                        (
+                                            "tmux Session".to_owned(),
+                                            Some(tmux_startup_command.clone()),
+                                        ),
                                         ("Codex".to_owned(), Some("codex".to_owned())),
                                         ("Claude Code".to_owned(), Some("claude".to_owned())),
                                         ("OpenCode".to_owned(), Some("opencode".to_owned())),
@@ -8292,17 +8494,16 @@ impl Sidebar {
                         let attach_sidebar = this_for_menu.clone();
                         let menu = if attachable_sessions.is_empty() {
                             menu.item(
-                                ContextMenuEntry::new(if external_activity_refreshing {
-                                    "Checking tmux, Herdr, and cmux…"
-                                } else {
-                                    "No matching tmux, Herdr, or cmux session"
-                                })
+                                ContextMenuEntry::new(external_sessions_empty_label(
+                                    external_activity_refreshing,
+                                    &external_source_statuses,
+                                ))
                                 .disabled(true),
                             )
                         } else {
                             let attach_sidebar = attach_sidebar.clone();
                             menu.submenu(
-                                "Open Running Workspace or Session…",
+                                "Open Running Session…",
                                 move |mut submenu, _window, _cx| {
                                     for session in attachable_sessions_for_menu.clone() {
                                         let label = format!(
@@ -8331,12 +8532,12 @@ impl Sidebar {
                         let refresh_menu = weak_menu.clone();
                         let menu = if external_activity_refreshing {
                             menu.item(
-                                ContextMenuEntry::new("Refreshing external activity…")
+                                ContextMenuEntry::new("Refreshing running sessions…")
                                     .disabled(true),
                             )
                         } else {
                             let multiplexer_store = multiplexer_store.clone();
-                            menu.entry("Refresh External Activity", None, move |_window, cx| {
+                            menu.entry("Refresh Running Sessions", None, move |_window, cx| {
                                 if let Some(store) = &multiplexer_store {
                                     store.update(cx, |store, cx| store.refresh(cx));
                                 }
@@ -15808,15 +16009,47 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
-        if self.contents.multiplexer_sessions.is_empty()
-            && self.contents.machine_terminals.is_empty()
+        let project_group_keys = self
+            .multi_workspace
+            .upgrade()
+            .map(|multi_workspace| multi_workspace.read(cx).project_group_keys().to_vec())
+            .unwrap_or_default();
+        let query = self.filter_editor.read(cx).text(cx);
+        let multiplexer_sessions = self
+            .contents
+            .multiplexer_sessions
+            .iter()
+            .filter(|session| {
+                APP_NAME == "Zed"
+                    || external_multiplexer_project_group(session, &project_group_keys).is_none()
+            })
+            .filter(|session| {
+                query.is_empty() || external_multiplexer_session_matches_query(session, &query)
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        let (external_activity_refreshing, external_source_statuses) =
+            MultiplexerSessionStore::try_global(cx)
+                .map(|store| {
+                    let store = store.read(cx);
+                    (store.is_refreshing(), store.source_statuses().to_vec())
+                })
+                .unwrap_or_default();
+        let has_rows = !multiplexer_sessions.is_empty()
+            || (APP_NAME == "Zed" && !self.contents.machine_terminals.is_empty());
+        if !has_rows && (!query.is_empty() || APP_NAME == "Zed" || !self.external_activity_expanded)
         {
             return None;
         }
 
-        let attachable_count = self.contents.multiplexer_sessions.len();
+        let attachable_count = multiplexer_sessions.len();
         let observed_count = self.contents.machine_terminals.len();
-        let count_label = if self.rendered_width < RESPONSIVE_MIN_WIDTH {
+        let count_label = if APP_NAME != "Zed" {
+            match attachable_count {
+                1 => "1 session".to_owned(),
+                count => format!("{count} sessions"),
+            }
+        } else if self.rendered_width < RESPONSIVE_MIN_WIDTH {
             format!("{attachable_count} · {observed_count}")
         } else {
             format!("{attachable_count} attachable · {observed_count} observed")
@@ -15843,9 +16076,7 @@ impl Sidebar {
             .flatten()
             .collect::<Vec<_>>();
 
-        let mut rows = self
-            .contents
-            .multiplexer_sessions
+        let mut rows = multiplexer_sessions
             .iter()
             .cloned()
             .map(|session| {
@@ -15865,7 +16096,7 @@ impl Sidebar {
                     .working_directory
                     .as_ref()
                     .map(|path| path.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| "External session".to_owned());
+                    .unwrap_or_else(|| "Working directory unavailable".to_owned());
                 let action_label = external_multiplexer_action_label(&session);
                 let action_icon = if session.is_last_known() {
                     IconName::ArrowCircle
@@ -15918,7 +16149,7 @@ impl Sidebar {
                                     cx,
                                 );
                             })
-                            .ok();
+                            .log_err();
                     }),
                 )
                 .on_click(move |_, window, cx| {
@@ -15930,7 +16161,7 @@ impl Sidebar {
                                 cx,
                             );
                         })
-                        .ok();
+                        .log_err();
                 })
                 .into_any_element()
             })
@@ -16021,72 +16252,104 @@ impl Sidebar {
         }
 
         let disclosure_sidebar = sidebar.clone();
-        let disclosure_label = if self.external_activity_expanded {
+        let disclosure_label = if APP_NAME != "Zed" {
+            "Sessions outside the currently open Workspace roots"
+        } else if self.external_activity_expanded {
             "Hide observed machine terminals"
         } else {
             "Show observed machine terminals"
         };
+        let section_header = h_flex()
+            .id("external-terminal-section-header")
+            .flex_none()
+            .h(Tab::content_height(cx))
+            .px_1p5()
+            .gap_1()
+            .justify_between()
+            .cursor_pointer()
+            .child(
+                h_flex()
+                    .gap_1()
+                    .child(
+                        Icon::new(if self.external_activity_expanded {
+                            IconName::ChevronDown
+                        } else {
+                            IconName::ChevronRight
+                        })
+                        .size(IconSize::XSmall)
+                        .color(Color::Muted),
+                    )
+                    .child(
+                        Label::new(if APP_NAME == "Zed" {
+                            "External Activity"
+                        } else {
+                            "Other Running Sessions"
+                        })
+                        .size(LabelSize::Small),
+                    ),
+            )
+            .child(
+                Label::new(count_label)
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted),
+            )
+            .tooltip(Tooltip::text(disclosure_label));
+        let section_header = section_header.on_click(move |_, _, cx| {
+            disclosure_sidebar
+                .update(cx, |sidebar, cx| {
+                    sidebar.external_activity_expanded = !sidebar.external_activity_expanded;
+                    cx.notify();
+                })
+                .log_err();
+        });
+        let rows_visible = APP_NAME == "Zed" || self.external_activity_expanded;
+        let empty_label = other_running_sessions_empty_label(
+            external_activity_refreshing,
+            &external_source_statuses,
+        );
         let section = v_flex()
             .id("external-terminal-section")
             .role(gpui::Role::Region)
-            .aria_label("External terminal sessions")
-            .aria_description(
-                "tmux and Herdr sessions can be attached in the Main Work Area. Other machine terminals remain observation-only.",
-            )
+            .aria_label(if APP_NAME == "Zed" {
+                "External terminal sessions"
+            } else {
+                "Other running sessions"
+            })
+            .aria_description(if APP_NAME == "Zed" {
+                "Attachable multiplexer sessions remain externally owned. Observed machine terminals are read-only."
+            } else {
+                "tmux and Herdr sessions attach in the Main Work Area. cmux Workspaces open in cmux and remain externally owned."
+            })
             .min_h_0()
             .border_t_1()
             .border_color(cx.theme().colors().border)
-            .child(
-                h_flex()
-                    .id("external-terminal-section-header")
-                    .cursor_pointer()
-                    .flex_none()
-                    .h(Tab::content_height(cx))
-                    .px_1p5()
-                    .gap_1()
-                    .justify_between()
-                    .child(
-                        h_flex()
-                            .gap_1()
-                            .child(
-                                Icon::new(if self.external_activity_expanded {
-                                    IconName::ChevronDown
-                                } else {
-                                    IconName::ChevronRight
-                                })
-                                .size(IconSize::XSmall)
-                                .color(Color::Muted),
-                            )
-                            .child(Label::new("External Activity").size(LabelSize::Small)),
-                    )
-                    .child(
-                        Label::new(count_label)
-                            .size(LabelSize::XSmall)
-                            .color(Color::Muted),
-                    )
-                    .on_click(move |_, _, cx| {
-                        disclosure_sidebar
-                            .update(cx, |sidebar, cx| {
-                                sidebar.external_activity_expanded =
-                                    !sidebar.external_activity_expanded;
-                                cx.notify();
-                            })
-                            .ok();
-                    })
-                    .tooltip(Tooltip::text(
-                        disclosure_label,
-                    )),
-            )
-            .when(!rows.is_empty(), |this| this.child(
+            .child(section_header)
+            .when(rows_visible && !rows.is_empty(), |this| this.child(
                 v_flex()
                     .id("external-terminal-list")
                     .role(gpui::Role::List)
-                    .aria_label("External terminal sessions")
+                    .aria_label(if APP_NAME == "Zed" {
+                        "External terminal sessions"
+                    } else {
+                        "Other running sessions"
+                    })
                     .min_h_0()
                     .flex_1()
                     .overflow_y_scroll()
                     .children(rows),
-            ));
+            ))
+            .when(
+                APP_NAME != "Zed" && self.external_activity_expanded && !has_rows,
+                |this| {
+                    this.child(
+                        Label::new(empty_label)
+                            .size(LabelSize::XSmall)
+                            .color(Color::Muted)
+                            .px_2()
+                            .pb_2(),
+                    )
+                },
+            );
 
         Some(if has_workspace_rows {
             section
@@ -16098,7 +16361,50 @@ impl Sidebar {
         })
     }
 
-    fn render_empty_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_empty_state(&self, cx: &mut Context<Self>) -> AnyElement {
+        if dez_installation_required(cx) {
+            return v_flex()
+                .id("sidebar-installation-required")
+                .role(gpui::Role::Group)
+                .aria_label("Install Dez to continue")
+                .flex_1()
+                .min_h_0()
+                .overflow_y_scroll()
+                .px_2()
+                .py_2()
+                .child(
+                    v_flex()
+                        .w_full()
+                        .gap_2()
+                        .child(Label::new("Install Dez to continue").size(LabelSize::Small))
+                        .child(
+                            Label::new(
+                                "Install Dez in Applications and relaunch before opening Workspaces or durable terminals.",
+                            )
+                            .size(LabelSize::XSmall)
+                            .color(Color::Muted),
+                        )
+                        .child(
+                            Button::new("install-dez-and-relaunch", "Install and Relaunch")
+                                .full_width()
+                                .style(ButtonStyle::Filled)
+                                .start_icon(Icon::new(IconName::Download).size(IconSize::Small))
+                                .tab_index(0isize)
+                                .aria_label("Install Dez and Relaunch")
+                                .tooltip(Tooltip::text(
+                                    "Install Dez in Applications, then relaunch it",
+                                ))
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(
+                                        zed_actions::dez::InstallAndRelaunch.boxed_clone(),
+                                        cx,
+                                    );
+                                }),
+                        ),
+                )
+                .into_any_element();
+        }
+
         let (title, description, open_workspace_label, scratch_terminal_label) =
             session_start_state_copy(APP_NAME);
 
@@ -16175,10 +16481,25 @@ impl Sidebar {
                         )
                     }),
             )
+            .into_any_element()
     }
 
     fn render_terminal_host_status(&self, cx: &App) -> Option<AnyElement> {
         let state = TerminalHostStartupStatus::state(cx);
+        if matches!(state, TerminalHostStartupState::InstallationRequired { .. })
+            && self
+                .multi_workspace
+                .upgrade()
+                .map(|multi_workspace| multi_workspace.read(cx).workspace().clone())
+                .is_some_and(|workspace| {
+                    workspace
+                        .read(cx)
+                        .active_item_as::<workspace::welcome::WelcomePage>(cx)
+                        .is_some()
+                })
+        {
+            return None;
+        }
         let presentation = terminal_host_status_presentation(&state)?;
         let (severity, icon) = match presentation.kind {
             TerminalHostStatusKind::InstallationRequired => (Severity::Warning, IconName::Warning),
@@ -16207,19 +16528,33 @@ impl Sidebar {
                     TerminalHostStatusKind::Reconnecting => "Copy Details",
                     TerminalHostStatusKind::Connecting => unreachable!(),
                 };
+                let should_offer_install = APP_NAME != "Zed"
+                    && presentation.kind == TerminalHostStatusKind::InstallationRequired;
+                let primary_label = if should_offer_install {
+                    "Install and Relaunch"
+                } else {
+                    "Open Local Log"
+                };
                 callout.actions_slot(
                     h_flex()
                         .flex_wrap()
                         .gap_1()
                         .child(
-                            Button::new("open-terminal-host-log", "Open Local Log")
+                            Button::new("terminal-host-primary-action", primary_label)
                                 .size(ButtonSize::Medium)
                                 .style(ButtonStyle::Filled)
                                 .tab_index(0isize)
-                                .aria_label("Open Local Diagnostics Log")
-                                .tooltip(Tooltip::text("Open the local Dez diagnostics log"))
-                                .on_click(|_, window, cx| {
-                                    window.dispatch_action(OpenLog.boxed_clone(), cx);
+                                .aria_label(primary_label)
+                                .tooltip(Tooltip::text(primary_label))
+                                .on_click(move |_, window, cx| {
+                                    if should_offer_install {
+                                        window.dispatch_action(
+                                            zed_actions::dez::InstallAndRelaunch.boxed_clone(),
+                                            cx,
+                                        );
+                                    } else {
+                                        window.dispatch_action(OpenLog.boxed_clone(), cx);
+                                    }
                                 }),
                         )
                         .child(
@@ -16433,6 +16768,9 @@ impl Sidebar {
     }
 
     fn render_workspace_restore_status(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        if dez_installation_required(cx) {
+            return None;
+        }
         let unresolved_workspace_ids = self.unresolved_workspace_ids(cx);
         if unresolved_workspace_ids.is_empty() {
             return None;
@@ -16736,7 +17074,7 @@ impl Sidebar {
                     this.child(
                         v_flex()
                             .id("active-workspace-tab-list")
-                            .role(gpui::Role::List)
+                            .role(gpui::Role::Group)
                             .aria_label("Open tabs grouped by pane")
                             .max_h(vh(0.18, window))
                             .overflow_y_scroll()
@@ -16891,7 +17229,8 @@ impl Sidebar {
                 this.child(div().flex_1())
             })
             .when(
-                session_rail_open_workspace_control_visible(APP_NAME),
+                session_rail_open_workspace_control_visible(APP_NAME)
+                    && sidebar_workspace_actions_available(cx),
                 |this| {
                     this.child(
                         IconButton::new("open-workspace", IconName::Plus)
@@ -16999,6 +17338,7 @@ impl Sidebar {
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let is_dez = paths::APP_NAME != "Zed";
+        let installation_required = dez_installation_required(cx);
         let on_right = self.side(cx) == SidebarSide::Right;
         let active_conversation_view = if is_dez {
             None
@@ -17098,6 +17438,12 @@ impl Sidebar {
                         menu = menu.context(focus_handle.clone());
 
                         if is_dez {
+                            if installation_required {
+                                return menu.header(session_rail_title(APP_NAME)).action(
+                                    "Install and Relaunch",
+                                    Box::new(zed_actions::dez::InstallAndRelaunch),
+                                );
+                            }
                             return menu
                                 .header(session_rail_title(APP_NAME))
                                 .action(
@@ -17107,6 +17453,10 @@ impl Sidebar {
                                 .action(
                                     "Open Recent Workspaces…",
                                     Box::new(OpenRecent::default()),
+                                )
+                                .action(
+                                    "Browse Running Sessions…",
+                                    Box::new(BrowseRunningSessions),
                                 )
                                 .separator()
                                 .action(workspace_history_label, Box::new(ToggleThreadHistory))
@@ -17257,7 +17607,17 @@ impl Sidebar {
             })
     }
 
-    fn render_sidebar_bottom_bar(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_sidebar_bottom_bar(&mut self, cx: &mut Context<Self>) -> AnyElement {
+        if dez_installation_required(cx) {
+            return v_flex()
+                .p_1()
+                .gap_1()
+                .border_t_1()
+                .border_color(cx.theme().colors().border)
+                .child(self.sidebar_chrome.clone())
+                .into_any_element();
+        }
+
         let is_archive = matches!(self.view, SidebarView::Archive(..));
         let history_label = if is_archive {
             "Hide Agent History"
@@ -17303,6 +17663,7 @@ impl Sidebar {
                     .child(div().flex_1())
                     .child(self.render_recent_projects_button(rail_width, cx)),
             )
+            .into_any_element()
     }
 
     fn toggle_attention_filter(
@@ -17503,6 +17864,10 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if dez_installation_required(cx) {
+            window.dispatch_action(zed_actions::dez::InstallAndRelaunch.boxed_clone(), cx);
+            return;
+        }
         match &self.view {
             SidebarView::ThreadList => {
                 self.show_archive(window, cx);
@@ -17702,6 +18067,50 @@ impl WorkspaceSidebar for Sidebar {
         cx.notify();
     }
 
+    fn browse_external_sessions(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if dez_installation_required(cx) {
+            window.dispatch_action(zed_actions::dez::InstallAndRelaunch.boxed_clone(), cx);
+            return;
+        }
+        if !matches!(self.view, SidebarView::ThreadList) {
+            self.show_thread_list(window, cx);
+        }
+        self.attention_only = false;
+        self.external_activity_expanded = true;
+        self.reveal_running_sessions_after_refresh = true;
+        self.session_search_open = false;
+        self.selection = None;
+        self.reset_filter_editor_text(window, cx);
+
+        let multiplexer_store = MultiplexerSessionStore::try_global(cx);
+        if let (Some(multi_workspace), Some(store)) =
+            (self.multi_workspace.upgrade(), multiplexer_store.as_ref())
+        {
+            let project_group_keys = multi_workspace.read(cx).project_group_keys().to_vec();
+            let sessions = store.read(cx).sessions().to_vec();
+            for project_group_key in &project_group_keys {
+                if sessions.iter().any(|session| {
+                    external_multiplexer_project_group(session, &project_group_keys)
+                        == Some(project_group_key)
+                }) {
+                    self.set_group_expanded(project_group_key, true, cx);
+                }
+            }
+        }
+
+        self.update_entries(cx);
+        self.reveal_first_running_session_group();
+
+        if let Some(store) = multiplexer_store {
+            store.update(cx, |store, cx| store.refresh(cx));
+        } else {
+            self.reveal_running_sessions_after_refresh = false;
+        }
+
+        self.focus_handle.focus(window, cx);
+        cx.notify();
+    }
+
     fn toggle_thread_switcher(
         &mut self,
         select_last: bool,
@@ -17822,17 +18231,18 @@ impl Render for Sidebar {
         };
         let rail_on_left = self.side(cx) == SidebarSide::Left;
 
-        let has_workspace_rows = !self.contents.entries.is_empty();
-        let has_external_terminal_rows = APP_NAME == "Zed"
-            && (!self.contents.multiplexer_sessions.is_empty()
-                || !self.contents.machine_terminals.is_empty());
-        let total_item_count = self.contents.session_count
-            + if APP_NAME == "Zed" {
-                self.contents.observed_terminal_count
-            } else {
-                0
-            };
-        let no_search_results = !has_workspace_rows && !has_external_terminal_rows;
+        let installation_required = dez_installation_required(cx);
+        let has_workspace_rows = !installation_required && !self.contents.entries.is_empty();
+        let total_item_count = if installation_required {
+            0
+        } else {
+            self.contents.session_count
+                + if APP_NAME == "Zed" {
+                    self.contents.observed_terminal_count
+                } else {
+                    0
+                }
+        };
         let has_query = self.has_filter_query(cx);
         let search_is_focused = self.filter_editor.focus_handle(cx).is_focused(window);
         let show_session_search = session_search_visible(
@@ -17842,28 +18252,33 @@ impl Render for Sidebar {
             search_is_focused,
             self.session_search_open,
         );
-        let show_start_state = session_start_state_visible(
-            self.contents.has_open_projects,
-            self.contents.session_count,
-            has_query,
-            self.attention_only,
-            self.workspace_restore_status_is_visible(cx),
-        );
-        let external_terminal_section = (APP_NAME == "Zed")
-            .then(|| {
-                self.render_external_terminal_section(
-                    has_workspace_rows || show_start_state,
-                    window,
-                    cx,
-                )
-            })
-            .flatten();
-        let active_workspace_tabs = (matches!(self.view, SidebarView::ThreadList) && !has_query)
-            .then(|| self.render_active_workspace_tabs(window, cx))
-            .flatten();
-        let session_notices = matches!(self.view, SidebarView::ThreadList)
-            .then(|| self.render_session_notices(window, cx))
-            .flatten();
+        let show_start_state = installation_required
+            || session_start_state_visible(
+                self.contents.has_open_projects,
+                self.contents.session_count,
+                has_query,
+                self.attention_only,
+                self.workspace_restore_status_is_visible(cx),
+            );
+        let external_terminal_section = if installation_required {
+            None
+        } else {
+            self.render_external_terminal_section(
+                has_workspace_rows || show_start_state,
+                window,
+                cx,
+            )
+        };
+        let has_filtered_external_rows = external_terminal_section.is_some();
+        let no_search_results = !has_workspace_rows && !has_filtered_external_rows;
+        let active_workspace_tabs =
+            (!installation_required && matches!(self.view, SidebarView::ThreadList) && !has_query)
+                .then(|| self.render_active_workspace_tabs(window, cx))
+                .flatten();
+        let session_notices = (!installation_required
+            && matches!(self.view, SidebarView::ThreadList))
+        .then(|| self.render_session_notices(window, cx))
+        .flatten();
 
         v_flex()
             .id("workspace-sidebar")
@@ -17905,7 +18320,9 @@ impl Render for Sidebar {
             .on_action(cx.listener(Self::on_previous_thread))
             .on_action(cx.listener(Self::toggle_agent_options_menu))
             .on_action(cx.listener(|this, _: &OpenRecent, window, cx| {
-                if session_rail_uses_footer_utilities(paths::APP_NAME) {
+                if dez_installation_required(cx) {
+                    window.dispatch_action(zed_actions::dez::InstallAndRelaunch.boxed_clone(), cx);
+                } else if session_rail_uses_footer_utilities(paths::APP_NAME) {
                     this.recent_projects_popover_handle.toggle(window, cx);
                 } else {
                     cx.propagate();
@@ -17989,57 +18406,64 @@ impl Render for Sidebar {
             .child(self.render_sidebar_header(window, cx))
             .when_some(session_notices, |this, notices| this.child(notices))
             .when_some(active_workspace_tabs, |this, tabs| this.child(tabs))
-            .map(|this| match &self.view {
-                SidebarView::ThreadList => this
-                    .when(
-                        session_overview_visible(
-                            paths::APP_NAME,
-                            self.contents.session_count,
-                            self.contents.attention_count,
-                            self.attention_only,
-                        ),
-                        |this| this.child(self.render_session_overview(window, cx)),
-                    )
-                    .map(|this| {
-                        if show_start_state {
-                            this.child(self.render_empty_state(cx))
-                                .when_some(external_terminal_section, |this, section| {
-                                    this.child(section)
-                                })
-                        } else {
-                            this.child(
-                                v_flex()
-                                    .flex_1()
-                                    .overflow_hidden()
-                                    .when(show_session_search, |this| {
-                                        this.child(self.render_session_search(cx))
+            .map(|this| {
+                if installation_required {
+                    return this.child(self.render_empty_state(cx));
+                }
+                match &self.view {
+                    SidebarView::ThreadList => this
+                        .when(
+                            !installation_required
+                                && session_overview_visible(
+                                    paths::APP_NAME,
+                                    self.contents.session_count,
+                                    self.contents.attention_count,
+                                    self.attention_only,
+                                ),
+                            |this| this.child(self.render_session_overview(window, cx)),
+                        )
+                        .map(|this| {
+                            if show_start_state {
+                                this.child(self.render_empty_state(cx))
+                                    .when_some(external_terminal_section, |this, section| {
+                                        this.child(section)
                                     })
-                                    .child(
-                                        v_flex()
-                                            .id("workspace-session-list")
-                                            .role(gpui::Role::List)
-                                            .aria_label(if APP_NAME == "Zed" {
-                                                "Workspace Sessions"
-                                            } else {
-                                                "Workspaces and Agent Sessions"
-                                            })
-                                            .relative()
-                                            .flex_1()
-                                            .overflow_hidden()
-                                            .map(|this| {
-                                                if no_search_results {
-                                                    if has_query {
-                                                        this.child(self.render_no_results(cx))
-                                                    } else if self.attention_only {
-                                                        this.child(
-                                                            self.render_attention_empty_state(cx),
-                                                        )
-                                                    } else {
-                                                        this.child(self.render_no_results(cx))
-                                                    }
+                            } else {
+                                this.child(
+                                    v_flex()
+                                        .flex_1()
+                                        .overflow_hidden()
+                                        .when(show_session_search, |this| {
+                                            this.child(self.render_session_search(cx))
+                                        })
+                                        .child(
+                                            v_flex()
+                                                .id("workspace-session-list")
+                                                .role(gpui::Role::List)
+                                                .aria_label(if APP_NAME == "Zed" {
+                                                    "Workspace Sessions"
                                                 } else {
-                                                    this.when(has_workspace_rows, |this| {
-                                                        this.child(
+                                                    "Workspaces and Sessions"
+                                                })
+                                                .relative()
+                                                .flex_1()
+                                                .overflow_hidden()
+                                                .map(|this| {
+                                                    if no_search_results {
+                                                        if has_query {
+                                                            this.child(self.render_no_results(cx))
+                                                        } else if self.attention_only {
+                                                            this.child(
+                                                                self.render_attention_empty_state(
+                                                                    cx,
+                                                                ),
+                                                            )
+                                                        } else {
+                                                            this.child(self.render_no_results(cx))
+                                                        }
+                                                    } else {
+                                                        this.when(has_workspace_rows, |this| {
+                                                            this.child(
                                                             v_flex()
                                                                 .relative()
                                                                 .min_h_0()
@@ -18072,22 +18496,25 @@ impl Render for Sidebar {
                                                                     cx,
                                                                 ),
                                                         )
-                                                    })
-                                                    .when_some(
-                                                        external_terminal_section,
-                                                        |this, section| this.child(section),
-                                                    )
-                                                }
-                                            }),
-                                    ),
-                            )
-                        }
-                    }),
-                SidebarView::Archive(archive_view) => this.child(archive_view.clone()),
+                                                        })
+                                                        .when_some(
+                                                            external_terminal_section,
+                                                            |this, section| this.child(section),
+                                                        )
+                                                    }
+                                                }),
+                                        ),
+                                )
+                            }
+                        }),
+                    SidebarView::Archive(archive_view) => this.child(archive_view.clone()),
+                }
             })
             .map(|this| {
-                let show_acp = self.should_render_acp_import_onboarding(cx);
-                let show_cross_channel = self.should_render_cross_channel_import_onboarding(cx);
+                let show_acp =
+                    !installation_required && self.should_render_acp_import_onboarding(cx);
+                let show_cross_channel = !installation_required
+                    && self.should_render_cross_channel_import_onboarding(cx);
 
                 let verbose = *self
                     .import_banners_use_verbose_labels

@@ -33,11 +33,12 @@ documents according to their authority, not their age.
 9. [Upstream Synchronization](./upstream-sync.md) defines the permanent merge
    train and release provenance requirements.
 10. [Upstream Feature Ledger](./upstream-ledger.md) records the current merge
-   target, conflict inventory, and capability treatment.
+    target, conflict inventory, and capability treatment.
 11. [Architecture Baseline](./architecture-baseline.md) maps the current code to
-   Dez ownership, records gaps, and identifies safe seams for the next change.
-12. [Codex Terminal Adapter](./codex-adapter.md) documents the opt-in structured
-    lifecycle feed, trust boundary, retention limits, and current constraints.
+    Dez ownership, records gaps, and identifies safe seams for the next change.
+12. [Codex Terminal Adapter](./codex-adapter.md) documents the explicit
+    structured lifecycle feed, packaged Host boundary, trust and retention
+    limits, and current constraints.
 13. [Live Preview and Agent Model](./live-preview-and-agent-model.md) defines
     the terminal-first recommendation and the first honest embedded-preview
     vertical slice. It is deferred beyond v0.0.4, not evidence that an embedded

@@ -158,13 +158,58 @@ fn terminal_session_init_setting_copy(app_name: &str) -> (&'static str, &'static
     } else {
         (
             "Default Terminal Command",
-            "Command opened by Open Terminal and Ctrl+`. Leave blank to use the native shell. Start Native Shell, tmux, Codex, Claude Code, or OpenCode from the Main Work Area + menu or Command Palette.",
+            "Command used by Open Terminal and Ctrl+`. Leave blank for the native shell. Use the tab-strip + or Command Palette for one-off Native Shell, tmux, Codex, Claude Code, or OpenCode launches.",
         )
     }
 }
 
 fn terminal_session_init_setting_visible(_app_name: &str) -> bool {
     true
+}
+
+fn terminal_session_init_setting_on_terminal_page(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
+fn terminal_session_init_setting_placeholder(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "e.g. claude"
+    } else {
+        "e.g. codex"
+    }
+}
+
+fn terminal_session_init_setting_item() -> SettingsPageItem {
+    SettingsPageItem::SettingItem(SettingItem {
+        title: terminal_session_init_setting_copy(paths::APP_NAME).0,
+        description: terminal_session_init_setting_copy(paths::APP_NAME).1,
+        field: Box::new(SettingField {
+            organization_override: None,
+            json_path: Some("agent.terminal_init_command"),
+            pick: |settings_content| {
+                settings_content
+                    .agent
+                    .as_ref()?
+                    .terminal_init_command
+                    .as_ref()
+            },
+            write: |settings_content, value, _| {
+                settings_content
+                    .agent
+                    .get_or_insert_default()
+                    .terminal_init_command = value;
+            },
+        }),
+        metadata: Some(Box::new(SettingsFieldMetadata {
+            placeholder: Some(terminal_session_init_setting_placeholder(paths::APP_NAME)),
+            display_confirm_button: true,
+            display_clear_button: true,
+            confirm_on_focus_out: true,
+            treat_missing_text_as_empty: true,
+            ..Default::default()
+        })),
+        files: USER,
+    })
 }
 
 fn agent_session_setting_copy(
@@ -7143,6 +7188,17 @@ fn terminal_page() -> SettingsPage {
         }
     }
 
+    fn launch_section() -> Vec<SettingsPageItem> {
+        if terminal_session_init_setting_on_terminal_page(paths::APP_NAME) {
+            vec![
+                SettingsPageItem::SectionHeader("Terminal Launch"),
+                terminal_session_init_setting_item(),
+            ]
+        } else {
+            Vec::new()
+        }
+    }
+
     fn environment_section() -> [SettingsPageItem; 5] {
         [
                 SettingsPageItem::SectionHeader("Environment"),
@@ -8031,6 +8087,7 @@ fn terminal_page() -> SettingsPage {
         ),
         items: concat_sections![
             sessions_section(),
+            launch_section(),
             environment_section(),
             font_section(),
             display_settings_section(),
@@ -8989,37 +9046,10 @@ fn ai_page(cx: &App) -> SettingsPage {
             }),
         ]);
 
-        if terminal_session_init_setting_visible(paths::APP_NAME) {
-            items.push(SettingsPageItem::SettingItem(SettingItem {
-                title: terminal_session_init_setting_copy(paths::APP_NAME).0,
-                description: terminal_session_init_setting_copy(paths::APP_NAME).1,
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("agent.terminal_init_command"),
-                    pick: |settings_content| {
-                        settings_content
-                            .agent
-                            .as_ref()?
-                            .terminal_init_command
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .agent
-                            .get_or_insert_default()
-                            .terminal_init_command = value;
-                    },
-                }),
-                metadata: Some(Box::new(SettingsFieldMetadata {
-                    placeholder: Some("e.g. claude"),
-                    display_confirm_button: true,
-                    display_clear_button: true,
-                    confirm_on_focus_out: true,
-                    treat_missing_text_as_empty: true,
-                    ..Default::default()
-                })),
-                files: USER,
-            }));
+        if terminal_session_init_setting_visible(paths::APP_NAME)
+            && !terminal_session_init_setting_on_terminal_page(paths::APP_NAME)
+        {
+            items.push(terminal_session_init_setting_item());
         }
 
         items.extend([
@@ -9297,7 +9327,11 @@ fn attention_page() -> SettingsPage {
         }),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Notify on Attention",
-            description: "Notify when a background terminal or agent raises a new unread attention condition.",
+            description: if paths::APP_NAME == "Zed" {
+                "Notify when a background terminal or agent raises a new unread attention condition."
+            } else {
+                "Notify when a background terminal or Agent Session first needs attention."
+            },
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("agent_ui.notify_on_attention"),
@@ -9319,7 +9353,11 @@ fn attention_page() -> SettingsPage {
         }),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Announce Attention",
-            description: "Request an accessible window announcement when agent attention changes.",
+            description: if paths::APP_NAME == "Zed" {
+                "Request an accessible window announcement when agent attention changes."
+            } else {
+                "Announce Agent Session attention changes to assistive technologies."
+            },
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("accessibility.announce_agent_attention"),
@@ -9341,7 +9379,11 @@ fn attention_page() -> SettingsPage {
         }),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Pane Attention Ring",
-            description: "Use a visible pane outline in addition to labels and icons when a surface needs action.",
+            description: if paths::APP_NAME == "Zed" {
+                "Use a visible pane outline in addition to labels and icons when a surface needs action."
+            } else {
+                "Outline a pane when its terminal or Agent Session needs attention."
+            },
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("pane_grid.attention_ring"),
@@ -9378,7 +9420,11 @@ fn evidence_page() -> SettingsPage {
         }),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Show Detection Confidence",
-            description: "Label process-name detection as lower-confidence until structured adapter evidence is available.",
+            description: if paths::APP_NAME == "Zed" {
+                "Label process-name detection as lower-confidence until structured adapter evidence is available."
+            } else {
+                "Mark process-name detection as lower confidence until a structured adapter reports evidence."
+            },
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("agent_ui.show_detection_confidence"),
@@ -9400,7 +9446,11 @@ fn evidence_page() -> SettingsPage {
         }),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Detect Terminal Agents",
-            description: "Observe known agent process names as a local, lower-confidence fallback. This does not read terminal transcripts.",
+            description: if paths::APP_NAME == "Zed" {
+                "Observe known agent process names as a local, lower-confidence fallback. This does not read terminal transcripts."
+            } else {
+                "Detect known agent process names locally as a lower-confidence fallback. Dez does not read terminal transcripts."
+            },
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("agent_ui.detect_terminal_agents"),
@@ -9422,7 +9472,11 @@ fn evidence_page() -> SettingsPage {
         }),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Observe Terminal Activity",
-            description: "Use local lifecycle signals and authenticated adapter events to show agent state, commands, and file targets in Workspaces. Transcripts are not retained, and Dez never changes provider configuration.",
+            description: if paths::APP_NAME == "Zed" {
+                "Use local lifecycle signals and authenticated adapter events to show agent state, commands, and file targets in Workspaces. Transcripts are not retained, and Dez never changes provider configuration."
+            } else {
+                "Show lifecycle, command, and file-target events reported by local terminals and authenticated adapters in Workspaces. Dez does not retain terminal transcripts."
+            },
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("agent_ui.connect_hooks"),
@@ -9447,7 +9501,7 @@ fn evidence_page() -> SettingsPage {
             description: if paths::APP_NAME == "Zed" {
                 "Reopen the last active terminal surface when its locally stored identity still resolves. Session Rail identity and attention metadata load independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database."
             } else {
-                "Reopen the last active Terminal when its Terminal Host is still available. Workspaces restore Session identity and attention, not terminal transcripts. Live activity resumes only from the same Terminal Host."
+                "Reopen the last active terminal when its Terminal Host is available. Workspaces restores Session identity and attention metadata, not terminal transcripts."
             },
             field: Box::new(SettingField {
                 organization_override: None,
@@ -11682,11 +11736,21 @@ mod tests {
     fn terminal_startup_setting_exposes_the_native_dez_agent_launcher() {
         assert!(terminal_session_init_setting_visible("Dez"));
         assert!(terminal_session_init_setting_visible("Zed"));
+        assert!(terminal_session_init_setting_on_terminal_page("Dez"));
+        assert!(!terminal_session_init_setting_on_terminal_page("Zed"));
+        assert_eq!(
+            terminal_session_init_setting_placeholder("Dez"),
+            "e.g. codex"
+        );
+        assert_eq!(
+            terminal_session_init_setting_placeholder("Zed"),
+            "e.g. claude"
+        );
         assert_eq!(
             terminal_session_init_setting_copy("Dez"),
             (
                 "Default Terminal Command",
-                "Command opened by Open Terminal and Ctrl+`. Leave blank to use the native shell. Start Native Shell, tmux, Codex, Claude Code, or OpenCode from the Main Work Area + menu or Command Palette.",
+                "Command used by Open Terminal and Ctrl+`. Leave blank for the native shell. Use the tab-strip + or Command Palette for one-off Native Shell, tmux, Codex, Claude Code, or OpenCode launches.",
             )
         );
         assert_eq!(

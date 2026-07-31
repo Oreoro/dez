@@ -66,11 +66,12 @@ use ui::{
 use util::ResultExt;
 use workspace::{
     CloseActiveItem, DesignSystemSettings, DraggedSelection, DraggedTab, NewCenterTerminal,
-    NewTerminal, OpenFolder as OpenWorkspace, OpenTerminal, Pane, RevealFiles, ToolbarItemLocation,
-    Workspace, WorkspaceId, delete_unloaded_items,
+    NewTerminal, OpenFolder as OpenWorkspace, OpenTerminal, Pane, RevealFiles, Toast,
+    ToolbarItemLocation, Workspace, WorkspaceId, delete_unloaded_items,
     item::{
         HighlightedText, Item, ItemEvent, SerializableItem, TabContentParams, TabTooltipContent,
     },
+    notifications::NotificationId,
     register_serializable_item,
     searchable::{
         Direction, SearchEvent, SearchOptions, SearchToken, SearchableItem, SearchableItemHandle,
@@ -104,6 +105,8 @@ const TERMINAL_CONTEXT_ACTIVITY_LABEL_MIN_WIDTH: Pixels = px(360.);
 const TERMINAL_CONTEXT_PRIMARY_ACTION_LABEL_MIN_WIDTH: Pixels = px(480.);
 const TERMINAL_CONTEXT_SECONDARY_ACTION_LABEL_MIN_WIDTH: Pixels = px(720.);
 const TERMINAL_CONTEXT_DETAILS_LABEL_MIN_WIDTH: Pixels = px(920.);
+
+struct InstallationRequiredForTerminal;
 
 fn resolve_terminal_startup_command(
     requested: Option<String>,
@@ -906,7 +909,7 @@ fn open_shell_terminal(
     );
 }
 
-fn tmux_session_name_from_workspace_label(label: Option<&str>) -> String {
+pub fn tmux_session_name_from_workspace_label(label: Option<&str>) -> String {
     let session_name = label
         .unwrap_or("dez")
         .chars()
@@ -1053,6 +1056,17 @@ fn add_terminal_to_active_pane<F>(
 where
     F: FnOnce(&mut Project, &mut Context<Project>) -> Task<Result<Entity<Terminal>>> + 'static,
 {
+    if let Err(error) = workspace::ensure_workspace_startup_ready(cx) {
+        workspace.show_toast(
+            Toast::new(
+                NotificationId::unique::<InstallationRequiredForTerminal>(),
+                error.to_string(),
+            )
+            .autohide(),
+            cx,
+        );
+        return Task::ready(Err(error));
+    }
     if !is_enabled_in_workspace(workspace, cx) {
         return Task::ready(Err(anyhow!(
             "terminal not yet supported for collaborative projects"

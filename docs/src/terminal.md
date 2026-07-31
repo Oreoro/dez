@@ -1,6 +1,6 @@
 ---
 title: Built-in Terminal - Dez
-description: Dez's integrated terminal with main-area tabs, splits, agent supervision, optional Host sessions, custom shells, and editor integration.
+description: Dez's integrated terminal with native tabs, splits, agent supervision, durable Host ownership, custom launch commands, and Workspace navigation.
 ---
 
 # Terminal
@@ -10,6 +10,11 @@ and review. A terminal opens in the Main Work Area as a normal tab or split.
 Ordinary shells stay there. Workspaces only lists a terminal after Dez detects
 a supported foreground agent or explicitly owns it as a managed agent
 terminal.
+
+The terminal workflow is Workspace-first: use **Open Workspace**, start a new
+terminal tab or attach a discovered tmux or Herdr Session, supervise that work
+in **Workspaces**, then return through **Open Files** or **Review Changes**.
+The terminal remains an ordinary native tab throughout the flow.
 
 Workspaces starts closed in a fresh Dez window and may restore open when that
 window previously used it. When open, **Hide Workspaces** lives in the
@@ -33,6 +38,11 @@ and explicit `project_panel.starts_open` preferences remain respected.
 
 ## Opening Terminals
 
+On macOS, a copy running outside `/Applications` shows one inline **Install Dez
+to continue** callout on Home with **Install and Relaunch**. Workspace restore
+and durable-terminal startup wait behind that state. No startup dialog, prompt,
+modal, or overlay is opened.
+
 | Action                   | macOS              | Linux/Windows      |
 | ------------------------ | ------------------ | ------------------ |
 | Open configured terminal | `` Ctrl+` ``       | `` Ctrl+` ``       |
@@ -47,6 +57,12 @@ Native Shell**, **Launch Codex**, **Launch Claude Code**, and **Launch OpenCode*
 switching providers does not require changing the default. These commands,
 Workspaces, the tab-strip add control, and an empty Workspace all converge on the
 same native terminal Surface.
+
+Set the default under **Settings → Workspaces & Terminals → Terminal Launch →
+Default Terminal Command**. The adjacent `+` after each native pane's tabs
+offers that default, Native Shell, a Workspace-named tmux Session, Codex,
+Claude Code, and OpenCode as separate choices. Choosing a provider once does
+not rewrite the default.
 
 Dez lists that terminal under the matching Workspace when it detects a
 supported agent. The add control stays available when focus moves to Workspace
@@ -67,6 +83,13 @@ You can:
 - reattach a Host-owned terminal Session when the packaged Terminal Host owns
   it. Source or partial installations without the helper use the non-durable
   in-process fallback.
+
+The packaged Host bounds connection, reconnection, and command cycles. It does
+not replay a command whose outcome is uncertain, and it rejects work queued
+behind a broken transport as stale. Terminal input is bounded by message count
+and bytes; a full input queue reports backpressure instead of blocking or
+growing without limit. Resize and termination use a separate control lane so
+an input backlog cannot prevent recovery controls from running.
 
 ### Foreground agents stay in the terminal
 
@@ -100,16 +123,27 @@ Dez does not capture that terminal's transcript or arguments, accept its input,
 adopt its PTY, restore its process, or attribute its work. No Workspaces row is
 created for an unrelated external TTY.
 
-v0.0.4 adds a narrower, explicit control boundary for tmux, Herdr, and cmux.
+Dez adds a narrow, explicit control boundary for tmux, Herdr, and cmux.
 Dez discovers live tmux sessions through `list-panes`, live Herdr panes through
 the documented snapshot API, and cmux Workspaces through
-`list-workspaces --json`. An item appears under **Browse External Sessions…**
-only on an open Workspace whose root contains its working directory.
+`list-workspaces --json`. A session whose working directory is inside an open
+root appears beneath the most specific matching Workspace. Sessions with no
+working directory or no matching open root remain visible under **Other Running
+Sessions**. **Browse Running Sessions…** opens or refocuses Workspaces, clears
+temporary filters, expands matching groups, and refreshes every source.
 tmux and Herdr open the documented attach command in an ordinary Main Work Area
 terminal. A cmux Workspace opens in cmux through `select-workspace`; Dez does
 not manufacture an attachment terminal for it. The external application
 remains authoritative, closing a Dez tab detaches rather than terminates, and
 Dez never requests a Herdr takeover automatically.
+
+Each integration reports its source truth independently: **Missing** means the
+executable is unavailable, **Empty** means an available source returned no
+sessions, **Failed** means discovery did not complete, and **Ready** means it
+returned sessions. Failure preserves only that source's rows as **last known**;
+successful sources continue updating. A ready source may still have no session
+matching the selected Workspace, in which case its unmatched items stay under
+**Other Running Sessions** rather than disappearing.
 
 For the current local codebase, **Workspace: Open in cmux** in Command Palette
 hands the Workspace path to cmux and keeps the Dez window intact. It reports

@@ -45,6 +45,8 @@ actions!(
         CloseSidebar,
         /// Moves focus to or from the sidebar without closing it.
         FocusSidebar,
+        /// Opens Workspaces and reveals running tmux, Herdr, and cmux sessions.
+        BrowseRunningSessions,
         /// Activates the next project in the sidebar.
         NextProject,
         /// Activates the previous project in the sidebar.
@@ -447,6 +449,9 @@ pub trait Sidebar: Focusable + Render + EventEmitter<SidebarEvent> + Sized {
     ) {
     }
 
+    /// Reveals externally owned terminal sessions in the sidebar.
+    fn browse_external_sessions(&mut self, _window: &mut Window, _cx: &mut Context<Self>) {}
+
     /// Activates the next or previous project.
     fn cycle_project(&mut self, _forward: bool, _window: &mut Window, _cx: &mut Context<Self>) {}
 
@@ -503,6 +508,7 @@ pub trait SidebarHandle: 'static + Send + Sync {
     fn to_any(&self) -> AnyView;
     fn entity_id(&self) -> EntityId;
     fn toggle_thread_switcher(&self, select_last: bool, window: &mut Window, cx: &mut App);
+    fn browse_external_sessions(&self, window: &mut Window, cx: &mut App);
     fn cycle_project(&self, forward: bool, window: &mut Window, cx: &mut App);
     fn cycle_thread(&self, forward: bool, window: &mut Window, cx: &mut App);
     fn toggle_options_menu(&self, window: &mut Window, cx: &mut App);
@@ -571,6 +577,15 @@ impl<T: Sidebar> SidebarHandle for Entity<T> {
         window.defer(cx, move |window, cx| {
             entity.update(cx, |this, cx| {
                 this.toggle_thread_switcher(select_last, window, cx);
+            });
+        });
+    }
+
+    fn browse_external_sessions(&self, window: &mut Window, cx: &mut App) {
+        let entity = self.clone();
+        window.defer(cx, move |window, cx| {
+            entity.update(cx, |this, cx| {
+                this.browse_external_sessions(window, cx);
             });
         });
     }
@@ -1796,6 +1811,9 @@ impl MultiWorkspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Task<Result<Entity<Workspace>>> {
+        if let Err(error) = crate::ensure_workspace_startup_ready(cx) {
+            return Task::ready(Err(error));
+        }
         if let Some(workspace) =
             self.workspace_for_paths_excluding(&paths, host.as_ref(), excluding, cx)
         {
@@ -2596,6 +2614,9 @@ impl MultiWorkspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Task<Result<Entity<Workspace>>> {
+        if let Err(error) = crate::ensure_workspace_startup_ready(cx) {
+            return Task::ready(Err(error));
+        }
         if self.multi_workspace_enabled(cx) {
             let empty_workspace = if self
                 .active_workspace
@@ -2841,6 +2862,16 @@ impl Render for MultiWorkspace {
                             this.focus_sidebar(window, cx);
                         }),
                     )
+                    .on_action(cx.listener(
+                        |this: &mut Self, _: &BrowseRunningSessions, window, cx| {
+                            this.open_sidebar_for_sessions_reveal(window, cx);
+                            if let Some(sidebar) = &this.sidebar {
+                                this.previous_focus_handle = window.focused(cx);
+                                sidebar.browse_external_sessions(window, cx);
+                                sidebar.focus(window, cx);
+                            }
+                        },
+                    ))
                     .on_action(cx.listener(
                         |this: &mut Self, action: &ToggleThreadSwitcher, window, cx| {
                             if let Some(sidebar) = &this.sidebar {

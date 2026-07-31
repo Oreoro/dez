@@ -37,10 +37,19 @@ The active source contract lives in
 release gates remain in [v0.1 Product Hardening](./v0.1-product-hardening.md);
 that preserved ladder is a baseline, not a competing release train.
 
+The source-candidate route under validation is:
+
+```text
+Open Workspace
+-> run or attach work in native terminal tabs
+-> supervise Sessions and attention in Workspaces
+-> Open Files or Review Changes in the Main Work Area
+```
+
 The v0.2 dependency order is:
 
 ```text
-validate the exact v0.2.1 source candidate
+validate the exact v0.2.2 source candidate
 -> simplify Home, Workspaces, menus, and native tab navigation
 -> prove durable terminal and Workspace recovery
 -> harden Codex, Claude Code, OpenCode, tmux, and Herdr integrations
@@ -51,6 +60,27 @@ validate the exact v0.2.1 source candidate
 Do not advance a marketing version because source looks plausible. Each
 checkpoint must preserve the primary workflow and carry exact evidence for the
 claims it adds.
+
+The v0.2.2 source candidate sharpens the Workspace-first route without adding
+a second navigation model:
+
+- the adjacent native `+` launches the configured terminal, native shell,
+  tmux, Codex, Claude Code, or OpenCode and exposes **Browse Running
+  Sessions…**;
+- discovered tmux, Herdr, and cmux items appear beneath the most specific
+  matching Workspace, while pathless or unmatched items remain in **Other
+  Running Sessions**;
+- every discovery source distinguishes **Missing**, **Empty**, **Failed**, and
+  **Ready**, preserving only failed-source rows as **last known**;
+- browsing running Sessions clears transient navigator filters, refreshes
+  sources, expands matching groups, and focuses Workspaces;
+- **Default Terminal Command** lives in **Workspaces & Terminals → Terminal
+  Launch**; and
+- Host command cycles and PTY input are bounded, ambiguous commands are not
+  replayed, and resize or termination cannot be starved by input backlog.
+
+These are source-candidate claims. Exact-artifact runtime, restart, visual,
+accessibility, and packaging evidence remains open.
 
 ## v0.0.4 baseline slice {#v0-0-4-active-slice}
 

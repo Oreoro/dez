@@ -1770,6 +1770,25 @@ fn full_path_budget(
     (((max_width / 0.8) - file_name.len() * normal_em) / small_em) as usize
 }
 
+fn file_finder_placeholder(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Search project files..."
+    } else {
+        "Search Workspace files…"
+    }
+}
+
+#[cfg(test)]
+mod product_label_tests {
+    use super::file_finder_placeholder;
+
+    #[test]
+    fn file_finder_uses_workspace_scope_only_in_dez() {
+        assert_eq!(file_finder_placeholder("Dez"), "Search Workspace files…");
+        assert_eq!(file_finder_placeholder("Zed"), "Search project files...");
+    }
+}
+
 impl PickerDelegate for FileFinderDelegate {
     type ListItem = ListItem;
 
@@ -1778,7 +1797,7 @@ impl PickerDelegate for FileFinderDelegate {
     }
 
     fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
-        "Search project files...".into()
+        file_finder_placeholder(paths::APP_NAME).into()
     }
 
     fn searchbar_trailer(

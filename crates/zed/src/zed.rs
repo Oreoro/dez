@@ -107,9 +107,18 @@ use zed_actions::{
     OpenServerSettings, OpenSettingsFile, OpenStatusPage, OpenZedUrl, Quit,
 };
 
-const DOCS_URL: &str = "https://zed.dev/docs/";
+const ZED_DOCS_URL: &str = "https://zed.dev/docs/";
+const DEZ_DOCS_URL: &str = "https://github.com/Oreoro/dez/blob/main/docs/src/dez.md";
 const STATUS_URL: &str = "https://status.zed.dev";
 const MERCH_URL: &str = "https://merch.zed.dev/";
+
+fn product_docs_url(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        ZED_DOCS_URL
+    } else {
+        DEZ_DOCS_URL
+    }
+}
 
 pub struct CrashHandler(pub Arc<crashes::Client>);
 
@@ -918,6 +927,27 @@ fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
     status_bar.line_endings_button = Some(true);
 }
 
+struct InstallationRequiredForWorkspaceAction;
+
+fn workspace_action_blocked_by_installation(
+    workspace: &mut Workspace,
+    cx: &mut Context<Workspace>,
+) -> bool {
+    if APP_NAME == "Zed" || workspace::workspace_startup_is_ready(cx) {
+        return false;
+    }
+
+    workspace.show_toast(
+        Toast::new(
+            NotificationId::unique::<InstallationRequiredForWorkspaceAction>(),
+            "Install and relaunch Dez before opening a Workspace.",
+        )
+        .autohide(),
+        cx,
+    );
+    true
+}
+
 fn register_actions(
     app_state: Arc<AppState>,
     workspace: &mut Workspace,
@@ -925,7 +955,7 @@ fn register_actions(
     cx: &mut Context<Workspace>,
 ) {
     workspace
-        .register_action(|_, _: &OpenDocs, _, cx| cx.open_url(DOCS_URL))
+        .register_action(|_, _: &OpenDocs, _, cx| cx.open_url(product_docs_url(APP_NAME)))
         .register_action(|_, _: &OpenStatusPage, _, cx| cx.open_url(STATUS_URL))
         .register_action(|_, _: &GetMerch, _, cx| cx.open_url(MERCH_URL))
         .register_action(
@@ -1034,6 +1064,9 @@ fn register_actions(
             }
         })
         .register_action(|workspace, action: &workspace::Open, window, cx| {
+            if workspace_action_blocked_by_installation(workspace, cx) {
+                return;
+            }
             telemetry::event!("Project Opened");
             workspace::prompt_for_open_path_and_open(
                 workspace,
@@ -1055,6 +1088,9 @@ fn register_actions(
             );
         })
         .register_action(|workspace, action: &workspace::OpenFolder, window, cx| {
+            if workspace_action_blocked_by_installation(workspace, cx) {
+                return;
+            }
             telemetry::event!("Workspace Folder Opened");
             workspace::prompt_for_open_path_and_open(
                 workspace,
@@ -1076,6 +1112,9 @@ fn register_actions(
             );
         })
         .register_action(|workspace, _: &workspace::OpenFiles, window, cx| {
+            if workspace_action_blocked_by_installation(workspace, cx) {
+                return;
+            }
             let directories = cx.can_select_mixed_files_and_dirs();
             workspace::prompt_for_open_path_and_open(
                 workspace,
@@ -1092,6 +1131,9 @@ fn register_actions(
             );
         })
         .register_action(|workspace, action: &zed_actions::OpenRemote, window, cx| {
+            if workspace_action_blocked_by_installation(workspace, cx) {
+                return;
+            }
             if !action.from_existing_connection {
                 cx.propagate();
                 return;
@@ -1126,6 +1168,11 @@ fn register_actions(
                 }
             })
             .detach()
+        })
+        .register_action(|workspace, _: &zed_actions::OpenRecent, _, cx| {
+            if !workspace_action_blocked_by_installation(workspace, cx) {
+                cx.propagate();
+            }
         })
         .register_action({
             let fs = app_state.fs.clone();
@@ -1272,6 +1319,24 @@ fn register_actions(
         })
         .register_action(
             |workspace: &mut Workspace,
+             _: &zed_actions::dez::InstallAndRelaunch,
+             window,
+             cx| {
+                if APP_NAME == "Zed" {
+                    cx.propagate();
+                    return;
+                }
+                #[cfg(target_os = "macos")]
+                move_to_applications::install_and_relaunch(workspace, window, cx);
+                #[cfg(not(target_os = "macos"))]
+                {
+                    let _ = (workspace, window);
+                    cx.propagate();
+                }
+            },
+        )
+        .register_action(
+            |workspace: &mut Workspace,
              _: &zed_actions::dez::OpenWorkspaceInCmux,
              window,
              cx| {
@@ -1283,6 +1348,17 @@ fn register_actions(
                 struct OpenWorkspaceInCmux;
 
                 let project_group_key = workspace.project_group_key(cx);
+                if project_group_key.host().is_some() {
+                    workspace.show_toast(
+                        Toast::new(
+                            NotificationId::unique::<OpenWorkspaceInCmux>(),
+                            "cmux can open only local Workspaces. This remote Workspace stayed in Dez.",
+                        )
+                        .autohide(),
+                        cx,
+                    );
+                    return;
+                }
                 let Some(path) = project_group_key
                     .path_list()
                     .ordered_paths()
@@ -3017,6 +3093,15 @@ mod tests {
         sync::Arc,
         time::Duration,
     };
+
+    #[test]
+    fn documentation_routes_follow_the_product_identity() {
+        assert_eq!(product_docs_url("Zed"), "https://zed.dev/docs/");
+        assert_eq!(
+            product_docs_url("Dez"),
+            "https://github.com/Oreoro/dez/blob/main/docs/src/dez.md"
+        );
+    }
     use theme::ThemeRegistry;
     use util::{
         path,

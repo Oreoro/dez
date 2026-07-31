@@ -29,8 +29,25 @@ const DEFAULT_REPLAY_LIMIT_BYTES: usize = 128 * 1024;
 const MAX_HOST_EVENTS: usize = 512;
 const MAX_EVENTS_PER_RESPONSE: usize = 8;
 const TERMINAL_PTY_TERMINATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+const TERMINAL_HOST_HANDSHAKE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+const TERMINAL_HOST_WRITE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
 const TERMINAL_HOST_EVENT_HEARTBEAT_INTERVAL: std::time::Duration =
     std::time::Duration::from_secs(10);
+
+async fn run_bounded_transport_operation<F, T>(
+    future: F,
+    operation: &'static str,
+    timeout: std::time::Duration,
+) -> Result<T, TerminalHostTransportError>
+where
+    F: Future<Output = Result<T, TerminalHostTransportError>>,
+{
+    smol::future::race(future, async move {
+        smol::Timer::after(timeout).await;
+        Err(TerminalHostTransportError::TimedOut { operation, timeout })
+    })
+    .await
+}
 
 #[derive(Clone, Default)]
 struct TerminalHostEventNotifier {
@@ -624,21 +641,34 @@ async fn serve_client(
     host_id: TerminalHostId,
     expected_auth_token: &TerminalHostAuthToken,
 ) -> Result<()> {
-    let hello = read_frame::<_, TerminalHostClientMessage>(&mut stream).await?;
+    let hello = run_bounded_transport_operation(
+        read_frame::<_, TerminalHostClientMessage>(&mut stream),
+        "handshake read",
+        TERMINAL_HOST_HANDSHAKE_TIMEOUT,
+    )
+    .await?;
     let capabilities = match validate_hello(hello, host_id, expected_auth_token) {
         Ok(capabilities) => capabilities,
         Err(rejection) => {
-            write_frame(
-                &mut stream,
-                &TerminalHostServerMessage::HelloRejected { rejection },
+            run_bounded_transport_operation(
+                write_frame(
+                    &mut stream,
+                    &TerminalHostServerMessage::HelloRejected { rejection },
+                ),
+                "handshake rejection write",
+                TERMINAL_HOST_WRITE_TIMEOUT,
             )
             .await?;
             return Ok(());
         }
     };
-    write_frame(
-        &mut stream,
-        &TerminalHostServerMessage::accepted(host_id, capabilities),
+    run_bounded_transport_operation(
+        write_frame(
+            &mut stream,
+            &TerminalHostServerMessage::accepted(host_id, capabilities),
+        ),
+        "handshake response write",
+        TERMINAL_HOST_WRITE_TIMEOUT,
     )
     .await?;
 
@@ -652,12 +682,16 @@ async fn serve_client(
                 if changed {
                     notifier.notify();
                 }
-                write_frame(
-                    &mut stream,
-                    &TerminalHostServerMessage::Response {
-                        request_id,
-                        response,
-                    },
+                run_bounded_transport_operation(
+                    write_frame(
+                        &mut stream,
+                        &TerminalHostServerMessage::Response {
+                            request_id,
+                            response,
+                        },
+                    ),
+                    "command response write",
+                    TERMINAL_HOST_WRITE_TIMEOUT,
                 )
                 .await?;
             }
@@ -698,14 +732,18 @@ async fn serve_event_stream(
         };
         let has_events = !events.is_empty();
         if send_initial_position || has_events || truncated {
-            write_frame(
-                &mut stream,
-                &TerminalHostServerMessage::EventBatch {
-                    events,
-                    oldest_cursor,
-                    latest_cursor,
-                    truncated,
-                },
+            run_bounded_transport_operation(
+                write_frame(
+                    &mut stream,
+                    &TerminalHostServerMessage::EventBatch {
+                        events,
+                        oldest_cursor,
+                        latest_cursor,
+                        truncated,
+                    },
+                ),
+                "event batch write",
+                TERMINAL_HOST_WRITE_TIMEOUT,
             )
             .await?;
             send_initial_position = false;

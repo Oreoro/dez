@@ -1,8 +1,8 @@
 use crate::{
     BufferSearchBar, EXCLUDE_PLACEHOLDER, FocusSearch, HighlightKey, INCLUDE_PLACEHOLDER,
-    NextHistoryQuery, PreviousHistoryQuery, REPLACE_PLACEHOLDER, ReplaceAll, ReplaceNext,
-    SearchOption, SearchOptions, SearchSource, SelectNextMatch, SelectPreviousMatch,
-    ToggleCaseSensitive, ToggleIncludeIgnored, ToggleRegex, ToggleReplace, ToggleWholeWord,
+    NextHistoryQuery, PreviousHistoryQuery, ReplaceAll, ReplaceNext, SearchOption, SearchOptions,
+    SearchSource, SelectNextMatch, SelectPreviousMatch, ToggleCaseSensitive, ToggleIncludeIgnored,
+    ToggleRegex, ToggleReplace, ToggleWholeWord,
     buffer_search::Deploy,
     canvas,
     search_bar::{
@@ -10,6 +10,7 @@ use crate::{
         render_action_button, render_text_input, should_navigate_history,
     },
     text_finder::TextFinder,
+    workspace_replace_placeholder,
 };
 use anyhow::Context as _;
 use collections::HashMap;
@@ -157,6 +158,11 @@ mod product_label_tests {
             "No files in this Workspace match the current query. Broaden the query or remove path filters."
         );
         assert_eq!(workspace_search_title("Zed"), "Project Search");
+        assert_eq!(
+            workspace_replace_placeholder("Dez"),
+            "Replace across Workspace…"
+        );
+        assert_eq!(workspace_replace_placeholder("Zed"), "Replace in project…");
     }
 
     #[test]
@@ -1270,7 +1276,7 @@ impl ProjectSearchView {
         );
         let replacement_editor = cx.new(|cx| {
             let mut editor = Editor::auto_height(1, 4, window, cx);
-            editor.set_placeholder_text(REPLACE_PLACEHOLDER, window, cx);
+            editor.set_placeholder_text(workspace_replace_placeholder(paths::APP_NAME), window, cx);
             if let Some(text) = replacement_text {
                 editor.set_text(text, window, cx);
             }

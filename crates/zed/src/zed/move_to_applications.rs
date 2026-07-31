@@ -1,16 +1,21 @@
 use anyhow::{Context as _, Result};
-use gpui::{App, AsyncWindowContext, PromptButton, PromptLevel};
+use gpui::{App, AsyncWindowContext, Context, PromptButton, PromptLevel, TaskExt as _, Window};
+use paths::APP_NAME;
 use release_channel::RELEASE_CHANNEL;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use util::ResultExt;
+use util::ResultExt as _;
 use util::command::new_command;
-use workspace::MultiWorkspace;
+use workspace::{MultiWorkspace, Toast, Workspace, notifications::NotificationId};
 
-static PROMPTED_THIS_SESSION: AtomicBool = AtomicBool::new(false);
+static PROMPTED_UPSTREAM_ZED_THIS_SESSION: AtomicBool = AtomicBool::new(false);
+static DEZ_INSTALL_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
 
 pub fn init(cx: &mut App) {
+    if APP_NAME != "Zed" {
+        return;
+    }
     let Some(request) = MoveToApplicationsRequest::new(cx).log_err().flatten() else {
         return;
     };
@@ -19,14 +24,13 @@ pub fn init(cx: &mut App) {
         let Some(window) = window else {
             return;
         };
-
-        if PROMPTED_THIS_SESSION.swap(true, Ordering::AcqRel) {
+        if PROMPTED_UPSTREAM_ZED_THIS_SESSION.swap(true, Ordering::AcqRel) {
             return;
         }
 
         let request = request.clone();
         cx.spawn_in(window, async move |_workspace, cx| {
-            request.prompt(cx).await.log_err();
+            request.prompt_upstream_zed(cx).await.log_err();
         })
         .detach();
     })
@@ -65,15 +69,13 @@ impl MoveToApplicationsRequest {
         Ok(Some(Self { app_path }))
     }
 
-    async fn prompt(self, cx: &mut AsyncWindowContext) -> Result<()> {
+    async fn prompt_upstream_zed(self, cx: &mut AsyncWindowContext) -> Result<()> {
         let app_name = RELEASE_CHANNEL.display_name();
-        let prompt_title = format!("Install {app_name} before continuing");
-        let prompt_description = installation_required_message();
         let response = cx
             .prompt(
                 PromptLevel::Warning,
-                &prompt_title,
-                Some(&prompt_description),
+                &format!("Install {app_name} before continuing"),
+                Some(&installation_required_message()),
                 &[
                     PromptButton::ok("Install and Relaunch"),
                     PromptButton::cancel("Quit"),
@@ -94,13 +96,68 @@ impl MoveToApplicationsRequest {
                     .log_err();
                 }
             }
-            _ => {
-                cx.update(|_window, cx| cx.quit())?;
-            }
+            _ => cx.update(|_window, cx| cx.quit())?,
         }
-
         Ok(())
     }
+}
+
+pub fn install_and_relaunch(
+    workspace: &mut Workspace,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    struct InstallAndRelaunchToast;
+
+    let request = match MoveToApplicationsRequest::new(cx) {
+        Ok(Some(request)) => request,
+        Ok(None) => return,
+        Err(error) => {
+            log::error!("could not determine the Dez installation location: {error:#}");
+            return;
+        }
+    };
+    if DEZ_INSTALL_IN_PROGRESS.swap(true, Ordering::AcqRel) {
+        workspace.show_toast(
+            Toast::new(
+                NotificationId::unique::<InstallAndRelaunchToast>(),
+                "Installing Dez in /Applications…",
+            )
+            .autohide(),
+            cx,
+        );
+        return;
+    }
+
+    workspace.show_toast(
+        Toast::new(
+            NotificationId::unique::<InstallAndRelaunchToast>(),
+            format!(
+                "Installing {} in /Applications…",
+                RELEASE_CHANNEL.display_name()
+            ),
+        ),
+        cx,
+    );
+
+    cx.spawn_in(window, async move |workspace, cx| {
+        if let Err(error) = move_to_applications(&request.app_path, cx).await {
+            DEZ_INSTALL_IN_PROGRESS.store(false, Ordering::Release);
+            log::error!("failed to install Dez in /Applications: {error:#}");
+            workspace
+                .update_in(cx, |workspace, _, cx| {
+                    workspace.show_toast(
+                        Toast::new(
+                            NotificationId::unique::<InstallAndRelaunchToast>(),
+                            format!("Could not install Dez: {error}"),
+                        ),
+                        cx,
+                    );
+                })
+                .log_err();
+        }
+    })
+    .detach();
 }
 
 fn should_require_installation(app_path: &Path) -> bool {

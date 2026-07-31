@@ -842,8 +842,16 @@ impl TerminalHostConnection {
                     if response_tx.send(result).is_err() {
                         log::debug!("terminal host command response receiver was dropped");
                     }
-                } else if let Err(error) = result {
-                    log::warn!("terminal host command failed: {error:#}");
+                } else {
+                    match result {
+                        Err(error) => log::warn!("terminal host command failed: {error:#}"),
+                        Ok(Some(response)) => {
+                            if let Some(message) = terminal_host_response_rejection(&response) {
+                                log::warn!("terminal host rejected queued command: {message}");
+                            }
+                        }
+                        Ok(None) => {}
+                    }
                 }
             }
         });
@@ -896,8 +904,11 @@ impl TerminalHostConnection {
         if stream.is_none() {
             *stream = Some(self.event_stream(after_cursor).await?);
         }
+        let event_stream = stream
+            .as_mut()
+            .ok_or_else(|| anyhow::anyhow!("terminal host event stream was not connected"))?;
         run_bounded_terminal_host_operation(
-            stream.as_mut().expect("event stream is connected").next(),
+            event_stream.next(),
             &self.background_executor,
             "event heartbeat",
             TERMINAL_HOST_EVENT_READ_TIMEOUT,
@@ -1128,6 +1139,19 @@ fn reconnect_error_is_permanent(error: &TerminalHostTransportError) -> bool {
         ) | TerminalHostTransportError::HostMismatch
             | TerminalHostTransportError::ProtocolMismatch { .. }
     )
+}
+
+fn terminal_host_response_rejection(response: &TerminalHostResponse) -> Option<&str> {
+    match response {
+        TerminalHostResponse::Error { message } | TerminalHostResponse::Unsupported { message } => {
+            Some(message)
+        }
+        TerminalHostResponse::Heartbeat { .. }
+        | TerminalHostResponse::Events { .. }
+        | TerminalHostResponse::Sessions { .. }
+        | TerminalHostResponse::Snapshot { .. }
+        | TerminalHostResponse::Attachment { .. } => None,
+    }
 }
 
 fn terminal_host_command_queue_error(

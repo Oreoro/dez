@@ -666,26 +666,40 @@ fn main() {
         }
         let app_session = cx.new(|cx| AppSession::new(session, cx));
 
-        if let Some(installation_id) = &installation_id {
-            #[cfg(target_os = "macos")]
-            let installation_required = zed::move_to_applications::installation_required(cx);
-            #[cfg(target_os = "macos")]
-            let installation_required_message =
-                zed::move_to_applications::installation_required_message();
-            #[cfg(not(target_os = "macos"))]
-            let installation_required = false;
-            #[cfg(not(target_os = "macos"))]
-            let installation_required_message = String::new();
+        #[cfg(target_os = "macos")]
+        let installation_required = zed::move_to_applications::installation_required(cx);
+        #[cfg(target_os = "macos")]
+        let installation_required_message =
+            zed::move_to_applications::installation_required_message();
+        #[cfg(not(target_os = "macos"))]
+        let installation_required = false;
+        #[cfg(not(target_os = "macos"))]
+        let installation_required_message = String::new();
 
-            if installation_required {
-                terminal::session_host::transport::TerminalHostStartupStatus::init(cx);
-                terminal::session_host::transport::TerminalHostStartupStatus::set(
-                    terminal::session_host::transport::TerminalHostStartupState::InstallationRequired {
-                        message: installation_required_message,
-                    },
+        if installation_required {
+            if paths::APP_NAME == "Zed" {
+                workspace::set_workspace_startup_state(
+                    workspace::WorkspaceStartupState::Ready,
                     cx,
                 );
             } else {
+                workspace::set_workspace_startup_state(
+                    workspace::WorkspaceStartupState::InstallationRequired {
+                        message: installation_required_message.clone(),
+                    },
+                    cx,
+                );
+            }
+            terminal::session_host::transport::TerminalHostStartupStatus::init(cx);
+            terminal::session_host::transport::TerminalHostStartupStatus::set(
+                terminal::session_host::transport::TerminalHostStartupState::InstallationRequired {
+                    message: installation_required_message,
+                },
+                cx,
+            );
+        } else {
+            workspace::set_workspace_startup_state(workspace::WorkspaceStartupState::Ready, cx);
+            if let Some(installation_id) = &installation_id {
                 let terminal_host_id = terminal::session_host::TerminalHostId::from_stable_key(
                     &format!(
                         "dez-local-host:{}:{}",
@@ -695,6 +709,18 @@ fn main() {
                 );
                 terminal::session_host::LocalTerminalHost::init(terminal_host_id, cx);
                 terminal_host_runtime::TerminalHostRuntime::init(terminal_host_id, cx);
+            } else {
+                terminal::session_host::transport::TerminalHostStartupStatus::init(cx);
+                terminal::session_host::transport::TerminalHostStartupStatus::set(
+                    terminal::session_host::transport::TerminalHostStartupState::Failed {
+                        message: format!(
+                            "{} could not load its installation identity. Relaunch {}; if this continues, open the local diagnostics log.",
+                            paths::APP_NAME,
+                            paths::APP_NAME
+                        ),
+                    },
+                    cx,
+                );
             }
         }
 

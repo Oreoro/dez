@@ -237,9 +237,9 @@ fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Write. Delegate. Watch. Verify."
     } else if has_workspace {
-        "Start an agent or shell in a terminal. Follow activity in Workspaces, then review files and changes here."
+        "Run or attach in a native terminal tab. Monitor Sessions in Workspaces, then inspect Files or Review Changes."
     } else {
-        "Open a codebase, start an agent or shell, and review its work in one native Workspace."
+        "Open a codebase to keep terminals, files, agents, and review together in one Workspace."
     }
 }
 
@@ -369,7 +369,7 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
             },
             SectionEntry {
                 icon: IconName::FolderOpen,
-                title: "Browse Files",
+                title: "Open Files",
                 action: &REVEAL_FILES,
                 visibility_guard: SectionVisibility::Always,
             },
@@ -709,6 +709,18 @@ impl Render for WelcomePage {
             .workspace
             .upgrade()
             .is_some_and(|workspace| workspace.read(cx).worktrees(cx).next().is_some());
+        let workspace_startup_state = is_dez.then(|| crate::workspace_startup_state(cx));
+        let workspace_access_state = is_dez.then(|| crate::workspace_access_state(cx));
+        let installation_required = matches!(
+            &workspace_startup_state,
+            Some(crate::WorkspaceStartupState::InstallationRequired { .. })
+        );
+        let installation_action_count = usize::from(installation_required);
+        let workspace_access_action_count = usize::from(matches!(
+            &workspace_access_state,
+            Some(crate::WorkspaceAccessState::AccessRequired { .. })
+        ));
+        let action_tab_offset = installation_action_count + workspace_access_action_count;
         let (first_section, second_section) = if APP_NAME == "Zed" {
             ZED_CONTENT
         } else if has_workspace {
@@ -730,51 +742,66 @@ impl Render for WelcomePage {
             .map(|(index, workspace)| {
                 self.render_recent_project(
                     index,
-                    first_section_entries + index,
+                    action_tab_offset + first_section_entries + index,
                     &workspace.location,
                     &workspace.identity_paths,
                 )
             })
             .collect::<Vec<_>>();
 
-        let recent_state = welcome_recent_state(
-            APP_NAME,
-            self.fallback_to_recent_projects,
-            self.recent_workspaces.is_some(),
-            self.recent_workspaces_load_failed,
-            recent_projects.len(),
-        );
-        let secondary_content = match recent_state {
-            WelcomeRecentState::Ready => Some(
-                self.render_recent_project_section(recent_projects)
+        let recent_state = if installation_action_count > 0 {
+            WelcomeRecentState::Hidden
+        } else {
+            welcome_recent_state(
+                APP_NAME,
+                self.fallback_to_recent_projects,
+                self.recent_workspaces.is_some(),
+                self.recent_workspaces_load_failed,
+                recent_projects.len(),
+            )
+        };
+        let secondary_content = if installation_required {
+            None
+        } else {
+            match recent_state {
+                WelcomeRecentState::Ready => Some(
+                    self.render_recent_project_section(recent_projects)
+                        .into_any_element(),
+                ),
+                WelcomeRecentState::Loading => Some(
+                    Self::render_recent_workspace_status(
+                        "Loading recent Workspaces",
+                        "Reading your local Workspace history.",
+                        IconName::Clock,
+                    )
                     .into_any_element(),
-            ),
-            WelcomeRecentState::Loading => Some(
-                Self::render_recent_workspace_status(
-                    "Loading recent Workspaces",
-                    "Reading your local Workspace history.",
-                    IconName::Clock,
-                )
-                .into_any_element(),
-            ),
-            WelcomeRecentState::Unavailable => Some(
-                Self::render_recent_workspace_error(first_section_entries, welcome_page)
+                ),
+                WelcomeRecentState::Unavailable => Some(
+                    Self::render_recent_workspace_error(
+                        action_tab_offset + first_section_entries,
+                        welcome_page,
+                    )
                     .into_any_element(),
-            ),
-            WelcomeRecentState::Empty => Some(
-                Self::render_recent_workspace_status(
-                    "No recent Workspaces",
-                    "Open a Workspace and it will appear here.",
-                    IconName::Folder,
-                )
-                .into_any_element(),
-            ),
-            WelcomeRecentState::Hidden if !second_section.entries.is_empty() => Some(
-                second_section
-                    .render(first_section_entries, &self.focus_handle, false)
+                ),
+                WelcomeRecentState::Empty => Some(
+                    Self::render_recent_workspace_status(
+                        "No recent Workspaces",
+                        "Open a Workspace and it will appear here.",
+                        IconName::Folder,
+                    )
                     .into_any_element(),
-            ),
-            WelcomeRecentState::Hidden => None,
+                ),
+                WelcomeRecentState::Hidden if !second_section.entries.is_empty() => Some(
+                    second_section
+                        .render(
+                            action_tab_offset + first_section_entries,
+                            &self.focus_handle,
+                            false,
+                        )
+                        .into_any_element(),
+                ),
+                WelcomeRecentState::Hidden => None,
+            }
         };
         let has_secondary_content = secondary_content.is_some();
 
@@ -790,8 +817,33 @@ impl Render for WelcomePage {
         } else {
             cx.theme().colors().editor_background
         };
-        let workspace_access_notice = if is_dez {
-            match crate::workspace_access_state(cx) {
+        let installation_notice = match workspace_startup_state {
+            Some(crate::WorkspaceStartupState::InstallationRequired { message }) => Some(
+                Callout::new()
+                    .severity(Severity::Warning)
+                    .icon(IconName::FolderOpen)
+                    .title("Install Dez to continue")
+                    .description(message)
+                    .actions_slot(
+                        Button::new("home-install-and-relaunch", "Install and Relaunch")
+                            .style(ui::ButtonStyle::Filled)
+                            .tab_index(0isize)
+                            .aria_label("Install Dez in Applications and Relaunch")
+                            .on_click(|_, window, cx| {
+                                window.dispatch_action(
+                                    zed_actions::dez::InstallAndRelaunch.boxed_clone(),
+                                    cx,
+                                );
+                            }),
+                    )
+                    .into_any_element(),
+            ),
+            Some(crate::WorkspaceStartupState::Ready) | None => None,
+        };
+        let workspace_access_notice = if installation_required {
+            None
+        } else if let Some(workspace_access_state) = workspace_access_state {
+            match workspace_access_state {
                 crate::WorkspaceAccessState::Available => None,
                 crate::WorkspaceAccessState::AccessRequired { roots } => {
                     let description = if roots.len() == 1 {
@@ -800,11 +852,11 @@ impl Render for WelcomePage {
                             .and_then(|name| name.to_str())
                             .unwrap_or("This Workspace");
                         format!(
-                            "“{root}” needs access before files, Git, agents, or terminals can start. Choose the folder once in the native macOS picker."
+                            "Choose “{root}” once so Dez can open its files and start Workspace terminals and agents."
                         )
                     } else {
                         format!(
-                            "{} Workspace folders need access before files, Git, agents, or terminals can start. Choose each folder once in the native macOS picker.",
+                            "Choose each of the {} Workspace folders once so Dez can open their files and start terminals and agents.",
                             roots.len()
                         )
                     };
@@ -817,7 +869,7 @@ impl Render for WelcomePage {
                             .actions_slot(
                                 Button::new("home-choose-workspace-access", "Choose Workspace…")
                                     .style(ui::ButtonStyle::Filled)
-                                    .tab_index(0isize)
+                                    .tab_index(installation_action_count as isize)
                                     .aria_label("Choose Blocked Workspace Folder")
                                     .on_click(|_, window, cx| {
                                         window.dispatch_action(OPEN_WORKSPACE.boxed_clone(), cx);
@@ -833,6 +885,16 @@ impl Render for WelcomePage {
         let section_focus_handle = self.focus_handle.clone();
         let show_onboarding_return = APP_NAME == "Zed" && !self.fallback_to_recent_projects;
         let content_welcome_label = welcome_label.clone();
+        let page_title = if installation_required {
+            "Install Dez"
+        } else {
+            welcome_title(APP_NAME, has_workspace)
+        };
+        let page_summary = if installation_required {
+            "Install in Applications and relaunch before opening a Workspace or starting durable terminals."
+        } else {
+            welcome_summary(APP_NAME, has_workspace)
+        };
 
         h_flex()
             .id("welcome-page")
@@ -870,7 +932,7 @@ impl Render for WelcomePage {
                                 .flex_1()
                                 .when(is_dez, |this| this.px_1())
                                 .child(first_section.render(
-                                    0,
+                                    action_tab_offset,
                                     &section_focus_handle,
                                     welcome_emphasizes_first_action(APP_NAME),
                                 )),
@@ -897,7 +959,7 @@ impl Render for WelcomePage {
                             this.max_w(rems_from_px(520.))
                         })
                         .child(first_section.render(
-                            0,
+                            action_tab_offset,
                             &section_focus_handle,
                             welcome_emphasizes_first_action(APP_NAME),
                         ))
@@ -937,13 +999,13 @@ impl Render for WelcomePage {
                                         .min_w_0()
                                         .gap_0p5()
                                         .child(
-                                            Label::new(welcome_title(APP_NAME, has_workspace))
+                                            Label::new(page_title)
                                                 .size(LabelSize::XSmall)
                                                 .color(Color::Muted),
                                         )
                                         .child(Headline::new(content_welcome_label.clone()))
                                         .child(
-                                            Label::new(welcome_summary(APP_NAME, has_workspace))
+                                            Label::new(page_summary)
                                                 .size(LabelSize::Small)
                                                 .color(Color::Muted),
                                         ),
@@ -975,30 +1037,25 @@ impl Render for WelcomePage {
                                     v_flex()
                                         .min_w_0()
                                         .gap_1()
+                                        .child(div().font_weight(FontWeight::MEDIUM).child(
+                                            Headline::new(page_title).size(HeadlineSize::Large),
+                                        ))
                                         .child(
-                                            div().font_weight(FontWeight::MEDIUM).child(
-                                                Headline::new(welcome_title(
-                                                    APP_NAME,
-                                                    has_workspace,
-                                                ))
-                                                .size(HeadlineSize::Large),
-                                            ),
-                                        )
-                                        .child(
-                                            Label::new(welcome_summary(APP_NAME, has_workspace))
+                                            Label::new(page_summary)
                                                 .size(LabelSize::Small)
                                                 .color(Color::Muted),
                                         ),
                                 )
                                 .into_any_element()
                         })
+                        .when_some(installation_notice, |this, notice| this.child(notice))
                         .when_some(workspace_access_notice, |this, notice| this.child(notice))
-                        .child(sections)
+                        .when(!installation_required, |this| this.child(sections))
                         .when(show_onboarding_return, |this| {
                             this.child(
                                 v_flex().gap_4().child(Divider::horizontal()).child(
                                     Button::new("welcome-exit", "Return to Onboarding")
-                                        .tab_index(next_tab_index as isize)
+                                        .tab_index((action_tab_offset + next_tab_index) as isize)
                                         .full_width()
                                         .label_size(LabelSize::XSmall)
                                         .on_click(|_, window, cx| {
@@ -1262,11 +1319,11 @@ mod tests {
     fn dez_home_states_the_workflow_without_a_persistent_walkthrough() {
         assert_eq!(
             welcome_summary("Dez", false),
-            "Open a codebase, start an agent or shell, and review its work in one native Workspace."
+            "Open a codebase to keep terminals, files, agents, and review together in one Workspace."
         );
         assert_eq!(
             welcome_summary("Dez", true),
-            "Start an agent or shell in a terminal. Follow activity in Workspaces, then review files and changes here."
+            "Run or attach in a native terminal tab. Monitor Sessions in Workspaces, then inspect Files or Review Changes."
         );
         assert_eq!(
             welcome_summary("Zed", true),
@@ -1289,7 +1346,7 @@ mod tests {
             "the empty Dez window must not offer a pathless agent-terminal dead end"
         );
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[0].title, "Open Terminal");
-        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[1].title, "Browse Files");
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[1].title, "Open Files");
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[2].title, "Review Changes");
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[3].title, "New File");
         assert!(
