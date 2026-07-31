@@ -1069,6 +1069,15 @@ fn session_sidebar_title_in_titlebar(app_name: &str) -> bool {
     app_name != "Zed"
 }
 
+fn session_header_status_visible(
+    app_name: &str,
+    is_searching: bool,
+    is_restoring: bool,
+    has_attention: bool,
+) -> bool {
+    app_name == "Zed" || is_searching || is_restoring || has_attention
+}
+
 fn session_rail_title(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Sessions"
@@ -2172,6 +2181,10 @@ mod workspace_header_label_tests {
         assert!(session_overview_visible("Dez", 3, 1, false));
         assert!(session_overview_visible("Dez", 3, 0, true));
         assert!(session_overview_visible("Zed", 3, 0, false));
+        assert!(!session_header_status_visible("Dez", false, false, false));
+        assert!(session_header_status_visible("Dez", true, false, false));
+        assert!(session_header_status_visible("Dez", false, true, false));
+        assert!(session_header_status_visible("Dez", false, false, true));
     }
 }
 
@@ -6792,10 +6805,20 @@ impl Sidebar {
                     .focused_thread_entry(window, cx)
                     .as_ref()
                     .is_some_and(|active| active.matches_entry(entry));
-                self.render_thread(ix, thread, is_active, is_selected, cx)
+                let thread = self.render_thread(ix, thread, is_active, is_selected, cx);
+                if APP_NAME == "Zed" {
+                    thread
+                } else {
+                    h_flex().w_full().pl_3().child(thread).into_any_element()
+                }
             }
             ListEntry::Terminal(terminal) => {
-                self.render_terminal(ix, terminal, is_active, is_selected, cx)
+                let terminal = self.render_terminal(ix, terminal, is_active, is_selected, cx);
+                if APP_NAME == "Zed" {
+                    terminal
+                } else {
+                    h_flex().w_full().pl_3().child(terminal).into_any_element()
+                }
             }
         };
 
@@ -15957,37 +15980,43 @@ impl Sidebar {
                 this.child(
                     h_flex()
                         .min_w_0()
+                        .flex_1()
                         .gap_1()
                         .child(
                             Label::new(session_rail_title(APP_NAME))
                                 .size(LabelSize::Small)
+                                .flex_none()
                                 .truncate(),
                         )
-                        .child(
-                            h_flex()
-                                .id("session-rail-header-status")
-                                .min_w_0()
-                                .gap_1()
-                                .role(gpui::Role::Status)
-                                .aria_label(status_label.clone())
-                                .tooltip(Tooltip::text(status_label.clone()))
-                                .child(
-                                    Icon::new(status_icon)
-                                        .size(IconSize::XSmall)
-                                        .color(status_color),
+                        .when(
+                            session_header_status_visible(
+                                APP_NAME,
+                                has_query,
+                                is_restoring,
+                                self.contents.has_attention,
+                            ),
+                            |this| {
+                                this.child(
+                                    h_flex()
+                                        .id("session-rail-header-status")
+                                        .min_w_0()
+                                        .gap_1()
+                                        .role(gpui::Role::Status)
+                                        .aria_label(status_label.clone())
+                                        .tooltip(Tooltip::text(status_label.clone()))
+                                        .child(
+                                            Icon::new(status_icon)
+                                                .size(IconSize::XSmall)
+                                                .color(status_color),
+                                        ),
                                 )
-                                .when(self.rendered_width >= DETAILED_MIN_WIDTH, |this| {
-                                    this.child(
-                                        Label::new(status_label.clone())
-                                            .size(LabelSize::XSmall)
-                                            .color(status_color)
-                                            .truncate(),
-                                    )
-                                }),
+                            },
                         ),
                 )
             })
-            .child(div().flex_1())
+            .when(!session_sidebar_title_in_titlebar(APP_NAME), |this| {
+                this.child(div().flex_1())
+            })
             .when(
                 session_rail_open_workspace_control_visible(APP_NAME),
                 |this| {
