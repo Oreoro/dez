@@ -72,6 +72,13 @@ open a Workspace
 → resume without rebuilding context
 ```
 
+The primary user story is deliberately short. **Home** starts or resumes a
+Workspace. **Open Agent Terminal** launches the configured terminal workflow.
+**Workspace Navigator** switches codebases, returns to open tabs, and surfaces
+attention. **Browse Files** and **Review Changes** bring the result back into
+the same Main Work Area. The native tab-strip `+` is the shared Add menu for
+every step; no separate dashboard or onboarding mode is required.
+
 The window is deliberately not a dashboard of equal columns. Each Workspace
 owns one Project, one Main Work Area, its terminals, and its Git state.
 Workspaces stays global on the left. Files, Git, Outline, Debug, Built-in Agent,
@@ -87,8 +94,10 @@ Those tabs support reorder, cross-pane drag, preview replacement, pinning,
 closing, and horizontal or vertical splits. A terminal can therefore sit
 below code without Dez manufacturing a separate multiplexer UI.
 The adjacent native `+` reopens Home, opens Recent Workspaces, or routes to a
-terminal, file, search, Files, Git, Debug, or Built-in Agent surface through
-the existing Zed actions.
+terminal, file, search, Files, Changes, Debug, or Built-in Agent surface
+through the existing Zed actions. Its terminal submenu names the default Agent
+Terminal first, followed by Shell, tmux Workspace, and explicit provider
+launchers.
 
 Six optional layout commands remain available through **View** and Command
 Search: **Work Area + Files**, **Work Area + Built-in Agent**, **Focus Work

@@ -997,10 +997,10 @@ impl Pane {
         let (title, description) = if is_dez && show_orientation {
             (
                 "Main Work Area",
-                "Open a file or Agent Terminal in this Workspace.",
+                "Run an agent, find a file, or create one in this Workspace.",
             )
         } else if is_dez {
-            ("Empty pane", "Open a file or move a tab here.")
+            ("Empty pane", "Open or move a tab here.")
         } else if show_orientation {
             (
                 "Start work in this project",
@@ -1082,11 +1082,7 @@ impl Pane {
                             .child(
                                 Button::new("empty-project-terminal", terminal_action_label)
                                     .tab_index(0isize)
-                                    .style(if is_dez {
-                                        ButtonStyle::Outlined
-                                    } else {
-                                        ButtonStyle::Filled
-                                    })
+                                    .style(ButtonStyle::Filled)
                                     .start_icon(Icon::new(IconName::Terminal))
                                     .aria_label(terminal_action_aria_label)
                                     .tooltip(move |_, cx| {
@@ -5626,17 +5622,17 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                 } else {
                     menu.action("Open Home", crate::welcome::ShowWelcome.boxed_clone())
                         .action(
-                            "Open Recent Workspace…",
+                            "Open Recent Workspaces…",
                             zed_actions::OpenRecent::default().boxed_clone(),
                         )
                         .separator()
                         .submenu("Open Terminal", |menu, _, _| {
                             menu.action(
-                                "Configured Agent",
+                                "Default Agent Terminal",
                                 zed_actions::terminal::OpenAgentTerminal.boxed_clone(),
                             )
                             .action(
-                                "Native Shell",
+                                "Shell",
                                 zed_actions::terminal::OpenShellTerminal.boxed_clone(),
                             )
                             .action(
@@ -5668,7 +5664,7 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                         .action(open_file, ToggleFileFinder::default().boxed_clone())
                         .separator()
                         .action("Open Files", RevealFiles.boxed_clone())
-                        .action("Review Git Changes", RevealGitChanges.boxed_clone())
+                        .action("Review Changes", RevealGitChanges.boxed_clone())
                         .action("Open Debug", RevealDebug.boxed_clone())
                         .separator()
                         .action(search_workspace, DeploySearch::default().boxed_clone())
@@ -5714,7 +5710,7 @@ fn pane_new_surface_control_copy(app_name: &str) -> (&'static str, &'static str)
     } else {
         (
             "Add to Main Work Area",
-            "Open a terminal, file, or workspace tool",
+            "Add a terminal, file, review, or Workspace tool",
         )
     }
 }
@@ -5727,7 +5723,7 @@ fn pane_new_surface_menu_copy(
     } else {
         (
             "New File",
-            "Open File…",
+            "Find File…",
             "Search Workspace…",
             "Go to Symbol…",
         )
@@ -6619,7 +6615,7 @@ mod tests {
             pane_new_surface_control_copy("Dez"),
             (
                 "Add to Main Work Area",
-                "Open a terminal, file, or workspace tool"
+                "Add a terminal, file, review, or Workspace tool"
             )
         );
         assert_eq!(pane_new_surface_control_copy("Zed"), ("New Item", "New…"));
@@ -6627,7 +6623,7 @@ mod tests {
             pane_new_surface_menu_copy("Dez"),
             (
                 "New File",
-                "Open File…",
+                "Find File…",
                 "Search Workspace…",
                 "Go to Symbol…"
             )

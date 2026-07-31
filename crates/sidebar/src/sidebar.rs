@@ -1119,6 +1119,13 @@ fn workspace_tabs_section_visible(app_name: &str, tab_count: usize) -> bool {
     app_name != "Zed" && tab_count > 0
 }
 
+fn workspace_tab_count_label(tab_count: usize) -> String {
+    format!(
+        "{tab_count} {}",
+        if tab_count == 1 { "tab" } else { "tabs" }
+    )
+}
+
 fn workspace_pane_navigation_label(pane_index: usize, pane_count: usize) -> Option<String> {
     (pane_count > 1).then(|| format!("Pane {}", pane_index + 1))
 }
@@ -2263,6 +2270,8 @@ mod session_start_state_tests {
         assert!(workspace_tabs_section_visible("Dez", 1));
         assert!(!workspace_tabs_section_visible("Dez", 0));
         assert!(!workspace_tabs_section_visible("Zed", 3));
+        assert_eq!(workspace_tab_count_label(1), "1 tab");
+        assert_eq!(workspace_tab_count_label(3), "3 tabs");
         assert_eq!(workspace_pane_navigation_label(0, 1), None);
         assert_eq!(
             workspace_pane_navigation_label(1, 3).as_deref(),
@@ -8278,7 +8287,7 @@ impl Sidebar {
 
                         let menu = menu.when(is_active, |menu| {
                             menu.action("Open Files", Box::new(RevealFiles))
-                                .action("Review Git Changes", Box::new(ReviewGitChanges))
+                                .action("Review Changes", Box::new(ReviewGitChanges))
                                 .action(
                                     "Open Debug",
                                     Box::new(workspace::ApplyCanvasLayoutRecipe {
@@ -16502,7 +16511,7 @@ impl Sidebar {
                                         ),
                                 )
                                 .child(
-                                    Label::new(format!("{tab_count}"))
+                                    Label::new(workspace_tab_count_label(tab_count))
                                         .size(LabelSize::XSmall)
                                         .color(Color::Muted),
                                 ),

@@ -154,7 +154,7 @@ fn terminal_session_init_setting_copy(app_name: &str) -> (&'static str, &'static
     } else {
         (
             "Default Agent Terminal Command",
-            "Command Dez runs in a native Workspace terminal from Ctrl+` or Open Agent Terminal. Leave blank for your shell, or use Command Search to open Shell, launch Codex, Claude Code, or OpenCode directly.",
+            "Command launched by Open Agent Terminal and Ctrl+`. Leave blank to open the configured shell. Shell, tmux, Codex, Claude Code, and OpenCode remain available from Add and Command Search.",
         )
     }
 }
@@ -229,8 +229,8 @@ fn sessions_side_setting_visible(app_name: &str, page_title: &str) -> bool {
 
 fn projects_startup_setting() -> SettingsPageItem {
     SettingsPageItem::SettingItem(SettingItem {
-        title: "Open Workspaces on Startup",
-        description: "Open the Workspaces navigator in fresh windows. Restored and explicitly opened layouts keep their own state.",
+        title: "Show Workspace Navigator on Startup",
+        description: "Show the Workspace Navigator in new windows. Restored windows keep their saved layout.",
         field: Box::new(SettingField {
             organization_override: None,
             json_path: Some("sidebar.starts_open"),
@@ -249,12 +249,12 @@ fn sessions_side_setting() -> SettingsPageItem {
         title: if paths::APP_NAME == "Zed" {
             "Sessions Side"
         } else {
-            "Workspaces Side"
+            "Workspace Navigator Side"
         },
         description: if paths::APP_NAME == "Zed" {
             "Which side of the window the Sessions list appears on."
         } else {
-            "Which side of the window the Workspaces navigator appears on."
+            "Choose where the Workspace Navigator appears."
         },
         field: Box::new(SettingField {
             organization_override: None,
@@ -7109,7 +7109,7 @@ fn terminal_page() -> SettingsPage {
                 SettingsPageItem::SectionHeader(if paths::APP_NAME == "Zed" {
                     "Sessions"
                 } else {
-                    "Workspaces Navigator"
+                    "Workspace Navigator"
                 }),
                 sessions_side_setting(),
                 projects_startup_setting(),
@@ -11664,7 +11664,7 @@ mod tests {
             terminal_session_init_setting_copy("Dez"),
             (
                 "Default Agent Terminal Command",
-                "Command Dez runs in a native Workspace terminal from Ctrl+` or Open Agent Terminal. Leave blank for your shell, or use Command Search to open Shell, launch Codex, Claude Code, or OpenCode directly.",
+                "Command launched by Open Agent Terminal and Ctrl+`. Leave blank to open the configured shell. Shell, tmux, Codex, Claude Code, and OpenCode remain available from Add and Command Search.",
             )
         );
         assert_eq!(

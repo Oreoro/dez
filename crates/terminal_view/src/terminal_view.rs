@@ -2866,8 +2866,8 @@ impl TerminalView {
                 .style(ButtonStyle::Subtle)
                 .start_icon(Icon::new(IconName::Info).size(IconSize::XSmall))
                 .tab_index(0isize)
-                .aria_label("Open Terminal Details and How Dez Works")
-                .tooltip(Tooltip::text("Terminal Details and How Dez Works")),
+                .aria_label("Open Terminal Details")
+                .tooltip(Tooltip::text("Terminal Details")),
             )
             .menu(move |window, cx| {
                 let details_status = details_status.clone();
@@ -2909,21 +2909,21 @@ impl TerminalView {
                     .label("Agents · confidence and checks require trusted evidence.")
                     .label("Terminal text is display content, not proof.")
                     .separator()
-                    .header("How Dez Works")
-                    .label("Run · work stays in this terminal.")
+                    .header("Workflow")
+                    .label("Run · This process stays in this terminal.")
                     .when(paths::APP_NAME == "Zed", |menu| {
                         menu.label("Supervise · Sessions keeps live state and attention visible.")
                     })
                     .when(paths::APP_NAME != "Zed", |menu| {
                         menu.label(
-                            "Supervise · the Workspaces navigator keeps each codebase and its agent sessions together.",
+                            "Supervise · Workspace Navigator shows attention and returns you to this Session.",
                         )
                     })
                     .when(details_has_workspace_files, |menu| {
-                        menu.label("Review · Files and Git inspect this same Workspace.")
+                        menu.label("Review · Files and Git inspect this Workspace.")
                     })
                     .when(!details_has_workspace_files, |menu| {
-                        menu.label("Connect · open a Workspace to add Files and Git review.")
+                        menu.label("Connect · Open a Workspace to add Files and Git review.")
                     })
                 }))
             })

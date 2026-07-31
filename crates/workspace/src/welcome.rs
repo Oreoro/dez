@@ -1,6 +1,6 @@
 use crate::{
     NewCenterTerminal, NewFile, Open, OpenFolder, OpenMode, PathList, RecentWorkspace, RevealFiles,
-    SerializedWorkspaceLocation, Workspace, WorkspaceId, WorkspaceSettings,
+    RevealGitChanges, SerializedWorkspaceLocation, Workspace, WorkspaceId, WorkspaceSettings,
     item::{Item, ItemEvent},
     persistence::WorkspaceDb,
 };
@@ -227,14 +227,15 @@ const OPEN_WORKSPACE: OpenFolder = OpenFolder {
     create_new_window: Some(false),
 };
 const REVEAL_FILES: RevealFiles = RevealFiles;
+const REVEAL_GIT_CHANGES: RevealGitChanges = RevealGitChanges;
 
 fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Write. Delegate. Watch. Verify."
     } else if has_workspace {
-        "Run an agent in a native terminal, follow it in Workspaces, and review its files and Git changes here."
+        "Run an agent or edit directly, then review changes without leaving the Main Work Area."
     } else {
-        "Open a codebase to run agents in native terminals and review their work without leaving the Workspace."
+        "Open a codebase to connect files, terminals, agents, and Git in one native Workspace."
     }
 }
 
@@ -242,9 +243,9 @@ fn welcome_title(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Terminal-native development"
     } else if has_workspace {
-        "This Workspace"
+        "Continue in this Workspace"
     } else {
-        "Open a Workspace"
+        "Start with a Workspace"
     }
 }
 
@@ -330,7 +331,7 @@ const ZED_CONTENT: (Section, Section) = (
 
 const DEZ_CONTENT: (Section, Section) = (
     Section {
-        title: "Start",
+        title: "Start a Workspace",
         entries: &[
             SectionEntry {
                 icon: IconName::FolderOpen,
@@ -354,7 +355,7 @@ const DEZ_CONTENT: (Section, Section) = (
 
 const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
     Section {
-        title: "This Workspace",
+        title: "Continue",
         entries: &[
             SectionEntry {
                 icon: IconName::Terminal,
@@ -364,8 +365,14 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
             },
             SectionEntry {
                 icon: IconName::FolderOpen,
-                title: "Open Files",
+                title: "Browse Files",
                 action: &REVEAL_FILES,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
+                icon: IconName::Diff,
+                title: "Review Changes",
+                action: &REVEAL_GIT_CHANGES,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
@@ -1200,18 +1207,18 @@ mod tests {
     fn dez_home_states_the_workflow_without_a_persistent_walkthrough() {
         assert_eq!(
             welcome_summary("Dez", false),
-            "Open a codebase to run agents in native terminals and review their work without leaving the Workspace."
+            "Open a codebase to connect files, terminals, agents, and Git in one native Workspace."
         );
         assert_eq!(
             welcome_summary("Dez", true),
-            "Run an agent in a native terminal, follow it in Workspaces, and review its files and Git changes here."
+            "Run an agent or edit directly, then review changes without leaving the Main Work Area."
         );
         assert_eq!(
             welcome_summary("Zed", true),
             "Write. Delegate. Watch. Verify."
         );
-        assert_eq!(welcome_title("Dez", false), "Open a Workspace");
-        assert_eq!(welcome_title("Dez", true), "This Workspace");
+        assert_eq!(welcome_title("Dez", false), "Start with a Workspace");
+        assert_eq!(welcome_title("Dez", true), "Continue in this Workspace");
         assert_eq!(welcome_title("Zed", false), "Terminal-native development");
         assert_eq!(welcome_surface_label("Dez"), "Home");
         assert_eq!(welcome_surface_label("Zed"), "Welcome");
@@ -1230,8 +1237,9 @@ mod tests {
             DEZ_WORKSPACE_CONTENT.0.entries[0].title,
             "Open Agent Terminal"
         );
-        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[1].title, "Open Files");
-        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[2].title, "New File");
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[1].title, "Browse Files");
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[2].title, "Review Changes");
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[3].title, "New File");
         assert!(
             DEZ_CONTENT.1.entries.is_empty(),
             "Dez Welcome should leave configuration to normal application navigation"

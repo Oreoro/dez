@@ -46,9 +46,9 @@ does not imitate browser tabs with a separate navigation system. Terminals can
 be split below or beside code while keeping their Workspace ownership.
 
 The tab-strip **+** is the single **Add to Main Work Area** control. Its
-**Open Terminal** submenu launches the configured agent command, a native
-shell, a Workspace-named tmux session, Codex, Claude Code, or OpenCode. It also
-opens the optional Built-in Agent, a file, Files, Git, Debug, Workspace search,
+**Open Terminal** submenu launches the **Default Agent Terminal**, a **Shell**,
+a Workspace-named tmux session, Codex, Claude Code, or OpenCode. It also opens
+the optional Built-in Agent, a file, Files, Changes, Debug, Workspace search,
 or symbol search. **Browse tmux, Herdr & cmux…** focuses Workspaces, where each
 discovered external session remains attached to its owning Workspace.
 **Open Workspace in cmux** performs the explicit external handoff. Every
@@ -154,17 +154,17 @@ path. A stable signed release can retain the resulting macOS folder grant;
 ad-hoc development snapshots may be asked again after their code identity
 changes.
 
-Home keeps that first choice concrete. Without a Workspace, its start
-actions are **Open Workspace** and **Clone Repository**. Dez does not offer an
-Agent Terminal until a codebase can supply file and Git review context. Inside
-a Workspace, the actions become **Open Agent Terminal**, **Open Files**, and
-**New File**. The terminal action opens a normal integrated terminal; you then
-start a supported agent CLI. The terminal enters Sessions only after agent
-evidence exists.
+Home keeps that first choice concrete. Without a Workspace, **Start a
+Workspace** offers **Open Workspace** and **Clone Repository**. Dez does not
+offer an Agent Terminal until a codebase can supply file and Git review
+context. Inside a Workspace, **Continue** offers **Open Agent Terminal**,
+**Browse Files**, **Review Changes**, and **New File**. The terminal action
+opens a normal integrated terminal; you then start a supported agent CLI. The
+terminal enters Sessions only after agent evidence exists.
 
 Home is a normal, top-anchored Main Work Area surface, not a modal dashboard or
-persistent walkthrough. One sentence states the terminal → Workspaces → review
-loop, then native command rows own every action. It names its explicit tab
+persistent walkthrough. One sentence states the Workspace → run → review loop,
+then native command rows own every action. It names its explicit tab
 **Home**. Recent Workspaces reserve a stable native section while local history
 loads, state clearly when no history exists, and become ordinary
 keyboard-reachable rows when ready. Multi-root rows lead with the first root
@@ -309,9 +309,10 @@ subscription, authentication, TUI, commands, and plugins remain intact. Use
 conversation for planning, Workspace questions, edits, or tool calls beside the
 editor. It is optional and requires a usable provider and model.
 
-Workspace Options and the tab-strip **+** expose native terminal launch
-choices: **Configured Agent**, **Native Shell**, **tmux Workspace**,
-**Codex**, **Claude Code**, and **OpenCode**.
+The tab-strip **+** exposes native terminal launch choices: **Default Agent
+Terminal**, **Shell**, **tmux Workspace**, **Codex**, **Claude Code**, and
+**OpenCode**. Workspace Options identifies the configured default command and
+keeps a separate native-shell choice beside the explicit providers.
 The default command is editable under **Settings → Agents →
 Default Agent Terminal Command**; leaving it blank keeps a normal shell.
 Provider shortcuts are per-launch choices and never rewrite that setting.
@@ -599,9 +600,9 @@ stay out of the public Settings navigation.
 Workspaces is optional chrome, not a permanent editor column. Fresh windows
 keep it closed; the status bar exposes **Open Workspaces**, and the same toggle
 remains available through **View** and Command Search. **Settings → Workspaces
-& Terminals → Open Workspaces on Startup** makes it persistent for people who
-prefer that layout. Closing Workspaces never closes a Workspace, terminal, or
-Agent Session.
+& Terminals → Show Workspace Navigator on Startup** makes it persistent for
+people who prefer that layout. **Workspace Navigator Side** chooses its window
+edge. Closing Workspaces never closes a Workspace, terminal, or Agent Session.
 
 If imported settings hide that identity, **Settings → Appearance → Restore
 Native Dez Appearance** restores Lumin, balanced density, IBM Plex Sans, Lilex,
