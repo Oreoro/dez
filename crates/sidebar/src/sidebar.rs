@@ -3453,7 +3453,11 @@ async fn terminate_legacy_terminal_session(
             directory.join("auth.token"),
             generation,
         );
-        let token = match smol::fs::read_to_string(endpoint.token_file_path()).await {
+        let token_file_path = endpoint.token_file_path().to_path_buf();
+        let token = match background_executor
+            .spawn(async move { std::fs::read_to_string(token_file_path) })
+            .await
+        {
             Ok(token) => match TerminalHostAuthToken::parse(token.trim().to_owned()) {
                 Ok(token) => token,
                 Err(error) => {
@@ -4973,7 +4977,7 @@ impl Sidebar {
         }
 
         cx.observe(workspace, |this, workspace, cx| {
-            if this.is_active_workspace(workspace, cx) {
+            if this.is_active_workspace(&workspace, cx) {
                 cx.notify();
             }
         })
@@ -5949,7 +5953,8 @@ impl Sidebar {
                         let agent = metadata
                             .session_ref
                             .and_then(|session_ref| {
-                                helper_snapshot_by_session.get(&session_ref.session_id)
+                                helper_snapshot_by_session
+                                    .get(&(session_ref.host_id, session_ref.session_id))
                             })
                             .and_then(|snapshot| snapshot.agent.clone());
                         let has_notification = has_notification
@@ -16330,7 +16335,7 @@ impl Sidebar {
 
     fn render_active_workspace_tabs(
         &self,
-        window: &Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
         let workspace = self.active_workspace(cx)?;
