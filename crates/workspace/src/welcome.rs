@@ -221,6 +221,7 @@ impl SectionEntry {
 const NEW_CENTER_TERMINAL: NewCenterTerminal = NewCenterTerminal {
     local: false,
     startup_command: None,
+    working_directory: None,
 };
 const OPEN_WORKSPACE: OpenFolder = OpenFolder {
     create_new_window: Some(false),

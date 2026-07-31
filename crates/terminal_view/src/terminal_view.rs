@@ -899,6 +899,7 @@ fn open_shell_terminal(
         &NewCenterTerminal {
             local: false,
             startup_command: Some(String::new()),
+            working_directory: None,
         },
         window,
         cx,
@@ -1018,6 +1019,7 @@ fn open_terminal_with_startup_command(
         &NewCenterTerminal {
             local: false,
             startup_command: Some(startup_command.to_owned()),
+            working_directory: None,
         },
         window,
         cx,
@@ -1368,7 +1370,10 @@ impl TerminalView {
             AgentSettings::get_global(cx).terminal_init_command.clone(),
             paths::APP_NAME,
         );
-        let working_directory = default_working_directory(workspace, cx);
+        let working_directory = action
+            .working_directory
+            .clone()
+            .or_else(|| default_working_directory(workspace, cx));
         let terminal_task =
             add_terminal_to_active_pane(workspace, window, cx, move |project, cx| {
                 if local {

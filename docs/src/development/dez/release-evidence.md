@@ -1765,3 +1765,35 @@ setup.
 No build, test binary, alternate binary, or visual launch was performed.
 Rendered Lumin Light/Blur, compact-width, focus-order, and provider-state proof
 remains open for the consolidated build.
+
+## 2026-07-31: Workspace access and durable terminal ownership
+
+Current source makes `/Applications` installation a prerequisite for
+Workspace restoration and durable-terminal startup. The install path uses the
+native prompt and Home surface; the previous custom installation overlay,
+remembered bypass, and temporary-host startup path are removed.
+
+The terminal Host now exposes one generated endpoint containing its generation,
+socket path, and token-file path. The generation also participates in the
+stable Host ID, and terminal hooks receive the endpoint from the authenticated
+connection. Persisted records owned by an older Host remain visible as
+**Legacy · Access blocked**. Replacement-shell creation does not modify the
+legacy process; explicit termination retains the native confirmation gate and
+contacts only known legacy endpoints.
+
+Local Workspace roots are read-preflighted before restore. Permission failures
+become one root-aggregated native access state. Workspace Search deduplicates
+denied-root diagnostics and cancels active work through the GPUI quit
+subscription. Herdr and tmux attach terminals retain rerun, expose a manual
+**Retry Attach** action after failure, and refresh discovery after completion.
+Raw non-agent Herdr terminals are represented as **Available**.
+
+The macOS workflow now defaults to a Preview artifact and labels ad-hoc output
+as not being a v0.1 release. Stable selection fails when any signing or
+notarization secret is absent and validates Developer ID authority,
+TeamIdentifier, Gatekeeper acceptance, and the stapled notarization ticket
+before upload.
+
+Only formatting, shell syntax, diff, and source-identity checks are permitted
+locally for this slice. Exact compilation, focused tests, optimized packaging,
+signing, notarization, and artifact validation remain remote evidence gates.

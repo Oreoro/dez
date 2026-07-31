@@ -1,30 +1,16 @@
 use anyhow::{Context as _, Result};
-use db::kvp::KeyValueStore;
-use gpui::{
-    App, AsyncWindowContext, Context, DismissEvent, EventEmitter, FocusHandle, Focusable,
-    PromptButton, PromptLevel, Render, WeakEntity, Window,
-};
+use gpui::{App, AsyncWindowContext, PromptButton, PromptLevel};
 use release_channel::RELEASE_CHANNEL;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use ui::{
-    ActiveTheme, Color, CommonAnimationExt, Icon, IconName, IconSize, IntoElement, Label,
-    LabelCommon, LabelSize, ParentElement, Styled, StyledExt, div, h_flex, v_flex,
-};
 use util::ResultExt;
 use util::command::new_command;
-use workspace::{ModalView, MultiWorkspace};
+use workspace::MultiWorkspace;
 
-const DONT_ASK_AGAIN_KEY: &str = "move_to_applications_dont_ask_again";
 static PROMPTED_THIS_SESSION: AtomicBool = AtomicBool::new(false);
 
 pub fn init(cx: &mut App) {
-    let kvp = KeyValueStore::global(cx);
-    if matches!(kvp.read_kvp(DONT_ASK_AGAIN_KEY), Ok(Some(value)) if value == "true") {
-        return;
-    }
-
     let Some(request) = MoveToApplicationsRequest::new(cx).log_err().flatten() else {
         return;
     };
@@ -39,12 +25,25 @@ pub fn init(cx: &mut App) {
         }
 
         let request = request.clone();
-        cx.spawn_in(window, async move |workspace, cx| {
-            request.prompt(workspace, cx).await.log_err();
+        cx.spawn_in(window, async move |_workspace, cx| {
+            request.prompt(cx).await.log_err();
         })
         .detach();
     })
     .detach();
+}
+
+pub fn installation_required(cx: &App) -> bool {
+    MoveToApplicationsRequest::new(cx)
+        .map(Option::is_some)
+        .unwrap_or(false)
+}
+
+pub fn installation_required_message() -> String {
+    format!(
+        "{} is running from a temporary location. Install it in /Applications and relaunch before opening Workspaces or durable terminals.",
+        RELEASE_CHANNEL.display_name()
+    )
 }
 
 #[derive(Clone)]
@@ -59,55 +58,35 @@ impl MoveToApplicationsRequest {
             Err(_) => return Ok(None),
         };
 
-        if !should_offer_to_move(&app_path) {
+        if !should_require_installation(&app_path) {
             return Ok(None);
         }
 
         Ok(Some(Self { app_path }))
     }
 
-    async fn prompt(
-        self,
-        workspace: WeakEntity<MultiWorkspace>,
-        cx: &mut AsyncWindowContext,
-    ) -> Result<()> {
+    async fn prompt(self, cx: &mut AsyncWindowContext) -> Result<()> {
         let app_name = RELEASE_CHANNEL.display_name();
-        let prompt_title = format!("Move {app_name} to Applications?");
-        let prompt_description = format!(
-            "{app_name} is running from a temporary location. Move it to Applications to finish installing it."
-        );
+        let prompt_title = format!("Install {app_name} before continuing");
+        let prompt_description = installation_required_message();
         let response = cx
             .prompt(
-                PromptLevel::Info,
+                PromptLevel::Warning,
                 &prompt_title,
                 Some(&prompt_description),
                 &[
-                    PromptButton::ok("Yes"),
-                    PromptButton::cancel("No"),
-                    PromptButton::new("Don't ask me again"),
+                    PromptButton::ok("Install and Relaunch"),
+                    PromptButton::cancel("Quit"),
                 ],
             )
             .await?;
 
         match response {
             0 => {
-                workspace
-                    .update_in(cx, |workspace, window, cx| {
-                        workspace
-                            .toggle_modal(window, cx, |_window, cx| InstallingZedModal::new(cx));
-                    })
-                    .ok();
                 if let Err(error) = move_to_applications(&self.app_path, cx).await {
-                    workspace
-                        .update_in(cx, |workspace, _window, cx| {
-                            if let Some(modal) = workspace.active_modal::<InstallingZedModal>(cx) {
-                                modal.update(cx, |modal, cx| modal.finished(cx));
-                            }
-                        })
-                        .ok();
                     cx.prompt(
                         PromptLevel::Critical,
-                        &format!("Failed to move {app_name} to Applications"),
+                        &format!("Failed to install {app_name}"),
                         Some(&error.to_string()),
                         &["OK"],
                     )
@@ -115,108 +94,20 @@ impl MoveToApplicationsRequest {
                     .log_err();
                 }
             }
-            2 => {
-                let kvp = cx.update(|_window, cx| KeyValueStore::global(cx))?;
-                kvp.write_kvp(DONT_ASK_AGAIN_KEY.to_string(), "true".to_string())
-                    .await?;
+            _ => {
+                cx.update(|_window, cx| cx.quit())?;
             }
-            _ => {}
         }
 
         Ok(())
     }
 }
 
-pub struct InstallingZedModal {
-    focus_handle: FocusHandle,
-    finished: bool,
-}
-
-impl InstallingZedModal {
-    fn new(cx: &mut Context<Self>) -> Self {
-        Self {
-            focus_handle: cx.focus_handle(),
-            finished: false,
-        }
-    }
-
-    fn finished(&mut self, cx: &mut Context<Self>) {
-        self.finished = true;
-        cx.emit(DismissEvent);
-    }
-}
-
-impl EventEmitter<DismissEvent> for InstallingZedModal {}
-
-impl ModalView for InstallingZedModal {
-    fn on_before_dismiss(
-        &mut self,
-        _window: &mut Window,
-        _: &mut Context<Self>,
-    ) -> workspace::DismissDecision {
-        workspace::DismissDecision::Dismiss(self.finished)
-    }
-
-    fn fade_out_background(&self) -> bool {
-        true
-    }
-}
-
-impl Focusable for InstallingZedModal {
-    fn focus_handle(&self, _cx: &App) -> FocusHandle {
-        self.focus_handle.clone()
-    }
-}
-
-impl Render for InstallingZedModal {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = cx.theme();
-        let app_name = RELEASE_CHANNEL.display_name();
-
-        v_flex()
-            .elevation_3(cx)
-            .w_80()
-            .overflow_hidden()
-            .child(
-                div()
-                    .px_4()
-                    .py_3()
-                    .border_b_1()
-                    .border_color(theme.colors().border_variant)
-                    .child(Label::new(format!("Installing {app_name}…"))),
-            )
-            .child(
-                h_flex()
-                    .w_full()
-                    .gap_3()
-                    .px_4()
-                    .py_3()
-                    .bg(theme.colors().editor_background)
-                    .child(
-                        Icon::new(IconName::ArrowCircle)
-                            .size(IconSize::Medium)
-                            .color(Color::Accent)
-                            .with_rotate_animation(3),
-                    )
-                    .child(
-                        v_flex()
-                            .gap_1()
-                            .child(Label::new(format!("Moving {app_name} to Applications")))
-                            .child(
-                                Label::new(format!(
-                                    "{app_name} will reopen when installation is complete."
-                                ))
-                                .size(LabelSize::Small)
-                                .color(Color::Muted),
-                            ),
-                    ),
-            )
-    }
-}
-
-fn should_offer_to_move(app_path: &Path) -> bool {
-    app_path.starts_with(Path::new("/Volumes"))
-        || app_path.to_string_lossy().contains("/AppTranslocation/")
+fn should_require_installation(app_path: &Path) -> bool {
+    app_path
+        .extension()
+        .is_some_and(|extension| extension == "app")
+        && !app_path.starts_with(Path::new("/Applications"))
 }
 
 async fn move_to_applications(app_path: &Path, cx: &mut AsyncWindowContext) -> Result<()> {
@@ -230,54 +121,10 @@ async fn install_destination(app_path: &Path) -> Result<PathBuf> {
         .context("invalid app path: missing app bundle name")?;
 
     let system_destination = Path::new("/Applications").join(app_name);
-    if system_destination.exists() {
-        copy_app_bundle(app_path, &system_destination)
-            .await
-            .with_context(|| {
-                format!(
-                    "failed to replace existing app at {}",
-                    system_destination.display()
-                )
-            })?;
-        return Ok(system_destination);
-    }
-
-    if let Some(user_destination) = user_applications_directory().map(|path| path.join(app_name))
-        && user_destination.exists()
-    {
-        copy_app_bundle(app_path, &user_destination)
-            .await
-            .with_context(|| {
-                format!(
-                    "failed to replace existing app at {}",
-                    user_destination.display()
-                )
-            })?;
-        return Ok(user_destination);
-    }
-
-    match copy_app_bundle(app_path, &system_destination).await {
-        Ok(()) => Ok(system_destination),
-        Err(system_error) => {
-            let user_applications_directory = user_applications_directory()
-                .context("could not determine a writable Applications directory")?;
-            smol::fs::create_dir_all(&user_applications_directory)
-                .await
-                .with_context(|| {
-                    format!("failed to create {}", user_applications_directory.display())
-                })?;
-            let user_destination = user_applications_directory.join(app_name);
-            copy_app_bundle(app_path, &user_destination)
-                .await
-                .with_context(|| {
-                    format!(
-                        "failed to copy app to {} after system Applications copy failed: {system_error:#}",
-                        user_destination.display()
-                    )
-                })?;
-            Ok(user_destination)
-        }
-    }
+    copy_app_bundle(app_path, &system_destination)
+        .await
+        .with_context(|| format!("failed to install app at {}", system_destination.display()))?;
+    Ok(system_destination)
 }
 
 async fn copy_app_bundle(source: &Path, destination: &Path) -> Result<()> {
@@ -320,8 +167,26 @@ fn restart_into(app_path: PathBuf, cx: &mut AsyncWindowContext) -> Result<()> {
     Ok(())
 }
 
-fn user_applications_directory() -> Option<PathBuf> {
-    std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .map(|home| home.join("Applications"))
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn app_bundles_require_system_installation() {
+        assert!(!should_require_installation(Path::new(
+            "/Applications/Dez.app"
+        )));
+        assert!(should_require_installation(Path::new(
+            "/Volumes/Dez/Dez.app"
+        )));
+        assert!(should_require_installation(Path::new(
+            "/private/tmp/dez-build/Dez.app"
+        )));
+        assert!(should_require_installation(Path::new(
+            "/Users/test/Applications/Dez.app"
+        )));
+        assert!(!should_require_installation(Path::new(
+            "/Users/test/src/target/debug/dez"
+        )));
+    }
 }

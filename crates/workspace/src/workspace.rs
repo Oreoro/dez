@@ -177,6 +177,34 @@ pub(crate) fn workspace_card_gap(cx: &App) -> Pixels {
     workspace_card_gap_for_product(paths::APP_NAME, WorkspaceSettings::get_global(cx).card_gap)
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum WorkspaceAccessState {
+    #[default]
+    Available,
+    AccessRequired {
+        roots: Arc<[PathBuf]>,
+    },
+}
+
+impl Global for WorkspaceAccessState {}
+
+pub fn workspace_access_state(cx: &App) -> WorkspaceAccessState {
+    cx.try_global::<WorkspaceAccessState>()
+        .cloned()
+        .unwrap_or_default()
+}
+
+pub fn set_workspace_access_state(state: WorkspaceAccessState, cx: &mut App) {
+    if cx
+        .try_global::<WorkspaceAccessState>()
+        .is_some_and(|current| current == &state)
+    {
+        return;
+    }
+    cx.set_global(state);
+    cx.refresh_windows();
+}
+
 fn workspace_card_gap_for_product(app_name: &str, configured_gap: f32) -> Pixels {
     if app_name == "Zed" {
         gpui::px(configured_gap.max(0.0))
@@ -2415,6 +2443,9 @@ pub struct NewCenterTerminal {
     /// user's shell initialization and the native terminal emulator.
     #[serde(default)]
     pub startup_command: Option<String>,
+    /// Optional working directory for a replacement terminal.
+    #[serde(default)]
+    pub working_directory: Option<PathBuf>,
 }
 
 /// Opens a new terminal.

@@ -136,6 +136,36 @@ session named from the active Workspace with `tmux new-session -A`; discovered
 sessions remain available individually in Workspaces. Arbitrary PTYs remain
 read-only.
 
+## Installation, Workspace access, and terminal ownership
+
+On macOS, an application bundle launched from a DMG, App Translocation, a
+temporary directory, or any location outside `/Applications` enters an
+install-required Home state. Dez does not restore Workspaces or start its
+durable terminal Host until the native **Install and Relaunch** action has
+copied the app to `/Applications`. There is no background override and no
+custom installation overlay.
+
+Before restoring a local Workspace, Dez verifies that each root can be read.
+Protected-folder failures are aggregated into one **Workspace access required**
+notice with a native **Grant Access…** folder action. Git, Workspace Search,
+agents, and terminal creation wait rather than repeatedly failing against the
+same root.
+
+Each installed terminal Host has a generated endpoint identity: its generation,
+socket, token file, and stable Host ID are one connection-owned value. Terminal
+hooks receive those exact paths. Sessions from older Hosts remain alive and
+appear as **Legacy · Access blocked**. Selecting one opens a new shell in its
+recorded working directory; **Terminate Legacy Session…** is separate,
+confirmed, and contacts only the legacy owner. Dez never claims to migrate or
+silently terminates a running process.
+
+tmux and Herdr attach commands run in the native terminal with a visible rerun
+control. A failed attach keeps the external session unchanged, shows
+**Retry Attach**, and refreshes discovery after the command finishes. A raw
+Herdr terminal with no agent lifecycle is labeled **Available**. cmux remains
+an external Workspace owner and is opened through its CLI instead of being
+configured as Dez's shell.
+
 ## Visual baseline
 
 Dez ships with an attributed adaptation of
@@ -166,9 +196,11 @@ Fresh Dez windows open the top-anchored native Home launcher inside the normal
 Main Work Area tab frame. The tab strip and its adjacent Add control remain
 visible before the first file or terminal opens. Home does not auto-read a
 previous Workspace folder, avoiding a macOS privacy prompt for a stale recent
-path. Development snapshots are ad-hoc signed, so macOS can ask again when the
-build identity changes; a publisher-signed release is required for a durable
-folder grant.
+path. GitHub Actions marks ad-hoc artifacts **Dez Preview**; they are not v0.1
+releases and macOS may ask again when their signing identity changes. A stable
+workflow fails unless Developer ID signing and notarization credentials are
+present, and the artifact passes signature, TeamIdentifier, Gatekeeper, and
+stapled-ticket validation.
 
 ## Current status
 

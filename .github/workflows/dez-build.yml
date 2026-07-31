@@ -2,6 +2,15 @@ name: Build Dez for macOS
 
 on:
   workflow_dispatch:
+    inputs:
+      release_kind:
+        description: Artifact release policy
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - stable
 
 permissions:
   contents: read
@@ -16,7 +25,8 @@ env:
   CARGO_PROFILE_RELEASE_STRIP: symbols
   CARGO_PROFILE_RELEASE_PACKAGE_ZED_CODEGEN_UNITS: "1"
   CARGO_TERM_COLOR: always
-  DEZ_BUNDLE_CHANNEL: stable
+  DEZ_RELEASE_KIND: ${{ inputs.release_kind }}
+  DEZ_BUNDLE_CHANNEL: ${{ inputs.release_kind }}
   DEZ_BUNDLE_SKIP_REMOTE_SERVER: "true"
   MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
   MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
@@ -107,6 +117,21 @@ jobs:
           set -euo pipefail
           bash -n script/bundle-mac
           ./script/dez-identity-check
+          if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
+            for credential in \
+              MACOS_SIGNING_IDENTITY \
+              MACOS_CERTIFICATE \
+              MACOS_CERTIFICATE_PASSWORD \
+              APPLE_NOTARIZATION_KEY \
+              APPLE_NOTARIZATION_KEY_ID \
+              APPLE_NOTARIZATION_ISSUER_ID
+            do
+              if [[ -z "${!credential:-}" ]]; then
+                echo "::error::Stable Dez builds require $credential"
+                exit 1
+              fi
+            done
+          fi
 
       - name: Build the optimized Dez application bundle
         id: build-dez
@@ -142,7 +167,16 @@ jobs:
             >target/dez-dmg-attach.txt
           trap 'hdiutil detach "$mount_dir" >/dev/null' EXIT
 
-          app="$mount_dir/Dez.app"
+          if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
+            expected_name=Dez
+            expected_bundle_id=dev.dez.Dez
+            artifact_label=Dez
+          else
+            expected_name="Dez Preview"
+            expected_bundle_id=dev.dez.Dez-Preview
+            artifact_label=Dez-Preview
+          fi
+          app="$mount_dir/${expected_name}.app"
           plist="$app/Contents/Info.plist"
           main="$app/Contents/MacOS/dez"
           cli="$app/Contents/MacOS/cli"
@@ -152,8 +186,8 @@ jobs:
           test -d "$app"
           test -f "$plist"
           plutil -lint "$plist"
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")" = "Dez"
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")" = "dev.dez.Dez"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")" = "$expected_name"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")" = "$expected_bundle_id"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$plist")" = "dez"
 
           for binary in "$main" "$cli" "$terminal_host" "$git_binary"; do
@@ -162,16 +196,29 @@ jobs:
           done
 
           codesign --verify --deep --strict --verbose=2 "$app"
-          if codesign -dv --verbose=4 "$app" 2>&1 | grep -q '^Authority='; then
+          signature_details="$(codesign -dv --verbose=4 "$app" 2>&1)"
+          if grep -q '^Authority=Developer ID Application:' <<<"$signature_details"; then
             release_signed=true
             spctl --assess --type execute --verbose=2 "$app"
           else
             release_signed=false
           fi
+          if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
+            if [[ "$release_signed" != true ]]; then
+              echo "::error::Stable Dez artifacts require a Developer ID Application signature"
+              exit 1
+            fi
+            if ! grep -Eq '^TeamIdentifier=[A-Z0-9]+$' <<<"$signature_details"; then
+              echo "::error::Stable Dez artifacts require a stable signing TeamIdentifier"
+              exit 1
+            fi
+            xcrun stapler validate "$dmg"
+          fi
 
-          artifact_dir=target/dez-macos-m2
+          artifact_dir="target/dez-macos-m2-${DEZ_RELEASE_KIND}"
           mkdir -p "$artifact_dir"
-          cp "$dmg" "$artifact_dir/Dez-macOS-M2.dmg"
+          artifact_dmg="${artifact_label}-macOS-M2.dmg"
+          cp "$dmg" "$artifact_dir/$artifact_dmg"
 
           {
             echo "Packaged entry-point smoke test"
@@ -183,12 +230,13 @@ jobs:
             echo
             "$terminal_host" --help
           } >"$artifact_dir/runtime-smoke.txt"
-          grep -F "Dez: v0.1.0" "$artifact_dir/runtime-smoke.txt"
-          grep -F "Dez 0.1.0" "$artifact_dir/runtime-smoke.txt"
+          grep -F "$expected_name" "$artifact_dir/runtime-smoke.txt"
+          grep -F "0.1.0" "$artifact_dir/runtime-smoke.txt"
           grep -F "Usage: dez-terminal-host" "$artifact_dir/runtime-smoke.txt"
 
           {
             echo "commit=$(git rev-parse HEAD)"
+            echo "release_kind=$DEZ_RELEASE_KIND"
             echo "runner=${RUNNER_OS}-${RUNNER_ARCH}"
             echo "target=aarch64-apple-darwin"
             echo "target_cpu=apple-m2"
@@ -196,10 +244,12 @@ jobs:
             echo "bundle_name=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")"
             echo "bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")"
             echo "bundle_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")"
-            if [[ "$release_signed" = true ]]; then
+            if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
               echo "signature=Developer ID (notarized)"
+            elif [[ "$release_signed" = true ]]; then
+              echo "signature=Developer ID Preview (not a v0.1 release)"
             else
-              echo "signature=ad-hoc (not notarized)"
+              echo "signature=ad-hoc Preview (not notarized; not a v0.1 release)"
             fi
             rustc --version
             cargo --version
@@ -209,22 +259,23 @@ jobs:
           } >"$artifact_dir/build-manifest.txt"
 
           {
-            echo "Dez for Apple M2"
-            echo "================="
+            echo "$expected_name for Apple M2"
+            echo "================================"
             echo
-            echo "1. Open Dez-macOS-M2.dmg."
-            echo "2. Drag Dez.app to Applications."
+            echo "1. Open $artifact_dmg."
+            echo "2. Drag ${expected_name}.app to Applications."
             echo
-            if [[ "$release_signed" = true ]]; then
+            if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
               echo "3. Open Dez from Applications."
               echo
-              echo "This build has a stable Developer ID signature and notarization."
+              echo "This v0.1 release has a stable Developer ID signature and notarization."
               echo "macOS can therefore retain protected-folder decisions across"
               echo "upgrades that keep the same Dez signing identity."
             else
-              echo "3. Control-click Dez in Applications, choose Open, then Open."
+              echo "3. Control-click ${expected_name} in Applications, choose Open, then Open."
               echo
-              echo "This development snapshot is ad-hoc signed and is not notarized."
+              echo "This is a Preview artifact, not a Dez v0.1 release."
+              echo "It may be ad-hoc signed and not notarized."
               echo "Because rebuilt ad-hoc apps do not have a stable Apple signing"
               echo "identity, macOS can ask again before accessing protected folders"
               echo "such as Documents. Keep active code under ~/Developer to avoid"
@@ -232,7 +283,7 @@ jobs:
               echo
               echo "If Finder reports that this exact trusted build is damaged, run:"
               echo
-              echo "    xattr -dr com.apple.quarantine /Applications/Dez.app"
+              echo "    xattr -dr com.apple.quarantine \"/Applications/${expected_name}.app\""
             fi
             echo
             echo "The application, CLI, terminal host, Git helper, resources, bundle"
@@ -242,7 +293,7 @@ jobs:
 
           (
             cd "$artifact_dir"
-            shasum -a 256 Dez-macOS-M2.dmg >SHA256SUMS.txt
+            shasum -a 256 "$artifact_dmg" >SHA256SUMS.txt
             shasum -a 256 -c SHA256SUMS.txt
           )
 
@@ -252,8 +303,8 @@ jobs:
       - name: Upload the launchable Dez application
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: Dez-macOS-M2-${{ github.sha }}
-          path: target/dez-macos-m2/
+          name: Dez-${{ inputs.release_kind }}-macOS-M2-${{ github.sha }}
+          path: target/dez-macos-m2-${{ inputs.release_kind }}/
           if-no-files-found: error
           retention-days: 14
           compression-level: 0

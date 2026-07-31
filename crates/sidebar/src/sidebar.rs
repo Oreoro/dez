@@ -70,8 +70,9 @@ use terminal::{
         LocalTerminalHost, TerminalAgentEventKind, TerminalAgentSnapshot, TerminalAgentState,
         TerminalSessionCommand, TerminalSessionId, TerminalSessionSnapshot, TerminalSessionState,
         transport::{
-            TerminalHostConnection, TerminalHostSnapshotRevision, TerminalHostSnapshotStore,
-            TerminalHostStartupState, TerminalHostStartupStatus,
+            TerminalHostAuthToken, TerminalHostConnection, TerminalHostEndpoint,
+            TerminalHostSnapshotRevision, TerminalHostSnapshotStore, TerminalHostStartupState,
+            TerminalHostStartupStatus,
         },
     },
 };
@@ -613,6 +614,7 @@ fn terminal_custom_title_from_edit(
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum TerminalHostStatusKind {
+    InstallationRequired,
     Connecting,
     Reconnecting,
     Failed,
@@ -630,6 +632,13 @@ fn terminal_host_status_presentation(
 ) -> Option<TerminalHostStatusPresentation> {
     match state {
         TerminalHostStartupState::Disabled | TerminalHostStartupState::Connected { .. } => None,
+        TerminalHostStartupState::InstallationRequired { .. } => {
+            Some(TerminalHostStatusPresentation {
+                kind: TerminalHostStatusKind::InstallationRequired,
+                title: "Install Dez to use durable terminals",
+                description: "Workspace restoration and durable terminals wait until Dez is installed in Applications and relaunched.",
+            })
+        }
         TerminalHostStartupState::Connecting => Some(TerminalHostStatusPresentation {
             kind: TerminalHostStatusKind::Connecting,
             title: "Preparing terminals",
@@ -1440,6 +1449,7 @@ enum SerializedSidebarView {
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum NewEntryTarget {
     Terminal(Option<String>),
+    LegacyTerminal(Option<PathBuf>),
     AgentThread,
 }
 
@@ -1792,6 +1802,7 @@ fn terminal_agent_state_label(
                 Some(TerminalRuntimeState::Exited) => "Exited",
                 Some(TerminalRuntimeState::Missing) => "Missing",
                 Some(TerminalRuntimeState::Incompatible) => "Incompatible",
+                Some(TerminalRuntimeState::LegacyAccessBlocked) => "Legacy · Access blocked",
                 None => "Saved",
             };
             if needs_attention && transport_state != "Needs attention" {
@@ -1926,7 +1937,9 @@ fn terminal_thread_status(
         || runtime.is_some_and(|runtime| {
             matches!(
                 runtime.state,
-                TerminalRuntimeState::Missing | TerminalRuntimeState::Incompatible
+                TerminalRuntimeState::Missing
+                    | TerminalRuntimeState::Incompatible
+                    | TerminalRuntimeState::LegacyAccessBlocked
             )
         })
     {
@@ -2009,6 +2022,7 @@ enum TerminalRuntimeState {
     Exited,
     Missing,
     Incompatible,
+    LegacyAccessBlocked,
 }
 
 impl TerminalRuntimeState {
@@ -2020,6 +2034,7 @@ impl TerminalRuntimeState {
             Self::Exited => "Exited",
             Self::Missing => "Missing",
             Self::Incompatible => "Incompatible",
+            Self::LegacyAccessBlocked => "Legacy · Access blocked",
         }
     }
 }
@@ -2037,6 +2052,9 @@ fn terminal_row_close_presentation(
         (true, Some(TerminalRuntimeState::Exited)) => ("Remove Exited Terminal", false),
         (true, Some(TerminalRuntimeState::Missing)) => ("Remove Missing Terminal", false),
         (true, Some(TerminalRuntimeState::Incompatible)) => ("Remove Incompatible Terminal", false),
+        (true, Some(TerminalRuntimeState::LegacyAccessBlocked)) => {
+            ("Terminate Legacy Session…", true)
+        }
         (true, None) => ("Remove Saved Terminal", false),
         (false, Some(TerminalRuntimeState::Live)) => ("Detach Live Terminal", false),
         (false, Some(TerminalRuntimeState::Detached)) => ("Terminate Detached Terminal…", true),
@@ -2048,6 +2066,9 @@ fn terminal_row_close_presentation(
         (false, Some(TerminalRuntimeState::Incompatible)) => {
             ("Remove Incompatible Terminal", false)
         }
+        (false, Some(TerminalRuntimeState::LegacyAccessBlocked)) => {
+            ("Terminate Legacy Session…", true)
+        }
         (false, None) => ("Remove Saved Terminal", false),
     }
 }
@@ -2057,6 +2078,15 @@ fn terminal_termination_confirmation_copy(title: &str) -> (&'static str, String)
         "End Agent Terminal?",
         format!(
             "“{title}” will stop immediately, including its shell and any foreground command. This cannot be undone."
+        ),
+    )
+}
+
+fn legacy_terminal_termination_confirmation_copy(title: &str) -> (&'static str, String) {
+    (
+        "Terminate legacy session?",
+        format!(
+            "“{title}” is still owned by an older Dez Host. Terminating it stops its shell and foreground command. Dez cannot migrate or restore that process."
         ),
     )
 }
@@ -2495,6 +2525,21 @@ mod terminal_host_status_tests {
 
     #[test]
     fn host_status_copy_hides_transport_details_behind_explicit_actions() {
+        let installation_required =
+            terminal_host_status_presentation(&TerminalHostStartupState::InstallationRequired {
+                message: "temporary app path".to_owned(),
+            })
+            .unwrap();
+        assert_eq!(
+            installation_required.kind,
+            TerminalHostStatusKind::InstallationRequired
+        );
+        assert_eq!(
+            installation_required.title,
+            "Install Dez to use durable terminals"
+        );
+        assert!(!installation_required.description.contains("/private"));
+
         let connecting =
             terminal_host_status_presentation(&TerminalHostStartupState::Connecting).unwrap();
         assert_eq!(connecting.kind, TerminalHostStatusKind::Connecting);
@@ -3133,6 +3178,7 @@ enum TerminalEntrySource {
     AgentPanel,
     WorkspaceItem(Entity<TerminalView>),
     HostSession(TerminalSessionId),
+    LegacySession(TerminalSessionId),
 }
 
 #[derive(Clone)]
@@ -3147,6 +3193,7 @@ enum TerminalEntrySourceKind {
     WorkspaceItem,
     AgentPanel,
     HostSession(TerminalSessionId),
+    LegacySession(TerminalSessionId),
 }
 
 fn terminal_has_agent_evidence(
@@ -3359,11 +3406,88 @@ pub fn open_workspace_path_in_cmux(path: &Path) -> Result<(), String> {
     Err("cmux is not installed. Dez kept the Workspace open here.".to_owned())
 }
 
+async fn terminate_legacy_terminal_session(
+    session_ref: terminal::session_host::TerminalSessionRef,
+    background_executor: &gpui::BackgroundExecutor,
+) -> anyhow::Result<()> {
+    let mut errors = Vec::new();
+    for (directory_name, generation) in [
+        ("dez-terminal-host-v0.1", "v0.1"),
+        ("terminal-host", "legacy"),
+    ] {
+        let directory = paths::state_dir().join(directory_name);
+        let endpoint = TerminalHostEndpoint::new(
+            directory.join("local.sock"),
+            directory.join("auth.token"),
+            generation,
+        );
+        let token = match smol::fs::read_to_string(endpoint.token_file_path()).await {
+            Ok(token) => match TerminalHostAuthToken::parse(token.trim().to_owned()) {
+                Ok(token) => token,
+                Err(error) => {
+                    errors.push(format!("{directory_name}: invalid token: {error}"));
+                    continue;
+                }
+            },
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) => {
+                errors.push(format!("{directory_name}: could not read token: {error}"));
+                continue;
+            }
+        };
+        let connection = match TerminalHostConnection::connect(
+            &endpoint,
+            session_ref.host_id,
+            token,
+            background_executor,
+        )
+        .await
+        {
+            Ok(connection) => connection,
+            Err(error) => {
+                errors.push(format!("{directory_name}: {error}"));
+                continue;
+            }
+        };
+        let response = connection.command(TerminalSessionCommand::List).await?;
+        let contains_session = matches!(
+            response,
+            terminal::session_host::transport::TerminalHostResponse::Sessions { ref sessions }
+                if sessions.iter().any(|snapshot| snapshot.session_id == session_ref.session_id)
+        );
+        if !contains_session {
+            continue;
+        }
+        return match connection
+            .command(TerminalSessionCommand::Terminate {
+                session_id: session_ref.session_id,
+            })
+            .await?
+        {
+            terminal::session_host::transport::TerminalHostResponse::Snapshot { .. } => Ok(()),
+            terminal::session_host::transport::TerminalHostResponse::Error { message }
+            | terminal::session_host::transport::TerminalHostResponse::Unsupported { message } => {
+                anyhow::bail!("legacy terminal host rejected termination: {message}")
+            }
+            _ => anyhow::bail!("legacy terminal host returned an invalid terminate response"),
+        };
+    }
+
+    if errors.is_empty() {
+        anyhow::bail!("no legacy terminal host owns this session")
+    }
+    anyhow::bail!(
+        "could not reach the legacy terminal host: {}",
+        errors.join("; ")
+    )
+}
+
 fn terminal_entry_source_kind(
     app_name: &str,
     has_live_workspace_terminal: bool,
     has_live_agent_terminal: bool,
     host_session_id: Option<TerminalSessionId>,
+    legacy_session_id: Option<TerminalSessionId>,
 ) -> Option<TerminalEntrySourceKind> {
     if app_name != "Zed" && has_live_workspace_terminal {
         Some(TerminalEntrySourceKind::WorkspaceItem)
@@ -3371,6 +3495,8 @@ fn terminal_entry_source_kind(
         Some(TerminalEntrySourceKind::AgentPanel)
     } else if let Some(session_id) = host_session_id {
         Some(TerminalEntrySourceKind::HostSession(session_id))
+    } else if let Some(session_id) = legacy_session_id {
+        Some(TerminalEntrySourceKind::LegacySession(session_id))
     } else if has_live_agent_terminal {
         Some(TerminalEntrySourceKind::AgentPanel)
     } else {
@@ -3395,6 +3521,7 @@ fn terminal_run_review_state(
         Some(TerminalRuntimeState::Reconnecting) => return RunReviewState::Reconnecting,
         Some(TerminalRuntimeState::Missing) => return RunReviewState::Missing,
         Some(TerminalRuntimeState::Incompatible) => return RunReviewState::Incompatible,
+        Some(TerminalRuntimeState::LegacyAccessBlocked) => return RunReviewState::Missing,
         Some(TerminalRuntimeState::Exited)
             if !agent.is_some_and(|agent| {
                 matches!(
@@ -3675,6 +3802,10 @@ impl TerminalEntry {
             ),
             Some(TerminalRuntimeState::Incompatible) => observed_risks.push(
                 "The Host session uses an incompatible protocol; no replacement computation was started."
+                    .to_owned(),
+            ),
+            Some(TerminalRuntimeState::LegacyAccessBlocked) => observed_risks.push(
+                "This session belongs to a legacy Host. Dez preserved its process and did not claim to migrate it."
                     .to_owned(),
             ),
             Some(TerminalRuntimeState::Exited) => observed_risks.push(
@@ -5259,6 +5390,14 @@ impl Sidebar {
                         window,
                         cx,
                     ),
+                NewEntryTarget::LegacyTerminal(working_directory) => this
+                    .create_new_terminal_with_options(
+                        &workspace,
+                        None,
+                        working_directory,
+                        window,
+                        cx,
+                    ),
                 NewEntryTarget::AgentThread => this.create_new_thread(&workspace, window, cx),
             })?;
             anyhow::Ok(())
@@ -5450,8 +5589,10 @@ impl Sidebar {
             .unwrap_or_default();
         let helper_snapshot_by_session = helper_host_sessions
             .iter()
-            .map(|snapshot| (snapshot.session_id, snapshot.clone()))
+            .map(|snapshot| ((snapshot.host_id, snapshot.session_id), snapshot.clone()))
             .collect::<HashMap<_, _>>();
+        let active_terminal_host_id =
+            TerminalHostConnection::try_global(cx).map(|connection| connection.host_id());
         let failed_terminal_activations = self.failed_terminal_activations.clone();
         let detached_local_sessions = local_host_sessions
             .into_iter()
@@ -5556,8 +5697,16 @@ impl Sidebar {
                     let worktrees =
                         worktree_info_from_thread_paths(&metadata.worktree_paths, branch_by_path);
                     let host_snapshot = metadata.session_ref.and_then(|session_ref| {
-                        helper_snapshot_by_session.get(&session_ref.session_id)
+                        helper_snapshot_by_session
+                            .get(&(session_ref.host_id, session_ref.session_id))
                     });
+                    let legacy_session_id = metadata
+                        .session_ref
+                        .filter(|session_ref| {
+                            host_snapshot.is_none()
+                                && active_terminal_host_id != Some(session_ref.host_id)
+                        })
+                        .map(|session_ref| session_ref.session_id);
                     if let Some(title) = host_snapshot.and_then(|snapshot| snapshot.title.as_ref())
                     {
                         metadata.title = title.clone().into();
@@ -5576,6 +5725,7 @@ impl Sidebar {
                         live_workspace_terminal.is_some(),
                         live_terminal_runtime.contains_key(&metadata.terminal_id),
                         host_snapshot.map(|snapshot| snapshot.session_id),
+                        legacy_session_id,
                     )?;
                     let (workspace, source) = match source_kind {
                         TerminalEntrySourceKind::WorkspaceItem => {
@@ -5590,6 +5740,9 @@ impl Sidebar {
                         }
                         TerminalEntrySourceKind::HostSession(session_id) => {
                             (workspace, TerminalEntrySource::HostSession(session_id))
+                        }
+                        TerminalEntrySourceKind::LegacySession(session_id) => {
+                            (workspace, TerminalEntrySource::LegacySession(session_id))
                         }
                     };
                     let agent = host_snapshot.and_then(|snapshot| snapshot.agent.clone());
@@ -5618,7 +5771,10 @@ impl Sidebar {
                         .flatten();
                     if !terminal_entry_visible_in_session_rail(
                         APP_NAME,
-                        matches!(&source, TerminalEntrySource::AgentPanel),
+                        matches!(
+                            &source,
+                            TerminalEntrySource::AgentPanel | TerminalEntrySource::LegacySession(_)
+                        ),
                         detected_agent_kind,
                         agent.is_some(),
                     ) {
@@ -5638,6 +5794,10 @@ impl Sidebar {
                                 } else {
                                     TerminalRuntimeState::Live
                                 },
+                            })
+                        } else if matches!(&source, TerminalEntrySource::LegacySession(_)) {
+                            Some(TerminalRuntimeInfo {
+                                state: TerminalRuntimeState::LegacyAccessBlocked,
                             })
                         } else {
                             failed_terminal_activations
@@ -8696,7 +8856,7 @@ impl Sidebar {
             }
             (
                 ThreadEntryWorkspace::Open(_) | ThreadEntryWorkspace::Closed { .. },
-                TerminalEntrySource::HostSession(_),
+                TerminalEntrySource::HostSession(_) | TerminalEntrySource::LegacySession(_),
             )
             | (
                 ThreadEntryWorkspace::Closed { .. },
@@ -10151,6 +10311,31 @@ impl Sidebar {
             ) => self.attach_host_terminal_session(
                 &workspace, metadata, session_id, retain, true, window, cx,
             ),
+            (ThreadEntryWorkspace::Open(workspace), TerminalEntrySource::LegacySession(_)) => {
+                self.activate_workspace(&workspace, window, cx);
+                workspace.read(cx).focus_handle(cx).dispatch_action(
+                    &NewCenterTerminal {
+                        local: false,
+                        startup_command: None,
+                        working_directory: metadata.working_directory.clone(),
+                    },
+                    window,
+                    cx,
+                );
+            }
+            (
+                ThreadEntryWorkspace::Closed {
+                    project_group_key, ..
+                },
+                TerminalEntrySource::LegacySession(_),
+            ) => {
+                self.open_workspace_and_create_entry(
+                    &project_group_key,
+                    NewEntryTarget::LegacyTerminal(metadata.working_directory.clone()),
+                    window,
+                    cx,
+                );
+            }
             (
                 ThreadEntryWorkspace::Closed {
                     folder_paths,
@@ -10933,6 +11118,53 @@ impl Sidebar {
     ) {
         self.failed_terminal_activations
             .remove(&metadata.terminal_id);
+        if matches!(source, TerminalEntrySource::LegacySession(_)) {
+            let Some(session_ref) = metadata.session_ref else {
+                log::error!("legacy terminal entry is missing its host session reference");
+                return;
+            };
+            let terminal_id = metadata.terminal_id;
+            let terminal_title = metadata.display_title();
+            let background_executor = cx.background_executor().clone();
+            cx.spawn(async move |this, cx| {
+                let result =
+                    terminate_legacy_terminal_session(session_ref, &background_executor).await;
+                this.update(cx, |this, cx| {
+                    match &result {
+                        Ok(()) => {
+                            if let Some(store) = TerminalThreadMetadataStore::try_global(cx) {
+                                store.update(cx, |store, cx| store.delete(terminal_id, cx));
+                            }
+                            this.standalone_terminal_created_at.remove(&terminal_id);
+                            this.update_entries(cx);
+                        }
+                        Err(error) => {
+                            log::error!("legacy terminal termination failed: {error:#}");
+                            if let Some(workspace) = this.active_workspace(cx) {
+                                workspace.update(cx, |workspace, cx| {
+                                    struct LegacyTerminalTerminationErrorToast;
+                                    workspace.show_toast(
+                                        Toast::new(
+                                            NotificationId::composite::<
+                                                LegacyTerminalTerminationErrorToast,
+                                            >(terminal_id.to_string()),
+                                            format!(
+                                                "Could not terminate {terminal_title}. It is still owned by the legacy Host: {error}"
+                                            ),
+                                        ),
+                                        cx,
+                                    );
+                                });
+                            }
+                        }
+                    }
+                })
+                .log_err();
+                result
+            })
+            .detach_and_log_err(cx);
+            return;
+        }
         if let TerminalEntrySource::HostSession(session_id) = source {
             if let Some(host) = LocalTerminalHost::try_global(cx) {
                 host.update(cx, |host, cx| {
@@ -11245,14 +11477,18 @@ impl Sidebar {
         }
 
         let title = metadata.display_title();
-        let (heading, detail) = terminal_termination_confirmation_copy(title.as_ref());
-        let prompt = window.prompt(
-            PromptLevel::Critical,
-            heading,
-            Some(&detail),
-            &["End Terminal", "Cancel"],
-            cx,
-        );
+        let is_legacy_session = matches!(&source, TerminalEntrySource::LegacySession(_));
+        let (heading, detail) = if is_legacy_session {
+            legacy_terminal_termination_confirmation_copy(title.as_ref())
+        } else {
+            terminal_termination_confirmation_copy(title.as_ref())
+        };
+        let buttons = if is_legacy_session {
+            ["Terminate Session", "Keep Running"]
+        } else {
+            ["End Terminal", "Cancel"]
+        };
+        let prompt = window.prompt(PromptLevel::Critical, heading, Some(&detail), &buttons, cx);
 
         cx.spawn_in(window, async move |this, cx| -> anyhow::Result<()> {
             if prompt.await.log_err() != Some(0) {
@@ -12030,8 +12266,10 @@ impl Sidebar {
                 let metadata = terminal.metadata.clone();
                 let workspace = terminal.workspace.clone();
                 let source = terminal.source.clone();
-                let is_host_session =
-                    matches!(&terminal.source, TerminalEntrySource::HostSession(_));
+                let is_host_session = matches!(
+                    &terminal.source,
+                    TerminalEntrySource::HostSession(_) | TerminalEntrySource::LegacySession(_)
+                );
                 let (_, requires_termination_confirmation) = terminal_row_close_presentation(
                     is_host_session,
                     terminal.runtime.as_ref().map(|runtime| runtime.state),
@@ -12526,6 +12764,18 @@ impl Sidebar {
                                 *session_id,
                                 false,
                                 false,
+                                window,
+                                cx,
+                            );
+                        }
+                        TerminalEntrySource::LegacySession(_) => {
+                            self.activate_workspace(workspace, window, cx);
+                            workspace.read(cx).focus_handle(cx).dispatch_action(
+                                &NewCenterTerminal {
+                                    local: false,
+                                    startup_command: None,
+                                    working_directory: metadata.working_directory.clone(),
+                                },
                                 window,
                                 cx,
                             );
@@ -13326,7 +13576,11 @@ impl Sidebar {
         let show_agent_attention =
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
         let terminal_agent_kind = terminal.detected_agent_kind;
-        let is_host_session = matches!(&terminal.source, TerminalEntrySource::HostSession(_));
+        let is_host_session = matches!(
+            &terminal.source,
+            TerminalEntrySource::HostSession(_) | TerminalEntrySource::LegacySession(_)
+        );
+        let is_legacy_session = matches!(&terminal.source, TerminalEntrySource::LegacySession(_));
         let is_opening = self.pending_terminal_activation == Some(terminal.metadata.terminal_id);
         let (close_label, requires_termination_confirmation) = terminal_row_close_presentation(
             is_host_session,
@@ -13408,9 +13662,15 @@ impl Sidebar {
         };
         let context_terminal_view = match &terminal.source {
             TerminalEntrySource::WorkspaceItem(terminal_view) => Some(terminal_view.clone()),
-            TerminalEntrySource::AgentPanel | TerminalEntrySource::HostSession(_) => None,
+            TerminalEntrySource::AgentPanel
+            | TerminalEntrySource::HostSession(_)
+            | TerminalEntrySource::LegacySession(_) => None,
         };
-        let host_label = terminal_row_owner_label(has_persistent_owner, is_remote);
+        let host_label = if is_legacy_session {
+            "Legacy Host"
+        } else {
+            terminal_row_owner_label(has_persistent_owner, is_remote)
+        };
         let (icon_char, title, highlight_positions) =
             match split_leading_icon_char(&display_title, &terminal.highlight_positions) {
                 Some((icon_char, title, positions)) => (Some(icon_char), title, positions),
@@ -13707,6 +13967,20 @@ impl Sidebar {
                             })
                             .ok();
                     });
+                    if is_legacy_session && let Some(workspace) = files_workspace.clone() {
+                        let working_directory = working_directory.clone();
+                        menu = menu.entry("Open New Shell Here", None, move |window, cx| {
+                            workspace.read(cx).focus_handle(cx).dispatch_action(
+                                &NewCenterTerminal {
+                                    local: false,
+                                    startup_command: None,
+                                    working_directory: working_directory.clone(),
+                                },
+                                window,
+                                cx,
+                            );
+                        });
+                    }
                     if let Some(working_directory) = working_directory.clone() {
                         menu = menu.entry("Copy Working Directory", None, move |_window, cx| {
                             cx.write_to_clipboard(ClipboardItem::new_string(
@@ -14352,6 +14626,17 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.create_new_terminal_with_options(workspace, startup_command, None, window, cx);
+    }
+
+    fn create_new_terminal_with_options(
+        &mut self,
+        workspace: &Entity<Workspace>,
+        startup_command: Option<String>,
+        working_directory: Option<PathBuf>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         if workspace_path_list(workspace, cx).paths().is_empty() {
             return;
         }
@@ -14369,6 +14654,7 @@ impl Sidebar {
             &NewCenterTerminal {
                 local: false,
                 startup_command,
+                working_directory,
             },
             window,
             cx,
@@ -14586,12 +14872,15 @@ impl Sidebar {
             shell: Shell::System,
             show_summary: false,
             show_command: false,
-            show_rerun: false,
+            show_rerun: true,
             save: SaveStrategy::None,
         };
 
         let weak_workspace = target_workspace.downgrade();
-        let session_title = session.title;
+        let session_title = session.title.clone();
+        let retry_session = session;
+        let retry_sidebar = cx.weak_entity();
+        let multiplexer_store = MultiplexerSessionStore::try_global(cx);
         let terminal_task = target_workspace.update(cx, |workspace, cx| {
             workspace.spawn_in_terminal(spawn, window, cx)
         });
@@ -14606,6 +14895,8 @@ impl Sidebar {
 
             if let Some(failure) = failure {
                 log::error!("external terminal session attach failed: {failure}");
+                let retry_sidebar = retry_sidebar.clone();
+                let retry_session = retry_session.clone();
                 weak_workspace
                     .update(cx, |workspace, cx| {
                         struct ExternalSessionAttachErrorToast;
@@ -14616,11 +14907,27 @@ impl Sidebar {
                                 ),
                                 format!("{failure}. The external session was not changed."),
                             )
-                            .autohide(),
+                            .on_click(
+                                "Retry Attach",
+                                move |window, cx| {
+                                    retry_sidebar
+                                        .update(cx, |sidebar, cx| {
+                                            sidebar.open_external_multiplexer_session(
+                                                retry_session.clone(),
+                                                window,
+                                                cx,
+                                            );
+                                        })
+                                        .log_err();
+                                },
+                            ),
                             cx,
                         );
                     })
                     .ok();
+            }
+            if let Some(store) = multiplexer_store {
+                store.update(cx, |store, cx| store.refresh(cx));
             }
         })
         .detach();
@@ -15678,12 +15985,14 @@ impl Sidebar {
         let state = TerminalHostStartupStatus::state(cx);
         let presentation = terminal_host_status_presentation(&state)?;
         let (severity, icon) = match presentation.kind {
+            TerminalHostStatusKind::InstallationRequired => (Severity::Warning, IconName::Warning),
             TerminalHostStatusKind::Connecting => (Severity::Info, IconName::Info),
             TerminalHostStatusKind::Reconnecting => (Severity::Warning, IconName::Warning),
             TerminalHostStatusKind::Failed => (Severity::Error, IconName::Warning),
         };
         let details = match &state {
-            TerminalHostStartupState::Reconnecting { message }
+            TerminalHostStartupState::InstallationRequired { message }
+            | TerminalHostStartupState::Reconnecting { message }
             | TerminalHostStartupState::Failed { message } => Some(message.clone()),
             TerminalHostStartupState::Disabled
             | TerminalHostStartupState::Connecting
@@ -15697,6 +16006,7 @@ impl Sidebar {
             .description(presentation.description)
             .when_some(details, |callout, details| {
                 let copy_label = match presentation.kind {
+                    TerminalHostStatusKind::InstallationRequired => "Copy Details",
                     TerminalHostStatusKind::Failed => "Copy Error",
                     TerminalHostStatusKind::Reconnecting => "Copy Details",
                     TerminalHostStatusKind::Connecting => unreachable!(),
@@ -15732,6 +16042,57 @@ impl Sidebar {
                 )
             });
         Some(callout.into_any_element())
+    }
+
+    fn render_workspace_access_status(&self, cx: &App) -> Option<AnyElement> {
+        let workspace::WorkspaceAccessState::AccessRequired { roots } =
+            workspace::workspace_access_state(cx)
+        else {
+            return None;
+        };
+        let root_labels = roots
+            .iter()
+            .map(|root| root.display().to_string())
+            .collect::<Vec<_>>();
+        let description = if root_labels.len() == 1 {
+            format!(
+                "Dez cannot read {}. Grant access before Git, search, agents, or terminals start.",
+                root_labels[0]
+            )
+        } else {
+            format!(
+                "Dez cannot read {} Workspace roots. Grant access before Git, search, agents, or terminals start.",
+                root_labels.len()
+            )
+        };
+
+        Some(
+            Callout::new()
+                .severity(Severity::Warning)
+                .icon(IconName::Folder)
+                .title("Workspace access required")
+                .description(description)
+                .actions_slot(
+                    Button::new("grant-workspace-access", "Grant Access…")
+                        .size(ButtonSize::Medium)
+                        .style(ButtonStyle::Filled)
+                        .tab_index(0isize)
+                        .aria_label("Grant Workspace Folder Access")
+                        .tooltip(Tooltip::text(
+                            "Choose the Workspace folder in the native folder picker",
+                        ))
+                        .on_click(|_, window, cx| {
+                            window.dispatch_action(
+                                OpenFolder {
+                                    create_new_window: Some(false),
+                                }
+                                .boxed_clone(),
+                                cx,
+                            );
+                        }),
+                )
+                .into_any_element(),
+        )
     }
 
     fn app_session(&self, cx: &App) -> Option<Entity<AppSession>> {
@@ -15789,7 +16150,9 @@ impl Sidebar {
             matches!(&terminal_host_state, TerminalHostStartupState::Connecting);
         let terminal_host_needs_recovery = matches!(
             &terminal_host_state,
-            TerminalHostStartupState::Reconnecting { .. } | TerminalHostStartupState::Failed { .. }
+            TerminalHostStartupState::InstallationRequired { .. }
+                | TerminalHostStartupState::Reconnecting { .. }
+                | TerminalHostStartupState::Failed { .. }
         );
         let restoration_ready = self.contents.snapshot_ready
             && self.update_task.is_none()
@@ -15890,7 +16253,10 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
-        let mut notices = Vec::with_capacity(2);
+        let mut notices = Vec::with_capacity(3);
+        if let Some(workspace_access_status) = self.render_workspace_access_status(cx) {
+            notices.push(workspace_access_status);
+        }
         if let Some(workspace_restore_status) = self.render_workspace_restore_status(cx) {
             notices.push(workspace_restore_status);
         }

@@ -691,6 +691,7 @@ fn parse_herdr_snapshot(
                 Some("working") => MultiplexerSessionState::Working,
                 Some("blocked") => MultiplexerSessionState::NeedsAttention,
                 Some("done") => MultiplexerSessionState::Completed,
+                _ if detected_agent_kind.is_none() => MultiplexerSessionState::Available,
                 _ => MultiplexerSessionState::Unknown,
             };
 
@@ -847,6 +848,7 @@ mod tests {
             sessions[0].open_command().args,
             ["terminal", "attach", "terminal-1"]
         );
+        assert_eq!(sessions[0].state, MultiplexerSessionState::Available);
     }
 
     #[test]

@@ -12,9 +12,9 @@ use gpui::{App, AppContext as _, BackgroundExecutor, Entity, Global};
 use terminal::session_host::{
     TerminalHostId,
     transport::{
-        TerminalHostAuthToken, TerminalHostConnection, TerminalHostHandshakeRejection,
-        TerminalHostStartupState, TerminalHostStartupStatus, TerminalHostTransportError,
-        terminal_host_enabled_for_app, terminal_host_executable_path,
+        TerminalHostAuthToken, TerminalHostConnection, TerminalHostEndpoint,
+        TerminalHostHandshakeRejection, TerminalHostStartupState, TerminalHostStartupStatus,
+        TerminalHostTransportError, terminal_host_enabled_for_app, terminal_host_executable_path,
     },
 };
 use util::ResultExt as _;
@@ -22,7 +22,8 @@ use uuid::Uuid;
 
 const TERMINAL_HOST_CONNECT_ATTEMPTS: usize = 40;
 const TERMINAL_HOST_CONNECT_INTERVAL: Duration = Duration::from_millis(50);
-const DEZ_TERMINAL_HOST_RUNTIME_DIRECTORY: &str = "dez-terminal-host-v0.1";
+pub const DEZ_TERMINAL_HOST_GENERATION: &str = "v1";
+const DEZ_TERMINAL_HOST_RUNTIME_DIRECTORY: &str = "dez-terminal-host-v1";
 
 struct GlobalTerminalHostRuntime(Entity<TerminalHostRuntime>);
 
@@ -86,11 +87,11 @@ async fn connect_or_launch(
     host_id: TerminalHostId,
     background_executor: &BackgroundExecutor,
 ) -> Result<TerminalHostConnection> {
-    let paths = prepare_runtime_paths()?;
-    let auth_token = read_or_create_auth_token(&paths.token)?;
+    let endpoint = prepare_runtime_endpoint()?;
+    let auth_token = read_or_create_auth_token(endpoint.token_file_path())?;
 
     match TerminalHostConnection::connect(
-        &paths.socket,
+        &endpoint,
         host_id,
         auth_token.clone(),
         background_executor,
@@ -99,7 +100,7 @@ async fn connect_or_launch(
     {
         Ok(connection) => return Ok(connection),
         Err(error) if is_identity_rejection(&error) => return Err(error.into()),
-        Err(error) if is_stale_socket_error(&error) => remove_stale_socket(&paths.socket)?,
+        Err(error) if is_stale_socket_error(&error) => remove_stale_socket(endpoint.socket_path())?,
         Err(error) => return Err(error.into()),
     }
 
@@ -108,9 +109,9 @@ async fn connect_or_launch(
     helper_command
         .arg("serve")
         .arg("--socket")
-        .arg(&paths.socket)
+        .arg(endpoint.socket_path())
         .arg("--token-file")
-        .arg(&paths.token)
+        .arg(endpoint.token_file_path())
         .arg("--host-id")
         .arg(host_id.to_string())
         .stdin(Stdio::null())
@@ -135,7 +136,7 @@ async fn connect_or_launch(
     let mut last_error = None;
     for _ in 0..TERMINAL_HOST_CONNECT_ATTEMPTS {
         match TerminalHostConnection::connect(
-            &paths.socket,
+            &endpoint,
             host_id,
             auth_token.clone(),
             background_executor,
@@ -176,18 +177,14 @@ fn is_stale_socket_error(error: &TerminalHostTransportError) -> bool {
     )
 }
 
-struct TerminalHostRuntimePaths {
-    socket: PathBuf,
-    token: PathBuf,
-}
-
-fn prepare_runtime_paths() -> Result<TerminalHostRuntimePaths> {
+fn prepare_runtime_endpoint() -> Result<TerminalHostEndpoint> {
     let directory = terminal_host_runtime_directory(paths::state_dir(), paths::APP_NAME);
     create_private_directory(&directory)?;
-    Ok(TerminalHostRuntimePaths {
-        socket: directory.join("local.sock"),
-        token: directory.join("auth.token"),
-    })
+    Ok(TerminalHostEndpoint::new(
+        directory.join("local.sock"),
+        directory.join("auth.token"),
+        DEZ_TERMINAL_HOST_GENERATION,
+    ))
 }
 
 fn terminal_host_runtime_directory(state_dir: &Path, app_name: &str) -> PathBuf {
@@ -333,11 +330,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn dez_v0_1_does_not_reuse_a_legacy_terminal_host_socket() {
+    fn generated_dez_host_does_not_reuse_a_legacy_terminal_host_socket() {
         let state_dir = Path::new("/state");
         assert_eq!(
             terminal_host_runtime_directory(state_dir, "Dez"),
-            state_dir.join("dez-terminal-host-v0.1")
+            state_dir.join("dez-terminal-host-v1")
         );
         assert_eq!(
             terminal_host_runtime_directory(state_dir, "Zed"),

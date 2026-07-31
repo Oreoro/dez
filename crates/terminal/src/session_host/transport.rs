@@ -256,6 +256,39 @@ pub struct TerminalHostEventStream {
     stream: UnixStream,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TerminalHostEndpoint {
+    socket_path: std::path::PathBuf,
+    token_file_path: std::path::PathBuf,
+    generation: &'static str,
+}
+
+impl TerminalHostEndpoint {
+    pub fn new(
+        socket_path: std::path::PathBuf,
+        token_file_path: std::path::PathBuf,
+        generation: &'static str,
+    ) -> Self {
+        Self {
+            socket_path,
+            token_file_path,
+            generation,
+        }
+    }
+
+    pub fn socket_path(&self) -> &Path {
+        &self.socket_path
+    }
+
+    pub fn token_file_path(&self) -> &Path {
+        &self.token_file_path
+    }
+
+    pub fn generation(&self) -> &'static str {
+        self.generation
+    }
+}
+
 struct QueuedTerminalHostCommand {
     command: TerminalSessionCommand,
     response_tx:
@@ -267,7 +300,7 @@ struct QueuedTerminalHostCommand {
 pub struct TerminalHostConnection {
     host_id: TerminalHostId,
     capabilities: TerminalHostCapabilities,
-    socket_path: std::path::PathBuf,
+    endpoint: TerminalHostEndpoint,
     auth_token: TerminalHostAuthToken,
     command_tx: async_channel::Sender<QueuedTerminalHostCommand>,
     _transport_task: Task<()>,
@@ -284,6 +317,7 @@ impl Global for GlobalTerminalHostSnapshotStore {}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TerminalHostStartupState {
     Disabled,
+    InstallationRequired { message: String },
     Connecting,
     Connected { host_id: TerminalHostId },
     Reconnecting { message: String },
@@ -587,18 +621,22 @@ impl TerminalHostConnection {
     }
 
     pub async fn connect(
-        socket_path: &Path,
+        endpoint: &TerminalHostEndpoint,
         host_id: TerminalHostId,
         auth_token: TerminalHostAuthToken,
         background_executor: &BackgroundExecutor,
     ) -> Result<Self, TerminalHostTransportError> {
-        let client =
-            TerminalHostTransportClient::connect(socket_path, host_id, auth_token.clone()).await?;
+        let client = TerminalHostTransportClient::connect(
+            endpoint.socket_path(),
+            host_id,
+            auth_token.clone(),
+        )
+        .await?;
         let capabilities = client.capabilities();
         let (command_tx, command_rx) = async_channel::unbounded::<QueuedTerminalHostCommand>();
-        let event_socket_path = socket_path.to_path_buf();
+        let endpoint = endpoint.clone();
         let event_auth_token = auth_token.clone();
-        let command_socket_path = socket_path.to_path_buf();
+        let command_socket_path = endpoint.socket_path().to_path_buf();
         let executor = background_executor.clone();
         let transport_task = background_executor.spawn(async move {
             let mut client = Some(client);
@@ -659,7 +697,7 @@ impl TerminalHostConnection {
         Ok(Self {
             host_id,
             capabilities,
-            socket_path: event_socket_path,
+            endpoint,
             auth_token: event_auth_token,
             command_tx,
             _transport_task: transport_task,
@@ -674,12 +712,16 @@ impl TerminalHostConnection {
         self.capabilities
     }
 
+    pub fn endpoint(&self) -> &TerminalHostEndpoint {
+        &self.endpoint
+    }
+
     async fn event_stream(
         &self,
         after_cursor: Option<u64>,
     ) -> Result<TerminalHostEventStream, TerminalHostTransportError> {
         TerminalHostEventStream::connect(
-            &self.socket_path,
+            self.endpoint.socket_path(),
             self.host_id,
             self.auth_token.clone(),
             after_cursor,

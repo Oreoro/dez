@@ -3,7 +3,7 @@ use collections::HashMap;
 use gpui::{App, AppContext as _, Context, Entity, Task, WeakEntity};
 
 use async_channel::bounded;
-use futures::{FutureExt, future::Shared};
+use futures::{FutureExt, StreamExt as _, future::Shared};
 use itertools::Itertools as _;
 use language::LanguageName;
 use remote::{Interactive, RemoteClient};
@@ -398,7 +398,11 @@ impl Project {
             self.resolve_directory_environment(&env_shell, path.clone(), remote_client.clone(), cx);
 
         let lang_registry = self.languages.clone();
+        let fs = self.fs.clone();
         cx.spawn(async move |project, cx| {
+            if let Some(local_path) = &local_path {
+                preflight_terminal_working_directory(fs.as_ref(), local_path).await?;
+            }
             let shell_kind = ShellKind::new(&shell, path_style.is_windows());
             let mut env = env_task.await.unwrap_or_default();
             env.extend(settings.env);
@@ -449,6 +453,9 @@ impl Project {
                             }
                             | terminal::session_host::transport::TerminalHostStartupState::Reconnecting {
                                 message,
+                            }
+                            | terminal::session_host::transport::TerminalHostStartupState::InstallationRequired {
+                                message,
                             } => Some(message),
                             terminal::session_host::transport::TerminalHostStartupState::Disabled
                             | terminal::session_host::transport::TerminalHostStartupState::Connecting
@@ -479,7 +486,6 @@ impl Project {
                 cx.update(|cx| {
                     insert_zed_terminal_env(&mut env, &release_channel::AppVersion::global(cx));
                 });
-                let terminal_host_directory = paths::state_dir().join("terminal-host");
                 if let Ok(helper) = terminal_host_executable_path() {
                     env.insert(
                         TERMINAL_HOST_BIN_ENV.to_owned(),
@@ -488,15 +494,17 @@ impl Project {
                 }
                 env.insert(
                     TERMINAL_HOST_SOCKET_ENV.to_owned(),
-                    terminal_host_directory
-                        .join("local.sock")
+                    connection
+                        .endpoint()
+                        .socket_path()
                         .to_string_lossy()
                         .into_owned(),
                 );
                 env.insert(
                     TERMINAL_HOST_TOKEN_FILE_ENV.to_owned(),
-                    terminal_host_directory
-                        .join("auth.token")
+                    connection
+                        .endpoint()
+                        .token_file_path()
                         .to_string_lossy()
                         .into_owned(),
                 );
@@ -792,6 +800,24 @@ impl Project {
             Task::ready(None).shared()
         }
     }
+}
+
+async fn preflight_terminal_working_directory(fs: &dyn fs::Fs, path: &Path) -> Result<()> {
+    let mut entries = fs.read_dir(path).await.map_err(|error| {
+        anyhow::anyhow!(
+            "Workspace access required for {} before a terminal can start: {error:#}",
+            path.display()
+        )
+    })?;
+    if let Some(entry) = entries.next().await {
+        entry.map_err(|error| {
+            anyhow::anyhow!(
+                "Workspace access required for {} before a terminal can start: {error:#}",
+                path.display()
+            )
+        })?;
+    }
+    Ok(())
 }
 
 fn create_remote_shell(

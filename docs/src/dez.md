@@ -508,11 +508,28 @@ without the helper retain the ordinary in-process path. Task terminals remain
 GUI-owned because retaining a task after the UI reports cancellation would be
 dishonest, and remote terminals retain their remote owner.
 
-The v0.1 helper uses a versioned Dez runtime socket. A helper left alive by a
-pre-v0.1 mounted snapshot cannot accept a newer GUI connection and make
-Workspace terminals appear inert. Legacy unavailable terminal tabs are
-skipped during restore; opening a fresh terminal creates a current
-v0.1-owned Session.
+An app bundle must be installed in `/Applications` before this service starts
+or Workspaces restore. A DMG, App Translocation, temporary, or user-local app
+launch opens native Home and the operating-system prompt for **Install and
+Relaunch**. Dez does not provide a “continue anyway” path because a temporary
+process owner cannot provide durable terminal or protected-folder identity.
+
+The current helper uses one generated `TerminalHostEndpoint`: generation,
+socket path, token-file path, and stable Host identity advance together.
+Terminal-agent hooks receive the exact endpoint from their authenticated
+connection, so they cannot accidentally address an inherited Zed path.
+A helper left alive by an older build remains the owner of its shells.
+Workspaces labels those records **Legacy · Access blocked** and offers three
+honest outcomes: open a new shell in the recorded directory, keep the legacy
+process running, or explicitly confirm **Terminate Legacy Session…**. Dez
+never claims to transfer process ownership between Hosts.
+
+Before a local Workspace restore, Dez enumerates each root once. A macOS
+protected-folder denial becomes one **Workspace access required** notice with
+the native **Grant Access…** folder picker. Git, Workspace Search, LSP, agent,
+and terminal startup wait behind that preflight. Workspace Search deduplicates
+permission diagnostics per root, and active searches are cancelled during
+quit so denied trees cannot flood the log or hold `app_will_quit` open.
 
 Workspaces does not list arbitrary current-user TTYs from Terminal.app, iTerm,
 Warp, another IDE, or an unrelated application. Those processes are neither
@@ -527,6 +544,10 @@ cmux Workspaces stay in cmux and open through its `select-workspace` command.
 Discovery updates automatically; **Refresh External Activity** in a
 Workspace's options menu requests an immediate scan, shows when discovery is
 running, and explains when no path-matched activity exists.
+Attach terminals keep the native rerun control. Failure shows an explicit
+**Retry Attach** action and refreshes discovery after completion without
+starting a duplicate attach automatically. Raw Herdr shells without structured
+agent state are labeled **Available**, not unknown.
 The external application remains authoritative; closing a Dez tab detaches,
 Herdr never receives automatic takeover, and Workspaces never becomes a second
 process, transcript, or layout owner.

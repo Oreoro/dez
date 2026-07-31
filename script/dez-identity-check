@@ -701,6 +701,12 @@ require_multiline_pattern crates/agent_ui/src/multiplexer_session_store.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Checking tmux, Herdr, and cmux….*?No matching tmux, Herdr, or cmux session.*?Refresh External Activity.*?store\.refresh\(cx\).*?fn open_external_multiplexer_session.*?ExternalSessionOpenMode::RevealExternal.*?Opening \{\} in cmux….*?cmux could not open the Workspace.*?Opened \{session_title\} in cmux\..*?The external Workspace was not changed' \
     'external Workspace actions can regress to silent no-op or failure behavior'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn open_external_multiplexer_session.*?show_rerun: true.*?Retry Attach.*?open_external_multiplexer_session.*?store\.refresh\(cx\)' \
+    'tmux and Herdr attach failures can regress to a dead terminal with no manual retry or refresh'
+require_multiline_pattern crates/agent_ui/src/multiplexer_session_store.rs \
+    'detected_agent_kind\.is_none\(\) => MultiplexerSessionState::Available.*?opens_non_agent_herdr_panes_with_the_interactive_terminal_client.*?MultiplexerSessionState::Available' \
+    'raw Herdr terminals can regress to an unhelpful unknown state'
 require_multiline_pattern crates/agent_ui/src/multiplexer_session_store.rs \
     'pub fn is_refreshing.*?pub fn refresh.*?self\.refreshing = true.*?scan_external_multiplexer_sessions.*?store\.refreshing = false.*?MULTIPLEXER_REFRESH_INTERVAL' \
     'external session discovery can regress to a timer-only path without explicit refresh feedback'
@@ -738,7 +744,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn terminal_row_close_presentation.*?"Terminate Running Terminal…", true.*?"Terminate Detached Terminal…", true.*?"Detach Live Terminal", false' \
     'terminal lifecycle actions can regress to generic Session wording or a non-destructive label'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn terminal_termination_confirmation_copy.*?"End Agent Terminal\?".*?shell and any foreground command.*?cannot be undone.*?&\["End Terminal", "Cancel"\]' \
+    'fn terminal_termination_confirmation_copy.*?"End Agent Terminal\?".*?shell and any foreground command.*?cannot be undone.*?fn close_terminal_with_confirmation.*?let buttons = if is_legacy_session.*?\["Terminate Session", "Keep Running"\].*?\["End Terminal", "Cancel"\]' \
     'terminal termination confirmation can regress to architecture jargon or omit the irreversible process effect'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn terminal_termination_failure_copy.*?Dez could not terminate.*?It may still be running.*?NotificationId::composite.*?terminal_termination_failure_copy.*?\.on_click\(.*?"Return to Session".*?activate_terminal_entry' \
@@ -951,8 +957,41 @@ require_multiline_pattern crates/workspace/src/workspace.rs \
     'fn dez_layout_uses_single_work_area.*?CanvasLayoutRecipe::Full.*?CanvasLayoutRecipe::AgentControl.*?CanvasLayoutRecipe::EditorFocus.*?CanvasLayoutRecipe::Review.*?CanvasLayoutRecipe::Debug.*?fn normalize_restored_dez_main_work_area.*?active_canvas_layout_recipe.*?is_some_and\(dez_layout_uses_single_work_area\).*?consolidate_dez_main_work_area.*?fn apply_dez_single_work_area_destination.*?consolidate_dez_main_work_area.*?select_dez_essential_canvas_recipe_panel.*?fn consolidate_dez_main_work_area.*?join_pane_into_active.*?fn test_restore_consolidates_single_work_area_dez_layouts.*?with_label\("review\.diff"\).*?normalize_restored_dez_main_work_area.*?primary_pane\.read\(cx\)\.items_len\(\), 1.*?!workspace\.pane_is_in_center\(&restored_review_pane\).*?fn test_restore_promotes_visible_user_work_over_stale_empty_active_pane.*?with_label\("Session unavailable"\).*?normalize_restored_dez_main_work_area.*?!stale_empty_pane\.read\(cx\)\.is_visible\(\).*?user_work_pane\.read\(cx\)\.is_visible\(\).*?workspace\.active_pane\(\).*?&user_work_pane' \
     'Workspace destinations can regress to restored duplicate panes or lose populated surfaces instead of consolidating them as tabs'
 require_multiline_pattern crates/zed/src/terminal_host_runtime.rs \
-    'DEZ_TERMINAL_HOST_RUNTIME_DIRECTORY: &str = "dez-terminal-host-v0\.1".*?fn prepare_runtime_paths.*?terminal_host_runtime_directory\(paths::state_dir\(\), paths::APP_NAME\).*?fn terminal_host_runtime_directory.*?app_name == "Zed".*?state_dir\.join\("terminal-host"\).*?state_dir\.join\(DEZ_TERMINAL_HOST_RUNTIME_DIRECTORY\).*?fn dez_v0_1_does_not_reuse_a_legacy_terminal_host_socket' \
-    'Dez v0.1 can reconnect to a stale helper left by a pre-v0.1 development snapshot'
+    'DEZ_TERMINAL_HOST_GENERATION: &str = "v1".*?DEZ_TERMINAL_HOST_RUNTIME_DIRECTORY: &str = "dez-terminal-host-v1".*?fn prepare_runtime_endpoint.*?TerminalHostEndpoint::new.*?DEZ_TERMINAL_HOST_GENERATION.*?fn terminal_host_runtime_directory.*?state_dir\.join\("terminal-host"\).*?state_dir\.join\(DEZ_TERMINAL_HOST_RUNTIME_DIRECTORY\).*?fn generated_dez_host_does_not_reuse_a_legacy_terminal_host_socket' \
+    'a generated Dez Host can regress to sharing the identity or endpoint of a legacy terminal owner'
+require_multiline_pattern crates/terminal/src/session_host/transport.rs \
+    'pub struct TerminalHostEndpoint.*?socket_path.*?token_file_path.*?generation.*?pub struct TerminalHostConnection.*?endpoint: TerminalHostEndpoint.*?pub fn endpoint\(&self\) -> &TerminalHostEndpoint' \
+    'the terminal connection can lose its authoritative generated endpoint'
+require_multiline_pattern crates/project/src/terminals.rs \
+    'connection.*?endpoint\(\).*?socket_path\(\).*?TERMINAL_HOST_TOKEN_FILE_ENV.*?connection.*?endpoint\(\).*?token_file_path\(\).*?TERMINAL_HOST_ID_ENV' \
+    'terminal hooks can regress to hard-coded legacy socket and token paths'
+require_multiline_pattern crates/zed/src/main.rs \
+    'dez-local-host:\{\}:\{\}.*?DEZ_TERMINAL_HOST_GENERATION.*?installation_id' \
+    'the terminal Host ID can regress to ignoring its endpoint generation'
+require_multiline_pattern crates/zed/src/zed/move_to_applications.rs \
+    'pub fn installation_required.*?if !should_require_installation.*?Install and Relaunch.*?PromptButton::cancel\("Quit"\).*?fn should_require_installation.*?extension\(\).*?extension == "app".*?!app_path\.starts_with\(Path::new\("/Applications"\)\).*?fn app_bundles_require_system_installation' \
+    'temporary app bundles can regain a bypass around install-first Workspace and terminal ownership'
+reject_pattern crates/zed/src/zed/move_to_applications.rs \
+    'InstallingZedModal|DONT_ASK_AGAIN_KEY|Don.t ask me again' \
+    'the removed custom installation overlay or persistent bypass returned'
+require_multiline_pattern crates/zed/src/main.rs \
+    'if installation_required.*?TerminalHostStartupState::InstallationRequired.*?else \{.*?LocalTerminalHost::init.*?TerminalHostRuntime::init.*?restore_or_create_workspace.*?move_to_applications::installation_required.*?seed_empty_workspace_with_home.*?return Ok' \
+    'a temporary app launch can regress to restoring Workspaces or starting the durable Host'
+require_multiline_pattern crates/workspace/src/workspace.rs \
+    'pub enum WorkspaceAccessState.*?Available.*?AccessRequired.*?pub fn set_workspace_access_state' \
+    'Workspace access denial can regress to an unrenderable background error'
+require_multiline_pattern crates/zed/src/main.rs \
+    'preflight_workspace_roots.*?WorkspaceAccessState::AccessRequired.*?is_permission_denied.*?PermissionDenied' \
+    'Workspace restoration can regress to starting services before protected-root access'
+require_multiline_pattern crates/project/src/project_search.rs \
+    'permission_denied_roots.*?Workspace search skipped inaccessible root.*?fn is_permission_denied.*?PermissionDenied' \
+    'Workspace Search can regress to logging a permission failure for every file'
+require_multiline_pattern crates/search/src/project_search.rs \
+    '_quit_subscription: Subscription.*?on_app_quit.*?pending_search\.take' \
+    'active Workspace searches can regress to holding app quit open'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'LegacyAccessBlocked.*?Legacy · Access blocked.*?Terminate Legacy Session….*?terminate_legacy_terminal_session.*?Keep Running.*?Open New Shell Here' \
+    'legacy sessions can regress to being hidden, claimed as migrated, or terminated without an explicit recovery path'
 require_multiline_pattern crates/worktree/src/worktree.rs \
     'fn worktree_root_open_failure_is_fatal\(app_name: &str\) -> bool \{.*?app_name != "Zed".*?fs\.open_handle\(&abs_path\).*?Err\(error\) if worktree_root_open_failure_is_fatal\(paths::APP_NAME\).*?return Err\(error\).*?fn dez_does_not_open_a_half_working_workspace_without_root_access' \
     'Dez can regress to a half-working Workspace after macOS denies folder access'
@@ -1002,7 +1041,7 @@ require_multiline_pattern crates/workspace/src/multi_workspace.rs \
     'sidebar_auto_close_pending: bool.*?fn toggle_sidebar.*?sidebar_auto_close_pending = false.*?fn focus_sidebar.*?sidebar_auto_close_pending = false.*?fn open_sidebar.*?sidebar_auto_close_pending = false.*?fn restore_sidebar_open_state.*?sidebar_open && settings.auto_visibility && !settings.always_open.*?fn reconcile_restored_sidebar_visibility.*?sidebar_has_focus.*?has_supervision_or_recovery.*?!restoration_ready.*?restore-auto-close.*?apply_close_sidebar\(false, window, true, cx\)' \
     'a stale restored Sessions rail can regress to permanent chrome or auto-hide after explicit user interaction'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'snapshot_ready: bool.*?snapshot_ready: true.*?fn reconcile_restored_sessions_visibility.*?TerminalHostStartupState::Connecting.*?TerminalHostStartupState::Reconnecting.*?TerminalHostStartupState::Failed.*?restoration_ready = self.contents.snapshot_ready.*?self.update_task.is_none.*?session_count > 0.*?has_attention.*?SidebarView::Archive.*?unresolved_workspace_ids.*?window.defer.*?reconcile_restored_sidebar_visibility.*?impl Render for Sidebar.*?reconcile_restored_sessions_visibility\(window, cx\)' \
+    'snapshot_ready: bool.*?snapshot_ready: true.*?fn reconcile_restored_sessions_visibility.*?TerminalHostStartupState::Connecting.*?TerminalHostStartupState::InstallationRequired.*?TerminalHostStartupState::Reconnecting.*?TerminalHostStartupState::Failed.*?restoration_ready = self.contents.snapshot_ready.*?self.update_task.is_none.*?session_count > 0.*?has_attention.*?SidebarView::Archive.*?unresolved_workspace_ids.*?window.defer.*?reconcile_restored_sidebar_visibility.*?impl Render for Sidebar.*?reconcile_restored_sessions_visibility\(window, cx\)' \
     'Sessions can resolve auto visibility before restoration truth or hide supervision and recovery state'
 require_multiline_pattern crates/workspace/src/multi_workspace_tests.rs \
     'test_restored_auto_sidebar_closes_only_after_empty_state_is_ready.*?reconcile_restored_sidebar_visibility\(false, false.*?sidebar_open.*?reconcile_restored_sidebar_visibility\(true, false.*?!multi_workspace.sidebar_open.*?test_explicit_sidebar_open_cancels_restored_auto_close.*?multi_workspace.open_sidebar.*?!multi_workspace.restored_sidebar_visibility_pending.*?multi_workspace.sidebar_open' \
@@ -2530,8 +2569,11 @@ require_pattern .github/workflows/dez-build.yml \
     'target-cpu=apple-m2' \
     'the manual macOS workflow is no longer optimized for the Apple M2 target'
 require_pattern .github/workflows/dez-build.yml \
-    '^  DEZ_BUNDLE_CHANNEL: stable$' \
-    'the downloadable macOS workflow no longer produces the canonical Dez identity'
+    '^  DEZ_RELEASE_KIND: \$\{\{ inputs\.release_kind \}\}$' \
+    'the downloadable macOS workflow no longer records whether an artifact is Preview or Stable'
+require_pattern .github/workflows/dez-build.yml \
+    '^  DEZ_BUNDLE_CHANNEL: \$\{\{ inputs\.release_kind \}\}$' \
+    'Preview and Stable artifacts can regress to sharing an ambiguous bundle identity'
 require_pattern .github/workflows/dez-build.yml \
     '^  CARGO_PROFILE_RELEASE_STRIP: symbols$' \
     'the downloadable macOS workflow no longer strips release symbols'
@@ -2545,16 +2587,19 @@ require_multiline_pattern .github/workflows/dez-build.yml \
     'Build the optimized Dez application bundle.*?id: build-dez.*?Save Rust release intermediates.*?!cancelled\(\).*?steps\.build-dez\.outcome.*?steps\.rust-release-cache\.outputs\.cache-hit.*?continue-on-error: true.*?actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830.*?target/aarch64-apple-darwin/release/\.fingerprint.*?target/aarch64-apple-darwin/release/build.*?target/aarch64-apple-darwin/release/deps.*?github\.sha.*?Verify and package the launchable application' \
     'the remote macOS build no longer preserves reusable compilation work before exact-package verification'
 require_multiline_pattern .github/workflows/dez-build.yml \
-    'hdiutil verify.*?Dez\.app.*?Contents/MacOS/dez-terminal-host.*?CFBundleIdentifier.*?dev\.dez\.Dez.*?codesign --verify --deep --strict' \
+    'hdiutil verify.*?expected_name=Dez.*?expected_name="Dez Preview".*?expected_bundle_id=dev\.dez\.Dez-Preview.*?Contents/MacOS/dez-terminal-host.*?CFBundleIdentifier.*?codesign --verify --deep --strict' \
     'the manual macOS workflow does not verify its DMG, identity, helper, and signature'
 require_multiline_pattern .github/workflows/dez-build.yml \
-    'MACOS_SIGNING_IDENTITY: \$\{\{ secrets\.MACOS_SIGNING_IDENTITY \}\}.*?MACOS_CERTIFICATE: \$\{\{ secrets\.MACOS_CERTIFICATE \}\}.*?APPLE_NOTARIZATION_KEY: \$\{\{ secrets\.APPLE_NOTARIZATION_KEY \}\}.*?codesign -dv --verbose=4.*?\^Authority=.*?release_signed=true.*?spctl --assess --type execute.*?signature=Developer ID \(notarized\).*?rebuilt ad-hoc apps do not have a stable Apple signing.*?protected folders.*?~/Developer' \
-    'the macOS artifact can regress to hiding whether its signing identity can retain protected-folder permission'
+    'release_kind:.*?default: preview.*?options:.*?- preview.*?- stable.*?signature=ad-hoc Preview \(not notarized; not a v0\.1 release\)' \
+    'Preview can regress to masquerading as a v0.1 release'
 require_multiline_pattern .github/workflows/dez-build.yml \
-    '"\$main" --system-specs.*?"\$cli" --dez "\$app" --version.*?"\$terminal_host" --help.*?runtime-smoke\.txt.*?grep -F "Dez: v0\.1\.0".*?grep -F "Dez 0\.1\.0".*?grep -F "Usage: dez-terminal-host"' \
+    'Stable Dez builds require \$credential.*?Developer ID Application signature.*?TeamIdentifier.*?stapler validate' \
+    'Stable can regress to accepting unsigned output or Preview can masquerade as a v0.1 release'
+require_multiline_pattern .github/workflows/dez-build.yml \
+    '"\$main" --system-specs.*?"\$cli" --dez "\$app" --version.*?"\$terminal_host" --help.*?runtime-smoke\.txt.*?grep -F "\$expected_name".*?grep -F "0\.1\.0".*?grep -F "Usage: dez-terminal-host"' \
     'the public macOS workflow no longer executes and verifies every packaged Dez entry point'
 require_multiline_pattern .github/workflows/dez-build.yml \
-    'Dez-macOS-M2\.dmg.*?INSTALL\.txt.*?SHA256SUMS\.txt.*?compression-level: 0' \
+    'artifact_dmg="\$\{artifact_label\}-macOS-M2\.dmg".*?INSTALL\.txt.*?SHA256SUMS\.txt.*?compression-level: 0' \
     'the manual macOS artifact is not a fast-download DMG with install and checksum evidence'
 require_pattern crates/terminal/src/terminal.rs \
     'env\.insert\("DEZ_TERM"\.to_string\(\), "true"\.to_string\(\)\);' \
