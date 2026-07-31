@@ -1103,8 +1103,24 @@ fn session_rail_accessibility_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Sessions"
     } else {
-        "Workspaces and agent sessions"
+        "Workspace Navigator"
     }
+}
+
+fn workspace_tabs_section_title(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Open Tabs"
+    } else {
+        "Active Workspace"
+    }
+}
+
+fn workspace_tabs_section_visible(app_name: &str, tab_count: usize) -> bool {
+    app_name != "Zed" && tab_count > 0
+}
+
+fn workspace_pane_navigation_label(pane_index: usize, pane_count: usize) -> Option<String> {
+    (pane_count > 1).then(|| format!("Pane {}", pane_index + 1))
 }
 
 fn session_rail_search_label(app_name: &str) -> &'static str {
@@ -1465,6 +1481,12 @@ struct SerializedSidebar {
     active_view: SerializedSidebarView,
     #[serde(default)]
     manual_entry_order: Vec<ManualEntryOrderKey>,
+    #[serde(default = "workspace_tabs_expanded_default")]
+    workspace_tabs_expanded: bool,
+}
+
+fn workspace_tabs_expanded_default() -> bool {
+    true
 }
 
 #[derive(Debug, Default)]
@@ -2234,7 +2256,17 @@ mod session_start_state_tests {
         assert_eq!(session_rail_title("Zed"), "Sessions");
         assert_eq!(
             session_rail_accessibility_label("Dez"),
-            "Workspaces and agent sessions"
+            "Workspace Navigator"
+        );
+        assert_eq!(workspace_tabs_section_title("Dez"), "Active Workspace");
+        assert_eq!(workspace_tabs_section_title("Zed"), "Open Tabs");
+        assert!(workspace_tabs_section_visible("Dez", 1));
+        assert!(!workspace_tabs_section_visible("Dez", 0));
+        assert!(!workspace_tabs_section_visible("Zed", 3));
+        assert_eq!(workspace_pane_navigation_label(0, 1), None);
+        assert_eq!(
+            workspace_pane_navigation_label(1, 3).as_deref(),
+            Some("Pane 2")
         );
         assert_eq!(session_rail_search_label("Dez"), "Search Workspaces");
         assert_eq!(session_rail_search_placeholder("Dez"), "Search Workspaces…");
@@ -4590,6 +4622,9 @@ pub struct Sidebar {
     /// navigation. Keep them behind an explicit disclosure so Workspaces stays
     /// focused on codebases and actionable agent sessions.
     external_activity_expanded: bool,
+    /// The active Workspace's center-pane tabs are a native projection rather
+    /// than a second source of tab state. This only persists the disclosure.
+    workspace_tabs_expanded: bool,
     /// The index of the list item that currently has the keyboard focus
     ///
     /// Note: This is NOT the same as the active item.
@@ -4847,6 +4882,7 @@ impl Sidebar {
             attention_only: false,
             session_search_open: false,
             external_activity_expanded: false,
+            workspace_tabs_expanded: true,
             selection: None,
             active_entry: None,
             hovered_thread_index: None,
@@ -4935,6 +4971,13 @@ impl Sidebar {
         for terminal_view in terminal_views {
             self.subscribe_to_standalone_terminal(&terminal_view, window, cx);
         }
+
+        cx.observe(workspace, |this, workspace, cx| {
+            if this.is_active_workspace(workspace, cx) {
+                cx.notify();
+            }
+        })
+        .detach();
 
         cx.subscribe_in(
             &project,
@@ -16285,6 +16328,202 @@ impl Sidebar {
         )
     }
 
+    fn render_active_workspace_tabs(
+        &self,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        let workspace = self.active_workspace(cx)?;
+        let active_pane = workspace.read(cx).active_pane().clone();
+        let pane_items = workspace
+            .read(cx)
+            .panes()
+            .iter()
+            .filter_map(|pane| {
+                let items = pane.read(cx).items().cloned().collect::<Vec<_>>();
+                (!items.is_empty()).then(|| (pane.clone(), items))
+            })
+            .collect::<Vec<_>>();
+        let tab_count = pane_items.iter().map(|(_, items)| items.len()).sum();
+
+        if !workspace_tabs_section_visible(APP_NAME, tab_count) {
+            return None;
+        }
+
+        let workspace_label = self
+            .contents
+            .entries
+            .iter()
+            .find_map(|entry| match entry {
+                ListEntry::ProjectHeader {
+                    label,
+                    is_active: true,
+                    ..
+                } => Some(label.clone()),
+                _ => None,
+            })
+            .unwrap_or_else(|| SharedString::from("Current Workspace"));
+        let pane_count = pane_items.len();
+        let mut rows = Vec::with_capacity(tab_count + pane_count);
+
+        if self.workspace_tabs_expanded {
+            for (pane_index, (pane, items)) in pane_items.into_iter().enumerate() {
+                let pane_is_active = pane == active_pane;
+                let active_item_id = pane.read(cx).active_item().map(|item| item.item_id());
+                let details = workspace::tab_details(&items, window, cx);
+
+                if let Some(pane_label) = workspace_pane_navigation_label(pane_index, pane_count) {
+                    rows.push(
+                        h_flex()
+                            .px_2()
+                            .pt_1()
+                            .pb_0p5()
+                            .child(
+                                Label::new(pane_label)
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Muted),
+                            )
+                            .into_any_element(),
+                    );
+                }
+
+                for (item_index, item) in items.into_iter().enumerate() {
+                    let detail = details.get(item_index).copied().unwrap_or_default();
+                    let label = item.tab_content_text(detail, cx);
+                    let icon = item
+                        .tab_icon(window, cx)
+                        .unwrap_or_else(|| Icon::new(IconName::File))
+                        .size(IconSize::XSmall)
+                        .color(Color::Muted);
+                    let is_dirty = item.is_dirty(cx);
+                    let is_active = pane_is_active && active_item_id == Some(item.item_id());
+                    let accessibility_label = format!("Open {label} in {workspace_label}");
+                    let item_id = item.item_id();
+                    let workspace = workspace.clone();
+
+                    rows.push(
+                        ButtonLike::new(ElementId::from(format!("workspace-native-tab-{item_id}")))
+                            .size(ButtonSize::Medium)
+                            .style(ButtonStyle::Subtle)
+                            .full_width()
+                            .toggle_state(is_active)
+                            .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                            .tab_index(0isize)
+                            .aria_label(accessibility_label.clone())
+                            .tooltip(Tooltip::text(accessibility_label))
+                            .child(
+                                h_flex()
+                                    .w_full()
+                                    .min_w_0()
+                                    .gap_2()
+                                    .child(icon)
+                                    .child(
+                                        Label::new(label)
+                                            .size(LabelSize::Small)
+                                            .truncate()
+                                            .flex_1(),
+                                    )
+                                    .when(is_dirty, |this| {
+                                        this.child(
+                                            Icon::new(IconName::Circle)
+                                                .size(IconSize::XSmall)
+                                                .color(Color::Accent),
+                                        )
+                                    }),
+                            )
+                            .on_click(move |_, window, cx| {
+                                workspace.update(cx, |workspace, cx| {
+                                    workspace.activate_item(item.as_ref(), true, true, window, cx);
+                                });
+                            })
+                            .into_any_element(),
+                    );
+                }
+            }
+        }
+
+        let expanded = self.workspace_tabs_expanded;
+        let disclosure_label = if expanded {
+            "Hide active Workspace tabs"
+        } else {
+            "Show active Workspace tabs"
+        };
+
+        Some(
+            v_flex()
+                .id("active-workspace-tabs")
+                .role(gpui::Role::Region)
+                .aria_label("Active Workspace tabs")
+                .flex_none()
+                .min_h_0()
+                .border_b_1()
+                .border_color(cx.theme().colors().border)
+                .child(
+                    ButtonLike::new("active-workspace-tabs-disclosure")
+                        .size(ButtonSize::Medium)
+                        .style(ButtonStyle::Subtle)
+                        .full_width()
+                        .tab_index(0isize)
+                        .aria_label(disclosure_label)
+                        .aria_expanded(expanded)
+                        .tooltip(Tooltip::text(disclosure_label))
+                        .child(
+                            h_flex()
+                                .w_full()
+                                .min_w_0()
+                                .gap_1()
+                                .child(
+                                    Icon::new(if expanded {
+                                        IconName::ChevronDown
+                                    } else {
+                                        IconName::ChevronRight
+                                    })
+                                    .size(IconSize::XSmall)
+                                    .color(Color::Muted),
+                                )
+                                .child(
+                                    v_flex()
+                                        .min_w_0()
+                                        .flex_1()
+                                        .child(
+                                            Label::new(workspace_tabs_section_title(APP_NAME))
+                                                .size(LabelSize::Small),
+                                        )
+                                        .child(
+                                            Label::new(workspace_label)
+                                                .size(LabelSize::XSmall)
+                                                .color(Color::Muted)
+                                                .truncate(),
+                                        ),
+                                )
+                                .child(
+                                    Label::new(format!("{tab_count}"))
+                                        .size(LabelSize::XSmall)
+                                        .color(Color::Muted),
+                                ),
+                        )
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            this.workspace_tabs_expanded = !this.workspace_tabs_expanded;
+                            this.serialize(cx);
+                            cx.notify();
+                        })),
+                )
+                .when(expanded, |this| {
+                    this.child(
+                        v_flex()
+                            .id("active-workspace-tab-list")
+                            .role(gpui::Role::List)
+                            .aria_label("Open tabs grouped by pane")
+                            .max_h(vh(0.26, window))
+                            .overflow_y_scroll()
+                            .p_1()
+                            .children(rows),
+                    )
+                })
+                .into_any_element(),
+        )
+    }
+
     fn render_sidebar_header(&self, window: &Window, cx: &mut Context<Self>) -> impl IntoElement {
         let sidebar_side = self.side(cx);
         let sidebar_state = SidebarRenderState {
@@ -17251,6 +17490,7 @@ impl WorkspaceSidebar for Sidebar {
                 SidebarView::Archive(_) => SerializedSidebarView::History,
             },
             manual_entry_order: self.manual_entry_order.clone(),
+            workspace_tabs_expanded: self.workspace_tabs_expanded,
         };
         serde_json::to_string(&serialized).ok()
     }
@@ -17266,6 +17506,7 @@ impl WorkspaceSidebar for Sidebar {
                 self.width = px(width).clamp(MIN_WIDTH, session_rail_max_width(APP_NAME));
             }
             self.manual_entry_order = serialized.manual_entry_order;
+            self.workspace_tabs_expanded = serialized.workspace_tabs_expanded;
             if serialized.active_view == SerializedSidebarView::History {
                 cx.defer_in(window, |this, window, cx| {
                     this.show_archive(window, cx);
@@ -17344,6 +17585,9 @@ impl Render for Sidebar {
                     cx,
                 )
             })
+            .flatten();
+        let active_workspace_tabs = (matches!(self.view, SidebarView::ThreadList) && !has_query)
+            .then(|| self.render_active_workspace_tabs(window, cx))
             .flatten();
 
         v_flex()
@@ -17468,6 +17712,7 @@ impl Render for Sidebar {
                 }
             })
             .child(self.render_sidebar_header(window, cx))
+            .when_some(active_workspace_tabs, |this, tabs| this.child(tabs))
             .map(|this| match &self.view {
                 SidebarView::ThreadList => this
                     .when(

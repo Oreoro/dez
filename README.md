@@ -23,9 +23,14 @@ Workspace instead of separate applications or hidden panel modes.
 - **Main Work Area** — files, terminals, search results, settings, diagnostics,
   previews, and reviews are ordinary movable and splittable Surfaces.
 - **Workspaces** — a stable, collapsible left navigator for codebases and their
-  Agent Sessions. It shows provider identity and Running, Needs Input, Waiting
-  for Permission, Reconnecting, Completed, or Error state on a secondary row,
-  leaving the terminal or Session title as the primary navigation label. A
+  open Surfaces and Agent Sessions. Its collapsible **Active Workspace**
+  section mirrors the native center-pane tabs, grouping them by pane only when
+  the Workspace is split. Selecting a row activates that exact native tab;
+  tab ownership, dirty state, close behavior, dragging, and ordering remain in
+  Zed's pane model rather than being copied into the navigator. Agent Session
+  rows show provider identity and Running, Needs Input, Waiting for Permission,
+  Reconnecting, Completed, or Error state on a secondary row, leaving the
+  terminal or Session title as the primary navigation label. A
   multi-root Workspace leads with its first root and a bounded root count; all
   root names remain searchable and available in the header tooltip and
   accessibility label. A Workspace can explicitly attach a path-matched tmux
@@ -72,6 +77,12 @@ owns one Project, one Main Work Area, its terminals, and its Git state.
 Workspaces stays global on the left. Files, Git, Outline, Debug, Built-in Agent,
 commits, diffs, reviews, agent terminals, and ordinary terminals use the
 native workspace tab and pane model instead of another navigation system.
+When Workspaces is visible, **Active Workspace** provides a compact vertical
+route to those same open tabs. It stays flat for a single pane and introduces
+small **Pane 1**, **Pane 2**, and later group labels only when a real split
+exists. The section is collapsible, remembers its disclosure state, and
+disappears while Workspace search is active so search results keep the full
+navigator.
 Those tabs support reorder, cross-pane drag, preview replacement, pinning,
 closing, and horizontal or vertical splits. A terminal can therefore sit
 below code without Dez manufacturing a separate multiplexer UI.

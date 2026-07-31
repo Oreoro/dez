@@ -90,6 +90,16 @@ generic row. Provider icons identify Codex, Claude Code, OpenCode, Herdr, and
 other detected agents. Native status treatments distinguish Running, Needs
 Input, Waiting for Permission, Reconnecting, Completed, and Error without
 rendering a second terminal transcript.
+When Workspaces is open, its collapsible **Active Workspace** section projects
+the active Workspace's native center-pane tabs above the Workspace and Session
+list. A one-pane layout remains a flat list. Real splits add quiet **Pane 1**,
+**Pane 2**, and later group labels, so the hierarchy describes the layout that
+already exists instead of manufacturing one. Each row uses the Surface's
+native icon, disambiguated tab title, active state, and dirty state. Activating
+a row calls the owning Workspace's native item activation path; ordering,
+dragging, preview replacement, pinning, closing, and split ownership remain in
+the pane. The disclosure state persists, while Workspace search temporarily
+hides the section to keep filtering focused.
 Each Main Work Area pane keeps native Back and Forward controls in its tab
 bar. They traverse files, terminals, diffs, settings, and other native
 Surfaces without inventing a separate browser or duplicating Workspace
