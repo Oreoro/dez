@@ -106,6 +106,7 @@ pub struct ExternalMultiplexerSession {
     pub detected_agent_kind: Option<TerminalAgentKind>,
     pub state: MultiplexerSessionState,
     pub attached_clients: Option<usize>,
+    discovery_stale: bool,
     executable: PathBuf,
     herdr_session_name: Option<String>,
 }
@@ -119,10 +120,15 @@ impl ExternalMultiplexerSession {
     }
 
     pub fn state_label(&self) -> String {
-        match self.attached_clients {
+        let label = match self.attached_clients {
             Some(1) => format!("{} · 1 client", self.state.label()),
             Some(count) if count > 1 => format!("{} · {count} clients", self.state.label()),
             _ => self.state.label().to_owned(),
+        };
+        if self.discovery_stale {
+            format!("{label} · last known")
+        } else {
+            label
         }
     }
 
@@ -187,6 +193,12 @@ pub struct MultiplexerSessionStore {
     _refresh_task: Task<()>,
 }
 
+struct ExternalMultiplexerScan {
+    tmux: Result<Vec<ExternalMultiplexerSession>>,
+    herdr: Result<Vec<ExternalMultiplexerSession>>,
+    cmux: Result<Vec<ExternalMultiplexerSession>>,
+}
+
 impl MultiplexerSessionStore {
     pub fn init_global(cx: &mut App) {
         if APP_NAME == "Zed" || cx.has_global::<GlobalMultiplexerSessionStore>() {
@@ -233,18 +245,8 @@ impl MultiplexerSessionStore {
         .detach();
     }
 
-    fn apply_scan(
-        &mut self,
-        scan: Result<Vec<ExternalMultiplexerSession>>,
-        cx: &mut Context<Self>,
-    ) {
-        let sessions = match scan {
-            Ok(sessions) => sessions,
-            Err(error) => {
-                log::debug!("failed to discover external terminal sessions: {error:#}");
-                return;
-            }
-        };
+    fn apply_scan(&mut self, scan: ExternalMultiplexerScan, cx: &mut Context<Self>) {
+        let sessions = reconcile_external_multiplexer_sessions(&self.sessions, scan);
         if self.sessions != sessions {
             self.sessions = sessions;
             cx.notify();
@@ -286,24 +288,42 @@ pub fn init(cx: &mut App) {
     MultiplexerSessionStore::init_global(cx);
 }
 
-fn scan_external_multiplexer_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
-    let mut sessions = match scan_tmux_sessions() {
-        Ok(sessions) => sessions,
-        Err(error) => {
-            log::debug!("tmux discovery failed without changing the session: {error:#}");
-            Vec::new()
-        }
-    };
-    match scan_herdr_sessions() {
-        Ok(herdr_sessions) => sessions.extend(herdr_sessions),
-        Err(error) => {
-            log::debug!("Herdr discovery failed without changing the session: {error:#}");
-        }
+fn scan_external_multiplexer_sessions() -> ExternalMultiplexerScan {
+    ExternalMultiplexerScan {
+        tmux: scan_tmux_sessions(),
+        herdr: scan_herdr_sessions(),
+        cmux: scan_cmux_workspaces(),
     }
-    match scan_cmux_workspaces() {
-        Ok(cmux_workspaces) => sessions.extend(cmux_workspaces),
-        Err(error) => {
-            log::debug!("cmux discovery failed without changing the session: {error:#}");
+}
+
+fn reconcile_external_multiplexer_sessions(
+    previous_sessions: &[ExternalMultiplexerSession],
+    scan: ExternalMultiplexerScan,
+) -> Vec<ExternalMultiplexerSession> {
+    let mut sessions = Vec::new();
+    for (kind, result) in [
+        (MultiplexerKind::Tmux, scan.tmux),
+        (MultiplexerKind::Herdr, scan.herdr),
+        (MultiplexerKind::Cmux, scan.cmux),
+    ] {
+        match result {
+            Ok(scanned_sessions) => sessions.extend(scanned_sessions),
+            Err(error) => {
+                log::debug!(
+                    "{} discovery failed; preserving its last known sessions: {error:#}",
+                    kind.display_name()
+                );
+                sessions.extend(
+                    previous_sessions
+                        .iter()
+                        .filter(|session| session.kind == kind)
+                        .map(|session| {
+                            let mut session = session.clone();
+                            session.discovery_stale = true;
+                            session
+                        }),
+                );
+            }
         }
     }
     sessions.sort_by(|left, right| {
@@ -313,7 +333,7 @@ fn scan_external_multiplexer_sessions() -> Result<Vec<ExternalMultiplexerSession
             .then_with(|| left.title.cmp(&right.title))
             .then_with(|| left.id.cmp(&right.id))
     });
-    Ok(sessions)
+    sessions
 }
 
 fn scan_tmux_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
@@ -437,6 +457,7 @@ fn parse_cmux_workspaces(
                     MultiplexerSessionState::Available
                 },
                 attached_clients: None,
+                discovery_stale: false,
                 executable: executable.clone(),
                 herdr_session_name: None,
             })
@@ -534,6 +555,7 @@ fn parse_tmux_sessions(output: &str, executable: PathBuf) -> Vec<ExternalMultipl
                 detected_agent_kind,
                 state,
                 attached_clients: Some(record.attached_clients),
+                discovery_stale: false,
                 executable: executable.clone(),
                 herdr_session_name: None,
             }
@@ -706,6 +728,7 @@ fn parse_herdr_snapshot(
                 detected_agent_kind,
                 state,
                 attached_clients: None,
+                discovery_stale: false,
                 executable: executable.clone(),
                 herdr_session_name: server_name.clone(),
             })
@@ -740,6 +763,52 @@ fn first_available_program(programs: &[&str]) -> Result<Option<PathBuf>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn external_session(kind: MultiplexerKind, id: &str) -> ExternalMultiplexerSession {
+        ExternalMultiplexerSession {
+            id: id.to_owned(),
+            kind,
+            target: id.to_owned(),
+            title: id.to_owned(),
+            owner_context: None,
+            working_directory: None,
+            foreground_command: None,
+            detected_agent_kind: None,
+            state: MultiplexerSessionState::Available,
+            attached_clients: None,
+            discovery_stale: false,
+            executable: PathBuf::from(kind.display_name()),
+            herdr_session_name: None,
+        }
+    }
+
+    #[test]
+    fn a_failed_integration_scan_preserves_only_its_last_known_sessions() {
+        let previous_sessions = vec![
+            external_session(MultiplexerKind::Tmux, "old-tmux"),
+            external_session(MultiplexerKind::Herdr, "old-herdr"),
+            external_session(MultiplexerKind::Cmux, "old-cmux"),
+        ];
+        let sessions = reconcile_external_multiplexer_sessions(
+            &previous_sessions,
+            ExternalMultiplexerScan {
+                tmux: Ok(vec![external_session(MultiplexerKind::Tmux, "new-tmux")]),
+                herdr: Err(anyhow::anyhow!("Herdr is temporarily unavailable")),
+                cmux: Ok(Vec::new()),
+            },
+        );
+
+        assert_eq!(
+            sessions
+                .iter()
+                .map(|session| session.id.as_str())
+                .collect::<Vec<_>>(),
+            ["old-herdr", "new-tmux"]
+        );
+        assert!(sessions[0].discovery_stale);
+        assert_eq!(sessions[0].state_label(), "available · last known");
+        assert!(!sessions[1].discovery_stale);
+    }
 
     #[test]
     fn parses_tmux_sessions_by_stable_session_id_and_prefers_active_pane() {

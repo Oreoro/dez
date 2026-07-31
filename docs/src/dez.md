@@ -550,6 +550,10 @@ owned nor safely controllable by Dez, so they never become Workspace or Agent
 Session rows.
 
 Dez v0.2 retains explicit project-scoped integration for tmux, Herdr, and cmux.
+Each discovery source updates independently: a failed source preserves only its
+rows, labels them **last known**, and lets successful tmux, Herdr, or cmux scans
+continue to update. An authoritative successful empty scan removes that
+source's stale rows.
 Dez discovers tmux sessions through the documented CLI format, Herdr panes
 through the local snapshot API, and cmux Workspaces through its JSON CLI. tmux
 and Herdr open their documented attach command in a normal terminal Surface.

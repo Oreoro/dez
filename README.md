@@ -149,12 +149,13 @@ Herdr. Dez v0.2 discovers explicitly shared tmux sessions, live Herdr panes,
 and cmux Workspaces. tmux and Herdr attach through ordinary terminal tabs; cmux
 Workspaces open in cmux. Discovery updates automatically and can be refreshed
 explicitly from a Workspace's options menu. The menu shows when it is checking
-and explains when no external session matches instead of silently removing the
-integration. Process and layout ownership always stays with the external
-application. **Terminal: Open tmux Workspace** attaches or creates a stable
-session named from the active Workspace with `tmux new-session -A`; discovered
-sessions remain available individually in Workspaces. Arbitrary PTYs remain
-read-only.
+and explains when no external session matches. A transient discovery failure
+preserves that integration's rows as **last known** without freezing successful
+updates from the other integrations. Process and layout ownership always stays
+with the external application. **Terminal: Open tmux Workspace** attaches or
+creates a stable session named from the active Workspace with
+`tmux new-session -A`; discovered sessions remain available individually in
+Workspaces. Arbitrary PTYs remain read-only.
 
 ## Installation, Workspace access, and terminal ownership
 
