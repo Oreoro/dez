@@ -8,6 +8,25 @@ active source lane. The preserved
 release order and remaining runtime gates. Historical artifacts below do not
 validate a newer source tree.
 
+## 2026-08-01: v0.2.1 source candidate
+
+Commit `3e395267517eadc255889a80683de9ff6372f139` is the exact v0.2.1
+implementation candidate. The following source-only checks passed before that
+commit was recorded:
+
+- `cargo fmt --all -- --check`;
+- `bash -n script/dez-identity-check`;
+- `bash script/dez-identity-check`, including the Dez theme contract;
+- `git diff --check`; and
+- Prettier checks for every changed current/public Markdown document.
+
+No local compilation, test suite, optimized package, signature, notarization,
+application launch, protected-folder recovery, terminal-survival scenario, or
+rendered visual inspection was run for this commit. Those gates remain assigned
+to GitHub Actions and exact-artifact inspection. The historical `0.2.0` Preview
+below does not validate this newer source tree. This ledger-only follow-up does
+not change application, helper, workflow, manifest, or lockfile inputs.
+
 ## 2026-07-31: packaged v0.2 navigation baseline
 
 [GitHub Actions run 30623841946](https://github.com/Oreoro/dez/actions/runs/30623841946)
