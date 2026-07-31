@@ -151,7 +151,9 @@ Workspaces open in cmux. Discovery updates automatically and can be refreshed
 explicitly from a Workspace's options menu. The menu shows when it is checking
 and explains when no external session matches. A transient discovery failure
 preserves that integration's rows as **last known** without freezing successful
-updates from the other integrations. Process and layout ownership always stays
+updates from the other integrations. Every discovery command is bounded and
+cancelled before the next refresh cycle, so an unresponsive external tool
+cannot freeze Workspace activity. Process and layout ownership always stays
 with the external application. **Terminal: Open tmux Workspace** attaches or
 creates a stable session named from the active Workspace with
 `tmux new-session -A`; discovered sessions remain available individually in

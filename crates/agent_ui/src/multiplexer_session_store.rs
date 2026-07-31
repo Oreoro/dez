@@ -1,14 +1,15 @@
 use std::{
     collections::{BTreeMap, HashMap},
     fs,
+    future::Future,
     io::ErrorKind,
     path::PathBuf,
-    process::{Command, Output},
+    process::Output,
     time::Duration,
 };
 
 use anyhow::{Context as _, Result};
-use gpui::{App, AppContext as _, Context, Entity, Global, Task};
+use gpui::{App, AppContext as _, BackgroundExecutor, Context, Entity, Global, Task};
 use paths::APP_NAME;
 use serde_json::Value;
 
@@ -17,6 +18,7 @@ use crate::terminal_thread_metadata_store::{
 };
 
 const MULTIPLEXER_REFRESH_INTERVAL: Duration = Duration::from_secs(5);
+const MULTIPLEXER_COMMAND_TIMEOUT: Duration = Duration::from_secs(4);
 // tmux sanitizes control characters when Dez is launched from Finder's
 // minimal, locale-free environment. Keep this printable so the exact same
 // parser works from a shell, Finder, and a signed application bundle.
@@ -230,9 +232,10 @@ impl MultiplexerSessionStore {
         self.refreshing = true;
         cx.notify();
         cx.spawn(async move |this, cx| {
+            let scan_executor = cx.background_executor().clone();
             let scan = cx
                 .background_executor()
-                .spawn(async { scan_external_multiplexer_sessions() })
+                .spawn(async move { scan_external_multiplexer_sessions(&scan_executor).await })
                 .await;
             if let Err(error) = this.update(cx, |store, cx| {
                 store.refreshing = false;
@@ -256,9 +259,10 @@ impl MultiplexerSessionStore {
     fn new(cx: &mut Context<Self>) -> Self {
         let refresh_task = cx.spawn(async move |this, cx| {
             loop {
+                let scan_executor = cx.background_executor().clone();
                 let scan = cx
                     .background_executor()
-                    .spawn(async { scan_external_multiplexer_sessions() })
+                    .spawn(async move { scan_external_multiplexer_sessions(&scan_executor).await })
                     .await;
 
                 if this
@@ -288,11 +292,28 @@ pub fn init(cx: &mut App) {
     MultiplexerSessionStore::init_global(cx);
 }
 
-fn scan_external_multiplexer_sessions() -> ExternalMultiplexerScan {
-    ExternalMultiplexerScan {
-        tmux: scan_tmux_sessions(),
-        herdr: scan_herdr_sessions(),
-        cmux: scan_cmux_workspaces(),
+async fn scan_external_multiplexer_sessions(
+    executor: &BackgroundExecutor,
+) -> ExternalMultiplexerScan {
+    let tmux = bounded_multiplexer_scan("tmux", scan_tmux_sessions(), executor);
+    let herdr = bounded_multiplexer_scan("Herdr", scan_herdr_sessions(), executor);
+    let cmux = bounded_multiplexer_scan("cmux", scan_cmux_workspaces(), executor);
+    let (tmux, herdr, cmux) = futures::join!(tmux, herdr, cmux);
+    ExternalMultiplexerScan { tmux, herdr, cmux }
+}
+
+async fn bounded_multiplexer_scan(
+    source: &'static str,
+    scan: impl Future<Output = Result<Vec<ExternalMultiplexerSession>>>,
+    executor: &BackgroundExecutor,
+) -> Result<Vec<ExternalMultiplexerSession>> {
+    let timeout = executor.timer(MULTIPLEXER_COMMAND_TIMEOUT);
+    futures::pin_mut!(scan, timeout);
+    match futures::future::select(scan, timeout).await {
+        futures::future::Either::Left((result, _)) => result,
+        futures::future::Either::Right(_) => {
+            anyhow::bail!("{source} discovery timed out after {MULTIPLEXER_COMMAND_TIMEOUT:?}")
+        }
     }
 }
 
@@ -336,11 +357,12 @@ fn reconcile_external_multiplexer_sessions(
     sessions
 }
 
-fn scan_tmux_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
+async fn scan_tmux_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
     let Some((executable, output)) = run_first_available(
         &["/opt/homebrew/bin/tmux", "/usr/local/bin/tmux", "tmux"],
         &["list-panes", "-a", "-F", TMUX_FORMAT],
-    )?
+    )
+    .await?
     else {
         return Ok(Vec::new());
     };
@@ -363,7 +385,7 @@ fn scan_tmux_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
     ))
 }
 
-fn scan_cmux_workspaces() -> Result<Vec<ExternalMultiplexerSession>> {
+async fn scan_cmux_workspaces() -> Result<Vec<ExternalMultiplexerSession>> {
     let Some((executable, output)) = run_first_available(
         &[
             "/Applications/cmux.app/Contents/Resources/bin/cmux",
@@ -372,7 +394,8 @@ fn scan_cmux_workspaces() -> Result<Vec<ExternalMultiplexerSession>> {
             "cmux",
         ],
         &["list-workspaces", "--json"],
-    )?
+    )
+    .await?
     else {
         return Ok(Vec::new());
     };
@@ -563,7 +586,7 @@ fn parse_tmux_sessions(output: &str, executable: PathBuf) -> Vec<ExternalMultipl
         .collect()
 }
 
-fn scan_herdr_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
+async fn scan_herdr_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
     let herdr_root = paths::home_dir().join(".config").join("herdr");
     let mut server_names = Vec::new();
     if herdr_root.join("herdr.sock").exists() {
@@ -586,7 +609,8 @@ fn scan_herdr_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
     }
 
     let Some(executable) =
-        first_available_program(&["/opt/homebrew/bin/herdr", "/usr/local/bin/herdr", "herdr"])?
+        first_available_program(&["/opt/homebrew/bin/herdr", "/usr/local/bin/herdr", "herdr"])
+            .await?
     else {
         return Ok(Vec::new());
     };
@@ -599,9 +623,11 @@ fn scan_herdr_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
         }
         args.extend(["api".to_owned(), "snapshot".to_owned()]);
 
-        let output = Command::new(&executable)
-            .args(&args)
+        let mut command = util::command::new_command(&executable);
+        command.args(&args).kill_on_drop(true);
+        let output = command
             .output()
+            .await
             .with_context(|| format!("failed to query {}", executable.display()))?;
         if !output.status.success() {
             // A stale socket is equivalent to no running Herdr session.
@@ -738,9 +764,14 @@ fn parse_herdr_snapshot(
     Ok(sessions)
 }
 
-fn run_first_available(programs: &[&str], args: &[&str]) -> Result<Option<(PathBuf, Output)>> {
+async fn run_first_available(
+    programs: &[&str],
+    args: &[&str],
+) -> Result<Option<(PathBuf, Output)>> {
     for program in programs {
-        match Command::new(program).args(args).output() {
+        let mut command = util::command::new_command(program);
+        command.args(args).kill_on_drop(true);
+        match command.output().await {
             Ok(output) => return Ok(Some((PathBuf::from(program), output))),
             Err(error) if error.kind() == ErrorKind::NotFound => continue,
             Err(error) => return Err(error).with_context(|| format!("failed to run {program}")),
@@ -749,9 +780,11 @@ fn run_first_available(programs: &[&str], args: &[&str]) -> Result<Option<(PathB
     Ok(None)
 }
 
-fn first_available_program(programs: &[&str]) -> Result<Option<PathBuf>> {
+async fn first_available_program(programs: &[&str]) -> Result<Option<PathBuf>> {
     for program in programs {
-        match Command::new(program).arg("--version").output() {
+        let mut command = util::command::new_command(program);
+        command.arg("--version").kill_on_drop(true);
+        match command.output().await {
             Ok(_) => return Ok(Some(PathBuf::from(program))),
             Err(error) if error.kind() == ErrorKind::NotFound => continue,
             Err(error) => return Err(error).with_context(|| format!("failed to run {program}")),
@@ -808,6 +841,11 @@ mod tests {
         assert!(sessions[0].discovery_stale);
         assert_eq!(sessions[0].state_label(), "available · last known");
         assert!(!sessions[1].discovery_stale);
+    }
+
+    #[test]
+    fn discovery_timeout_finishes_before_the_next_refresh_interval() {
+        assert!(MULTIPLEXER_COMMAND_TIMEOUT < MULTIPLEXER_REFRESH_INTERVAL);
     }
 
     #[test]

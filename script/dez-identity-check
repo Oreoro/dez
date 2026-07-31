@@ -713,6 +713,9 @@ require_multiline_pattern crates/agent_ui/src/multiplexer_session_store.rs \
 require_multiline_pattern crates/agent_ui/src/multiplexer_session_store.rs \
     'discovery_stale: bool.*?last known.*?struct ExternalMultiplexerScan.*?tmux: Result.*?herdr: Result.*?cmux: Result.*?fn reconcile_external_multiplexer_sessions.*?preserving its last known sessions.*?previous_sessions.*?session\.kind == kind.*?session\.discovery_stale = true.*?fn a_failed_integration_scan_preserves_only_its_last_known_sessions.*?old-herdr.*?new-tmux.*?available · last known' \
     'a transient tmux, Herdr, or cmux discovery failure can regress to silently deleting its visible sessions'
+require_multiline_pattern crates/agent_ui/src/multiplexer_session_store.rs \
+    'MULTIPLEXER_REFRESH_INTERVAL: Duration = Duration::from_secs\(5\).*?MULTIPLEXER_COMMAND_TIMEOUT: Duration = Duration::from_secs\(4\).*?async fn scan_external_multiplexer_sessions.*?bounded_multiplexer_scan\("tmux".*?bounded_multiplexer_scan\("Herdr".*?bounded_multiplexer_scan\("cmux".*?futures::join!.*?async fn bounded_multiplexer_scan.*?executor\.timer\(MULTIPLEXER_COMMAND_TIMEOUT\).*?futures::future::select.*?discovery timed out.*?kill_on_drop\(true\).*?fn discovery_timeout_finishes_before_the_next_refresh_interval' \
+    'external multiplexer discovery can regress to an unbounded command that freezes Workspace updates'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Checking tmux, Herdr, and cmux….*?No matching tmux, Herdr, or cmux session.*?Refresh External Activity.*?store\.refresh\(cx\).*?fn open_external_multiplexer_session.*?ExternalSessionOpenMode::RevealExternal.*?Opening \{\} in cmux….*?cmux could not open the Workspace.*?Opened \{session_title\} in cmux\..*?The external Workspace was not changed' \
     'external Workspace actions can regress to silent no-op or failure behavior'
