@@ -605,6 +605,12 @@ require_pattern crates/zed/src/zed.rs \
 require_pattern crates/zed/src/zed.rs \
     'app_name == "Zed"' \
     'blank-file seeding is not restricted to the official Zed product'
+require_multiline_pattern crates/zed/src/zed.rs \
+    'fn should_seed_empty_workspace_with_home\(app_name: &str\).*?app_name != "Zed".*?fn seed_empty_workspace_with_home.*?workspace::welcome::WelcomePage::new\(workspace\.weak_handle\(\), true, window, cx\).*?workspace\.add_item_to_active_pane\(Box::new\(home\), None, true, window, cx\).*?move \|_, _: &NewWindow.*?should_seed_empty_workspace_with_blank_file\(APP_NAME\).*?else \{[[:space:]]*seed_empty_workspace_with_home\(workspace, window, cx\).*?should_seed_empty_workspace_with_home\("Dez"\).*?!should_seed_empty_workspace_with_home\("Zed"\)' \
+    'fresh Dez windows can regress to a placeholder with no native Home tab'
+require_multiline_pattern crates/zed/src/main.rs \
+    'All workspace restorations failed.*?seed_empty_workspace_with_home\(workspace, window, cx\).*?if crate::zed::should_seed_empty_workspace_with_home\(paths::APP_NAME\).*?seed_empty_workspace_with_home\(workspace, window, cx\).*?else if !matches!.*?if crate::zed::should_seed_empty_workspace_with_home\(paths::APP_NAME\).*?seed_empty_workspace_with_home\(workspace, window, cx\)' \
+    'first launch or failed restoration can regress to an untitled empty Main Work Area instead of native Home'
 require_pattern crates/zed/src/zed.rs \
     '"DEZ_ALLOW_EMULATED_GPU"' \
     'the Dez unsupported-GPU recovery still advertises the upstream Zed environment variable'
@@ -1993,7 +1999,7 @@ require_multiline_pattern crates/workspace/src/pane.rs \
     'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?else \{.*?"Open Agent Terminal".*?NewCenterTerminal::default' \
     'the Dez New Item menu can regress from the single center-terminal model'
 require_multiline_pattern crates/workspace/src/pane.rs \
-    'fn render_new_surface_control.*?pane_new_surface_control_copy\(paths::APP_NAME\).*?IconButton::new\("plus", IconName::Plus\).*?tab_index\(0isize\).*?aria_label\(aria_label\).*?Tooltip::text\(tooltip\).*?paths::APP_NAME == "Zed".*?else \{.*?"Open Agent Terminal".*?RevealBuiltInAgent.*?"Open Files".*?RevealFiles.*?"Review Git Changes".*?RevealGitChanges.*?"Open Debug".*?RevealDebug.*?fn pane_new_surface_control_copy.*?"New Item".*?"New…".*?"Add to Main Work Area".*?"Open a terminal, file, or workspace tool"' \
+    'fn render_new_surface_control.*?pane_new_surface_control_copy\(paths::APP_NAME\).*?IconButton::new\("plus", IconName::Plus\).*?tab_index\(0isize\).*?aria_label\(aria_label\).*?Tooltip::text\(tooltip\).*?paths::APP_NAME == "Zed".*?else \{.*?"Open Home".*?crate::welcome::ShowWelcome.*?"Open Recent Workspace…".*?zed_actions::OpenRecent::default.*?"Open Agent Terminal".*?RevealBuiltInAgent.*?"Open Files".*?RevealFiles.*?"Review Git Changes".*?RevealGitChanges.*?"Open Debug".*?RevealDebug.*?fn pane_new_surface_control_copy.*?"New Item".*?"New…".*?"Add to Main Work Area".*?"Open a terminal, file, or workspace tool"' \
     'the main-work-area plus control can regress to an unnamed button or stop opening native terminal, agent, Files, Git, and Debug surfaces'
 require_multiline_pattern crates/workspace/src/pane.rs \
     'fn pane_new_surface_control_is_adjacent\(app_name: &str, pane_kind: PaneKind\).*?app_name != "Zed" && pane_kind == PaneKind::Tabs.*?fn render_unpinned_tabs_container.*?pane_new_surface_control_is_adjacent\(paths::APP_NAME, self\.pane_kind\).*?then\(\|\| render_new_surface_control\(self\)\).*?\.children\(unpinned_tabs\).*?\.children\(adjacent_new_surface_control\).*?\.child\(self\.render_tab_bar_drop_target.*?fn default_render_tab_bar_buttons.*?if !has_focus \{[[:space:]]*return \(None, None\);.*?\.when\(paths::APP_NAME == "Zed".*?render_new_surface_control\(pane\)' \
@@ -2400,6 +2406,9 @@ require_multiline_pattern crates/workspace/src/welcome.rs \
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'fn welcome_surface_label.*?app_name == "Zed".*?"Welcome".*?"Home".*?enum WelcomeRecentState.*?Hidden.*?Loading.*?Empty.*?Ready.*?fn welcome_recent_state.*?WelcomeRecentState::Loading.*?render_recent_workspace_status.*?role\(gpui::Role::Status\).*?"Loading recent Workspaces".*?"No recent Workspaces".*?let welcome_label = if is_dez.*?"Dez Home".*?fn tab_content_text.*?welcome_surface_label\(APP_NAME\)' \
     'Dez Home can regress to an unstable or inherited Welcome surface'
+require_multiline_pattern crates/workspace/src/welcome.rs \
+    'fn welcome_forces_tab_bar\(app_name: &str\).*?app_name != "Zed".*?fn welcome_tab_icon\(app_name: &str\).*?IconName::Compass.*?impl Item for WelcomePage.*?fn tab_icon.*?welcome_tab_icon\(APP_NAME\)\.map\(Icon::new\).*?fn force_show_tab_bar\(&self\) -> bool.*?welcome_forces_tab_bar\(APP_NAME\).*?welcome_forces_tab_bar\("Dez"\).*?!welcome_forces_tab_bar\("Zed"\).*?welcome_tab_icon\("Dez"\), Some\(IconName::Compass\).*?welcome_tab_icon\("Zed"\), None' \
+    'the single Home item can regress to hiding its native tab and adjacent Add control'
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'DEZ_WELCOME_COMPACT_BREAKPOINT: Pixels = px\(760\.\).*?DEZ_WELCOME_SPLIT_BREAKPOINT: Pixels = px\(980\.\).*?fn dez_welcome_uses_split_layout.*?theme_is_transparent\(cx\).*?gpui::transparent_black\(\).*?\.justify_center\(\).*?when\(is_dez, \|this\| this\.items_start\(\)\).*?\.id\("welcome-content"\).*?\.w_full\(\).*?\.h_full\(\).*?640\..*?1040\..*?Headline::new\(welcome_title\(APP_NAME, has_workspace\)\).*?\.child\(sections\)' \
     'the top-anchored Dez Home content can regress to an opaque, oversized, or poorly balanced canvas'

@@ -1546,7 +1546,8 @@ pub(crate) async fn restore_or_create_workspace(
                         Default::default(),
                         app_state.clone(),
                         cx,
-                        |workspace, _window, cx| {
+                        |workspace, window, cx| {
+                            crate::zed::seed_empty_workspace_with_home(workspace, window, cx);
                             workspace.show_toast(failed_workspace_restore_toast(message), cx);
                         },
                     )
@@ -1568,7 +1569,9 @@ pub(crate) async fn restore_or_create_workspace(
                     |workspace, window, cx| {
                         let restore_on_startup =
                             WorkspaceSettings::get_global(cx).restore_on_startup;
-                        if !matches!(
+                        if crate::zed::should_seed_empty_workspace_with_home(paths::APP_NAME) {
+                            crate::zed::seed_empty_workspace_with_home(workspace, window, cx);
+                        } else if !matches!(
                             restore_on_startup,
                             workspace::RestoreOnStartupBehavior::Launchpad
                         ) && crate::zed::should_seed_empty_workspace_with_blank_file(
@@ -1593,11 +1596,14 @@ pub(crate) async fn restore_or_create_workspace(
                 cx,
                 |workspace, window, cx| {
                     let restore_on_startup = WorkspaceSettings::get_global(cx).restore_on_startup;
-                    if !matches!(
+                    if crate::zed::should_seed_empty_workspace_with_home(paths::APP_NAME) {
+                        crate::zed::seed_empty_workspace_with_home(workspace, window, cx);
+                    } else if !matches!(
                         restore_on_startup,
                         workspace::RestoreOnStartupBehavior::Launchpad
-                    ) && crate::zed::should_seed_empty_workspace_with_blank_file(paths::APP_NAME)
-                    {
+                    ) && crate::zed::should_seed_empty_workspace_with_blank_file(
+                        paths::APP_NAME,
+                    ) {
                         Editor::new_file(workspace, &Default::default(), window, cx);
                     }
                 },

@@ -7,6 +7,25 @@ The
 the current release order. Historical artifacts below do not validate a newer
 source tree.
 
+## 2026-07-31: real native Home tab and navigation routes
+
+Fresh, fallback, and explicit New Window flows now insert the existing
+`WelcomePage` as a real Main Work Area Item instead of presenting it only as an
+untitled empty-pane placeholder. The Item is labeled **Home**, uses a native
+icon, and forces the inherited single-tab bar to remain visible, so Home and
+the adjacent Add control share the same native tab strip as files, terminals,
+diffs, and tools.
+
+The Add menu reuses existing Zed actions to reopen Home, open Recent
+Workspaces, start an agent terminal, open the Built-in Agent, create or find
+files, reveal Files/Git/Debug, and search the Workspace or its symbols. No
+custom history, tab, search, or Workspace picker was introduced.
+
+This is source evidence only. Formatting, diff hygiene, shell syntax, identity,
+and remote source guards can validate the patch. Runtime appearance, keyboard
+focus, first launch, close/reopen, and Add-menu behavior remain open until the
+exact candidate package is inspected.
+
 ## 2026-07-30: bounded Workspace navigation labels
 
 The active v0.2 source-polish lane now gives a multi-root Workspace one bounded

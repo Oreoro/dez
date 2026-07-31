@@ -119,6 +119,24 @@ pub(crate) fn should_seed_empty_workspace_with_blank_file(app_name: &str) -> boo
     app_name == "Zed"
 }
 
+pub(crate) fn should_seed_empty_workspace_with_home(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
+pub(crate) fn seed_empty_workspace_with_home(
+    workspace: &mut Workspace,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !should_seed_empty_workspace_with_home(APP_NAME) {
+        return;
+    }
+
+    let home = cx
+        .new(|cx| workspace::welcome::WelcomePage::new(workspace.weak_handle(), true, window, cx));
+    workspace.add_item_to_active_pane(Box::new(home), None, true, window, cx);
+}
+
 fn status_bar_shows_workspace_search(app_name: &str) -> bool {
     // Dez keeps global navigation in the Command Palette and Workspace
     // surfaces. A permanent Search launcher does not communicate state and
@@ -1399,9 +1417,6 @@ fn register_actions(
                     cx,
                     |workspace, window, cx| {
                         cx.activate(true);
-                        // Dez's empty pane is an intentional terminal-first
-                        // launch surface. Do not cover it with an unsolicited
-                        // unsaved editor; New File remains a separate action.
                         if should_seed_empty_workspace_with_blank_file(APP_NAME) {
                             // Preserve upstream Zed's synchronous blank buffer
                             // to avoid changing its New Window behavior.
@@ -1419,6 +1434,8 @@ fn register_actions(
                                 window,
                                 cx,
                             );
+                        } else {
+                            seed_empty_workspace_with_home(workspace, window, cx);
                         }
                     },
                 )
@@ -3043,6 +3060,8 @@ mod tests {
     fn dez_empty_workspace_preserves_the_actionable_launch_surface() {
         assert!(!should_seed_empty_workspace_with_blank_file("Dez"));
         assert!(should_seed_empty_workspace_with_blank_file("Zed"));
+        assert!(should_seed_empty_workspace_with_home("Dez"));
+        assert!(!should_seed_empty_workspace_with_home("Zed"));
     }
 
     #[test]

@@ -5624,21 +5624,27 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                             NewCenterTerminal::default().boxed_clone(),
                         )
                 } else {
-                    menu.action(
-                        "Open Agent Terminal",
-                        NewCenterTerminal::default().boxed_clone(),
-                    )
-                    .action("Open Built-in Agent", RevealBuiltInAgent.boxed_clone())
-                    .separator()
-                    .action(new_file, NewFile.boxed_clone())
-                    .action(open_file, ToggleFileFinder::default().boxed_clone())
-                    .separator()
-                    .action("Open Files", RevealFiles.boxed_clone())
-                    .action("Review Git Changes", RevealGitChanges.boxed_clone())
-                    .action("Open Debug", RevealDebug.boxed_clone())
-                    .separator()
-                    .action(search_workspace, DeploySearch::default().boxed_clone())
-                    .action(search_symbols, ToggleProjectSymbols.boxed_clone())
+                    menu.action("Open Home", crate::welcome::ShowWelcome.boxed_clone())
+                        .action(
+                            "Open Recent Workspace…",
+                            zed_actions::OpenRecent::default().boxed_clone(),
+                        )
+                        .separator()
+                        .action(
+                            "Open Agent Terminal",
+                            NewCenterTerminal::default().boxed_clone(),
+                        )
+                        .action("Open Built-in Agent", RevealBuiltInAgent.boxed_clone())
+                        .separator()
+                        .action(new_file, NewFile.boxed_clone())
+                        .action(open_file, ToggleFileFinder::default().boxed_clone())
+                        .separator()
+                        .action("Open Files", RevealFiles.boxed_clone())
+                        .action("Review Git Changes", RevealGitChanges.boxed_clone())
+                        .action("Open Debug", RevealDebug.boxed_clone())
+                        .separator()
+                        .action(search_workspace, DeploySearch::default().boxed_clone())
+                        .action(search_symbols, ToggleProjectSymbols.boxed_clone())
                 }
             }))
         })

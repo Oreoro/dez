@@ -251,6 +251,14 @@ fn welcome_surface_label(app_name: &str) -> &'static str {
     if app_name == "Zed" { "Welcome" } else { "Home" }
 }
 
+fn welcome_forces_tab_bar(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
+fn welcome_tab_icon(app_name: &str) -> Option<IconName> {
+    (app_name != "Zed").then_some(IconName::Compass)
+}
+
 fn welcome_emphasizes_first_action(app_name: &str) -> bool {
     app_name != "Zed"
 }
@@ -957,6 +965,10 @@ impl Item for WelcomePage {
         welcome_surface_label(APP_NAME).into()
     }
 
+    fn tab_icon(&self, _window: &Window, _cx: &App) -> Option<Icon> {
+        welcome_tab_icon(APP_NAME).map(Icon::new)
+    }
+
     fn telemetry_event_text(&self) -> Option<&'static str> {
         Some(if APP_NAME == "Zed" {
             "New Welcome Page Opened"
@@ -967,6 +979,10 @@ impl Item for WelcomePage {
 
     fn show_toolbar(&self) -> bool {
         false
+    }
+
+    fn force_show_tab_bar(&self) -> bool {
+        welcome_forces_tab_bar(APP_NAME)
     }
 
     fn to_item_events(event: &Self::Event, f: &mut dyn FnMut(crate::item::ItemEvent)) {
@@ -1198,6 +1214,10 @@ mod tests {
         assert_eq!(welcome_title("Zed", false), "Terminal-native development");
         assert_eq!(welcome_surface_label("Dez"), "Home");
         assert_eq!(welcome_surface_label("Zed"), "Welcome");
+        assert!(welcome_forces_tab_bar("Dez"));
+        assert!(!welcome_forces_tab_bar("Zed"));
+        assert_eq!(welcome_tab_icon("Dez"), Some(IconName::Compass));
+        assert_eq!(welcome_tab_icon("Zed"), None);
         assert_eq!(DEZ_CONTENT.0.entries[0].title, "Open Workspace");
         assert_eq!(DEZ_CONTENT.0.entries[1].title, "Clone Repository");
         assert_eq!(

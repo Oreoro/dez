@@ -72,6 +72,9 @@ native workspace tab and pane model instead of another navigation system.
 Those tabs support reorder, cross-pane drag, preview replacement, pinning,
 closing, and horizontal or vertical splits. A terminal can therefore sit
 below code without Dez manufacturing a separate multiplexer UI.
+The adjacent native `+` reopens Home, opens Recent Workspaces, or routes to a
+terminal, file, search, Files, Git, Debug, or Built-in Agent surface through
+the existing Zed actions.
 
 Six optional layout commands remain available through **View** and Command
 Search: **Work Area + Files**, **Work Area + Built-in Agent**, **Focus Work
