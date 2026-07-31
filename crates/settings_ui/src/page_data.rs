@@ -229,8 +229,16 @@ fn sessions_side_setting_visible(app_name: &str, page_title: &str) -> bool {
 
 fn projects_startup_setting() -> SettingsPageItem {
     SettingsPageItem::SettingItem(SettingItem {
-        title: "Show Workspace Navigator on Startup",
-        description: "Show the Workspace Navigator in new windows. Restored windows keep their saved layout.",
+        title: if paths::APP_NAME == "Zed" {
+            "Show Sessions on Startup"
+        } else {
+            "Show Workspaces on Startup"
+        },
+        description: if paths::APP_NAME == "Zed" {
+            "Show Sessions in new windows. Restored windows keep their saved layout."
+        } else {
+            "Show Workspaces in new windows. Restored windows keep their saved layout."
+        },
         field: Box::new(SettingField {
             organization_override: None,
             json_path: Some("sidebar.starts_open"),
@@ -245,17 +253,29 @@ fn projects_startup_setting() -> SettingsPageItem {
 }
 
 fn sessions_side_setting() -> SettingsPageItem {
+    if paths::APP_NAME != "Zed" {
+        return SettingsPageItem::SettingItem(SettingItem {
+            title: "Workspaces Side",
+            description: "Choose which side of the window shows Workspaces.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("session_rail.position"),
+                pick: |settings_content| settings_content.session_rail.as_ref()?.position.as_ref(),
+                write: |settings_content, value, _| {
+                    settings_content
+                        .session_rail
+                        .get_or_insert_default()
+                        .position = value;
+                },
+            }),
+            metadata: None,
+            files: USER,
+        });
+    }
+
     SettingsPageItem::SettingItem(SettingItem {
-        title: if paths::APP_NAME == "Zed" {
-            "Sessions Side"
-        } else {
-            "Workspace Navigator Side"
-        },
-        description: if paths::APP_NAME == "Zed" {
-            "Which side of the window the Sessions list appears on."
-        } else {
-            "Choose where the Workspace Navigator appears."
-        },
+        title: "Sessions Side",
+        description: "Which side of the window the Sessions list appears on.",
         field: Box::new(SettingField {
             organization_override: None,
             json_path: Some("sidebar.side"),
@@ -7109,7 +7129,7 @@ fn terminal_page() -> SettingsPage {
                 SettingsPageItem::SectionHeader(if paths::APP_NAME == "Zed" {
                     "Sessions"
                 } else {
-                    "Workspace Navigator"
+                    "Workspaces"
                 }),
                 sessions_side_setting(),
                 projects_startup_setting(),
@@ -9393,8 +9413,8 @@ fn evidence_page() -> SettingsPage {
             files: USER,
         }),
         SettingsPageItem::SettingItem(SettingItem {
-            title: "Observe Terminal Evidence",
-            description: "Observe local terminal lifecycle signals and accept authenticated structured adapter events. Commands and file targets remain bounded between the owning Host and Dez; transcripts are not retained. Obvious secret environment assignments, CLI flags, and URL credentials are redacted from commands. File paths remain verbatim for review navigation. Dez never installs hooks or edits provider configuration automatically.",
+            title: "Show Terminal Activity",
+            description: "Use local lifecycle signals and authenticated adapter events to show agent state, commands, and file targets in Workspaces. Transcripts are not retained, and Dez never changes provider configuration.",
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("agent_ui.connect_hooks"),
@@ -9419,7 +9439,7 @@ fn evidence_page() -> SettingsPage {
             description: if paths::APP_NAME == "Zed" {
                 "Reopen the last active terminal surface when its locally stored identity still resolves. Session Rail identity and attention metadata load independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database."
             } else {
-                "Reopen the last active Terminal when its Terminal Host is still available. Workspace Navigator restores only Session identity and attention, not terminal transcripts. Live activity resumes only from the same Terminal Host."
+                "Reopen the last active Terminal when its Terminal Host is still available. Workspaces restore Session identity and attention, not terminal transcripts. Live activity resumes only from the same Terminal Host."
             },
             field: Box::new(SettingField {
                 organization_override: None,

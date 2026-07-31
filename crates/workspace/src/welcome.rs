@@ -1,6 +1,6 @@
 use crate::{
-    NewCenterTerminal, NewFile, Open, OpenFolder, OpenMode, PathList, RecentWorkspace, RevealFiles,
-    RevealGitChanges, SerializedWorkspaceLocation, Workspace, WorkspaceId, WorkspaceSettings,
+    NewFile, Open, OpenFolder, OpenMode, PathList, RecentWorkspace, RevealFiles, RevealGitChanges,
+    SerializedWorkspaceLocation, Workspace, WorkspaceId, WorkspaceSettings,
     item::{Item, ItemEvent},
     persistence::WorkspaceDb,
 };
@@ -17,7 +17,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use settings::{DefaultOpenBehavior, Settings};
 use ui::{
-    ButtonLike, Divider, DividerColor, KeyBinding, Tooltip, prelude::*, theme_is_transparent,
+    ButtonLike, Callout, Divider, DividerColor, KeyBinding, Severity, Tooltip, prelude::*,
+    theme_is_transparent,
 };
 use util::{ResultExt, paths::PathExt};
 use zed_actions::{
@@ -218,11 +219,13 @@ impl SectionEntry {
     }
 }
 
-const NEW_CENTER_TERMINAL: NewCenterTerminal = NewCenterTerminal {
+const NEW_CENTER_TERMINAL: crate::NewCenterTerminal = crate::NewCenterTerminal {
     local: false,
     startup_command: None,
     working_directory: None,
 };
+const OPEN_AGENT_TERMINAL: zed_actions::terminal::OpenAgentTerminal =
+    zed_actions::terminal::OpenAgentTerminal;
 const OPEN_WORKSPACE: OpenFolder = OpenFolder {
     create_new_window: Some(false),
 };
@@ -233,7 +236,7 @@ fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Write. Delegate. Watch. Verify."
     } else if has_workspace {
-        "Run an agent or edit directly. Follow attention in Workspace Navigator, then review changes here."
+        "Run an agent or edit directly. Follow attention in Workspaces, then review changes here."
     } else {
         "Open a codebase to connect files, terminals, agents, and Git in one native Workspace."
     }
@@ -355,12 +358,12 @@ const DEZ_CONTENT: (Section, Section) = (
 
 const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
     Section {
-        title: "Continue",
+        title: "In this Workspace",
         entries: &[
             SectionEntry {
                 icon: IconName::Terminal,
                 title: "Open Agent Terminal",
-                action: &NEW_CENTER_TERMINAL,
+                action: &OPEN_AGENT_TERMINAL,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
@@ -841,6 +844,46 @@ impl Render for WelcomePage {
         } else {
             cx.theme().colors().editor_background
         };
+        let workspace_access_notice = if is_dez {
+            match crate::workspace_access_state(cx) {
+                crate::WorkspaceAccessState::Available => None,
+                crate::WorkspaceAccessState::AccessRequired { roots } => {
+                    let description = if roots.len() == 1 {
+                        let root = roots[0]
+                            .file_name()
+                            .and_then(|name| name.to_str())
+                            .unwrap_or("This Workspace");
+                        format!(
+                            "“{root}” needs access before files, Git, agents, or terminals can start. Choose the folder once in the native macOS picker."
+                        )
+                    } else {
+                        format!(
+                            "{} Workspace folders need access before files, Git, agents, or terminals can start. Choose each folder once in the native macOS picker.",
+                            roots.len()
+                        )
+                    };
+                    Some(
+                        Callout::new()
+                            .severity(Severity::Warning)
+                            .icon(IconName::Folder)
+                            .title("Workspace access required")
+                            .description(description)
+                            .actions_slot(
+                                Button::new("home-choose-workspace-access", "Choose Workspace…")
+                                    .style(ui::ButtonStyle::Filled)
+                                    .tab_index(0isize)
+                                    .aria_label("Choose Blocked Workspace Folder")
+                                    .on_click(|_, window, cx| {
+                                        window.dispatch_action(OPEN_WORKSPACE.boxed_clone(), cx);
+                                    }),
+                            )
+                            .into_any_element(),
+                    )
+                }
+            }
+        } else {
+            None
+        };
 
         h_flex()
             .id("welcome-page")
@@ -936,6 +979,7 @@ impl Render for WelcomePage {
                             )
                             .into_any_element()
                     })
+                    .when_some(workspace_access_notice, |this, notice| this.child(notice))
                     .child(sections)
                     .when(
                         APP_NAME == "Zed" && !self.fallback_to_recent_projects,
@@ -1211,7 +1255,7 @@ mod tests {
         );
         assert_eq!(
             welcome_summary("Dez", true),
-            "Run an agent or edit directly. Follow attention in Workspace Navigator, then review changes here."
+            "Run an agent or edit directly. Follow attention in Workspaces, then review changes here."
         );
         assert_eq!(
             welcome_summary("Zed", true),

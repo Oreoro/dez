@@ -1557,16 +1557,16 @@ enum TerminalType {
     DisplayOnly,
 }
 
-/// Synchronous command boundary used by a client-side terminal emulator whose
-/// PTY is owned by a terminal host process.
+/// Command boundary used by a client-side terminal emulator whose PTY is owned
+/// by a terminal host process.
 ///
-/// Implementations should enqueue transport work and return quickly; these
-/// methods are called from the GPUI foreground thread.
+/// Input, resize, and detach enqueue work from the GPUI foreground thread.
+/// Destructive termination completes only after the host acknowledges it.
 pub trait HostedTerminalController: Send + Sync {
     fn input(&self, bytes: Vec<u8>) -> Result<()>;
     fn resize(&self, columns: u16, rows: u16) -> Result<()>;
     fn detach(&self) -> Result<()>;
-    fn terminate(&self) -> Result<()>;
+    fn terminate(&self) -> futures::future::BoxFuture<'static, Result<()>>;
 }
 
 pub struct Terminal {
@@ -3067,9 +3067,14 @@ impl Terminal {
                     }
                 }
                 TerminalType::Hosted { controller } => {
-                    if let Err(error) = controller.terminate() {
-                        log::warn!("failed to terminate hosted task: {error:#}");
-                    }
+                    let controller = controller.clone();
+                    self.background_executor
+                        .spawn(async move {
+                            if let Err(error) = controller.terminate().await {
+                                log::warn!("failed to terminate hosted task: {error:#}");
+                            }
+                        })
+                        .detach();
                 }
             }
         }
@@ -3408,23 +3413,33 @@ impl Terminal {
         }
     }
 
-    /// Explicitly terminates this terminal's computation.
-    ///
-    /// Closing a view should detach it through `LocalTerminalHost`; this method
-    /// is reserved for the separate destructive terminate command.
-    pub fn terminate_process(&mut self, cx: &mut Context<Self>) {
-        let hosted_controller = match &self.terminal_type {
-            TerminalType::Hosted { controller } => Some(controller.clone()),
+    pub fn request_hosted_termination(
+        &self,
+    ) -> Option<futures::future::BoxFuture<'static, Result<()>>> {
+        match &self.terminal_type {
+            TerminalType::Hosted { controller } => Some(controller.terminate()),
             TerminalType::Pty { .. } | TerminalType::DisplayOnly => None,
-        };
-        if let Some(controller) = hosted_controller {
-            if let Err(error) = controller.terminate() {
-                log::warn!("failed to terminate hosted terminal: {error:#}");
-            }
-            self.terminal_type = TerminalType::DisplayOnly;
-        } else {
-            self.shut_down_process();
         }
+    }
+
+    pub fn confirm_hosted_termination(&mut self, cx: &mut Context<Self>) {
+        if !matches!(self.terminal_type, TerminalType::Hosted { .. }) {
+            return;
+        }
+        self.terminal_type = TerminalType::DisplayOnly;
+        self.finish_terminated_process(cx);
+    }
+
+    pub fn terminate_process(&mut self, cx: &mut Context<Self>) {
+        if matches!(self.terminal_type, TerminalType::Hosted { .. }) {
+            log::warn!("hosted terminal termination requires an acknowledged async request");
+            return;
+        }
+        self.shut_down_process();
+        self.finish_terminated_process(cx);
+    }
+
+    fn finish_terminated_process(&mut self, cx: &mut Context<Self>) {
         self.complete_init_command_startup_handshake();
         if !self.process_exited {
             self.process_exited = true;

@@ -644,8 +644,20 @@ pub fn sidebar_button_layout(cx: &App) -> Option<gpui::WindowButtonLayout> {
     SidebarChromeSettings::get_global(cx).button_layout
 }
 
-fn sidebar_project_identity_visible(app_name: &str, enabled_by_settings: bool) -> bool {
-    app_name == "Zed" && enabled_by_settings
+fn sidebar_project_identity_visible(_app_name: &str, enabled_by_settings: bool) -> bool {
+    enabled_by_settings
+}
+
+fn workspace_bar_visible(
+    app_name: &str,
+    enabled_by_settings: bool,
+    has_canvas_prefix_indicator: bool,
+) -> bool {
+    app_name == "Zed" || enabled_by_settings || has_canvas_prefix_indicator
+}
+
+fn workspace_bar_command_search_visible(_app_name: &str, enabled_by_settings: bool) -> bool {
+    enabled_by_settings
 }
 
 fn sidebar_identity_row_visible(
@@ -772,7 +784,11 @@ impl Render for SidebarChrome {
         );
         let application_menu = self.application_menu.clone();
         let canvas_prefix_indicator = self.render_canvas_prefix_indicator(window, cx);
-        let show_workspace_bar = paths::APP_NAME == "Zed" || canvas_prefix_indicator.is_some();
+        let show_workspace_bar = workspace_bar_visible(
+            paths::APP_NAME,
+            workspace_bar_settings.is_visible(),
+            canvas_prefix_indicator.is_some(),
+        );
         let restricted_mode = self.render_restricted_mode(cx);
         let show_identity_row = sidebar_identity_row_visible(
             render_project_items,
@@ -878,8 +894,10 @@ impl Render for SidebarChrome {
                         .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                         .child(div().flex_1())
                         .when(
-                            paths::APP_NAME == "Zed"
-                                && workspace_bar_settings.center_command_search(),
+                            workspace_bar_command_search_visible(
+                                paths::APP_NAME,
+                                workspace_bar_settings.center_command_search(),
+                            ),
                             |this| {
                                 this.child(self.render_command_search_button(cx))
                                     .child(div().flex_1())
@@ -2282,7 +2300,8 @@ mod dez_sidebar_chrome_tests {
     use super::{
         CanvasLayoutCommandSet, canvas_layout_command_set, canvas_layout_menu_visible,
         layout_menu_label, project_or_workspace_label, sidebar_identity_row_visible,
-        sidebar_project_identity_visible,
+        sidebar_project_identity_visible, workspace_bar_command_search_visible,
+        workspace_bar_visible,
     };
 
     #[test]
@@ -2301,10 +2320,24 @@ mod dez_sidebar_chrome_tests {
     }
 
     #[test]
-    fn dez_footer_does_not_duplicate_project_identity() {
-        assert!(!sidebar_project_identity_visible("Dez", true));
+    fn sidebar_project_identity_honors_settings_for_both_products() {
+        assert!(sidebar_project_identity_visible("Dez", true));
+        assert!(!sidebar_project_identity_visible("Dez", false));
         assert!(sidebar_project_identity_visible("Zed", true));
         assert!(!sidebar_project_identity_visible("Zed", false));
+    }
+
+    #[test]
+    fn dez_workspace_bar_honors_visibility_and_command_search_settings() {
+        assert!(workspace_bar_visible("Dez", true, false));
+        assert!(!workspace_bar_visible("Dez", false, false));
+        assert!(workspace_bar_visible("Dez", false, true));
+        assert!(workspace_bar_visible("Zed", false, false));
+
+        assert!(workspace_bar_command_search_visible("Dez", true));
+        assert!(!workspace_bar_command_search_visible("Dez", false));
+        assert!(workspace_bar_command_search_visible("Zed", true));
+        assert!(!workspace_bar_command_search_visible("Zed", false));
     }
 
     #[test]

@@ -23,7 +23,7 @@ use agent_ui::{
     AgentThreadSource, ArchiveSelectedThread, CanvasAgentUiSettings, ConversationView,
     CrossChannelImportOnboarding, ExternalMultiplexerSession, ExternalSessionOpenMode,
     MachineTerminalStore, ManageProfiles, MultiplexerKind, MultiplexerSessionState,
-    MultiplexerSessionStore, NewTerminalThread, ObservedMachineTerminal,
+    MultiplexerSessionStore, MultiplexerSourceIssue, NewTerminalThread, ObservedMachineTerminal,
     ObservedRepositoryEvidence, ObservedRunActivity, ObservedRunCheck, ObservedRunCheckStatus,
     ObservedRunCommand, ObservedWorkspaceEvidence, OpenAgentDiff, RenameSelectedThread,
     RunReviewBrief, RunReviewState, TerminalId, ThreadId, ThreadImportModal,
@@ -1103,7 +1103,7 @@ fn session_rail_accessibility_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Sessions"
     } else {
-        "Workspace Navigator"
+        "Workspaces and Agent Sessions"
     }
 }
 
@@ -1496,7 +1496,7 @@ struct SerializedSidebar {
 }
 
 fn workspace_tabs_expanded_default() -> bool {
-    true
+    false
 }
 
 #[derive(Debug, Default)]
@@ -2271,7 +2271,7 @@ mod session_start_state_tests {
         assert_eq!(session_rail_title("Zed"), "Sessions");
         assert_eq!(
             session_rail_accessibility_label("Dez"),
-            "Workspace Navigator"
+            "Workspaces and Agent Sessions"
         );
         assert_eq!(workspace_tabs_section_title("Dez"), "Open Tabs");
         assert_eq!(workspace_tabs_section_title("Zed"), "Open Tabs");
@@ -3435,6 +3435,19 @@ fn external_multiplexer_action_label(session: &ExternalMultiplexerSession) -> St
     }
 }
 
+fn external_activity_issue_description(issue: &MultiplexerSourceIssue) -> String {
+    let retention = if issue.had_successful_scan {
+        "Last-known rows stay visible."
+    } else {
+        "No current rows are shown."
+    };
+    format!(
+        "{}: {}. {retention}",
+        issue.kind.display_name(),
+        issue.summary.trim_end_matches(&['.', '!', '?'][..])
+    )
+}
+
 const CMUX_HANDOFF_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
 
 async fn run_bounded_cmux_command(
@@ -3541,7 +3554,10 @@ async fn terminate_legacy_terminal_session(
         let response = connection.command(TerminalSessionCommand::List).await?;
         let contains_session = matches!(
             response,
-            terminal::session_host::transport::TerminalHostResponse::Sessions { ref sessions }
+            terminal::session_host::transport::TerminalHostResponse::Sessions {
+                ref sessions,
+                ..
+            }
                 if sessions.iter().any(|snapshot| snapshot.session_id == session_ref.session_id)
         );
         if !contains_session {
@@ -4939,7 +4955,7 @@ impl Sidebar {
             attention_only: false,
             session_search_open: false,
             external_activity_expanded: false,
-            workspace_tabs_expanded: true,
+            workspace_tabs_expanded: false,
             selection: None,
             active_entry: None,
             hovered_thread_index: None,
@@ -13700,7 +13716,8 @@ impl Sidebar {
         let show_detection_confidence = agent_ui_settings.show_detection_confidence;
         let needs_attention = terminal.needs_attention;
         let has_notification = terminal.has_notification;
-        let has_persistent_owner = terminal.metadata.session_ref.is_some_and(|session_ref| {
+        let has_persistent_owner = terminal.metadata.session_ref.is_some();
+        let host_connection_verified = terminal.metadata.session_ref.is_some_and(|session_ref| {
             let owns_active_host = TerminalHostConnection::try_global(cx)
                 .is_some_and(|connection| connection.host_id() == session_ref.host_id);
             let owns_saved_snapshot =
@@ -13714,7 +13731,7 @@ impl Sidebar {
         });
         let can_copy_codex_hook = terminal_agent_kind == Some(TerminalAgentKind::Codex)
             && terminal.agent.is_none()
-            && has_persistent_owner;
+            && host_connection_verified;
         let attention_is_active =
             terminal.metadata.attention.condition == TerminalAttentionCondition::Active;
         let attention_is_unread =
@@ -16222,6 +16239,15 @@ impl Sidebar {
     }
 
     fn render_workspace_access_status(&self, cx: &App) -> Option<AnyElement> {
+        let active_workspace = self.multi_workspace.upgrade()?.read(cx).workspace().clone();
+        if active_workspace
+            .read(cx)
+            .active_item_as::<workspace::welcome::WelcomePage>(cx)
+            .is_some()
+        {
+            return None;
+        }
+
         let workspace::WorkspaceAccessState::AccessRequired { roots } =
             workspace::workspace_access_state(cx)
         else {
@@ -16266,6 +16292,48 @@ impl Sidebar {
                                 .boxed_clone(),
                                 cx,
                             );
+                        }),
+                )
+                .into_any_element(),
+        )
+    }
+
+    fn render_external_activity_status(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let store = MultiplexerSessionStore::try_global(cx)?;
+        let issues = store.read(cx).source_issues().to_vec();
+        if issues.is_empty() {
+            return None;
+        }
+
+        let title = if issues.len() == 1 {
+            format!("{} unavailable", issues[0].kind.display_name())
+        } else {
+            format!("{} terminal integrations unavailable", issues.len())
+        };
+        let description = issues
+            .iter()
+            .map(external_activity_issue_description)
+            .collect::<Vec<_>>()
+            .join(" ");
+        let retry_store = store.clone();
+
+        Some(
+            Callout::new()
+                .severity(Severity::Warning)
+                .icon(IconName::ArrowCircle)
+                .title(title)
+                .description(description)
+                .actions_slot(
+                    Button::new("retry-external-activity", "Retry")
+                        .size(ButtonSize::Medium)
+                        .style(ButtonStyle::Filled)
+                        .tab_index(0isize)
+                        .aria_label("Retry External Terminal Discovery")
+                        .tooltip(Tooltip::text(
+                            "Check tmux, Herdr, and cmux again without changing their sessions",
+                        ))
+                        .on_click(move |_, _window, cx| {
+                            retry_store.update(cx, |store, cx| store.refresh(cx));
                         }),
                 )
                 .into_any_element(),
@@ -16430,7 +16498,7 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
-        let mut notices = Vec::with_capacity(3);
+        let mut notices = Vec::with_capacity(4);
         if let Some(workspace_access_status) = self.render_workspace_access_status(cx) {
             notices.push(workspace_access_status);
         }
@@ -16439,6 +16507,9 @@ impl Sidebar {
         }
         if let Some(terminal_host_status) = self.render_terminal_host_status(cx) {
             notices.push(terminal_host_status);
+        }
+        if let Some(external_activity_status) = self.render_external_activity_status(cx) {
+            notices.push(external_activity_status);
         }
         if notices.is_empty() {
             return None;
@@ -16524,14 +16595,31 @@ impl Sidebar {
                 for (item_index, item) in items.into_iter().enumerate() {
                     let detail = details.get(item_index).copied().unwrap_or_default();
                     let label = item.tab_content_text(detail, cx);
+                    let is_visible = active_item_id == Some(item.item_id());
+                    let is_focused = pane_is_active && is_visible;
                     let icon = item
                         .tab_icon(window, cx)
                         .unwrap_or_else(|| Icon::new(IconName::File))
                         .size(IconSize::XSmall)
-                        .color(Color::Muted);
+                        .color(if is_visible {
+                            Color::Accent
+                        } else {
+                            Color::Muted
+                        });
                     let is_dirty = item.is_dirty(cx);
-                    let is_active = pane_is_active && active_item_id == Some(item.item_id());
-                    let accessibility_label = format!("Open {label} in {workspace_label}");
+                    let pane_label = workspace_pane_navigation_label(pane_index, pane_count)
+                        .unwrap_or_else(|| "Main Work Area".to_owned());
+                    let visibility_label = if is_focused {
+                        "focused"
+                    } else if is_visible {
+                        "visible"
+                    } else {
+                        "open"
+                    };
+                    let dirty_label = if is_dirty { ", modified" } else { "" };
+                    let accessibility_label = format!(
+                        "{label}, {visibility_label}{dirty_label}, {pane_label}. Open in {workspace_label}"
+                    );
                     let item_id = item.item_id();
                     let workspace = workspace.clone();
 
@@ -16540,7 +16628,7 @@ impl Sidebar {
                             .size(ButtonSize::Medium)
                             .style(ButtonStyle::Subtle)
                             .full_width()
-                            .toggle_state(is_active)
+                            .toggle_state(is_focused)
                             .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                             .tab_index(0isize)
                             .aria_label(accessibility_label.clone())
@@ -16648,7 +16736,7 @@ impl Sidebar {
                             .id("active-workspace-tab-list")
                             .role(gpui::Role::List)
                             .aria_label("Open tabs grouped by pane")
-                            .max_h(vh(0.26, window))
+                            .max_h(vh(0.18, window))
                             .overflow_y_scroll()
                             .p_1()
                             .children(rows),
@@ -17723,6 +17811,9 @@ impl Render for Sidebar {
         let active_workspace_tabs = (matches!(self.view, SidebarView::ThreadList) && !has_query)
             .then(|| self.render_active_workspace_tabs(window, cx))
             .flatten();
+        let session_notices = matches!(self.view, SidebarView::ThreadList)
+            .then(|| self.render_session_notices(window, cx))
+            .flatten();
 
         v_flex()
             .id("workspace-sidebar")
@@ -17846,6 +17937,10 @@ impl Render for Sidebar {
                 }
             })
             .child(self.render_sidebar_header(window, cx))
+            .when(APP_NAME != "Zed", |this| {
+                this.child(self.sidebar_chrome.clone())
+            })
+            .when_some(session_notices, |this, notices| this.child(notices))
             .when_some(active_workspace_tabs, |this, tabs| this.child(tabs))
             .map(|this| match &self.view {
                 SidebarView::ThreadList => this
@@ -17860,23 +17955,15 @@ impl Render for Sidebar {
                     )
                     .map(|this| {
                         if show_start_state {
-                            this.when_some(
-                                self.render_session_notices(window, cx),
-                                |this, status| this.child(status),
-                            )
-                            .child(self.render_empty_state(cx))
-                            .when_some(external_terminal_section, |this, section| {
-                                this.child(section)
-                            })
+                            this.child(self.render_empty_state(cx))
+                                .when_some(external_terminal_section, |this, section| {
+                                    this.child(section)
+                                })
                         } else {
                             this.child(
                                 v_flex()
                                     .flex_1()
                                     .overflow_hidden()
-                                    .when_some(
-                                        self.render_session_notices(window, cx),
-                                        |this, status| this.child(status),
-                                    )
                                     .when(show_session_search, |this| {
                                         this.child(self.render_session_search(cx))
                                     })

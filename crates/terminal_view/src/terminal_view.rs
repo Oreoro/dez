@@ -49,6 +49,7 @@ use terminal::{
         LocalTerminalHost, TerminalSessionState,
         transport::{
             TerminalHostConnection, TerminalHostSnapshotRevision, TerminalHostSnapshotStore,
+            TerminalHostStartupState, TerminalHostStartupStatus,
         },
     },
     terminal_settings::{CursorShape, TerminalSettings},
@@ -98,6 +99,7 @@ const CURSOR_BLINK_INTERVAL: Duration = Duration::from_millis(500);
 const TERMINAL_STARTUP_COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
 const TERMINAL_HOST_RESTORE_ATTEMPTS: usize = 40;
 const TERMINAL_HOST_RESTORE_INTERVAL: Duration = Duration::from_millis(50);
+const TERMINAL_HOST_TERMINATION_TIMEOUT: Duration = Duration::from_secs(8);
 const TERMINAL_CONTEXT_ACTIVITY_LABEL_MIN_WIDTH: Pixels = px(360.);
 const TERMINAL_CONTEXT_PRIMARY_ACTION_LABEL_MIN_WIDTH: Pixels = px(480.);
 const TERMINAL_CONTEXT_SECONDARY_ACTION_LABEL_MIN_WIDTH: Pixels = px(720.);
@@ -492,23 +494,21 @@ fn terminal_termination_available(session_unavailable: bool, process_exited: boo
     !session_unavailable && !process_exited
 }
 
-fn terminal_has_persistent_owner(terminal: &Terminal, cx: &App) -> bool {
+fn terminal_has_persistent_owner(terminal: &Terminal, _cx: &App) -> bool {
+    terminal.is_hosted()
+}
+
+fn terminal_host_connection_verified(terminal: &Terminal, cx: &App) -> bool {
     if !terminal.is_hosted() {
         return false;
     }
-    let session_id = terminal.session_id();
-    let Some(host_id) =
-        TerminalHostConnection::try_global(cx).map(|connection| connection.host_id())
-    else {
+    let Some(connection) = TerminalHostConnection::try_global(cx) else {
         return false;
     };
-    TerminalHostSnapshotStore::try_global(cx).is_some_and(|store| {
-        store
-            .read(cx)
-            .snapshots()
-            .iter()
-            .any(|snapshot| snapshot.host_id == host_id && snapshot.session_id == session_id)
-    })
+    matches!(
+        TerminalHostStartupStatus::state(cx),
+        TerminalHostStartupState::Connected { host_id } if host_id == connection.host_id()
+    )
 }
 
 fn terminal_ownership_label(
@@ -517,17 +517,17 @@ fn terminal_ownership_label(
     session_unavailable: bool,
 ) -> &'static str {
     if app_name == "Zed" {
-        if has_persistent_owner {
-            "Persistent Terminal Session"
-        } else if session_unavailable {
+        if session_unavailable {
             "Saved Terminal Session"
+        } else if has_persistent_owner {
+            "Persistent Terminal Session"
         } else {
             "Workspace Terminal Session"
         }
-    } else if has_persistent_owner {
-        "Host-owned terminal"
     } else if session_unavailable {
         "Saved terminal"
+    } else if has_persistent_owner {
+        "Host-owned terminal"
     } else {
         "Workspace terminal"
     }
@@ -1937,13 +1937,43 @@ impl TerminalView {
             if confirmation.await.log_err() != Some(0) {
                 return Ok(());
             }
-            this.update(cx, |this, cx| {
-                // The terminal controller is authoritative. A global Host can
-                // coexist with ordinary GUI-owned terminals and must never
-                // choose which process this action terminates.
-                this.terminal
-                    .update(cx, |terminal, cx| terminal.terminate_process(cx));
+            let hosted_termination = this.update(cx, |this, cx| {
+                this.terminal.read(cx).request_hosted_termination()
             })?;
+            if let Some(hosted_termination) = hosted_termination {
+                let timeout = cx
+                    .background_executor()
+                    .timer(TERMINAL_HOST_TERMINATION_TIMEOUT);
+                futures::pin_mut!(timeout);
+                let termination_result =
+                    match futures::future::select(hosted_termination, timeout).await {
+                        futures::future::Either::Left((result, _)) => result,
+                        futures::future::Either::Right(_) => Err(anyhow!(
+                            "the Terminal Host did not respond within {TERMINAL_HOST_TERMINATION_TIMEOUT:?}"
+                        )),
+                    };
+                if let Err(error) = termination_result {
+                    let message = format!(
+                        "\r\n[Dez: could not confirm that this terminal ended: {error}. Its Host remains authoritative; wait for Workspaces to refresh before retrying.]\r\n"
+                    );
+                    this.update(cx, |this, cx| {
+                        this.terminal.update(cx, |terminal, cx| {
+                            terminal.write_output(message.as_bytes(), cx)
+                        });
+                    })?;
+                    log::warn!("could not confirm hosted terminal termination: {error:#}");
+                    return Ok(());
+                }
+                this.update(cx, |this, cx| {
+                    this.terminal
+                        .update(cx, |terminal, cx| terminal.confirm_hosted_termination(cx));
+                })?;
+            } else {
+                this.update(cx, |this, cx| {
+                    this.terminal
+                        .update(cx, |terminal, cx| terminal.terminate_process(cx));
+                })?;
+            }
             Ok(())
         })
         .detach_and_log_err(cx);
@@ -2787,7 +2817,12 @@ impl TerminalView {
             status_color
         };
         let has_persistent_owner = terminal_has_persistent_owner(&terminal, cx);
-        let ownership = terminal_ownership_label(paths::APP_NAME, has_persistent_owner, false);
+        let host_connection_verified = terminal_host_connection_verified(&terminal, cx);
+        let ownership = if has_persistent_owner && !host_connection_verified {
+            "Host-owned terminal · connection unavailable"
+        } else {
+            terminal_ownership_label(paths::APP_NAME, has_persistent_owner, false)
+        };
         let working_directory = terminal
             .working_directory()
             .map(|path| path.to_string_lossy().into_owned());
@@ -2851,7 +2886,9 @@ impl TerminalView {
             "Review {changed_files} changed {}",
             if changed_files == 1 { "file" } else { "files" }
         );
-        let ownership_note = if has_persistent_owner {
+        let ownership_note = if has_persistent_owner && !host_connection_verified {
+            "The Dez Terminal Host owns this process, but its connection is unavailable. Detaching does not claim that the process ended."
+        } else if has_persistent_owner {
             "The external Dez Terminal Host owns this process. Detaching the tab does not stop it."
         } else {
             "This Workspace owns the process. Closing Dez also ends it."
@@ -2916,7 +2953,7 @@ impl TerminalView {
                     })
                     .when(paths::APP_NAME != "Zed", |menu| {
                         menu.label(
-                            "Supervise · Workspace Navigator shows attention and returns you to this Session.",
+                            "Supervise · Workspaces shows attention and returns you to this terminal.",
                         )
                     })
                     .when(details_has_workspace_files, |menu| {
@@ -4586,6 +4623,10 @@ mod tests {
         );
         assert_eq!(
             terminal_ownership_label("Dez", false, true),
+            "Saved terminal"
+        );
+        assert_eq!(
+            terminal_ownership_label("Dez", true, true),
             "Saved terminal"
         );
         assert_eq!(

@@ -137,13 +137,6 @@ pub(crate) fn seed_empty_workspace_with_home(
     workspace.add_item_to_active_pane(Box::new(home), None, true, window, cx);
 }
 
-fn status_bar_shows_workspace_search(app_name: &str) -> bool {
-    // Dez keeps global navigation in the Command Palette and Workspace
-    // surfaces. A permanent Search launcher does not communicate state and
-    // makes the compact status strip look like a second toolbar.
-    app_name == "Zed"
-}
-
 actions!(
     zed,
     [
@@ -669,9 +662,7 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
         let merge_conflict_indicator =
             cx.new(|cx| git_ui::MergeConflictIndicator::new(workspace, cx));
         workspace.status_bar().update(cx, |status_bar, cx| {
-            if status_bar_shows_workspace_search(APP_NAME) {
-                status_bar.add_left_item(search_button, window, cx);
-            }
+            status_bar.add_left_item(search_button, window, cx);
             status_bar.add_left_item(lsp_button, window, cx);
             status_bar.add_left_item(diagnostic_summary, window, cx);
             status_bar.add_left_item(active_file_name, window, cx);
@@ -3064,12 +3055,6 @@ mod tests {
         assert!(should_seed_empty_workspace_with_blank_file("Zed"));
         assert!(should_seed_empty_workspace_with_home("Dez"));
         assert!(!should_seed_empty_workspace_with_home("Zed"));
-    }
-
-    #[test]
-    fn dez_status_bar_does_not_duplicate_workspace_search() {
-        assert!(!status_bar_shows_workspace_search("Dez"));
-        assert!(status_bar_shows_workspace_search("Zed"));
     }
 
     #[test]

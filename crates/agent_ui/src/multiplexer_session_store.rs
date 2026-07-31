@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet},
     fs,
     future::Future,
     io::ErrorKind,
@@ -25,11 +25,18 @@ const MULTIPLEXER_COMMAND_TIMEOUT: Duration = Duration::from_secs(4);
 const TMUX_FIELD_SEPARATOR: &str = "|:dez:|";
 const TMUX_FORMAT: &str = "#{session_id}|:dez:|#{session_name}|:dez:|#{session_attached}|:dez:|#{window_id}|:dez:|#{window_name}|:dez:|#{window_active}|:dez:|#{pane_id}|:dez:|#{pane_active}|:dez:|#{pane_current_path}|:dez:|#{pane_current_command}|:dez:|#{pane_title}";
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum MultiplexerKind {
     Tmux,
     Herdr,
     Cmux,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MultiplexerSourceIssue {
+    pub kind: MultiplexerKind,
+    pub summary: String,
+    pub had_successful_scan: bool,
 }
 
 impl MultiplexerKind {
@@ -195,6 +202,8 @@ impl Global for GlobalMultiplexerSessionStore {}
 
 pub struct MultiplexerSessionStore {
     sessions: Vec<ExternalMultiplexerSession>,
+    source_issues: Vec<MultiplexerSourceIssue>,
+    successful_sources: HashSet<MultiplexerKind>,
     refreshing: bool,
     _refresh_task: Task<()>,
 }
@@ -228,6 +237,10 @@ impl MultiplexerSessionStore {
         self.refreshing
     }
 
+    pub fn source_issues(&self) -> &[MultiplexerSourceIssue] {
+        &self.source_issues
+    }
+
     pub fn refresh(&mut self, cx: &mut Context<Self>) {
         if self.refreshing {
             return;
@@ -253,9 +266,12 @@ impl MultiplexerSessionStore {
     }
 
     fn apply_scan(&mut self, scan: ExternalMultiplexerScan, cx: &mut Context<Self>) {
-        let sessions = reconcile_external_multiplexer_sessions(&self.sessions, scan);
-        if self.sessions != sessions {
+        let (sessions, source_issues, successful_sources) =
+            reconcile_external_multiplexer_sessions(&self.sessions, scan, &self.successful_sources);
+        self.successful_sources.extend(successful_sources);
+        if self.sessions != sessions || self.source_issues != source_issues {
             self.sessions = sessions;
+            self.source_issues = source_issues;
             cx.notify();
         }
     }
@@ -263,18 +279,7 @@ impl MultiplexerSessionStore {
     fn new(cx: &mut Context<Self>) -> Self {
         let refresh_task = cx.spawn(async move |this, cx| {
             loop {
-                let scan_executor = cx.background_executor().clone();
-                let scan = cx
-                    .background_executor()
-                    .spawn(async move { scan_external_multiplexer_sessions(&scan_executor).await })
-                    .await;
-
-                if this
-                    .update(cx, |store, cx| {
-                        store.apply_scan(scan, cx);
-                    })
-                    .is_err()
-                {
+                if this.update(cx, |store, cx| store.refresh(cx)).is_err() {
                     break;
                 }
 
@@ -286,6 +291,8 @@ impl MultiplexerSessionStore {
 
         Self {
             sessions: Vec::new(),
+            source_issues: Vec::new(),
+            successful_sources: HashSet::new(),
             refreshing: false,
             _refresh_task: refresh_task,
         }
@@ -324,15 +331,25 @@ async fn bounded_multiplexer_scan(
 fn reconcile_external_multiplexer_sessions(
     previous_sessions: &[ExternalMultiplexerSession],
     scan: ExternalMultiplexerScan,
-) -> Vec<ExternalMultiplexerSession> {
+    successful_sources: &HashSet<MultiplexerKind>,
+) -> (
+    Vec<ExternalMultiplexerSession>,
+    Vec<MultiplexerSourceIssue>,
+    Vec<MultiplexerKind>,
+) {
     let mut sessions = Vec::new();
+    let mut source_issues = Vec::new();
+    let mut newly_successful_sources = Vec::new();
     for (kind, result) in [
         (MultiplexerKind::Tmux, scan.tmux),
         (MultiplexerKind::Herdr, scan.herdr),
         (MultiplexerKind::Cmux, scan.cmux),
     ] {
         match result {
-            Ok(scanned_sessions) => sessions.extend(scanned_sessions),
+            Ok(scanned_sessions) => {
+                sessions.extend(scanned_sessions);
+                newly_successful_sources.push(kind);
+            }
             Err(error) => {
                 log::debug!(
                     "{} discovery failed; preserving its last known sessions: {error:#}",
@@ -348,6 +365,11 @@ fn reconcile_external_multiplexer_sessions(
                             session
                         }),
                 );
+                source_issues.push(MultiplexerSourceIssue {
+                    kind,
+                    summary: concise_discovery_error(&error),
+                    had_successful_scan: successful_sources.contains(&kind),
+                });
             }
         }
     }
@@ -358,7 +380,20 @@ fn reconcile_external_multiplexer_sessions(
             .then_with(|| left.title.cmp(&right.title))
             .then_with(|| left.id.cmp(&right.id))
     });
-    sessions
+    (sessions, source_issues, newly_successful_sources)
+}
+
+fn concise_discovery_error(error: &anyhow::Error) -> String {
+    const MAX_CHARS: usize = 180;
+    let message = format!("{error:#}")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    if message.chars().count() <= MAX_CHARS {
+        message
+    } else {
+        format!("{}…", message.chars().take(MAX_CHARS).collect::<String>())
+    }
 }
 
 async fn scan_tmux_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
@@ -379,10 +414,7 @@ async fn scan_tmux_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
         anyhow::bail!("tmux discovery failed: {}", stderr.trim());
     }
 
-    Ok(parse_tmux_sessions(
-        &String::from_utf8_lossy(&output.stdout),
-        executable,
-    ))
+    parse_tmux_sessions(&String::from_utf8_lossy(&output.stdout), executable)
 }
 
 fn tmux_failure_is_no_server(exit_code: Option<i32>, stderr: &str) -> bool {
@@ -528,10 +560,18 @@ struct TmuxPaneRecord {
     title: Option<String>,
 }
 
-fn parse_tmux_sessions(output: &str, executable: PathBuf) -> Vec<ExternalMultiplexerSession> {
+fn parse_tmux_sessions(
+    output: &str,
+    executable: PathBuf,
+) -> Result<Vec<ExternalMultiplexerSession>> {
     let mut sessions = BTreeMap::<String, TmuxPaneRecord>::new();
+    let mut nonempty_line_count = 0usize;
 
     for line in output.lines() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        nonempty_line_count += 1;
         let fields = line.split(TMUX_FIELD_SEPARATOR).collect::<Vec<_>>();
         if fields.len() != 11 {
             continue;
@@ -563,7 +603,11 @@ fn parse_tmux_sessions(output: &str, executable: PathBuf) -> Vec<ExternalMultipl
             .or_insert(record);
     }
 
-    sessions
+    if nonempty_line_count > 0 && sessions.is_empty() {
+        anyhow::bail!("tmux returned an unsupported pane-list format")
+    }
+
+    Ok(sessions
         .into_values()
         .map(|record| {
             let command = record.command.clone();
@@ -593,7 +637,7 @@ fn parse_tmux_sessions(output: &str, executable: PathBuf) -> Vec<ExternalMultipl
                 herdr_session_name: None,
             }
         })
-        .collect()
+        .collect())
 }
 
 async fn scan_herdr_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
@@ -651,7 +695,7 @@ async fn scan_herdr_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
         first_available_program(&["/opt/homebrew/bin/herdr", "/usr/local/bin/herdr", "herdr"])
             .await?
     else {
-        return Ok(Vec::new());
+        anyhow::bail!("Herdr sockets were found, but the Herdr CLI is unavailable");
     };
 
     let mut sessions = Vec::new();
@@ -721,12 +765,14 @@ fn parse_herdr_snapshot(
         })
         .collect::<HashMap<_, _>>();
 
-    let server_key = server_name.as_deref().unwrap_or("default");
-    let sessions = snapshot
+    let panes = snapshot
         .get("panes")
         .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
+        .context("Herdr snapshot did not contain a panes array")?;
+
+    let server_key = server_name.as_deref().unwrap_or("default");
+    let sessions = panes
+        .iter()
         .filter_map(|pane| {
             let pane_id = pane.get("pane_id")?.as_str()?.to_owned();
             let terminal_id = pane
@@ -797,7 +843,11 @@ fn parse_herdr_snapshot(
                 herdr_session_name: server_name.clone(),
             })
         })
-        .collect();
+        .collect::<Vec<_>>();
+
+    if !panes.is_empty() && sessions.is_empty() {
+        anyhow::bail!("Herdr returned panes in an unsupported snapshot format");
+    }
 
     Ok(sessions)
 }
@@ -860,14 +910,17 @@ mod tests {
             external_session(MultiplexerKind::Herdr, "old-herdr"),
             external_session(MultiplexerKind::Cmux, "old-cmux"),
         ];
-        let sessions = reconcile_external_multiplexer_sessions(
-            &previous_sessions,
-            ExternalMultiplexerScan {
-                tmux: Ok(vec![external_session(MultiplexerKind::Tmux, "new-tmux")]),
-                herdr: Err(anyhow::anyhow!("Herdr is temporarily unavailable")),
-                cmux: Ok(Vec::new()),
-            },
-        );
+        let successful_sources = HashSet::from([MultiplexerKind::Herdr]);
+        let (sessions, source_issues, newly_successful_sources) =
+            reconcile_external_multiplexer_sessions(
+                &previous_sessions,
+                ExternalMultiplexerScan {
+                    tmux: Ok(vec![external_session(MultiplexerKind::Tmux, "new-tmux")]),
+                    herdr: Err(anyhow::anyhow!("Herdr is temporarily unavailable")),
+                    cmux: Ok(Vec::new()),
+                },
+                &successful_sources,
+            );
 
         assert_eq!(
             sessions
@@ -879,6 +932,14 @@ mod tests {
         assert!(sessions[0].discovery_stale);
         assert_eq!(sessions[0].state_label(), "available · last known");
         assert!(!sessions[1].discovery_stale);
+        assert_eq!(source_issues.len(), 1);
+        assert_eq!(source_issues[0].kind, MultiplexerKind::Herdr);
+        assert_eq!(source_issues[0].summary, "Herdr is temporarily unavailable");
+        assert!(source_issues[0].had_successful_scan);
+        assert_eq!(
+            newly_successful_sources,
+            [MultiplexerKind::Tmux, MultiplexerKind::Cmux]
+        );
     }
 
     #[test]
@@ -913,7 +974,8 @@ mod tests {
             "$1{separator}compiler{separator}0{separator}@1{separator}editor{separator}1{separator}%1{separator}0{separator}/tmp/old{separator}zsh{separator}old\n\
              $1{separator}compiler{separator}0{separator}@1{separator}editor{separator}1{separator}%2{separator}1{separator}/tmp/project{separator}codex{separator}agent"
         );
-        let sessions = parse_tmux_sessions(&output, PathBuf::from("/opt/homebrew/bin/tmux"));
+        let sessions = parse_tmux_sessions(&output, PathBuf::from("/opt/homebrew/bin/tmux"))
+            .expect("pane list should parse");
 
         assert_eq!(sessions.len(), 1);
         assert_eq!(sessions[0].id, "tmux:$1");
@@ -923,6 +985,17 @@ mod tests {
             sessions[0].open_command().args,
             ["attach-session", "-t", "$1"]
         );
+    }
+
+    #[test]
+    fn rejects_nonempty_tmux_output_when_no_rows_match_the_contract() {
+        let error = parse_tmux_sessions(
+            "pane output from an incompatible tmux format",
+            PathBuf::from("tmux"),
+        )
+        .expect_err("an incompatible schema must preserve last-known sessions");
+
+        assert!(error.to_string().contains("unsupported pane-list format"));
     }
 
     #[test]
@@ -1038,6 +1111,15 @@ mod tests {
         let sessions = parse_herdr_snapshot(output, PathBuf::from("herdr"), None)
             .expect("snapshot should parse");
         assert_eq!(sessions[0].working_directory, None);
+    }
+
+    #[test]
+    fn rejects_herdr_snapshots_without_a_panes_array() {
+        let output = r#"{"result":{"snapshot":{"workspaces":[],"tabs":[]}}}"#;
+        let error = parse_herdr_snapshot(output, PathBuf::from("herdr"), None)
+            .expect_err("a missing pane schema must preserve last-known sessions");
+
+        assert!(error.to_string().contains("panes array"));
     }
 
     #[test]

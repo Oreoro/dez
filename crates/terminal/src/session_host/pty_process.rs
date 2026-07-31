@@ -117,8 +117,13 @@ impl ForegroundProcessObserver {
 
 enum TerminalHostPtyCommand {
     Input(Vec<u8>),
-    Resize { columns: u16, rows: u16 },
-    Terminate,
+    Resize {
+        columns: u16,
+        rows: u16,
+    },
+    Terminate {
+        completion: Option<async_channel::Sender<()>>,
+    },
 }
 
 /// Process handle owned by a terminal host rather than a GPUI entity.
@@ -136,7 +141,7 @@ impl Drop for TerminalHostPtyHandle {
     fn drop(&mut self) {
         if self
             .command_tx
-            .send(TerminalHostPtyCommand::Terminate)
+            .send(TerminalHostPtyCommand::Terminate { completion: None })
             .is_ok()
             && let Err(error) = self.poller.notify()
         {
@@ -199,8 +204,12 @@ impl TerminalHostPtyHandle {
         self.send_command(TerminalHostPtyCommand::Resize { columns, rows })
     }
 
-    pub fn terminate(&self) -> io::Result<()> {
-        self.send_command(TerminalHostPtyCommand::Terminate)
+    pub fn terminate(&self) -> io::Result<async_channel::Receiver<()>> {
+        let (completion_tx, completion_rx) = async_channel::bounded(1);
+        self.send_command(TerminalHostPtyCommand::Terminate {
+            completion: Some(completion_tx),
+        })?;
+        Ok(completion_rx)
     }
 
     fn send_command(&self, command: TerminalHostPtyCommand) -> io::Result<()> {
@@ -236,6 +245,7 @@ fn run_pty(
     let mut events = Events::with_capacity(event_capacity);
     let mut foreground_process = ForegroundProcessObserver::new();
     let mut foreground_process_watch_until = None;
+    let mut termination_completion = None;
     if let Some(command) = foreground_process.refresh(&pty, true) {
         event_handler(TerminalHostPtyEvent::ForegroundProcessChanged { command });
     }
@@ -270,7 +280,10 @@ fn run_pty(
                         cell_height: 16,
                     });
                 }
-                Ok(TerminalHostPtyCommand::Terminate) => break 'host,
+                Ok(TerminalHostPtyCommand::Terminate { completion }) => {
+                    termination_completion = completion;
+                    break 'host;
+                }
                 Err(mpsc::TryRecvError::Empty) => break,
                 Err(mpsc::TryRecvError::Disconnected) => break 'host,
             }
@@ -331,6 +344,15 @@ fn run_pty(
 
     if let Err(error) = pty.deregister(&poller) {
         event_handler(TerminalHostPtyEvent::Failed(error.to_string()));
+    }
+    if let Some(completion) = termination_completion {
+        // Alacritty's PTY teardown owns the child shutdown. A destructive
+        // request is acknowledged only after that owner has been dropped.
+        drop(pty);
+        event_handler(TerminalHostPtyEvent::Exited { exit_code: None });
+        if completion.try_send(()).is_err() {
+            log::debug!("terminal host PTY termination receiver was dropped");
+        }
     }
 }
 

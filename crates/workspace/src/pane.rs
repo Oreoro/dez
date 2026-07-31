@@ -1022,6 +1022,12 @@ impl Pane {
         } else {
             "Open Agent Terminal in Main Work Area"
         };
+        let terminal_action = if is_dez {
+            zed_actions::terminal::OpenAgentTerminal.boxed_clone()
+        } else {
+            NewCenterTerminal::default().boxed_clone()
+        };
+        let terminal_tooltip_action = terminal_action.boxed_clone();
 
         v_flex()
             .id("empty-project-state")
@@ -1088,13 +1094,13 @@ impl Pane {
                                     .tooltip(move |_, cx| {
                                         Tooltip::for_action(
                                             terminal_action_aria_label,
-                                            &NewCenterTerminal::default(),
+                                            &*terminal_tooltip_action,
                                             cx,
                                         )
                                     })
                                     .on_click(move |_, window, cx| {
                                         terminal_focus.dispatch_action(
-                                            &NewCenterTerminal::default(),
+                                            &*terminal_action,
                                             window,
                                             cx,
                                         );
@@ -4219,6 +4225,14 @@ impl Pane {
             })
     }
 
+    fn configure_fixed_new_surface_control(&self, tab_bar: TabBar) -> TabBar {
+        if pane_new_surface_control_is_adjacent(paths::APP_NAME, self.pane_kind) {
+            tab_bar.end_child(render_new_surface_control(self))
+        } else {
+            tab_bar
+        }
+    }
+
     fn render_single_row_tab_bar(
         &mut self,
         pinned_tabs: Vec<AnyElement>,
@@ -4230,14 +4244,9 @@ impl Pane {
         window: &mut Window,
         cx: &mut Context<Pane>,
     ) -> AnyElement {
+        let tab_bar = self.configure_fixed_new_surface_control(canvas_tab_bar("tab_bar", cx));
         let tab_bar = self
-            .configure_tab_bar_start(
-                canvas_tab_bar("tab_bar", cx),
-                navigate_backward,
-                navigate_forward,
-                window,
-                cx,
-            )
+            .configure_tab_bar_start(tab_bar, navigate_backward, navigate_forward, window, cx)
             .children(pinned_tabs.len().ne(&0).then(|| {
                 let max_scroll = self.tab_bar_scroll_handle.max_offset().x;
                 // We need to check both because offset returns delta values even when the scroll handle is not scrollable
@@ -4281,14 +4290,10 @@ impl Pane {
             .render_tab_overflow_menu_button(window, cx)
             .into_any_element();
 
+        let tab_bar =
+            self.configure_fixed_new_surface_control(canvas_tab_bar("stacked_tab_bar", cx));
         let tab_bar = self
-            .configure_tab_bar_start(
-                canvas_tab_bar("stacked_tab_bar", cx),
-                navigate_backward,
-                navigate_forward,
-                window,
-                cx,
-            )
+            .configure_tab_bar_start(tab_bar, navigate_backward, navigate_forward, window, cx)
             .children(pinned_tabs.len().ne(&0).then(|| {
                 h_flex()
                     .children(pinned_tabs)
@@ -4329,7 +4334,8 @@ impl Pane {
                     .children(pinned_tabs)
                     .child(self.render_pinned_tab_bar_drop_target(cx)),
             );
-        let unpinned_tab_bar = canvas_tab_bar("unpinned_tab_bar", cx)
+        let unpinned_tab_bar = self
+            .configure_fixed_new_surface_control(canvas_tab_bar("unpinned_tab_bar", cx))
             .child(self.render_unpinned_tabs_container(unpinned_tabs, tab_count, cx));
         let unpinned_tab_bar = if show_tab_overflow_menu {
             unpinned_tab_bar.end_child(
@@ -4354,10 +4360,6 @@ impl Pane {
         tab_count: usize,
         cx: &mut Context<Pane>,
     ) -> impl IntoElement {
-        let adjacent_new_surface_control =
-            pane_new_surface_control_is_adjacent(paths::APP_NAME, self.pane_kind)
-                .then(|| render_new_surface_control(self));
-
         h_flex()
             .id("unpinned tabs")
             .overflow_x_scroll()
@@ -4367,7 +4369,6 @@ impl Pane {
                 this.suppress_scroll = true;
             }))
             .children(unpinned_tabs)
-            .children(adjacent_new_surface_control)
             .child(self.render_tab_bar_drop_target(tab_count, cx))
     }
 
@@ -10146,7 +10147,7 @@ mod tests {
         // Assert
         let tab_bar_scroll_handle =
             pane.update_in(cx, |pane, _window, _cx| pane.tab_bar_scroll_handle.clone());
-        assert_eq!(tab_bar_scroll_handle.children_count(), 6);
+        assert_eq!(tab_bar_scroll_handle.children_count(), 5);
         let tab_bounds = cx.debug_bounds("TAB-4").unwrap();
         let new_tab_button_bounds = cx.debug_bounds("ICON-Plus").unwrap();
         let scroll_bounds = tab_bar_scroll_handle.bounds();
@@ -10155,6 +10156,7 @@ mod tests {
         assert!(scroll_offset.x >= -tab_bar_scroll_handle.max_offset().x);
         assert!(tab_bounds.left() >= scroll_bounds.left());
         assert!(tab_bounds.right() <= scroll_bounds.right());
+        assert!(new_tab_button_bounds.left() >= scroll_bounds.right());
         assert!(
             !tab_bounds.intersects(&new_tab_button_bounds),
             "Tab should not overlap with the new tab button, if this is failing check if there's been a redesign!"

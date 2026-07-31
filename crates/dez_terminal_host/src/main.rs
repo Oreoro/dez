@@ -27,6 +27,7 @@ use terminal::session_host::{
 const DEFAULT_REPLAY_LIMIT_BYTES: usize = 128 * 1024;
 const MAX_HOST_EVENTS: usize = 512;
 const MAX_EVENTS_PER_RESPONSE: usize = 8;
+const TERMINAL_PTY_TERMINATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
 
 #[derive(Clone, Default)]
 struct TerminalHostEventNotifier {
@@ -621,17 +622,7 @@ async fn serve_client(
                 request_id,
                 command,
             } => {
-                let (response, changed, notifier) = {
-                    let mut host = lock_host_service(&host);
-                    let previous_cursor = host.next_event_cursor;
-                    let response = handle_command(&mut host, command);
-                    host.capture_snapshot_events();
-                    (
-                        response,
-                        host.next_event_cursor != previous_cursor,
-                        host.notifier.clone(),
-                    )
-                };
+                let (response, changed, notifier) = execute_command(&host, command).await;
                 if changed {
                     notifier.notify();
                 }
@@ -711,6 +702,68 @@ fn lock_host_service(host: &Mutex<TerminalHostService>) -> MutexGuard<'_, Termin
     }
 }
 
+async fn execute_command(
+    host: &Arc<Mutex<TerminalHostService>>,
+    command: TerminalSessionCommand,
+) -> (TerminalHostResponse, bool, TerminalHostEventNotifier) {
+    let previous_cursor = lock_host_service(host).next_event_cursor;
+    let response = match command {
+        TerminalSessionCommand::Terminate { session_id } => {
+            let termination = {
+                let mut host = lock_host_service(host);
+                host.begin_termination(session_id)
+            };
+            match termination {
+                TerminalTermination::Ready(response) => response,
+                TerminalTermination::Pending(completion) => {
+                    enum Completion {
+                        Acknowledged,
+                        Closed,
+                        TimedOut,
+                    }
+                    let completion = smol::future::race(
+                        async {
+                            match completion.recv().await {
+                                Ok(()) => Completion::Acknowledged,
+                                Err(_) => Completion::Closed,
+                            }
+                        },
+                        async {
+                            smol::Timer::after(TERMINAL_PTY_TERMINATION_TIMEOUT).await;
+                            Completion::TimedOut
+                        },
+                    )
+                    .await;
+                    match completion {
+                        Completion::Acknowledged => {
+                            lock_host_service(host).finish_termination(session_id)
+                        }
+                        Completion::Closed => TerminalHostResponse::Error {
+                            message: format!(
+                                "terminal session {session_id} closed its termination acknowledgement before completion"
+                            ),
+                        },
+                        Completion::TimedOut => TerminalHostResponse::Error {
+                            message: format!(
+                                "terminal session {session_id} did not finish PTY teardown within {TERMINAL_PTY_TERMINATION_TIMEOUT:?}"
+                            ),
+                        },
+                    }
+                }
+            }
+        }
+        command => {
+            let mut host = lock_host_service(host);
+            handle_command(&mut host, command)
+        }
+    };
+    let mut host = lock_host_service(host);
+    host.capture_snapshot_events();
+    let changed = host.next_event_cursor != previous_cursor;
+    let notifier = host.notifier.clone();
+    (response, changed, notifier)
+}
+
 fn validate_hello(
     message: TerminalHostClientMessage,
     host_id: TerminalHostId,
@@ -764,9 +817,7 @@ fn handle_command(
             after_cursor,
             limit,
         } => host.events_after(after_cursor, limit),
-        TerminalSessionCommand::List => TerminalHostResponse::Sessions {
-            sessions: host.lock_model().list(),
-        },
+        TerminalSessionCommand::List => host.list_response(),
         TerminalSessionCommand::Create {
             session_id,
             working_directory,
@@ -815,8 +866,17 @@ fn handle_command(
                 snapshot: host.lock_model().acknowledge_agent_attention(session_id),
             }
         }
-        TerminalSessionCommand::Terminate { session_id } => host.terminate(session_id),
+        TerminalSessionCommand::Terminate { session_id } => TerminalHostResponse::Error {
+            message: format!(
+                "terminal session {session_id} termination requires acknowledged dispatch"
+            ),
+        },
     }
+}
+
+enum TerminalTermination {
+    Ready(TerminalHostResponse),
+    Pending(async_channel::Receiver<()>),
 }
 
 struct TerminalHostService {
@@ -879,6 +939,14 @@ impl TerminalHostService {
             .into_iter()
             .map(|snapshot| (snapshot.session_id, snapshot))
             .collect();
+    }
+
+    fn list_response(&mut self) -> TerminalHostResponse {
+        self.capture_snapshot_events();
+        TerminalHostResponse::Sessions {
+            sessions: self.lock_model().list(),
+            latest_event_cursor: Some(self.next_event_cursor.saturating_sub(1)),
+        }
     }
 
     fn events_after(&mut self, after_cursor: Option<u64>, limit: u32) -> TerminalHostResponse {
@@ -1017,15 +1085,38 @@ impl TerminalHostService {
         }
     }
 
-    fn terminate(&mut self, session_id: TerminalSessionId) -> TerminalHostResponse {
-        if let Some(pty) = self.ptys.remove(&session_id)
-            && let Err(error) = pty.terminate()
-        {
-            eprintln!("failed to terminate terminal session {session_id}: {error}");
+    fn begin_termination(&mut self, session_id: TerminalSessionId) -> TerminalTermination {
+        self.reap_exited_ptys();
+        let snapshot = self.lock_model().snapshot(session_id);
+        if !snapshot.state.may_be_live() {
+            return TerminalTermination::Ready(TerminalHostResponse::Snapshot { snapshot });
         }
-        TerminalHostResponse::Snapshot {
-            snapshot: self.lock_model().terminate(session_id, None),
+
+        if let Some(pty) = self.ptys.get(&session_id) {
+            return match pty.terminate() {
+                Ok(completion) => TerminalTermination::Pending(completion),
+                Err(error) => TerminalTermination::Ready(TerminalHostResponse::Error {
+                    message: format!("failed to end terminal session {session_id}: {error}"),
+                }),
+            };
         }
+
+        TerminalTermination::Ready(TerminalHostResponse::Error {
+            message: format!("terminal session {session_id} is live but its PTY is unavailable"),
+        })
+    }
+
+    fn finish_termination(&mut self, session_id: TerminalSessionId) -> TerminalHostResponse {
+        let snapshot = self.lock_model().snapshot(session_id);
+        if !matches!(snapshot.state, TerminalSessionState::Exited { .. }) {
+            return TerminalHostResponse::Error {
+                message: format!(
+                    "terminal session {session_id} completed PTY teardown without an exited snapshot"
+                ),
+            };
+        }
+        self.reap_exited_ptys();
+        TerminalHostResponse::Snapshot { snapshot }
     }
 
     fn update_metadata(
@@ -1315,8 +1406,12 @@ mod tests {
             }
         ));
 
-        let terminated =
-            handle_command(&mut host, TerminalSessionCommand::Terminate { session_id });
+        let host = Arc::new(Mutex::new(host));
+        let terminated = smol::block_on(async {
+            execute_command(&host, TerminalSessionCommand::Terminate { session_id })
+                .await
+                .0
+        });
         assert!(matches!(
             terminated,
             TerminalHostResponse::Snapshot {
@@ -1392,5 +1487,43 @@ mod tests {
                     }] if snapshot.state == TerminalSessionState::Detached
                 )
         ));
+    }
+
+    #[test]
+    fn list_snapshot_supplies_the_event_resume_cursor() {
+        let host_id = TerminalHostId::from_stable_key("helper-list-baseline-test");
+        let session_id = TerminalSessionId::new();
+        let mut host =
+            TerminalHostService::new(host_id, 1024, TerminalHostEventNotifier::default());
+        host.lock_model()
+            .create(session_id, None)
+            .expect("in-process session creation should succeed");
+
+        let TerminalHostResponse::Sessions {
+            latest_event_cursor: Some(baseline_cursor),
+            ..
+        } = host.list_response()
+        else {
+            panic!("list response should include an event baseline");
+        };
+        let TerminalHostResponse::Events { events, .. } =
+            host.events_after(Some(baseline_cursor), 8)
+        else {
+            panic!("event request should return a bounded event response");
+        };
+        assert!(events.is_empty());
+
+        host.lock_model()
+            .set_title(session_id, Some("after baseline".to_owned()));
+        let TerminalHostResponse::Events {
+            events,
+            latest_cursor,
+            ..
+        } = host.events_after(Some(baseline_cursor), 8)
+        else {
+            panic!("event request should return a bounded event response");
+        };
+        assert!(!events.is_empty());
+        assert!(latest_cursor > baseline_cursor);
     }
 }

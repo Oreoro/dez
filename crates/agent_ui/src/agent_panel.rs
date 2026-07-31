@@ -94,9 +94,9 @@ use ui::{
 };
 use util::ResultExt as _;
 use workspace::{
-    CollaboratorId, DesignSystemSettings, DraggedSelection, DraggedTab, MultiWorkspace,
-    NewCenterTerminal, PaneKind, PathList, SerializedPathList, ToggleAgentPane, ToggleSidebar,
-    ToggleZoom, ToolbarItemView, Workspace, WorkspaceId,
+    CollaboratorId, DesignSystemSettings, DraggedSelection, DraggedTab, MultiWorkspace, PaneKind,
+    PathList, SerializedPathList, ToggleAgentPane, ToggleSidebar, ToggleZoom, ToolbarItemView,
+    Workspace, WorkspaceId,
     dock::{DockPosition, Panel, PanelEvent},
     item::{ItemEvent, ItemHandle},
 };
@@ -566,7 +566,11 @@ pub fn init(cx: &mut App) {
                         }
                     } else {
                         let workspace_focus = workspace.focus_handle(cx);
-                        workspace_focus.dispatch_action(&NewCenterTerminal::default(), window, cx);
+                        workspace_focus.dispatch_action(
+                            &zed_actions::terminal::OpenAgentTerminal,
+                            window,
+                            cx,
+                        );
                     }
                 })
                 .register_action(
@@ -7086,7 +7090,11 @@ impl Render for AgentPanel {
                     this.new_terminal(None, AgentThreadSource::AgentPanel, window, cx);
                 } else if let Some(workspace) = this.workspace.upgrade() {
                     let workspace_focus = workspace.read(cx).focus_handle(cx);
-                    workspace_focus.dispatch_action(&NewCenterTerminal::default(), window, cx);
+                    workspace_focus.dispatch_action(
+                        &zed_actions::terminal::OpenAgentTerminal,
+                        window,
+                        cx,
+                    );
                 }
             }))
             .on_action(cx.listener(|this, _: &OpenSettings, window, cx| {

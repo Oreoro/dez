@@ -162,6 +162,8 @@ pub enum TerminalHostResponse {
     },
     Sessions {
         sessions: Vec<TerminalSessionSnapshot>,
+        #[serde(default)]
+        latest_event_cursor: Option<u64>,
     },
     Snapshot {
         snapshot: TerminalSessionSnapshot,
@@ -386,6 +388,16 @@ pub struct TerminalHostSnapshotStore {
     _poll_task: Task<()>,
 }
 
+fn require_authoritative_snapshot_after_event_stream_failure(
+    event_cursor: &mut Option<u64>,
+    needs_full_snapshot: &mut bool,
+) {
+    // A restarted helper owns a new cursor namespace. Reusing the old high
+    // cursor can make a valid empty event batch look authoritative forever.
+    *event_cursor = None;
+    *needs_full_snapshot = true;
+}
+
 impl TerminalHostSnapshotStore {
     fn apply_event(&mut self, event: TerminalSessionEvent) {
         match event {
@@ -460,6 +472,10 @@ impl TerminalHostSnapshotStore {
                             .await;
                         if response.is_err() {
                             event_stream = None;
+                            require_authoritative_snapshot_after_event_stream_failure(
+                                &mut event_cursor,
+                                &mut needs_full_snapshot,
+                            );
                         }
                         response
                     } else {
@@ -471,8 +487,14 @@ impl TerminalHostSnapshotStore {
                             .await
                     };
                     match &response {
-                        Ok(TerminalHostResponse::Sessions { .. }) => {
-                            needs_full_snapshot = !(supports_event_stream || supports_event_cursor);
+                        Ok(TerminalHostResponse::Sessions {
+                            latest_event_cursor,
+                            ..
+                        }) => {
+                            event_cursor = *latest_event_cursor;
+                            needs_full_snapshot = !((supports_event_stream
+                                || supports_event_cursor)
+                                && event_cursor.is_some());
                         }
                         Ok(TerminalHostResponse::Events {
                             latest_cursor,
@@ -494,7 +516,7 @@ impl TerminalHostSnapshotStore {
                             let previous_error = store.last_error.clone();
                             let mut poll_interval;
                             match response {
-                                Ok(TerminalHostResponse::Sessions { sessions }) => {
+                                Ok(TerminalHostResponse::Sessions { sessions, .. }) => {
                                     store.snapshots = sessions;
                                     store.last_error = None;
                                     poll_interval = if store.snapshots == previous_snapshots
@@ -568,7 +590,11 @@ impl TerminalHostSnapshotStore {
                                 cx.notify();
                                 TerminalHostSnapshotRevision::bump(cx);
                             }
-                            if supports_event_stream && store.last_error.is_none() {
+                            if supports_event_stream
+                                && event_cursor.is_some()
+                                && !needs_full_snapshot
+                                && store.last_error.is_none()
+                            {
                                 // The next stream read sleeps in the helper
                                 // until a new authoritative event is ready.
                                 poll_interval = std::time::Duration::ZERO;
@@ -851,18 +877,7 @@ impl TerminalHostConnection {
                     })
                     .await
                 {
-                    Ok(response) => {
-                        if reconnecting {
-                            terminal.update(cx, |terminal, cx| {
-                                terminal.write_output(
-                                    b"\r\n[Dez: terminal host reconnected]\r\n",
-                                    cx,
-                                );
-                            })?;
-                            reconnecting = false;
-                        }
-                        response
-                    }
+                    Ok(response) => response,
                     Err(error) => {
                         if !reconnecting {
                             log::warn!("terminal host connection lost: {error:#}");
@@ -893,6 +908,13 @@ impl TerminalHostConnection {
                         anyhow::bail!("terminal host returned a non-attachment response");
                     }
                 };
+
+                if reconnecting {
+                    terminal.update(cx, |terminal, cx| {
+                        terminal.write_output(b"\r\n[Dez: terminal host reconnected]\r\n", cx);
+                    })?;
+                    reconnecting = false;
+                }
 
                 let replay_was_truncated = attachment.replay_was_truncated;
                 let state = attachment.snapshot.state;
@@ -1003,9 +1025,44 @@ impl HostedTerminalController for TransportHostedTerminalController {
         })
     }
 
-    fn terminate(&self) -> anyhow::Result<()> {
-        self.enqueue(TerminalSessionCommand::Terminate {
-            session_id: self.session_id,
+    fn terminate(&self) -> futures::future::BoxFuture<'static, anyhow::Result<()>> {
+        let command_tx = self.command_tx.clone();
+        let session_id = self.session_id;
+        Box::pin(async move {
+            let (response_tx, response_rx) = futures::channel::oneshot::channel();
+            command_tx
+                .send(QueuedTerminalHostCommand {
+                    command: TerminalSessionCommand::Terminate { session_id },
+                    response_tx: Some(response_tx),
+                })
+                .await
+                .map_err(|_| anyhow::anyhow!("terminal host connection closed"))?;
+            let response = response_rx
+                .await
+                .map_err(|_| anyhow::anyhow!("terminal host termination response was dropped"))??;
+            match response {
+                TerminalHostResponse::Snapshot { snapshot }
+                    if matches!(snapshot.state, super::TerminalSessionState::Exited { .. }) =>
+                {
+                    Ok(())
+                }
+                TerminalHostResponse::Error { message }
+                | TerminalHostResponse::Unsupported { message } => {
+                    anyhow::bail!("terminal host could not end the session: {message}")
+                }
+                TerminalHostResponse::Snapshot { snapshot } => {
+                    anyhow::bail!(
+                        "terminal host did not confirm termination; current state is {:?}",
+                        snapshot.state
+                    )
+                }
+                TerminalHostResponse::Sessions { .. }
+                | TerminalHostResponse::Attachment { .. }
+                | TerminalHostResponse::Heartbeat { .. }
+                | TerminalHostResponse::Events { .. } => {
+                    anyhow::bail!("terminal host returned an invalid termination response")
+                }
+            }
         })
     }
 }
@@ -1246,6 +1303,35 @@ mod tests {
             anyhow::ensure!(restored == batch);
             anyhow::Ok(())
         })
+    }
+
+    #[test]
+    fn event_stream_failure_requires_a_fresh_authoritative_snapshot() {
+        let mut event_cursor = Some(8_192);
+        let mut needs_full_snapshot = false;
+
+        require_authoritative_snapshot_after_event_stream_failure(
+            &mut event_cursor,
+            &mut needs_full_snapshot,
+        );
+
+        assert_eq!(event_cursor, None);
+        assert!(needs_full_snapshot);
+    }
+
+    #[test]
+    fn old_session_list_without_an_event_cursor_stays_compatible() -> anyhow::Result<()> {
+        let response: TerminalHostResponse =
+            serde_json::from_str(r#"{"response":"sessions","sessions":[]}"#)?;
+        let TerminalHostResponse::Sessions {
+            latest_event_cursor,
+            ..
+        } = response
+        else {
+            anyhow::bail!("old response should still deserialize as a session list");
+        };
+        anyhow::ensure!(latest_event_cursor.is_none());
+        Ok(())
     }
 
     #[test]
