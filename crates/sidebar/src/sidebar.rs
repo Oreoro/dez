@@ -7069,6 +7069,7 @@ impl Sidebar {
                     .when(labels_visible, |this| {
                         this.child(
                             v_flex()
+                                .id(format!("{id_prefix}project-labels-{ix}"))
                                 .min_w_0()
                                 .gap(px(1.0))
                                 .child(label)
