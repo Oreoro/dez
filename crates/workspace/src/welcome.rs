@@ -233,7 +233,7 @@ fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Write. Delegate. Watch. Verify."
     } else if has_workspace {
-        "Run an agent or edit directly, then review changes without leaving the Main Work Area."
+        "Run an agent or edit directly. Follow attention in Workspace Navigator, then review changes here."
     } else {
         "Open a codebase to connect files, terminals, agents, and Git in one native Workspace."
     }
@@ -1211,7 +1211,7 @@ mod tests {
         );
         assert_eq!(
             welcome_summary("Dez", true),
-            "Run an agent or edit directly, then review changes without leaving the Main Work Area."
+            "Run an agent or edit directly. Follow attention in Workspace Navigator, then review changes here."
         );
         assert_eq!(
             welcome_summary("Zed", true),

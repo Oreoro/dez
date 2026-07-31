@@ -35,7 +35,7 @@ pub fn init(cx: &mut App) {
 
 pub fn installation_required(cx: &App) -> bool {
     MoveToApplicationsRequest::new(cx)
-        .map(Option::is_some)
+        .map(|request| request.is_some())
         .unwrap_or(false)
 }
 

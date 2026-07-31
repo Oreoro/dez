@@ -2,10 +2,30 @@
 
 This log records direct evidence for the consolidated release gate. A source
 claim is not a runtime claim, and an unchecked scenario remains unverified.
-The
-[v0.0.3 Production Readiness Plan](./v0.0.3-production-readiness.md) defines
-the current release order. Historical artifacts below do not validate a newer
-source tree.
+The [v0.2 Workspace Polish](./v0.2-workspace-polish.md) contract defines the
+active source lane. The preserved
+[v0.1 Product Hardening](./v0.1-product-hardening.md) ladder defines the
+release order and remaining runtime gates. Historical artifacts below do not
+validate a newer source tree.
+
+## 2026-07-31: rejected native-navigation compile baseline
+
+[GitHub Actions run 30621006062](https://github.com/Oreoro/dez/actions/runs/30621006062)
+targeted commit `2c7d72039cf2db115837c8f2ad59c8ad0bb1f522`. The Apple M2
+target check and Dez source and bundle guards passed. The optimized application
+build then failed before packaging, so this run produced no candidate artifact.
+
+The compiler found two concrete defects: `installation_required` passed a
+borrowed `Option` predicate to a consuming `Result::map`, and generated Terminal
+Host identity formatting passed the `IdType` wrapper where a displayable ID was
+required. The follow-up source patch uses an owning closure, formats the stored
+installation ID explicitly, and removes an unused legacy-session payload that
+the same compile reported as dead code.
+
+This rejected run is compile diagnostics, not positive artifact evidence. The
+corrections remain unproven until a new exact-head Preview run completes its
+optimized build, runtime entry-point smoke tests, DMG verification, signature
+check, and artifact upload.
 
 ## 2026-07-31: real native Home tab and navigation routes
 

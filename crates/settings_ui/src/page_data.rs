@@ -154,7 +154,7 @@ fn terminal_session_init_setting_copy(app_name: &str) -> (&'static str, &'static
     } else {
         (
             "Default Agent Terminal Command",
-            "Command launched by Open Agent Terminal and Ctrl+`. Leave blank to open the configured shell. Shell, tmux, Codex, Claude Code, and OpenCode remain available from Add and Command Search.",
+            "Command opened by Open Agent Terminal and Ctrl+`. Leave blank to use the configured shell. Start Shell, tmux, Codex, Claude Code, or OpenCode from the Main Work Area + menu or Command Search.",
         )
     }
 }
@@ -9419,7 +9419,7 @@ fn evidence_page() -> SettingsPage {
             description: if paths::APP_NAME == "Zed" {
                 "Reopen the last active terminal surface when its locally stored identity still resolves. Session Rail identity and attention metadata load independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database."
             } else {
-                "Reopen the last active terminal surface when its locally stored identity still resolves. The Workspaces navigator loads Session identity and attention metadata independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database."
+                "Reopen the last active Terminal when its Terminal Host is still available. Workspace Navigator restores only Session identity and attention, not terminal transcripts. Live activity resumes only from the same Terminal Host."
             },
             field: Box::new(SettingField {
                 organization_override: None,
@@ -11664,7 +11664,7 @@ mod tests {
             terminal_session_init_setting_copy("Dez"),
             (
                 "Default Agent Terminal Command",
-                "Command launched by Open Agent Terminal and Ctrl+`. Leave blank to open the configured shell. Shell, tmux, Codex, Claude Code, and OpenCode remain available from Add and Command Search.",
+                "Command opened by Open Agent Terminal and Ctrl+`. Leave blank to use the configured shell. Start Shell, tmux, Codex, Claude Code, or OpenCode from the Main Work Area + menu or Command Search.",
             )
         );
         assert_eq!(

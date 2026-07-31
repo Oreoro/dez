@@ -690,7 +690,7 @@ fn main() {
                     &format!(
                         "dez-local-host:{}:{}",
                         terminal_host_runtime::DEZ_TERMINAL_HOST_GENERATION,
-                        installation_id
+                        installation_id.to_string()
                     ),
                 );
                 terminal::session_host::LocalTerminalHost::init(terminal_host_id, cx);

@@ -11,7 +11,7 @@ and agent ecosystem, then reorganizes them around a clearer product promise:
 > See what is running, what needs attention, what changed, and what is ready
 > for review without reconstructing terminal and editor state.
 
-This repository currently carries the **Dez v0.1.0 source candidate**. It is
+This repository currently carries the **Dez v0.2.0 source candidate**. It is
 not yet a signed or supported binary release; promotion depends on the exact
 remote artifact and evidence gates documented below.
 
@@ -23,7 +23,7 @@ Workspace instead of separate applications or hidden panel modes.
 - **Main Work Area** — files, terminals, search results, settings, diagnostics,
   previews, and reviews are ordinary movable and splittable Surfaces.
 - **Workspaces** — a stable, collapsible left navigator for codebases and their
-  open Surfaces and Agent Sessions. Its collapsible **Active Workspace**
+  open Surfaces and Agent Sessions. Its collapsible **Open Tabs**
   section mirrors the native center-pane tabs, grouping them by pane only when
   the Workspace is split. Selecting a row activates that exact native tab;
   tab ownership, dirty state, close behavior, dragging, and ordering remain in
@@ -84,7 +84,7 @@ owns one Project, one Main Work Area, its terminals, and its Git state.
 Workspaces stays global on the left. Files, Git, Outline, Debug, Built-in Agent,
 commits, diffs, reviews, agent terminals, and ordinary terminals use the
 native workspace tab and pane model instead of another navigation system.
-When Workspaces is visible, **Active Workspace** provides a compact vertical
+When Workspaces is visible, **Open Tabs** provides a compact vertical
 route to those same open tabs. It stays flat for a single pane and introduces
 small **Pane 1**, **Pane 2**, and later group labels only when a real split
 exists. The section is collapsible, remembers its disclosure state, and
@@ -145,7 +145,7 @@ one Zed-compatible Project:
 A terminal is therefore not embedded in chat, and the editor is not a separate
 mode. They are peer Surfaces in one native pane grid. Dez detects supported
 agents running in its terminals, including Codex, Claude Code, OpenCode, and
-Herdr. Dez v0.1 discovers explicitly shared tmux sessions, live Herdr panes,
+Herdr. Dez v0.2 discovers explicitly shared tmux sessions, live Herdr panes,
 and cmux Workspaces. tmux and Herdr attach through ordinary terminal tabs; cmux
 Workspaces open in cmux. Discovery updates automatically and can be refreshed
 explicitly from a Workspace's options menu. The menu shows when it is checking
@@ -216,7 +216,7 @@ Fresh Dez windows open the top-anchored native Home launcher inside the normal
 Main Work Area tab frame. The tab strip and its adjacent Add control remain
 visible before the first file or terminal opens. Home does not auto-read a
 previous Workspace folder, avoiding a macOS privacy prompt for a stale recent
-path. GitHub Actions marks ad-hoc artifacts **Dez Preview**; they are not v0.1
+path. GitHub Actions marks ad-hoc artifacts **Dez Preview**; they are not v0.2
 releases and macOS may ask again when their signing identity changes. A stable
 workflow fails unless Developer ID signing and notarization credentials are
 present, and the artifact passes signature, TeamIdentifier, Gatekeeper, and
@@ -224,7 +224,7 @@ stapled-ticket validation.
 
 ## Current status
 
-The v0.1.0 source candidate contains the opinionated Dez shell,
+The v0.2.0 source candidate contains the opinionated Dez shell,
 identity isolation, Workspace composition, persistent Workspaces navigation,
 ordinary closeable workspace-tool tabs, explicit Agent Session state,
 host-owned local terminal lifecycle, setting-controlled Back/Forward history,
@@ -240,7 +240,7 @@ previews. The next browser slice requires a real pane-scoped native surface and
 Workspace item; Dez deliberately does not expose the inherited
 geometry-only `BrowserDevelopment` recipe as a fake preview.
 
-A public v0.1 release still requires exact build, rendered, restart, crash,
+A public v0.2 release still requires exact build, rendered, restart, crash,
 accessibility, integration, coexistence, and packaging evidence. The ordered
 release ladder and open gates remain documented in
 [v0.1 Product Hardening](./docs/src/development/dez/v0.1-product-hardening.md).
@@ -322,7 +322,7 @@ flow from Zed.
 
 ## Contributing
 
-The public contributor workflow is being prepared for v0.1. Until its
+The public contributor workflow is being prepared for v0.2. Until its
 fork-specific policy is complete, use [CONTRIBUTING.md](./CONTRIBUTING.md) for
 the inherited engineering workflow and include:
 

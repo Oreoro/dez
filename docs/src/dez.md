@@ -90,7 +90,7 @@ generic row. Provider icons identify Codex, Claude Code, OpenCode, Herdr, and
 other detected agents. Native status treatments distinguish Running, Needs
 Input, Waiting for Permission, Reconnecting, Completed, and Error without
 rendering a second terminal transcript.
-When Workspaces is open, its collapsible **Active Workspace** section projects
+When Workspaces is open, its collapsible **Open Tabs** section projects
 the active Workspace's native center-pane tabs above the Workspace and Session
 list. A one-pane layout remains a flat list. Real splits add quiet **Pane 1**,
 **Pane 2**, and later group labels, so the hierarchy describes the layout that
@@ -547,7 +547,7 @@ Warp, another IDE, or an unrelated application. Those processes are neither
 owned nor safely controllable by Dez, so they never become Workspace or Agent
 Session rows.
 
-Dez v0.1 retains explicit project-scoped integration for tmux, Herdr, and cmux.
+Dez v0.2 retains explicit project-scoped integration for tmux, Herdr, and cmux.
 Dez discovers tmux sessions through the documented CLI format, Herdr panes
 through the local snapshot API, and cmux Workspaces through its JSON CLI. tmux
 and Herdr open their documented attach command in a normal terminal Surface.
@@ -692,7 +692,7 @@ Dez is not:
 - a claim that arbitrary terminals owned by other applications survive through
   Dez.
 
-The v0.1 product promise is a complete native IDE with one sharp wedge:
+The v0.2 product promise is a complete native IDE with one sharp wedge:
 trustworthy supervision, reattachment, and review of terminal-native and
 agent-driven work.
 

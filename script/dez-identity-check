@@ -68,11 +68,11 @@ require_pattern assets/settings/default.json \
     '^  "restore_on_startup": "launchpad",$' \
     'fresh Dez can regress to touching a protected recent Workspace before the user opens it'
 require_pattern crates/zed/Cargo.toml \
-    '^version = "0\.1\.0"$' \
-    'application version is not 0.1.0'
+    '^version = "0\.2\.0"$' \
+    'application version is not 0.2.0'
 require_multiline_pattern Cargo.lock \
-    '\[\[package\]\][[:space:]]*name = "zed"[[:space:]]*version = "0\.1\.0"' \
-    'the locked Dez package version does not match 0.1.0'
+    '\[\[package\]\][[:space:]]*name = "zed"[[:space:]]*version = "0\.2\.0"' \
+    'the locked Dez package version does not match 0.2.0'
 require_pattern crates/zed/Cargo.toml \
     '^description = "A native IDE for terminal-native developers\."$' \
     'the package description no longer communicates the Dez product identity'
@@ -230,8 +230,11 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn resolve_terminal_startup_command.*?app_name != "Zed".*?AgentSettings::get_global\(cx\)\.terminal_init_command\.clone\(\).*?start_init_command_startup_handshake.*?TERMINAL_STARTUP_COMMAND_TIMEOUT.*?write_init_command_after_startup' \
     'native agent launchers can regress to bypassing the configured shell or startup handshake'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
-    'Default Agent Terminal Command.*?Open Agent Terminal and Ctrl\+`.*?configured shell.*?Shell, tmux, Codex, Claude Code, and OpenCode.*?Add and Command Search.*?fn terminal_session_init_setting_visible.*?true' \
+    'Default Agent Terminal Command.*?Open Agent Terminal and Ctrl\+`.*?configured shell.*?Start Shell, tmux, Codex, Claude Code, or OpenCode.*?Main Work Area \+ menu or Command Search.*?fn terminal_session_init_setting_visible.*?true' \
     'Settings can regress to hiding the native Dez agent-terminal default'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'title: "Reopen Last Terminal".*?Terminal Host is still available.*?Workspace Navigator restores only Session identity and attention, not terminal transcripts.*?Live activity resumes only from the same Terminal Host.*?json_path: Some\("agent_ui\.resume_sessions_on_restart"\)' \
+    'terminal restoration Settings can regress to legacy navigator vocabulary or overstate retained evidence'
 require_multiline_pattern crates/zed_actions/src/lib.rs \
     'pub mod dez.*?OpenWorkspaceInCmux.*?pub mod terminal.*?OpenAgentTerminal.*?OpenShellTerminal.*?OpenTmuxTerminal.*?OpenCodexTerminal.*?OpenClaudeCodeTerminal.*?OpenOpenCodeTerminal' \
     'Dez can regress from first-class native terminal and cmux actions to buried menu-only launchers'
@@ -388,7 +391,7 @@ require_pattern assets/fonts/jetbrains-mono/OFL.txt \
     '^Copyright 2020 The JetBrains Mono Project Authors' \
     'the JetBrains Mono source attribution is incomplete'
 require_multiline_pattern README.md \
-    '^# Dez.*?v0\.1\.0 source candidate.*?not yet a signed or supported binary release.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Workspaces\*\*.*?path-matched.*?tmux.*?Herdr.*?Unrelated.*?machine terminals.*?Workspace tools.*?ordinary draggable and closeable native.*?\*\*Built-in Agent\*\*.*?Open Agent Terminal.*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?A public v0\.1 release' \
+    '^# Dez.*?v0\.2\.0 source candidate.*?not yet a signed or supported binary release.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Workspaces\*\*.*?path-matched.*?tmux.*?Herdr.*?Unrelated.*?machine terminals.*?Workspace tools.*?ordinary draggable and closeable native.*?\*\*Built-in Agent\*\*.*?Open Agent Terminal.*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?A public v0\.2 release' \
     'the repository front page can regress to upstream branding, omit the Dez product model, or overstate release readiness'
 require_multiline_pattern README.md \
     '## Visual baseline.*?Lumin Blur.*?Lumin Light.*?IBM Plex Sans.*?Lilex.*?## Upstream relationship.*?deliberate fork.*?## License and attribution.*?independent fork' \
@@ -397,7 +400,7 @@ reject_pattern README.md \
     '^# Zed$|download Zed directly|we.re hiring|Sponsorships go directly to Zed Industries' \
     'the repository front page still presents Dez as the official upstream Zed product'
 require_multiline_pattern docs/src/dez.md \
-    '^# What is Dez\?.*?## The screen model.*?Workspaces.*?Main Work Area.*?Workspace Tools.*?native pane grid.*?## How coding work flows.*?Open Agent Terminal.*?## Terminal and Agent integration.*?Packaged Dez builds.*?Workspaces does not list arbitrary current-user TTYs.*?Dez v0\.1 retains explicit project-scoped integration for tmux, Herdr, and cmux.*?The v0\.1 product promise.*?## Source-preview limits' \
+    '^# What is Dez\?.*?## The screen model.*?Workspaces.*?Main Work Area.*?Workspace Tools.*?native pane grid.*?## How coding work flows.*?Open Agent Terminal.*?## Terminal and Agent integration.*?Packaged Dez builds.*?Workspaces does not list arbitrary current-user TTYs.*?Dez v0\.2 retains explicit project-scoped integration for tmux, Herdr, and cmux.*?The v0\.2 product promise.*?## Source-preview limits' \
     'the public product guide can lose the screen model, IDE integration, or honest source-preview boundary'
 require_pattern docs/src/SUMMARY.md \
     '^- \[What is Dez\?\]\(\./dez\.md\)$' \
@@ -420,14 +423,20 @@ require_multiline_pattern docs/src/development/dez/v0.1-product-hardening.md \
 require_file docs/src/development/dez/v0.2-workspace-polish.md \
     'the active v0.2 Workspace polish contract is missing'
 require_multiline_pattern docs/src/development/dez/v0.2-workspace-polish.md \
-    '^# Dez v0\.2 Workspace polish.*?does not claim that a v0\.2 binary has shipped.*?## Product promise.*?one native Workspace.*?## Workspace contract.*?One Main Work Area.*?native tab and[[:space:]]+pane model.*?Split Work Area is the only public workflow.*?native status bar.*?terminal context strip appears only for actionable state.*?## Acceptance gates.*?No startup or restored layout creates an unexplained second pane.*?active terminal.*?no duplicate metadata[[:space:]]+toolbar.*?exact candidate commit before release' \
+    '^# Dez v0\.2 Workspace polish.*?active v0\.2\.0 source candidate.*?does not claim that a signed v0\.2 binary has shipped.*?## Product promise.*?one native Workspace.*?## Workspace contract.*?One Main Work Area.*?native tab and[[:space:]]+pane model.*?Split Work Area is the only public workflow.*?native status bar.*?terminal context strip appears only for actionable state.*?## Acceptance gates.*?No startup or restored layout creates an unexplained second pane.*?active terminal.*?no duplicate metadata[[:space:]]+toolbar.*?exact candidate commit before release' \
     'the v0.2 Workspace lane can regress without native-shell, duplication, status, and evidence gates'
+require_multiline_pattern docs/src/development/dez/roadmap.md \
+    '^# Dez Roadmap.*?Reach Dez v0\.2 as a public-quality native IDE.*?## v0\.2 active source track.*?\[v0\.2 Workspace Polish\].*?unresolved runtime and[[:space:]]+release gates remain in \[v0\.1 Product Hardening\].*?validate the exact v0\.2\.0 source candidate' \
+    'the living roadmap can regress to presenting an older source lane as current'
 require_multiline_pattern docs/src/development/dez/v0.0.1-release-runbook.md \
     'there is currently no retained runnable.*?## Historical local candidate.*?future runtime.*?rebuild, identify, hash, sign, and audit a new exact candidate' \
     'the release runbook can regress to presenting removed local targets as a current runnable candidate'
 reject_pattern docs/src/development/dez/v0.0.1-release-runbook.md \
     'Use only this bundle for the current gate|output remains present|signed bundle copy remains the intended runnable candidate' \
     'the release runbook still claims removed local artifacts are present'
+require_multiline_pattern docs/src/development/dez/release-evidence.md \
+    'The \[v0\.2 Workspace Polish\].*?defines the[[:space:]]+active source lane.*?\[v0\.1 Product Hardening\].*?defines the[[:space:]]+release order and remaining runtime gates.*?Historical artifacts below do not[[:space:]]+validate a newer source tree' \
+    'the evidence ledger can regress to naming a historical release plan as current'
 require_multiline_pattern docs/src/development/dez/release-evidence.md \
     '## Frozen source and historical artifacts.*?Historical development executable.*?regenerable `target` directory.*?new.*?runtime gate must rebuild' \
     'release evidence can regress to treating removed generated artifacts as present'
@@ -969,10 +978,10 @@ require_multiline_pattern crates/project/src/terminals.rs \
     'connection.*?endpoint\(\).*?socket_path\(\).*?TERMINAL_HOST_TOKEN_FILE_ENV.*?connection.*?endpoint\(\).*?token_file_path\(\).*?TERMINAL_HOST_ID_ENV' \
     'terminal hooks can regress to hard-coded legacy socket and token paths'
 require_multiline_pattern crates/zed/src/main.rs \
-    'dez-local-host:\{\}:\{\}.*?DEZ_TERMINAL_HOST_GENERATION.*?installation_id' \
+    'dez-local-host:\{\}:\{\}.*?DEZ_TERMINAL_HOST_GENERATION.*?installation_id\.to_string\(\)' \
     'the terminal Host ID can regress to ignoring its endpoint generation'
 require_multiline_pattern crates/zed/src/zed/move_to_applications.rs \
-    'pub fn installation_required.*?if !should_require_installation.*?Install and Relaunch.*?PromptButton::cancel\("Quit"\).*?fn should_require_installation.*?extension\(\).*?extension == "app".*?!app_path\.starts_with\(Path::new\("/Applications"\)\).*?fn app_bundles_require_system_installation' \
+    'pub fn installation_required.*?\.map\(\|request\| request\.is_some\(\)\).*?if !should_require_installation.*?Install and Relaunch.*?PromptButton::cancel\("Quit"\).*?fn should_require_installation.*?extension\(\).*?extension == "app".*?!app_path\.starts_with\(Path::new\("/Applications"\)\).*?fn app_bundles_require_system_installation' \
     'temporary app bundles can regain a bypass around install-first Workspace and terminal ownership'
 reject_pattern crates/zed/src/zed/move_to_applications.rs \
     'InstallingZedModal|DONT_ASK_AGAIN_KEY|Don.t ask me again' \
@@ -1671,7 +1680,7 @@ require_multiline_pattern crates/workspace/src/welcome.rs \
     'when\(APP_NAME != "Zed".*?ButtonStyle::Subtle.*?when\(self\.primary.*?ButtonStyle::Filled.*?aria_description\("Recommended first step"\).*?fn welcome_emphasizes_first_action.*?app_name != "Zed".*?first_section\.render\(.*?welcome_emphasizes_first_action\(APP_NAME\)' \
     'Dez Welcome can regress from native command rows or lose its recommended first transition'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'fn welcome_summary.*?"Run an agent or edit directly, then review changes without leaving the Main Work Area\.".*?"Open a codebase to connect files, terminals, agents, and Git in one native Workspace\.".*?fn welcome_title.*?"Continue in this Workspace".*?"Start with a Workspace".*?Headline::new\(welcome_title\(APP_NAME, has_workspace\)\)' \
+    'fn welcome_summary.*?"Run an agent or edit directly\. Follow attention in Workspace Navigator, then review changes here\.".*?"Open a codebase to connect files, terminals, agents, and Git in one native Workspace\.".*?fn welcome_title.*?"Continue in this Workspace".*?"Start with a Workspace".*?Headline::new\(welcome_title\(APP_NAME, has_workspace\)\)' \
     'Home can regress to hiding its Workspace-terminal-review purpose or restoring promotional heading copy'
 reject_pattern crates/workspace/src/welcome.rs \
     'dez-workflow|dez-supported-terminal-agents|Run agents in your codebase' \
@@ -1764,7 +1773,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'menu\.when\(is_active.*?action\("Open Files", Box::new\(RevealFiles\)\).*?action\("Review Changes", Box::new\(ReviewGitChanges\)\).*?action\([[:space:]]*"Open Debug".*?ApplyCanvasLayoutRecipe.*?name: "debug"' \
     'Workspace Options can regress to hiding Files, Git, or Debug behind layout administration'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn workspace_tabs_section_title.*?"Active Workspace".*?fn workspace_tabs_section_visible.*?app_name != "Zed" && tab_count > 0.*?fn workspace_tab_count_label.*?tab_count == 1.*?"tab".*?"tabs".*?fn render_active_workspace_tabs.*?workspace_tabs_section_visible\(APP_NAME, tab_count\).*?workspace_pane_navigation_label.*?workspace\.activate_item.*?Label::new\(workspace_tab_count_label\(tab_count\)\)' \
+    'fn workspace_tabs_section_title.*?"Open Tabs".*?fn workspace_tabs_section_visible.*?app_name != "Zed" && tab_count > 0.*?fn workspace_tab_count_label.*?tab_count == 1.*?"tab".*?"tabs".*?fn render_active_workspace_tabs.*?workspace_tabs_section_visible\(APP_NAME, tab_count\).*?workspace_pane_navigation_label.*?workspace\.activate_item.*?Open tabs in the active Workspace.*?Label::new\(workspace_tab_count_label\(tab_count\)\)' \
     'the Workspace Navigator can regress to an unexplained tab count or stop activating native tabs'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_new_terminal_tooltip_label.*?terminal_launch_label\(app_name\).*?workspace_new_terminal_tooltip_label\("Dez"\).*?"Open Agent Terminal".*?fn render_new_session_button.*?aria_label\(new_terminal_label\.clone\(\).*?Tooltip::for_action_in\([[:space:]]*workspace_new_terminal_tooltip_label\(APP_NAME\)' \
@@ -2434,7 +2443,7 @@ reject_pattern crates/workspace/src/history_manager.rs \
     'recent_project_workspaces\(fs\.as_ref\(\)\)' \
     'launch history can regress to triggering protected-folder access prompts'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'fn welcome_summary.*?"Run an agent or edit directly, then review changes without leaving the Main Work Area\.".*?"Open a codebase to connect files, terminals, agents, and Git in one native Workspace\.".*?fn welcome_title.*?"Continue in this Workspace".*?"Start with a Workspace".*?Label::new\(welcome_summary\(APP_NAME, has_workspace\)\)' \
+    'fn welcome_summary.*?"Run an agent or edit directly\. Follow attention in Workspace Navigator, then review changes here\.".*?"Open a codebase to connect files, terminals, agents, and Git in one native Workspace\.".*?fn welcome_title.*?"Continue in this Workspace".*?"Start with a Workspace".*?Label::new\(welcome_summary\(APP_NAME, has_workspace\)\)' \
     'the Dez welcome headline no longer explains the Workspace-to-IDE product promise'
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'const OPEN_WORKSPACE: OpenFolder = OpenFolder \{.*?create_new_window: Some\(false\).*?const DEZ_CONTENT: \(Section, Section\).*?title: "Start a Workspace".*?title: "Open Workspace",[[:space:]]*action: &OPEN_WORKSPACE.*?title: "Clone Repository".*?const DEZ_WORKSPACE_CONTENT' \
@@ -2596,13 +2605,13 @@ require_multiline_pattern .github/workflows/dez-build.yml \
     'hdiutil verify.*?expected_name=Dez.*?expected_name="Dez Preview".*?expected_bundle_id=dev\.dez\.Dez-Preview.*?Contents/MacOS/dez-terminal-host.*?CFBundleIdentifier.*?codesign --verify --deep --strict' \
     'the manual macOS workflow does not verify its DMG, identity, helper, and signature'
 require_multiline_pattern .github/workflows/dez-build.yml \
-    'release_kind:.*?default: preview.*?options:.*?- preview.*?- stable.*?signature=ad-hoc Preview \(not notarized; not a v0\.1 release\)' \
-    'Preview can regress to masquerading as a v0.1 release'
+    'release_kind:.*?default: preview.*?options:.*?- preview.*?- stable.*?signature=ad-hoc Preview \(not notarized; not a v0\.2 release\)' \
+    'Preview can regress to masquerading as a v0.2 release'
 require_multiline_pattern .github/workflows/dez-build.yml \
     'Stable Dez builds require \$credential.*?Developer ID Application signature.*?TeamIdentifier.*?stapler validate' \
-    'Stable can regress to accepting unsigned output or Preview can masquerade as a v0.1 release'
+    'Stable can regress to accepting unsigned output or Preview can masquerade as a v0.2 release'
 require_multiline_pattern .github/workflows/dez-build.yml \
-    '"\$main" --system-specs.*?"\$cli" --dez "\$app" --version.*?"\$terminal_host" --help.*?runtime-smoke\.txt.*?grep -F "\$expected_name".*?grep -F "0\.1\.0".*?grep -F "Usage: dez-terminal-host"' \
+    '"\$main" --system-specs.*?"\$cli" --dez "\$app" --version.*?"\$terminal_host" --help.*?runtime-smoke\.txt.*?grep -F "\$expected_name".*?grep -F "0\.2\.0".*?grep -F "Usage: dez-terminal-host"' \
     'the public macOS workflow no longer executes and verifies every packaged Dez entry point'
 require_multiline_pattern .github/workflows/dez-build.yml \
     'artifact_dmg="\$\{artifact_label\}-macOS-M2\.dmg".*?INSTALL\.txt.*?SHA256SUMS\.txt.*?compression-level: 0' \

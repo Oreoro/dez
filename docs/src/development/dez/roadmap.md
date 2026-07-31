@@ -8,7 +8,7 @@ Do not erase completed evidence.
 
 ## Objective {#objective}
 
-Reach Dez v0.1 as a public-quality native IDE for developers who move between
+Reach Dez v0.2 as a public-quality native IDE for developers who move between
 code, durable terminals, and terminal-native agents. Preserve Zed-quality
 editing and tools, make Workspaces optional supervision rather than mandatory
 navigation, and prove lifecycle, integration, visual, accessibility, and
@@ -30,16 +30,17 @@ upstream and identity gate
 Visual polish continues in small slices, but it must support truthful state and
 the product loop rather than outrun ownership foundations.
 
-## v0.1 active track {#v0-1-active-track}
+## v0.2 active source track {#v0-2-active-source-track}
 
-The ordered release contract lives in
-[v0.1 Product Hardening](./v0.1-product-hardening.md). The v0.0.4 source and
-artifact evidence are its historical baseline, not a competing release train.
+The active source contract lives in
+[v0.2 Workspace Polish](./v0.2-workspace-polish.md). The unresolved runtime and
+release gates remain in [v0.1 Product Hardening](./v0.1-product-hardening.md);
+that preserved ladder is a baseline, not a competing release train.
 
-The v0.1 dependency order is:
+The v0.2 dependency order is:
 
 ```text
-validate the exact v0.1.0 source candidate
+validate the exact v0.2.0 source candidate
 -> simplify Home, Workspaces, menus, and native tab navigation
 -> prove durable terminal and Workspace recovery
 -> harden Codex, Claude Code, OpenCode, tmux, and Herdr integrations

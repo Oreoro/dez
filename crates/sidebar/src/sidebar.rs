@@ -1107,12 +1107,8 @@ fn session_rail_accessibility_label(app_name: &str) -> &'static str {
     }
 }
 
-fn workspace_tabs_section_title(app_name: &str) -> &'static str {
-    if app_name == "Zed" {
-        "Open Tabs"
-    } else {
-        "Active Workspace"
-    }
+fn workspace_tabs_section_title(_app_name: &str) -> &'static str {
+    "Open Tabs"
 }
 
 fn workspace_tabs_section_visible(app_name: &str, tab_count: usize) -> bool {
@@ -2265,7 +2261,7 @@ mod session_start_state_tests {
             session_rail_accessibility_label("Dez"),
             "Workspace Navigator"
         );
-        assert_eq!(workspace_tabs_section_title("Dez"), "Active Workspace");
+        assert_eq!(workspace_tabs_section_title("Dez"), "Open Tabs");
         assert_eq!(workspace_tabs_section_title("Zed"), "Open Tabs");
         assert!(workspace_tabs_section_visible("Dez", 1));
         assert!(!workspace_tabs_section_visible("Dez", 0));
@@ -3219,7 +3215,7 @@ enum TerminalEntrySource {
     AgentPanel,
     WorkspaceItem(Entity<TerminalView>),
     HostSession(TerminalSessionId),
-    LegacySession(TerminalSessionId),
+    LegacySession,
 }
 
 #[derive(Clone)]
@@ -5797,8 +5793,8 @@ impl Sidebar {
                         TerminalEntrySourceKind::HostSession(session_id) => {
                             (workspace, TerminalEntrySource::HostSession(session_id))
                         }
-                        TerminalEntrySourceKind::LegacySession(session_id) => {
-                            (workspace, TerminalEntrySource::LegacySession(session_id))
+                        TerminalEntrySourceKind::LegacySession(_) => {
+                            (workspace, TerminalEntrySource::LegacySession)
                         }
                     };
                     let agent = host_snapshot.and_then(|snapshot| snapshot.agent.clone());
@@ -5829,7 +5825,7 @@ impl Sidebar {
                         APP_NAME,
                         matches!(
                             &source,
-                            TerminalEntrySource::AgentPanel | TerminalEntrySource::LegacySession(_)
+                            TerminalEntrySource::AgentPanel | TerminalEntrySource::LegacySession
                         ),
                         detected_agent_kind,
                         agent.is_some(),
@@ -5851,7 +5847,7 @@ impl Sidebar {
                                     TerminalRuntimeState::Live
                                 },
                             })
-                        } else if matches!(&source, TerminalEntrySource::LegacySession(_)) {
+                        } else if matches!(&source, TerminalEntrySource::LegacySession) {
                             Some(TerminalRuntimeInfo {
                                 state: TerminalRuntimeState::LegacyAccessBlocked,
                             })
@@ -8913,7 +8909,7 @@ impl Sidebar {
             }
             (
                 ThreadEntryWorkspace::Open(_) | ThreadEntryWorkspace::Closed { .. },
-                TerminalEntrySource::HostSession(_) | TerminalEntrySource::LegacySession(_),
+                TerminalEntrySource::HostSession(_) | TerminalEntrySource::LegacySession,
             )
             | (
                 ThreadEntryWorkspace::Closed { .. },
@@ -10368,7 +10364,7 @@ impl Sidebar {
             ) => self.attach_host_terminal_session(
                 &workspace, metadata, session_id, retain, true, window, cx,
             ),
-            (ThreadEntryWorkspace::Open(workspace), TerminalEntrySource::LegacySession(_)) => {
+            (ThreadEntryWorkspace::Open(workspace), TerminalEntrySource::LegacySession) => {
                 self.activate_workspace(&workspace, window, cx);
                 workspace.read(cx).focus_handle(cx).dispatch_action(
                     &NewCenterTerminal {
@@ -10384,7 +10380,7 @@ impl Sidebar {
                 ThreadEntryWorkspace::Closed {
                     project_group_key, ..
                 },
-                TerminalEntrySource::LegacySession(_),
+                TerminalEntrySource::LegacySession,
             ) => {
                 self.open_workspace_and_create_entry(
                     &project_group_key,
@@ -11175,7 +11171,7 @@ impl Sidebar {
     ) {
         self.failed_terminal_activations
             .remove(&metadata.terminal_id);
-        if matches!(source, TerminalEntrySource::LegacySession(_)) {
+        if matches!(source, TerminalEntrySource::LegacySession) {
             let Some(session_ref) = metadata.session_ref else {
                 log::error!("legacy terminal entry is missing its host session reference");
                 return;
@@ -11534,7 +11530,7 @@ impl Sidebar {
         }
 
         let title = metadata.display_title();
-        let is_legacy_session = matches!(&source, TerminalEntrySource::LegacySession(_));
+        let is_legacy_session = matches!(&source, TerminalEntrySource::LegacySession);
         let (heading, detail) = if is_legacy_session {
             legacy_terminal_termination_confirmation_copy(title.as_ref())
         } else {
@@ -12325,7 +12321,7 @@ impl Sidebar {
                 let source = terminal.source.clone();
                 let is_host_session = matches!(
                     &terminal.source,
-                    TerminalEntrySource::HostSession(_) | TerminalEntrySource::LegacySession(_)
+                    TerminalEntrySource::HostSession(_) | TerminalEntrySource::LegacySession
                 );
                 let (_, requires_termination_confirmation) = terminal_row_close_presentation(
                     is_host_session,
@@ -12825,7 +12821,7 @@ impl Sidebar {
                                 cx,
                             );
                         }
-                        TerminalEntrySource::LegacySession(_) => {
+                        TerminalEntrySource::LegacySession => {
                             self.activate_workspace(workspace, window, cx);
                             workspace.read(cx).focus_handle(cx).dispatch_action(
                                 &NewCenterTerminal {
@@ -13635,9 +13631,9 @@ impl Sidebar {
         let terminal_agent_kind = terminal.detected_agent_kind;
         let is_host_session = matches!(
             &terminal.source,
-            TerminalEntrySource::HostSession(_) | TerminalEntrySource::LegacySession(_)
+            TerminalEntrySource::HostSession(_) | TerminalEntrySource::LegacySession
         );
-        let is_legacy_session = matches!(&terminal.source, TerminalEntrySource::LegacySession(_));
+        let is_legacy_session = matches!(&terminal.source, TerminalEntrySource::LegacySession);
         let is_opening = self.pending_terminal_activation == Some(terminal.metadata.terminal_id);
         let (close_label, requires_termination_confirmation) = terminal_row_close_presentation(
             is_host_session,
@@ -13721,7 +13717,7 @@ impl Sidebar {
             TerminalEntrySource::WorkspaceItem(terminal_view) => Some(terminal_view.clone()),
             TerminalEntrySource::AgentPanel
             | TerminalEntrySource::HostSession(_)
-            | TerminalEntrySource::LegacySession(_) => None,
+            | TerminalEntrySource::LegacySession => None,
         };
         let host_label = if is_legacy_session {
             "Legacy Host"
@@ -16467,7 +16463,7 @@ impl Sidebar {
             v_flex()
                 .id("active-workspace-tabs")
                 .role(gpui::Role::Region)
-                .aria_label("Active Workspace tabs")
+                .aria_label("Open tabs in the active Workspace")
                 .flex_none()
                 .min_h_0()
                 .border_b_1()
