@@ -1324,8 +1324,10 @@ fn register_actions(
                     .and_then(|name| name.to_str())
                     .unwrap_or("Workspace")
                     .to_owned();
-                let open_task =
-                    cx.background_spawn(async move { sidebar::open_workspace_path_in_cmux(&path) });
+                let handoff_executor = cx.background_executor().clone();
+                let open_task = cx.background_spawn(async move {
+                    sidebar::open_workspace_path_in_cmux(&path, &handoff_executor).await
+                });
                 let multiplexer_store = agent_ui::MultiplexerSessionStore::try_global(cx);
                 cx.spawn_in(window, async move |workspace, cx| {
                     let outcome = open_task.await;

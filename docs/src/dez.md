@@ -555,7 +555,18 @@ rows, labels them **last known**, and lets successful tmux, Herdr, or cmux scans
 continue to update. An authoritative successful empty scan removes that
 source's stale rows. Each source has a bounded command deadline shorter than
 the refresh interval; a hung CLI is cancelled and becomes a visible last-known
-state rather than blocking every later refresh.
+state rather than blocking every later refresh. tmux is empty only after its
+canonical missing-server response. Permission, protocol, Herdr socket, and
+Herdr query errors are failures and preserve prior rows instead of masquerading
+as an authoritative empty scan.
+The explicit **Open Workspace in cmux** handoff is separately bounded to eight
+seconds. A timeout leaves the Workspace unchanged and replaces the progress
+notice with actionable failure copy.
+Last-known external rows refresh their source instead of attaching blindly;
+select the refreshed row again to open it. **Retry Attach** resolves the current
+session by stable ID, reports sessions that ended during refresh, and surfaces
+a missing terminal provider as an attach failure rather than a successful
+no-op.
 Dez discovers tmux sessions through the documented CLI format, Herdr panes
 through the local snapshot API, and cmux Workspaces through its JSON CLI. tmux
 and Herdr open their documented attach command in a normal terminal Surface.

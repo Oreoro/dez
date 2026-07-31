@@ -153,11 +153,23 @@ and explains when no external session matches. A transient discovery failure
 preserves that integration's rows as **last known** without freezing successful
 updates from the other integrations. Every discovery command is bounded and
 cancelled before the next refresh cycle, so an unresponsive external tool
-cannot freeze Workspace activity. Process and layout ownership always stays
-with the external application. **Terminal: Open tmux Workspace** attaches or
+cannot freeze Workspace activity. Only tmux's canonical missing-server response
+counts as an empty result; permission, protocol, Herdr socket, and query errors
+preserve last-known rows. Process and layout ownership always stays with the
+external application. **Terminal: Open tmux Workspace** attaches or
 creates a stable session named from the active Workspace with
 `tmux new-session -A`; discovered sessions remain available individually in
 Workspaces. Arbitrary PTYs remain read-only.
+
+Opening the active Workspace in cmux also has a bounded handoff. If cmux does
+not respond within eight seconds, Dez keeps the Workspace open, ends the
+progress state, and reports a retryable failure instead of leaving an endless
+“Opening…” notice.
+
+Last-known external rows are never attached blindly. Their action refreshes
+that source first; select a fresh row again before opening it. Retry resolves
+the session by stable ID after discovery, reports when it has ended, and treats
+a missing terminal provider as a visible failure instead of a successful no-op.
 
 ## Installation, Workspace access, and terminal ownership
 

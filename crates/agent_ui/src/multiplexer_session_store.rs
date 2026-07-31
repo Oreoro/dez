@@ -114,6 +114,10 @@ pub struct ExternalMultiplexerSession {
 }
 
 impl ExternalMultiplexerSession {
+    pub fn is_last_known(&self) -> bool {
+        self.discovery_stale
+    }
+
     pub fn source_label(&self) -> String {
         self.owner_context
             .as_ref()
@@ -368,21 +372,27 @@ async fn scan_tmux_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
     };
 
     if !output.status.success() {
-        // tmux exits with status 1 when no server exists. That is a normal
-        // empty state, not a product error.
-        if output.status.code() == Some(1) {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        if tmux_failure_is_no_server(output.status.code(), &stderr) {
             return Ok(Vec::new());
         }
-        anyhow::bail!(
-            "tmux discovery failed: {}",
-            String::from_utf8_lossy(&output.stderr).trim()
-        );
+        anyhow::bail!("tmux discovery failed: {}", stderr.trim());
     }
 
     Ok(parse_tmux_sessions(
         &String::from_utf8_lossy(&output.stdout),
         executable,
     ))
+}
+
+fn tmux_failure_is_no_server(exit_code: Option<i32>, stderr: &str) -> bool {
+    if exit_code != Some(1) {
+        return false;
+    }
+    let stderr = stderr.to_ascii_lowercase();
+    stderr.contains("no server running on")
+        || stderr.contains("no server running")
+        || stderr.contains("error connecting to") && stderr.contains("no such file or directory")
 }
 
 async fn scan_cmux_workspaces() -> Result<Vec<ExternalMultiplexerSession>> {
@@ -589,18 +599,47 @@ fn parse_tmux_sessions(output: &str, executable: PathBuf) -> Vec<ExternalMultipl
 async fn scan_herdr_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
     let herdr_root = paths::home_dir().join(".config").join("herdr");
     let mut server_names = Vec::new();
-    if herdr_root.join("herdr.sock").exists() {
-        server_names.push(None);
+    let default_socket = herdr_root.join("herdr.sock");
+    match fs::metadata(&default_socket) {
+        Ok(_) => server_names.push(None),
+        Err(error) if error.kind() == ErrorKind::NotFound => {}
+        Err(error) => {
+            return Err(error)
+                .with_context(|| format!("inspect Herdr socket {}", default_socket.display()));
+        }
     }
 
     let named_sessions_dir = herdr_root.join("sessions");
-    if let Ok(entries) = fs::read_dir(&named_sessions_dir) {
-        for entry in entries.flatten() {
-            if entry.path().join("herdr.sock").exists()
-                && let Some(name) = entry.file_name().to_str()
-            {
-                server_names.push(Some(name.to_owned()));
+    match fs::read_dir(&named_sessions_dir) {
+        Ok(entries) => {
+            for entry in entries {
+                let entry = entry.with_context(|| {
+                    format!(
+                        "read Herdr session entry in {}",
+                        named_sessions_dir.display()
+                    )
+                })?;
+                let socket_path = entry.path().join("herdr.sock");
+                match fs::metadata(&socket_path) {
+                    Ok(_) => {
+                        if let Some(name) = entry.file_name().to_str() {
+                            server_names.push(Some(name.to_owned()));
+                        }
+                    }
+                    Err(error) if error.kind() == ErrorKind::NotFound => {}
+                    Err(error) => {
+                        return Err(error).with_context(|| {
+                            format!("inspect Herdr socket {}", socket_path.display())
+                        });
+                    }
+                }
             }
+        }
+        Err(error) if error.kind() == ErrorKind::NotFound => {}
+        Err(error) => {
+            return Err(error).with_context(|| {
+                format!("read Herdr sessions in {}", named_sessions_dir.display())
+            });
         }
     }
 
@@ -630,13 +669,11 @@ async fn scan_herdr_sessions() -> Result<Vec<ExternalMultiplexerSession>> {
             .await
             .with_context(|| format!("failed to query {}", executable.display()))?;
         if !output.status.success() {
-            // A stale socket is equivalent to no running Herdr session.
-            log::debug!(
-                "Herdr session discovery skipped {}: {}",
+            anyhow::bail!(
+                "Herdr session discovery failed for {}: {}",
                 server_name.as_deref().unwrap_or("default"),
                 String::from_utf8_lossy(&output.stderr).trim()
             );
-            continue;
         }
 
         sessions.extend(parse_herdr_snapshot(
@@ -733,6 +770,7 @@ fn parse_herdr_snapshot(
                 .get("foreground_cwd")
                 .and_then(Value::as_str)
                 .or_else(|| pane.get("cwd").and_then(Value::as_str))
+                .filter(|path| !path.trim().is_empty())
                 .map(PathBuf::from);
             let state = match pane.get("agent_status").and_then(Value::as_str) {
                 Some("idle") => MultiplexerSessionState::Idle,
@@ -849,6 +887,26 @@ mod tests {
     }
 
     #[test]
+    fn tmux_only_treats_canonical_missing_server_failures_as_empty() {
+        assert!(tmux_failure_is_no_server(
+            Some(1),
+            "no server running on /private/tmp/tmux-501/default"
+        ));
+        assert!(tmux_failure_is_no_server(
+            Some(1),
+            "error connecting to /tmp/tmux/default (No such file or directory)"
+        ));
+        assert!(!tmux_failure_is_no_server(
+            Some(1),
+            "error connecting to /tmp/tmux/default (Permission denied)"
+        ));
+        assert!(!tmux_failure_is_no_server(
+            Some(2),
+            "no server running on /tmp/tmux/default"
+        ));
+    }
+
+    #[test]
     fn parses_tmux_sessions_by_stable_session_id_and_prefers_active_pane() {
         let separator = TMUX_FIELD_SEPARATOR;
         let output = format!(
@@ -956,6 +1014,30 @@ mod tests {
             ["terminal", "attach", "terminal-1"]
         );
         assert_eq!(sessions[0].state, MultiplexerSessionState::Available);
+        assert_eq!(sessions[0].working_directory, Some("/tmp/compiler".into()));
+    }
+
+    #[test]
+    fn ignores_empty_herdr_working_directories() {
+        let output = r#"{
+          "result": {
+            "snapshot": {
+              "workspaces": [{"workspace_id": "ws-1", "label": "compiler"}],
+              "tabs": [{"tab_id": "tab-1", "label": "shell"}],
+              "panes": [{
+                "pane_id": "pane-1",
+                "terminal_id": "terminal-1",
+                "workspace_id": "ws-1",
+                "tab_id": "tab-1",
+                "cwd": "   "
+              }]
+            }
+          }
+        }"#;
+
+        let sessions = parse_herdr_snapshot(output, PathBuf::from("herdr"), None)
+            .expect("snapshot should parse");
+        assert_eq!(sessions[0].working_directory, None);
     }
 
     #[test]

@@ -3416,6 +3416,12 @@ fn external_multiplexer_icon(session: &ExternalMultiplexerSession) -> IconName {
 }
 
 fn external_multiplexer_action_label(session: &ExternalMultiplexerSession) -> String {
+    if session.is_last_known() {
+        return format!(
+            "Refresh {} before opening this last-known session.",
+            session.kind.display_name()
+        );
+    }
     match session.kind {
         MultiplexerKind::Cmux => format!(
             "Open {} in cmux. cmux remains the Workspace owner.",
@@ -3429,14 +3435,41 @@ fn external_multiplexer_action_label(session: &ExternalMultiplexerSession) -> St
     }
 }
 
-pub fn open_workspace_path_in_cmux(path: &Path) -> Result<(), String> {
+const CMUX_HANDOFF_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
+
+async fn run_bounded_cmux_command(
+    command: &mut util::command::Command,
+    executor: &gpui::BackgroundExecutor,
+) -> std::io::Result<std::process::Output> {
+    command.kill_on_drop(true);
+    let output = command.output();
+    let timeout = executor.timer(CMUX_HANDOFF_TIMEOUT);
+    futures::pin_mut!(output, timeout);
+    match futures::future::select(output, timeout).await {
+        futures::future::Either::Left((result, _)) => result,
+        futures::future::Either::Right(_) => Err(std::io::Error::new(
+            std::io::ErrorKind::TimedOut,
+            format!(
+                "cmux did not respond within {} seconds",
+                CMUX_HANDOFF_TIMEOUT.as_secs()
+            ),
+        )),
+    }
+}
+
+pub async fn open_workspace_path_in_cmux(
+    path: &Path,
+    executor: &gpui::BackgroundExecutor,
+) -> Result<(), String> {
     for program in [
         "/Applications/cmux.app/Contents/Resources/bin/cmux",
         "/opt/homebrew/bin/cmux",
         "/usr/local/bin/cmux",
         "cmux",
     ] {
-        match std::process::Command::new(program).arg(path).output() {
+        let mut command = util::command::new_command(program);
+        command.arg(path);
+        match run_bounded_cmux_command(&mut command, executor).await {
             Ok(output) if output.status.success() => return Ok(()),
             Ok(output) => {
                 let detail = String::from_utf8_lossy(&output.stderr);
@@ -3448,6 +3481,9 @@ pub fn open_workspace_path_in_cmux(path: &Path) -> Result<(), String> {
                 });
             }
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) if error.kind() == std::io::ErrorKind::TimedOut => {
+                return Err(format!("{error}. Dez kept this Workspace open."));
+            }
             Err(error) => return Err(format!("Could not start cmux: {error}")),
         }
     }
@@ -14783,7 +14819,10 @@ impl Sidebar {
             .and_then(|name| name.to_str())
             .unwrap_or("Workspace")
             .to_owned();
-        let open_task = cx.background_spawn(async move { open_workspace_path_in_cmux(&path) });
+        let handoff_executor = cx.background_executor().clone();
+        let open_task = cx.background_spawn(async move {
+            open_workspace_path_in_cmux(&path, &handoff_executor).await
+        });
         let weak_workspace = target_workspace.downgrade();
         let multiplexer_store = MultiplexerSessionStore::try_global(cx);
         cx.spawn_in(window, async move |_this, cx| {
@@ -14853,6 +14892,30 @@ impl Sidebar {
             multi_workspace.activate(target_workspace.clone(), None, window, cx);
         });
 
+        if session.is_last_known() {
+            if let Some(store) = MultiplexerSessionStore::try_global(cx) {
+                store.update(cx, |store, cx| store.refresh(cx));
+            }
+            struct RefreshLastKnownExternalSession;
+            target_workspace.update(cx, |workspace, cx| {
+                workspace.show_toast(
+                    Toast::new(
+                        NotificationId::composite::<RefreshLastKnownExternalSession>(
+                            session.id.clone(),
+                        ),
+                        format!(
+                            "Refreshing {} before opening {}. Select it again when current.",
+                            session.kind.display_name(),
+                            session.title
+                        ),
+                    )
+                    .autohide(),
+                    cx,
+                );
+            });
+            return;
+        }
+
         let open = session.open_command();
         if open.mode == ExternalSessionOpenMode::RevealExternal {
             struct ExternalWorkspaceOpenToast;
@@ -14869,10 +14932,11 @@ impl Sidebar {
                 );
             });
 
+            let handoff_executor = cx.background_executor().clone();
             let open_task = cx.background_spawn(async move {
-                std::process::Command::new(&open.program)
-                    .args(&open.args)
-                    .output()
+                let mut command = util::command::new_command(&open.program);
+                command.args(&open.args);
+                run_bounded_cmux_command(&mut command, &handoff_executor).await
             });
             let weak_workspace = target_workspace.downgrade();
             let session_title = session.title;
@@ -14886,6 +14950,9 @@ impl Sidebar {
                         } else {
                             format!("cmux could not open the Workspace: {detail}")
                         })
+                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::TimedOut => {
+                        Err(format!("{error}"))
                     }
                     Err(error) => Err(format!("Could not run cmux: {error}")),
                     Ok(_) => Ok(format!("Opened {session_title} in cmux.")),
@@ -14943,7 +15010,7 @@ impl Sidebar {
 
         let weak_workspace = target_workspace.downgrade();
         let session_title = session.title.clone();
-        let retry_session = session;
+        let retry_session_id = session.id;
         let retry_sidebar = cx.weak_entity();
         let multiplexer_store = MultiplexerSessionStore::try_global(cx);
         let terminal_task = target_workspace.update(cx, |workspace, cx| {
@@ -14955,13 +15022,14 @@ impl Sidebar {
                     Some(format!("Attach exited with {status}"))
                 }
                 Some(Err(error)) => Some(format!("Could not attach: {error}")),
-                Some(Ok(_)) | None => None,
+                None => Some("No terminal provider was available for this Workspace".to_owned()),
+                Some(Ok(_)) => None,
             };
 
             if let Some(failure) = failure {
                 log::error!("external terminal session attach failed: {failure}");
                 let retry_sidebar = retry_sidebar.clone();
-                let retry_session = retry_session.clone();
+                let retry_session_id = retry_session_id.clone();
                 weak_workspace
                     .update(cx, |workspace, cx| {
                         struct ExternalSessionAttachErrorToast;
@@ -14977,8 +15045,8 @@ impl Sidebar {
                                 move |window, cx| {
                                     retry_sidebar
                                         .update(cx, |sidebar, cx| {
-                                            sidebar.open_external_multiplexer_session(
-                                                retry_session.clone(),
+                                            sidebar.retry_external_multiplexer_session(
+                                                &retry_session_id,
                                                 window,
                                                 cx,
                                             );
@@ -14996,6 +15064,45 @@ impl Sidebar {
             }
         })
         .detach();
+    }
+
+    fn retry_external_multiplexer_session(
+        &mut self,
+        session_id: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let current_session = MultiplexerSessionStore::try_global(cx).and_then(|store| {
+            store
+                .read(cx)
+                .sessions()
+                .iter()
+                .find(|session| session.id == session_id)
+                .cloned()
+        });
+        if let Some(session) = current_session {
+            self.open_external_multiplexer_session(session, window, cx);
+            return;
+        }
+
+        let Some(multi_workspace) = self.multi_workspace.upgrade() else {
+            return;
+        };
+        let workspace = multi_workspace.read(cx).workspace().clone();
+        struct ExternalSessionEnded;
+        workspace.update(cx, |workspace, cx| {
+            workspace.show_toast(
+                Toast::new(
+                    NotificationId::composite::<ExternalSessionEnded>(session_id.to_owned()),
+                    "That external session is no longer available. Refreshing Workspace activity.",
+                )
+                .autohide(),
+                cx,
+            );
+        });
+        if let Some(store) = MultiplexerSessionStore::try_global(cx) {
+            store.update(cx, |store, cx| store.refresh(cx));
+        }
     }
 
     fn selected_group_key(&self) -> Option<ProjectGroupKey> {
@@ -15741,6 +15848,11 @@ impl Sidebar {
                     .map(|path| path.to_string_lossy().into_owned())
                     .unwrap_or_else(|| "External session".to_owned());
                 let action_label = external_multiplexer_action_label(&session);
+                let action_icon = if session.is_last_known() {
+                    IconName::ArrowCircle
+                } else {
+                    IconName::ArrowUpRight
+                };
                 let status = external_multiplexer_status(session.state);
                 let icon = external_multiplexer_icon(&session);
                 let row_session = session.clone();
@@ -15769,7 +15881,7 @@ impl Sidebar {
                             ElementId::from("external-session-attach"),
                             session.id.clone(),
                         ),
-                        IconName::ArrowUpRight,
+                        action_icon,
                     )
                     .size(ButtonSize::Medium)
                     .icon_size(IconSize::Small)
