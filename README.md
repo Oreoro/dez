@@ -11,7 +11,7 @@ and agent ecosystem, then reorganizes them around a clearer product promise:
 > See what is running, what needs attention, what changed, and what is ready
 > for review without reconstructing terminal and editor state.
 
-This repository currently carries the **Dez v0.2.0 source candidate**. It is
+This repository currently carries the **Dez v0.2.1 source candidate**. It is
 not yet a signed or supported binary release; promotion depends on the exact
 remote artifact and evidence gates documented below.
 
@@ -23,9 +23,9 @@ Workspace instead of separate applications or hidden panel modes.
 - **Main Work Area** — files, terminals, search results, settings, diagnostics,
   previews, and reviews are ordinary movable and splittable Surfaces.
 - **Workspaces** — a stable, collapsible left navigator for codebases and their
-  open Surfaces and Agent Sessions. Its collapsible **Open Tabs**
-  section mirrors the native center-pane tabs, grouping them by pane only when
-  the Workspace is split. Selecting a row activates that exact native tab;
+  open Surfaces and Agent Sessions. Its collapsible **Workspace Tabs** section
+  appears when at least two native center-pane tabs are open, grouping them by
+  pane only when the Workspace is split. Selecting a row activates that exact native tab;
   tab ownership, dirty state, close behavior, dragging, and ordering remain in
   Zed's pane model rather than being copied into the navigator. Agent Session
   rows show provider identity and Running, Needs Input, Waiting for Permission,
@@ -44,8 +44,9 @@ Workspace instead of separate applications or hidden panel modes.
   provider-backed Built-in Agent are ordinary draggable and closeable native
   tabs. They are not nested panels or a mandatory second sidebar.
 - **Built-in Agent** — is distinct from terminal agents such as Codex, Claude
-  Code, OpenCode, and Herdr, which start through **Open Agent Terminal**. All
-  edits still land in ordinary buffers and Git changes, so the same
+  Code, OpenCode, and Herdr. **Open Terminal** launches the configured default,
+  while the Add menu keeps explicit provider and native-shell choices nearby.
+  All edits still land in ordinary buffers and Git changes, so the same
   diagnostics, diff, and review tools apply.
 - **Terminal Sessions** — terminals open in the Main Work Area. Session
   identity, deliberate close/end behavior, and honest unavailable-session
@@ -73,30 +74,30 @@ open a Workspace
 ```
 
 The primary user story is deliberately short. **Home** starts or resumes a
-Workspace. **Open Agent Terminal** launches the configured terminal workflow.
-**Workspace Navigator** switches codebases, returns to open tabs, and surfaces
-attention. **Browse Files** and **Review Changes** bring the result back into
-the same Main Work Area. The native tab-strip `+` is the shared Add menu for
-every step; no separate dashboard or onboarding mode is required.
+Workspace. **Open Terminal** launches the configured terminal workflow.
+**Workspaces** switches codebases, returns to current Workspace tabs, and
+surfaces attention. **Browse Files** and **Review Changes** bring the result
+back into the same Main Work Area. The native tab-strip `+` is the shared Add
+menu for every step; no separate dashboard or onboarding mode is required.
 
 The window is deliberately not a dashboard of equal columns. Each Workspace
-owns one Project, one Main Work Area, its terminals, and its Git state.
+owns one codebase context, one Main Work Area, its terminals, and its Git state.
 Workspaces stays global on the left. Files, Git, Outline, Debug, Built-in Agent,
 commits, diffs, reviews, agent terminals, and ordinary terminals use the
 native workspace tab and pane model instead of another navigation system.
-When Workspaces is visible, **Open Tabs** provides a compact vertical
-route to those same open tabs. It stays flat for a single pane and introduces
-small **Pane 1**, **Pane 2**, and later group labels only when a real split
-exists. The section is collapsible, remembers its disclosure state, and
-disappears while Workspace search is active so search results keep the full
-navigator.
+When Workspaces is visible, **Workspace Tabs** provides a compact vertical route
+to those same open tabs once there is something useful to switch between. It
+stays flat for a single pane and introduces small **Pane 1**, **Pane 2**, and
+later group labels only when a real split exists. The section is collapsible,
+remembers its disclosure state, and disappears while Workspace search is active
+so search results keep the full navigator.
 Those tabs support reorder, cross-pane drag, preview replacement, pinning,
 closing, and horizontal or vertical splits. A terminal can therefore sit
 below code without Dez manufacturing a separate multiplexer UI.
 The adjacent native `+` reopens Home, opens Recent Workspaces, or routes to a
 terminal, file, search, Files, Changes, Debug, or Built-in Agent surface
-through the existing Zed actions. Its terminal submenu names the default Agent
-Terminal first, followed by Shell, tmux Workspace, and explicit provider
+through the existing Zed actions. Its terminal submenu names the configured
+Default Terminal first, followed by Native Shell, tmux Session, and explicit provider
 launchers.
 
 Six optional layout commands remain available through **View** and Command
@@ -107,11 +108,11 @@ from the default titlebar so the primary navigation remains obvious.
 Keyboard navigation remains first-class: macOS `⌘1`–`⌘8` selects native tabs
 and `⌘9` selects the last tab; Linux and Windows use `Alt+1`–`Alt+9`.
 `Ctrl+Tab` opens the recent-tab switcher, split-pane focus keeps the native
-Zed chords, `Ctrl+\`` opens the configured agent terminal, and
-`Ctrl+Shift+\`` always opens a shell. Command Search can launch Codex, Claude
-Code, OpenCode, a shell, a Workspace-named tmux session, or cmux directly.
-The native tab-strip `+` exposes the same terminal choices, **Browse tmux,
-Herdr & cmux…**, and **Open Workspace in cmux** without creating a second
+Zed chords, `Ctrl+Backtick` opens the configured terminal, and
+`Ctrl+Shift+Backtick` always opens the native shell. Command Palette can launch
+Codex, Claude Code, OpenCode, a shell, a Workspace-named tmux session, or cmux
+directly. The native tab-strip `+` exposes the same terminal choices, **Browse
+External Sessions…**, and **Open Workspace in cmux** without creating a second
 navigation system. **Settings → Keyboard & Vim**
 exposes shortcut search, conflict inspection, base keymaps, and optional full
 Vim or Helix editing. Vim and Helix share native leader destinations for
@@ -156,7 +157,7 @@ cancelled before the next refresh cycle, so an unresponsive external tool
 cannot freeze Workspace activity. Only tmux's canonical missing-server response
 counts as an empty result; permission, protocol, Herdr socket, and query errors
 preserve last-known rows. Process and layout ownership always stays with the
-external application. **Terminal: Open tmux Workspace** attaches or
+external application. **Terminal: Open tmux Session** attaches or
 creates a stable session named from the active Workspace with
 `tmux new-session -A`; discovered sessions remain available individually in
 Workspaces. Arbitrary PTYs remain read-only.
@@ -241,17 +242,17 @@ stapled-ticket validation.
 
 ## Current status
 
-The v0.2.0 source candidate contains the opinionated Dez shell,
+The v0.2.1 source candidate contains the opinionated Dez shell,
 identity isolation, Workspace composition, persistent Workspaces navigation,
 ordinary closeable workspace-tool tabs, explicit Agent Session state,
 host-owned local terminal lifecycle, setting-controlled Back/Forward history,
 native draggable tab navigation, first-run experience, Lumin/Plex/Lilex visual
-defaults, project-scoped tmux and Herdr attachment, project-scoped cmux
+defaults, Workspace-scoped tmux and Herdr attachment, Workspace-scoped cmux
 Workspace opening, and a large set of static product-contract checks.
 Arbitrary machine terminals are deliberately absent because Dez cannot safely
 control or attribute them.
 
-**Live Preview is not implemented in the current candidate.** URL actions
+**Live Preview is not implemented in the v0.2.1 source candidate.** URL actions
 still open the system browser, while Markdown, SVG, and CSV use native file
 previews. The next browser slice requires a real pane-scoped native surface and
 Workspace item; Dez deliberately does not expose the inherited

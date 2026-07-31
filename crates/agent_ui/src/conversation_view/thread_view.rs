@@ -77,12 +77,12 @@ fn unset_model_recovery_copy(
     } else if has_authenticated_provider {
         (
             "Built-in Agent needs a model",
-            "Select a model for the built-in Agent. Terminal agents such as Codex or Claude Code run from Open Agent Terminal and do not use this picker.",
+            "Select a model for the built-in Agent. Terminal agents such as Codex or Claude Code run from Open Terminal and do not use this picker.",
         )
     } else {
         (
             "Built-in Agent needs a provider",
-            "Configure a provider for the built-in Agent. To run Codex, Claude Code, or another terminal agent, use Open Agent Terminal instead.",
+            "Configure a provider for the built-in Agent. To run Codex, Claude Code, or another terminal agent, use Open Terminal instead.",
         )
     }
 }
@@ -13363,14 +13363,14 @@ mod tests {
             unset_model_recovery_copy("Dez", true),
             (
                 "Built-in Agent needs a model",
-                "Select a model for the built-in Agent. Terminal agents such as Codex or Claude Code run from Open Agent Terminal and do not use this picker.",
+                "Select a model for the built-in Agent. Terminal agents such as Codex or Claude Code run from Open Terminal and do not use this picker.",
             )
         );
         assert_eq!(
             unset_model_recovery_copy("Dez", false),
             (
                 "Built-in Agent needs a provider",
-                "Configure a provider for the built-in Agent. To run Codex, Claude Code, or another terminal agent, use Open Agent Terminal instead.",
+                "Configure a provider for the built-in Agent. To run Codex, Claude Code, or another terminal agent, use Open Terminal instead.",
             )
         );
         assert_eq!(

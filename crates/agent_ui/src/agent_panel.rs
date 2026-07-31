@@ -4116,7 +4116,7 @@ impl AgentPanel {
     pub(crate) fn open_configuration(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         window.dispatch_action(
             Box::new(zed_actions::OpenSettingsPage {
-                page: "AI".to_string(),
+                page: "Agents".to_string(),
                 target: None,
             }),
             cx,

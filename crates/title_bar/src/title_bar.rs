@@ -944,6 +944,41 @@ impl Render for SidebarChrome {
 }
 
 impl SidebarChrome {
+    pub fn render_native_sidebar_header_utilities(
+        &self,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        let application_menu = cfg!(not(target_os = "macos"))
+            .then(|| self.application_menu.clone())
+            .flatten();
+        let restricted_mode = self.render_restricted_mode(cx);
+        let canvas_prefix_indicator = self.render_canvas_prefix_indicator(window, cx);
+
+        if application_menu.is_none()
+            && restricted_mode.is_none()
+            && canvas_prefix_indicator.is_none()
+        {
+            return None;
+        }
+
+        Some(
+            h_flex()
+                .id("native-sidebar-header-utilities")
+                .min_w_0()
+                .gap_1()
+                .overflow_x_hidden()
+                .when_some(application_menu, |this, menu| {
+                    this.child(div().min_w_0().overflow_x_hidden().child(menu))
+                })
+                .children(restricted_mode)
+                .when_some(canvas_prefix_indicator, |this, indicator| {
+                    this.child(indicator)
+                })
+                .into_any_element(),
+        )
+    }
+
     pub fn new(
         id: impl Into<ElementId>,
         workspace: Entity<Workspace>,

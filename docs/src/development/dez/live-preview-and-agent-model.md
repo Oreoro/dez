@@ -3,50 +3,50 @@
 This document defines the first browser-preview vertical slice and the product
 boundary between terminal-native agents and the optional Built-in Agent.
 [Fork Notes](./fork-notes.md) remain the permanent source of truth. The
-[v0.0.3 Production Readiness Plan](./v0.0.3-production-readiness.md) is the
-current release train. Live Preview remains out of scope until that hardening
-candidate passes its exact-package runtime gate and a later release makes an
-explicit expansion decision.
+[v0.2 Workspace Polish](./v0.2-workspace-polish.md) contract is the active
+source lane. Live Preview remains out of scope until the current Workspace and
+terminal candidate passes its exact-package runtime gate and a later release
+makes an explicit expansion decision.
 
 ## Product decision {#product-decision}
 
 Dez is terminal-first and agent-capable, not chat-first.
 
-- **Agent Terminal is the default execution surface.** It runs Codex, Claude
+- **Terminal is the default execution surface.** It runs Codex, Claude
   Code, OpenCode, and other terminal-native tools in a real PTY, with their
   normal subscriptions, authentication, TUI, commands, and plugins. The
   terminal remains the interactive source of truth and the packaged terminal
   host owns its durable local process.
 - **Built-in Agent is the optional structured surface.** Use it for planning,
-  questions grounded in the active Project, provider-backed edits, and
+  questions grounded in the active Workspace, provider-backed edits, and
   structured tool calls when a usable provider and model are configured. It
   does not replace or wrap terminal agents.
 - **Live Preview is a normal Main Work Area Surface.** It renders the
   application being developed beside files, a terminal, or a diff. It is not a
   permanent sidebar, floating overlay, dashboard card, or hidden panel mode.
 
-All three paths use the same Project, files, Git state, diagnostics, and review
-tools. Projects observes meaningful Agent Sessions and returns to their
+All three paths use the same Workspace, files, Git state, diagnostics, and review
+tools. Workspaces observes meaningful Agent Sessions and returns to their
 existing Surface; it never copies a terminal transcript or browser session.
 
 ## Recommended everyday workflow {#recommended-workflow}
 
 ```mermaid
 flowchart LR
-    OPEN["Open Project"] --> RUN["Open Agent Terminal"]
+    OPEN["Open Workspace"] --> RUN["Open Terminal"]
     RUN --> CLI["Run Codex, Claude Code, or OpenCode"]
-    CLI --> SERVER["Start or reuse the Project dev server"]
+    CLI --> SERVER["Start or reuse the Workspace dev server"]
     SERVER --> PREVIEW["Open Live Preview in Main Work Area"]
     PREVIEW --> INSPECT["Inspect UI and reload visibly"]
     CLI --> CHANGES["Files, diagnostics, and Git changes"]
     INSPECT --> REVIEW["Review changes"]
     CHANGES --> REVIEW
     REVIEW --> CLI
-    PLAN["Optional Built-in Agent<br/>planning and Project questions"] --> CLI
+    PLAN["Optional Built-in Agent<br/>planning and Workspace questions"] --> CLI
 ```
 
 Use the Built-in Agent when its structured conversation is genuinely useful.
-Use an Agent Terminal for long-running autonomous work, CLI-specific
+Use a Terminal for long-running autonomous work, CLI-specific
 capabilities, subscription-backed tools, and any workflow whose terminal state
 must survive the GUI. This keeps the default understandable while preserving
 both models.
@@ -55,13 +55,13 @@ both models.
 
 Live Preview has one owner and one placement:
 
-| Concern | Owner |
-| --- | --- |
-| Dev-server process, command, logs, and exit state | Terminal or task Surface |
-| Preview URL, history, reload state, viewport, and page title | Live Preview Surface |
-| Files, buffers, diagnostics, Git, and diffs | Active Project |
-| Agent lifecycle and attention projection | Projects |
-| Layout, tab history, split, zoom, and restoration | Main Work Area |
+| Concern                                                      | Owner                    |
+| ------------------------------------------------------------ | ------------------------ |
+| Dev-server process, command, logs, and exit state            | Terminal or task Surface |
+| Preview URL, history, reload state, viewport, and page title | Live Preview Surface     |
+| Files, buffers, diagnostics, Git, and diffs                  | Active Workspace         |
+| Agent lifecycle and attention projection                     | Workspaces               |
+| Layout, tab history, split, zoom, and restoration            | Main Work Area           |
 
 The minimum visible chrome is one compact native subtoolbar:
 
@@ -70,7 +70,7 @@ The minimum visible chrome is one compact native subtoolbar:
 │                                                                              │
 │                         rendered application                                 │
 │                                                                              │
-└ status: connected · Project dev server · agent control off ──────────────────┘
+└ status: connected · Workspace dev server · agent control off ────────────────┘
 ```
 
 The pane tab bar remains the only tab owner. Live Preview must not add a second
@@ -146,15 +146,15 @@ substitute.
 - Add **Work Area + Live Preview** only after the item can populate the named
   surface. The public layout cycle must never create an empty preview pane.
 
-### Slice 3: Project dev-server pairing
+### Slice 3: Workspace dev-server pairing
 
-- Let a terminal or task explicitly publish a localhost URL as Project
+- Let a terminal or task explicitly publish a localhost URL as Workspace
   evidence.
 - Offer **Open Live Preview** on that evidence without taking ownership of the
   server process.
 - Prefer localhost and loopback targets; require deliberate confirmation for
   remote or public origins.
-- Keep multiple server URLs named and scoped to their Project and Host.
+- Keep multiple server URLs named and scoped to their Workspace and Host.
 - When the server ends, retain the preview with a reconnect/restart explanation
   rather than silently launching a replacement command.
 
@@ -162,7 +162,7 @@ substitute.
 
 Expose only scoped, visible tools:
 
-- list Project previews;
+- list Workspace previews;
 - open or navigate an approved preview;
 - reload;
 - capture the visible viewport;
@@ -170,7 +170,7 @@ Expose only scoped, visible tools:
 - inspect bounded console and network errors; and
 - highlight a target for user confirmation.
 
-Agent activity must show the controlling Actor, target Project and origin,
+Agent activity must show the controlling Actor, target Workspace and origin,
 current action, Stop control, and permission state. Navigation, page input,
 downloads, clipboard access, credentials, camera, microphone, geolocation, and
 cross-origin requests remain separately permissioned. Background control may
@@ -198,4 +198,4 @@ Live Preview is ready only when one exact candidate proves:
   audited.
 
 Until this gate passes, the honest workflow is to run the dev server in an
-Agent Terminal and open its URL in the system browser.
+Terminal and open its URL in the system browser.

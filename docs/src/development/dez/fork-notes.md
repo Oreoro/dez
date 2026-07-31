@@ -103,7 +103,7 @@ agent dashboard:
 
 ```mermaid
 flowchart LR
-    START["Open Agent Terminal<br/>in Main Work Area"] --> RUN["Run Codex, Claude Code,<br/>OpenCode, or another supported CLI"]
+    START["Open Terminal<br/>in Main Work Area"] --> RUN["Run Codex, Claude Code,<br/>OpenCode, or another supported CLI"]
     RUN --> OBSERVE["Terminal and adapter report<br/>agent lifecycle and attention"]
     OBSERVE --> SESSIONS["Workspaces shows agent Sessions<br/>without owning the process"]
     SESSIONS -->|Select row| RETURN["Focus or reattach the existing<br/>Main Work Area Surface"]
@@ -123,10 +123,10 @@ rather than opening a duplicate.
 The visible title is **Workspaces**, because the stable thing a developer
 navigates is a codebase. Agent Sessions appear beneath their owning Workspace;
 ordinary integrated shells stay in the Main Work Area. Path-matched tmux and
-Herdr work and cmux Workspaces are available through that Workspace's **Open
-Running Workspace or Session…** action while leaving the external application
-authoritative. Unrelated terminal applications do not appear in Workspaces and
-Dez never implies that it owns their PTYs.
+Herdr work and cmux Workspaces are available through **Browse External
+Sessions…**. The external application remains authoritative. Unrelated terminal
+applications do not appear in Workspaces, and Dez never implies that it owns
+their PTYs.
 
 Workspaces restoration follows this lifecycle:
 
@@ -170,11 +170,11 @@ failed Workspace recovery, or failed/reconnecting Terminal Host keeps it open.
 Any explicit Workspaces command or focus cancels the pending automatic close.
 
 Dez renders no persistent Workspaces footer. Secondary destinations live behind
-one named **Workspaces Menu** in the overview: **Agent History**, **Open Recent
-Workspaces…**, and Agent tooling/settings. **Hide Workspaces** remains the one
-direct adjacent action because it changes the current layout. Recovery notices
-open the global Recent Workspaces surface rather than relying on a hidden
-popover anchor. Official Zed retains its inherited footer.
+one named **Workspaces Menu** in the overview: **Command Palette…**, **Open
+Recent Workspaces…**, Workspace activity and attention filters, **Workspaces
+Settings…**, and **Hide Workspaces**. Recovery notices open the global Recent
+Workspaces surface rather than relying on a hidden popover anchor. Official Zed
+retains its inherited footer.
 
 Workspaces and the Main Work Area form one continuous window shell. Dez does not
 put a desktop-colored gutter or four-sided floating-card frame between them.
@@ -183,7 +183,7 @@ window-facing outer corners inherit the native window radius. Lumin
 translucency therefore reads as one bounded application surface rather than
 separate glass cards floating over the desktop.
 
-Every visible **Open Agent Terminal** action creates a normal main-area terminal
+Every visible **Open Terminal** action creates a normal main-area terminal
 Surface. It can be tabbed, split, moved, detached from a durable Host Session,
 or reattached without introducing a separate Terminal Panel model. Opening the
 terminal alone does not create a Sessions row; the user still starts a
@@ -234,7 +234,7 @@ status. With no Workspace open, the compact state says **No Workspace open**,
 explains that project context comes first, and offers one filled **Open
 Workspace…** action. It does not create a pathless terminal branch or repeat
 the launch/supervise/review route owned by Welcome. With an active Workspace
-but no Session, that Workspace group owns the primary **Open Agent Terminal**
+but no Session, that Workspace group owns the primary **Open Terminal**
 action.
 Start, search recovery, attention scope, and Session scope actions are keyboard
 tab stops and name their destination in accessibility output.
@@ -256,14 +256,14 @@ terminology:
 
 | Intent                                        | Result                                                                 |
 | --------------------------------------------- | ---------------------------------------------------------------------- |
-| **Open Agent Terminal**                       | Opens a terminal tab in the active Workspace's main work area          |
+| **Open Terminal**                             | Opens a terminal tab in the active Workspace's main work area          |
 | **New Built-in Agent Session…**               | Opens or focuses a provider-backed conversation in Built-in Agent      |
 | **Files**, **Outline**, **Git**, or **Debug** | Opens the named tab in the active Main Work Area                       |
 | Select a Sessions row                         | Activates its Workspace and focuses or reattaches the existing Surface |
 | Close a Workspace Tool or Built-in Agent tab  | Closes only that tab and keeps the Main Work Area visible              |
 | Split or move a Surface                       | Rearranges the same Workspace; it does not create a second project     |
 
-The active or keyboard-focused Workspace keeps **Open Agent Terminal** and
+The active or keyboard-focused Workspace keeps **Open Terminal** and
 **Workspace Options** visible. Other inactive Workspace actions may reveal on
 hover because selecting or focusing the Workspace first makes the same controls
 persistent. Every icon-only control must retain an accessible name, tooltip,
@@ -277,7 +277,7 @@ main-area overflow control is **Switch Surface**, not Open Tab.
 
 Action hierarchy follows the next useful transition. Dez Welcome emphasizes
 exactly one recommended first action: **Open Workspace** without a codebase, or
-**Open Agent Terminal** in an active Workspace. Secondary creation and
+**Open Terminal** in an active Workspace. Secondary creation and
 navigation actions remain available without competing for the same visual
 weight. Critical controls must not depend on pointer hover in Dez. Icon-only
 toolbar controls must be keyboard-focusable, expose a specific accessible
@@ -286,7 +286,7 @@ branches may retain upstream hover and icon behavior.
 
 Welcome follows progressive disclosure. With no Workspace it offers only
 **Open Workspace** and **Clone Repository**. A terminal is not offered until a
-codebase can supply review context. With a Workspace it offers **Open Agent
+codebase can supply review context. With a Workspace it offers **Open
 Terminal**, **Open Files**, and **New File**. Generic utilities such as the
 command palette and replacing the active Workspace remain available through
 normal chrome, but do not compete with the release-defining start loop. Its
@@ -297,7 +297,7 @@ says that work stays connected and reviewable in the IDE. One sentence names
 the terminal → Workspaces → review loop; Home does not persist a step diagram,
 provider promotion, enclosing card, or control-like walkthrough.
 
-The active empty Main Work Area uses the same **Open Agent Terminal**
+The active empty Main Work Area uses the same **Open Terminal**
 vocabulary. Its orientation is part of the native work surface, not a bordered
 card floating over it. The focused empty work area is headed **Main Work
 Area**, names what can open there in one sentence, and presents only the three
@@ -426,11 +426,11 @@ default titlebar. Saved-layout detail belongs in **Manage Saved Layouts…**.
 The active Workspace exposes this submenu through its persistent **Workspace
 Options** control in Workspaces. That menu also provides direct
 **Open Files** and **Review Git Changes** routes for the active Workspace;
-launch, review, and layout actions therefore share one project-scoped owner.
+launch, review, and layout actions therefore share one Workspace-scoped owner.
 The destination layouts select their named native Main Work Area tab. Split
 Work Area is the explicit command for arranging at most two populated work
 areas instead of preallocating a blank column. It never starts a terminal
-process; **Open Agent Terminal** remains the explicit process-creation action.
+process; **Open Terminal** remains the explicit process-creation action.
 These layouts remain available when provider-backed AI is disabled because
 Files, terminal, Git, Debug, and pane geometry are IDE capabilities.
 Official Zed's account and organization chrome remains unchanged compatibility
@@ -1844,12 +1844,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   command creates another work area. This decision supersedes the earlier
   drawer geometry while preserving Workspaces as optional global navigation.
 - **2026-07-30: v0.2 makes one work area the destination invariant.** Work Area
-  + Files, Work Area + Built-in Agent, Focus Work Area, Work Area + Git, and
-  Work Area + Debug consolidate every populated center pane into the native
-  Main Work Area tab strip. The operation preserves each open surface as a tab
-  instead of hiding it. Restoring one of those named states applies the same
-  repair. Split Work Area remains the only public state that may retain
-  multiple populated work areas.
+  - Files, Work Area + Built-in Agent, Focus Work Area, Work Area + Git, and
+    Work Area + Debug consolidate every populated center pane into the native
+    Main Work Area tab strip. The operation preserves each open surface as a tab
+    instead of hiding it. Restoring one of those named states applies the same
+    repair. Split Work Area remains the only public state that may retain
+    multiple populated work areas.
 - **2026-07-30: Terminal context chrome is evidence-driven.** A clean active
   terminal in a connected Workspace relies on the native tab strip and status
   bar, so Dez does not repeat Workspace and repository metadata above it. The
@@ -1906,3 +1906,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   list before incremental events resume. **End Terminal** does not convert a
   hosted item into a closed display until the Host returns an exited snapshot;
   an error keeps the terminal visible with retry guidance.
+- **2026-08-01: Open Terminal is the truthful creation label.** This supersedes
+  the earlier visible **Open Agent Terminal** wording because the configured
+  default may intentionally be blank and open the native shell. **Open
+  Terminal** creates the configured default; the adjacent Add menu names
+  **Default Terminal**, **Native Shell**, **tmux Session**, and explicit agent
+  providers separately. Internal compatibility action identifiers may retain
+  their existing names. Workspaces remains the stable navigation noun, and its
+  collapsible native-tab projection is labeled **Workspace Tabs** and stays
+  hidden until there are at least two native tabs to navigate.

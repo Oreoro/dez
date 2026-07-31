@@ -80,12 +80,18 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
     if dez_settings_page_visible(paths::APP_NAME, "Collaboration") {
         pages.push(collaboration_page());
     }
-    pages.extend([
-        ai_page(cx),
-        attention_page(),
-        evidence_page(),
-        network_page(),
-    ]);
+    let mut agents_page = ai_page(cx);
+    if paths::APP_NAME != "Zed" {
+        let mut agent_items = agents_page.items.into_vec();
+        agent_items.extend(attention_page().items);
+        agent_items.extend(evidence_page().items);
+        agents_page.items = agent_items.into_boxed_slice();
+    }
+    pages.push(agents_page);
+    if paths::APP_NAME == "Zed" {
+        pages.extend([attention_page(), evidence_page()]);
+    }
+    pages.push(network_page());
     if developer_settings_page_visible(paths::APP_NAME, cx.feature_flag_overrides_enabled()) {
         pages.push(developer_page(cx));
     }
@@ -100,20 +106,18 @@ fn dez_settings_page_priority(title: &str) -> usize {
         "Workspace & Privacy" => 0,
         "Workspaces & Terminals" => 1,
         "Agents" => 2,
-        "Attention" => 3,
-        "Evidence" => 4,
-        "Appearance" => 5,
-        "Keyboard & Vim" => 6,
-        "Editor" => 7,
-        "Languages & Tools" => 8,
-        "Search & Files" => 9,
-        "Navigation & Layout" => 10,
-        "Workspace Tools" => 11,
-        "Debugger" => 12,
-        "Version Control" => 13,
-        "Network" => 14,
-        "Advanced" => 15,
-        _ => 16,
+        "Appearance" => 3,
+        "Keyboard & Vim" => 4,
+        "Editor" => 5,
+        "Languages & Tools" => 6,
+        "Search & Files" => 7,
+        "Navigation & Layout" => 8,
+        "Workspace Tools" => 9,
+        "Debugger" => 10,
+        "Version Control" => 11,
+        "Network" => 12,
+        "Advanced" => 13,
+        _ => 14,
     }
 }
 
@@ -153,8 +157,8 @@ fn terminal_session_init_setting_copy(app_name: &str) -> (&'static str, &'static
         )
     } else {
         (
-            "Default Agent Terminal Command",
-            "Command opened by Open Agent Terminal and Ctrl+`. Leave blank to use the configured shell. Start Shell, tmux, Codex, Claude Code, or OpenCode from the Main Work Area + menu or Command Search.",
+            "Default Terminal Command",
+            "Command opened by Open Terminal and Ctrl+`. Leave blank to use the native shell. Start Native Shell, tmux, Codex, Claude Code, or OpenCode from the Main Work Area + menu or Command Palette.",
         )
     }
 }
@@ -255,7 +259,7 @@ fn projects_startup_setting() -> SettingsPageItem {
 fn sessions_side_setting() -> SettingsPageItem {
     if paths::APP_NAME != "Zed" {
         return SettingsPageItem::SettingItem(SettingItem {
-            title: "Workspaces Side",
+            title: "Workspaces Position",
             description: "Choose which side of the window shows Workspaces.",
             field: Box::new(SettingField {
                 organization_override: None,
@@ -9265,7 +9269,7 @@ fn attention_page() -> SettingsPage {
     let attention_status_description = if paths::APP_NAME == "Zed" {
         "Show the action-needed summary in the workspace bar and Session Rail."
     } else {
-        "Show the action-needed summary in Workspaces and native Workspace chrome."
+        "Show the action-needed summary in Workspaces."
     };
     let items = vec![
         SettingsPageItem::SectionHeader("Attention"),
@@ -9367,7 +9371,11 @@ fn attention_page() -> SettingsPage {
 
 fn evidence_page() -> SettingsPage {
     let items = vec![
-        SettingsPageItem::SectionHeader("Evidence & Trust"),
+        SettingsPageItem::SectionHeader(if paths::APP_NAME == "Zed" {
+            "Evidence & Trust"
+        } else {
+            "Terminal Activity & Privacy"
+        }),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Show Detection Confidence",
             description: "Label process-name detection as lower-confidence until structured adapter evidence is available.",
@@ -9413,7 +9421,7 @@ fn evidence_page() -> SettingsPage {
             files: USER,
         }),
         SettingsPageItem::SettingItem(SettingItem {
-            title: "Show Terminal Activity",
+            title: "Observe Terminal Activity",
             description: "Use local lifecycle signals and authenticated adapter events to show agent state, commands, and file targets in Workspaces. Transcripts are not retained, and Dez never changes provider configuration.",
             field: Box::new(SettingField {
                 organization_override: None,
@@ -11625,25 +11633,19 @@ mod tests {
 
     #[test]
     fn dez_settings_put_the_product_workflow_before_ide_customization() {
-        let product_pages = [
-            "Workspace & Privacy",
-            "Workspaces & Terminals",
-            "Agents",
-            "Attention",
-            "Evidence",
-        ];
+        let product_pages = ["Workspace & Privacy", "Workspaces & Terminals", "Agents"];
         for pair in product_pages.windows(2) {
             assert!(dez_settings_page_priority(pair[0]) < dez_settings_page_priority(pair[1]));
         }
 
-        assert!(dez_settings_page_priority("Evidence") < dez_settings_page_priority("Appearance"));
+        assert!(dez_settings_page_priority("Agents") < dez_settings_page_priority("Appearance"));
         assert!(
             dez_settings_page_priority("Keyboard & Vim") < dez_settings_page_priority("Editor")
         );
         assert!(
             dez_settings_page_priority("Workspace Tools") < dez_settings_page_priority("Advanced")
         );
-        assert_eq!(dez_settings_page_priority("Unknown Compatibility Page"), 16);
+        assert_eq!(dez_settings_page_priority("Unknown Compatibility Page"), 14);
     }
 
     #[test]
@@ -11683,8 +11685,8 @@ mod tests {
         assert_eq!(
             terminal_session_init_setting_copy("Dez"),
             (
-                "Default Agent Terminal Command",
-                "Command opened by Open Agent Terminal and Ctrl+`. Leave blank to use the configured shell. Start Shell, tmux, Codex, Claude Code, or OpenCode from the Main Work Area + menu or Command Search.",
+                "Default Terminal Command",
+                "Command opened by Open Terminal and Ctrl+`. Leave blank to use the native shell. Start Native Shell, tmux, Codex, Claude Code, or OpenCode from the Main Work Area + menu or Command Palette.",
             )
         );
         assert_eq!(

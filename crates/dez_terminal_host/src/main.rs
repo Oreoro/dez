@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, HashSet, VecDeque},
+    future::Future,
     io::{self, Read as _},
     path::PathBuf,
     sync::{Arc, Mutex, MutexGuard},
@@ -28,6 +29,8 @@ const DEFAULT_REPLAY_LIMIT_BYTES: usize = 128 * 1024;
 const MAX_HOST_EVENTS: usize = 512;
 const MAX_EVENTS_PER_RESPONSE: usize = 8;
 const TERMINAL_PTY_TERMINATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+const TERMINAL_HOST_EVENT_HEARTBEAT_INTERVAL: std::time::Duration =
+    std::time::Duration::from_secs(10);
 
 #[derive(Clone, Default)]
 struct TerminalHostEventNotifier {
@@ -114,6 +117,24 @@ fn run_server(arguments: ServeArguments) -> Result<()> {
 const MAX_AGENT_HOOK_BYTES: u64 = 256 * 1024;
 const MAX_AGENT_FIELD_BYTES: usize = 4096;
 const MAX_AGENT_FILE_TARGETS: usize = 64;
+const AGENT_HOOK_TRANSPORT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(3);
+
+async fn run_bounded_agent_hook_operation<F, T>(
+    future: F,
+    operation: &'static str,
+) -> Result<T, TerminalHostTransportError>
+where
+    F: Future<Output = Result<T, TerminalHostTransportError>>,
+{
+    smol::future::race(future, async move {
+        smol::Timer::after(AGENT_HOOK_TRANSPORT_TIMEOUT).await;
+        Err(TerminalHostTransportError::TimedOut {
+            operation,
+            timeout: AGENT_HOOK_TRANSPORT_TIMEOUT,
+        })
+    })
+    .await
+}
 
 #[derive(Debug, serde::Deserialize)]
 struct CodexHookEvent {
@@ -154,14 +175,19 @@ fn report_agent_event() -> Result<()> {
     let auth_token = read_auth_token(&token_file)?;
 
     smol::block_on(async move {
-        let mut client = TerminalHostTransportClient::connect(&socket, host_id, auth_token)
-            .await
-            .context("connect structured terminal-agent hook to Dez host")?;
-        match client
-            .command(TerminalSessionCommand::UpdateAgent { session_id, update })
-            .await
-            .context("send structured terminal-agent update")?
-        {
+        let response = run_bounded_agent_hook_operation(
+            async move {
+                let mut client =
+                    TerminalHostTransportClient::connect(&socket, host_id, auth_token).await?;
+                client
+                    .command(TerminalSessionCommand::UpdateAgent { session_id, update })
+                    .await
+            },
+            "agent hook transaction",
+        )
+        .await
+        .context("report structured terminal-agent update to Dez host")?;
+        match response {
             TerminalHostResponse::Snapshot { .. } => Ok(()),
             TerminalHostResponse::Error { message }
             | TerminalHostResponse::Unsupported { message } => {
@@ -688,10 +714,23 @@ async fn serve_event_stream(
         if has_events {
             continue;
         }
-        notifications
-            .recv()
-            .await
-            .context("terminal host event notifier closed")?;
+        let event_was_notified = smol::future::race(
+            async {
+                notifications
+                    .recv()
+                    .await
+                    .context("terminal host event notifier closed")?;
+                Ok::<_, anyhow::Error>(true)
+            },
+            async {
+                smol::Timer::after(TERMINAL_HOST_EVENT_HEARTBEAT_INTERVAL).await;
+                Ok(false)
+            },
+        )
+        .await?;
+        if !event_was_notified {
+            send_initial_position = true;
+        }
     }
 }
 

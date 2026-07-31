@@ -997,7 +997,7 @@ impl Pane {
         let (title, description) = if is_dez && show_orientation {
             (
                 "Main Work Area",
-                "Run an agent, find a file, or create one in this Workspace.",
+                "Open a terminal, file, or review tab in this Workspace.",
             )
         } else if is_dez {
             ("Empty pane", "Open or move a tab here.")
@@ -1015,12 +1015,12 @@ impl Pane {
         let terminal_action_label = if paths::APP_NAME == "Zed" {
             "Start Terminal Session"
         } else {
-            "Open Agent Terminal"
+            "Open Terminal"
         };
         let terminal_action_aria_label = if paths::APP_NAME == "Zed" {
             "Start Terminal Session in Main Work Area"
         } else {
-            "Open Agent Terminal in Main Work Area"
+            "Open Terminal in Main Work Area"
         };
         let terminal_action = if is_dez {
             zed_actions::terminal::OpenAgentTerminal.boxed_clone()
@@ -5629,15 +5629,15 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                         .separator()
                         .submenu("Open Terminal", |menu, _, _| {
                             menu.action(
-                                "Default Agent Terminal",
+                                "Default Terminal",
                                 zed_actions::terminal::OpenAgentTerminal.boxed_clone(),
                             )
                             .action(
-                                "Shell",
+                                "Native Shell",
                                 zed_actions::terminal::OpenShellTerminal.boxed_clone(),
                             )
                             .action(
-                                "tmux Workspace",
+                                "tmux Session",
                                 zed_actions::terminal::OpenTmuxTerminal.boxed_clone(),
                             )
                             .separator()
@@ -5654,7 +5654,7 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                                 zed_actions::terminal::OpenOpenCodeTerminal.boxed_clone(),
                             )
                         })
-                        .action("Browse tmux, Herdr & cmux…", FocusSidebar.boxed_clone())
+                        .action("Browse External Sessions…", FocusSidebar.boxed_clone())
                         .action(
                             "Open Workspace in cmux",
                             zed_actions::dez::OpenWorkspaceInCmux.boxed_clone(),

@@ -40,7 +40,7 @@ that preserved ladder is a baseline, not a competing release train.
 The v0.2 dependency order is:
 
 ```text
-validate the exact v0.2.0 source candidate
+validate the exact v0.2.1 source candidate
 -> simplify Home, Workspaces, menus, and native tab navigation
 -> prove durable terminal and Workspace recovery
 -> harden Codex, Claude Code, OpenCode, tmux, and Herdr integrations

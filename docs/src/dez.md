@@ -10,7 +10,7 @@ and supervise coding agents running in integrated terminals.
 
 Its job is simple to state:
 
-> Keep a project's code, active agent work, attention, changes, and review
+> Keep a Workspace's codebase, active agent work, attention, changes, and review
 > evidence visible in one native Workspace.
 
 Dez inherits Zed's fast editor, language support, Git, debugger, tasks, remote
@@ -20,12 +20,13 @@ editing and delegated work without reconstructing context.
 
 ## The screen model
 
-The default interface has two persistent ownership regions:
+The interface has two ownership regions. The Main Work Area is always present;
+Workspaces is optional and collapsible:
 
-| Region              | What it is for                                                                                                 |
-| ------------------- | -------------------------------------------------------------------------------------------------------------- |
-| **Workspaces** · left | Optionally switch codebases and supervise their terminal and Built-in Agent Sessions                         |
-| **Main Work Area**  | Edit files and use terminal, Files, Outline, Git, Debug, Built-in Agent, settings, diagnostics, and review tabs |
+| Region                | What it is for                                                                                                  |
+| --------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **Workspaces** · left | Optionally switch codebases and supervise their terminal and Built-in Agent Sessions                            |
+| **Main Work Area**    | Edit files and use terminal, Files, Outline, Git, Debug, Built-in Agent, settings, diagnostics, and review tabs |
 
 Workspaces is global and collapsible. It does not turn into Files, Git, or chat,
 and opening a Workspace Tool does not dismiss it. Each codebase remains visible
@@ -46,10 +47,10 @@ does not imitate browser tabs with a separate navigation system. Terminals can
 be split below or beside code while keeping their Workspace ownership.
 
 The tab-strip **+** is the single **Add to Main Work Area** control. Its
-**Open Terminal** submenu launches the **Default Agent Terminal**, a **Shell**,
+**Open Terminal** submenu launches the **Default Terminal**, a **Native Shell**,
 a Workspace-named tmux session, Codex, Claude Code, or OpenCode. It also opens
 the optional Built-in Agent, a file, Files, Changes, Debug, Workspace search,
-or symbol search. **Browse tmux, Herdr & cmux…** focuses Workspaces, where each
+or symbol search. **Browse External Sessions…** focuses Workspaces, where each
 discovered external session remains attached to its owning Workspace.
 **Open Workspace in cmux** performs the explicit external handoff. Every
 destination is the existing Zed Surface in the same pane system, so it can be
@@ -71,13 +72,13 @@ a diagram.
 Optional **Workspace Layout** commands name destinations instead of abstract
 arrangements: **Work Area + Files**, **Work Area + Built-in Agent**, **Focus
 Work Area**, **Split Work Area**, **Work Area + Git**, and **Work Area +
-Debug**. They live in **View** and Command Search rather than occupying the
+Debug**. They live in **View** and Command Palette rather than occupying the
 default titlebar. Files, Git, Debug, and Built-in Agent each select that exact
 native surface. Focus closes contextual tools. Split Work Area only arranges
 existing Main Work Area surfaces; it never starts a process or opens an
 unrelated tool. No recipe may manufacture an empty column.
 When that work area is empty, one restrained launch panel states the product
-purpose and offers only Open Agent Terminal, Find File, and New File. It does
+purpose and offers only Open Terminal, Find File, and New File. It does
 not repeat Home's product summary. It is an operational start state for the
 current Workspace, not a second Home screen.
 **Workspaces** is a projection over the real owners. Each open codebase
@@ -90,9 +91,9 @@ generic row. Provider icons identify Codex, Claude Code, OpenCode, Herdr, and
 other detected agents. Native status treatments distinguish Running, Needs
 Input, Waiting for Permission, Reconnecting, Completed, and Error without
 rendering a second terminal transcript.
-When Workspaces is open, its collapsible **Open Tabs** section projects
-the active Workspace's native center-pane tabs above the Workspace and Session
-list. A one-pane layout remains a flat list. Real splits add quiet **Pane 1**,
+When Workspaces is open, its collapsible **Workspace Tabs** section projects the
+active Workspace's native center-pane tabs above the Workspace and Session list
+when at least two tabs are open. A one-pane layout remains a flat list. Real splits add quiet **Pane 1**,
 **Pane 2**, and later group labels, so the hierarchy describes the layout that
 already exists instead of manufacturing one. Each row uses the Surface's
 native icon, disambiguated tab title, active state, and dirty state. Activating
@@ -134,12 +135,12 @@ marks for these controls. Command Palette labels follow the same grammar: Dez
 uses `workspace: ...` for actions scoped to the active codebase,
 `workspaces: ...` for global navigation, and the specific `files: ...` and
 `git: ...` destinations instead of inherited implementation namespaces.
-Terminal creation appears under `terminal: open agent terminal …`, and the six
+Terminal creation appears under `terminal: open terminal …`, and the six
 layout transitions and their management commands appear under `layout: ...`;
 neither route exposes inherited Project, Thread, or Canvas terminology.
 
 Hierarchy follows the next useful action. Home places **Open Workspace**
-first when no codebase is open, or **Open Agent Terminal** first inside an
+first when no codebase is open, or **Open Terminal** first inside an
 active Workspace. These are native command rows on the editor surface, not
 filled dashboard cards. Dense Files & Git and Built-in Agent toolbars use
 compact icons, but every control has a specific accessible name, tooltip, and
@@ -157,13 +158,13 @@ changes.
 
 Home keeps that first choice concrete. Without a Workspace, **Start a
 Workspace** offers **Open Workspace** and **Clone Repository**. Dez does not
-offer an Agent Terminal until a codebase can supply file and Git review
-context. Inside a Workspace, **In this Workspace** offers **Open Agent
-Terminal**, **Browse Files**, **Review Changes**, and **New File**. The terminal
-action uses the configured **Default Agent Terminal Command** when one is set;
+offer a Terminal until a codebase can supply file and Git review context.
+Inside a Workspace, **In this Workspace** offers **Open Terminal**, **Browse
+Files**, **Review Changes**, and **New File**. The terminal action uses the
+configured **Default Terminal Command** when one is set;
 otherwise it opens the normal Workspace shell. Explicit Shell, tmux, Codex,
 Claude Code, and OpenCode routes remain available from the adjacent **+** menu
-and Command Search. A terminal appears beneath its owning Workspace only after
+and Command Palette. A terminal appears beneath its owning Workspace only after
 agent evidence exists.
 
 Home is a normal, top-anchored Main Work Area surface, not a modal dashboard or
@@ -178,20 +179,20 @@ section never appears as a floating card or repaints the Lumin window material.
 The empty Workspaces navigator follows the same activation loop. **No Workspace
 open** explains that a codebase supplies context to agent work and review.
 **Open Workspace** is its only start action. Once a Workspace is ready, the
-scoped action becomes **Open Agent Terminal**. The Workspace remains visible,
+scoped action becomes **Open Terminal**. The Workspace remains visible,
 but its Agent Session list stays empty until agent evidence exists. Start,
 recovery, and All/Attention scope actions remain keyboard reachable as the
 navigator changes state.
 
 Workspace controls follow focus. Selecting or keyboard-focusing a Workspace
-keeps its Open Agent Terminal and Options actions visible; opening the
+keeps its Open Terminal and Options actions visible; opening the
 Options menu keeps its scoped close controls visible as well. Search clearing
 and banner dismissal are keyboard-focusable, so pointer hover is never the only
 route to a visible shell action. Workspace names and their action cluster share
 one bounded inline row: text truncates within its allocation, actions never
 overlap it, and no gradient mask is painted over either side of the header. An
-expanded Workspace with no Agent Sessions shows one labeled **Open Agent
-Terminal** action below the header; its compact terminal icon is suppressed
+expanded Workspace with no Agent Sessions shows one labeled **Open Terminal**
+action below the header; its compact terminal icon is suppressed
 until the Workspace is collapsed or contains Agent Sessions. Readiness remains
 in the overview summary and the Workspace header's accessible name instead of
 being repeated as a decorative dot-and-caption row.
@@ -211,13 +212,14 @@ system-selected Lumin Light/Lumin Blur. Custom font or theme choices are not
 treated as generated defaults.
 
 Creation emphasis also follows state. A ready Workspace without a Session
-shows one quiet **Open Agent Terminal** command row. Once work exists, a
+shows one quiet **Open Terminal** command row. Once work exists, a
 compact terminal action remains in each Workspace header while the Workspaces
 overview stays focused on status and All/Attention scope. Dez does not repeat a
 global launcher for the already-active Workspace.
 
 Workspaces uses one native titlebar label and one options menu for secondary
-destinations such as Agent Tools, Agent History, and Recent Workspaces. It does
+destinations such as Command Palette, Recent Workspaces, Workspace activity,
+attention filtering, and Workspaces Settings. It does
 not repeat **Workspaces** inside a dashboard header or reserve a permanent
 footer. Empty, caught-up, search, and recovery states stay in normal sidebar
 flow and never become floating overlays. An empty Workspace keeps one compact
@@ -234,7 +236,7 @@ Workspace is open.
 
 The bottom Workspace status strip is evidence-driven. Its compact **Search
 Workspace Files** control follows the native **Workspace Search Button** setting
-and opens the same Workspace Search Surface as Command Search. It does not add a
+and opens the same Workspace Search Surface as Command Palette. It does not add a
 second search model. Healthy diagnostics do not occupy space with a decorative
 checkmark; actual errors, warnings, counts, active diagnostic messages,
 language health, and file context remain visible when relevant. Terminal focus
@@ -286,9 +288,9 @@ different workflow.
 
 ### 2. Work directly or delegate
 
-Open a file to edit directly, choose **Open Agent Terminal** to run Codex,
-Claude Code, or another terminal agent in the Main Work Area, or start a
-provider-backed Agent Session in **Built-in Agent**.
+Open a file to edit directly, choose **Open Terminal** and run Codex, Claude
+Code, or another terminal agent in the Main Work Area, or start a provider-backed
+Agent Session in **Built-in Agent**.
 
 Agent edits land in ordinary buffers and Git changes. A terminal starts in the
 Workspace's working-directory context. Both sit beside files in the same pane
@@ -308,27 +310,28 @@ model picker.
 
 #### Which agent surface should I use?
 
-Start with **Open Agent Terminal**. It is the durable default for Codex, Claude
-Code, OpenCode, and other terminal-native tools because their real PTY,
-subscription, authentication, TUI, commands, and plugins remain intact. Use
+Start with **Open Terminal**. It opens the configured default and falls back to
+the native Workspace shell. Codex, Claude Code, OpenCode, and other
+terminal-native tools keep their real PTY, subscription, authentication, TUI,
+commands, and plugins. Use
 **Built-in Agent** when you specifically want a structured, provider-backed
 conversation for planning, Workspace questions, edits, or tool calls beside the
 editor. It is optional and requires a usable provider and model.
 
-The tab-strip **+** exposes native terminal launch choices: **Default Agent
-Terminal**, **Shell**, **tmux Workspace**, **Codex**, **Claude Code**, and
+The tab-strip **+** exposes native terminal launch choices: **Default
+Terminal**, **Native Shell**, **tmux Session**, **Codex**, **Claude Code**, and
 **OpenCode**. Workspace Options identifies the configured default command and
 keeps a separate native-shell choice beside the explicit providers.
 The default command is editable under **Settings → Agents →
-Default Agent Terminal Command**; leaving it blank keeps a normal shell.
+Default Terminal Command**; leaving it blank keeps a normal shell.
 Provider shortcuts are per-launch choices and never rewrite that setting.
-The same choices are native Command Search actions: **Terminal: Open Agent
-Terminal**, **Open Shell**, **Open tmux Workspace**, **Launch Codex**,
-**Launch Claude Code**, and **Launch OpenCode**. **Open tmux Workspace** runs
+The same choices are native Command Palette actions: **Terminal: Open
+Terminal**, **Open Native Shell**, **Open tmux Session**, **Launch Codex**,
+**Launch Claude Code**, and **Launch OpenCode**. **Open tmux Session** runs
 `tmux new-session -A -s <workspace>` after the native login shell is ready, so
 each codebase gets a stable attach-or-create destination. **Workspace: Open in
 cmux** hands the active local Workspace to cmux without replacing or closing
-Dez. **Browse tmux, Herdr & cmux…** opens Workspaces for an exact discovered
+Dez. **Browse External Sessions…** opens Workspaces for an exact discovered
 session instead of guessing which target the user intended.
 Dez waits for the configured shell startup before submitting the selected
 command, so login-shell initialization, remote/WSL behavior, and native PTY
@@ -340,11 +343,12 @@ require creating a Built-in Agent Session, and opening the Built-in Agent does
 not wrap or replace the terminal.
 
 An embedded **Live Preview** is planned as a normal Main Work Area Surface but
-is not present in the current candidate. URL actions currently open the system
-browser, while Markdown, SVG, and CSV use native file previews. A real Live
-Preview must own pane-scoped browser navigation without owning or restarting
-the terminal's dev-server process. The platform and security gate is documented
-in [Live Preview and Agent Model](./development/dez/live-preview-and-agent-model.md).
+is not present in the v0.2.1 source candidate. URL actions currently open the
+system browser, while Markdown, SVG, and CSV use native file previews. A real
+Live Preview must own pane-scoped browser navigation without owning or
+restarting the terminal's dev-server process. The platform and security gate is
+documented in
+[Live Preview and Agent Model](./development/dez/live-preview-and-agent-model.md).
 
 The Agent composer is the control point for the current conversation. Its
 context, follow, speed, thinking, effort, send/queue, stop, size, and sandbox
@@ -613,7 +617,7 @@ is outside every open Workspace; it does not mean Dez adopted or ended anything.
 
 - tmux is discovered at `/opt/homebrew/bin/tmux`, `/usr/local/bin/tmux`, or on
   `PATH`. Start or attach to a tmux server and ensure the pane's working
-  directory is inside the intended Workspace. **Open tmux Workspace** remains
+  directory is inside the intended Workspace. **Open tmux Session** remains
   available when you want Dez to create or attach to the Workspace-named
   session explicitly.
 - cmux is discovered at
@@ -659,26 +663,29 @@ other Surfaces; Dez does not add browser chrome over the editor.
 ### Settings and navigation visibility
 
 Dez keeps native editor customization, but Settings starts with the product
-flow: **Workspace & Privacy**, **Workspaces & Terminals**, **Agents**,
-**Attention**, and **Evidence**. **Navigation & Layout** owns tabs, status-bar
-controls, and window behavior. **Workspace Tools** configures Files, Outline,
-Git, and the optional Built-in Agent without assigning them a separate region.
+flow: **Workspace & Privacy**, **Workspaces & Terminals**, and **Agents**.
+Attention and **Terminal Activity & Privacy** are sections within Agents rather
+than separate top-level destinations. **Navigation & Layout** owns tabs,
+status-bar controls, and window behavior. **Workspace Tools** configures Files,
+Outline, Git, and the optional Built-in Agent without assigning them a separate
+region.
 Inherited collaboration, staff-only
 instrumentation, legacy dock geometry, and controls for removed sidebar chrome
 stay out of the public Settings navigation.
 
 Workspaces is optional chrome, not a permanent editor column. Fresh windows
 keep it closed; the status bar exposes **Open Workspaces**, and the same toggle
-remains available through **View** and Command Search. **Settings → Workspaces
+remains available through **View** and Command Palette. **Settings → Workspaces
 & Terminals → Show Workspaces on Startup** makes it persistent for people who
-prefer that layout. **Workspaces Side** chooses its window edge. Closing
+prefer that layout. **Workspaces Position** chooses its window edge. Closing
 Workspaces never closes a Workspace, terminal, or Agent Session.
 
-Dez also honors the native Workspace Bar and sidebar identity settings.
-Workspace Bar visibility and centered Command Search follow their explicit
-settings; project/root and branch identity follow the native sidebar identity
-controls. The default Dez profile keeps this orientation visible, while an
-explicit hide choice remains respected.
+Workspaces intentionally omits the inherited Workspace Bar, centered Command
+Search row, and duplicate project/branch identity strip. Each Workspace row
+already owns its roots, Git branch, and change count; the header ellipsis opens
+Command Palette and Workspace-level actions without adding another toolbar.
+The compact native header still preserves the cross-platform application menu,
+Restricted Mode security state, and an active multiplexer prefix indicator.
 
 If imported settings hide that identity, **Settings → Appearance → Restore
 Native Dez Appearance** restores Lumin, balanced density, IBM Plex Sans, Lilex,
@@ -697,17 +704,17 @@ objects, registers, macros, marks, command mode, and Workspace-aware navigation.
 
 The default tab model follows familiar browser behavior:
 
-| Intent | macOS | Linux and Windows | Vim |
-| --- | --- | --- | --- |
-| Open tab 1–8 / last tab | `⌘1`–`⌘8` / `⌘9` | `Alt+1`–`Alt+8` / `Alt+9` | `[b`, `]b`, `gt`, `gT` |
-| Recent-tab switcher | `Ctrl+Tab` | `Ctrl+Tab` | `[b` / `]b` |
-| Previous / next tab | `⌘{` / `⌘}` | `Ctrl+PageUp` / `Ctrl+PageDown` | `gT` / `gt` |
-| Move between split panes | `⌘K`, then arrow | `Ctrl+K`, then arrow | `Ctrl+W`, then `h/j/k/l` |
-| Workspaces | `⌘B` | `Ctrl+B` | Command Search |
-| Files | `⌘⇧E` | `Ctrl+Shift+E` | `Space f` |
-| Open configured agent terminal | `` Ctrl+` `` | `` Ctrl+` `` | `Space t` |
-| Open shell terminal | `` Ctrl+Shift+` `` | `` Ctrl+Shift+` `` | `Space T` |
-| Edit shortcuts | `⌘K ⌘S` | `Ctrl+K Ctrl+S` | Command Search |
+| Intent                     | macOS              | Linux and Windows               | Vim                      |
+| -------------------------- | ------------------ | ------------------------------- | ------------------------ |
+| Open tab 1–8 / last tab    | `⌘1`–`⌘8` / `⌘9`   | `Alt+1`–`Alt+8` / `Alt+9`       | `[b`, `]b`, `gt`, `gT`   |
+| Recent-tab switcher        | `Ctrl+Tab`         | `Ctrl+Tab`                      | `[b` / `]b`              |
+| Previous / next tab        | `⌘{` / `⌘}`        | `Ctrl+PageUp` / `Ctrl+PageDown` | `gT` / `gt`              |
+| Move between split panes   | `⌘K`, then arrow   | `Ctrl+K`, then arrow            | `Ctrl+W`, then `h/j/k/l` |
+| Workspaces                 | `⌘B`               | `Ctrl+B`                        | Command Palette          |
+| Files                      | `⌘⇧E`              | `Ctrl+Shift+E`                  | `Space f`                |
+| Open configured terminal   | `` Ctrl+` ``       | `` Ctrl+` ``                    | `Space t`                |
+| Open native shell terminal | `` Ctrl+Shift+` `` | `` Ctrl+Shift+` ``              | `Space T`                |
+| Edit shortcuts             | `⌘K ⌘S`            | `Ctrl+K Ctrl+S`                 | Command Palette          |
 
 Number shortcuts activate tabs in the focused native pane; deliberate split
 navigation remains on the pane-navigation chords. This keeps one-pane work as
@@ -716,7 +723,7 @@ terminals, diffs, Debug, and review.
 
 Regular Vim and Helix mode share the same native leader destinations:
 `Space b` opens the recent-tab switcher, `Space f` finds a file, `Space t`
-opens the configured agent terminal, `Space T` opens a shell, and `Space /`
+opens the configured terminal, `Space T` opens the native shell, and `Space /`
 searches the Workspace. The bindings dispatch normal Zed actions, so they stay
 customizable and appear in Keyboard & Vim conflict inspection.
 
@@ -778,27 +785,29 @@ This repository currently represents a source candidate, not a signed public
 binary. A release still requires consolidated platform builds plus rendered,
 restart, crash, accessibility, upgrade, and coexistence evidence.
 
-### Try the current Preview safely
+### Recorded Preview and current source
 
-The currently recorded package is an Apple Silicon macOS Preview, not a
-supported or notarized v0.2 release. Follow the exact artifact link and evidence
-boundary in [Release Evidence](./development/dez/release-evidence.md), then:
+The recorded package is a historical `0.2.0` Apple Silicon macOS Preview, not a
+supported or notarized v0.2 release. It predates the current source's
+install-first gate, Workspace-access recovery, generated terminal-Host endpoint,
+and latest external-session reconciliation. It therefore cannot validate those
+flows.
 
-1. Keep the downloaded DMG beside its `SHA256SUMS.txt` and run
+To inspect that historical navigation baseline safely:
+
+1. Follow its exact artifact link and evidence boundary in [Release
+   Evidence](./development/dez/release-evidence.md).
+2. Keep the downloaded DMG beside its `SHA256SUMS.txt` and run
    `shasum -a 256 -c SHA256SUMS.txt` from that directory.
-2. Open the DMG, drag **Dez Preview.app** into `/Applications`, eject the DMG,
-   and launch the installed copy. A temporary or translocated copy will ask to
-   install and relaunch before restoring Workspaces or starting durable shells.
-3. From Home, choose **Open Workspace**. If macOS protects that folder, use the
-   native **Choose Workspace…** action and grant the same root once. Rebuilt
-   ad-hoc Previews can ask again because their signing identity is not stable.
-4. Use the Main Work Area **+** → **Open Terminal** → **Default Agent
-   Terminal**, start the agent CLI you trust, and review its real changes in
-   Files and Git.
+3. Open the DMG, drag **Dez Preview.app** into `/Applications`, eject the DMG,
+   and launch the installed copy.
+4. Attribute observations only to that package and commit. Do not treat them as
+   proof of the newer source tree.
 
-Do not treat a successful launch as release evidence. Terminal survival,
-protected-folder recovery, keyboard and screen-reader behavior, and rendered
-appearance must still be verified against that exact package.
+For the current source, the intended first-run path is install and relaunch,
+grant a selected Workspace root when macOS requires it, then use **Open
+Terminal** or the Main Work Area **+** to start a shell or agent CLI. Those
+steps remain source claims until an exact newer package records runtime proof.
 
 For precise implementation state, read:
 

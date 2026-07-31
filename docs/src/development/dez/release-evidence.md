@@ -61,7 +61,7 @@ the adjacent Add control share the same native tab strip as files, terminals,
 diffs, and tools.
 
 The Add menu reuses existing Zed actions to reopen Home, open Recent
-Workspaces, start an agent terminal, open the Built-in Agent, create or find
+Workspaces, start the configured terminal, open the Built-in Agent, create or find
 files, reveal Files/Git/Debug, and search the Workspace or its symbols. No
 custom history, tab, search, or Workspace picker was introduced.
 
@@ -97,10 +97,10 @@ This is source evidence only. Runtime tab focus, Add-menu placement, narrow
 layout, light/dark appearance, and first-launch behavior remain open for the
 exact candidate artifact.
 
-## v0.0.3 candidate status {#v0-0-3-candidate-status}
+## Historical v0.0.3 candidate status {#v0-0-3-candidate-status}
 
-The package version and source release train now identify v0.0.3. No packaged
-artifact currently proves the active source tree. The successful macOS action
+The package version and source release train at that checkpoint identified
+v0.0.3. No packaged artifact from that checkpoint proves the active source tree. The successful macOS action
 for rejected candidate `v0.0.3-rc5` predates the current stable Workspaces
 navigator, contextual right-side Workspace Tools, Main Work Area tab routing,
 balanced density, centered onboarding, and explicit Agent Session status
@@ -576,7 +576,8 @@ executable. That executable contains **No sessions yet**, **No sessions in this
 workspace**, **Project ready**, and **Command Search**, but does not contain the
 later **Start a session** or **Workspace ready** source. There are therefore
 three distinct generations: the supplied screenshot, the stale running bundle,
-and current source. None may be substituted for rendered proof of another.
+and the source tree recorded in that entry. None may be substituted for rendered
+proof of another.
 
 The screenshot also showed a loaded project with a completely blank center.
 The render decision checked `should_display_welcome_page` before checking for a
@@ -884,8 +885,8 @@ states. Product branches retain official Zed wording and internal compatibility
 types remain unchanged. Identity, formatting, Bash syntax, and diff checks pass;
 rendered proof remains deferred.
 
-Commit `2092acd453` replaces the supplied screenshot's redundant zero-session
-hierarchy in current source. The rail is named **Session Rail**, its empty
+Commit `2092acd453` replaced the supplied screenshot's redundant zero-session
+hierarchy in the source at that commit. The rail was named **Session Rail**, its empty
 summary reports ready Workspace count, and each empty Workspace has one scoped
 New Terminal action whose accessible name includes that Workspace. Authored
 copy/visibility assertions and the identity guard pass; compilation and rendered
@@ -1071,9 +1072,9 @@ The previous `Dez Dev.app` was registered and launched as launchd child PID
 `85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
 At that time, `lsof` resolved its text executable to
 `/Users/test/Documents/zed 3.0/target/debug/bundle/osx/Dez Dev.app/Contents/MacOS/dez`.
-That process is no longer running. The current candidate has been rebuilt and
-statically audited but has not yet been launched; this historical launch is not
-used as current-source render proof.
+That process is no longer running. The candidate through `2452d3b4ec` was
+rebuilt and statically audited but had not yet been launched; this historical
+launch is not used as render proof for that candidate or newer source.
 
 Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`,
@@ -1083,7 +1084,7 @@ Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
 `f89f55868c`, `f40877d4ab`, `526218a972`, `bb0cf408b4`, `a8ce563373`,
 `e101b63e43`, `f535c5e6ae`, `0e6507756e`, `ea2bb18453`, `0f8740b1a1`,
 `af232402f5`, `a4047d95c0`, and `6f2061d2c7` were newer than that historical
-bundle. They are included in the current candidate through `2452d3b4ec`.
+bundle. They are included in the candidate recorded through `2452d3b4ec`.
 The first passes all nine focused Session tests, including duplicate viewport
 replacement without reordering or membership loss. The second makes Project
 ready terminal-first, prevents New Window and startup fallback paths from
@@ -1276,11 +1277,11 @@ that scenario still requires the unlocked UI and a graceful application quit.
 
 - [x] Historical intended raw-binary first launch and exact signed-bundle
       normal launch
-- [ ] Current `2452d3b4ec` candidate exact signed-bundle launch and process-path
+- [ ] Historical `2452d3b4ec` candidate exact signed-bundle launch and process-path
       verification
 - [ ] Restored and empty-workspace interaction audit (the first full-window
       overlay, compact-width clipping, blank-center, terminal-first action
-      order, and no-blank-editor startup fixes are compiled into the current
+      order, and no-blank-editor startup fixes were compiled into that
       candidate; fresh interaction and capture remain open)
 - [ ] Offline, failed-Host, and incompatible-Host rendered states
 - [ ] Quiet local-first launch with no Zed websocket, LiveKit room, or
@@ -1299,20 +1300,20 @@ that scenario still requires the unlocked UI and a graceful application quit.
 - [ ] Developer ID signing, notarization, install, launch, and uninstall audit
 
 The approved macOS UI-control path was previously blocked by the locked desktop.
-No alternate screenshot mechanism, AppleScript, or historical binary path is
-used as a substitute. The exact bundle is now rebuilt through `2452d3b4ec` and
-statically re-audited; current-candidate launch, desktop availability, and
-fresh rendered inspection remain the next gate.
+No alternate screenshot mechanism, AppleScript, or historical binary path was
+used as a substitute. The exact bundle was rebuilt through `2452d3b4ec` and
+statically re-audited; launch of that candidate and fresh rendered inspection
+remain unverified historical gates.
 
 ## Known external release dependencies {#known-external-release-dependencies}
 
 Public Developer ID signing and Apple notarization require Dez publisher
 credentials. The ad-hoc local signature proves bundle structure, not public
 notarization. Design-partner testing requires actual target users and remains
-separate from local engineering verification. The exact candidate is built and
-statically audited through `2452d3b4ec`; it is not currently running. A
-current-candidate launch and an available desktop are prerequisites for the
-visual, interaction, accessibility, and GUI-driven hosted-PTY recovery matrix.
+separate from local engineering verification. That candidate was built and
+statically audited through `2452d3b4ec`; it is not running. Launching it on an
+available desktop remained a prerequisite for its visual, interaction,
+accessibility, and GUI-driven hosted-PTY recovery matrix.
 
 ## 2026-07-23 source-only terminal and shell recovery
 
@@ -1600,7 +1601,7 @@ the later running-app reports, the source advanced through:
   cursor from unavailable terminals, preserves the saved title and concrete
   failure reason, and makes **Start Fresh Terminal** an explicit separate
   computation in the Main Work Area; and
-- the current source slice, which gives Terminal Session rows the same inline,
+- that source slice, which gives Terminal Session rows the same inline,
   pointer, context-menu, and selected-row keyboard rename paths as Agent
   Sessions. It persists custom names across detached Host ownership, updates
   live Workspace and Agent terminal Surfaces, preserves dynamic shell and agent
@@ -1682,11 +1683,11 @@ remains part of the later consolidated artifact check.
 
 ## 2026-07-26: compact Lumin chrome audit
 
-The already-running installed Dez window remains older than current source. It
-still renders idle Workspace rows and opens Workspace Tools beside an empty Main
-Work Area. Those observations are not evidence against the current fixes: the
-source now omits idle rows and starts fresh Workspaces with the Main Work Area
-as the only primary region.
+The installed Dez window inspected for this entry was older than the source
+recorded here. It rendered idle Workspace rows and opened Workspace Tools beside
+an empty Main Work Area. Those observations are not evidence against those
+source fixes: that source omits idle rows and starts fresh Workspaces with the
+Main Work Area as the only primary region.
 
 The Lumin path itself is complete in source. Both Lumin Light and Lumin Blur
 request blurred window backgrounds; macOS supplies one under-window material,

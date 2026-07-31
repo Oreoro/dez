@@ -325,10 +325,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                 if APP_NAME == "Zed" {
                     MenuItem::action("New Terminal", workspace::NewTerminal::default())
                 } else {
-                    MenuItem::action(
-                        "Open Agent Terminal",
-                        zed_actions::terminal::OpenAgentTerminal,
-                    )
+                    MenuItem::action("Open Terminal", zed_actions::terminal::OpenAgentTerminal)
                 },
                 MenuItem::action("New File", workspace::NewFile),
                 MenuItem::action("New Window", workspace::NewWindow),

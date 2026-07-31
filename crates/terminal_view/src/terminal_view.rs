@@ -1769,11 +1769,8 @@ impl TerminalView {
                             )
                             .separator()
                     } else {
-                        menu.action(
-                            "Open Agent Terminal",
-                            Box::new(NewCenterTerminal::default()),
-                        )
-                        .separator()
+                        menu.action("Open Terminal", Box::new(NewCenterTerminal::default()))
+                            .separator()
                     }
                 })
                 .when(has_selection, |menu| {

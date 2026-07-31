@@ -886,7 +886,7 @@ fn session_empty_state_copy(
             (
                 IconName::Terminal,
                 "No agent sessions",
-                "Open an Agent Terminal and run Codex, Claude Code, OpenCode, or another supported CLI. Dez adds it here when an agent is detected.",
+                "Open a terminal and run Codex, Claude Code, OpenCode, or another supported CLI. Dez adds it here when an agent is detected.",
             )
         }
     }
@@ -1107,12 +1107,16 @@ fn session_rail_accessibility_label(app_name: &str) -> &'static str {
     }
 }
 
-fn workspace_tabs_section_title(_app_name: &str) -> &'static str {
-    "Open Tabs"
+fn workspace_tabs_section_title(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Open Tabs"
+    } else {
+        "Workspace Tabs"
+    }
 }
 
 fn workspace_tabs_section_visible(app_name: &str, tab_count: usize) -> bool {
-    app_name != "Zed" && tab_count > 0
+    app_name != "Zed" && tab_count > 1
 }
 
 fn workspace_tab_count_label(tab_count: usize) -> String {
@@ -1216,7 +1220,7 @@ fn terminal_launch_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Start Terminal Session"
     } else {
-        "Open Agent Terminal"
+        "Open Terminal"
     }
 }
 
@@ -1236,7 +1240,7 @@ fn terminal_launch_in_main_work_area_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Start Terminal Session in Main Work Area"
     } else {
-        "Open Agent Terminal in Main Work Area"
+        "Open Terminal in Main Work Area"
     }
 }
 
@@ -1244,7 +1248,7 @@ fn terminal_launch_menu_header(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Start Terminal Session In…"
     } else {
-        "Open Agent Terminal In…"
+        "Open Terminal In…"
     }
 }
 
@@ -1266,7 +1270,7 @@ fn session_start_state_copy(
     } else {
         (
             "No Workspace open",
-            "Open a Workspace first. Then run an agent in its Main Work Area and supervise it here.",
+            "Open a Workspace, then start a terminal. Agent activity appears here automatically.",
             "Open Workspace…",
             None,
         )
@@ -1277,7 +1281,7 @@ fn active_workspace_terminal_destination_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Start Terminal Session in Main Work Area of Active Workspace"
     } else {
-        "Open Agent Terminal in Main Work Area of Active Workspace"
+        "Open Terminal in Main Work Area of Active Workspace"
     }
 }
 
@@ -2172,7 +2176,7 @@ mod workspace_header_label_tests {
         );
         assert_eq!(
             workspace_new_terminal_control_label("Dez", "compiler"),
-            "Open Agent Terminal in compiler"
+            "Open Terminal in compiler"
         );
         assert_eq!(
             workspace_new_terminal_control_label("Zed", "compiler"),
@@ -2200,10 +2204,7 @@ mod workspace_header_label_tests {
             "zed 3.0"
         );
         assert_eq!(workspace_access_root_label(Path::new("/")), "/");
-        assert_eq!(
-            workspace_new_terminal_tooltip_label("Dez"),
-            "Open Agent Terminal"
-        );
+        assert_eq!(workspace_new_terminal_tooltip_label("Dez"), "Open Terminal");
         assert!(workspace_header_terminal_action_visible(
             "Dez", false, false
         ));
@@ -2273,9 +2274,10 @@ mod session_start_state_tests {
             session_rail_accessibility_label("Dez"),
             "Workspaces and Agent Sessions"
         );
-        assert_eq!(workspace_tabs_section_title("Dez"), "Open Tabs");
+        assert_eq!(workspace_tabs_section_title("Dez"), "Workspace Tabs");
         assert_eq!(workspace_tabs_section_title("Zed"), "Open Tabs");
-        assert!(workspace_tabs_section_visible("Dez", 1));
+        assert!(workspace_tabs_section_visible("Dez", 2));
+        assert!(!workspace_tabs_section_visible("Dez", 1));
         assert!(!workspace_tabs_section_visible("Dez", 0));
         assert!(!workspace_tabs_section_visible("Zed", 3));
         assert_eq!(workspace_tab_count_label(1), "1 tab");
@@ -2338,7 +2340,7 @@ mod session_start_state_tests {
             session_start_state_copy("Dez"),
             (
                 "No Workspace open",
-                "Open a Workspace first. Then run an agent in its Main Work Area and supervise it here.",
+                "Open a Workspace, then start a terminal. Agent activity appears here automatically.",
                 "Open Workspace…",
                 None
             ),
@@ -2346,7 +2348,7 @@ mod session_start_state_tests {
         );
         assert_eq!(
             active_workspace_terminal_destination_label("Dez"),
-            "Open Agent Terminal in Main Work Area of Active Workspace"
+            "Open Terminal in Main Work Area of Active Workspace"
         );
         assert_eq!(
             session_start_state_copy("Zed").3,
@@ -13924,11 +13926,11 @@ impl Sidebar {
                                     primary_action_labels_visible,
                                     None,
                                     Some(Color::Muted),
-                                    "Open Agent Terminal Details",
+                                    "Open Terminal Details",
                                     Some("Shift+V"),
                                     move |_window, cx| {
                                         Tooltip::for_action_in(
-                                            "Open Agent Terminal Details",
+                                            "Open Terminal Details",
                                             &OpenSelectedReviewBrief,
                                             &focus_handle,
                                             cx,
@@ -14058,7 +14060,7 @@ impl Sidebar {
                         });
                     }
                     if let Some(review_workspace) = review_workspace.clone() {
-                        menu = menu.entry("Open Agent Terminal Details", None, {
+                        menu = menu.entry("Open Terminal Details", None, {
                             let review_brief = review_brief.clone();
                             let sidebar = sidebar.clone();
                             let metadata = close_metadata.clone();
@@ -16810,6 +16812,13 @@ impl Sidebar {
         } else {
             None
         };
+        let native_header_utilities = (paths::APP_NAME != "Zed")
+            .then(|| {
+                self.sidebar_chrome.update(cx, |sidebar_chrome, cx| {
+                    sidebar_chrome.render_native_sidebar_header_utilities(window, cx)
+                })
+            })
+            .flatten();
 
         h_flex()
             .flex_none()
@@ -16837,6 +16846,9 @@ impl Sidebar {
             .when(!right_window_controls, |this| this.pr_1p5())
             .gap_1()
             .when_some(left_header_buttons, |this, buttons| this.child(buttons))
+            .when_some(native_header_utilities, |this, utilities| {
+                this.child(utilities)
+            })
             .when(session_sidebar_title_in_titlebar(APP_NAME), |this| {
                 this.child(
                     h_flex()
@@ -16988,7 +17000,11 @@ impl Sidebar {
     ) -> impl IntoElement {
         let is_dez = paths::APP_NAME != "Zed";
         let on_right = self.side(cx) == SidebarSide::Right;
-        let active_conversation_view = self.active_agent_conversation_view(cx);
+        let active_conversation_view = if is_dez {
+            None
+        } else {
+            self.active_agent_conversation_view(cx)
+        };
         let can_regenerate_thread_title =
             active_conversation_view
                 .as_ref()
@@ -17005,12 +17021,25 @@ impl Sidebar {
         let supports_logout = active_conversation_view
             .as_ref()
             .is_some_and(|conversation_view| conversation_view.read(cx).supports_logout());
-        let global_agents_md_loaded = UserAgentsMd::global(cx)
-            .and_then(|md| md.content())
-            .is_some();
-        let project_agents_md_exists = self.active_project_agents_md_exists(cx);
+        let global_agents_md_loaded = !is_dez
+            && UserAgentsMd::global(cx)
+                .and_then(|md| md.content())
+                .is_some();
+        let project_agents_md_exists = !is_dez && self.active_project_agents_md_exists(cx);
         let focus_handle = self.focus_handle.clone();
         let sidebar = cx.weak_entity();
+        let workspace_history_label = if matches!(self.view, SidebarView::Archive(..)) {
+            "Show Workspace Activity"
+        } else {
+            "Show Agent History"
+        };
+        let attention_filter_label = if self.attention_only {
+            "Show All Workspace Activity"
+        } else {
+            "Show Only Attention"
+        };
+        let attention_filter_available = self.contents.attention_count > 0 || self.attention_only;
+        let sidebar_can_hide = !SidebarSettings::get_global(cx).always_open;
         let menu_open = self.agent_options_menu_handle.is_deployed();
         let trigger = ButtonLike::new("agent-sidebar-options-menu-trigger")
             .size(if is_dez {
@@ -17069,14 +17098,35 @@ impl Sidebar {
                         menu = menu.context(focus_handle.clone());
 
                         if is_dez {
-                            menu = menu
+                            return menu
                                 .header(session_rail_title(APP_NAME))
-                                .action("Agent History", Box::new(ToggleThreadHistory))
+                                .action(
+                                    "Command Palette…",
+                                    Box::new(zed_actions::command_palette::Toggle),
+                                )
                                 .action(
                                     "Open Recent Workspaces…",
                                     Box::new(OpenRecent::default()),
                                 )
-                                .separator();
+                                .separator()
+                                .action(workspace_history_label, Box::new(ToggleThreadHistory))
+                                .when(attention_filter_available, |menu| {
+                                    menu.action(
+                                        attention_filter_label,
+                                        Box::new(ToggleAttentionFilter),
+                                    )
+                                })
+                                .separator()
+                                .action(
+                                    "Workspaces Settings…",
+                                    Box::new(zed_actions::OpenSettingsPage {
+                                        page: "Workspaces & Terminals".to_owned(),
+                                        target: None,
+                                    }),
+                                )
+                                .when(sidebar_can_hide, |menu| {
+                                    menu.action("Hide Workspaces", Box::new(ToggleSidebar))
+                                });
                         }
 
                         if can_regenerate_thread_title {
@@ -17937,9 +17987,6 @@ impl Render for Sidebar {
                 }
             })
             .child(self.render_sidebar_header(window, cx))
-            .when(APP_NAME != "Zed", |this| {
-                this.child(self.sidebar_chrome.clone())
-            })
             .when_some(session_notices, |this, notices| this.child(notices))
             .when_some(active_workspace_tabs, |this, tabs| this.child(tabs))
             .map(|this| match &self.view {

@@ -33,17 +33,17 @@ and explicit `project_panel.starts_open` preferences remain respected.
 
 ## Opening Terminals
 
-| Action                         | macOS               | Linux/Windows       |
-| ------------------------------ | ------------------- | ------------------- |
-| Open configured agent terminal | `` Ctrl+` ``        | `` Ctrl+` ``        |
-| Open shell terminal            | `` Ctrl+Shift+` ``  | `` Ctrl+Shift+` ``  |
-| Command palette                | `Cmd+Shift+P`       | `Ctrl+Shift+P`      |
-| Split terminal                 | `Cmd+D`             | `Ctrl+Shift+5`      |
+| Action                   | macOS              | Linux/Windows      |
+| ------------------------ | ------------------ | ------------------ |
+| Open configured terminal | `` Ctrl+` ``       | `` Ctrl+` ``       |
+| Open shell terminal      | `` Ctrl+Shift+` `` | `` Ctrl+Shift+` `` |
+| Command palette          | `Cmd+Shift+P`      | `Ctrl+Shift+P`     |
+| Split terminal           | `Cmd+D`            | `Ctrl+Shift+5`     |
 
-**Open Agent Terminal** opens a normal terminal in the Main Work Area and runs
-the **Default Agent Terminal Command** after the configured shell is ready. A
-blank command keeps the shell prompt. Command Search also exposes **Open
-Shell**, **Launch Codex**, **Launch Claude Code**, and **Launch OpenCode**, so
+**Open Terminal** opens a normal terminal in the Main Work Area and runs the
+**Default Terminal Command** after the configured shell is ready. A blank
+command keeps the native shell prompt. Command Palette also exposes **Open
+Native Shell**, **Launch Codex**, **Launch Claude Code**, and **Launch OpenCode**, so
 switching providers does not require changing the default. These commands,
 Workspaces, the tab-strip add control, and an empty Workspace all converge on the
 same native terminal Surface.
@@ -55,7 +55,7 @@ and never present a second terminal destination.
 
 ### One Terminal Model
 
-Dez has no separate Terminal Panel destination. Every **Open Agent Terminal**
+Dez has no separate Terminal Panel destination. Every **Open Terminal**
 action opens an ordinary main-area terminal Surface in the active Workspace.
 You can:
 
@@ -64,8 +64,9 @@ You can:
 - move it with other Surfaces;
 - run a supported agent and select its Agent Session row to return to the
   existing Surface; or
-- reattach a Host-owned terminal Session when the experimental Terminal Host
-  is explicitly enabled.
+- reattach a Host-owned terminal Session when the packaged Terminal Host owns
+  it. Source or partial installations without the helper use the non-durable
+  in-process fallback.
 
 ### Foreground agents stay in the terminal
 
@@ -84,8 +85,8 @@ process detection deliberately promises only who appears to be running.
 
 For ordinary terminals, foreground inspection coalesces output bursts while
 retaining one trailing refresh. Starting Codex while an earlier shell
-inspection is still running therefore cannot leave Sessions permanently stuck
-on the shell once the TUI becomes quiet.
+inspection is still running therefore cannot leave Workspaces showing the shell
+after the TUI becomes quiet.
 
 ### What Dez can and cannot observe
 
@@ -102,15 +103,15 @@ created for an unrelated external TTY.
 v0.0.4 adds a narrower, explicit control boundary for tmux, Herdr, and cmux.
 Dez discovers live tmux sessions through `list-panes`, live Herdr panes through
 the documented snapshot API, and cmux Workspaces through
-`list-workspaces --json`. An item appears under **Open Running Workspace or
-Session…** only on an open Workspace whose root contains its working directory.
+`list-workspaces --json`. An item appears under **Browse External Sessions…**
+only on an open Workspace whose root contains its working directory.
 tmux and Herdr open the documented attach command in an ordinary Main Work Area
 terminal. A cmux Workspace opens in cmux through `select-workspace`; Dez does
 not manufacture an attachment terminal for it. The external application
 remains authoritative, closing a Dez tab detaches rather than terminates, and
 Dez never requests a Herdr takeover automatically.
 
-For the current local codebase, **Workspace: Open in cmux** in Command Search
+For the current local codebase, **Workspace: Open in cmux** in Command Palette
 hands the Workspace path to cmux and keeps the Dez window intact. It reports
 success or the exact launch failure through a native toast and refreshes the
 external Session projection afterward.
@@ -143,20 +144,20 @@ The selected agent Session and its active terminal expose one shared handoff:
 
 The terminal context bar exposes **Files**, **Review Changes**, and **Terminal
 Details**. A detected or managed agent terminal projects its live state into
-Sessions; an ordinary shell remains only a terminal and never becomes a
-synthetic Session. The Sessions context menu retains the same handoff actions
+Workspaces; an ordinary shell remains only a terminal and never becomes a
+synthetic Session. The Workspaces context menu retains the same handoff actions
 when a compact row has no room for every control. Compatibility command
 identifiers may still include the inherited Session Rail name, but visible Dez
-chrome uses **Sessions**.
+chrome uses **Workspaces**.
 
 After the welcome guide disappears, **Terminal Details** keeps a compact **How
 Dez Works** explanation available: run work in the terminal, supervise detected
-agent state and attention in Sessions, then review the same Workspace through
+agent state and attention in Workspaces, then review the same Workspace through
 Files and Git. This keeps orientation one click away without adding a permanent
 help row.
 
-Dez does not advertise a pathless Agent Terminal before a Workspace is open.
-If an existing scratch terminal is present, it does not appear in Sessions
+Dez does not advertise a pathless Terminal before a Workspace is open.
+If an existing scratch terminal is present, it does not appear in Workspaces
 until a supported agent is detected. Its context strip shows **Open Workspace**
 instead of pretending that Files or Git review are already available. Its
 picker accepts folders only. Every selected folder is added to the same window,
@@ -193,10 +194,10 @@ content, not proof.
 
 ## Working with Multiple Terminals
 
-Create additional terminals from the normal terminal command or **Open Agent
+Create additional terminals from the Main Work Area **+** menu or **Open
 Terminal**. Each terminal is an independent main-area tab and keeps the active
 Workspace's directory context. Only detected or managed agent terminals appear
-in Sessions.
+in Workspaces.
 
 Split terminals horizontally with `Cmd+D` (macOS) or `Ctrl+Shift+5` (Linux/Windows).
 
@@ -204,14 +205,14 @@ Split terminals horizontally with `Cmd+D` (macOS) or `Ctrl+Shift+5` (Linux/Windo
 
 An ordinary shell terminal follows the title supplied by its shell. Dez retains
 that full title for its tab and tooltip. When the terminal becomes a detected
-or managed agent Session, the same identity is reused by Sessions, Session
+or managed agent Session, the same identity is reused by Workspaces, Session
 Switcher, and Host ownership metadata.
 
 Double-click a terminal tab or use its **Rename Terminal…** context action.
-Detected or managed agent terminals can also be renamed from Sessions. A
-normal-width Sessions row exposes a pencil when the row is hovered or
-keyboard-selected. Narrow rows retain rename in the context menu and **Session
-Rail: Rename Selected Session** command instead of crowding the lifecycle
+Detected or managed agent terminals can also be renamed from Workspaces. A
+normal-width Workspaces row exposes a pencil when the row is hovered or
+keyboard-selected. Narrow rows retain rename in the context menu and the
+selected-row rename action instead of crowding the lifecycle
 controls. Leading and trailing whitespace is removed. Clearing the custom name
 returns to the live terminal title. A running-agent status prefix continues to
 update around the custom name. Task terminals retain their task label.
@@ -228,7 +229,7 @@ These actions have deliberately different meanings:
   shell is still running, Dez uses the normal dirty-item protection before
   discarding it.
 - **Detach Terminal** closes a Host-owned terminal Surface without stopping
-  its Host-owned process. Its Sessions row remains available while the Host
+  its Host-owned process. Its Workspaces row remains available while the Host
   continues to report that process.
 - **End Terminal…** is destructive. It is separated from close/detach in the
   terminal context menu and opens a critical confirmation explaining that the

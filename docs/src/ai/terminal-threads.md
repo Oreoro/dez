@@ -9,11 +9,11 @@ A Terminal is a shell or terminal-native tool running in the **Main Work
 Area**. It remains a normal native Zed Surface: it can sit beside
 files, Workspace Search, diagnostics, and Agent Review.
 
-**Projects** is a compact supervisory view of that same computation. It
+**Workspaces** is a compact supervisory view of that same computation. It
 adds a Session row after managed ownership or supported agent evidence exists,
 then shows lifecycle, detected agent state, attention, and review evidence.
 Selecting the row focuses or reattaches the owning Terminal; it does not open a
-second terminal inside Projects or the Built-in Agent.
+second terminal inside Workspaces or the Built-in Agent.
 
 Use Terminals for shells, build tools, test runners, servers, and native
 agent CLIs or TUIs. [External Agents](./external-agents.md) are different: they
@@ -24,9 +24,9 @@ integrate through ACP and render as Agent Sessions.
 Dez owns:
 
 - the native Terminal Surface in the Main Work Area
-- Project ownership and supported-agent supervision in Projects
+- Workspace ownership and supported-agent supervision in Workspaces
 - terminal title, Workspace placement, and lifecycle presentation
-- optional persistent Host identity, detach, reattach, and explicit termination
+- packaged Host-owned Session identity, detach, reattach, and explicit termination
 - bell and supported structured attention signals
 - evidence-backed review links when observations are available
 
@@ -46,11 +46,12 @@ automatically apply to a native CLI running in a Terminal.
 
 ## Opening a Terminal {#opening-a-terminal-thread}
 
-Use **Open Agent Terminal** in the active Project, or choose **Open Agent
-Terminal** from **Add to Main Work Area** in the native pane tab strip. The
+Use **Open Terminal** in the active Workspace, or choose **Open Terminal** from
+**Add to Main Work Area** in the native pane tab strip. The
 terminal opens as Zed's existing `TerminalView` in the Main Work Area; Dez
-does not wrap it in a separate terminal renderer. Projects observes that
-Surface and adds the corresponding Project-owned Session row.
+does not wrap it in a separate terminal renderer. Workspaces observes that
+Surface and adds the corresponding Workspace-owned Session row after managed
+ownership or supported agent evidence exists.
 
 Opening a Terminal is intentionally separate from creating a **New Agent
 Session**. The Built-in Agent owns conversations; it is not a terminal
@@ -60,18 +61,18 @@ You can open multiple terminals and move among them like other IDE Surfaces.
 ## Terminal Titles {#terminal-thread-titles}
 
 The terminal title updates automatically to reflect the running shell or
-process. You can set a custom name from its tab or Projects row. At normal
-rail widths, hover or keyboard-select the row and use its pencil. At narrow
+process. You can set a custom name from its tab or Workspaces row. At normal
+Workspaces widths, hover or keyboard-select the row and use its pencil. At narrow
 widths, use the row's context menu or the selected-row rename action. Editing
 the name does not freeze a running-agent or shell status prefix.
 
-The Main Work Area tab and Projects row receive the full title. Each visual
+The Main Work Area tab and Workspaces row receive the full title. Each visual
 surface truncates it only when its own available width requires it, so tooltips,
 switching, and restored Sessions retain useful context.
 
 ## Attention {#terminal-thread-notifications}
 
-When an unfocused terminal emits a bell, Dez can raise attention in Projects
+When an unfocused terminal emits a bell, Dez can raise attention in Workspaces
 and show a notification. Selecting the Session focuses its terminal
 Surface. Acknowledging the notification changes presentation; it does not
 pretend the underlying work condition has been resolved.
@@ -96,7 +97,7 @@ The action names its actual effect:
 ## CLI/TUI Setup Notes {#cli-setup}
 
 Some agent CLIs and TUIs can send terminal signals, such as bell notifications
-or title updates, that Dez uses to show useful context in Projects after the
+or title updates, that Dez uses to show useful context in Workspaces after the
 tool is recognized as supported agent work.
 
 ### Claude Code Notifications {#claude-code-notifications}
@@ -182,7 +183,7 @@ Restart Pi after adding the extension, or run `/reload` if the extension is in o
 ### Codex Terminal Titles {#codex-terminal-titles}
 
 Codex can update the terminal title as it works. Dez uses that title as useful
-Projects context, such as the Workspace, current state, branch, model, or
+Workspaces context, such as the Workspace, current state, branch, model, or
 task progress.
 
 To configure this from within Codex, run `/title` and use the picker to choose which fields appear and in what order. Codex saves the selection to `tui.terminal_title` in `~/.codex/config.toml`. You can also edit it directly:

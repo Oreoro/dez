@@ -231,7 +231,7 @@ jobs:
             "$terminal_host" --help
           } >"$artifact_dir/runtime-smoke.txt"
           grep -F "$expected_name" "$artifact_dir/runtime-smoke.txt"
-          grep -F "0.2.0" "$artifact_dir/runtime-smoke.txt"
+          grep -F "0.2.1" "$artifact_dir/runtime-smoke.txt"
           grep -F "Usage: dez-terminal-host" "$artifact_dir/runtime-smoke.txt"
 
           {

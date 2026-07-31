@@ -1,4 +1,4 @@
-use std::{fmt, io, path::Path};
+use std::{fmt, future::Future, io, path::Path};
 
 use futures_lite::io::{AsyncRead, AsyncReadExt as _, AsyncWrite, AsyncWriteExt as _};
 use gpui::{
@@ -24,8 +24,16 @@ pub const TERMINAL_HOST_TOKEN_FILE_ENV: &str = "DEZ_TERMINAL_HOST_TOKEN_FILE";
 pub const TERMINAL_HOST_ID_ENV: &str = "DEZ_TERMINAL_HOST_ID";
 pub const TERMINAL_SESSION_ID_ENV: &str = "DEZ_TERMINAL_SESSION_ID";
 const MAX_TERMINAL_HOST_INPUT_CHUNK_BYTES: usize = 64 * 1024;
+const TERMINAL_HOST_COMMAND_QUEUE_CAPACITY: usize = 256;
 const TERMINAL_HOST_RECONNECT_ATTEMPTS: usize = 8;
 const TERMINAL_HOST_RECONNECT_INTERVAL: std::time::Duration = std::time::Duration::from_millis(250);
+const TERMINAL_HOST_CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(3);
+const TERMINAL_HOST_COMMAND_CYCLE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(12);
+const TERMINAL_HOST_EVENT_READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+const TERMINAL_HOST_REPLAY_ACTIVE_INTERVAL: std::time::Duration =
+    std::time::Duration::from_millis(32);
+const TERMINAL_HOST_REPLAY_IDLE_INTERVAL: std::time::Duration =
+    std::time::Duration::from_millis(125);
 const TERMINAL_HOST_ACTIVE_POLL_INTERVAL: std::time::Duration =
     std::time::Duration::from_millis(250);
 const TERMINAL_HOST_IDLE_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
@@ -240,6 +248,48 @@ pub enum TerminalHostTransportError {
     RequestIdExhausted,
     #[error("terminal host does not support server-pushed events")]
     EventStreamUnsupported,
+    #[error("terminal host {operation} timed out after {timeout:?}")]
+    TimedOut {
+        operation: &'static str,
+        timeout: std::time::Duration,
+    },
+}
+
+async fn run_bounded_terminal_host_operation<F, T>(
+    future: F,
+    executor: &BackgroundExecutor,
+    operation: &'static str,
+    timeout: std::time::Duration,
+) -> Result<T, TerminalHostTransportError>
+where
+    F: Future<Output = Result<T, TerminalHostTransportError>>,
+{
+    let timer = executor.timer(timeout);
+    futures::pin_mut!(future, timer);
+    match futures::future::select(future, timer).await {
+        futures::future::Either::Left((result, _)) => result,
+        futures::future::Either::Right(_) => {
+            Err(TerminalHostTransportError::TimedOut { operation, timeout })
+        }
+    }
+}
+
+async fn run_bounded_terminal_host_command_cycle<F, T>(
+    future: F,
+    executor: &BackgroundExecutor,
+) -> anyhow::Result<T>
+where
+    F: Future<Output = anyhow::Result<T>>,
+{
+    let timer = executor.timer(TERMINAL_HOST_COMMAND_CYCLE_TIMEOUT);
+    futures::pin_mut!(future, timer);
+    match futures::future::select(future, timer).await {
+        futures::future::Either::Left((result, _)) => result,
+        futures::future::Either::Right(_) => anyhow::bail!(
+            "terminal host command cycle timed out after {:?}",
+            TERMINAL_HOST_COMMAND_CYCLE_TIMEOUT
+        ),
+    }
 }
 
 /// Authenticated, sequential command client for the local terminal helper.
@@ -304,6 +354,7 @@ pub struct TerminalHostConnection {
     capabilities: TerminalHostCapabilities,
     endpoint: TerminalHostEndpoint,
     auth_token: TerminalHostAuthToken,
+    background_executor: BackgroundExecutor,
     command_tx: async_channel::Sender<QueuedTerminalHostCommand>,
     _transport_task: Task<()>,
 }
@@ -492,9 +543,8 @@ impl TerminalHostSnapshotStore {
                             ..
                         }) => {
                             event_cursor = *latest_event_cursor;
-                            needs_full_snapshot = !((supports_event_stream
-                                || supports_event_cursor)
-                                && event_cursor.is_some());
+                            needs_full_snapshot =
+                                !(supports_event_cursor && event_cursor.is_some());
                         }
                         Ok(TerminalHostResponse::Events {
                             latest_cursor,
@@ -652,14 +702,21 @@ impl TerminalHostConnection {
         auth_token: TerminalHostAuthToken,
         background_executor: &BackgroundExecutor,
     ) -> Result<Self, TerminalHostTransportError> {
-        let client = TerminalHostTransportClient::connect(
-            endpoint.socket_path(),
-            host_id,
-            auth_token.clone(),
+        let client = run_bounded_terminal_host_operation(
+            TerminalHostTransportClient::connect(
+                endpoint.socket_path(),
+                host_id,
+                auth_token.clone(),
+            ),
+            background_executor,
+            "connection",
+            TERMINAL_HOST_CONNECT_TIMEOUT,
         )
         .await?;
         let capabilities = client.capabilities();
-        let (command_tx, command_rx) = async_channel::unbounded::<QueuedTerminalHostCommand>();
+        let (command_tx, command_rx) = async_channel::bounded::<QueuedTerminalHostCommand>(
+            TERMINAL_HOST_COMMAND_QUEUE_CAPACITY,
+        );
         let endpoint = endpoint.clone();
         let event_auth_token = auth_token.clone();
         let command_socket_path = endpoint.socket_path().to_path_buf();
@@ -667,51 +724,121 @@ impl TerminalHostConnection {
         let transport_task = background_executor.spawn(async move {
             let mut client = Some(client);
             while let Ok(queued) = command_rx.recv().await {
-                let mut reconnect_error = None;
-                for attempt in 0..TERMINAL_HOST_RECONNECT_ATTEMPTS {
-                    if client.is_some() {
-                        break;
-                    }
-                    match TerminalHostTransportClient::connect(
-                        &command_socket_path,
-                        host_id,
-                        auth_token.clone(),
-                    )
-                    .await
-                    {
-                        Ok(reconnected) => client = Some(reconnected),
-                        Err(error) => {
-                            log::debug!("terminal host reconnect failed: {error}");
-                            let permanent = reconnect_error_is_permanent(&error);
-                            reconnect_error = Some(error);
-                            if permanent {
-                                break;
-                            }
-                            if attempt + 1 < TERMINAL_HOST_RECONNECT_ATTEMPTS {
-                                executor.timer(TERMINAL_HOST_RECONNECT_INTERVAL).await;
+                let QueuedTerminalHostCommand {
+                    command,
+                    response_tx,
+                } = queued;
+                if response_tx
+                    .as_ref()
+                    .is_some_and(|response_tx| response_tx.is_canceled())
+                {
+                    continue;
+                }
+
+                let command_cycle = async {
+                    let mut reconnect_error = None;
+                    for attempt in 0..TERMINAL_HOST_RECONNECT_ATTEMPTS {
+                        if response_tx
+                            .as_ref()
+                            .is_some_and(|response_tx| response_tx.is_canceled())
+                        {
+                            return Ok(None);
+                        }
+                        if client.is_some() {
+                            break;
+                        }
+                        match run_bounded_terminal_host_operation(
+                            TerminalHostTransportClient::connect(
+                                &command_socket_path,
+                                host_id,
+                                auth_token.clone(),
+                            ),
+                            &executor,
+                            "reconnection",
+                            TERMINAL_HOST_CONNECT_TIMEOUT,
+                        )
+                        .await
+                        {
+                            Ok(reconnected) => client = Some(reconnected),
+                            Err(error) => {
+                                log::debug!("terminal host reconnect failed: {error}");
+                                let permanent = reconnect_error_is_permanent(&error);
+                                reconnect_error = Some(error);
+                                if permanent {
+                                    break;
+                                }
+                                if attempt + 1 < TERMINAL_HOST_RECONNECT_ATTEMPTS {
+                                    if response_tx
+                                        .as_ref()
+                                        .is_some_and(|response_tx| response_tx.is_canceled())
+                                    {
+                                        return Ok(None);
+                                    }
+                                    executor.timer(TERMINAL_HOST_RECONNECT_INTERVAL).await;
+                                }
                             }
                         }
                     }
-                }
-                let result = match client.as_mut() {
-                    Some(client) => client
-                        .command(queued.command)
-                        .await
-                        .map_err(anyhow::Error::from),
-                    None => match reconnect_error {
-                        Some(error) => Err(anyhow::anyhow!(
-                            "terminal host connection is still unavailable: {error}"
-                        )),
-                        None => Err(anyhow::anyhow!("terminal host connection unavailable")),
-                    },
+                    if response_tx
+                        .as_ref()
+                        .is_some_and(|response_tx| response_tx.is_canceled())
+                    {
+                        return Ok(None);
+                    }
+                    match client.as_mut() {
+                        Some(client) => client
+                            .command(command)
+                            .await
+                            .map(Some)
+                            .map_err(anyhow::Error::from),
+                        None => match reconnect_error {
+                            Some(error) => Err(anyhow::anyhow!(
+                                "terminal host connection is still unavailable: {error}"
+                            )),
+                            None => Err(anyhow::anyhow!("terminal host connection unavailable")),
+                        },
+                    }
                 };
+                let result =
+                    run_bounded_terminal_host_command_cycle(command_cycle, &executor).await;
                 if result.is_err() {
                     // The request may have reached the helper, so never replay
-                    // it automatically. Reconnect before the next ordered
-                    // command and let callers reconcile through snapshots.
+                    // it automatically. Any work already queued behind the
+                    // failed request is stale by definition and must fail too.
                     client = None;
                 }
-                if let Some(response_tx) = queued.response_tx {
+                let failure_message = result.as_ref().err().map(|error| format!("{error:#}"));
+                if let Some(failure_message) = failure_message.as_ref() {
+                    let queued_at_failure = command_rx.len();
+                    let mut discarded_count = 0usize;
+                    for _ in 0..queued_at_failure {
+                        let Ok(pending) = command_rx.try_recv() else {
+                            break;
+                        };
+                        discarded_count = discarded_count.saturating_add(1);
+                        if let Some(response_tx) = pending.response_tx
+                            && !response_tx.is_canceled()
+                            && response_tx
+                                .send(Err(anyhow::anyhow!(
+                                    "terminal host discarded queued work after a transport failure: {failure_message}"
+                                )))
+                                .is_err()
+                        {
+                            log::debug!(
+                                "terminal host queued command response receiver was dropped"
+                            );
+                        }
+                    }
+                    if discarded_count > 0 {
+                        log::warn!(
+                            "discarded {discarded_count} stale terminal host commands after a transport failure"
+                        );
+                    }
+                }
+                if let Some(response_tx) = response_tx {
+                    let result = result.and_then(|response| {
+                        response.ok_or_else(|| anyhow::anyhow!("terminal host command canceled"))
+                    });
                     if response_tx.send(result).is_err() {
                         log::debug!("terminal host command response receiver was dropped");
                     }
@@ -725,6 +852,7 @@ impl TerminalHostConnection {
             capabilities,
             endpoint,
             auth_token: event_auth_token,
+            background_executor: background_executor.clone(),
             command_tx,
             _transport_task: transport_task,
         })
@@ -746,11 +874,16 @@ impl TerminalHostConnection {
         &self,
         after_cursor: Option<u64>,
     ) -> Result<TerminalHostEventStream, TerminalHostTransportError> {
-        TerminalHostEventStream::connect(
-            self.endpoint.socket_path(),
-            self.host_id,
-            self.auth_token.clone(),
-            after_cursor,
+        run_bounded_terminal_host_operation(
+            TerminalHostEventStream::connect(
+                self.endpoint.socket_path(),
+                self.host_id,
+                self.auth_token.clone(),
+                after_cursor,
+            ),
+            &self.background_executor,
+            "event connection",
+            TERMINAL_HOST_CONNECT_TIMEOUT,
         )
         .await
     }
@@ -763,12 +896,14 @@ impl TerminalHostConnection {
         if stream.is_none() {
             *stream = Some(self.event_stream(after_cursor).await?);
         }
-        stream
-            .as_mut()
-            .expect("event stream is connected")
-            .next()
-            .await
-            .map_err(anyhow::Error::from)
+        run_bounded_terminal_host_operation(
+            stream.as_mut().expect("event stream is connected").next(),
+            &self.background_executor,
+            "event heartbeat",
+            TERMINAL_HOST_EVENT_READ_TIMEOUT,
+        )
+        .await
+        .map_err(anyhow::Error::from)
     }
 
     pub async fn command(
@@ -917,6 +1052,7 @@ impl TerminalHostConnection {
                 }
 
                 let replay_was_truncated = attachment.replay_was_truncated;
+                let replay_is_active = !attachment.replay.is_empty();
                 let state = attachment.snapshot.state;
                 let dimensions = attachment.snapshot.dimensions;
                 let foreground_command = attachment.snapshot.foreground_command.clone();
@@ -933,7 +1069,13 @@ impl TerminalHostConnection {
                         latest_sequence = latest_sequence.max(chunk.sequence);
                         terminal.write_hosted_replay(&chunk, cx);
                     }
-                    terminal.finish_hosted_replay(dimensions, cx);
+                    let terminal_bounds = terminal.last_content().terminal_bounds;
+                    let dimensions_changed = terminal_bounds.num_columns()
+                        != usize::from(dimensions.columns)
+                        || terminal_bounds.num_lines() != usize::from(dimensions.rows);
+                    if replay_is_active || replay_was_truncated || dimensions_changed {
+                        terminal.finish_hosted_replay(dimensions, cx);
+                    }
                     terminal.set_hosted_foreground_command(foreground_command, cx);
                     match state {
                         super::TerminalSessionState::Exited { exit_code } => {
@@ -965,7 +1107,11 @@ impl TerminalHostConnection {
                     return Ok(());
                 }
                 cx.background_executor()
-                    .timer(std::time::Duration::from_millis(32))
+                    .timer(if replay_is_active {
+                        TERMINAL_HOST_REPLAY_ACTIVE_INTERVAL
+                    } else {
+                        TERMINAL_HOST_REPLAY_IDLE_INTERVAL
+                    })
                     .await;
             }
         })
@@ -984,6 +1130,19 @@ fn reconnect_error_is_permanent(error: &TerminalHostTransportError) -> bool {
     )
 }
 
+fn terminal_host_command_queue_error(
+    error: async_channel::TrySendError<QueuedTerminalHostCommand>,
+) -> anyhow::Error {
+    match error {
+        async_channel::TrySendError::Full(_) => {
+            anyhow::anyhow!("terminal host is busy; wait for pending terminal operations and retry")
+        }
+        async_channel::TrySendError::Closed(_) => {
+            anyhow::anyhow!("terminal host connection closed")
+        }
+    }
+}
+
 struct TransportHostedTerminalController {
     session_id: super::TerminalSessionId,
     command_tx: async_channel::Sender<QueuedTerminalHostCommand>,
@@ -996,7 +1155,7 @@ impl TransportHostedTerminalController {
                 command,
                 response_tx: None,
             })
-            .map_err(|_| anyhow::anyhow!("terminal host connection closed"))
+            .map_err(terminal_host_command_queue_error)
     }
 }
 

@@ -942,9 +942,11 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
     }
 
     match name {
-        "workspace::NewTerminal" => return "terminal::OpenAgentTerminal".to_owned(),
-        "terminal::OpenShellTerminal" => return "terminal::OpenShell".to_owned(),
-        "terminal::OpenTmuxTerminal" => return "terminal::OpenTmuxWorkspace".to_owned(),
+        "workspace::NewTerminal" | "terminal::OpenAgentTerminal" => {
+            return "terminal::OpenTerminal".to_owned();
+        }
+        "terminal::OpenShellTerminal" => return "terminal::OpenNativeShell".to_owned(),
+        "terminal::OpenTmuxTerminal" => return "terminal::OpenTmuxSession".to_owned(),
         "terminal::OpenCodexTerminal" => return "terminal::LaunchCodex".to_owned(),
         "terminal::OpenClaudeCodeTerminal" => {
             return "terminal::LaunchClaudeCode".to_owned();
@@ -991,10 +993,10 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
             return "agent_sessions::RenameSelectedSession".to_owned();
         }
         "agent::NewTerminalThread" => {
-            return "terminal::OpenAgentTerminalInWorkspace".to_owned();
+            return "terminal::OpenTerminalInWorkspace".to_owned();
         }
         "sidebar::NewSessionInGroup" => {
-            return "terminal::OpenAgentTerminalInSelectedWorkspace".to_owned();
+            return "terminal::OpenTerminalInSelectedWorkspace".to_owned();
         }
         "sidebar::NewThreadInGroup" => {
             return "built_in_agent::NewSessionInWorkspace".to_owned();
@@ -1175,15 +1177,15 @@ mod tests {
         );
         assert_eq!(
             humanize_action_name_for_product("terminal::OpenAgentTerminal", "Dez"),
-            "terminal: open agent terminal"
+            "terminal: open terminal"
         );
         assert_eq!(
             humanize_action_name_for_product("terminal::OpenShellTerminal", "Dez"),
-            "terminal: open shell"
+            "terminal: open native shell"
         );
         assert_eq!(
             humanize_action_name_for_product("terminal::OpenTmuxTerminal", "Dez"),
-            "terminal: open tmux workspace"
+            "terminal: open tmux session"
         );
         assert_eq!(
             humanize_action_name_for_product("terminal::OpenCodexTerminal", "Dez"),
@@ -1287,11 +1289,11 @@ mod tests {
         );
         assert_eq!(
             humanize_action_name_for_product("agent::NewTerminalThread", "Dez"),
-            "terminal: open agent terminal in workspace"
+            "terminal: open terminal in workspace"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::NewSessionInGroup", "Dez"),
-            "terminal: open agent terminal in selected workspace"
+            "terminal: open terminal in selected workspace"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::ToggleThreadHistory", "Dez"),
