@@ -205,6 +205,40 @@ pub fn set_workspace_access_state(state: WorkspaceAccessState, cx: &mut App) {
     cx.refresh_windows();
 }
 
+fn remaining_inaccessible_workspace_roots(
+    roots: &[PathBuf],
+    opened_paths: &[PathBuf],
+) -> Vec<PathBuf> {
+    roots
+        .iter()
+        .filter(|root| {
+            !opened_paths
+                .iter()
+                .any(|opened_path| root.starts_with(opened_path))
+        })
+        .cloned()
+        .collect()
+}
+
+fn mark_workspace_paths_accessible(opened_paths: &[PathBuf], cx: &mut App) {
+    let WorkspaceAccessState::AccessRequired { roots } = workspace_access_state(cx) else {
+        return;
+    };
+    let remaining_roots = remaining_inaccessible_workspace_roots(&roots, opened_paths);
+    if remaining_roots.len() == roots.len() {
+        return;
+    }
+
+    let state = if remaining_roots.is_empty() {
+        WorkspaceAccessState::Available
+    } else {
+        WorkspaceAccessState::AccessRequired {
+            roots: remaining_roots.into(),
+        }
+    };
+    set_workspace_access_state(state, cx);
+}
+
 fn workspace_card_gap_for_product(app_name: &str, configured_gap: f32) -> Pixels {
     if app_name == "Zed" {
         gpui::px(configured_gap.max(0.0))
@@ -2685,6 +2719,7 @@ pub fn prompt_for_open_path_and_open(
         let Some(paths) = paths.await.log_err().flatten() else {
             return;
         };
+        let opened_paths = paths.clone();
         if !create_new_window {
             if let Some(handle) = multi_workspace_handle {
                 if let Some(task) = handle
@@ -2693,7 +2728,10 @@ pub fn prompt_for_open_path_and_open(
                     })
                     .log_err()
                 {
-                    task.await.log_err();
+                    if task.await.log_err().is_some() {
+                        cx.update(|_, cx| mark_workspace_paths_accessible(&opened_paths, cx))
+                            .log_err();
+                    }
                 }
                 return;
             }
@@ -2704,7 +2742,10 @@ pub fn prompt_for_open_path_and_open(
             })
             .log_err()
         {
-            task.await.log_err();
+            if task.await.log_err().is_some() {
+                cx.update(|_, cx| mark_workspace_paths_accessible(&opened_paths, cx))
+                    .log_err();
+            }
         }
     })
     .detach();
@@ -17553,6 +17594,40 @@ mod tests {
         assert_eq!(workspace_card_gap_for_product("Zed", -1.0), Pixels::ZERO);
         assert!(!workspace_pane_uses_rounded_card_frame("Dez"));
         assert!(workspace_pane_uses_rounded_card_frame("Zed"));
+    }
+
+    #[test]
+    fn reopening_a_blocked_workspace_clears_only_accessible_roots() {
+        let roots = vec![
+            PathBuf::from("/Users/test/Documents/one"),
+            PathBuf::from("/Users/test/Documents/two"),
+            PathBuf::from("/Users/test/Desktop/three"),
+        ];
+
+        assert_eq!(
+            remaining_inaccessible_workspace_roots(
+                &roots,
+                &[PathBuf::from("/Users/test/Documents/one")],
+            ),
+            vec![
+                PathBuf::from("/Users/test/Documents/two"),
+                PathBuf::from("/Users/test/Desktop/three"),
+            ]
+        );
+        assert_eq!(
+            remaining_inaccessible_workspace_roots(
+                &roots,
+                &[PathBuf::from("/Users/test/Documents")],
+            ),
+            vec![PathBuf::from("/Users/test/Desktop/three")]
+        );
+        assert_eq!(
+            remaining_inaccessible_workspace_roots(
+                &roots,
+                &[PathBuf::from("/Users/test/Developer")],
+            ),
+            roots
+        );
     }
 
     #[test]

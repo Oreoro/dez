@@ -438,6 +438,9 @@ require_multiline_pattern docs/src/development/dez/release-evidence.md \
     'The \[v0\.2 Workspace Polish\].*?defines the[[:space:]]+active source lane.*?\[v0\.1 Product Hardening\].*?defines the[[:space:]]+release order and remaining runtime gates.*?Historical artifacts below do not[[:space:]]+validate a newer source tree' \
     'the evidence ledger can regress to naming a historical release plan as current'
 require_multiline_pattern docs/src/development/dez/release-evidence.md \
+    '## 2026-07-31: packaged v0\.2 navigation baseline.*?30623841946.*?a21ad2b62a47beaf0d13e03208f3d1ab095d8435.*?8792258542.*?337c1f45ece29aa46d0811d203d1f714eddfbe8b6464626071ad691b3ae69442.*?ad-hoc-signed Preview, not a signed or notarized v0\.2 release.*?does not prove a later access-recovery patch' \
+    'the evidence ledger can regress to losing the exact v0.2 compile baseline or promoting it beyond its proof'
+require_multiline_pattern docs/src/development/dez/release-evidence.md \
     '## Frozen source and historical artifacts.*?Historical development executable.*?regenerable `target` directory.*?new.*?runtime gate must rebuild' \
     'release evidence can regress to treating removed generated artifacts as present'
 require_pattern crates/zed/src/main.rs \
@@ -990,8 +993,11 @@ require_multiline_pattern crates/zed/src/main.rs \
     'if installation_required.*?TerminalHostStartupState::InstallationRequired.*?else \{.*?LocalTerminalHost::init.*?TerminalHostRuntime::init.*?restore_or_create_workspace.*?move_to_applications::installation_required.*?seed_empty_workspace_with_home.*?return Ok' \
     'a temporary app launch can regress to restoring Workspaces or starting the durable Host'
 require_multiline_pattern crates/workspace/src/workspace.rs \
-    'pub enum WorkspaceAccessState.*?Available.*?AccessRequired.*?pub fn set_workspace_access_state' \
+    'pub enum WorkspaceAccessState.*?Available.*?AccessRequired.*?pub fn set_workspace_access_state.*?fn remaining_inaccessible_workspace_roots.*?root\.starts_with\(opened_path\).*?fn mark_workspace_paths_accessible.*?WorkspaceAccessState::Available.*?remaining_roots\.into\(\).*?mark_workspace_paths_accessible\(&opened_paths, cx\).*?fn reopening_a_blocked_workspace_clears_only_accessible_roots' \
     'Workspace access denial can regress to an unrenderable background error'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn workspace_access_root_label.*?file_name.*?workspace_access_root_label\(root\).*?needs access before Git, search, agents, or terminals can start.*?Workspace access required.*?Choose Workspace….*?Choose Blocked Workspace Folder.*?native macOS picker.*?OpenFolder' \
+    'the protected-folder recovery surface can regress to an unclear or non-native permission action'
 require_multiline_pattern crates/zed/src/main.rs \
     'preflight_workspace_roots.*?WorkspaceAccessState::AccessRequired.*?is_permission_denied.*?PermissionDenied' \
     'Workspace restoration can regress to starting services before protected-root access'

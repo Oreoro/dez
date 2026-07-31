@@ -1357,6 +1357,13 @@ fn workspace_options_tooltip_label() -> &'static str {
     "Workspace Options"
 }
 
+fn workspace_access_root_label(root: &Path) -> String {
+    root.file_name()
+        .filter(|name| !name.is_empty())
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| root.display().to_string())
+}
+
 fn project_header_primary_action_activates_workspace(app_name: &str) -> bool {
     app_name != "Zed"
 }
@@ -2188,6 +2195,11 @@ mod workspace_header_label_tests {
             "zed 3.0, ideas"
         );
         assert_eq!(workspace_options_tooltip_label(), "Workspace Options");
+        assert_eq!(
+            workspace_access_root_label(Path::new("/Users/test/Documents/zed 3.0")),
+            "zed 3.0"
+        );
+        assert_eq!(workspace_access_root_label(Path::new("/")), "/");
         assert_eq!(
             workspace_new_terminal_tooltip_label("Dez"),
             "Open Agent Terminal"
@@ -16105,16 +16117,16 @@ impl Sidebar {
         };
         let root_labels = roots
             .iter()
-            .map(|root| root.display().to_string())
+            .map(|root| workspace_access_root_label(root))
             .collect::<Vec<_>>();
         let description = if root_labels.len() == 1 {
             format!(
-                "Dez cannot read {}. Grant access before Git, search, agents, or terminals start.",
+                "“{}” needs access before Git, search, agents, or terminals can start. Choose it once in the macOS folder picker.",
                 root_labels[0]
             )
         } else {
             format!(
-                "Dez cannot read {} Workspace roots. Grant access before Git, search, agents, or terminals start.",
+                "{} Workspace folders need access before Git, search, agents, or terminals can start. Choose each blocked folder once in the macOS picker.",
                 root_labels.len()
             )
         };
@@ -16126,13 +16138,13 @@ impl Sidebar {
                 .title("Workspace access required")
                 .description(description)
                 .actions_slot(
-                    Button::new("grant-workspace-access", "Grant Access…")
+                    Button::new("choose-blocked-workspace", "Choose Workspace…")
                         .size(ButtonSize::Medium)
                         .style(ButtonStyle::Filled)
                         .tab_index(0isize)
-                        .aria_label("Grant Workspace Folder Access")
+                        .aria_label("Choose Blocked Workspace Folder")
                         .tooltip(Tooltip::text(
-                            "Choose the Workspace folder in the native folder picker",
+                            "Choose a blocked Workspace folder in the native macOS picker",
                         ))
                         .on_click(|_, window, cx| {
                             window.dispatch_action(

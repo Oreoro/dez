@@ -167,7 +167,9 @@ custom installation overlay.
 
 Before restoring a local Workspace, Dez verifies that each root can be read.
 Protected-folder failures are aggregated into one **Workspace access required**
-notice with a native **Grant Access…** folder action. Git, Workspace Search,
+notice with a native **Choose Workspace…** folder action. Select each blocked
+root once in the macOS picker. A successfully reopened root leaves the blocked
+set immediately; other denied roots remain visible. Git, Workspace Search,
 agents, and terminal creation wait rather than repeatedly failing against the
 same root.
 

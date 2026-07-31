@@ -8,6 +8,27 @@ active source lane. The preserved
 release order and remaining runtime gates. Historical artifacts below do not
 validate a newer source tree.
 
+## 2026-07-31: packaged v0.2 navigation baseline
+
+[GitHub Actions run 30623841946](https://github.com/Oreoro/dez/actions/runs/30623841946)
+targeted commit `a21ad2b62a47beaf0d13e03208f3d1ab095d8435` and completed
+the Apple M2 Preview lane in 1 hour 17 minutes. Source and bundle guards,
+optimized arm64 compilation, DMG verification, bundle identity, executable
+architecture, deep ad-hoc signature, packaged app/CLI/terminal-Host entry
+points, the `0.2.0` runtime version, portable checksum, and artifact upload all
+passed.
+
+Artifact `8792258542` is named
+`Dez-preview-macOS-M2-a21ad2b62a47beaf0d13e03208f3d1ab095d8435`, is
+145,156,781 bytes, and has SHA-256
+`337c1f45ece29aa46d0811d203d1f714eddfbe8b6464626071ad691b3ae69442`.
+It is an ad-hoc-signed Preview, not a signed or notarized v0.2 release.
+
+This proves compilation and packaging for that exact historical baseline.
+It does not prove a later access-recovery patch, interactive first launch,
+protected-folder recovery, terminal survival or attachment, keyboard and
+screen-reader behavior, or rendered light/dark/reduced-transparency layouts.
+
 ## 2026-07-31: rejected native-navigation compile baseline
 
 [GitHub Actions run 30621006062](https://github.com/Oreoro/dez/actions/runs/30621006062)
@@ -23,9 +44,8 @@ installation ID explicitly, and removes an unused legacy-session payload that
 the same compile reported as dead code.
 
 This rejected run is compile diagnostics, not positive artifact evidence. The
-corrections remain unproven until a new exact-head Preview run completes its
-optimized build, runtime entry-point smoke tests, DMG verification, signature
-check, and artifact upload.
+corrections were subsequently compiled and packaged by the exact-head Preview
+baseline recorded above.
 
 ## 2026-07-31: real native Home tab and navigation routes
 

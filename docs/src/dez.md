@@ -537,10 +537,12 @@ never claims to transfer process ownership between Hosts.
 
 Before a local Workspace restore, Dez enumerates each root once. A macOS
 protected-folder denial becomes one **Workspace access required** notice with
-the native **Grant Access…** folder picker. Git, Workspace Search, LSP, agent,
-and terminal startup wait behind that preflight. Workspace Search deduplicates
-permission diagnostics per root, and active searches are cancelled during
-quit so denied trees cannot flood the log or hold `app_will_quit` open.
+the native **Choose Workspace…** folder picker. Select each blocked root once;
+a successfully reopened root is removed from the access warning while other
+denied roots remain visible. Git, Workspace Search, LSP, agent, and terminal
+startup wait behind that preflight. Workspace Search deduplicates permission
+diagnostics per root, and active searches are cancelled during quit so denied
+trees cannot flood the log or hold `app_will_quit` open.
 
 Workspaces does not list arbitrary current-user TTYs from Terminal.app, iTerm,
 Warp, another IDE, or an unrelated application. Those processes are neither
