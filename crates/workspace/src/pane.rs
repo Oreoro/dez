@@ -1,9 +1,9 @@
 use crate::{
-    AddActiveFileToEvidence, CloseWindow, MultiWorkspace, NewCenterTerminal, NewFile, NewTerminal,
-    OpenInTerminal, OpenOptions, OpenTerminal, OpenVisible, RemoveActiveFileFromEvidence,
-    RevealBuiltInAgent, RevealDebug, RevealFiles, RevealGitChanges, SidebarSide, SplitDirection,
-    ToggleAgentPane, ToggleFileFinder, ToggleProjectPane, ToggleProjectSymbols, ToggleZoom,
-    Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
+    AddActiveFileToEvidence, CloseWindow, FocusSidebar, MultiWorkspace, NewCenterTerminal, NewFile,
+    NewTerminal, OpenInTerminal, OpenOptions, OpenTerminal, OpenVisible,
+    RemoveActiveFileFromEvidence, RevealBuiltInAgent, RevealDebug, RevealFiles, RevealGitChanges,
+    SidebarSide, SplitDirection, ToggleAgentPane, ToggleFileFinder, ToggleProjectPane,
+    ToggleProjectSymbols, ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
     focus_follows_mouse::FocusFollowsMouse as _,
     invalid_item_view::InvalidItemView,
     item::{
@@ -5630,9 +5630,37 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                             zed_actions::OpenRecent::default().boxed_clone(),
                         )
                         .separator()
+                        .submenu("Open Terminal", |menu, _, _| {
+                            menu.action(
+                                "Configured Agent",
+                                zed_actions::terminal::OpenAgentTerminal.boxed_clone(),
+                            )
+                            .action(
+                                "Native Shell",
+                                zed_actions::terminal::OpenShellTerminal.boxed_clone(),
+                            )
+                            .action(
+                                "tmux Workspace",
+                                zed_actions::terminal::OpenTmuxTerminal.boxed_clone(),
+                            )
+                            .separator()
+                            .action(
+                                "Codex",
+                                zed_actions::terminal::OpenCodexTerminal.boxed_clone(),
+                            )
+                            .action(
+                                "Claude Code",
+                                zed_actions::terminal::OpenClaudeCodeTerminal.boxed_clone(),
+                            )
+                            .action(
+                                "OpenCode",
+                                zed_actions::terminal::OpenOpenCodeTerminal.boxed_clone(),
+                            )
+                        })
+                        .action("Browse tmux, Herdr & cmux…", FocusSidebar.boxed_clone())
                         .action(
-                            "Open Agent Terminal",
-                            NewCenterTerminal::default().boxed_clone(),
+                            "Open Workspace in cmux",
+                            zed_actions::dez::OpenWorkspaceInCmux.boxed_clone(),
                         )
                         .action("Open Built-in Agent", RevealBuiltInAgent.boxed_clone())
                         .separator()

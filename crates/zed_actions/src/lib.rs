@@ -110,6 +110,8 @@ pub mod terminal {
             OpenAgentTerminal,
             /// Opens the configured shell in a native Main Work Area terminal.
             OpenShellTerminal,
+            /// Opens a Workspace-named tmux session in a native Main Work Area terminal.
+            OpenTmuxTerminal,
             /// Opens Codex in a native Main Work Area terminal.
             OpenCodexTerminal,
             /// Opens Claude Code in a native Main Work Area terminal.

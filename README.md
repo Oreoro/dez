@@ -31,7 +31,9 @@ Workspace instead of separate applications or hidden panel modes.
   accessibility label. A Workspace can explicitly attach a path-matched tmux
   or Herdr session, or open a path-matched cmux Workspace in cmux, without
   taking ownership. Each external item appears beneath the most specific
-  matching Workspace, beside its associated Dez terminals and agents. Unrelated
+  matching Workspace with source, semantic state, and working-directory
+  metadata, beside its associated Dez terminals and agents. Workspace headers
+  show live Git branch and changed-file counts when available. Unrelated
   machine terminals do not leak into the list.
 - **Workspace tools** — Files, Outline, Git, Debug, and the optional
   provider-backed Built-in Agent are ordinary draggable and closeable native
@@ -47,8 +49,9 @@ Workspace instead of separate applications or hidden panel modes.
   accidentally losing the GUI does not end the computation. Reopening Dez
   reattaches the same Session; task and remote terminals keep their existing
   lifecycle semantics. Workspace Options can launch the configured default,
-  a plain shell, Codex, Claude Code, or OpenCode in the native terminal, and
-  can hand the Workspace path to cmux without pretending cmux is a shell.
+  a plain shell, a Workspace-named tmux session, Codex, Claude Code, or
+  OpenCode in the native terminal, and can hand the Workspace path to cmux
+  without pretending cmux is a shell.
 - **Evidence and review** — Dez distinguishes observed facts from reported or
   unknown state, then uses Workspace, terminal, command, check, file, and Git
   evidence to make review safer.
@@ -86,7 +89,10 @@ and `⌘9` selects the last tab; Linux and Windows use `Alt+1`–`Alt+9`.
 `Ctrl+Tab` opens the recent-tab switcher, split-pane focus keeps the native
 Zed chords, `Ctrl+\`` opens the configured agent terminal, and
 `Ctrl+Shift+\`` always opens a shell. Command Search can launch Codex, Claude
-Code, OpenCode, a shell, or cmux directly. **Settings → Keyboard & Vim**
+Code, OpenCode, a shell, a Workspace-named tmux session, or cmux directly.
+The native tab-strip `+` exposes the same terminal choices, **Browse tmux,
+Herdr & cmux…**, and **Open Workspace in cmux** without creating a second
+navigation system. **Settings → Keyboard & Vim**
 exposes shortcut search, conflict inspection, base keymaps, and optional full
 Vim or Helix editing. Vim and Helix share native leader destinations for
 recent tabs (`Space b`), files (`Space f`), the configured agent terminal
@@ -125,7 +131,10 @@ Workspaces open in cmux. Discovery updates automatically and can be refreshed
 explicitly from a Workspace's options menu. The menu shows when it is checking
 and explains when no external session matches instead of silently removing the
 integration. Process and layout ownership always stays with the external
-application. Arbitrary PTYs remain read-only.
+application. **Terminal: Open tmux Workspace** attaches or creates a stable
+session named from the active Workspace with `tmux new-session -A`; discovered
+sessions remain available individually in Workspaces. Arbitrary PTYs remain
+read-only.
 
 ## Visual baseline
 

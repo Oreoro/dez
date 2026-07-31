@@ -77,7 +77,7 @@ use workspace::{
 };
 use zed_actions::terminal::{
     OpenAgentTerminal, OpenClaudeCodeTerminal, OpenCodexTerminal, OpenOpenCodeTerminal,
-    OpenShellTerminal,
+    OpenShellTerminal, OpenTmuxTerminal,
 };
 
 struct ImeState {
@@ -154,6 +154,19 @@ mod startup_command_tests {
             terminal_startup_command_input("opencode".to_owned()),
             b"opencode\r"
         );
+    }
+
+    #[test]
+    fn tmux_session_names_are_workspace_scoped_and_shell_safe() {
+        assert_eq!(
+            tmux_session_name_from_workspace_label(Some("Dez 3.0")),
+            "Dez-3-0"
+        );
+        assert_eq!(
+            tmux_session_name_from_workspace_label(Some("../../")),
+            "dez"
+        );
+        assert_eq!(tmux_session_name_from_workspace_label(None), "dez");
     }
 }
 
@@ -591,6 +604,7 @@ pub fn init(cx: &mut App) {
         workspace.register_action(new_terminal);
         workspace.register_action(open_agent_terminal);
         workspace.register_action(open_shell_terminal);
+        workspace.register_action(open_tmux_terminal);
         workspace.register_action(open_codex_terminal);
         workspace.register_action(open_claude_code_terminal);
         workspace.register_action(open_opencode_terminal);
@@ -886,6 +900,52 @@ fn open_shell_terminal(
             local: false,
             startup_command: Some(String::new()),
         },
+        window,
+        cx,
+    );
+}
+
+fn tmux_session_name_from_workspace_label(label: Option<&str>) -> String {
+    let session_name = label
+        .unwrap_or("dez")
+        .chars()
+        .map(|character| {
+            if character.is_ascii_alphanumeric() || matches!(character, '-' | '_') {
+                character
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>();
+    let session_name = session_name.trim_matches('-');
+    if session_name.is_empty() {
+        "dez".to_owned()
+    } else {
+        session_name.to_owned()
+    }
+}
+
+fn open_tmux_terminal(
+    workspace: &mut Workspace,
+    _: &OpenTmuxTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+
+    let project_group_key = workspace.project_group_key(cx);
+    let workspace_label = project_group_key
+        .path_list()
+        .ordered_paths()
+        .next()
+        .and_then(|path| path.file_name())
+        .and_then(|name| name.to_str());
+    let session_name = tmux_session_name_from_workspace_label(workspace_label);
+    open_terminal_with_startup_command(
+        workspace,
+        &format!("tmux new-session -A -s {session_name}"),
         window,
         cx,
     );

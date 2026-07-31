@@ -45,12 +45,17 @@ reorder, cross-pane drag, preview replacement, pin, and close behavior; Dez
 does not imitate browser tabs with a separate navigation system. Terminals can
 be split below or beside code while keeping their Workspace ownership.
 
-The tab-strip **+** is the single **Add to Main Work Area** control. It can
-open a native agent terminal, the optional Built-in Agent, a file, Files, Git,
-Debug, Workspace search, or symbol search. Every destination is the existing
-Zed Surface in the same pane system, so it can be focused and arranged without
-creating a nested panel or a second navigation model. The tab strip and Add
-control remain visible on an empty Main Work Area, including first-run Home.
+The tab-strip **+** is the single **Add to Main Work Area** control. Its
+**Open Terminal** submenu launches the configured agent command, a native
+shell, a Workspace-named tmux session, Codex, Claude Code, or OpenCode. It also
+opens the optional Built-in Agent, a file, Files, Git, Debug, Workspace search,
+or symbol search. **Browse tmux, Herdr & cmux…** focuses Workspaces, where each
+discovered external session remains attached to its owning Workspace.
+**Open Workspace in cmux** performs the explicit external handoff. Every
+destination is the existing Zed Surface in the same pane system, so it can be
+focused and arranged without creating a nested panel or a second navigation
+model. The tab strip and Add control remain visible on an empty Main Work
+Area, including first-run Home.
 
 Workspaces starts closed in fresh windows and remains available as an on-demand
 supervisor. Workspace Tools start closed and open as ordinary Main Work Area
@@ -205,7 +210,10 @@ terminal action in its header instead of expanding into a provider onboarding
 block. At compact widths, the caught-up action shortens to **Show All** without
 losing source or status in each row. Explicit tmux and Herdr rows attach in the
 Main Work Area; cmux Workspace rows open in cmux. Each row sits beneath the
-most specific matching Workspace. Unrelated machine terminals do not render.
+most specific matching Workspace and uses its secondary metadata row for
+source, semantic state, working directory or worktree, and attention. The
+Workspace header owns Git branch and changed-file metadata. Unrelated machine
+terminals do not render.
 Explicit external rows never hide the primary **Open Workspace…** path when no
 Workspace is open.
 
@@ -291,15 +299,20 @@ subscription, authentication, TUI, commands, and plugins remain intact. Use
 conversation for planning, Workspace questions, edits, or tool calls beside the
 editor. It is optional and requires a usable provider and model.
 
-Workspace Options exposes one native **Open Agent Terminal** submenu:
-**Default**, **Native Shell**, **Codex**, **Claude Code**, and **OpenCode**.
+Workspace Options and the tab-strip **+** expose native terminal launch
+choices: **Configured Agent**, **Native Shell**, **tmux Workspace**,
+**Codex**, **Claude Code**, and **OpenCode**.
 The default command is editable under **Settings → Agents →
 Default Agent Terminal Command**; leaving it blank keeps a normal shell.
 Provider shortcuts are per-launch choices and never rewrite that setting.
 The same choices are native Command Search actions: **Terminal: Open Agent
-Terminal**, **Open Shell**, **Launch Codex**, **Launch Claude Code**, and
-**Launch OpenCode**. **Workspace: Open in cmux** hands the active local
-Workspace to cmux without replacing or closing Dez.
+Terminal**, **Open Shell**, **Open tmux Workspace**, **Launch Codex**,
+**Launch Claude Code**, and **Launch OpenCode**. **Open tmux Workspace** runs
+`tmux new-session -A -s <workspace>` after the native login shell is ready, so
+each codebase gets a stable attach-or-create destination. **Workspace: Open in
+cmux** hands the active local Workspace to cmux without replacing or closing
+Dez. **Browse tmux, Herdr & cmux…** opens Workspaces for an exact discovered
+session instead of guessing which target the user intended.
 Dez waits for the configured shell startup before submitting the selected
 command, so login-shell initialization, remote/WSL behavior, and native PTY
 keyboard handling remain intact.
@@ -517,6 +530,13 @@ running, and explains when no path-matched activity exists.
 The external application remains authoritative; closing a Dez tab detaches,
 Herdr never receives automatic takeover, and Workspaces never becomes a second
 process, transcript, or layout owner.
+
+Dez only renders metadata with an authoritative owner. Git supplies branch and
+changed-file counts; terminal and multiplexer snapshots supply working
+directory, provider, lifecycle, client count, and attention. The current
+candidate does not advertise port badges because no Workspace-scoped local
+server or port-forwarding model is wired into Workspaces yet. It does not
+scrape terminal output or infer ports from process names.
 
 ## Visual design
 

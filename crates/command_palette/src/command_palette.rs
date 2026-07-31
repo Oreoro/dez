@@ -59,6 +59,7 @@ fn product_hidden_action_types(app_name: &str) -> Vec<TypeId> {
             TypeId::of::<zed_actions::dez::OpenWorkspaceInCmux>(),
             TypeId::of::<zed_actions::terminal::OpenAgentTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenShellTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenTmuxTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenCodexTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenClaudeCodeTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenOpenCodeTerminal>(),
@@ -943,6 +944,7 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
     match name {
         "workspace::NewTerminal" => return "terminal::OpenAgentTerminal".to_owned(),
         "terminal::OpenShellTerminal" => return "terminal::OpenShell".to_owned(),
+        "terminal::OpenTmuxTerminal" => return "terminal::OpenTmuxWorkspace".to_owned(),
         "terminal::OpenCodexTerminal" => return "terminal::LaunchCodex".to_owned(),
         "terminal::OpenClaudeCodeTerminal" => {
             return "terminal::LaunchClaudeCode".to_owned();
@@ -1180,6 +1182,10 @@ mod tests {
             "terminal: open shell"
         );
         assert_eq!(
+            humanize_action_name_for_product("terminal::OpenTmuxTerminal", "Dez"),
+            "terminal: open tmux workspace"
+        );
+        assert_eq!(
             humanize_action_name_for_product("terminal::OpenCodexTerminal", "Dez"),
             "terminal: launch codex"
         );
@@ -1362,6 +1368,7 @@ mod tests {
             TypeId::of::<zed_actions::dez::OpenWorkspaceInCmux>(),
             TypeId::of::<zed_actions::terminal::OpenAgentTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenShellTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenTmuxTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenCodexTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenClaudeCodeTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenOpenCodeTerminal>(),

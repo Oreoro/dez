@@ -428,6 +428,10 @@ fn session_rail_supplemental_metadata_visible(width: Pixels) -> bool {
     width >= SUPPLEMENTAL_METADATA_MIN_WIDTH
 }
 
+fn session_rail_supplemental_metadata_visible_for_product(app_name: &str, width: Pixels) -> bool {
+    app_name != "Zed" || session_rail_supplemental_metadata_visible(width)
+}
+
 fn session_rail_agent_tools_utility_label(width: Pixels) -> &'static str {
     if width >= DETAILED_MIN_WIDTH {
         "Agent Tools"
@@ -2302,6 +2306,14 @@ mod session_start_state_tests {
         assert!(!session_rail_supplemental_metadata_visible(DEFAULT_WIDTH));
         assert!(session_rail_supplemental_metadata_visible(
             SUPPLEMENTAL_METADATA_MIN_WIDTH
+        ));
+        assert!(session_rail_supplemental_metadata_visible_for_product(
+            "Dez",
+            DEFAULT_WIDTH
+        ));
+        assert!(!session_rail_supplemental_metadata_visible_for_product(
+            "Zed",
+            DEFAULT_WIDTH
         ));
     }
 }
@@ -7247,11 +7259,26 @@ impl Sidebar {
                     let sidebar = cx.weak_entity();
                     let open_session = session.clone();
                     let action_label = external_multiplexer_action_label(session);
-                    let source_and_state = SharedString::from(format!(
-                        "{} · {}",
-                        session.kind.display_name(),
-                        session.state_label()
-                    ));
+                    let source_and_state = match &session.working_directory {
+                        Some(working_directory) => SharedString::from(format!(
+                            "{} · {} · {}",
+                            session.source_label(),
+                            session.state_label(),
+                            working_directory.display()
+                        )),
+                        None => SharedString::from(format!(
+                            "{} · {}",
+                            session.source_label(),
+                            session.state_label()
+                        )),
+                    };
+                    let tooltip_label = match &session.working_directory {
+                        Some(working_directory) => format!(
+                            "{action_label}\nWorking directory: {}",
+                            working_directory.display()
+                        ),
+                        None => action_label.clone(),
+                    };
                     ButtonLike::new(ElementId::from(format!(
                         "workspace-external-session-{}",
                         session.id
@@ -7261,7 +7288,7 @@ impl Sidebar {
                     .full_width()
                     .tab_index(0isize)
                     .aria_label(action_label.clone())
-                    .tooltip(Tooltip::text(action_label))
+                    .tooltip(Tooltip::text(tooltip_label))
                     .child(
                         h_flex()
                             .w_full()
@@ -7280,16 +7307,21 @@ impl Sidebar {
                                     ),
                             )
                             .child(
-                                Label::new(session.title.clone())
-                                    .size(LabelSize::XSmall)
-                                    .truncate(),
-                            )
-                            .child(div().flex_1())
-                            .child(
-                                Label::new(source_and_state)
-                                    .size(LabelSize::XSmall)
-                                    .color(Color::Muted)
-                                    .truncate(),
+                                v_flex()
+                                    .min_w_0()
+                                    .flex_1()
+                                    .gap(px(1.0))
+                                    .child(
+                                        Label::new(session.title.clone())
+                                            .size(LabelSize::XSmall)
+                                            .truncate(),
+                                    )
+                                    .child(
+                                        Label::new(source_and_state)
+                                            .size(LabelSize::XSmall)
+                                            .color(Color::Muted)
+                                            .truncate(),
+                                    ),
                             ),
                     )
                     .on_click(move |_, window, cx| {
@@ -12721,7 +12753,8 @@ impl Sidebar {
         let session_rail_settings = SessionRailSettings::get_global(cx);
         let rail_width = self.rendered_width;
         let primary_action_labels_visible = session_row_primary_action_labels_visible(rail_width);
-        let supplemental_metadata_visible = session_rail_supplemental_metadata_visible(rail_width);
+        let supplemental_metadata_visible =
+            session_rail_supplemental_metadata_visible_for_product(APP_NAME, rail_width);
         let design_system = DesignSystemSettings::get_global(cx);
         let labels_visible = session_rail_labels_visible(&design_system);
         let show_agent_attention =
@@ -13264,7 +13297,8 @@ impl Sidebar {
         let session_rail_settings = SessionRailSettings::get_global(cx);
         let rail_width = self.rendered_width;
         let primary_action_labels_visible = session_row_primary_action_labels_visible(rail_width);
-        let supplemental_metadata_visible = session_rail_supplemental_metadata_visible(rail_width);
+        let supplemental_metadata_visible =
+            session_rail_supplemental_metadata_visible_for_product(APP_NAME, rail_width);
         let has_evidence = evidence_label.is_some();
         let worktrees =
             if session_rail_settings.show_worktree_metadata && supplemental_metadata_visible {
@@ -15290,7 +15324,7 @@ impl Sidebar {
             format!("{attachable_count} attachable · {observed_count} observed")
         };
         let supplemental_metadata_visible =
-            session_rail_supplemental_metadata_visible(self.rendered_width);
+            session_rail_supplemental_metadata_visible_for_product(APP_NAME, self.rendered_width);
         let design_system = DesignSystemSettings::get_global(cx);
         let labels_visible = session_rail_labels_visible(&design_system);
         let sidebar = cx.weak_entity();
