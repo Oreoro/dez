@@ -328,6 +328,8 @@ pub fn configured_terminal_launcher_icon(command: Option<&str>) -> IconName {
     }
 }
 
+pub const WORKSPACE_TMUX_LAUNCHER_LABEL: &str = "Workspace tmux";
+
 pub fn configured_terminal_launcher_label(command: Option<&str>) -> String {
     let launcher = match configured_terminal_launcher(command) {
         ConfiguredTerminalLauncher::NativeShell => "Native Shell",
@@ -1275,6 +1277,7 @@ mod tests {
 
     #[test]
     fn configured_terminal_identity_is_consistent_across_native_launch_surfaces() {
+        assert_eq!(WORKSPACE_TMUX_LAUNCHER_LABEL, "Workspace tmux");
         assert_eq!(
             configured_terminal_launcher_label(None),
             "Default · Native Shell"

@@ -78,8 +78,8 @@ use terminal::{
     },
 };
 use terminal_view::{
-    TerminalView, configured_terminal_launcher_icon, configured_terminal_launcher_label,
-    terminal_agent_icon,
+    TerminalView, WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_icon,
+    configured_terminal_launcher_label, terminal_agent_icon,
 };
 use theme::{ActiveTheme, CLIENT_SIDE_DECORATION_ROUNDING};
 use ui::{
@@ -8724,7 +8724,7 @@ impl Sidebar {
                                             Some(String::new()),
                                         ),
                                         (
-                                            "tmux Session".to_owned(),
+                                            WORKSPACE_TMUX_LAUNCHER_LABEL.to_owned(),
                                             IconName::SplitAlt,
                                             Some(tmux_startup_command.clone()),
                                         ),

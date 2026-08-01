@@ -67,7 +67,7 @@ raw command field for another terminal-native tool or wrapper, and existing
 command-only configurations remain compatible. The dropdown shows the same
 provider or tmux mark used by native launch surfaces, with a separate trailing
 check for the current choice. The adjacent `+` after each native pane's tabs
-offers that default, Native Shell, a Workspace-named tmux Session, Codex,
+offers that default, Native Shell, **Workspace tmux**, Codex,
 Claude Code, and OpenCode as separate choices. Choosing a provider once does
 not rewrite the default. In **File → Open Terminal**, the first row makes the
 resolved choice explicit as **Default · Native Shell**, **Default · Codex**,
@@ -85,7 +85,7 @@ Choose the route by ownership, not by appearance:
 | **Default Terminal**                        | Opens the configured shell, agent TUI, tmux session, or custom command in a native terminal tab                   |
 | **Native Shell**                            | Opens the Workspace shell without starting an agent                                                               |
 | **Codex**, **Claude Code**, or **OpenCode** | Starts that CLI and keeps its real TUI in the native terminal                                                     |
-| **tmux Session**                            | Attaches or creates the primary-root-scoped tmux session inside a native terminal                                 |
+| **Workspace tmux**                          | Attaches or creates the primary-root-scoped tmux session inside a native terminal                                 |
 | **Browse Running Sessions…**                | Refreshes Workspaces so a discovered tmux or Herdr row can be attached, or a cmux Workspace can be opened in cmux |
 | **Open Workspace in cmux**                  | Hands the Workspace path to the external cmux application and keeps Dez open                                      |
 

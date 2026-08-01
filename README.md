@@ -68,7 +68,7 @@ Workspace instead of separate applications or hidden panel modes.
   accidentally losing the GUI does not end the computation. Reopening Dez
   reattaches the same Session; task and remote terminals keep their existing
   lifecycle semantics. Workspace Options can launch the configured default,
-  a plain shell, a Workspace-named tmux session, Codex, Claude Code, or
+  a plain shell, **Workspace tmux**, Codex, Claude Code, or
   OpenCode in the native terminal; **More Agent CLIs** adds Gemini CLI, Aider,
   and Herdr without expanding the primary list. It can hand the Workspace path
   to cmux without pretending cmux is a shell.
@@ -129,7 +129,7 @@ therefore sit below code without Dez manufacturing a separate multiplexer UI.
 The adjacent native `+` reopens Home, opens Recent Workspaces, or routes to a
 terminal, file, search, Files, Review Changes, Run Task, Debug, or Built-in Agent surface
 through the existing Zed actions. Its terminal submenu names the configured
-Default Terminal first, followed by Native Shell, tmux Session, and explicit
+Default Terminal first, followed by Native Shell, Workspace tmux, and explicit
 Codex, Claude Code, and OpenCode launchers. **More Agent CLIs** keeps Gemini
 CLI, Aider, and Herdr available without crowding the frequent path. **Continue
 Agent** resumes the last Codex, Claude Code, or OpenCode session. **Browse
@@ -141,7 +141,7 @@ launch routes in the same order, followed by **Continue Agent**. Its first row p
 **Default · Native Shell**, **Default · Codex**, **Default · Claude Code**,
 **Default · OpenCode**, **Default · tmux Session**, a detected agent, or
 **Default · Custom Command**; the pane `+` keeps the shorter **Default
-Terminal** label. Native Shell, tmux Session, Codex, Claude Code, and OpenCode
+Terminal** label. Native Shell, Workspace tmux, Codex, Claude Code, and OpenCode
 remain explicit alternatives; Gemini CLI, Aider, and Herdr live one level
 deeper under **More Agent CLIs**. Continue uses
 `codex resume --last`, `claude --continue`, or `opencode --continue` in the
@@ -159,7 +159,7 @@ and `⌘9` selects the last tab; Linux and Windows use `Alt+1`–`Alt+9`.
 Zed chords, `Ctrl+Backtick` opens the configured terminal, and
 `Ctrl+Shift+Backtick` always opens the native shell. Command Palette can start
 Codex, Claude Code, OpenCode, Gemini CLI, Aider, or Herdr; continue a supported
-provider; launch a shell or Workspace-named tmux session; or hand the Workspace
+provider; launch a shell or **Workspace tmux** session; or hand the Workspace
 to cmux. The native tab-strip `+` exposes the same terminal choices, **Browse
 Running Sessions…**, and **Open Workspace in cmux** without creating a second
 navigation system. The guided default lives under **Settings → Workspaces &

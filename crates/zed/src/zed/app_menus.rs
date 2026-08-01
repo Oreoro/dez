@@ -3,7 +3,9 @@ use gpui::{App, Menu, MenuItem, OsAction};
 use paths::APP_NAME;
 use release_channel::ReleaseChannel;
 use settings::Settings as _;
-use terminal_view::{configured_terminal_launcher_label, terminal_panel};
+use terminal_view::{
+    WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_label, terminal_panel,
+};
 use zed_actions::{Quit, assistant, debug_panel, dev, git_panel, project_panel};
 
 fn terminal_panel_surface_visible(app_name: &str) -> bool {
@@ -375,7 +377,10 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                     zed_actions::terminal::OpenAgentTerminal,
                 ),
                 MenuItem::action("Native Shell", zed_actions::terminal::OpenShellTerminal),
-                MenuItem::action("tmux Session", zed_actions::terminal::OpenTmuxTerminal),
+                MenuItem::action(
+                    WORKSPACE_TMUX_LAUNCHER_LABEL,
+                    zed_actions::terminal::OpenTmuxTerminal,
+                ),
                 MenuItem::separator(),
                 MenuItem::action("Codex", zed_actions::terminal::OpenCodexTerminal),
                 MenuItem::action("Claude Code", zed_actions::terminal::OpenClaudeCodeTerminal),

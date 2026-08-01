@@ -953,7 +953,7 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
             return "terminal::OpenTerminal".to_owned();
         }
         "terminal::OpenShellTerminal" => return "terminal::OpenNativeShell".to_owned(),
-        "terminal::OpenTmuxTerminal" => return "terminal::OpenTmuxSession".to_owned(),
+        "terminal::OpenTmuxTerminal" => return "terminal::OpenWorkspaceTmux".to_owned(),
         "terminal::OpenCodexTerminal" => return "terminal::LaunchCodex".to_owned(),
         "terminal::ResumeCodexTerminal" => return "terminal::ContinueCodex".to_owned(),
         "terminal::OpenClaudeCodeTerminal" => {
@@ -1203,7 +1203,7 @@ mod tests {
         );
         assert_eq!(
             humanize_action_name_for_product("terminal::OpenTmuxTerminal", "Dez"),
-            "terminal: open tmux session"
+            "terminal: open workspace tmux"
         );
         assert_eq!(
             humanize_action_name_for_product("terminal::OpenCodexTerminal", "Dez"),

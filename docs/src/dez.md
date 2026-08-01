@@ -174,7 +174,7 @@ be split below or beside code while keeping their Workspace ownership.
 
 The tab-strip **+** is the single **Add to Main Work Area** control. Its
 **Open Terminal** submenu launches the **Default Terminal**, a **Native Shell**,
-a Workspace-named tmux session, Codex, Claude Code, or OpenCode. **More Agent
+a **Workspace tmux** session, Codex, Claude Code, or OpenCode. **More Agent
 CLIs** keeps Gemini CLI, Aider, and Herdr one level deeper. The Add menu also
 opens the optional Built-in Agent, a file, Files, Review Changes, Run Task, Debug,
 Workspace search, or symbol search. **Continue Agent** resumes the last native
@@ -205,7 +205,7 @@ in the same order, followed by **Continue Agent**. Its first row previews the
 configured result as **Default · Native Shell**, **Default · Codex**, **Default
 · Claude Code**, **Default · OpenCode**, **Default · tmux Session**, a detected
 agent, or **Default · Custom Command**; the pane **+** keeps the shorter
-**Default Terminal** label. Native Shell, tmux Session, Codex, Claude Code, and
+**Default Terminal** label. Native Shell, Workspace tmux, Codex, Claude Code, and
 OpenCode remain explicit alternatives. Gemini CLI, Aider, and Herdr are grouped
 under **More Agent CLIs** so the frequent path stays short.
 Continue routes use the providers' documented last-session commands. **Browse
@@ -327,7 +327,7 @@ Terminal**, **Browse Running Sessions…**, **Open Files**, and **Review Changes
 **Open Terminal** uses the configured **Default Terminal**. Its inline detail
 names that resolved default before launch, so a returning user does not need to
 reopen Settings to remember whether **Open Terminal** starts a shell, agent, or
-Workspace-named tmux session. The adjacent **+**
+**Workspace tmux** session. The adjacent **+**
 and Command Palette keep Native Shell, tmux, Codex, Claude Code, and OpenCode
 available as one-off launches, with Gemini CLI, Aider, and Herdr grouped under
 **More Agent CLIs**. **New File** remains available from File, the
@@ -514,7 +514,7 @@ conversation beside the editor. It is optional and requires a usable provider
 and model.
 
 The tab-strip **+** exposes native terminal launch choices: **Default
-Terminal**, **Native Shell**, **tmux Session**, **Codex**, **Claude Code**, and
+Terminal**, **Native Shell**, **Workspace tmux**, **Codex**, **Claude Code**, and
 **OpenCode**, followed by **More Agent CLIs** for **Gemini CLI**, **Aider**, and
 **Herdr**. Workspace Options identifies the configured default launcher and keeps
 a separate native-shell choice beside the explicit providers.
@@ -527,9 +527,9 @@ Workspaces, so Gemini CLI, Aider, Amp, Herdr, Pi, and other detected providers
 do not fall back to anonymous **Custom Command** copy.
 Provider shortcuts are per-launch choices and never rewrite that setting.
 The same choices are native Command Palette actions: **Terminal: Open
-Terminal**, **Open Native Shell**, **Open tmux Session**, **Launch Codex**,
+Terminal**, **Open Native Shell**, **Open Workspace tmux**, **Launch Codex**,
 **Launch Claude Code**, **Launch OpenCode**, **Launch Gemini CLI**, **Launch
-Aider**, and **Launch Herdr**. **Open tmux Session** derives a
+Aider**, and **Launch Herdr**. **Open Workspace tmux** derives a
 shell-safe name from the primary Workspace root and a stable root identity, then
 runs `tmux new-session -A -s <workspace>-<root-id>` after the native login shell
 is ready. Repositories with the same folder name therefore cannot attach to one
@@ -904,7 +904,7 @@ state means Dez adopted or ended an external process.
 
 - tmux is discovered at `/opt/homebrew/bin/tmux`, `/usr/local/bin/tmux`, or on
   `PATH`. Start or attach to a tmux server and ensure the pane's working
-  directory is inside the intended Workspace. **Open tmux Session** remains
+  directory is inside the intended Workspace. **Open Workspace tmux** remains
   available when you want Dez to create or attach to the root-scoped session
   explicitly. A basename-only session from an older Dez build remains visible
   and is reused only when its active pane still belongs to that Workspace root.

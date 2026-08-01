@@ -6,7 +6,8 @@ pub mod terminal_scrollbar;
 
 use agent_settings::{AgentSettings, TerminalAgentKind, detect_terminal_agent_command};
 pub use agent_settings::{
-    configured_terminal_launcher_icon, configured_terminal_launcher_label, terminal_agent_icon,
+    WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_icon,
+    configured_terminal_launcher_label, terminal_agent_icon,
 };
 use anyhow::{Result, anyhow};
 use collections::HashMap;
