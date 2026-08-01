@@ -5790,6 +5790,8 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                                 zed_actions::terminal::ResumeOpenCodeTerminal.boxed_clone(),
                             )
                         })
+                        .action("Open Built-in Agent", RevealBuiltInAgent.boxed_clone())
+                        .separator()
                         .action(
                             "Browse Running Sessions…",
                             BrowseRunningSessions.boxed_clone(),
@@ -5800,7 +5802,6 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                                 zed_actions::dez::OpenWorkspaceInCmux.boxed_clone(),
                             )
                         })
-                        .action("Open Built-in Agent", RevealBuiltInAgent.boxed_clone())
                         .separator()
                         .action(new_file, NewFile.boxed_clone())
                         .action(open_file, ToggleFileFinder::default().boxed_clone())

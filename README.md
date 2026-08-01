@@ -139,7 +139,9 @@ tmux session, or hand the Workspace to cmux. The native tab-strip `+` exposes th
 Running Sessions…**, and **Open Workspace in cmux** without creating a second
 navigation system. The default launch command lives under **Settings →
 Workspaces & Terminals → Terminal Launch → Default Terminal Command**;
-provider launchers and Continue actions remain one-off choices. **Settings → Keyboard & Vim**
+**cmux Workflows** beside it opens cmux's own custom-command guide for provider
+actions and multi-pane layouts. Dez keeps those layouts externally owned.
+Provider launchers and Continue actions remain one-off choices. **Settings → Keyboard & Vim**
 exposes shortcut search, conflict inspection, base keymaps, and optional full
 Vim or Helix editing. Vim and Helix share native leader destinations for
 recent tabs (`Space b`), files (`Space f`), the configured agent terminal

@@ -284,8 +284,8 @@ require_multiline_pattern docs/src/dez.md \
     'Open configured terminal.*?`Space t`.*?Open native shell terminal.*?`Space T`.*?Regular Vim and Helix mode share the same native leader destinations.*?`Space b`.*?`Space f`.*?`Space t`.*?`Space T`.*?`Space /`' \
     'the product guide can regress from the implemented Vim and Helix leader grammar'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'CMUX_HANDOFF_TIMEOUT.*?async fn run_bounded_cmux_command.*?kill_on_drop\(true\).*?pub async fn open_workspace_path_in_cmux.*?/Applications/cmux\.app/Contents/Resources/bin/cmux.*?util::command::new_command\(program\).*?command\.arg\("open"\)\.arg\(path\).*?Open Workspace in cmux.*?configured_terminal_launcher_label.*?Native Shell.*?Codex.*?Claude Code.*?OpenCode.*?Continue Agent.*?codex resume --last.*?claude --continue.*?opencode --continue' \
-    'Workspace Options can regress from explicit cmux handoff and native agent launch choices'
+    'CMUX_HANDOFF_TIMEOUT.*?async fn run_bounded_cmux_command.*?kill_on_drop\(true\).*?pub async fn open_workspace_path_in_cmux.*?/Applications/cmux\.app/Contents/Resources/bin/cmux.*?util::command::new_command\(program\).*?command\.arg\("open"\)\.arg\(path\).*?configured_terminal_launcher_label.*?Native Shell.*?Codex.*?Claude Code.*?OpenCode.*?Continue Agent.*?codex resume --last.*?claude --continue.*?opencode --continue.*?Open Workspace in cmux' \
+    'Workspace Options can regress from native agent launch choices followed by the explicit cmux handoff'
 require_multiline_pattern crates/zed/src/zed.rs \
     'OpenWorkspaceInCmux.*?project_group_key\(cx\).*?project_group_key\.host\(\)\.is_some\(\).*?cmux can open only local Workspaces\. This remote Workspace stayed in Dez\..*?return;.*?ordered_paths\(\).*?cmux handoff needs a local Workspace\. Open a folder first\..*?return;.*?Opening this Workspace in cmux.*?sidebar::open_workspace_path_in_cmux.*?MultiplexerSessionStore::try_global.*?Opened \{path_label\} in cmux.*?store\.refresh' \
     'the global cmux action can regress to a dead command, silent failure, or stale external Session state'
@@ -1461,8 +1461,11 @@ require_pattern crates/sidebar/src/sidebar.rs \
     'menu = menu\.header\(terminal_launch_menu_header\(APP_NAME\)\)' \
     'the Workspace creation picker has regressed to an ambiguous thread action'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn workspace_built_in_agent_action_label.*?"New Agent Thread".*?built_in_agent_ready.*?"New Built-in Agent Session…".*?"Configure Built-in Agent…".*?let built_in_agent_ready = built_in_agent_is_ready\(menu_cx\).*?let menu = if APP_NAME == "Zed".*?workspace_built_in_agent_action_label\([[:space:]]*APP_NAME,[[:space:]]*built_in_agent_ready.*?else.*?Open Workspace in cmux.*?submenu\([[:space:]]*terminal_launch_label\(APP_NAME\).*?Native Shell.*?Codex.*?Claude Code.*?OpenCode.*?separator\(\).*?workspace_built_in_agent_action_label\([[:space:]]*APP_NAME,[[:space:]]*built_in_agent_ready.*?NewEntryTarget::AgentThread' \
-    'Workspace options can regress to leading with the optional built-in Agent, hiding the terminal-first distinction, or offering a dead model-less session'
+    'fn workspace_built_in_agent_action_label.*?"New Agent Thread".*?built_in_agent_ready.*?"New Built-in Agent Session…".*?"Configure Built-in Agent…".*?let built_in_agent_ready = built_in_agent_is_ready\(menu_cx\).*?let menu = if APP_NAME == "Zed".*?workspace_built_in_agent_action_label\([[:space:]]*APP_NAME,[[:space:]]*built_in_agent_ready.*?else.*?submenu\([[:space:]]*terminal_launch_label\(APP_NAME\).*?Native Shell.*?Codex.*?Claude Code.*?OpenCode.*?separator\(\).*?workspace_built_in_agent_action_label\([[:space:]]*APP_NAME,[[:space:]]*built_in_agent_ready.*?NewEntryTarget::AgentThread.*?separator\(\)\.entry\([[:space:]]*"Open Workspace in cmux"' \
+    'Workspace options can regress from native-first terminal, Continue, and Built-in Agent actions, offer a dead model-less session, or mix the cmux handoff into the native group'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'fn cmux_workflows_action_link.*?"cmux Workflows".*?cmux owns its Codex, Claude Code, and OpenCode actions and pane layouts.*?"Open cmux Guide".*?https://cmux\.com/docs/custom-commands.*?fn terminal_page.*?SectionHeader\("Terminal Launch"\).*?terminal_session_init_setting_item\(\).*?cmux_workflows_action_link\(\)' \
+    'Dez settings can regress to implying ownership of cmux agent actions or hiding the official workflow configuration route'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn create_new_thread.*?APP_NAME != "Zed" && !built_in_agent_is_ready\(cx\).*?OpenSettingsAt.*?path: "llm_providers".*?return;.*?create_agent_thread_in_workspace' \
     'Session Rail creation can regress to opening a dead Built-in Agent draft'

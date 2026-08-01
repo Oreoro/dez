@@ -8397,22 +8397,6 @@ impl Sidebar {
                                 },
                             )
                         } else {
-                            let cmux_key = project_group_key.clone();
-                            let cmux_sidebar = this_for_menu.clone();
-                            let cmux_menu = weak_menu.clone();
-                            let menu = menu.when(project_group_key.host().is_none(), |menu| {
-                                menu.entry("Open Workspace in cmux", None, move |window, cx| {
-                                    cmux_sidebar
-                                        .update(cx, |sidebar, cx| {
-                                            sidebar
-                                                .open_project_group_in_cmux(&cmux_key, window, cx);
-                                        })
-                                        .ok();
-                                    cmux_menu.update(cx, |_, cx| cx.emit(DismissEvent)).ok();
-                                })
-                                .separator()
-                            });
-
                             let terminal_sidebar = this_for_menu.clone();
                             let terminal_key = project_group_key.clone();
                             let terminal_menu = weak_menu.clone();
@@ -8426,6 +8410,9 @@ impl Sidebar {
                                 terminal_view::tmux_startup_command_for_workspace(
                                     project_group_key.path_list().ordered_paths().next(),
                                 );
+                            let cmux_key = project_group_key.clone();
+                            let cmux_sidebar = this_for_menu.clone();
+                            let cmux_menu = weak_menu.clone();
                             menu.submenu(
                                 terminal_launch_label(APP_NAME),
                                 move |mut submenu, _window, _cx| {
@@ -8521,6 +8508,27 @@ impl Sidebar {
                                     new_agent_menu
                                         .update(cx, |_, cx| cx.emit(DismissEvent))
                                         .ok();
+                                },
+                            )
+                            .when(
+                                project_group_key.host().is_none(),
+                                |menu| {
+                                    menu.separator().entry(
+                                        "Open Workspace in cmux",
+                                        None,
+                                        move |window, cx| {
+                                            cmux_sidebar
+                                                .update(cx, |sidebar, cx| {
+                                                    sidebar.open_project_group_in_cmux(
+                                                        &cmux_key, window, cx,
+                                                    );
+                                                })
+                                                .ok();
+                                            cmux_menu
+                                                .update(cx, |_, cx| cx.emit(DismissEvent))
+                                                .ok();
+                                        },
+                                    )
                                 },
                             )
                         }

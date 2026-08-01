@@ -65,8 +65,13 @@ returning to the most recent provider session. Provider authentication and
 subscriptions remain owned by each provider CLI.
 
 cmux is an external Workspace handoff, not a Dez terminal profile. Install it
-separately, then use **Open Workspace in cmux**. For cmux-owned notification and
-restore metadata, review and run its hook setup explicitly:
+separately, then use **Open Workspace in cmux**. Its
+[custom commands](https://cmux.com/docs/custom-commands) own Codex, Claude Code,
+and OpenCode actions as well as any multi-pane agent layouts. Dez deliberately
+does not reproduce that layout inside the editor. **Settings → Workspaces &
+Terminals → Terminal Launch → cmux Workflows** links to that configuration
+guide. For cmux-owned notification and restore metadata, review and run its
+hook setup explicitly:
 
 ```bash
 cmux hooks setup
@@ -645,9 +650,11 @@ alternate-screen scrolling, path links, search, and task integration. Optional
 terminal title breadcrumbs remain off in the default Dez profile and can be
 enabled through native terminal settings. cmux is not configured as the shell
 because its documented [CLI](https://github.com/manaflow-ai/cmux) defines a
-separate macOS workspace and terminal application. Instead,
-**Open Workspace in cmux** is the first external-workspace action in Workspace
-Options. It invokes the documented `cmux open <path>` handoff, keeps Dez open, and
+separate macOS workspace and terminal application. Instead, native terminal,
+Continue Agent, and Built-in Agent actions lead Workspace Options. **Open
+Workspace in cmux** begins the external-work group beside discovered
+multiplexer Sessions. It invokes the documented `cmux open <path>` handoff,
+keeps Dez open, and
 then refreshes path-matched cmux activity. Existing cmux Workspaces remain
 selectable beneath their associated Dez Workspace. This preserves native Dez
 editing and review while making cmux a first-class opt-in owner for users who
