@@ -376,6 +376,8 @@ losing source or status in each row. Explicit tmux and Herdr rows attach in the
 Main Work Area; cmux Workspace rows open in cmux. A row with a current path sits
 beneath the most specific matching Workspace and uses its secondary metadata
 row for source, semantic state, working directory or worktree, and attention.
+cmux rows keep API-reported listening ports visible in that native row and its
+accessible tooltip without turning Workspaces into a server scanner.
 Pathless and unmatched discovered rows remain in **Other Running Sessions**.
 The Workspace header owns Git branch and changed-file metadata. Unrelated
 machine terminals do not render.
@@ -896,10 +898,13 @@ attachment automatically.
 
 Dez only renders metadata with an authoritative owner. Git supplies branch and
 changed-file counts; terminal and multiplexer snapshots supply working
-directory, provider, lifecycle, client count, and attention. The current
-candidate does not advertise port badges because no Workspace-scoped local
-server or port-forwarding model is wired into Workspaces yet. It does not
-scrape terminal output or infer ports from process names.
+directory, provider, lifecycle, client count, and attention. cmux additionally
+supplies authoritative `listening_ports`; matching cmux rows keep a bounded
+`:port` label visible beside their title metadata and include the same ports in
+their tooltip and accessibility label. Other local Workspace processes do not
+receive inferred port badges because no Workspace-scoped server or
+port-forwarding model owns that evidence yet. Dez does not scrape terminal
+output or infer ports from process names.
 
 ## Visual design
 

@@ -175,13 +175,17 @@ impl ExternalMultiplexerSession {
             .working_directory
             .as_ref()
             .map(|path| path.to_string_lossy().into_owned());
-        let ports = concise_port_label(&self.listening_ports);
+        let ports = self.port_label();
         match (location, ports) {
             (Some(location), Some(ports)) => format!("{location} · {ports}"),
             (Some(location), None) => location,
             (None, Some(ports)) => ports,
             (None, None) => "Working directory unavailable".to_owned(),
         }
+    }
+
+    pub fn port_label(&self) -> Option<String> {
+        concise_port_label(&self.listening_ports)
     }
 
     pub fn open_command(&self) -> ExternalSessionCommand {
@@ -2186,6 +2190,7 @@ mod tests {
             Some("Approve the proposed command")
         );
         assert_eq!(sessions[0].listening_ports, [3000, 5173]);
+        assert_eq!(sessions[0].port_label().as_deref(), Some(":3000, :5173"));
         assert_eq!(sessions[0].location_label(), "/tmp/compiler · :3000, :5173");
     }
 

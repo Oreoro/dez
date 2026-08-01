@@ -7794,6 +7794,7 @@ impl Sidebar {
                     let sidebar = cx.weak_entity();
                     let open_session = session.clone();
                     let action_label = external_multiplexer_action_label(session);
+                    let port_label = session.port_label().map(SharedString::from);
                     let source_and_state = match &session.working_directory {
                         Some(working_directory) => SharedString::from(format!(
                             "{} · {} · {}",
@@ -7807,12 +7808,21 @@ impl Sidebar {
                             session.state_label()
                         )),
                     };
-                    let tooltip_label = match &session.working_directory {
+                    let mut tooltip_label = match &session.working_directory {
                         Some(working_directory) => format!(
                             "{action_label}\nWorking directory: {}",
                             working_directory.display()
                         ),
                         None => action_label.clone(),
+                    };
+                    if let Some(port_label) = port_label.as_deref() {
+                        tooltip_label.push_str("\nListening ports: ");
+                        tooltip_label.push_str(port_label);
+                    }
+                    let accessibility_label = if let Some(port_label) = port_label.as_deref() {
+                        format!("{action_label} Listening ports: {port_label}.")
+                    } else {
+                        action_label.clone()
                     };
                     ButtonLike::new(ElementId::from(format!(
                         "workspace-external-session-{}",
@@ -7822,7 +7832,7 @@ impl Sidebar {
                     .style(ButtonStyle::Subtle)
                     .full_width()
                     .tab_index(0isize)
-                    .aria_label(action_label.clone())
+                    .aria_label(accessibility_label)
                     .tooltip(Tooltip::text(tooltip_label))
                     .child(
                         h_flex()
@@ -7865,6 +7875,15 @@ impl Sidebar {
                                     }),
                             ),
                     )
+                    .when_some(port_label, |this, port_label| {
+                        this.child(
+                            h_flex().flex_none().child(
+                                Label::new(port_label)
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Accent),
+                            ),
+                        )
+                    })
                     .on_click(move |_, window, cx| {
                         sidebar
                             .update(cx, |sidebar, cx| {
@@ -7874,7 +7893,7 @@ impl Sidebar {
                                     cx,
                                 );
                             })
-                            .ok();
+                            .log_err();
                     })
                     .into_any_element()
                 })

@@ -43,6 +43,8 @@ Workspace instead of separate applications or hidden panel modes.
   Herdr session, or open a discovered cmux Workspace in cmux, without taking
   ownership. Each item with a matching working directory appears beneath the
   most specific Workspace with source, state, and working-directory metadata.
+  A cmux row also keeps its API-reported listening ports visible as compact
+  operational metadata; Dez does not infer ports for other processes.
   Discovered tmux, Herdr, and cmux activity without a matching open root stays
   reachable in **Other Running Sessions** instead of being hidden or assigned
   to the wrong codebase. Opening an unmatched tmux or Herdr item with a known
