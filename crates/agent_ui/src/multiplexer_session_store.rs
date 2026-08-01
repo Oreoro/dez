@@ -133,6 +133,8 @@ pub struct ExternalMultiplexerSession {
     pub working_directory: Option<PathBuf>,
     pub foreground_command: Option<String>,
     pub detected_agent_kind: Option<TerminalAgentKind>,
+    pub latest_activity: Option<String>,
+    pub listening_ports: Vec<u16>,
     pub state: MultiplexerSessionState,
     pub attached_clients: Option<usize>,
     discovery_stale: bool,
@@ -162,6 +164,20 @@ impl ExternalMultiplexerSession {
             format!("{label} · last known")
         } else {
             label
+        }
+    }
+
+    pub fn location_label(&self) -> String {
+        let location = self
+            .working_directory
+            .as_ref()
+            .map(|path| path.to_string_lossy().into_owned());
+        let ports = concise_port_label(&self.listening_ports);
+        match (location, ports) {
+            (Some(location), Some(ports)) => format!("{location} · {ports}"),
+            (Some(location), None) => location,
+            (None, Some(ports)) => ports,
+            (None, None) => "Working directory unavailable".to_owned(),
         }
     }
 
@@ -625,37 +641,85 @@ fn tmux_failure_is_no_server(exit_code: Option<i32>, stderr: &str) -> bool {
 }
 
 async fn scan_cmux_workspaces() -> Result<MultiplexerScanOutcome> {
-    let Some((executable, output)) = run_first_available(
+    let Some((executable, current_output)) = run_first_available(
         &[
             "/Applications/cmux.app/Contents/Resources/bin/cmux",
             "/opt/homebrew/bin/cmux",
             "/usr/local/bin/cmux",
             "cmux",
         ],
-        &["list-workspaces", "--json"],
+        &["workspace", "list", "--json"],
     )
     .await?
     else {
         return Ok(MultiplexerScanOutcome::MissingExecutable);
     };
 
-    if !output.status.success() {
-        anyhow::bail!(
-            "cmux discovery failed: {}",
-            String::from_utf8_lossy(&output.stderr).trim()
+    let (workspace_output, used_legacy_workspace_verb) = if current_output.status.success() {
+        (current_output, false)
+    } else {
+        let legacy_output = run_multiplexer_command(
+            &executable,
+            &["list-workspaces", "--json"],
+            "cmux compatibility workspace discovery",
+        )
+        .await?;
+        if !legacy_output.status.success() {
+            anyhow::bail!(
+                "cmux discovery failed: {}; compatibility fallback failed: {}",
+                concise_command_stderr(&current_output),
+                concise_command_stderr(&legacy_output)
+            );
+        }
+        (legacy_output, true)
+    };
+
+    let notification_output = run_multiplexer_command(
+        &executable,
+        &["list-notifications", "--json"],
+        "cmux notification discovery",
+    )
+    .await?;
+    let (notification_json, notification_warning) = if notification_output.status.success() {
+        (
+            Some(String::from_utf8_lossy(&notification_output.stdout).into_owned()),
+            None,
+        )
+    } else if used_legacy_workspace_verb {
+        log::debug!(
+            "cmux compatibility discovery does not expose notifications: {}",
+            concise_command_stderr(&notification_output)
         );
+        (None, None)
+    } else {
+        (
+            None,
+            Some(format!(
+                "cmux notifications could not be refreshed: {}",
+                concise_command_stderr(&notification_output)
+            )),
+        )
+    };
+
+    let sessions = parse_cmux_workspaces(
+        &String::from_utf8_lossy(&workspace_output.stdout),
+        notification_json.as_deref(),
+        executable,
+    )?;
+    let mut scan = AvailableMultiplexerScan::complete(sessions);
+    if let Some(summary) = notification_warning {
+        scan.warnings.push(MultiplexerScanWarning {
+            herdr_session_name: None,
+            summary,
+        });
     }
 
-    Ok(MultiplexerScanOutcome::Available(
-        AvailableMultiplexerScan::complete(parse_cmux_workspaces(
-            &String::from_utf8_lossy(&output.stdout),
-            executable,
-        )?),
-    ))
+    Ok(MultiplexerScanOutcome::Available(scan))
 }
 
 fn parse_cmux_workspaces(
     output: &str,
+    notification_output: Option<&str>,
     executable: PathBuf,
 ) -> Result<Vec<ExternalMultiplexerSession>> {
     let value: Value = serde_json::from_str(output).context("invalid cmux workspace JSON")?;
@@ -665,6 +729,10 @@ fn parse_cmux_workspaces(
         .and_then(Value::as_array)
         .or_else(|| result.as_array())
         .context("cmux response did not contain workspaces")?;
+    let activity_by_workspace = notification_output
+        .map(parse_cmux_notifications)
+        .transpose()?
+        .unwrap_or_default();
 
     Ok(workspaces
         .iter()
@@ -698,8 +766,11 @@ fn parse_cmux_workspaces(
                 .and_then(Value::as_str)
                 .filter(|description| !description.is_empty() && *description != title)
                 .map(str::to_owned);
-            let detected_agent_kind =
-                cmux_workspace_agent_label(workspace).and_then(detect_terminal_agent_kind);
+            let activity = activity_by_workspace.get(&target.to_ascii_lowercase());
+            let detected_agent_kind = cmux_workspace_agent_label(workspace)
+                .and_then(detect_terminal_agent_kind)
+                .or_else(|| activity.and_then(|activity| activity.detected_agent_kind))
+                .or_else(|| cmux_workspace_detected_agent_kind(workspace));
             let needs_attention = workspace
                 .get("unread_count")
                 .and_then(Value::as_u64)
@@ -707,7 +778,12 @@ fn parse_cmux_workspaces(
                 || workspace
                     .get("needs_attention")
                     .and_then(Value::as_bool)
-                    .unwrap_or(false);
+                    .unwrap_or(false)
+                || activity.is_some_and(|activity| activity.needs_attention);
+            let latest_activity = activity
+                .and_then(|activity| activity.latest_activity.clone())
+                .or_else(|| cmux_workspace_latest_activity(workspace));
+            let listening_ports = cmux_workspace_listening_ports(workspace);
 
             Some(ExternalMultiplexerSession {
                 id: format!("cmux:{target}"),
@@ -718,6 +794,8 @@ fn parse_cmux_workspaces(
                 working_directory,
                 foreground_command: None,
                 detected_agent_kind,
+                latest_activity,
+                listening_ports,
                 state: if needs_attention {
                     MultiplexerSessionState::NeedsAttention
                 } else {
@@ -730,6 +808,172 @@ fn parse_cmux_workspaces(
             })
         })
         .collect())
+}
+
+#[derive(Default)]
+struct CmuxWorkspaceActivity {
+    needs_attention: bool,
+    latest_activity: Option<String>,
+    latest_created_at: Option<String>,
+    latest_index: usize,
+    detected_agent_kind: Option<TerminalAgentKind>,
+}
+
+fn parse_cmux_notifications(output: &str) -> Result<HashMap<String, CmuxWorkspaceActivity>> {
+    let value: Value = serde_json::from_str(output).context("invalid cmux notification JSON")?;
+    let result = value.get("result").unwrap_or(&value);
+    let notifications = result
+        .get("notifications")
+        .and_then(Value::as_array)
+        .or_else(|| result.as_array())
+        .context("cmux response did not contain notifications")?;
+    let mut activity_by_workspace = HashMap::<String, CmuxWorkspaceActivity>::new();
+
+    for (index, notification) in notifications.iter().enumerate() {
+        let Some(workspace_id) = notification
+            .get("workspace_id")
+            .and_then(Value::as_str)
+            .filter(|workspace_id| !workspace_id.is_empty())
+        else {
+            continue;
+        };
+        let activity = activity_by_workspace
+            .entry(workspace_id.to_ascii_lowercase())
+            .or_default();
+        activity.needs_attention |= !notification
+            .get("is_read")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        if activity.detected_agent_kind.is_none() {
+            activity.detected_agent_kind = cmux_notification_detected_agent_kind(notification);
+        }
+
+        let created_at = notification
+            .get("created_at")
+            .and_then(Value::as_str)
+            .filter(|created_at| !created_at.is_empty());
+        let is_latest = match (&activity.latest_created_at, created_at) {
+            (Some(previous), Some(candidate)) => candidate >= previous.as_str(),
+            (None, Some(_)) => true,
+            (Some(_), None) => false,
+            (None, None) => index >= activity.latest_index,
+        };
+        if is_latest {
+            activity.latest_activity = cmux_notification_activity(notification);
+            activity.latest_created_at = created_at.map(str::to_owned);
+            activity.latest_index = index;
+        }
+    }
+
+    Ok(activity_by_workspace)
+}
+
+fn cmux_notification_activity(notification: &Value) -> Option<String> {
+    ["body", "subtitle", "title", "tab_title"]
+        .into_iter()
+        .find_map(|field| {
+            notification
+                .get(field)
+                .and_then(Value::as_str)
+                .and_then(concise_cmux_activity)
+        })
+}
+
+fn cmux_notification_detected_agent_kind(notification: &Value) -> Option<TerminalAgentKind> {
+    ["tab_title", "title", "subtitle", "body"]
+        .into_iter()
+        .find_map(|field| {
+            notification
+                .get(field)
+                .and_then(Value::as_str)
+                .and_then(detect_terminal_agent_kind)
+        })
+}
+
+fn cmux_workspace_detected_agent_kind(workspace: &Value) -> Option<TerminalAgentKind> {
+    [
+        "latest_conversation_message",
+        "latest_submitted_message",
+        "title",
+        "description",
+    ]
+    .into_iter()
+    .find_map(|field| {
+        workspace
+            .get(field)
+            .and_then(Value::as_str)
+            .and_then(detect_terminal_agent_kind)
+    })
+}
+
+fn cmux_workspace_latest_activity(workspace: &Value) -> Option<String> {
+    ["latest_conversation_message", "latest_submitted_message"]
+        .into_iter()
+        .find_map(|field| {
+            workspace
+                .get(field)
+                .and_then(Value::as_str)
+                .and_then(concise_cmux_activity)
+        })
+}
+
+fn cmux_workspace_listening_ports(workspace: &Value) -> Vec<u16> {
+    let mut ports = workspace
+        .get("listening_ports")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|port| {
+            port.as_u64()
+                .and_then(|port| u16::try_from(port).ok())
+                .or_else(|| port.as_str().and_then(|port| port.parse::<u16>().ok()))
+        })
+        .collect::<Vec<_>>();
+    ports.sort_unstable();
+    ports.dedup();
+    ports
+}
+
+fn concise_cmux_activity(activity: &str) -> Option<String> {
+    const MAX_CHARS: usize = 96;
+    let activity = activity.split_whitespace().collect::<Vec<_>>().join(" ");
+    if activity.is_empty() {
+        None
+    } else if activity.chars().count() <= MAX_CHARS {
+        Some(activity)
+    } else {
+        Some(format!(
+            "{}…",
+            activity.chars().take(MAX_CHARS).collect::<String>()
+        ))
+    }
+}
+
+fn concise_port_label(ports: &[u16]) -> Option<String> {
+    if ports.is_empty() {
+        return None;
+    }
+    let visible_ports = ports
+        .iter()
+        .take(3)
+        .map(|port| format!(":{port}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let remaining_count = ports.len().saturating_sub(3);
+    Some(if remaining_count > 0 {
+        format!("{visible_ports} +{remaining_count}")
+    } else {
+        visible_ports
+    })
+}
+
+fn concise_command_stderr(output: &Output) -> String {
+    let stderr = concise_discovery_message(&String::from_utf8_lossy(&output.stderr));
+    if stderr.is_empty() {
+        format!("command exited with {}", output.status)
+    } else {
+        stderr
+    }
 }
 
 fn cmux_workspace_agent_label(workspace: &Value) -> Option<&str> {
@@ -832,6 +1076,8 @@ fn parse_tmux_sessions(
                 working_directory: record.working_directory,
                 foreground_command: command,
                 detected_agent_kind,
+                latest_activity: None,
+                listening_ports: Vec::new(),
                 state,
                 attached_clients: Some(record.attached_clients),
                 discovery_stale: false,
@@ -1194,6 +1440,8 @@ fn parse_herdr_snapshot(
                 working_directory,
                 foreground_command,
                 detected_agent_kind,
+                latest_activity: None,
+                listening_ports: Vec::new(),
                 state,
                 attached_clients: None,
                 discovery_stale: false,
@@ -1226,6 +1474,19 @@ async fn run_first_available(
     Ok(None)
 }
 
+async fn run_multiplexer_command(
+    executable: &PathBuf,
+    args: &[&str],
+    operation: &str,
+) -> Result<Output> {
+    let mut command = util::command::new_command(executable);
+    command.args(args).kill_on_drop(true);
+    command
+        .output()
+        .await
+        .with_context(|| format!("failed to run {operation}"))
+}
+
 async fn first_available_program(programs: &[&str]) -> Result<Option<PathBuf>> {
     for program in programs {
         let mut command = util::command::new_command(program);
@@ -1253,6 +1514,8 @@ mod tests {
             working_directory: None,
             foreground_command: None,
             detected_agent_kind: None,
+            latest_activity: None,
+            listening_ports: Vec::new(),
             state: MultiplexerSessionState::Available,
             attached_clients: None,
             discovery_stale: false,
@@ -1699,7 +1962,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_cmux_workspaces_as_externally_revealed_project_activity() {
+    fn preserves_legacy_cmux_workspace_metadata() {
         let output = r#"{
           "id": "workspace-list",
           "ok": true,
@@ -1719,7 +1982,7 @@ mod tests {
           }
         }"#;
 
-        let sessions = parse_cmux_workspaces(output, PathBuf::from("/opt/homebrew/bin/cmux"))
+        let sessions = parse_cmux_workspaces(output, None, PathBuf::from("/opt/homebrew/bin/cmux"))
             .expect("workspace list should parse");
 
         assert_eq!(sessions.len(), 1);
@@ -1743,6 +2006,56 @@ mod tests {
                 mode: ExternalSessionOpenMode::RevealExternal,
             }
         );
+    }
+
+    #[test]
+    fn correlates_current_cmux_workspace_activity_notifications_and_ports() {
+        let workspaces = r#"[{
+          "id": "9B2C",
+          "ref": "workspace:2",
+          "title": "compiler",
+          "description": "Agent review",
+          "current_directory": "/tmp/compiler",
+          "listening_ports": [5173, "3000", 5173, 70000],
+          "latest_conversation_message": "Codex is checking the patch",
+          "latest_submitted_message": "Review the latest changes",
+          "selected": false
+        }]"#;
+        let notifications = r#"[{
+          "id": "notification-1",
+          "workspace_id": "9b2c",
+          "is_read": false,
+          "title": "Codex needs input",
+          "body": "Approve the proposed command",
+          "tab_title": "codex",
+          "created_at": "2026-08-01T09:00:00Z"
+        }, {
+          "id": "notification-2",
+          "workspace_id": "unrelated",
+          "is_read": false,
+          "body": "Do not leak across Workspaces",
+          "created_at": "2026-08-01T09:01:00Z"
+        }]"#;
+
+        let sessions = parse_cmux_workspaces(
+            workspaces,
+            Some(notifications),
+            PathBuf::from("/Applications/cmux.app/Contents/Resources/bin/cmux"),
+        )
+        .expect("current workspace and notification lists should correlate");
+
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].state, MultiplexerSessionState::NeedsAttention);
+        assert_eq!(
+            sessions[0].detected_agent_kind,
+            Some(TerminalAgentKind::Codex)
+        );
+        assert_eq!(
+            sessions[0].latest_activity.as_deref(),
+            Some("Approve the proposed command")
+        );
+        assert_eq!(sessions[0].listening_ports, [3000, 5173]);
+        assert_eq!(sessions[0].location_label(), "/tmp/compiler · :3000, :5173");
     }
 
     #[test]

@@ -3320,6 +3320,14 @@ fn external_multiplexer_session_matches_query(
         || session.source_label().to_ascii_lowercase().contains(&query)
         || session.state_label().to_ascii_lowercase().contains(&query)
         || session
+            .latest_activity
+            .as_ref()
+            .is_some_and(|activity| activity.to_ascii_lowercase().contains(&query))
+        || session
+            .listening_ports
+            .iter()
+            .any(|port| port.to_string().contains(&query))
+        || session
             .foreground_command
             .as_ref()
             .is_some_and(|command| command.to_ascii_lowercase().contains(&query))
@@ -16127,12 +16135,12 @@ impl Sidebar {
                     .as_ref()
                     .map(|project| format!("{project} · {}", session.state_label()))
                     .unwrap_or_else(|| session.state_label());
-                let owner = session.source_label();
-                let location = session
-                    .working_directory
+                let owner = session
+                    .latest_activity
                     .as_ref()
-                    .map(|path| path.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| "Working directory unavailable".to_owned());
+                    .map(|activity| format!("{} · {activity}", session.kind.display_name()))
+                    .unwrap_or_else(|| session.source_label());
+                let location = session.location_label();
                 let action_label = external_multiplexer_action_label(&session);
                 let action_icon = if session.is_last_known() {
                     IconName::ArrowCircle

@@ -1756,11 +1756,14 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   closeable native tab model; Dez adds no nested layout menu, second sidebar,
   transcript store, or external lifecycle database.
 - **2026-07-29: cmux integration preserves external Workspace ownership.**
-  Dez discovers cmux Workspaces through `cmux list-workspaces --json`, matches
-  only those with a working directory inside a Workspace, and opens the selected
-  Workspace through `cmux select-workspace`. It does not spawn an attachment
-  terminal, copy cmux's pane grid, inspect terminal content, or claim ownership
-  of the external Workspace.
+  Dez discovers cmux Workspaces through the current `cmux workspace list
+  --json` namespace and retains `cmux list-workspaces --json` only as an older
+  release fallback. It correlates the public notification list to project
+  **Needs Input**, latest activity, agent identity, and listening ports without
+  mutating cmux state. Dez matches only Workspaces with a working directory
+  inside a Workspace and opens the selected Workspace through `cmux
+  select-workspace`. It does not spawn an attachment terminal, copy cmux's pane
+  grid, inspect terminal content, or claim ownership of the external Workspace.
 - **2026-07-29: Workspaces renders a Workspace-first activity tree.** Local Agent
   Sessions and path-matched tmux, Herdr, and cmux activity sit beneath the
   owning Workspace. Overlapping roots choose the most specific Workspace.

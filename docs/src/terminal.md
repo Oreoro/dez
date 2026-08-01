@@ -149,8 +149,9 @@ created for an unrelated external TTY.
 Dez adds a narrow, explicit control boundary for tmux, Herdr, and cmux.
 Dez discovers live tmux sessions through `list-panes`, asks `herdr session list
 --json` for the live default and named Herdr endpoints before querying the
-documented snapshot API, and discovers cmux Workspaces through `list-workspaces
---json`. A session whose working directory is inside an open root appears
+documented snapshot API, and discovers cmux Workspaces through `workspace list
+--json`. Older cmux releases remain supported through the compatibility
+`list-workspaces --json` verb. A session whose working directory is inside an open root appears
 beneath the most specific matching Workspace. Sessions with no working
 directory or no matching open root remain visible under **Other Running
 Sessions**. **Browse Running Sessions…** opens or refocuses Workspaces, clears
@@ -161,6 +162,13 @@ not manufacture an attachment terminal for it. The external application
 remains authoritative, closing a Dez tab detaches rather than terminates, and
 Dez never requests a Herdr takeover automatically.
 
+For a current cmux release, Dez also correlates `list-notifications --json`
+with the Workspace list. Unread notifications become **Needs Input**; the
+latest notification or conversation summary and up to three listening ports
+remain compact metadata in the native Workspace row. They are a read-only
+projection of cmux state. Dez does not mark notifications read, send terminal
+input, reproduce cmux panes, or infer ownership from notification text.
+
 Each integration reports its source truth independently: **Missing** means the
 executable is unavailable, **Empty** means an available source returned no
 sessions, **Failed** means discovery did not complete, and **Ready** means it
@@ -168,6 +176,12 @@ returned sessions. Failure preserves only that source's rows as **last known**;
 successful sources continue updating. A ready source may still have no session
 matching the selected Workspace, in which case its unmatched items stay under
 **Other Running Sessions** rather than disappearing.
+
+If current cmux Workspace discovery succeeds but notification discovery fails,
+Dez keeps the current Workspace rows, reports the cmux source as **Failed**, and
+preserves missing rows as **last known**. A compatibility-only cmux release may
+omit notification support without hiding the legacy Workspace metadata it did
+return.
 
 Herdr registry discovery and endpoint queries share one source-wide deadline;
 endpoint snapshots run concurrently with an individual deadline for each
