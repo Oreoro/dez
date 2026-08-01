@@ -314,7 +314,7 @@ impl Item for AgentThreadItem {
 
     fn tab_icon(&self, _window: &Window, cx: &App) -> Option<Icon> {
         let icon = if self.is_draft(cx) {
-            IconName::Robot
+            ui::agent_icon_for_app(paths::APP_NAME)
         } else {
             self.agent_icon(cx)
         };

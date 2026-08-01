@@ -421,6 +421,14 @@ Subagents expose distinct **Stop Subagent**, **Expand Subagent Preview**, and
 **Open Subagent Session** actions; opening a Session navigates to that existing
 conversation and does not create or restart work.
 
+Agent identity and execution state are separate. Dez's built-in Agent uses the
+product's four-node Agent glyph and Subagents use its parent-and-child variant.
+Recognized terminal agents keep their provider glyphs. Workspaces layers
+running, permission, attention, and error state onto that stable identity
+instead of replacing every active agent with the same spinner. Subagents stay
+inside the parent Session's title bar, permission list, output boundary, and
+tool card; they do not become a second top-level navigation model.
+
 The optional **Workspace Layout** menu is a workflow picker, not a diagnostics
 or storage dashboard. It exposes **Work Area + Files**, **Work Area + Built-in
 Agent**, **Focus Work Area**, **Split Work Area**, **Work Area + Git**, and

@@ -586,6 +586,14 @@ failure marks report status without pretending to be buttons. A subagent card
 separates previewing its work, stopping it, and opening that existing Subagent
 Session in the Agent work area.
 
+Agent identity remains stable while state changes. The built-in Dez Agent uses
+the four-node Dez Agent mark; its Subagents use the related parent-and-child
+mark. Codex, Claude Code, OpenCode, Gemini, and other recognized terminal agents
+retain their provider marks. Running, waiting, attention, error, and completion
+are separate state treatments, so a spinner or warning never makes unrelated
+agents look identical. Subagents remain scoped to their parent Agent Session
+instead of becoming duplicate top-level Workspaces rows.
+
 ### 5. Resume honestly
 
 Workspace composition and agent-session metadata are restored where the source

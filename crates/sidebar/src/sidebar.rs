@@ -13425,6 +13425,7 @@ impl Sidebar {
                         .then_some(thread.status)
                         .unwrap_or_default(),
                 )
+                .preserve_identity_with_status(APP_NAME != "Zed")
                 .when(session_rail_settings.show_agent_state_metadata, |this| {
                     this.actor_label(actor_label).state_label(state_label)
                 })

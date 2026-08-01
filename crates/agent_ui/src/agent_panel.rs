@@ -198,7 +198,7 @@ fn agent_panel_create_icon(app_name: &str) -> IconName {
     if app_name == "Zed" {
         IconName::Plus
     } else {
-        IconName::Robot
+        ui::agent_icon_for_app(app_name)
     }
 }
 
@@ -7559,7 +7559,7 @@ mod tests {
     #[test]
     fn agent_panel_icons_preserve_product_identity() {
         assert_eq!(agent_panel_create_icon("Zed"), IconName::Plus);
-        assert_eq!(agent_panel_create_icon("Dez"), IconName::Robot);
+        assert_eq!(agent_panel_create_icon("Dez"), IconName::DezAgent);
         assert_eq!(agent_panel_registry_icon("Zed"), IconName::Plus);
         assert_eq!(agent_panel_registry_icon("Dez"), IconName::Blocks);
     }

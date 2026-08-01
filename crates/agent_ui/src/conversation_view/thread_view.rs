@@ -3560,7 +3560,7 @@ impl ThreadView {
                                     h_flex()
                                         .gap_1p5()
                                         .child(
-                                            Icon::new(IconName::Circle)
+                                            Icon::new(ui::subagent_icon_for_app(paths::APP_NAME))
                                                 .size(IconSize::XSmall)
                                                 .color(Color::Warning),
                                         )
@@ -4346,7 +4346,7 @@ impl ThreadView {
                                 .flex_1()
                                 .gap_2()
                                 .child(
-                                    Icon::new(IconName::ForwardArrowUp)
+                                    Icon::new(ui::subagent_icon_for_app(paths::APP_NAME))
                                         .size(IconSize::Small)
                                         .color(Color::Muted),
                                 )
@@ -6856,7 +6856,7 @@ impl ThreadView {
                             h_flex()
                                 .gap_1()
                                 .child(
-                                    Icon::new(IconName::ForwardArrowUp)
+                                    Icon::new(ui::subagent_icon_for_app(paths::APP_NAME))
                                         .color(Color::Muted)
                                         .size(IconSize::Small),
                                 )
@@ -11154,7 +11154,7 @@ impl ThreadView {
         let status_icon = format!("status-icon-{}", entry_ix);
         let diff_stat_id = format!("subagent-diff-{}", entry_ix);
 
-        let icon = h_flex().w_4().justify_center().child(if is_running {
+        let status_icon = if is_running {
             SpinnerLabel::new()
                 .size(LabelSize::Small)
                 .into_any_element()
@@ -11185,7 +11185,16 @@ impl ThreadView {
                 .size(IconSize::Small)
                 .color(Color::Success)
                 .into_any_element()
-        });
+        };
+        let icon = h_flex()
+            .gap_1()
+            .justify_center()
+            .child(
+                Icon::new(ui::subagent_icon_for_app(paths::APP_NAME))
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
+            )
+            .child(status_icon);
 
         let has_expandable_content = thread
             .as_ref()
