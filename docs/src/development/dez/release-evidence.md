@@ -2020,3 +2020,31 @@ before upload.
 Only formatting, shell syntax, diff, and source-identity checks are permitted
 locally for this slice. Exact compilation, focused tests, optimized packaging,
 signing, notarization, and artifact validation remain remote evidence gates.
+
+## 2026-08-01: stable Agent and Subagent identity
+
+Source commit `ecc2b9206e` adds an original, product-scoped icon pair for the
+built-in Dez Agent and its Subagents. Agent creation, draft Agent tabs, native
+Agent Sessions, subagent title bars, permission rows, output boundaries, and
+tool cards now share that identity contract. Recognized terminal agents retain
+their provider marks rather than being recolored or assigned decorative random
+avatars.
+
+Workspaces now presents running, waiting, attention, and error state as a small
+semantic indicator without replacing the underlying Dez or provider identity.
+The official Zed product path retains its upstream Agent marks and active-state
+presentation. Subagents remain parent-scoped and are not projected as duplicate
+top-level Workspaces rows.
+
+Source-only verification completed for the exact feature commit:
+
+- `cargo fmt --all`;
+- `xmllint --noout assets/icons/dez_agent.svg assets/icons/dez_subagent.svg`;
+- `cargo metadata --no-deps --format-version 1`;
+- `bash -n script/dez-identity-check`;
+- `./script/dez-identity-check`; and
+- `git diff --check`.
+
+No local build, test binary, app launch, package, or visual runtime was created.
+Rendered light/dark theme, compact-width, high-contrast, animation, and focus
+proof remains an exact remote-candidate and installed-runtime gate.
