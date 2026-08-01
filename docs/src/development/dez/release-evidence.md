@@ -8,6 +8,39 @@ active source lane. The preserved
 release order and remaining runtime gates. Historical artifacts below do not
 validate a newer source tree.
 
+## 2026-08-01: v0.2.2 corrected source candidate
+
+Commit `8c1bef490f0ae78c9c55e4a76dce14baf257be59` is the exact corrected
+v0.2.2 implementation candidate. It changes the terminal constructed for shell
+activation to a mutable binding, as required by the feedback-aware terminal
+write path. The following source-only checks passed after that correction:
+
+- `cargo fmt --all -- --check`;
+- `bash -n script/dez-identity-check`;
+- `bash script/dez-identity-check`, including the Dez theme contract; and
+- `git diff --check`.
+
+No local compilation, test suite, optimized package, signature, notarization,
+application launch, protected-folder recovery, terminal-survival scenario,
+multiplexer attachment, or rendered visual inspection was run for this commit.
+Those gates remain assigned to GitHub Actions and exact-artifact inspection.
+This ledger-only follow-up does not change application, helper, workflow,
+manifest, or lockfile inputs.
+
+### Rejected exact-head Preview run 30691903040
+
+[GitHub Actions run 30691903040](https://github.com/Oreoro/dez/actions/runs/30691903040)
+targeted commit `0efab5b719331a9a7284750319ff5d1456628649`. The Apple M2
+target check and Dez source and bundle guards passed. Optimized compilation
+then failed in `terminal` with Rust error `E0596`: the shell-activation
+`Terminal` binding was immutable after `write_to_pty` began requiring mutable
+access for visible hosted-input rejection state.
+
+Packaging and artifact upload were skipped, and the run produced no artifact.
+The binding is corrected in exact implementation commit
+`8c1bef490f0ae78c9c55e4a76dce14baf257be59`. Evidence from the rejected run is
+not promoted beyond its successful target and source-guard stages.
+
 ## 2026-08-01: v0.2.2 refined source candidate
 
 Commit `b5b1c5db0896d59c7b3e940d3c0d75100b4e2909` is the exact refined
