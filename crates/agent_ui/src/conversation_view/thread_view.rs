@@ -99,6 +99,39 @@ fn model_recovery_is_dismissible(app_name: &str, is_initial_setup: bool) -> bool
     app_name == "Zed" || !is_initial_setup
 }
 
+fn subagent_card_fallback_title(is_cancelled: bool, is_failed: bool) -> &'static str {
+    if is_cancelled {
+        "Subagent Canceled"
+    } else if is_failed {
+        "Subagent Failed"
+    } else {
+        "Starting Subagent…"
+    }
+}
+
+fn subagent_card_status_label(
+    is_running: bool,
+    is_pending_tool_call: bool,
+    is_cancelled: bool,
+    is_failed: bool,
+) -> &'static str {
+    if is_cancelled {
+        "Canceled"
+    } else if is_failed {
+        "Failed"
+    } else if is_pending_tool_call {
+        "Waiting for permission"
+    } else if is_running {
+        "Running"
+    } else {
+        "Completed"
+    }
+}
+
+fn subagent_preview_available(has_expandable_content: bool, is_pending_tool_call: bool) -> bool {
+    has_expandable_content && !is_pending_tool_call
+}
+
 #[derive(Default)]
 struct ThreadFeedbackState {
     feedback: Option<ThreadFeedback>,
@@ -11142,12 +11175,8 @@ impl ThreadView {
             thread_title
         } else if !tool_call_label.is_empty() {
             tool_call_label.into()
-        } else if is_cancelled {
-            "Subagent Canceled".into()
-        } else if is_failed {
-            "Subagent Failed".into()
         } else {
-            "Spawning Agent…".into()
+            subagent_card_fallback_title(is_cancelled, is_failed).into()
         };
 
         let card_header_id = format!("subagent-header-{}", entry_ix);
@@ -11168,7 +11197,7 @@ impl ThreadView {
                             cx.theme().colors().icon_disabled.opacity(0.5),
                         )),
                 )
-                .tooltip(Tooltip::text("Subagent Cancelled"))
+                .tooltip(Tooltip::text("Subagent Canceled"))
                 .into_any_element()
         } else if is_failed {
             div()
@@ -11199,6 +11228,11 @@ impl ThreadView {
         let has_expandable_content = thread
             .as_ref()
             .map_or(false, |thread| !thread.read(cx).entries().is_empty());
+        let preview_available =
+            subagent_preview_available(has_expandable_content, is_pending_tool_call);
+        let status_label =
+            subagent_card_status_label(is_running, is_pending_tool_call, is_cancelled, is_failed);
+        let accessibility_label = format!("Subagent: {title}. {status_label}.");
 
         let tooltip_meta_description = if is_expanded {
             "Click to Collapse"
@@ -11210,6 +11244,8 @@ impl ThreadView {
 
         v_flex()
             .w_full()
+            .role(gpui::Role::Region)
+            .aria_label(accessibility_label)
             .rounded_md()
             .border_1()
             .when(has_no_title_or_canceled, |this| this.border_dashed())
@@ -11282,7 +11318,7 @@ impl ThreadView {
                                         )
                                     }),
                             )
-                            .when(!has_no_title_or_canceled && !is_pending_tool_call, |this| {
+                            .when(preview_available, |this| {
                                 this.tooltip(move |_, cx| {
                                     Tooltip::with_meta(
                                         title.to_string(),
@@ -11292,7 +11328,7 @@ impl ThreadView {
                                     )
                                 })
                             })
-                            .when(has_expandable_content && !is_pending_tool_call, |this| {
+                            .when(preview_available, |this| {
                                 this.cursor_pointer()
                                     .hover(|s| s.bg(cx.theme().colors().element_hover))
                                     .child(
@@ -13353,6 +13389,44 @@ mod tests {
     use std::path::Path;
     use util::path;
     use workspace::MultiWorkspace;
+
+    #[test]
+    fn subagent_cards_name_identity_state_and_only_offer_real_previews() {
+        assert_eq!(
+            subagent_card_fallback_title(false, false),
+            "Starting Subagent…"
+        );
+        assert_eq!(
+            subagent_card_fallback_title(true, false),
+            "Subagent Canceled"
+        );
+        assert_eq!(subagent_card_fallback_title(false, true), "Subagent Failed");
+
+        assert_eq!(
+            subagent_card_status_label(true, false, false, false),
+            "Running"
+        );
+        assert_eq!(
+            subagent_card_status_label(true, true, false, false),
+            "Waiting for permission"
+        );
+        assert_eq!(
+            subagent_card_status_label(false, false, true, false),
+            "Canceled"
+        );
+        assert_eq!(
+            subagent_card_status_label(false, false, false, true),
+            "Failed"
+        );
+        assert_eq!(
+            subagent_card_status_label(false, false, false, false),
+            "Completed"
+        );
+
+        assert!(subagent_preview_available(true, false));
+        assert!(!subagent_preview_available(false, false));
+        assert!(!subagent_preview_available(true, true));
+    }
 
     fn native_command(name: &str) -> acp::AvailableCommand {
         acp::AvailableCommand::new(name, "").meta(acp_thread::meta_with_command_category(

@@ -673,7 +673,9 @@ Their expand/collapse and copy actions remain visible and keyboard reachable.
 A running command has one exact **Stop This Command** action. Truncation and
 failure marks report status without pretending to be buttons. A subagent card
 separates previewing its work, stopping it, and opening that existing Subagent
-Session in the Agent work area.
+Session in the Agent work area. It names running, waiting, completed, canceled,
+or failed state to assistive navigation and offers preview only when content is
+available.
 
 Agent identity remains stable while state changes. The built-in Dez Agent uses
 the four-node Dez Agent mark; its Subagents use the related parent-and-child
