@@ -8,6 +8,48 @@ active source lane. The preserved
 release order and remaining runtime gates. Historical artifacts below do not
 validate a newer source tree.
 
+## 2026-08-01: v0.2.2 continued source polish
+
+Commit `56dbcaf1532dbcccdc9b5be2253af85b4a2764d8` is the exact
+implementation candidate for this source-only polish pass. It refines Home and
+Main Work Area navigation, removes the duplicate active-Workspace terminal
+launcher, makes the File-menu default-terminal label truthful and live-updating,
+adds the explicit cmux handoff beside running-session discovery, queues a Retry
+requested during active discovery, and uses Herdr's JSON session registry rather
+than guessed configuration-directory sockets. Public and maintainer
+documentation now follows the same start or resume → supervise → inspect or
+review story and distinguishes native terminal TUIs from external multiplexer
+ownership.
+
+The following non-compiling checks passed for that exact implementation tree:
+
+- `cargo fmt --all -- --check`;
+- `cargo metadata --locked --no-deps --format-version 1`;
+- `bash -n script/dez-identity-check`;
+- `bash script/dez-identity-check`, including the Dez theme contract;
+- `jq empty assets/dez/codex-hooks.json`;
+- Prettier checks for every changed current/public Markdown document; and
+- `git diff --check`.
+
+No local or remote compilation, test suite, optimized package, signature,
+notarization, application launch, protected-folder recovery, multiplexer
+attachment, or rendered visual inspection was run for this commit. No workflow
+was dispatched for this candidate. Those runtime and artifact gates remain
+open; older runs do not validate this source tree.
+
+### Cancelled previous-head Preview run 30692700499
+
+[GitHub Actions run 30692700499](https://github.com/Oreoro/dez/actions/runs/30692700499)
+targeted earlier commit `9bab017847481a18cb8eba19c0af3e0438c3282b`.
+The Apple M2 target check and Dez source and bundle guards passed. At the user's
+request, the run was cancelled while the optimized application compilation step
+was still active. Packaging and artifact upload were skipped, and the run
+produced no candidate artifact.
+
+That cancelled run proves only its successful target and source-guard stages.
+It does not prove compilation for its own head and provides no evidence for the
+newer implementation commit recorded above.
+
 ## 2026-08-01: v0.2.2 corrected source candidate
 
 Commit `8c1bef490f0ae78c9c55e4a76dce14baf257be59` is the exact corrected
