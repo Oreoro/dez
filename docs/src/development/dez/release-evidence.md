@@ -8,6 +8,34 @@ active source lane. The preserved
 release order and remaining runtime gates. Historical artifacts below do not
 validate a newer source tree.
 
+## 2026-08-01: native terminal-agent workflow polish
+
+Commit `596a651e99c9f961e24efe1483d9eb228830d73f` is the exact implementation
+candidate for this source-only product pass. It adds distinct native Start and
+Continue actions for Codex, Claude Code, and OpenCode across the pane Add
+control, File, Workspace Options, and Command Palette; corrects the external
+cmux handoff to `cmux open <path>`; exposes Zed's native task launcher in the
+Add menu; and centralizes the configured-terminal label used by navigation.
+The public guide, Settings copy, product strategy, active Workspace contract,
+and permanent decisions now describe the same Workspace → start or continue →
+supervise → inspect → review loop and preserve external process ownership.
+
+The following non-compiling checks passed for that exact implementation tree:
+
+- `cargo fmt --all -- --check`;
+- `cargo metadata --no-deps --format-version 1`;
+- `bash -n script/dez-identity-check`;
+- `bash script/dez-identity-check`, including the Dez theme contract;
+- Prettier checks for every changed current/public Markdown document; and
+- `git diff --check`.
+
+No local compilation, test suite, application launch, or visual inspection was
+run. No remote build workflow was dispatched. Compilation, tests, optimized
+packaging, signing, notarization, protected-folder behavior, provider TUI
+interaction, multiplexer attachment, and exact-artifact inspection remain open
+remote/runtime gates. This ledger-only follow-up does not change application,
+helper, workflow, manifest, or lockfile inputs.
+
 ## 2026-08-01: v0.2.2 continued source polish
 
 Commit `56dbcaf1532dbcccdc9b5be2253af85b4a2764d8` is the exact
