@@ -17208,6 +17208,7 @@ impl Sidebar {
             for (pane_index, (pane, items)) in pane_items.into_iter().enumerate() {
                 let pane_is_active = pane == active_pane;
                 let active_item_id = pane.read(cx).active_item().map(|item| item.item_id());
+                let pinned_count = pane.read(cx).pinned_count();
                 let details = workspace::tab_details(&items, window, cx);
 
                 if let Some(pane_label) = workspace_pane_navigation_label(pane_index, pane_count) {
@@ -17230,6 +17231,7 @@ impl Sidebar {
                     let label = item.tab_content_text(detail, cx);
                     let is_visible = active_item_id == Some(item.item_id());
                     let is_focused = pane_is_active && is_visible;
+                    let is_pinned = item_index < pinned_count;
                     let icon = item
                         .tab_icon(window, cx)
                         .unwrap_or_else(|| Icon::new(IconName::File))
@@ -17249,48 +17251,120 @@ impl Sidebar {
                     } else {
                         "open"
                     };
+                    let pinned_label = if is_pinned { ", pinned" } else { "" };
                     let dirty_label = if is_dirty { ", modified" } else { "" };
                     let accessibility_label = format!(
-                        "{label}, {visibility_label}{dirty_label}, {pane_label}. Open in {workspace_label}"
+                        "{label}, {visibility_label}{pinned_label}{dirty_label}, {pane_label}. Open in {workspace_label}"
                     );
                     let item_id = item.item_id();
+                    let close_icon = item.tab_close_icon(cx);
+                    let close_tooltip_text = item.tab_close_tooltip_text(cx);
+                    let close_pane = pane.clone();
+                    let middle_click_pane = pane.clone();
                     let workspace = workspace.clone();
 
                     rows.push(
-                        ButtonLike::new(ElementId::from(format!("workspace-native-tab-{item_id}")))
-                            .size(ButtonSize::Medium)
-                            .style(ButtonStyle::Subtle)
-                            .full_width()
-                            .toggle_state(is_focused)
-                            .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-                            .tab_index(0isize)
-                            .aria_label(accessibility_label.clone())
-                            .tooltip(Tooltip::text(accessibility_label))
-                            .child(
-                                h_flex()
-                                    .w_full()
-                                    .min_w_0()
-                                    .gap_2()
-                                    .child(icon)
-                                    .child(
-                                        Label::new(label)
-                                            .size(LabelSize::Small)
-                                            .truncate()
-                                            .flex_1(),
-                                    )
-                                    .when(is_dirty, |this| {
-                                        this.child(
-                                            Icon::new(IconName::Circle)
-                                                .size(IconSize::XSmall)
-                                                .color(Color::Accent),
+                        div()
+                            .when(!is_pinned, |this| {
+                                this.on_aux_click(move |event: &ClickEvent, window, cx| {
+                                    if !event.is_middle_click() {
+                                        return;
+                                    }
+                                    middle_click_pane.update(cx, |pane, cx| {
+                                        pane.close_item_by_id(
+                                            item_id,
+                                            SaveIntent::Close,
+                                            window,
+                                            cx,
                                         )
-                                    }),
-                            )
-                            .on_click(move |_, window, cx| {
-                                workspace.update(cx, |workspace, cx| {
-                                    workspace.activate_item(item.as_ref(), true, true, window, cx);
-                                });
+                                        .detach_and_log_err(cx);
+                                    });
+                                    cx.stop_propagation();
+                                    window.prevent_default();
+                                })
                             })
+                            .child(
+                                ButtonLike::new(ElementId::from(format!(
+                                    "workspace-native-tab-{item_id}"
+                                )))
+                                .size(ButtonSize::Medium)
+                                .style(ButtonStyle::Subtle)
+                                .full_width()
+                                .toggle_state(is_focused)
+                                .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                                .tab_index(0isize)
+                                .aria_label(accessibility_label.clone())
+                                .tooltip(Tooltip::text(accessibility_label))
+                                .child(
+                                    h_flex()
+                                        .w_full()
+                                        .min_w_0()
+                                        .gap_2()
+                                        .child(icon)
+                                        .child(
+                                            Label::new(label)
+                                                .size(LabelSize::Small)
+                                                .truncate()
+                                                .flex_1(),
+                                        )
+                                        .when(is_dirty, |this| {
+                                            this.child(
+                                                Icon::new(IconName::Circle)
+                                                    .size(IconSize::XSmall)
+                                                    .color(Color::Accent),
+                                            )
+                                        })
+                                        .when(is_pinned, |this| {
+                                            this.child(
+                                                Icon::new(IconName::Pin)
+                                                    .size(IconSize::XSmall)
+                                                    .color(Color::Muted),
+                                            )
+                                        })
+                                        .when(!is_pinned, |this| {
+                                            this.child(
+                                                IconButton::new(
+                                                    ("workspace-native-tab-close", item_id),
+                                                    close_icon,
+                                                )
+                                                .shape(IconButtonShape::Square)
+                                                .icon_color(Color::Muted)
+                                                .size(ButtonSize::None)
+                                                .icon_size(IconSize::Small)
+                                                .aria_label(close_tooltip_text)
+                                                .tooltip(Tooltip::text(close_tooltip_text))
+                                                .when(is_visible, |this| this.tab_index(0isize))
+                                                .when(!is_visible, |this| this.visible_on_hover(""))
+                                                .on_click(move |_, window, cx| {
+                                                    cx.stop_propagation();
+                                                    window.prevent_default();
+                                                    close_pane.update(cx, |pane, cx| {
+                                                        pane.close_item_by_id(
+                                                            item_id,
+                                                            SaveIntent::Close,
+                                                            window,
+                                                            cx,
+                                                        )
+                                                        .detach_and_log_err(cx);
+                                                    });
+                                                }),
+                                            )
+                                        }),
+                                )
+                                .on_click(
+                                    move |_, window, cx| {
+                                        workspace.update(cx, |workspace, cx| {
+                                            workspace.activate_item(
+                                                item.as_ref(),
+                                                true,
+                                                true,
+                                                window,
+                                                cx,
+                                            );
+                                        });
+                                    },
+                                ),
+                            )
                             .into_any_element(),
                     );
                 }

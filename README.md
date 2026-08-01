@@ -28,7 +28,9 @@ Workspace instead of separate applications or hidden panel modes.
   configurable. Its collapsible **Workspace Tabs** section appears when at
   least two native Main Work Area tabs are open, grouping them by pane only
   when the Workspace is split. Selecting a row activates that exact native tab;
-  tab ownership, dirty state, close behavior, dragging, and ordering remain in
+  unpinned rows expose the Surface's native close action on hover and accept
+  middle-click, while pinned rows remain protected and visibly pinned. Tab
+  ownership, dirty state, close confirmation, dragging, and ordering remain in
   Zed's pane model rather than being copied into the navigator. Agent Session
   rows keep their Dez or provider identity mark while Running, Needs Input,
   Waiting for Permission, Reconnecting, Completed, or Error remains a separate
@@ -109,9 +111,12 @@ stays flat for a single pane and introduces small **Pane 1**, **Pane 2**, and
 later group labels only when a real split exists. The section is collapsible,
 remembers its disclosure state, and disappears while Workspace search is active
 so search results keep the full navigator.
-Those tabs support reorder, cross-pane drag, preview replacement, pinning,
-closing, and horizontal or vertical splits. A terminal can therefore sit
-below code without Dez manufacturing a separate multiplexer UI.
+Its active unpinned row keeps a native close control visible; inactive rows show
+that control on hover, and middle-click closes through the same unsaved-work
+contract. Pinned rows show their pin and cannot be closed from the navigator.
+The native tab strip remains the owner of reorder, cross-pane drag, preview
+replacement, pinning, and horizontal or vertical splits. A terminal can
+therefore sit below code without Dez manufacturing a separate multiplexer UI.
 The adjacent native `+` reopens Home, opens Recent Workspaces, or routes to a
 terminal, file, search, Files, Review Changes, Run Task, Debug, or Built-in Agent surface
 through the existing Zed actions. Its terminal submenu names the configured

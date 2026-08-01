@@ -220,11 +220,15 @@ active Workspace's native Main Work Area tabs above the Workspace and Session li
 when at least two tabs are open. A one-pane layout remains a flat list. Real splits add quiet **Pane 1**,
 **Pane 2**, and later group labels, so the hierarchy describes the layout that
 already exists instead of manufacturing one. Each row uses the Surface's
-native icon, disambiguated tab title, active state, and dirty state. Activating
-a row calls the owning Workspace's native item activation path; ordering,
-dragging, preview replacement, pinning, closing, and split ownership remain in
-the pane. The disclosure state persists, while Workspace search temporarily
-hides the section to keep filtering focused.
+native icon, disambiguated tab title, active state, dirty state, and pinned
+state. Activating a row calls the owning Workspace's native item activation
+path. An unpinned row exposes the Surface's native close icon on hover, keeps it
+visible while that Surface is active in its pane, and accepts middle-click.
+Both routes call the owning pane's normal close path, including unsaved-work
+confirmation. Pinned rows remain protected. Ordering, dragging, preview
+replacement, pinning, and split ownership remain in the native tab strip. The
+disclosure state persists, while Workspace search temporarily hides the section
+to keep filtering focused.
 Each Main Work Area pane keeps native Back and Forward controls in its tab
 bar. They traverse files, terminals, diffs, settings, and other native
 Surfaces without inventing a separate browser or duplicating Workspace
