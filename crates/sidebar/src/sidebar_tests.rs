@@ -13783,7 +13783,7 @@ mod property_test {
             }
 
             for workspace in group_workspaces {
-                for snapshot in root_repository_snapshots(workspace, cx) {
+                for snapshot in workspace_repository_snapshots(workspace, cx) {
                     let Some(main_worktree_abs_path) = snapshot.main_worktree_abs_path() else {
                         continue;
                     };

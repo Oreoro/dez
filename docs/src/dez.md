@@ -398,8 +398,11 @@ row for source, semantic state, working directory or worktree, and attention.
 cmux rows keep API-reported listening ports visible in that native row and its
 accessible tooltip without turning Workspaces into a server scanner.
 Pathless and unmatched discovered rows remain in **Other Running Sessions**.
-The Workspace header owns Git branch and changed-file metadata. Unrelated
-machine terminals do not render.
+The Workspace header owns Git branch and changed-file metadata. Repository
+association follows path-component ancestry in both directions, so opening a
+repository subdirectory or a parent folder that contains repositories does not
+erase Git identity. Similar string prefixes such as `dez` and `dez-tools` never
+match. Unrelated machine terminals do not render.
 Explicit external rows never hide the primary **Open Workspace…** path when no
 Workspace is open.
 

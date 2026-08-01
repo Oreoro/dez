@@ -2184,6 +2184,22 @@ mod workspace_header_label_tests {
             Some("1 change")
         );
         assert_eq!(workspace_repository_summary_label(None, 0), None);
+        assert!(workspace_root_overlaps_repository(
+            Path::new("/code/dez/crates/sidebar"),
+            Path::new("/code/dez")
+        ));
+        assert!(workspace_root_overlaps_repository(
+            Path::new("/code"),
+            Path::new("/code/dez")
+        ));
+        assert!(workspace_root_overlaps_repository(
+            Path::new("/code/dez"),
+            Path::new("/code/dez")
+        ));
+        assert!(!workspace_root_overlaps_repository(
+            Path::new("/code/dez"),
+            Path::new("/code/dez-tools")
+        ));
         assert_eq!(
             workspace_header_accessibility_label("Dez", "compiler", false, false, 0),
             "Workspace compiler, ready for a session"
@@ -4725,13 +4741,11 @@ fn attention_entries(
     (filtered, project_header_indices)
 }
 
-// TODO: The mapping from workspace root paths to git repositories needs a
-// unified approach across the codebase: this function, `AgentPanel::classify_worktrees`,
-// thread persistence (which PathList is saved to the database), and thread
-// querying (which PathList is used to read threads back). All of these need
-// to agree on how repos are resolved for a given workspace, especially in
-// multi-root and nested-repo configurations.
-fn root_repository_snapshots(
+fn workspace_root_overlaps_repository(workspace_root: &Path, repository_root: &Path) -> bool {
+    workspace_root.starts_with(repository_root) || repository_root.starts_with(workspace_root)
+}
+
+fn workspace_repository_snapshots(
     workspace: &Entity<Workspace>,
     cx: &App,
 ) -> impl Iterator<Item = project::git_store::RepositorySnapshot> {
@@ -4739,11 +4753,13 @@ fn root_repository_snapshots(
     let project = workspace.read(cx).project().read(cx);
     project.repositories(cx).values().filter_map(move |repo| {
         let snapshot = repo.read(cx).snapshot();
-        let is_root = path_list
-            .paths()
-            .iter()
-            .any(|p| p.as_path() == snapshot.work_directory_abs_path.as_ref());
-        is_root.then_some(snapshot)
+        let belongs_to_workspace = path_list.paths().iter().any(|root| {
+            workspace_root_overlaps_repository(
+                root.as_path(),
+                snapshot.work_directory_abs_path.as_ref(),
+            )
+        });
+        belongs_to_workspace.then_some(snapshot)
     })
 }
 
@@ -4756,7 +4772,7 @@ fn workspace_group_repository_summary(
     let mut changed_file_count = 0usize;
 
     for workspace in workspaces {
-        for repository in root_repository_snapshots(workspace, cx) {
+        for repository in workspace_repository_snapshots(workspace, cx) {
             if !repository_paths.insert(repository.work_directory_abs_path.to_path_buf()) {
                 continue;
             }
@@ -4789,7 +4805,7 @@ fn linked_worktree_path_lists_for_workspaces(
         if workspace.read(cx).visible_worktrees(cx).count() != 1 {
             continue;
         }
-        for snapshot in root_repository_snapshots(workspace, cx) {
+        for snapshot in workspace_repository_snapshots(workspace, cx) {
             linked_worktree_paths.extend(
                 snapshot.linked_worktrees().iter().map(|linked_worktree| {
                     PathList::new(std::slice::from_ref(&linked_worktree.path))
