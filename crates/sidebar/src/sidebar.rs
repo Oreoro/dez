@@ -1150,15 +1150,34 @@ fn workspace_tabs_section_visible(app_name: &str, tab_count: usize) -> bool {
     app_name != "Zed" && tab_count > 1
 }
 
-fn workspace_tab_count_label(tab_count: usize) -> String {
-    format!(
+fn workspace_tab_layout_label(tab_count: usize, pane_count: usize) -> String {
+    let tab_label = format!(
         "{tab_count} {}",
         if tab_count == 1 { "tab" } else { "tabs" }
-    )
+    );
+    if pane_count > 1 {
+        format!("{tab_label} · {pane_count} panes")
+    } else {
+        tab_label
+    }
 }
 
 fn workspace_pane_navigation_label(pane_index: usize, pane_count: usize) -> Option<String> {
     (pane_count > 1).then(|| format!("Pane {}", pane_index + 1))
+}
+
+fn workspace_pane_header_label(
+    pane_index: usize,
+    pane_count: usize,
+    is_focused: bool,
+) -> Option<String> {
+    workspace_pane_navigation_label(pane_index, pane_count).map(|label| {
+        if is_focused {
+            format!("{label} · Focused")
+        } else {
+            label
+        }
+    })
 }
 
 fn workspace_tab_icon_color(is_visible: bool, is_focused: bool) -> Color {
@@ -2409,11 +2428,20 @@ mod session_start_state_tests {
         assert!(!workspace_tabs_section_visible("Dez", 1));
         assert!(!workspace_tabs_section_visible("Dez", 0));
         assert!(!workspace_tabs_section_visible("Zed", 3));
-        assert_eq!(workspace_tab_count_label(1), "1 tab");
-        assert_eq!(workspace_tab_count_label(3), "3 tabs");
+        assert_eq!(workspace_tab_layout_label(1, 1), "1 tab");
+        assert_eq!(workspace_tab_layout_label(3, 1), "3 tabs");
+        assert_eq!(workspace_tab_layout_label(3, 2), "3 tabs · 2 panes");
         assert_eq!(workspace_pane_navigation_label(0, 1), None);
         assert_eq!(
             workspace_pane_navigation_label(1, 3).as_deref(),
+            Some("Pane 2")
+        );
+        assert_eq!(
+            workspace_pane_header_label(0, 2, true).as_deref(),
+            Some("Pane 1 · Focused")
+        );
+        assert_eq!(
+            workspace_pane_header_label(1, 2, false).as_deref(),
             Some("Pane 2")
         );
         assert_eq!(workspace_tab_icon_color(false, false), Color::Muted);
@@ -17533,17 +17561,21 @@ impl Sidebar {
                 let pinned_count = pane.read(cx).pinned_count();
                 let details = workspace::tab_details(&items, window, cx);
 
-                if let Some(pane_label) = workspace_pane_navigation_label(pane_index, pane_count) {
+                if let Some(pane_label) =
+                    workspace_pane_header_label(pane_index, pane_count, pane_is_active)
+                {
                     rows.push(
                         h_flex()
                             .px_2()
                             .pt_1()
                             .pb_0p5()
-                            .child(
-                                Label::new(pane_label)
-                                    .size(LabelSize::XSmall)
-                                    .color(Color::Muted),
-                            )
+                            .child(Label::new(pane_label).size(LabelSize::XSmall).color(
+                                if pane_is_active {
+                                    Color::Accent
+                                } else {
+                                    Color::Muted
+                                },
+                            ))
                             .into_any_element(),
                     );
                 }
@@ -17756,7 +17788,7 @@ impl Sidebar {
                                         ),
                                 )
                                 .child(
-                                    Label::new(workspace_tab_count_label(tab_count))
+                                    Label::new(workspace_tab_layout_label(tab_count, pane_count))
                                         .size(LabelSize::XSmall)
                                         .color(Color::Muted),
                                 ),

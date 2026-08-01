@@ -2052,8 +2052,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'menu\.when\(is_active.*?action\("Open Files", Box::new\(RevealFiles\)\).*?action\("Review Changes", Box::new\(ReviewGitChanges\)\).*?action\([[:space:]]*"Open Debug".*?ApplyCanvasLayoutRecipe.*?name: "debug"' \
     'Workspace Options can regress to hiding Files, Git, or Debug behind layout administration'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn workspace_tabs_section_title.*?"Open Tabs".*?"Workspace Tabs".*?fn workspace_tabs_section_visible.*?app_name != "Zed" && tab_count > 1.*?fn workspace_tab_count_label.*?tab_count == 1.*?"tab".*?"tabs".*?fn render_active_workspace_tabs.*?workspace_tabs_section_visible\(APP_NAME, tab_count\).*?workspace_pane_navigation_label.*?workspace\.activate_item.*?Open tabs in the active Workspace.*?Label::new\(workspace_tab_count_label\(tab_count\)\)' \
-    'Workspaces can regress to a redundant one-tab section, an unexplained count, or stop activating native tabs'
+    'fn workspace_tabs_section_title.*?"Open Tabs".*?"Workspace Tabs".*?fn workspace_tabs_section_visible.*?app_name != "Zed" && tab_count > 1.*?fn workspace_tab_layout_label.*?tab_count == 1.*?"tab".*?"tabs".*?pane_count > 1.*?"\{tab_label\} · \{pane_count\} panes".*?fn render_active_workspace_tabs.*?workspace_tabs_section_visible\(APP_NAME, tab_count\).*?workspace_pane_navigation_label.*?workspace\.activate_item.*?Open tabs in the active Workspace.*?Label::new\(workspace_tab_layout_label\(tab_count, pane_count\)\)' \
+    'Workspaces can regress to a redundant one-tab section, lose split-pane counts, or stop activating native tabs'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_active_workspace_tabs.*?let mut tab_position = 0.*?tab_position \+= 1.*?role\(gpui::Role::ListItem\).*?aria_position_in_set\(position_in_set\).*?aria_size_of_set\(tab_count\).*?id\("active-workspace-tab-list"\).*?role\(gpui::Role::List\)' \
     'Workspace Tabs can regress to an undifferentiated accessibility group without positional navigation'
@@ -2066,6 +2066,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_tab_icon_color.*?is_focused.*?Color::Accent.*?is_visible.*?Color::Default.*?Color::Muted.*?workspace_tab_icon_color\(false, false\).*?Color::Muted.*?workspace_tab_icon_color\(true, false\).*?Color::Default.*?workspace_tab_icon_color\(true, true\).*?Color::Accent' \
     'split-pane Workspace Tabs can regress to treating visible and focused tabs as the same state'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn workspace_pane_header_label.*?workspace_pane_navigation_label.*?is_focused.*?"\{label\} · Focused".*?workspace_pane_header_label\(0, 2, true\).*?"Pane 1 · Focused".*?workspace_pane_header_label\(1, 2, false\).*?"Pane 2".*?workspace_pane_header_label\(pane_index, pane_count, pane_is_active\).*?Color::Accent.*?Color::Muted' \
+    'expanded Workspace Tabs can regress to hiding which pane owns focus'
 require_multiline_pattern crates/workspace/src/pane.rs \
     'fn tab_icon_element.*?item\.tab_icon_element\(window, cx\).*?return Some\(icon\).*?item[[:space:]]*\.tab_icon\(window, cx\)' \
     'native tabs can regress to dropping an item-provided Agent, terminal, task, or multiplexer icon element'
