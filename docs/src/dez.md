@@ -998,6 +998,12 @@ Explicit agent CLI, tmux, and cmux launch actions do not
 rewrite the default terminal. Appearance recovery remains one scoped action,
 not a reset of unrelated preferences.
 
+The primary **Workspaces & Terminals** page therefore keeps Workspace behavior,
+Terminal Launch, and Environment visible. Detailed font, cursor, copy,
+scrolling, title-row, and scrollback options remain available through the
+native **Terminal Experience → Appearance & Behavior** subpage instead of
+competing with the initial product choices.
+
 Workspaces is optional chrome, not a permanent editor column. Fresh windows
 keep it closed; the status bar exposes **Open Workspaces**, and the same toggle
 remains available through **View** and Command Palette. **Settings → Workspaces

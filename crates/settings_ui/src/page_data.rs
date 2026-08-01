@@ -199,6 +199,10 @@ fn terminal_session_init_setting_on_terminal_page(app_name: &str) -> bool {
     app_name != "Zed"
 }
 
+fn terminal_customization_in_subpage(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
 fn terminal_session_init_setting_placeholder(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "e.g. claude"
@@ -8173,24 +8177,73 @@ fn terminal_page() -> SettingsPage {
         ]
     }
 
+    fn terminal_customization_section() -> [SettingsPageItem; 2] {
+        [
+            SettingsPageItem::SectionHeader("Terminal Experience"),
+            SettingsPageItem::SubPageLink(SubPageLink {
+                title: "Appearance & Behavior".into(),
+                r#type: Default::default(),
+                description: Some(
+                    "Tune terminal text, cursor, copy, scrolling, title, and other advanced native terminal behavior."
+                        .into(),
+                ),
+                search_aliases: &[
+                    "terminal font",
+                    "terminal cursor",
+                    "terminal copy",
+                    "terminal scrolling",
+                    "terminal title",
+                ],
+                json_path: Some("terminal"),
+                in_json: true,
+                files: USER,
+                render: |settings_window, scroll_handle, window, cx| {
+                    let items = concat_sections!(
+                        font_section(),
+                        display_settings_section(),
+                        behavior_settings_section(),
+                        layout_settings_section(),
+                        advanced_settings_section(),
+                        toolbar_section(),
+                        scrollbar_section(),
+                    );
+                    settings_window
+                        .render_sub_page_items(
+                            items.iter().enumerate(),
+                            scroll_handle,
+                            window,
+                            cx,
+                        )
+                        .into_any_element()
+                },
+            }),
+        ]
+    }
+
+    let mut items = concat_sections!(@vec,
+        sessions_section(),
+        launch_section(),
+        environment_section(),
+    );
+    if terminal_customization_in_subpage(paths::APP_NAME) {
+        items.extend(terminal_customization_section());
+    } else {
+        items.extend(font_section());
+        items.extend(display_settings_section());
+        items.extend(behavior_settings_section());
+        items.extend(layout_settings_section());
+        items.extend(advanced_settings_section());
+        items.extend(toolbar_section());
+        items.extend(scrollbar_section());
+    }
+
     SettingsPage {
         title: workspace_surface_copy(
             paths::APP_NAME,
             "Sessions & Terminal",
             "Workspaces & Terminals",
         ),
-        items: concat_sections![
-            sessions_section(),
-            launch_section(),
-            environment_section(),
-            font_section(),
-            display_settings_section(),
-            behavior_settings_section(),
-            layout_settings_section(),
-            advanced_settings_section(),
-            toolbar_section(),
-            scrollbar_section(),
-        ],
+        items: items.into_boxed_slice(),
     }
 }
 
@@ -11868,6 +11921,8 @@ mod tests {
         assert!(terminal_session_init_setting_visible("Zed"));
         assert!(terminal_session_init_setting_on_terminal_page("Dez"));
         assert!(!terminal_session_init_setting_on_terminal_page("Zed"));
+        assert!(terminal_customization_in_subpage("Dez"));
+        assert!(!terminal_customization_in_subpage("Zed"));
         assert_eq!(
             terminal_session_init_setting_placeholder("Dez"),
             "e.g. codex"

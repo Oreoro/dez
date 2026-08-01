@@ -78,6 +78,12 @@ corresponding provider or tmux mark on that default action. Wrapped and
 absolute commands retain known provider identity; Native Shell and unknown
 custom commands keep the terminal mark.
 
+The main Settings page keeps Workspace placement, launch choice, shell,
+working directory, and environment together. Open **Terminal Experience →
+Appearance & Behavior** for less frequent font, cursor, copy, scrolling,
+title-row, and scrollback controls. This keeps first-run setup short without
+removing the native terminal's detailed configuration.
+
 Choose the route by ownership, not by appearance:
 
 | Choice                                      | What Dez does                                                                                                     |

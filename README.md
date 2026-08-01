@@ -187,12 +187,16 @@ Vim or Helix editing. Vim and Helix share native leader destinations for
 recent tabs (`Space b`), files (`Space f`), the configured agent terminal
 (`Space t`), a shell (`Space T`), and Workspace search (`Space /`).
 
-Most users only need three product decisions: choose the **Default Terminal
-Command**, decide whether and where Workspaces should open, and configure an
+Most users only need three product decisions: choose the **Default Terminal**,
+decide whether and where Workspaces should open, and configure an
 Agent provider only if the optional Built-in Agent is needed. **Restore Native
 Dez Appearance** remains one scoped repair action that preserves font sizes and
 unrelated preferences. Primary agent CLIs, **More Agent CLIs**, tmux, and cmux
 remain explicit per-launch choices; choosing one never rewrites the default.
+The main **Workspaces & Terminals** page keeps those decisions, the shell, and
+the launch environment together. Less frequent font, cursor, copy, scrolling,
+title-row, and scrollback controls live one level deeper under **Terminal
+Experience → Appearance & Behavior**, so terminal tuning does not bury setup.
 
 The **Agents** Settings page follows the same priority: terminal-agent privacy
 and attention controls come first, followed by clearly optional Built-in Agent
