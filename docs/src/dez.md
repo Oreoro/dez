@@ -877,11 +877,14 @@ over the editor.
 
 Dez keeps native editor customization, but Settings starts with the product
 flow: **Workspace & Privacy**, **Workspaces & Terminals**, and **Agents**.
-Attention and **Terminal Activity & Privacy** are sections within Agents rather
-than separate top-level destinations. **Navigation & Layout** owns tabs,
-status-bar controls, and window behavior. **Workspace Tools** configures Files,
-Outline, Git, and the optional Built-in Agent without assigning them a separate
-region.
+Within Agents, the primary terminal workflow comes first: **Terminal Agents &
+Privacy**, then **Attention & Notifications**. Optional conversation features
+follow under **Built-in Agent & Providers** and **Built-in Agent Behavior**.
+Provider, ACP, and MCP links name the Built-in Agent surface they configure, so
+they cannot be mistaken for the Codex, Claude Code, or OpenCode terminal
+launchers. **Navigation & Layout** owns tabs, status-bar controls, and window
+behavior. **Workspace Tools** configures Files, Outline, Git, and the optional
+Built-in Agent without assigning them a separate region.
 Inherited collaboration, staff-only
 instrumentation, legacy dock geometry, and controls for removed sidebar chrome
 stay out of the public Settings navigation.

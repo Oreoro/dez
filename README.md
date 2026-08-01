@@ -162,6 +162,11 @@ Dez Appearance** remains one scoped repair action that preserves font sizes and
 unrelated preferences. Codex, Claude Code, OpenCode, tmux, and cmux remain
 explicit per-launch choices; choosing one never rewrites the default.
 
+The **Agents** Settings page follows the same priority: terminal-agent privacy
+and attention controls come first, followed by clearly optional Built-in Agent
+providers, ACP connections, MCP tools, and conversation behavior. Disabling the
+Built-in Agent does not remove the native terminal launch routes.
+
 From a selected Agent Session row in Workspaces, `Enter` returns to the
 existing Session, `Shift+F` opens its Workspace files, `Shift+G` opens its
 change review, and `Shift+V` opens its evidence-backed **Review Brief**. On a

@@ -406,6 +406,9 @@ require_multiline_pattern README.md \
     'Native launch menus keep identity visible.*?Codex.*?Claude Code.*?OpenCode.*?provider marks.*?Built-in Agent.*?Dez Agent mark.*?shell or multiplexer routes.*?terminal-specific icons.*?live state remains separate status text' \
     'the repository front page can regress to conflating provider identity with transient runtime state'
 require_multiline_pattern README.md \
+    'Agents.*?Settings page follows the same priority.*?terminal-agent privacy.*?attention controls come first.*?optional Built-in Agent.*?ACP connections.*?MCP tools.*?Disabling the[[:space:]]+Built-in Agent does not remove the native terminal launch routes' \
+    'the repository front page can regress to presenting the optional Built-in Agent as the primary terminal workflow'
+require_multiline_pattern README.md \
     'Herdr applies.*?per-endpoint deadlines.*?one deadline to the complete source scan.*?Saved references from older Hosts.*?Legacy · Access blocked.*?does not claim that the old process is.*?reachable or alive.*?GUI groups every.*?user-input batch into one queue item.*?queue admission.*?as a unit.*?caps aggregate bytes.*?prefix delivered.*?does not[[:space:]]+replay it' \
     'the repository front page can regress to overstating legacy process liveness, Herdr scan bounds, or end-to-end input atomicity'
 reject_pattern README.md \
@@ -414,6 +417,9 @@ reject_pattern README.md \
 require_multiline_pattern docs/src/dez.md \
     '^# What is Dez\?.*?Workspace-first development environment.*?product promise is simple.*?The main journey uses native surfaces throughout.*?Install and Relaunch.*?Open Workspace.*?Open Terminal.*?tab-strip.*?Open Workspace in cmux.*?Workspaces.*?Files.*?Review Changes.*?## The screen model.*?Workspaces.*?Main Work Area.*?Workspace Tools.*?native pane grid.*?Browse Running[[:space:]]+Sessions….*?## How coding work flows.*?Open Terminal.*?## Terminal and Agent integration.*?Packaged Dez builds.*?Workspaces does not list arbitrary current-user TTYs.*?Dez v0\.2 retains explicit integration for tmux, Herdr, and cmux.*?The v0\.2 product promise.*?## Source-preview limits' \
     'the public product guide can lose the screen model, IDE integration, or honest source-preview boundary'
+require_multiline_pattern docs/src/dez.md \
+    'Settings and navigation visibility.*?Workspace & Privacy.*?Workspaces & Terminals.*?Agents.*?Terminal Agents &[[:space:]]+Privacy.*?Attention & Notifications.*?Built-in Agent & Providers.*?Built-in Agent Behavior.*?ACP.*?MCP.*?cannot be mistaken for.*?terminal[[:space:]]+launchers' \
+    'the public Settings story can regress to burying the terminal-first workflow beneath optional conversation configuration'
 require_multiline_pattern docs/src/dez.md \
     'Command Palette labels follow the same grammar.*?`workspace: \.\.\.`.*?`workspaces: \.\.\.`.*?`files: \.\.\.`.*?`git: \.\.\.`.*?`terminal: open terminal …`.*?`layout: \.\.\.`' \
     'the public guide can regress to retired Project or navigator command prefixes'
@@ -648,7 +654,7 @@ require_pattern crates/settings_ui/src/page_data.rs \
     'dez_settings_page_visible\(paths::APP_NAME, "Collaboration"\)' \
     'Dez Settings can regress to exposing the inherited Calls and Collaboration page'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
-    'if paths::APP_NAME != "Zed".*?agent_items\.extend\(attention_page\(\)\.items\).*?agent_items\.extend\(evidence_page\(\)\.items\).*?pages\.sort_by_key\(\|page\| dez_settings_page_priority\(page\.title\)\).*?fn dez_settings_page_priority.*?"Workspace & Privacy" => 0.*?"Workspaces & Terminals" => 1.*?"Agents" => 2.*?"Appearance" => 3.*?"Navigation & Layout" => 8.*?"Workspace Tools" => 9.*?"Advanced" => 13' \
+    'if paths::APP_NAME != "Zed".*?let built_in_agent_items = agents_page\.items.*?let mut agent_items = evidence_page\(\)\.items\.into_vec\(\).*?agent_items\.extend\(attention_page\(\)\.items\).*?agent_items\.extend\(built_in_agent_items\).*?pages\.sort_by_key\(\|page\| dez_settings_page_priority\(page\.title\)\).*?fn dez_settings_page_priority.*?"Workspace & Privacy" => 0.*?"Workspaces & Terminals" => 1.*?"Agents" => 2.*?"Appearance" => 3.*?"Navigation & Layout" => 8.*?"Workspace Tools" => 9.*?"Advanced" => 13' \
     'Dez Settings can regress to burying its product workflow below inherited IDE customization'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn appearance_page\(\) -> SettingsPage.*?fn dez_visual_profile_section.*?paths::APP_NAME == "Zed".*?return Vec::new\(\).*?SectionHeader\("Dez Visual Profile"\).*?title: "Restore Native Dez Appearance".*?button_text: "Restore Profile".*?zed_actions::dez::RestoreVisualProfile\.boxed_clone\(\).*?original_window\.activate_window\(\).*?window\.remove_window\(\).*?dez_visual_profile_section\(\).*?theme_section\(\)' \
@@ -663,7 +669,7 @@ require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn sessions_side_setting_visible.*?app_name == "Zed".*?page_title == "Agents".*?page_title == "Workspaces & Terminals".*?fn projects_startup_setting.*?"Show Sessions on Startup".*?"Show Workspaces on Startup".*?Open Workspaces in new windows.*?status bar or View menu on demand.*?json_path: Some\("sidebar\.starts_open"\).*?fn sessions_side_setting.*?paths::APP_NAME != "Zed".*?"Workspaces Position".*?Choose which side of the window shows Workspaces.*?json_path: Some\("session_rail\.position"\).*?"Sessions Side".*?json_path: Some\("sidebar\.side"\).*?fn terminal_page\(\) -> SettingsPage.*?sessions_side_setting_visible\(paths::APP_NAME, "Workspaces & Terminals"\).*?"Workspaces".*?sessions_side_setting\(\).*?projects_startup_setting\(\).*?"Workspaces & Terminals".*?sessions_section\(\)' \
     'the Workspaces placement control can regress to an unrelated Agent-provider section'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
-    'fn ai_page\(cx: &App\) -> SettingsPage.*?SectionHeader\(agent_session_setting_copy.*?"General".*?"Agent Runtime & Providers".*?"Disable AI".*?"Disable Agent Features".*?sessions_side_setting_visible\(paths::APP_NAME, "Agents"\).*?title: "Agents"' \
+    'fn ai_page\(cx: &App\) -> SettingsPage.*?SectionHeader\(agent_session_setting_copy.*?"General".*?"Built-in Agent & Providers".*?"Disable AI".*?"Disable Agent Features".*?Terminal launchers remain available.*?"LLM Providers".*?"Built-in Agent Providers".*?"External Agents".*?"ACP Agents".*?"MCP Servers".*?"Built-in Agent Tools \(MCP\)".*?"Agent Configuration".*?"Built-in Agent Behavior".*?sessions_side_setting_visible\(paths::APP_NAME, "Agents"\).*?title: "Agents".*?fn attention_page.*?"Attention & Notifications".*?fn evidence_page.*?"Terminal Agents & Privacy"' \
     'Dez Agent settings can regress to inherited, implementation-shaped first-run copy'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'dez_network_setting_visible\(paths::APP_NAME' \

@@ -82,9 +82,10 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
     }
     let mut agents_page = ai_page(cx);
     if paths::APP_NAME != "Zed" {
-        let mut agent_items = agents_page.items.into_vec();
+        let built_in_agent_items = agents_page.items;
+        let mut agent_items = evidence_page().items.into_vec();
         agent_items.extend(attention_page().items);
-        agent_items.extend(evidence_page().items);
+        agent_items.extend(built_in_agent_items);
         agents_page.items = agent_items.into_boxed_slice();
     }
     pages.push(agents_page);
@@ -8723,7 +8724,7 @@ fn ai_page(cx: &App) -> SettingsPage {
             SettingsPageItem::SectionHeader(agent_session_setting_copy(
                 paths::APP_NAME,
                 "General",
-                "Agent Runtime & Providers",
+                "Built-in Agent & Providers",
             )),
             SettingsPageItem::SettingItem(SettingItem {
                 title: agent_session_setting_copy(
@@ -8734,7 +8735,7 @@ fn ai_page(cx: &App) -> SettingsPage {
                 description: agent_session_setting_copy(
                     paths::APP_NAME,
                     "Whether to disable all AI features in Zed.",
-                    "Disable Agent Sessions, model providers, and edit predictions in this Workspace.",
+                    "Disable the optional Built-in Agent, ACP agents, model providers, and edit predictions in this Workspace. Terminal launchers remain available.",
                 ),
                 field: Box::new(SettingField {
                     organization_override: None,
@@ -8753,10 +8754,22 @@ fn ai_page(cx: &App) -> SettingsPage {
         }
         items.extend([
             SettingsPageItem::SubPageLink(SubPageLink {
-                title: "LLM Providers".into(),
+                title: agent_session_setting_copy(
+                    paths::APP_NAME,
+                    "LLM Providers",
+                    "Built-in Agent Providers",
+                )
+                .into(),
                 r#type: Default::default(),
                 json_path: Some("llm_providers"),
-                description: Some("Configure natively-included model providers.".into()),
+                description: Some(
+                    agent_session_setting_copy(
+                        paths::APP_NAME,
+                        "Configure natively-included model providers.",
+                        "Configure models for the optional Built-in Agent.",
+                    )
+                    .into(),
+                ),
                 search_aliases: &[
                     "ai",
                     "amazon",
@@ -8788,12 +8801,17 @@ fn ai_page(cx: &App) -> SettingsPage {
                 render: render_llm_providers_page,
             }),
             SettingsPageItem::SubPageLink(SubPageLink {
-                title: "External Agents".into(),
+                title: agent_session_setting_copy(paths::APP_NAME, "External Agents", "ACP Agents")
+                    .into(),
                 r#type: Default::default(),
                 json_path: Some("agent_servers"),
                 description: Some(
-                    "View, add, and remove agents connected through the Agent Client Protocol."
-                        .into(),
+                    agent_session_setting_copy(
+                        paths::APP_NAME,
+                        "View, add, and remove agents connected through the Agent Client Protocol.",
+                        "Connect Agent Client Protocol providers to the Built-in Agent surface.",
+                    )
+                    .into(),
                 ),
                 search_aliases: &[
                     "acp",
@@ -8816,11 +8834,21 @@ fn ai_page(cx: &App) -> SettingsPage {
                 render: render_external_agents_page,
             }),
             SettingsPageItem::SubPageLink(SubPageLink {
-                title: "MCP Servers".into(),
+                title: agent_session_setting_copy(
+                    paths::APP_NAME,
+                    "MCP Servers",
+                    "Built-in Agent Tools (MCP)",
+                )
+                .into(),
                 r#type: Default::default(),
                 json_path: Some("context_servers"),
                 description: Some(
-                    "View, add, configure, and remove Model Context Protocol servers.".into(),
+                    agent_session_setting_copy(
+                        paths::APP_NAME,
+                        "View, add, configure, and remove Model Context Protocol servers.",
+                        "Configure Model Context Protocol tools for the Built-in Agent.",
+                    )
+                    .into(),
                 ),
                 search_aliases: &["context server", "mcp", "model context protocol"],
                 in_json: false,
@@ -8833,7 +8861,11 @@ fn ai_page(cx: &App) -> SettingsPage {
 
     fn agent_configuration_section(_cx: &App) -> Box<[SettingsPageItem]> {
         let mut items = vec![
-            SettingsPageItem::SectionHeader("Agent Configuration"),
+            SettingsPageItem::SectionHeader(agent_session_setting_copy(
+                paths::APP_NAME,
+                "Agent Configuration",
+                "Built-in Agent Behavior",
+            )),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Default Subagent Model",
                 description: agent_session_setting_copy(
@@ -9318,7 +9350,11 @@ fn attention_page() -> SettingsPage {
         "Show the action-needed summary in Workspaces."
     };
     let items = vec![
-        SettingsPageItem::SectionHeader("Attention"),
+        SettingsPageItem::SectionHeader(agent_session_setting_copy(
+            paths::APP_NAME,
+            "Attention",
+            "Attention & Notifications",
+        )),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Show Attention Status",
             description: attention_status_description,
@@ -9432,7 +9468,7 @@ fn evidence_page() -> SettingsPage {
         SettingsPageItem::SectionHeader(if paths::APP_NAME == "Zed" {
             "Evidence & Trust"
         } else {
-            "Terminal Activity & Privacy"
+            "Terminal Agents & Privacy"
         }),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Show Detection Confidence",
@@ -11839,6 +11875,18 @@ mod tests {
                 "Reset to use the parent Agent Session's model.",
             ),
             "Reset to use the parent thread's model."
+        );
+        assert_eq!(
+            agent_session_setting_copy("Dez", "General", "Built-in Agent & Providers"),
+            "Built-in Agent & Providers"
+        );
+        assert_eq!(
+            agent_session_setting_copy("Dez", "External Agents", "ACP Agents"),
+            "ACP Agents"
+        );
+        assert_eq!(
+            agent_session_setting_copy("Zed", "External Agents", "ACP Agents"),
+            "External Agents"
         );
     }
 
