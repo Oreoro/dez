@@ -1188,7 +1188,7 @@ fn workspace_tabs_section_title(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Open Tabs"
     } else {
-        "Workspace Tabs"
+        "Open Tabs & Tools"
     }
 }
 
@@ -2549,7 +2549,7 @@ mod session_start_state_tests {
             session_rail_accessibility_label("Dez"),
             "Workspaces and Sessions"
         );
-        assert_eq!(workspace_tabs_section_title("Dez"), "Workspace Tabs");
+        assert_eq!(workspace_tabs_section_title("Dez"), "Open Tabs & Tools");
         assert_eq!(workspace_tabs_section_title("Zed"), "Open Tabs");
         assert!(workspace_tabs_section_visible("Dez", 2));
         assert!(!workspace_tabs_section_visible("Dez", 1));
@@ -17889,7 +17889,7 @@ impl Sidebar {
             v_flex()
                 .id("active-workspace-tabs")
                 .role(gpui::Role::Region)
-                .aria_label("Open tabs in the active Workspace")
+                .aria_label("Open tabs and tools in the active Workspace")
                 .flex_none()
                 .min_h_0()
                 .border_b_1()

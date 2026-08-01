@@ -252,9 +252,12 @@ generic row. Provider icons identify Codex, Claude Code, OpenCode, Herdr, and
 other detected agents. Native status treatments distinguish Running, Needs
 Input, Waiting for Permission, Reconnecting, Completed, and Error without
 rendering a second terminal transcript.
-When Workspaces is open, its collapsible **Workspace Tabs** section projects the
-active Workspace's native Main Work Area tabs above the Workspace and Session list
-when at least two tabs are open. A one-pane layout remains a flat list. Real splits add quiet **Pane 1**,
+When Workspaces is open, its collapsible **Open Tabs & Tools** section projects
+the active Workspace's native Main Work Area surfaces above the Workspace and
+Session list when at least two tabs are open. Home, code, terminals, diffs,
+Files, Git, and other Workspace tools all appear through the same projection;
+only running terminal and agent activity appears under **Sessions**. A one-pane
+layout remains a flat list. Real splits add quiet **Pane 1**,
 **Pane 2**, and later group labels, so the hierarchy describes the layout that
 already exists instead of manufacturing one. Each row uses the Surface's
 native icon, disambiguated tab title, active state, dirty state, and pinned
@@ -311,11 +314,14 @@ Terminal creation appears under `terminal: open terminal …`, and the six
 layout transitions and their management commands appear under `layout: ...`;
 neither route exposes inherited Project, Thread, or Canvas terminology.
 
-Hierarchy follows the next useful action. Home places **Open Workspace** first
-when no codebase is open. Inside an active Workspace it presents **Open
-Terminal**, **Browse Running Sessions…**, **Open Files**, and **Review Changes**
-in that order: Start → Resume → Inspect → Review. These are native command rows
-on the editor surface, not filled dashboard cards. Home's first row identifies
+Hierarchy follows the next useful action. Home is consistently headed
+**Continue your work**. Without a codebase, **Open Workspace** and **Clone
+Repository** are the only primary routes. Inside an active Workspace, **Start
+with a tool** offers **Open Terminal**, Codex, Claude Code, OpenCode,
+**Workspace tmux**, and the explicit **Open Workspace in cmux** handoff.
+**Inspect and resume** keeps **Browse Running Sessions…**, **Open Files**, and
+**Review Changes** adjacent. These are native command rows on the editor
+surface, not filled dashboard cards. Home's first row identifies
 the configured result as **Default · Native Shell**, **Default · Codex**,
 **Default · Claude Code**, **Default · OpenCode**, **Default · tmux Session**,
 another detected terminal agent such as **Default · Aider** or **Default ·
@@ -335,8 +341,11 @@ native Settings.
 
 Without a Workspace, Home offers **Open Workspace** and **Clone Repository**.
 It does not offer a pathless terminal before a codebase can supply file, Git,
-and working-directory context. Inside a Workspace, Home offers **Open
-Terminal**, **Browse Running Sessions…**, **Open Files**, and **Review Changes**.
+and working-directory context. Home always loads Recent Workspaces as ordinary
+keyboard-reachable rows, including when reopened as a native tab. Inside a
+Workspace, direct terminal and Agent launchers appear under **Start with a
+tool**; running-session discovery, Files, and review remain under **Inspect and
+resume**.
 **Open Terminal** uses the configured **Default Terminal**. Its inline detail
 names that resolved default before launch, so a returning user does not need to
 reopen Settings to remember whether **Open Terminal** starts a shell, agent, or
@@ -347,7 +356,7 @@ available as one-off launches, with Gemini CLI, Aider, and Herdr grouped under
 native **+**, and keyboard shortcuts, but is no longer a primary Home or
 empty-state action.
 Recent Workspaces remain ordinary keyboard-reachable rows rather than a
-separate dashboard.
+separate dashboard, modal, or sidebar mode.
 
 The empty Workspaces navigator follows the same activation loop. **No Workspace
 open** explains that the codebase keeps terminals, Agent Sessions, files, and

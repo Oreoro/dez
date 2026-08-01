@@ -25,9 +25,10 @@ Workspace instead of separate applications or hidden panel modes.
 - **Workspaces** — an optional, collapsible navigator for codebases, open
   Surfaces, and Agent Sessions. Fresh windows keep it closed unless the user
   enables it, restored layouts may reopen it, and its window edge is
-  configurable. Its collapsible **Workspace Tabs** section appears when at
-  least two native Main Work Area tabs are open, grouping them by pane only
-  when the Workspace is split. Selecting a row activates that exact native tab;
+  configurable. Its collapsible **Open Tabs & Tools** section appears when at
+  least two native Main Work Area surfaces are open. It mirrors Home, code,
+  diffs, terminals, Files, Git, and other Workspace-owned tabs, grouping them
+  by pane only after the user creates a split. Selecting a row activates that exact native tab;
   unpinned rows expose the Surface's native close action on hover and accept
   middle-click, while pinned rows remain protected and visibly pinned. Tab
   ownership, dirty state, close confirmation, dragging, and ordering remain in
@@ -116,11 +117,12 @@ rebindable in Command Palette and Keyboard & Vim. The Workspaces ellipsis menu
 mirrors Search and Previous/Next when the current inventory makes those actions
 useful; a one-Workspace, one-item window stays quiet.
 
-Inside an active Workspace, Home makes the **Start → Watch → Inspect → Verify**
-route concrete with four actions in order: **Open Terminal**, **Browse Running
-Sessions…**, **Open Files**, and **Review Changes**. Its native Dez Agent mark
-and configured-default label distinguish this loop from a generic terminal
-launcher. An
+Home is headed **Continue your work** in both states and always keeps Recent
+Workspaces available as ordinary rows. Inside an active Workspace, it uses two flat native sections. **Start with a
+tool** opens the configured default terminal, Codex, Claude Code, OpenCode, a
+Workspace tmux session, or the explicit external cmux handoff. **Inspect and
+resume** opens running Sessions, Files, or Review Changes. The configured-default
+label distinguishes the primary route from a generic terminal launcher. An
 active empty Main Work Area uses the same route with space-aware labels:
 **Open Terminal**, **Browse Sessions**, **Find File**, and **Review Changes**.
 **New File** remains available from File, the native `+`, and keyboard
@@ -132,9 +134,10 @@ Workspaces stays global and optional on its configured window edge. Files, Git,
 Outline, Debug, Built-in Agent, commits, diffs, reviews, agent terminals, and
 ordinary terminals use the native Workspace tab and pane model instead of
 another navigation system.
-When Workspaces is visible, **Workspace Tabs** provides a compact vertical route
-to those same open tabs once there is something useful to switch between. It
-stays flat for a single pane and introduces small **Pane 1**, **Pane 2**, and
+When Workspaces is visible, **Open Tabs & Tools** provides a compact vertical
+route to the active Workspace's native surfaces once there is something useful
+to switch between. It stays flat for a single pane and introduces small
+**Pane 1**, **Pane 2**, and
 later group labels only when a real split exists. The section is collapsible,
 remembers its disclosure state, and disappears while Workspace search is active
 so search results keep the full navigator.

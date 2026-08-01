@@ -60,6 +60,11 @@ impl SectionHeader {
 
 impl RenderOnce for SectionHeader {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let title: SharedString = if APP_NAME == "Zed" {
+            self.title.to_ascii_uppercase().into()
+        } else {
+            self.title
+        };
         h_flex()
             .w_full()
             .min_w_0()
@@ -68,7 +73,7 @@ impl RenderOnce for SectionHeader {
             .gap_2()
             .child(
                 div().flex_none().child(
-                    Label::new(self.title.to_ascii_uppercase())
+                    Label::new(title)
                         .when(APP_NAME == "Zed", |label| label.buffer_font(cx))
                         .color(Color::Muted)
                         .size(LabelSize::XSmall),
@@ -202,12 +207,14 @@ impl RenderOnce for SectionButton {
 
 enum SectionVisibility {
     Always,
+    LocalWorkspace,
 }
 
 impl SectionVisibility {
-    fn is_visible(&self) -> bool {
+    fn is_visible(&self, local_workspace: bool) -> bool {
         match self {
             SectionVisibility::Always => true,
+            SectionVisibility::LocalWorkspace => local_workspace,
         }
     }
 }
@@ -229,8 +236,9 @@ impl SectionEntry {
         show_meta: bool,
         meta_override: Option<SharedString>,
         icon_override: Option<IconName>,
+        local_workspace: bool,
     ) -> Option<impl IntoElement> {
-        self.visibility_guard.is_visible().then(|| {
+        self.visibility_guard.is_visible(local_workspace).then(|| {
             let button = SectionButton::new(
                 self.title,
                 icon_override.unwrap_or(self.icon),
@@ -255,6 +263,16 @@ const NEW_CENTER_TERMINAL: crate::NewCenterTerminal = crate::NewCenterTerminal {
 };
 const OPEN_AGENT_TERMINAL: zed_actions::terminal::OpenAgentTerminal =
     zed_actions::terminal::OpenAgentTerminal;
+const OPEN_TMUX_TERMINAL: zed_actions::terminal::OpenTmuxTerminal =
+    zed_actions::terminal::OpenTmuxTerminal;
+const OPEN_CODEX_TERMINAL: zed_actions::terminal::OpenCodexTerminal =
+    zed_actions::terminal::OpenCodexTerminal;
+const OPEN_CLAUDE_CODE_TERMINAL: zed_actions::terminal::OpenClaudeCodeTerminal =
+    zed_actions::terminal::OpenClaudeCodeTerminal;
+const OPEN_OPEN_CODE_TERMINAL: zed_actions::terminal::OpenOpenCodeTerminal =
+    zed_actions::terminal::OpenOpenCodeTerminal;
+const OPEN_WORKSPACE_IN_CMUX: zed_actions::dez::OpenWorkspaceInCmux =
+    zed_actions::dez::OpenWorkspaceInCmux;
 const BROWSE_RUNNING_SESSIONS: BrowseRunningSessions = BrowseRunningSessions;
 const OPEN_WORKSPACE: OpenFolder = OpenFolder {
     create_new_window: Some(false),
@@ -266,29 +284,17 @@ fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Write. Delegate. Watch. Verify."
     } else if has_workspace {
-        "Start an agent or work directly. Watch attention in Workspaces, then inspect the code and verify the diff."
+        "Start a terminal or agent in this Workspace, then inspect the code and verify the diff."
     } else {
-        "Open a codebase once. Dez keeps its terminals, agent sessions, files, and review together in one Workspace."
+        "Open a Workspace, run an agent, and review changes in one place."
     }
 }
 
-fn welcome_title(app_name: &str, has_workspace: bool) -> &'static str {
+fn welcome_title(app_name: &str, _has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Terminal-native development"
-    } else if has_workspace {
-        "Build in this Workspace"
     } else {
-        "Start with a Workspace"
-    }
-}
-
-fn welcome_hero_icon(app_name: &str, has_workspace: bool) -> IconName {
-    if app_name == "Zed" {
-        IconName::Terminal
-    } else if has_workspace {
-        IconName::DezAgent
-    } else {
-        IconName::FolderOpen
+        "Continue your work"
     }
 }
 
@@ -426,7 +432,7 @@ const DEZ_CONTENT: (Section, Section) = (
 
 const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
     Section {
-        title: "In this Workspace",
+        title: "Start with a tool",
         entries: &[
             SectionEntry {
                 icon: IconName::Terminal,
@@ -435,6 +441,46 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
                 action: &OPEN_AGENT_TERMINAL,
                 visibility_guard: SectionVisibility::Always,
             },
+            SectionEntry {
+                icon: IconName::AiOpenAi,
+                title: "Codex",
+                meta: Some("Agent CLI"),
+                action: &OPEN_CODEX_TERMINAL,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
+                icon: IconName::AiClaude,
+                title: "Claude Code",
+                meta: Some("Agent CLI"),
+                action: &OPEN_CLAUDE_CODE_TERMINAL,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
+                icon: IconName::AiOpenCode,
+                title: "OpenCode",
+                meta: Some("Agent CLI"),
+                action: &OPEN_OPEN_CODE_TERMINAL,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
+                icon: IconName::SplitAlt,
+                title: "Workspace tmux",
+                meta: Some("Native terminal session"),
+                action: &OPEN_TMUX_TERMINAL,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
+                icon: IconName::ArrowUpRight,
+                title: "Open Workspace in cmux",
+                meta: Some("External handoff"),
+                action: &OPEN_WORKSPACE_IN_CMUX,
+                visibility_guard: SectionVisibility::LocalWorkspace,
+            },
+        ],
+    },
+    Section {
+        title: "Inspect and resume",
+        entries: &[
             SectionEntry {
                 icon: IconName::ListTree,
                 title: "Browse Running Sessions…",
@@ -458,10 +504,6 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
             },
         ],
     },
-    Section {
-        title: "",
-        entries: &[],
-    },
 );
 
 #[derive(Clone, Copy)]
@@ -471,6 +513,13 @@ struct Section {
 }
 
 impl Section {
+    fn visible_entry_count(self, local_workspace: bool) -> usize {
+        self.entries
+            .iter()
+            .filter(|entry| entry.visibility_guard.is_visible(local_workspace))
+            .count()
+    }
+
     fn render(
         self,
         index_offset: usize,
@@ -479,6 +528,7 @@ impl Section {
         show_meta: bool,
         first_entry_meta_override: Option<SharedString>,
         first_entry_icon_override: Option<IconName>,
+        local_workspace: bool,
     ) -> impl IntoElement {
         v_flex()
             .w_full()
@@ -499,6 +549,7 @@ impl Section {
                                 .then(|| first_entry_meta_override.clone())
                                 .flatten(),
                             (index == 0).then_some(first_entry_icon_override).flatten(),
+                            local_workspace,
                         )
                     }),
             )
@@ -549,6 +600,10 @@ fn welcome_recent_state(
     }
 }
 
+fn welcome_loads_recent_workspaces(app_name: &str, requested: bool) -> bool {
+    app_name != "Zed" || requested
+}
+
 fn dez_welcome_uses_compact_spacing(app_name: &str, viewport_width: Pixels) -> bool {
     app_name != "Zed" && viewport_width < DEZ_WELCOME_COMPACT_BREAKPOINT
 }
@@ -568,6 +623,8 @@ impl WelcomePage {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
+        let fallback_to_recent_projects =
+            welcome_loads_recent_workspaces(APP_NAME, fallback_to_recent_projects);
         let focus_handle = cx.focus_handle();
         cx.on_focus(&focus_handle, window, |_, _, cx| cx.notify())
             .detach();
@@ -788,10 +845,17 @@ impl WelcomePage {
 impl Render for WelcomePage {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let is_dez = APP_NAME != "Zed";
-        let has_workspace = self
+        let (has_workspace, local_workspace) = self
             .workspace
             .upgrade()
-            .is_some_and(|workspace| workspace.read(cx).worktrees(cx).next().is_some());
+            .map(|workspace| {
+                let workspace = workspace.read(cx);
+                let has_workspace = workspace.worktrees(cx).next().is_some();
+                let local_workspace =
+                    has_workspace && workspace.project_group_key(cx).host().is_none();
+                (has_workspace, local_workspace)
+            })
+            .unwrap_or((false, false));
         let workspace_startup_state = is_dez.then(|| crate::workspace_startup_state(cx));
         let workspace_access_state = is_dez.then(|| crate::workspace_access_state(cx));
         let installation_required = matches!(
@@ -811,8 +875,8 @@ impl Render for WelcomePage {
         } else {
             DEZ_CONTENT
         };
-        let first_section_entries = first_section.entries.len();
-        let next_tab_index = first_section_entries + second_section.entries.len();
+        let first_section_entries = first_section.visible_entry_count(local_workspace);
+        let second_section_entries = second_section.visible_entry_count(local_workspace);
         let welcome_page = cx.weak_entity();
 
         let recent_projects = self
@@ -843,51 +907,77 @@ impl Render for WelcomePage {
                 recent_projects.len(),
             )
         };
+        let recent_action_count = match recent_state {
+            WelcomeRecentState::Ready => recent_projects.len(),
+            WelcomeRecentState::Unavailable => 1,
+            WelcomeRecentState::Hidden
+            | WelcomeRecentState::Loading
+            | WelcomeRecentState::Empty => 0,
+        };
+        let next_tab_index = first_section_entries + recent_action_count + second_section_entries;
+        let recent_content = match recent_state {
+            WelcomeRecentState::Ready => Some(
+                self.render_recent_project_section(recent_projects)
+                    .into_any_element(),
+            ),
+            WelcomeRecentState::Loading => Some(
+                Self::render_recent_workspace_status(
+                    "Loading recent Workspaces",
+                    "Reading your local Workspace history.",
+                    IconName::Clock,
+                )
+                .into_any_element(),
+            ),
+            WelcomeRecentState::Unavailable => Some(
+                Self::render_recent_workspace_error(
+                    action_tab_offset + first_section_entries,
+                    welcome_page,
+                )
+                .into_any_element(),
+            ),
+            WelcomeRecentState::Empty => Some(
+                Self::render_recent_workspace_status(
+                    "No recent Workspaces",
+                    "Open a Workspace and it will appear here.",
+                    IconName::Folder,
+                )
+                .into_any_element(),
+            ),
+            WelcomeRecentState::Hidden => None,
+        };
+        let workspace_content = (second_section_entries > 0).then(|| {
+            second_section
+                .render(
+                    action_tab_offset + first_section_entries + recent_action_count,
+                    &self.focus_handle,
+                    false,
+                    true,
+                    None,
+                    None,
+                    local_workspace,
+                )
+                .into_any_element()
+        });
         let secondary_content = if installation_required {
             None
-        } else {
-            match recent_state {
-                WelcomeRecentState::Ready => Some(
-                    self.render_recent_project_section(recent_projects)
+        } else if is_dez {
+            match (recent_content, workspace_content) {
+                (Some(recent), Some(workspace)) => Some(
+                    v_flex()
+                        .w_full()
+                        .min_w_0()
+                        .gap_4()
+                        .child(recent)
+                        .child(Divider::horizontal().color(DividerColor::BorderVariant))
+                        .child(workspace)
                         .into_any_element(),
                 ),
-                WelcomeRecentState::Loading => Some(
-                    Self::render_recent_workspace_status(
-                        "Loading recent Workspaces",
-                        "Reading your local Workspace history.",
-                        IconName::Clock,
-                    )
-                    .into_any_element(),
-                ),
-                WelcomeRecentState::Unavailable => Some(
-                    Self::render_recent_workspace_error(
-                        action_tab_offset + first_section_entries,
-                        welcome_page,
-                    )
-                    .into_any_element(),
-                ),
-                WelcomeRecentState::Empty => Some(
-                    Self::render_recent_workspace_status(
-                        "No recent Workspaces",
-                        "Open a Workspace and it will appear here.",
-                        IconName::Folder,
-                    )
-                    .into_any_element(),
-                ),
-                WelcomeRecentState::Hidden if !second_section.entries.is_empty() => Some(
-                    second_section
-                        .render(
-                            action_tab_offset + first_section_entries,
-                            &self.focus_handle,
-                            false,
-                            true,
-                            None,
-                            None,
-                        )
-                        .into_any_element(),
-                ),
-                WelcomeRecentState::Hidden => None,
+                (Some(recent), None) => Some(recent),
+                (None, Some(workspace)) => Some(workspace),
+                (None, None) => None,
             }
+        } else {
+            recent_content.or(workspace_content)
         };
         let has_secondary_content = secondary_content.is_some();
 
@@ -1042,6 +1132,7 @@ impl Render for WelcomePage {
                                     true,
                                     first_entry_meta_override.clone(),
                                     first_entry_icon_override,
+                                    local_workspace,
                                 )),
                         )
                         .when_some(secondary_content.take(), |this, secondary_content| {
@@ -1072,6 +1163,7 @@ impl Render for WelcomePage {
                             !compact_spacing,
                             first_entry_meta_override.clone(),
                             first_entry_icon_override,
+                            local_workspace,
                         ))
                         .when_some(secondary_content.take(), |this, secondary_content| {
                             this.child(Divider::horizontal().color(DividerColor::BorderVariant))
@@ -1085,7 +1177,7 @@ impl Render for WelcomePage {
                         .id("welcome-content")
                         .w_full()
                         .h_full()
-                        .max_w(rems_from_px(if APP_NAME == "Zed" { 640. } else { 1040. }))
+                        .max_w(rems_from_px(if APP_NAME == "Zed" { 640. } else { 1120. }))
                         .when(APP_NAME == "Zed", |this| this.p_6().gap_5())
                         .when(is_dez && compact_spacing, |this| this.px_3().py_4().gap_4())
                         .when(is_dez && !compact_spacing, |this| {
@@ -1122,35 +1214,19 @@ impl Render for WelcomePage {
                                 )
                                 .into_any_element()
                         } else {
-                            h_flex()
+                            v_flex()
                                 .w_full()
-                                .items_start()
-                                .gap_3()
+                                .min_w_0()
+                                .gap_1()
                                 .child(
                                     div()
-                                        .size_8()
-                                        .flex_none()
-                                        .flex()
-                                        .items_center()
-                                        .justify_center()
-                                        .child(
-                                            Icon::new(welcome_hero_icon(APP_NAME, has_workspace))
-                                                .size(IconSize::Small)
-                                                .color(Color::Accent),
-                                        ),
+                                        .font_weight(FontWeight::MEDIUM)
+                                        .child(Headline::new(page_title).size(HeadlineSize::Large)),
                                 )
                                 .child(
-                                    v_flex()
-                                        .min_w_0()
-                                        .gap_1()
-                                        .child(div().font_weight(FontWeight::MEDIUM).child(
-                                            Headline::new(page_title).size(HeadlineSize::Large),
-                                        ))
-                                        .child(
-                                            Label::new(page_summary)
-                                                .size(LabelSize::Small)
-                                                .color(Color::Muted),
-                                        ),
+                                    Label::new(page_summary)
+                                        .size(LabelSize::Small)
+                                        .color(Color::Muted),
                                 )
                                 .into_any_element()
                         })
@@ -1425,22 +1501,19 @@ mod tests {
     fn dez_home_states_the_workflow_without_a_persistent_walkthrough() {
         assert_eq!(
             welcome_summary("Dez", false),
-            "Open a codebase once. Dez keeps its terminals, agent sessions, files, and review together in one Workspace."
+            "Open a Workspace, run an agent, and review changes in one place."
         );
         assert_eq!(
             welcome_summary("Dez", true),
-            "Start an agent or work directly. Watch attention in Workspaces, then inspect the code and verify the diff."
+            "Start a terminal or agent in this Workspace, then inspect the code and verify the diff."
         );
         assert_eq!(
             welcome_summary("Zed", true),
             "Write. Delegate. Watch. Verify."
         );
-        assert_eq!(welcome_title("Dez", false), "Start with a Workspace");
-        assert_eq!(welcome_title("Dez", true), "Build in this Workspace");
+        assert_eq!(welcome_title("Dez", false), "Continue your work");
+        assert_eq!(welcome_title("Dez", true), "Continue your work");
         assert_eq!(welcome_title("Zed", false), "Terminal-native development");
-        assert_eq!(welcome_hero_icon("Dez", true), IconName::DezAgent);
-        assert_eq!(welcome_hero_icon("Dez", false), IconName::FolderOpen);
-        assert_eq!(welcome_hero_icon("Zed", true), IconName::Terminal);
         assert_eq!(welcome_surface_label("Dez"), "Home");
         assert_eq!(welcome_surface_label("Zed"), "Welcome");
         assert!(welcome_forces_tab_bar("Dez"));
@@ -1513,32 +1586,29 @@ mod tests {
             welcome_terminal_action_icon("Zed", true, Some("codex")),
             None
         );
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.title, "Start with a tool");
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[1].title, "Codex");
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[2].title, "Claude Code");
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[3].title, "OpenCode");
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[4].title, "Workspace tmux");
         assert_eq!(
-            DEZ_WORKSPACE_CONTENT.0.entries[1].title,
+            DEZ_WORKSPACE_CONTENT.0.entries[5].title,
+            "Open Workspace in cmux"
+        );
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.visible_entry_count(true), 6);
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.visible_entry_count(false), 5);
+        assert_eq!(DEZ_WORKSPACE_CONTENT.1.title, "Inspect and resume");
+        assert_eq!(
+            DEZ_WORKSPACE_CONTENT.1.entries[0].title,
             "Browse Running Sessions…"
         );
-        assert_eq!(
-            DEZ_WORKSPACE_CONTENT.0.entries[1].meta,
-            Some("tmux, Herdr, and cmux")
-        );
-        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[2].title, "Open Files");
-        assert_eq!(
-            DEZ_WORKSPACE_CONTENT.0.entries[2].meta,
-            Some("Inspect code")
-        );
-        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[3].title, "Review Changes");
-        assert_eq!(
-            DEZ_WORKSPACE_CONTENT.0.entries[3].meta,
-            Some("Verify the diff")
-        );
+        assert_eq!(DEZ_WORKSPACE_CONTENT.1.entries[1].title, "Open Files");
+        assert_eq!(DEZ_WORKSPACE_CONTENT.1.entries[2].title, "Review Changes");
         assert!(
             DEZ_CONTENT.1.entries.is_empty(),
             "Dez Welcome should leave configuration to normal application navigation"
         );
-        assert!(
-            DEZ_WORKSPACE_CONTENT.1.entries.is_empty(),
-            "an active Workspace should not restore unrelated configuration launchers"
-        );
+        assert_eq!(DEZ_WORKSPACE_CONTENT.1.entries.len(), 3);
         assert!(
             !ZED_CONTENT.1.entries.is_empty(),
             "official Zed retains its inherited Personalize section"
@@ -1559,6 +1629,10 @@ mod tests {
         assert!(dez_welcome_uses_split_layout("Dez", px(980.), true));
         assert!(!dez_welcome_uses_split_layout("Dez", px(1400.), false));
         assert!(!dez_welcome_uses_split_layout("Zed", px(1400.), true));
+        assert!(welcome_loads_recent_workspaces("Dez", false));
+        assert!(welcome_loads_recent_workspaces("Dez", true));
+        assert!(welcome_loads_recent_workspaces("Zed", true));
+        assert!(!welcome_loads_recent_workspaces("Zed", false));
 
         assert_eq!(
             welcome_recent_state("Dez", true, false, false, 0),

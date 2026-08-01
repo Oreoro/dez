@@ -159,6 +159,11 @@ files, terminals, diffs, and settings. Opening one selects that tab instead of
 adding a drawer or nested tab bar. Restoring an older Workspace migrates its
 tool items into the Main Work Area and removes the obsolete auxiliary column.
 The transition is normal tab focus, never a floating overlay.
+The Workspaces projection names this shared inventory **Open Tabs & Tools**.
+It mirrors Home, code, diffs, terminals, and Workspace tools from the owning
+native panes; **Sessions** remains a separate activity projection for running
+terminal and Agent work. A single pane renders a flat list, and Pane labels are
+introduced only after an intentional split already exists.
 Transient progress and notices remain bounded and nonmodal; dialogs are
 reserved for decisions that block progress.
 
@@ -1912,8 +1917,8 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   leave the record untouched, choose **Open New Shell Here**, or confirm
   **Terminate Legacy Session…** so Dez contacts only a matching legacy owner.
   Replacement shells are separate computation.
-- **2026-07-31: Open Tabs is a native navigation projection, now labeled
-  Workspace Tabs.** When expanded in Workspaces, Workspace Tabs lists the
+- **2026-07-31: Open Tabs is a native navigation projection, now labeled Open
+  Tabs & Tools.** When expanded in Workspaces, Open Tabs & Tools lists the
   active Workspace's real Main Work Area items
   and groups them only when real panes exist. Selecting a row calls native item
   activation. The pane remains the owner of order, drag, preview, pin, close,
@@ -1942,7 +1947,7 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   **Default Terminal**, **Native Shell**, **tmux Session**, and explicit agent
   providers separately. Internal compatibility action identifiers may retain
   their existing names. Workspaces remains the stable navigation noun, and its
-  collapsible native-tab projection is labeled **Workspace Tabs** and stays
+  collapsible native-tab projection is labeled **Open Tabs & Tools** and stays
   hidden until there are at least two native tabs to navigate.
 - **2026-08-01: tmux identity is rooted, not basename-only.** **Open tmux
   Session** combines the primary local Workspace root's shell-safe folder name
