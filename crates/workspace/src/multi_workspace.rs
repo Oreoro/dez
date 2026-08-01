@@ -18,7 +18,7 @@ use std::rc::Rc;
 use ui::prelude::*;
 use util::ResultExt;
 use util::path_list::PathList;
-use zed_actions::sidebar::ToggleThreadSwitcher;
+use zed_actions::sidebar::{FocusSidebarFilter, ToggleThreadSwitcher};
 
 use crate::workspace_settings::SidebarSettings;
 use settings::{CanvasSide, SidebarDockPosition};
@@ -440,6 +440,10 @@ pub trait Sidebar: Focusable + Render + EventEmitter<SidebarEvent> + Sized {
     }
     /// Makes focus reset back to the search editor upon toggling the sidebar from outside
     fn prepare_for_focus(&mut self, _window: &mut Window, _cx: &mut Context<Self>) {}
+
+    /// Opens the sidebar's Workspace and Session filter.
+    fn focus_filter(&mut self, _window: &mut Window, _cx: &mut Context<Self>) {}
+
     /// Opens or cycles the thread switcher popup.
     fn toggle_thread_switcher(
         &mut self,
@@ -504,6 +508,7 @@ pub trait SidebarHandle: 'static + Send + Sync {
     fn focus_handle(&self, cx: &App) -> FocusHandle;
     fn focus(&self, window: &mut Window, cx: &mut App);
     fn prepare_for_focus(&self, window: &mut Window, cx: &mut App);
+    fn focus_filter(&self, window: &mut Window, cx: &mut App);
     fn has_notifications(&self, cx: &App) -> bool;
     fn to_any(&self) -> AnyView;
     fn entity_id(&self) -> EntityId;
@@ -558,6 +563,10 @@ impl<T: Sidebar> SidebarHandle for Entity<T> {
 
     fn prepare_for_focus(&self, window: &mut Window, cx: &mut App) {
         self.update(cx, |this, cx| this.prepare_for_focus(window, cx));
+    }
+
+    fn focus_filter(&self, window: &mut Window, cx: &mut App) {
+        self.update(cx, |this, cx| this.focus_filter(window, cx));
     }
 
     fn has_notifications(&self, cx: &App) -> bool {
@@ -938,6 +947,21 @@ impl MultiWorkspace {
                 sidebar.prepare_for_focus(window, cx);
                 sidebar.focus(window, cx);
             }
+        }
+    }
+
+    pub fn focus_sidebar_filter(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.multi_workspace_enabled(cx) {
+            return;
+        }
+
+        self.sidebar_auto_close_pending = false;
+        if !self.sidebar_open() {
+            self.previous_focus_handle = window.focused(cx);
+            self.open_sidebar(cx);
+        }
+        if let Some(sidebar) = &self.sidebar {
+            sidebar.focus_filter(window, cx);
         }
     }
 
@@ -2862,6 +2886,11 @@ impl Render for MultiWorkspace {
                             this.focus_sidebar(window, cx);
                         }),
                     )
+                    .on_action(cx.listener(
+                        |this: &mut Self, _: &FocusSidebarFilter, window, cx| {
+                            this.focus_sidebar_filter(window, cx);
+                        },
+                    ))
                     .on_action(cx.listener(
                         |this: &mut Self, _: &BrowseRunningSessions, window, cx| {
                             this.open_sidebar_for_sessions_reveal(window, cx);

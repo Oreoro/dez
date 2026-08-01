@@ -1532,6 +1532,22 @@ fn workspace_header_details_tooltip(
     (!details.is_empty()).then(|| details.join("\n"))
 }
 
+fn workspace_header_navigation_tooltip(
+    app_name: &str,
+    workspace_name: &str,
+    details: Option<&str>,
+) -> Option<String> {
+    if app_name == "Zed" {
+        return details.map(str::to_owned);
+    }
+
+    let action = format!("Switch to {workspace_name}");
+    Some(match details {
+        Some(details) => format!("{action}\n{details}"),
+        None => action,
+    })
+}
+
 fn workspace_header_accessibility_with_metadata(
     app_name: &str,
     accessibility_label: String,
@@ -2313,6 +2329,27 @@ mod workspace_header_label_tests {
             Some("Workspace roots: app, api\nGit: feature/navigation · 3 changes")
         );
         assert_eq!(workspace_header_details_tooltip("Dez", None, None), None);
+        assert_eq!(
+            workspace_header_navigation_tooltip(
+                "Dez",
+                "api",
+                Some("Git: feature/navigation · 3 changes")
+            )
+            .as_deref(),
+            Some("Switch to api\nGit: feature/navigation · 3 changes")
+        );
+        assert_eq!(
+            workspace_header_navigation_tooltip("Dez", "api", None).as_deref(),
+            Some("Switch to api")
+        );
+        assert_eq!(
+            workspace_header_navigation_tooltip("Zed", "api", Some("main")).as_deref(),
+            Some("main")
+        );
+        assert_eq!(
+            workspace_header_navigation_tooltip("Zed", "api", None),
+            None
+        );
         assert_eq!(
             workspace_header_accessibility_with_metadata(
                 "Dez",
@@ -7768,10 +7805,15 @@ impl Sidebar {
         );
         let workspace_roots_tooltip =
             (label != full_label).then(|| format!("Workspace roots: {full_label}"));
-        let workspace_details_tooltip = workspace_header_details_tooltip(
+        let workspace_details = workspace_header_details_tooltip(
             APP_NAME,
             workspace_roots_tooltip.as_deref(),
             layout_label.map(|label| label.as_ref()),
+        );
+        let workspace_details_tooltip = workspace_header_navigation_tooltip(
+            APP_NAME,
+            workspace_name.as_ref(),
+            workspace_details.as_deref(),
         );
         let workspace_accessibility_label = workspace_header_accessibility_with_metadata(
             APP_NAME,
@@ -18876,6 +18918,10 @@ impl WorkspaceSidebar for Sidebar {
     fn prepare_for_focus(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
         self.selection = None;
         cx.notify();
+    }
+
+    fn focus_filter(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.focus_sidebar_filter(&FocusSidebarFilter, window, cx);
     }
 
     fn browse_external_sessions(&mut self, window: &mut Window, cx: &mut Context<Self>) {

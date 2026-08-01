@@ -2126,6 +2126,12 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_sidebar_header.*?let search_is_active.*?self\.session_search_open.*?let searchable_item_count =.*?project_header_indices\.len\(\).*?session_search_control_visible\(paths::APP_NAME, searchable_item_count\).*?&& !search_is_active.*?IconButton::new\("open-session-search", IconName::MagnifyingGlass\).*?tab_index\(0isize\).*?aria_label\(session_rail_search_label\(APP_NAME\)\).*?focus_sidebar_filter\(&FocusSidebarFilter' \
     'Dez Workspaces search can regress to a duplicate active control or pointer-only disclosure'
+require_multiline_pattern crates/workspace/src/multi_workspace.rs \
+    'use zed_actions::sidebar::\{FocusSidebarFilter, ToggleThreadSwitcher\}.*?fn focus_filter\(&mut self, _window: &mut Window, _cx: &mut Context<Self>\).*?fn focus_filter\(&self, window: &mut Window, cx: &mut App\).*?pub fn focus_sidebar_filter.*?if !self\.sidebar_open\(\).*?self\.previous_focus_handle = window\.focused\(cx\).*?self\.open_sidebar\(cx\).*?sidebar\.focus_filter\(window, cx\).*?_: &FocusSidebarFilter.*?this\.focus_sidebar_filter\(window, cx\)' \
+    'Workspace Search can regress to doing nothing while the Workspaces navigator is closed'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn focus_filter\(&mut self, window: &mut Window, cx: &mut Context<Self>\).*?self\.focus_sidebar_filter\(&FocusSidebarFilter, window, cx\)' \
+    'the native Workspaces filter can stop participating in global Workspace navigation'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_search_dismiss_label\(app_name: &str\).*?"Clear Session Search".*?"Close Workspaces Search".*?fn render_session_search.*?let dismiss_label = session_search_dismiss_label\(APP_NAME\).*?IconButton::new\("clear-session-search", IconName::Close\).*?tab_index\(0isize\).*?aria_label\(dismiss_label\).*?this\.session_search_open = false.*?this\.focus_handle\.focus\(window, cx\)' \
     'Dez Workspaces search can regress to losing its native keyboard close path'
@@ -2413,8 +2419,11 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_controls_name_their_actual_workspace.*?workspace_root_overlaps_repository\([[:space:]]*Path::new\("/code/dez/crates/sidebar"\),[[:space:]]*Path::new\("/code/dez"\).*?workspace_root_overlaps_repository\([[:space:]]*Path::new\("/code"\),[[:space:]]*Path::new\("/code/dez"\).*?!workspace_root_overlaps_repository\([[:space:]]*Path::new\("/code/dez"\),[[:space:]]*Path::new\("/code/dez-tools"\)' \
     'Workspace Git association can regress to exact-root matching or unsafe string-prefix matching'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn workspace_header_metadata_description.*?app_name == "Zed".*?format!\("Git: \{metadata\}"\).*?fn workspace_header_details_tooltip.*?details\.join\("\\n"\).*?fn workspace_header_accessibility_with_metadata.*?workspace_header_metadata_description.*?let workspace_details_tooltip = workspace_header_details_tooltip.*?workspace_header_accessibility_with_metadata.*?aria_label\(workspace_accessibility_label\).*?id\(format!\("\{id_prefix\}project-labels-\{ix\}"\)\).*?min_w_0\(\).*?flex_1\(\).*?overflow_hidden\(\).*?when_some\(workspace_details_tooltip\.clone\(\).*?Tooltip::text\(tooltip\)' \
+    'fn workspace_header_metadata_description.*?app_name == "Zed".*?format!\("Git: \{metadata\}"\).*?fn workspace_header_details_tooltip.*?details\.join\("\\n"\).*?fn workspace_header_navigation_tooltip.*?app_name == "Zed".*?format!\("Switch to \{workspace_name\}"\).*?fn workspace_header_accessibility_with_metadata.*?workspace_header_metadata_description.*?let workspace_details = workspace_header_details_tooltip.*?let workspace_details_tooltip = workspace_header_navigation_tooltip.*?workspace_header_accessibility_with_metadata.*?aria_label\(workspace_accessibility_label\).*?id\(format!\("\{id_prefix\}project-labels-\{ix\}"\)\).*?min_w_0\(\).*?flex_1\(\).*?overflow_hidden\(\).*?when_some\(workspace_details_tooltip\.clone\(\).*?Tooltip::text\(tooltip\)' \
     'narrow Workspace headers can regress to clipping controls or hiding complete Git metadata from hover and assistive technology'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn workspace_controls_name_their_actual_workspace.*?workspace_header_navigation_tooltip\([[:space:]]*"Dez",[[:space:]]*"api",[[:space:]]*None.*?Some\("Switch to api"\).*?workspace_header_navigation_tooltip\("Zed", "api", None\),[[:space:]]*None' \
+    'Workspace headers can lose focused source coverage for native switch-to tooltips'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_header_terminal_action_visible.*?is_active: bool.*?has_sessions \|\| is_collapsed \|\| is_active.*?fn workspace_empty_terminal_row_visible_for_active_state\(app_name: &str, is_active: bool\) -> bool \{[[:space:]]*app_name != "Dez" \|\| !is_active[[:space:]]*\}.*?workspace_header_terminal_action_visible\([[:space:]]*APP_NAME,.*?is_collapsed,[[:space:]]*is_active.*?else if !is_collapsed[[:space:]]*&& !is_sticky[[:space:]]*&& !has_threads.*?&& workspace_empty_terminal_row_visible_for_active_state\(APP_NAME, is_active\)' \
     'the active Dez Workspace can regress to losing its compact terminal menu or duplicating it as an empty row'
@@ -2751,6 +2760,12 @@ require_multiline_pattern crates/zed/src/zed/app_menus.rs \
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'developer_surface_menu_label\([[:space:]]*APP_NAME,[[:space:]]*panels_as_pane_tabs,[[:space:]]*"Built-in Agent".*?if workspace_tools_are_grouped\(APP_NAME\).*?MenuItem::action\("Workspaces", workspace::ToggleSidebar\).*?Menu::new\("Workspace Tools"\).*?MenuItem::action\(project_surface_label.*?MenuItem::action\(outline_surface_label.*?MenuItem::action\(git_surface_label.*?MenuItem::action\(debugger_surface_label.*?MenuItem::action\(agent_surface_label.*?editor_layout_menu\(\).*?Diagnostics' \
     'the Dez View menu can regress to splitting contextual Workspace Tools into unrelated top-level panels'
+require_multiline_pattern crates/zed/src/zed/app_menus.rs \
+    'Menu::new\("Navigate Workspaces"\).*?"Focus Workspaces", workspace::FocusSidebar.*?"Search Workspaces and Sessions…".*?zed_actions::sidebar::FocusSidebarFilter.*?"Previous Workspace", workspace::PreviousProject.*?"Next Workspace", workspace::NextProject' \
+    'cross-Workspace focus, search, and cycling can disappear from the native View menu'
+require_multiline_pattern crates/command_palette/src/command_palette.rs \
+    '"sidebar::ToggleSidebar".*?"workspaces::ShowOrHide".*?"sidebar::FocusSidebar".*?"workspaces::Focus".*?"sidebar::FocusSidebarFilter".*?"workspaces::Search".*?"sidebar::PreviousProject".*?"workspaces::PreviousWorkspace".*?"sidebar::NextProject".*?"workspaces::NextWorkspace".*?humanize_action_name_for_product\("sidebar::NextProject", "Dez"\).*?"workspaces: next workspace".*?humanize_action_name_for_product\("sidebar::NextProject", "Zed"\).*?"sidebar: next project"' \
+    'Workspace navigation can regress to inherited Project vocabulary in Command Palette'
 reject_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'if workspace_tools_are_grouped\(APP_NAME\).*?Menu::new\("Workspace Tools"\)\.items\(\[[[:space:]]*MenuItem::action\(project_pane_label' \
     'the Dez View menu can regress to exposing a second Workspace Tools column beside its native tabs'

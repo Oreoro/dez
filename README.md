@@ -106,6 +106,14 @@ recovery, or the number of Sessions needing attention. Search counts visible
 Workspace rows as well as Session rows, so the status cannot claim zero while
 a matching codebase is on screen.
 
+Clicking a Workspace header activates that codebase and restores its last
+active tab and pane; its separate chevron only expands or collapses the
+Workspace's Sessions. **View → Navigate Workspaces** exposes Focus, Search,
+Previous, and Next routes without requiring the navigator to be open first.
+Search opens Workspaces when needed, focuses its native filter, and matches
+Workspace names alongside Sessions. The same actions remain discoverable and
+rebindable in Command Palette and Keyboard & Vim.
+
 Inside an active Workspace, Home makes the **Start → Watch → Inspect → Verify**
 route concrete with four actions in order: **Open Terminal**, **Browse Running
 Sessions…**, **Open Files**, and **Review Changes**. Its native Dez Agent mark

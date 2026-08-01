@@ -1018,6 +1018,15 @@ persistent for people who prefer that layout. **Workspaces Position** chooses
 its window edge. Closing Workspaces never closes a Workspace, terminal, or
 Agent Session.
 
+Each Workspace header is the primary switcher: selecting it restores that
+codebase's last active tab and pane, while its separate chevron only expands or
+collapses the Workspace's Sessions. **View → Navigate Workspaces** collects
+**Focus Workspaces**, **Search Workspaces and Sessions…**, **Previous
+Workspace**, and **Next Workspace**. Search opens a closed navigator before
+focusing its native filter, and matches Workspace names as well as Sessions.
+The same actions use Workspace vocabulary in Command Palette and remain
+rebindable through **Keyboard & Vim**.
+
 Workspaces intentionally omits the inherited Workspace Bar, centered Command
 Search row, and duplicate project/branch identity strip. Each Workspace row
 already owns its roots, Git branch, and change count; the header ellipsis opens
@@ -1048,7 +1057,8 @@ The default tab model follows familiar browser behavior:
 | Recent-tab switcher        | `Ctrl+Tab`         | `Ctrl+Tab`                      | `[b` / `]b`              |
 | Previous / next tab        | `⌘{` / `⌘}`        | `Ctrl+PageUp` / `Ctrl+PageDown` | `gT` / `gt`              |
 | Move between split panes   | `⌘K`, then arrow   | `Ctrl+K`, then arrow            | `Ctrl+W`, then `h/j/k/l` |
-| Workspaces                 | `⌘B`               | `Ctrl+B`                        | Command Palette          |
+| Show or hide Workspaces    | `⌘B`               | `Ctrl+B`                        | Command Palette          |
+| Search / cycle Workspaces  | View → Navigate Workspaces | View → Navigate Workspaces | `[p` / `]p`         |
 | Files                      | `⌘⇧E`              | `Ctrl+Shift+E`                  | `Space f`                |
 | Open configured terminal   | `` Ctrl+` ``       | `` Ctrl+` ``                    | `Space t`                |
 | Open native shell terminal | `` Ctrl+Shift+` `` | `` Ctrl+Shift+` ``              | `Space T`                |

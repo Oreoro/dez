@@ -1019,6 +1019,12 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
         "sidebar::NewThreadInGroup" => {
             return "built_in_agent::NewSessionInWorkspace".to_owned();
         }
+        "sidebar::ToggleSidebar" => return "workspaces::ShowOrHide".to_owned(),
+        "sidebar::CloseSidebar" => return "workspaces::Hide".to_owned(),
+        "sidebar::FocusSidebar" => return "workspaces::Focus".to_owned(),
+        "sidebar::FocusSidebarFilter" => return "workspaces::Search".to_owned(),
+        "sidebar::PreviousProject" => return "workspaces::PreviousWorkspace".to_owned(),
+        "sidebar::NextProject" => return "workspaces::NextWorkspace".to_owned(),
         "sidebar::ToggleThreadSwitcher" => return "workspaces::SwitchSessions".to_owned(),
         "sidebar::ToggleThreadHistory" => return "workspaces::ToggleAgentHistory".to_owned(),
         "sidebar::OpenSelectedReviewBrief" => {
@@ -1316,6 +1322,30 @@ mod tests {
         assert_eq!(
             humanize_action_name_for_product("sidebar::ToggleAttentionFilter", "Dez"),
             "workspaces: toggle attention filter"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::ToggleSidebar", "Dez"),
+            "workspaces: show or hide"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::FocusSidebar", "Dez"),
+            "workspaces: focus"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::FocusSidebarFilter", "Dez"),
+            "workspaces: search"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::PreviousProject", "Dez"),
+            "workspaces: previous workspace"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::NextProject", "Dez"),
+            "workspaces: next workspace"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::NextProject", "Zed"),
+            "sidebar: next project"
         );
         assert_eq!(
             humanize_action_name_for_product("workspace::AddFolderToProject", "Dez"),
