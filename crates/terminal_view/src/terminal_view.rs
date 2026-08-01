@@ -5,6 +5,7 @@ mod terminal_path_like_target;
 pub mod terminal_scrollbar;
 
 use agent_settings::AgentSettings;
+pub use agent_settings::configured_terminal_launcher_label;
 use anyhow::{Result, anyhow};
 use collections::HashMap;
 use editor::{
@@ -1038,22 +1039,6 @@ pub fn tmux_startup_command_for_workspace(root: Option<&Path>) -> String {
     format!(
         "if tmux has-session -t ={session_name} 2>/dev/null; then exec tmux attach-session -t ={session_name}; elif tmux has-session -t ={legacy_name} 2>/dev/null; then dez_tmux_cwd=$(tmux display-message -p -t ={legacy_name} '#{{pane_current_path}}' 2>/dev/null); case \"$dez_tmux_cwd\" in \"$PWD\"|\"$PWD\"/*) exec tmux attach-session -t ={legacy_name} ;; *) exec tmux new-session -A -s {session_name} ;; esac; else exec tmux new-session -A -s {session_name}; fi"
     )
-}
-
-pub fn configured_terminal_launcher_label(command: Option<&str>) -> String {
-    let executable = command
-        .map(str::trim)
-        .filter(|command| !command.is_empty())
-        .and_then(|command| command.split_whitespace().next())
-        .and_then(|executable| executable.rsplit('/').next());
-    let launcher = match executable {
-        None => "Native Shell",
-        Some("codex") => "Codex",
-        Some("claude") => "Claude Code",
-        Some("opencode") => "OpenCode",
-        Some(_) => "Custom Command",
-    };
-    format!("Default · {launcher}")
 }
 
 fn open_tmux_terminal(

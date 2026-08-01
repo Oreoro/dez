@@ -275,10 +275,13 @@ Hierarchy follows the next useful action. Home places **Open Workspace** first
 when no codebase is open. Inside an active Workspace it presents **Open
 Terminal**, **Browse Running Sessions…**, **Open Files**, and **Review Changes**
 in that order: Start → Resume → Inspect → Review. These are native command rows
-on the editor surface, not filled dashboard cards. Dense Files & Git and
-Built-in Agent toolbars use compact icons, but every control has a specific
-accessible name, tooltip, and place in the keyboard tab order. A critical
-action is never available only on pointer hover.
+on the editor surface, not filled dashboard cards. Home's first row identifies
+the configured result as **Default · Native Shell**, **Default · Codex**,
+**Default · Claude Code**, **Default · OpenCode**, or **Default · Custom
+Command**, using the same shared identity as File and Workspace menus. Dense
+Files & Git and Built-in Agent toolbars use compact icons, but every control has
+a specific accessible name, tooltip, and place in the keyboard tab order. A
+critical action is never available only on pointer hover.
 
 First run follows the same rule. Dez opens **Home** as a normal Main Work Area
 tab, not a setup modal, tour, floating card, or restored split. When the app is
@@ -292,10 +295,13 @@ It does not offer a pathless terminal before a codebase can supply file, Git,
 and working-directory context. Inside a Workspace, Home offers **Open
 Terminal**, **Browse Running Sessions…**, **Open Files**, and **Review Changes**.
 **Open Terminal** uses the configured **Default Terminal Command**, or the
-native shell when that setting is blank. The adjacent **+** and Command Palette
-keep Native Shell, tmux, Codex, Claude Code, and OpenCode available as one-off
-launches. **New File** remains available from File, the native **+**, and
-keyboard shortcuts, but is no longer a primary Home or empty-state action.
+native shell when that setting is blank. Its inline detail names that resolved
+default before launch, so a returning user does not need to reopen Settings to
+remember whether **Open Terminal** starts a shell or agent. The adjacent **+**
+and Command Palette keep Native Shell, tmux, Codex, Claude Code, and OpenCode
+available as one-off launches. **New File** remains available from File, the
+native **+**, and keyboard shortcuts, but is no longer a primary Home or
+empty-state action.
 Recent Workspaces remain ordinary keyboard-reachable rows rather than a
 separate dashboard.
 

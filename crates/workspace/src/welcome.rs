@@ -5,6 +5,7 @@ use crate::{
     item::{Item, ItemEvent},
     persistence::WorkspaceDb,
 };
+use agent_settings::{AgentSettings, configured_terminal_launcher_label};
 use git::Clone as GitClone;
 use gpui::WeakEntity;
 use gpui::{
@@ -224,6 +225,7 @@ impl SectionEntry {
         focus: &FocusHandle,
         primary: bool,
         show_meta: bool,
+        meta_override: Option<SharedString>,
     ) -> Option<impl IntoElement> {
         self.visibility_guard.is_visible().then(|| {
             let button = SectionButton::new(
@@ -235,7 +237,7 @@ impl SectionEntry {
                 primary,
             )
             .show_meta(show_meta);
-            match self.meta {
+            match meta_override.or_else(|| self.meta.map(SharedString::new_static)) {
                 Some(meta) => button.meta(meta),
                 None => button,
             }
@@ -301,6 +303,15 @@ fn welcome_tab_icon(app_name: &str) -> Option<IconName> {
 
 fn welcome_emphasizes_first_action(app_name: &str) -> bool {
     app_name != "Zed"
+}
+
+fn welcome_terminal_action_meta(
+    app_name: &str,
+    has_workspace: bool,
+    configured_command: Option<&str>,
+) -> Option<String> {
+    (app_name != "Zed" && has_workspace)
+        .then(|| configured_terminal_launcher_label(configured_command))
 }
 
 const ZED_CONTENT: (Section, Section) = (
@@ -408,7 +419,7 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
             SectionEntry {
                 icon: IconName::Terminal,
                 title: "Open Terminal",
-                meta: Some("Start an agent or shell"),
+                meta: Some("Default terminal"),
                 action: &OPEN_AGENT_TERMINAL,
                 visibility_guard: SectionVisibility::Always,
             },
@@ -454,6 +465,7 @@ impl Section {
         focus: &FocusHandle,
         emphasize_first: bool,
         show_meta: bool,
+        first_entry_meta_override: Option<SharedString>,
     ) -> impl IntoElement {
         v_flex()
             .w_full()
@@ -470,6 +482,9 @@ impl Section {
                             focus,
                             emphasize_first && index == 0,
                             show_meta,
+                            (index == 0)
+                                .then(|| first_entry_meta_override.clone())
+                                .flatten(),
                         )
                     }),
             )
@@ -852,6 +867,7 @@ impl Render for WelcomePage {
                             &self.focus_handle,
                             false,
                             true,
+                            None,
                         )
                         .into_any_element(),
                 ),
@@ -941,6 +957,14 @@ impl Render for WelcomePage {
             None
         };
         let section_focus_handle = self.focus_handle.clone();
+        let first_entry_meta_override = welcome_terminal_action_meta(
+            APP_NAME,
+            has_workspace,
+            AgentSettings::get_global(cx)
+                .terminal_init_command
+                .as_deref(),
+        )
+        .map(SharedString::from);
         let show_onboarding_return = APP_NAME == "Zed" && !self.fallback_to_recent_projects;
         let content_welcome_label = welcome_label.clone();
         let page_title = if installation_required {
@@ -994,6 +1018,7 @@ impl Render for WelcomePage {
                                     &section_focus_handle,
                                     welcome_emphasizes_first_action(APP_NAME),
                                     true,
+                                    first_entry_meta_override.clone(),
                                 )),
                         )
                         .when_some(secondary_content.take(), |this, secondary_content| {
@@ -1022,6 +1047,7 @@ impl Render for WelcomePage {
                             &section_focus_handle,
                             welcome_emphasizes_first_action(APP_NAME),
                             !compact_spacing,
+                            first_entry_meta_override.clone(),
                         ))
                         .when_some(secondary_content.take(), |this, secondary_content| {
                             this.child(Divider::horizontal().color(DividerColor::BorderVariant))
@@ -1409,7 +1435,27 @@ mod tests {
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[0].title, "Open Terminal");
         assert_eq!(
             DEZ_WORKSPACE_CONTENT.0.entries[0].meta,
-            Some("Start an agent or shell")
+            Some("Default terminal")
+        );
+        assert_eq!(
+            welcome_terminal_action_meta("Dez", true, None).as_deref(),
+            Some("Default · Native Shell")
+        );
+        assert_eq!(
+            welcome_terminal_action_meta("Dez", true, Some("codex --yolo")).as_deref(),
+            Some("Default · Codex")
+        );
+        assert_eq!(
+            welcome_terminal_action_meta("Dez", true, Some("aider")).as_deref(),
+            Some("Default · Custom Command")
+        );
+        assert_eq!(
+            welcome_terminal_action_meta("Dez", false, Some("codex")),
+            None
+        );
+        assert_eq!(
+            welcome_terminal_action_meta("Zed", true, Some("codex")),
+            None
         );
         assert_eq!(
             DEZ_WORKSPACE_CONTENT.0.entries[1].title,

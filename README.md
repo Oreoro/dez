@@ -84,7 +84,9 @@ Open Workspace
 ```
 
 The primary user story is deliberately short. **Home** starts or resumes a
-Workspace. **Open Terminal** launches the configured terminal workflow.
+Workspace. **Open Terminal** launches the configured terminal workflow and
+previews it inline as **Default · Native Shell**, **Default · Codex**, **Default
+· Claude Code**, **Default · OpenCode**, or **Default · Custom Command**.
 **Workspaces** switches codebases, returns to current Workspace tabs, and
 surfaces attention. **Open Files** and **Review Changes** bring the result
 back into the same Main Work Area. The native tab-strip `+` is the shared Add
@@ -93,11 +95,12 @@ menu for every step; no separate dashboard or onboarding mode is required.
 Inside an active Workspace, Home makes the **Start → Watch → Inspect → Verify**
 route concrete with four actions in order: **Open Terminal**, **Browse Running
 Sessions…**, **Open Files**, and **Review Changes**. Its native Dez Agent mark
-and outcome copy distinguish this loop from a generic terminal launcher. An
+and configured-default label distinguish this loop from a generic terminal
+launcher. An
 active empty Main Work Area uses the same route with space-aware labels:
-**Open Terminal**, **Browse Sessions**, **Find File**, and **Review Changes**. **New File** remains
-available from File, the native `+`, and keyboard shortcuts, but is not a
-primary Home or empty-state action.
+**Open Terminal**, **Browse Sessions**, **Find File**, and **Review Changes**.
+**New File** remains available from File, the native `+`, and keyboard
+shortcuts, but is not a primary Home or empty-state action.
 
 The window is deliberately not a dashboard of equal columns. Each Workspace
 owns one codebase context, one Main Work Area, its terminals, and its Git state.

@@ -31,6 +31,22 @@ pub const SUMMARIZE_THREAD_DETAILED_PROMPT: &str =
     include_str!("prompts/summarize_thread_detailed_prompt.txt");
 pub const COMPACTION_PROMPT: &str = include_str!("prompts/compaction_prompt.txt");
 
+pub fn configured_terminal_launcher_label(command: Option<&str>) -> String {
+    let executable = command
+        .map(str::trim)
+        .filter(|command| !command.is_empty())
+        .and_then(|command| command.split_whitespace().next())
+        .and_then(|executable| executable.rsplit('/').next());
+    let launcher = match executable {
+        None => "Native Shell",
+        Some("codex") => "Codex",
+        Some("claude") => "Claude Code",
+        Some("opencode") => "OpenCode",
+        Some(_) => "Custom Command",
+    };
+    format!("Default · {launcher}")
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct PanelLayout {
     pub(crate) agent_dock: Option<DockPosition>,
@@ -948,6 +964,30 @@ mod tests {
     use serde_json::json;
     use settings::ToolPermissionMode;
     use settings::ToolPermissionsContent;
+
+    #[test]
+    fn configured_terminal_identity_is_consistent_across_native_launch_surfaces() {
+        assert_eq!(
+            configured_terminal_launcher_label(None),
+            "Default · Native Shell"
+        );
+        assert_eq!(
+            configured_terminal_launcher_label(Some(" codex --yolo ")),
+            "Default · Codex"
+        );
+        assert_eq!(
+            configured_terminal_launcher_label(Some("/opt/homebrew/bin/claude --continue")),
+            "Default · Claude Code"
+        );
+        assert_eq!(
+            configured_terminal_launcher_label(Some("opencode --continue")),
+            "Default · OpenCode"
+        );
+        assert_eq!(
+            configured_terminal_launcher_label(Some("aider")),
+            "Default · Custom Command"
+        );
+    }
 
     #[test]
     fn test_parse_auto_compact_threshold() {
