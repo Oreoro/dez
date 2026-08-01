@@ -647,7 +647,12 @@ missing.
 Changed-file rows keep Review, Reject, and Keep visible and keyboard-reachable.
 Each decision targets that exact file; pending edits explain why Keep and
 Reject are temporarily unavailable. Review Changes opens the interactive Agent
-diff, while Keep All and Reject All remain explicit whole-review decisions.
+diff, while **Keep All Changes** and **Reject All Changes** remain explicit
+whole-review decisions. In the Built-in Agent surface, the Edits disclosure
+announces both its file count and expanded state and responds to Enter and
+Space. **Review Changes** remains a visible primary inspection action; the two
+whole-review decisions use subordinate native treatment so they do not look
+like equally safe navigation.
 
 Subagent controls distinguish stopping work from returning to the parent Agent
 Session. Restoring a checkpoint is different again: because it replaces
@@ -678,10 +683,13 @@ expansion for a longer message. View Diff, stage/unstage, commit, remote, and
 split-menu controls remain keyboard reachable and announce their action and
 open state.
 
-Git History uses the same native tab hierarchy. Its tab is keyboard reachable and
-announces whether it is selected. Missing-repository, loading, no-commit, and
-load-failure states begin at the tab content edge with a specific title and next-step
-explanation instead of switching to a generic centered label.
+Git History uses the same native tab hierarchy. Its tab is keyboard reachable
+and announces whether it is selected. Missing-repository, loading, no-commit,
+and load-failure states begin at the tab content edge with a specific title and
+next-step explanation instead of switching to a generic centered label. Loading
+uses a spinner plus status text. Only failure exposes **Retry**; that action
+removes the completed failed graph request and starts a fresh request without
+changing the active repository or Main Work Area tab.
 
 If a saved Session owns a closed Workspace, **Files** restores that exact
 Workspace and Session before revealing Files. It does not silently
@@ -714,7 +722,9 @@ failure marks report status without pretending to be buttons. A subagent card
 separates previewing its work, stopping it, and opening that existing Subagent
 Session in the Agent work area. It names running, waiting, completed, canceled,
 or failed state to assistive navigation and offers preview only when content is
-available.
+available. **Open Subagent Session** is a visible outlined handoff, not a faint
+footer or hover-only affordance. It focuses that exact existing child Session
+and never creates a duplicate Subagent or top-level Workspace row.
 
 Agent identity remains stable while state changes. The built-in Dez Agent uses
 the four-node Dez Agent mark; its Subagents use the related parent-and-child

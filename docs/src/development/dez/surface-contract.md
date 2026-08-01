@@ -329,6 +329,102 @@ cause, and starts no substitute process. The primary split action deep-links to
 **Workspaces & Terminals → Terminal Launch → Default Terminal**; its menu keeps
 the general Settings and raw JSON alternatives available.
 
+## Review-and-recovery wireframe
+
+### 13. Agent change review
+
+```text
+┌ Workspaces ─────┬ Review · app.rs | app.rs | + ──────────────┐
+│ dez · main       │ 3 files  +52  -17                              │
+│                 │ [Previous Change] [Next Change]                   │
+│ Open Tabs &     │ [Reject All Changes] [Keep All Changes]           │
+│ Tools           ├──────────────────────────────────────────┤
+│  Built-in Agent│ src/app.rs       [Review] [Reject] [Keep]          │
+│  Git Changes   │ src/config.rs    [Review] [Reject] [Keep]          │
+│  Terminal      │ tests/app_tests.rs [Review] [Reject] [Keep]        │
+│                 │                                                       │
+│                 │ native code diff                                     │
+├─────────────────┴──────────────────────────────────────────┤
+│ Workspace: dez | main | Permissions: Healthy                  │
+└───────────────────────────────────────────────────────────────┘
+```
+
+Review is an ordinary Main Work Area surface. Previous and next controls,
+file-level Review/Reject/Keep, and whole-review **Reject All Changes** and
+**Keep All Changes** remain keyboard reachable. Every decision targets the
+named file or the whole current review; Dez never places a custom overlay over
+the diff.
+
+### 14. Git History states
+
+```text
+┌ Git Changes | Git History | + ──────────────────────────────┐
+│ Loading Git History                                          │
+│ (…) Reading commits from this repository.                   │
+│                                                              │
+│ Git History couldn't load                                    │
+│ [!] Check the repository state, then retry.                  │
+│ [Retry]                                                      │
+│                                                              │
+│ No commits yet                                               │
+│ Git History will appear after the first commit.              │
+├──────────────────────────────────────────────────────────────┤
+│ Workspace: dez | main | Permissions: Healthy                  │
+└───────────────────────────────────────────────────────────────┘
+```
+
+These are alternate inline states, never a simultaneous stack. Loading uses a
+status label and a spinner. Failure uses a warning mark and one primary
+**Retry** action, which discards only a completed failed graph request before
+starting a new request. Missing-repository and no-commit states remain quiet
+and do not advertise an action that cannot help.
+
+### 15. Subagent supervision
+
+```text
+┌ Built-in Agent | Git Changes | Terminal | + ────────────────┐
+│ > Edits · 3 files · +52 -17                                │
+│ [Review Changes] [Reject All Changes] [Keep All Changes]       │
+│                                                               │
+│ Backend audit                         Working · 3m 24s        │
+│ Scanning code for unsafe patterns.          [Stop Subagent]    │
+│                                                               │
+│ [Open Subagent Session]                                       │
+├──────────────────────────────────────────────────────────────┤
+│ Workspace: dez | main | 2 agents | Permissions: Healthy        │
+└───────────────────────────────────────────────────────────────┘
+```
+
+The Edits disclosure announces its file count and expanded state and responds
+to Enter and Space. **Review Changes** is the primary inspection route;
+whole-review decisions are visibly secondary. Subagent state remains text, not
+color alone. **Open Subagent Session** is a visible outlined handoff that
+focuses the existing child Session rather than creating a new one.
+
+### 16. Resume honestly
+
+```text
+┌ Workspaces ─────┬ Terminal · Unavailable | Git Changes | + ───────┐
+│ Codex · Working  │ preserved terminal output                              │
+│ Terminal ·       │                                                       │
+│ Unavailable      │ Terminal unavailable                                  │
+│ Legacy · Access  │ Exact reason · last seen time                          │
+│ blocked          │ Dez did not start a replacement shell.                │
+│                  │ [Open new shell here] [Terminal Details]               │
+│                  │                                                       │
+│                  │ v Terminal Details                                    │
+│                  │ Owner · Workspace · Working directory                 │
+│                  │ Host generation · Endpoint · Evidence                 │
+├─────────────────┴──────────────────────────────────────────┤
+│ Workspace: dez | main | Host: unavailable                       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Unavailable and legacy records preserve evidence without claiming process
+death, liveness, ownership transfer, or migration. A fresh shell is explicitly
+separate computation. Terminal Details stays inline, and **Terminate legacy
+session…** remains a context-menu action behind native confirmation.
+
 ## Surface inventory
 
 | Surface | Owner | Primary job | Entry | Empty, failure, or recovery state |
@@ -340,8 +436,10 @@ the general Settings and raw JSON alternatives available.
 | Terminal | Main Work Area tab | run shell, TUI, task, or attach command | Home, tab `+`, File, Workspace menu | preserves output; launch failure deep-links to Terminal Launch settings; attach failure offers Retry or a fresh shell |
 | Terminal Details | inline Terminal disclosure | inspect lifecycle, ownership, cwd, and evidence | terminal context strip | connection uncertainty never claims process death |
 | Editor, diff, search, diagnostics | Main Work Area tabs | inspect and modify the codebase | native Zed actions | native Zed empty and error states |
-| Files, Outline, Git, Debug | Main Work Area tabs | inspect Workspace tools | tab `+`, View, terminal handoff | no permanent second drawer or column |
-| Built-in Agent | Main Work Area tab | use Zed's model-backed agent | tab `+`, Workspace menu | configure provider instead of opening a dead surface |
+| Agent Review | Main Work Area tab | inspect and decide agent edits | Review Changes, changed-file Review | pending edits disable decisions with an explanation; no custom overlay |
+| Git Changes and History | Main Work Area tabs | review repository state and commits | Review Changes, Git tool | loading has status feedback; failure alone offers Retry |
+| Files, Outline, Debug | Main Work Area tabs | inspect Workspace tools | tab `+`, View, terminal handoff | no permanent second drawer or column |
+| Built-in Agent | Main Work Area tab | use Zed's model-backed agent and supervise Subagents | tab `+`, Workspace menu | configure provider instead of opening a dead surface; Subagent handoff focuses the existing child Session |
 | Settings | native Settings surface | configure Workspace and terminal launch first, then agents and appearance | app menu, Command Palette | Workspace-dependent sections bind to the active Workspace |
 | Status bar | window | durable Workspace and editor context | visible by default | explicit preference may hide it; closed Workspaces keeps a labeled restore control |
 | Installation and access | Home plus Workspaces notice | unblock safe startup | startup preflight | install/relaunch or grant one exact folder; never background prompt loops |
@@ -392,6 +490,9 @@ the general Settings and raw JSON alternatives available.
   caught-up scope changes remain subordinate.
 - Native pane tabs remain the source of order, focus, dirty, close, and split
   truth.
+- Agent review disclosures and decisions remain keyboard reachable, and Git
+  History failure retries only the completed failed request.
+- Subagent supervision keeps state in text and opens the existing child Session.
 - Terminal Details expands inline and never obscures terminal output.
 - Provider and subagent glyphs use the shared icon family; lifecycle remains
   readable without color.

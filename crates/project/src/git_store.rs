@@ -6458,6 +6458,20 @@ impl Repository {
         }
     }
 
+    pub fn reset_failed_graph_data(&mut self, log_source: LogSource, log_order: LogOrder) -> bool {
+        let key = (log_source, log_order);
+        let can_retry = self
+            .initial_graph_data
+            .get(&key)
+            .is_some_and(|data| data.fetch_task.is_ready() && data.error.is_some());
+
+        if can_retry {
+            self.initial_graph_data.remove(&key);
+        }
+
+        can_retry
+    }
+
     async fn append_initial_graph_commits(
         this: &WeakEntity<Self>,
         graph_data_key: &(LogSource, LogOrder),

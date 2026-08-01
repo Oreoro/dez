@@ -1219,54 +1219,98 @@ impl Render for AgentDiffToolbar {
                 };
 
                 let editor_focus_handle = editor.read(cx).focus_handle(cx);
+                let previous_change_control = if paths::APP_NAME == "Zed" {
+                    IconButton::new("hunk-up", IconName::ArrowUp)
+                        .icon_size(IconSize::Small)
+                        .tab_index(0isize)
+                        .aria_label(previous_change_label)
+                        .tooltip(Tooltip::for_action_title_in(
+                            previous_change_label,
+                            &GoToPreviousHunk,
+                            &editor_focus_handle,
+                        ))
+                        .on_click({
+                            let editor_focus_handle = editor_focus_handle.clone();
+                            move |_, window, cx| {
+                                editor_focus_handle.dispatch_action(&GoToPreviousHunk, window, cx);
+                            }
+                        })
+                        .into_any_element()
+                } else {
+                    Button::new("hunk-up", previous_change_label)
+                        .style(ButtonStyle::Outlined)
+                        .label_size(LabelSize::Small)
+                        .start_icon(Icon::new(IconName::ArrowUp).size(IconSize::Small))
+                        .tab_index(0isize)
+                        .aria_label(previous_change_label)
+                        .tooltip(Tooltip::for_action_title_in(
+                            previous_change_label,
+                            &GoToPreviousHunk,
+                            &editor_focus_handle,
+                        ))
+                        .on_click({
+                            let editor_focus_handle = editor_focus_handle.clone();
+                            move |_, window, cx| {
+                                editor_focus_handle.dispatch_action(&GoToPreviousHunk, window, cx);
+                            }
+                        })
+                        .into_any_element()
+                };
+                let next_change_control = if paths::APP_NAME == "Zed" {
+                    IconButton::new("hunk-down", IconName::ArrowDown)
+                        .icon_size(IconSize::Small)
+                        .tab_index(0isize)
+                        .aria_label(next_change_label)
+                        .tooltip(Tooltip::for_action_title_in(
+                            next_change_label,
+                            &GoToHunk,
+                            &editor_focus_handle,
+                        ))
+                        .on_click({
+                            let editor_focus_handle = editor_focus_handle.clone();
+                            move |_, window, cx| {
+                                editor_focus_handle.dispatch_action(&GoToHunk, window, cx);
+                            }
+                        })
+                        .into_any_element()
+                } else {
+                    Button::new("hunk-down", next_change_label)
+                        .style(ButtonStyle::Outlined)
+                        .label_size(LabelSize::Small)
+                        .start_icon(Icon::new(IconName::ArrowDown).size(IconSize::Small))
+                        .tab_index(0isize)
+                        .aria_label(next_change_label)
+                        .tooltip(Tooltip::for_action_title_in(
+                            next_change_label,
+                            &GoToHunk,
+                            &editor_focus_handle,
+                        ))
+                        .on_click({
+                            let editor_focus_handle = editor_focus_handle.clone();
+                            move |_, window, cx| {
+                                editor_focus_handle.dispatch_action(&GoToHunk, window, cx);
+                            }
+                        })
+                        .into_any_element()
+                };
 
                 let content = match state {
                     EditorState::Idle => return Empty.into_any(),
                     EditorState::Reviewing => vec![
                         h_flex()
-                            .child(
-                                IconButton::new("hunk-up", IconName::ArrowUp)
-                                    .icon_size(IconSize::Small)
-                                    .aria_label(previous_change_label)
-                                    .tooltip(Tooltip::for_action_title_in(
-                                        previous_change_label,
-                                        &GoToPreviousHunk,
-                                        &editor_focus_handle,
-                                    ))
-                                    .on_click({
-                                        let editor_focus_handle = editor_focus_handle.clone();
-                                        move |_, window, cx| {
-                                            editor_focus_handle.dispatch_action(
-                                                &GoToPreviousHunk,
-                                                window,
-                                                cx,
-                                            );
-                                        }
-                                    }),
-                            )
-                            .child(
-                                IconButton::new("hunk-down", IconName::ArrowDown)
-                                    .icon_size(IconSize::Small)
-                                    .aria_label(next_change_label)
-                                    .tooltip(Tooltip::for_action_title_in(
-                                        next_change_label,
-                                        &GoToHunk,
-                                        &editor_focus_handle,
-                                    ))
-                                    .on_click({
-                                        let editor_focus_handle = editor_focus_handle.clone();
-                                        move |_, window, cx| {
-                                            editor_focus_handle
-                                                .dispatch_action(&GoToHunk, window, cx);
-                                        }
-                                    }),
-                            )
+                            .gap_0p5()
+                            .children([previous_change_control, next_change_control])
                             .into_any_element(),
                         Divider::vertical().into_any_element(),
                         h_flex()
                             .gap_0p5()
                             .child(
                                 Button::new("reject-all", reject_all_label)
+                                    .when(paths::APP_NAME != "Zed", |this| {
+                                        this.style(ButtonStyle::Outlined)
+                                    })
+                                    .tab_index(0isize)
+                                    .aria_label(reject_all_label)
                                     .key_binding({
                                         KeyBinding::for_action_in(
                                             &RejectAll,
@@ -1281,6 +1325,11 @@ impl Render for AgentDiffToolbar {
                             )
                             .child(
                                 Button::new("keep-all", keep_all_label)
+                                    .when(paths::APP_NAME != "Zed", |this| {
+                                        this.style(ButtonStyle::Outlined)
+                                    })
+                                    .tab_index(0isize)
+                                    .aria_label(keep_all_label)
                                     .key_binding({
                                         KeyBinding::for_action_in(
                                             &KeepAll,
@@ -1309,6 +1358,7 @@ impl Render for AgentDiffToolbar {
                         this.child(
                             IconButton::new("review", IconName::ListTodo)
                                 .icon_size(IconSize::Small)
+                                .tab_index(0isize)
                                 .aria_label(review_all_label)
                                 .tooltip(Tooltip::for_action_title_in(
                                     review_all_label,
@@ -1364,6 +1414,11 @@ impl Render for AgentDiffToolbar {
                         h_group_sm()
                             .child(
                                 Button::new("reject-all", reject_all_label)
+                                    .when(paths::APP_NAME != "Zed", |this| {
+                                        this.style(ButtonStyle::Outlined)
+                                    })
+                                    .tab_index(0isize)
+                                    .aria_label(reject_all_label)
                                     .key_binding({
                                         KeyBinding::for_action_in(&RejectAll, &focus_handle, cx)
                                             .map(|kb| kb.size(rems_from_px(12.)))
@@ -1374,6 +1429,11 @@ impl Render for AgentDiffToolbar {
                             )
                             .child(
                                 Button::new("keep-all", keep_all_label)
+                                    .when(paths::APP_NAME != "Zed", |this| {
+                                        this.style(ButtonStyle::Outlined)
+                                    })
+                                    .tab_index(0isize)
+                                    .aria_label(keep_all_label)
                                     .key_binding({
                                         KeyBinding::for_action_in(&KeepAll, &focus_handle, cx)
                                             .map(|kb| kb.size(rems_from_px(12.)))

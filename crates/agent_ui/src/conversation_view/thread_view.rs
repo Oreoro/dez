@@ -132,6 +132,24 @@ fn subagent_preview_available(has_expandable_content: bool, is_pending_tool_call
     has_expandable_content && !is_pending_tool_call
 }
 
+fn edits_disclosure_accessibility_label(expanded: bool, file_count: usize) -> String {
+    let action = if expanded { "Collapse" } else { "Expand" };
+    let noun = if file_count == 1 { "file" } else { "files" };
+    format!("{action} {file_count} changed {noun}")
+}
+
+fn edit_summary_action_label(
+    app_name: &str,
+    zed_label: &'static str,
+    dez_label: &'static str,
+) -> &'static str {
+    if app_name == "Zed" {
+        zed_label
+    } else {
+        dez_label
+    }
+}
+
 #[derive(Default)]
 struct ThreadFeedbackState {
     feedback: Option<ThreadFeedback>,
@@ -4180,6 +4198,46 @@ impl ThreadView {
         cx: &Context<Self>,
     ) -> Div {
         let focus_handle = self.focus_handle(cx);
+        let is_dez = paths::APP_NAME != "Zed";
+        let disclosure_accessibility_label =
+            edits_disclosure_accessibility_label(expanded, changed_buffers.len());
+        let reject_all_label =
+            edit_summary_action_label(paths::APP_NAME, "Reject All", "Reject All Changes");
+        let keep_all_label =
+            edit_summary_action_label(paths::APP_NAME, "Keep All", "Keep All Changes");
+        let review_action = if is_dez {
+            Button::new("review-changes", "Review Changes")
+                .style(ButtonStyle::Filled)
+                .label_size(LabelSize::Small)
+                .start_icon(Icon::new(IconName::ListTodo).size(IconSize::Small))
+                .tab_index(0isize)
+                .aria_label("Review Changes")
+                .tooltip({
+                    let focus_handle = focus_handle.clone();
+                    move |_window, cx| {
+                        Tooltip::for_action_in("Review Changes", &OpenAgentDiff, &focus_handle, cx)
+                    }
+                })
+                .on_click(cx.listener(|_, _, window, cx| {
+                    window.dispatch_action(OpenAgentDiff.boxed_clone(), cx);
+                }))
+                .into_any_element()
+        } else {
+            IconButton::new("review-changes", IconName::ListTodo)
+                .icon_size(IconSize::Small)
+                .tab_index(0isize)
+                .aria_label("Review Changes")
+                .tooltip({
+                    let focus_handle = focus_handle.clone();
+                    move |_window, cx| {
+                        Tooltip::for_action_in("Review Changes", &OpenAgentDiff, &focus_handle, cx)
+                    }
+                })
+                .on_click(cx.listener(|_, _, window, cx| {
+                    window.dispatch_action(OpenAgentDiff.boxed_clone(), cx);
+                }))
+                .into_any_element()
+        };
 
         h_flex()
             .p_1()
@@ -4191,6 +4249,10 @@ impl ThreadView {
             .child(
                 h_flex()
                     .id("edits-container")
+                    .role(gpui::Role::Button)
+                    .tab_index(0isize)
+                    .aria_label(disclosure_accessibility_label.clone())
+                    .tooltip(Tooltip::text(disclosure_accessibility_label))
                     .cursor_pointer()
                     .gap_1()
                     .child(Disclosure::new("edits-disclosure", expanded))
@@ -4254,36 +4316,30 @@ impl ThreadView {
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.edits_expanded = !this.edits_expanded;
                         cx.notify();
+                    }))
+                    .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, _, cx| {
+                        if event.keystroke.modifiers.modified() {
+                            return;
+                        }
+                        if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+                            this.edits_expanded = !this.edits_expanded;
+                            cx.stop_propagation();
+                            cx.notify();
+                        }
                     })),
             )
             .child(
                 h_flex()
                     .gap_1()
-                    .child(
-                        IconButton::new("review-changes", IconName::ListTodo)
-                            .icon_size(IconSize::Small)
-                            .tab_index(0isize)
-                            .aria_label("Review Changes")
-                            .tooltip({
-                                let focus_handle = focus_handle.clone();
-                                move |_window, cx| {
-                                    Tooltip::for_action_in(
-                                        "Review Changes",
-                                        &OpenAgentDiff,
-                                        &focus_handle,
-                                        cx,
-                                    )
-                                }
-                            })
-                            .on_click(cx.listener(|_, _, window, cx| {
-                                window.dispatch_action(OpenAgentDiff.boxed_clone(), cx);
-                            })),
-                    )
+                    .flex_wrap()
+                    .child(review_action)
                     .child(Divider::vertical().color(DividerColor::Border))
                     .child(
-                        Button::new("reject-all-changes", "Reject All")
+                        Button::new("reject-all-changes", reject_all_label)
                             .label_size(LabelSize::Small)
+                            .when(is_dez, |this| this.style(ButtonStyle::Outlined))
                             .tab_index(0isize)
+                            .aria_label(reject_all_label)
                             .disabled(pending_edits)
                             .when(pending_edits, |this| {
                                 this.tooltip(Tooltip::text(EDIT_NOT_READY_TOOLTIP_LABEL))
@@ -4297,9 +4353,11 @@ impl ThreadView {
                             })),
                     )
                     .child(
-                        Button::new("keep-all-changes", "Keep All")
+                        Button::new("keep-all-changes", keep_all_label)
                             .label_size(LabelSize::Small)
+                            .when(is_dez, |this| this.style(ButtonStyle::Outlined))
                             .tab_index(0isize)
+                            .aria_label(keep_all_label)
                             .disabled(pending_edits)
                             .when(pending_edits, |this| {
                                 this.tooltip(Tooltip::text(EDIT_NOT_READY_TOOLTIP_LABEL))
@@ -11436,7 +11494,11 @@ impl ThreadView {
                             "Open Subagent Session",
                         )
                         .full_width()
-                        .style(ButtonStyle::Subtle)
+                        .style(if paths::APP_NAME == "Zed" {
+                            ButtonStyle::Subtle
+                        } else {
+                            ButtonStyle::Outlined
+                        })
                         .label_size(LabelSize::Small)
                         .start_icon(
                             Icon::new(IconName::Maximize)
@@ -11444,6 +11506,7 @@ impl ThreadView {
                                 .size(IconSize::Small),
                         )
                         .tab_index(0isize)
+                        .aria_label("Open this Subagent Session")
                         .tooltip(Tooltip::text(
                             "Open this exact Subagent Session in the Agent work area",
                         ))
@@ -13426,6 +13489,22 @@ mod tests {
         assert!(subagent_preview_available(true, false));
         assert!(!subagent_preview_available(false, false));
         assert!(!subagent_preview_available(true, true));
+        assert_eq!(
+            edits_disclosure_accessibility_label(false, 3),
+            "Expand 3 changed files"
+        );
+        assert_eq!(
+            edits_disclosure_accessibility_label(true, 1),
+            "Collapse 1 changed file"
+        );
+        assert_eq!(
+            edit_summary_action_label("Dez", "Reject All", "Reject All Changes"),
+            "Reject All Changes"
+        );
+        assert_eq!(
+            edit_summary_action_label("Zed", "Reject All", "Reject All Changes"),
+            "Reject All"
+        );
     }
 
     fn native_command(name: &str) -> acp::AvailableCommand {

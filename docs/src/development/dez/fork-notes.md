@@ -1988,3 +1988,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   **Default Terminal** control through **Edit Terminal Settings**. Add and
   Switch Tab remain alternate native pane menus, and Browse Running Sessions
   continues to focus Workspaces without creating another page.
+- **2026-08-02: Review and recovery remain in their owning native surfaces.**
+  Agent edit disclosures expose expanded state and file count to keyboard and
+  assistive navigation; **Review Changes** is the visible inspection route,
+  while **Reject All Changes** and **Keep All Changes** name their whole-review
+  scope. Git History uses distinct loading, failed, missing-repository, and
+  no-commit states, and failure retries only after removing the completed
+  failed graph request. **Open Subagent Session** focuses the existing child
+  Session instead of creating a second record. Unavailable and legacy terminals
+  preserve evidence and never imply migration or an automatic replacement.
