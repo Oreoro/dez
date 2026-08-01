@@ -1583,7 +1583,7 @@ impl SettingsPageItem {
                             )
                             .tab_index(0_isize)
                             .end_icon(
-                                Icon::new(IconName::ArrowUpRight)
+                                Icon::new(action_link.icon)
                                     .size(IconSize::Small)
                                     .color(Color::Muted),
                             )
@@ -1905,6 +1905,7 @@ struct ActionLink {
     title: SharedString,
     description: Option<SharedString>,
     button_text: SharedString,
+    icon: IconName,
     on_click: Arc<dyn Fn(&mut SettingsWindow, &mut Window, &mut App) + Send + Sync>,
     files: FileMask,
 }

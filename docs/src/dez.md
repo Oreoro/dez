@@ -84,8 +84,11 @@ registry can also place user-defined agent actions in cmux's own tab bar and
 Command Palette; Dez does not import or rewrite that configuration. Dez
 deliberately does not reproduce that layout inside the editor. **Settings →
 Workspaces & Terminals → Terminal Launch → cmux Integration** links to the
-documented local API and access modes. cmux may reject API calls made outside a
-cmux-owned terminal because **cmux processes only** is its secure default. Cross-app
+documented local API and access modes. Its external-arrow affordance is a
+documentation handoff, not a toggle that mutates cmux. Internal Settings
+actions use their own reset, keyboard, reference, or run marks instead. cmux
+may reject API calls made outside a cmux-owned terminal because **cmux processes
+only** is its secure default. Cross-app
 discovery requires the documented `CMUX_SOCKET_MODE=allowAll` environment
 override when the user deliberately accepts that local access boundary; Dez
 never changes it. A process-only refusal is the expected **Access required**

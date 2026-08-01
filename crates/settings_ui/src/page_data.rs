@@ -8,7 +8,7 @@ use settings::{
 use std::sync::{Arc, OnceLock};
 use strum::{EnumMessage, IntoDiscriminant as _, VariantArray};
 use theme::SystemAppearance;
-use ui::IntoElement;
+use ui::{IconName, IntoElement};
 
 use crate::{
     ActionLink, DynamicItem, PROJECT, SettingField, SettingItem, SettingsFieldMetadata,
@@ -284,10 +284,11 @@ fn cmux_integration_action_link() -> SettingsPageItem {
     SettingsPageItem::ActionLink(ActionLink {
         title: "cmux Integration".into(),
         description: Some(
-            "cmux stays an external Workspace. Open Workspace in cmux works without live sharing. Enable cross-app API access only if you want cmux Workspace, port, and notification rows in Dez; Dez never changes cmux permissions or hooks."
+            "cmux owns its tabs, splits, browser, agent hooks, and action registry. Open Workspace in cmux works without live sharing. Enable cross-app API access only if you want cmux Workspace, port, and notification rows in Dez; Dez never changes cmux permissions or hooks."
                 .into(),
         ),
         button_text: "Open cmux API Guide".into(),
+        icon: IconName::ArrowUpRight,
         on_click: Arc::new(|_settings_window, _window, cx| {
             cx.open_url("https://cmux.com/docs/api");
         }),
@@ -892,6 +893,7 @@ fn appearance_page() -> SettingsPage {
                         .into(),
                 ),
                 button_text: "Restore Profile".into(),
+                icon: IconName::RotateCcw,
                 on_click: Arc::new(|settings_window, window, cx| {
                     let Some(original_window) = settings_window.original_window else {
                         return;
@@ -1926,17 +1928,21 @@ fn keymap_page() -> SettingsPage {
                         .into(),
                 ),
                 button_text: "Open Keymap".into(),
+                icon: IconName::Keyboard,
                 on_click: Arc::new(|settings_window, window, cx| {
                     let Some(original_window) = settings_window.original_window else {
                         return;
                     };
-                    original_window
-                        .update(cx, |_workspace, original_window, cx| {
+                    if let Err(error) =
+                        original_window.update(cx, |_workspace, original_window, cx| {
                             original_window
                                 .dispatch_action(zed_actions::OpenKeymap.boxed_clone(), cx);
                             original_window.activate_window();
                         })
-                        .ok();
+                    {
+                        log::error!("failed to open the native keymap editor: {error}");
+                        return;
+                    }
                     window.remove_window();
                 }),
                 files: USER,
@@ -1948,17 +1954,21 @@ fn keymap_page() -> SettingsPage {
                         .into(),
                 ),
                 button_text: "View Defaults".into(),
+                icon: IconName::Book,
                 on_click: Arc::new(|settings_window, window, cx| {
                     let Some(original_window) = settings_window.original_window else {
                         return;
                     };
-                    original_window
-                        .update(cx, |_workspace, original_window, cx| {
+                    if let Err(error) =
+                        original_window.update(cx, |_workspace, original_window, cx| {
                             original_window
                                 .dispatch_action(zed_actions::OpenDefaultKeymap.boxed_clone(), cx);
                             original_window.activate_window();
                         })
-                        .ok();
+                    {
+                        log::error!("failed to open the default keymap: {error}");
+                        return;
+                    }
                     window.remove_window();
                 }),
                 files: USER,
@@ -8723,6 +8733,7 @@ fn collaboration_page() -> SettingsPage {
                 title: "Test Audio".into(),
                 description: Some("Test your microphone and speaker setup".into()),
                 button_text: "Test Audio".into(),
+                icon: IconName::PlayFilled,
                 on_click: Arc::new(|_settings_window, window, cx| {
                     open_audio_test_window(window, cx);
                 }),
@@ -11908,6 +11919,21 @@ mod tests {
         assert_eq!(
             terminal_launcher_for_content(&settings_content),
             settings::TerminalLauncher::Tmux
+        );
+
+        let cmux_action = match cmux_integration_action_link() {
+            SettingsPageItem::ActionLink(action_link) => {
+                Some((action_link.title, action_link.button_text, action_link.icon))
+            }
+            _ => None,
+        };
+        assert_eq!(
+            cmux_action,
+            Some((
+                "cmux Integration".into(),
+                "Open cmux API Guide".into(),
+                IconName::ArrowUpRight,
+            ))
         );
     }
 
