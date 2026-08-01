@@ -294,6 +294,13 @@ with `tmux new-session -A`;
 discovered sessions remain available individually in Workspaces. Arbitrary
 machine PTYs remain excluded.
 
+The active Workspace always keeps its compact terminal launcher visible, even
+before a Session exists. That menu exposes the Default Terminal, Native Shell,
+Workspace tmux, supported agent CLIs, and cmux handoff without requiring users
+to leave Workspaces for an empty Main Work Area. Inactive expanded Workspaces
+retain one labeled **Open Terminal** row, keeping each codebase's launch target
+clear without duplicating actions.
+
 Opening the active Workspace in cmux also has a bounded handoff. If cmux does
 not respond within eight seconds, Dez keeps the Workspace open, ends the
 progress state, and keeps a native recovery toast visible instead of leaving an

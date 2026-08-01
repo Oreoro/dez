@@ -1365,9 +1365,10 @@ fn workspace_header_terminal_action_visible(
     app_name: &str,
     has_sessions: bool,
     is_collapsed: bool,
+    is_active: bool,
 ) -> bool {
     if app_name == "Dez" {
-        has_sessions || is_collapsed
+        has_sessions || is_collapsed || is_active
     } else {
         app_name != "Zed" || has_sessions || is_collapsed
     }
@@ -2337,11 +2338,14 @@ mod workspace_header_label_tests {
         );
         assert_eq!(workspace_access_root_label(Path::new("/")), "/");
         assert_eq!(workspace_new_terminal_tooltip_label("Dez"), "Open Terminal");
-        assert!(!workspace_header_terminal_action_visible(
-            "Dez", false, false
+        assert!(workspace_header_terminal_action_visible(
+            "Dez", false, false, true
         ));
         assert!(!workspace_header_terminal_action_visible(
-            "Zed", false, false
+            "Dez", false, false, false
+        ));
+        assert!(!workspace_header_terminal_action_visible(
+            "Zed", false, false, true
         ));
         assert!(!workspace_new_terminal_control_label("Dez", "compiler").contains("header-group"));
         assert!(!workspace_options_control_label("compiler").contains("header-group"));
@@ -7957,6 +7961,7 @@ impl Sidebar {
                             APP_NAME,
                             has_threads || (APP_NAME == "Dez" && !external_sessions.is_empty()),
                             is_collapsed,
+                            is_active,
                         )
                         .then(|| {
                             self.render_new_session_button(

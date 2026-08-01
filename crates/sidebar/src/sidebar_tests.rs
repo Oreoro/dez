@@ -306,26 +306,30 @@ fn active_or_focused_workspace_keeps_its_new_terminal_action_discoverable() {
 }
 
 #[test]
-fn dez_empty_workspace_moves_terminal_creation_to_one_labeled_row() {
+fn dez_empty_workspace_keeps_one_workspace_scoped_terminal_launcher() {
     assert!(
-        !workspace_header_terminal_action_visible("Dez", false, false),
-        "an expanded empty Dez Workspace gives terminal creation to its labeled row"
+        workspace_header_terminal_action_visible("Dez", false, false, true),
+        "the active Workspace keeps a compact terminal menu even before it has sessions"
     );
     assert!(
-        workspace_header_terminal_action_visible("Dez", false, true),
+        !workspace_header_terminal_action_visible("Dez", false, false, false),
+        "an inactive expanded Workspace gives terminal creation to its labeled row"
+    );
+    assert!(
+        workspace_header_terminal_action_visible("Dez", false, true, false),
         "a collapsed empty Workspace still needs a compact terminal action in its header"
     );
     assert!(
-        workspace_header_terminal_action_visible("Dez", true, false),
+        workspace_header_terminal_action_visible("Dez", true, false, false),
         "a Workspace with activity keeps terminal creation available in its compact header"
     );
     assert!(
-        !workspace_header_terminal_action_visible("Zed", false, false),
+        !workspace_header_terminal_action_visible("Zed", false, false, true),
         "upstream Zed retains its labeled empty-session action"
     );
     assert!(
         !workspace_empty_terminal_row_visible_for_active_state("Dez", true),
-        "the active Workspace already exposes terminal creation in the Main Work Area"
+        "the active Workspace uses its compact header menu instead of a second labeled row"
     );
     assert!(
         workspace_empty_terminal_row_visible_for_active_state("Dez", false),
