@@ -5750,55 +5750,70 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                         )
                         .separator()
                         .submenu("Open Terminal", |menu, _, _| {
-                            menu.action(
+                            menu.action_with_icon(
                                 "Default Terminal",
+                                IconName::Terminal,
                                 zed_actions::terminal::OpenAgentTerminal.boxed_clone(),
                             )
-                            .action(
+                            .action_with_icon(
                                 "Native Shell",
+                                IconName::Terminal,
                                 zed_actions::terminal::OpenShellTerminal.boxed_clone(),
                             )
-                            .action(
+                            .action_with_icon(
                                 "tmux Session",
+                                IconName::SplitAlt,
                                 zed_actions::terminal::OpenTmuxTerminal.boxed_clone(),
                             )
                             .separator()
-                            .action(
+                            .action_with_icon(
                                 "Codex",
+                                IconName::AiOpenAi,
                                 zed_actions::terminal::OpenCodexTerminal.boxed_clone(),
                             )
-                            .action(
+                            .action_with_icon(
                                 "Claude Code",
+                                IconName::AiClaude,
                                 zed_actions::terminal::OpenClaudeCodeTerminal.boxed_clone(),
                             )
-                            .action(
+                            .action_with_icon(
                                 "OpenCode",
+                                IconName::AiOpenCode,
                                 zed_actions::terminal::OpenOpenCodeTerminal.boxed_clone(),
                             )
                         })
                         .submenu("Continue Agent", |menu, _, _| {
-                            menu.action(
+                            menu.action_with_icon(
                                 "Codex · Last Session",
+                                IconName::AiOpenAi,
                                 zed_actions::terminal::ResumeCodexTerminal.boxed_clone(),
                             )
-                            .action(
+                            .action_with_icon(
                                 "Claude Code · Last Session",
+                                IconName::AiClaude,
                                 zed_actions::terminal::ResumeClaudeCodeTerminal.boxed_clone(),
                             )
-                            .action(
+                            .action_with_icon(
                                 "OpenCode · Last Session",
+                                IconName::AiOpenCode,
                                 zed_actions::terminal::ResumeOpenCodeTerminal.boxed_clone(),
                             )
                         })
-                        .action("Open Built-in Agent", RevealBuiltInAgent.boxed_clone())
+                        .action_with_icon(
+                            "Open Built-in Agent",
+                            IconName::DezAgent,
+                            RevealBuiltInAgent.boxed_clone(),
+                        )
                         .separator()
-                        .action(
+                        .action_with_icon(
                             "Browse Running Sessions…",
+                            IconName::ListTree,
                             BrowseRunningSessions.boxed_clone(),
                         )
                         .when(cmux_handoff_applicable, |menu| {
-                            menu.action(
+                            menu.action_with_icon(
                                 "Open Workspace in cmux",
+                                IconName::ArrowUpRight,
                                 zed_actions::dez::OpenWorkspaceInCmux.boxed_clone(),
                             )
                         })

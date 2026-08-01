@@ -8501,77 +8501,119 @@ impl Sidebar {
                             menu.submenu(
                                 terminal_launch_label(APP_NAME),
                                 move |mut submenu, _window, _cx| {
-                                    for (label, startup_command) in [
+                                    for (label, icon, startup_command) in [
                                         (
                                             configured_terminal_launcher_label(
                                                 configured_command.as_deref(),
                                             ),
+                                            IconName::Terminal,
                                             None,
                                         ),
-                                        ("Native Shell".to_owned(), Some(String::new())),
+                                        (
+                                            "Native Shell".to_owned(),
+                                            IconName::Terminal,
+                                            Some(String::new()),
+                                        ),
                                         (
                                             "tmux Session".to_owned(),
+                                            IconName::SplitAlt,
                                             Some(tmux_startup_command.clone()),
                                         ),
-                                        ("Codex".to_owned(), Some("codex".to_owned())),
-                                        ("Claude Code".to_owned(), Some("claude".to_owned())),
-                                        ("OpenCode".to_owned(), Some("opencode".to_owned())),
+                                        (
+                                            "Codex".to_owned(),
+                                            IconName::AiOpenAi,
+                                            Some("codex".to_owned()),
+                                        ),
+                                        (
+                                            "Claude Code".to_owned(),
+                                            IconName::AiClaude,
+                                            Some("claude".to_owned()),
+                                        ),
+                                        (
+                                            "OpenCode".to_owned(),
+                                            IconName::AiOpenCode,
+                                            Some("opencode".to_owned()),
+                                        ),
                                     ] {
                                         let terminal_sidebar = terminal_sidebar.clone();
                                         let terminal_key = terminal_key.clone();
                                         let terminal_menu = terminal_menu.clone();
-                                        submenu = submenu.entry(label, None, move |window, cx| {
-                                            terminal_sidebar
-                                                .update(cx, |sidebar, cx| {
-                                                    sidebar.create_terminal_in_project_group(
-                                                        &terminal_key,
-                                                        startup_command.clone(),
-                                                        window,
-                                                        cx,
-                                                    );
-                                                })
-                                                .ok();
-                                            terminal_menu
-                                                .update(cx, |_, cx| cx.emit(DismissEvent))
-                                                .ok();
-                                        });
+                                        submenu = submenu.item(
+                                            ContextMenuEntry::new(label).icon(icon).handler(
+                                                move |window, cx| {
+                                                    terminal_sidebar
+                                                        .update(cx, |sidebar, cx| {
+                                                            sidebar
+                                                                .create_terminal_in_project_group(
+                                                                    &terminal_key,
+                                                                    startup_command.clone(),
+                                                                    window,
+                                                                    cx,
+                                                                );
+                                                        })
+                                                        .ok();
+                                                    terminal_menu
+                                                        .update(cx, |_, cx| cx.emit(DismissEvent))
+                                                        .ok();
+                                                },
+                                            ),
+                                        );
                                     }
                                     submenu
                                 },
                             )
                             .submenu("Continue Agent", move |mut submenu, _window, _cx| {
-                                for (label, startup_command) in [
-                                    ("Codex · Last Session", "codex resume --last"),
-                                    ("Claude Code · Last Session", "claude --continue"),
-                                    ("OpenCode · Last Session", "opencode --continue"),
+                                for (label, icon, startup_command) in [
+                                    (
+                                        "Codex · Last Session",
+                                        IconName::AiOpenAi,
+                                        "codex resume --last",
+                                    ),
+                                    (
+                                        "Claude Code · Last Session",
+                                        IconName::AiClaude,
+                                        "claude --continue",
+                                    ),
+                                    (
+                                        "OpenCode · Last Session",
+                                        IconName::AiOpenCode,
+                                        "opencode --continue",
+                                    ),
                                 ] {
                                     let resume_sidebar = resume_sidebar.clone();
                                     let resume_key = resume_key.clone();
                                     let resume_menu = resume_menu.clone();
-                                    submenu = submenu.entry(label, None, move |window, cx| {
-                                        resume_sidebar
-                                            .update(cx, |sidebar, cx| {
-                                                sidebar.create_terminal_in_project_group(
-                                                    &resume_key,
-                                                    Some(startup_command.to_owned()),
-                                                    window,
-                                                    cx,
-                                                );
-                                            })
-                                            .ok();
-                                        resume_menu.update(cx, |_, cx| cx.emit(DismissEvent)).ok();
-                                    });
+                                    submenu = submenu.item(
+                                        ContextMenuEntry::new(label).icon(icon).handler(
+                                            move |window, cx| {
+                                                resume_sidebar
+                                                    .update(cx, |sidebar, cx| {
+                                                        sidebar.create_terminal_in_project_group(
+                                                            &resume_key,
+                                                            Some(startup_command.to_owned()),
+                                                            window,
+                                                            cx,
+                                                        );
+                                                    })
+                                                    .ok();
+                                                resume_menu
+                                                    .update(cx, |_, cx| cx.emit(DismissEvent))
+                                                    .ok();
+                                            },
+                                        ),
+                                    );
                                 }
                                 submenu
                             })
                             .separator()
-                            .entry(
-                                workspace_built_in_agent_action_label(
+                            .item(
+                                ContextMenuEntry::new(workspace_built_in_agent_action_label(
                                     APP_NAME,
                                     built_in_agent_ready,
-                                ),
-                                Some(Box::new(NewThreadInGroup)),
-                                move |window, cx| {
+                                ))
+                                .icon(IconName::DezAgent)
+                                .action(Box::new(NewThreadInGroup))
+                                .handler(move |window, cx| {
                                     new_agent_sidebar
                                         .update(cx, |sidebar, cx| {
                                             sidebar.set_group_expanded(&new_agent_key, true, cx);
@@ -8593,26 +8635,26 @@ impl Sidebar {
                                     new_agent_menu
                                         .update(cx, |_, cx| cx.emit(DismissEvent))
                                         .ok();
-                                },
+                                }),
                             )
                             .when(
                                 project_group_key.host().is_none(),
                                 |menu| {
-                                    menu.separator().entry(
-                                        "Open Workspace in cmux",
-                                        None,
-                                        move |window, cx| {
-                                            cmux_sidebar
-                                                .update(cx, |sidebar, cx| {
-                                                    sidebar.open_project_group_in_cmux(
-                                                        &cmux_key, window, cx,
-                                                    );
-                                                })
-                                                .ok();
-                                            cmux_menu
-                                                .update(cx, |_, cx| cx.emit(DismissEvent))
-                                                .ok();
-                                        },
+                                    menu.separator().item(
+                                        ContextMenuEntry::new("Open Workspace in cmux")
+                                            .icon(IconName::ArrowUpRight)
+                                            .handler(move |window, cx| {
+                                                cmux_sidebar
+                                                    .update(cx, |sidebar, cx| {
+                                                        sidebar.open_project_group_in_cmux(
+                                                            &cmux_key, window, cx,
+                                                        );
+                                                    })
+                                                    .ok();
+                                                cmux_menu
+                                                    .update(cx, |_, cx| cx.emit(DismissEvent))
+                                                    .ok();
+                                            }),
                                     )
                                 },
                             )

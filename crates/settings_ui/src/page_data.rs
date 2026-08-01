@@ -158,7 +158,7 @@ fn terminal_session_init_setting_copy(app_name: &str) -> (&'static str, &'static
     } else {
         (
             "Default Terminal Command",
-            "Command used by Open Terminal and Ctrl+`. Leave blank for the native shell. The pane + and File menu keep one-off Native Shell, tmux, Codex, Claude Code, and OpenCode launchers plus Continue Agent routes without changing this default.",
+            "Open Terminal and Ctrl+` start this command in a native Workspace tab. Leave blank for the native shell. The pane + and File → Open Terminal keep one-off Native Shell, tmux, Codex, Claude Code, and OpenCode launchers plus Continue Agent routes without changing this default.",
         )
     }
 }
@@ -216,7 +216,7 @@ fn cmux_integration_action_link() -> SettingsPageItem {
     SettingsPageItem::ActionLink(ActionLink {
         title: "cmux Integration".into(),
         description: Some(
-            "cmux owns its agent actions and pane layouts. Dez hands off local Workspace paths and reads Workspace and notification metadata through cmux's documented local API when cmux permits automation access. Dez never changes cmux access or hook settings."
+            "cmux owns its agent actions and pane layouts. Dez hands off local Workspace paths and reads read-only Workspace and notification metadata only when cmux permits cross-app socket access. cmux's secure default may reject Dez; Dez never changes its access mode or hooks."
                 .into(),
         ),
         button_text: "Open API Guide".into(),
@@ -11766,7 +11766,7 @@ mod tests {
             terminal_session_init_setting_copy("Dez"),
             (
                 "Default Terminal Command",
-                "Command used by Open Terminal and Ctrl+`. Leave blank for the native shell. The pane + and File → Open Terminal keep explicit Native Shell, tmux, Codex, Claude Code, and OpenCode routes without changing this default.",
+                "Open Terminal and Ctrl+` start this command in a native Workspace tab. Leave blank for the native shell. The pane + and File → Open Terminal keep one-off Native Shell, tmux, Codex, Claude Code, and OpenCode launchers plus Continue Agent routes without changing this default.",
             )
         );
         assert_eq!(

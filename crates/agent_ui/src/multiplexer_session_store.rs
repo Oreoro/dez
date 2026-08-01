@@ -350,6 +350,15 @@ impl MultiplexerSessionStore {
         let (sessions, source_issues, source_statuses, successful_sources) =
             reconcile_external_multiplexer_sessions(&self.sessions, scan, &self.successful_sources);
         self.successful_sources.extend(successful_sources);
+        for issue in &source_issues {
+            if source_issue_is_new(&self.source_issues, issue) {
+                log::debug!(
+                    "{} discovery issue: {}",
+                    issue.kind.display_name(),
+                    issue.summary
+                );
+            }
+        }
         if self.sessions != sessions
             || self.source_issues != source_issues
             || self.source_statuses != source_statuses
@@ -544,10 +553,6 @@ fn reconcile_external_multiplexer_sessions(
                 });
             }
             Err(error) => {
-                log::debug!(
-                    "{} discovery failed; preserving its last known sessions: {error:#}",
-                    kind.display_name()
-                );
                 let last_known_sessions = previous_sessions
                     .iter()
                     .filter(|session| session.kind == kind)
@@ -588,6 +593,13 @@ fn reconcile_external_multiplexer_sessions(
         source_statuses,
         newly_successful_sources,
     )
+}
+
+fn source_issue_is_new(
+    previous_issues: &[MultiplexerSourceIssue],
+    issue: &MultiplexerSourceIssue,
+) -> bool {
+    !previous_issues.contains(issue)
 }
 
 fn concise_discovery_error(error: &anyhow::Error) -> String {
@@ -1586,6 +1598,26 @@ mod tests {
             CMUX_COMPATIBILITY_WORKSPACE_LIST_ARGS,
             &["workspace", "list", "--json"]
         );
+    }
+
+    #[test]
+    fn repeated_source_issue_is_not_new_until_its_state_changes() {
+        let issue = MultiplexerSourceIssue {
+            kind: MultiplexerKind::Cmux,
+            summary: "cmux access is unavailable".to_owned(),
+            had_successful_scan: false,
+        };
+        assert!(source_issue_is_new(&[], &issue));
+        assert!(!source_issue_is_new(std::slice::from_ref(&issue), &issue));
+
+        let recovered_then_failed = MultiplexerSourceIssue {
+            had_successful_scan: true,
+            ..issue.clone()
+        };
+        assert!(source_issue_is_new(
+            std::slice::from_ref(&issue),
+            &recovered_then_failed
+        ));
     }
 
     #[test]

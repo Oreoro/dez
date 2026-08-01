@@ -415,7 +415,7 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
             SectionEntry {
                 icon: IconName::ListTree,
                 title: "Browse Running Sessions…",
-                meta: Some("Watch agent activity"),
+                meta: Some("tmux, Herdr, and cmux"),
                 action: &BROWSE_RUNNING_SESSIONS,
                 visibility_guard: SectionVisibility::Always,
             },
@@ -1417,7 +1417,7 @@ mod tests {
         );
         assert_eq!(
             DEZ_WORKSPACE_CONTENT.0.entries[1].meta,
-            Some("Watch agent activity")
+            Some("tmux, Herdr, and cmux")
         );
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[2].title, "Open Files");
         assert_eq!(

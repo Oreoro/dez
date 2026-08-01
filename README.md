@@ -147,7 +147,8 @@ navigation system. The default launch command lives under **Settings →
 Workspaces & Terminals → Terminal Launch → Default Terminal Command**;
 **cmux Integration** beside it opens cmux's API guide and explains the external
 automation boundary. cmux still owns its custom actions and multi-pane layouts;
-Dez keeps those layouts externally owned.
+Dez keeps those layouts externally owned. Its secure socket default accepts
+cmux-owned processes; Dez never enables cross-app access on the user's behalf.
 Provider launchers and Continue actions remain one-off choices. **Settings → Keyboard & Vim**
 exposes shortcut search, conflict inspection, base keymaps, and optional full
 Vim or Helix editing. Vim and Helix share native leader destinations for
@@ -182,6 +183,11 @@ cmux stays an external native application and receives the active path through
 its documented `cmux open <path>` command. Dez contributes Workspace context,
 native tabs and splits, durable ownership for eligible Dez-created terminals,
 attention, and direct Files/Git review routes.
+
+Native launch menus keep identity visible before a terminal starts: Codex,
+Claude Code, and OpenCode use their provider marks, the Built-in Agent uses the
+Dez Agent mark, and shell or multiplexer routes retain terminal-specific icons.
+Those marks identify ownership; live state remains separate status text.
 
 cmux notification and supported-session restore hooks remain an explicit cmux
 setup choice:

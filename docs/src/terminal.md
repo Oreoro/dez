@@ -179,10 +179,13 @@ reproduce cmux panes, or infer ownership from notification text.
 
 cmux protects its socket with an access mode. Its default may reject a CLI
 launched outside a cmux-owned terminal. When that happens, Dez shows one failed
-cmux source with the CLI diagnostic and a Retry action; it never weakens cmux's
-access mode automatically. Open cmux and choose an automation mode appropriate
-for the machine before retrying. The current command and access contract is in
-the [cmux CLI/API reference](https://cmux.com/docs/api).
+cmux source with the CLI diagnostic and a Retry action; an unchanged failure is
+logged once rather than on every five-second discovery cycle. Dez never weakens
+cmux's access mode automatically. The secure default is **cmux processes only**;
+cross-app discovery requires the documented `CMUX_SOCKET_MODE=allowAll`
+environment override when the user deliberately accepts that local access
+boundary. The current command and access contract is in the
+[cmux CLI/API reference](https://cmux.com/docs/api).
 
 Each integration reports its source truth independently: **Missing** means the
 executable is unavailable, **Empty** means an available source returned no

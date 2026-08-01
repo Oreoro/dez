@@ -746,6 +746,39 @@ impl ContextMenu {
         self.action_checked(label, action, false)
     }
 
+    pub fn action_with_icon(
+        mut self,
+        label: impl Into<SharedString>,
+        icon: IconName,
+        action: Box<dyn Action>,
+    ) -> Self {
+        self.items.push(ContextMenuItem::Entry(ContextMenuEntry {
+            toggle: None,
+            label: label.into(),
+            action: Some(action.boxed_clone()),
+            handler: Rc::new(move |context, window, cx| {
+                if let Some(context) = &context {
+                    window.focus(context, cx);
+                }
+                window.dispatch_action(action.boxed_clone(), cx);
+            }),
+            secondary_handler: None,
+            icon: Some(icon),
+            custom_icon_path: None,
+            custom_icon_svg: None,
+            icon_position: IconPosition::Start,
+            icon_size: IconSize::Small,
+            icon_color: None,
+            disabled: false,
+            documentation_aside: None,
+            end_slot_icon: None,
+            end_slot_title: None,
+            end_slot_handler: None,
+            show_end_slot_on_hover: false,
+        }));
+        self
+    }
+
     pub fn action_checked(
         self,
         label: impl Into<SharedString>,
