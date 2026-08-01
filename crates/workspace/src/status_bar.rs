@@ -122,6 +122,15 @@ fn sidebar_toggle_label(app_name: &str) -> &'static str {
     }
 }
 
+fn sidebar_toggle_accessibility_label(app_name: &str, has_notifications: bool) -> &'static str {
+    match (app_name == "Zed", has_notifications) {
+        (true, true) => "Open Sessions, attention needed",
+        (true, false) => "Open Sessions",
+        (false, true) => "Open Workspaces, attention needed",
+        (false, false) => "Open Workspaces",
+    }
+}
+
 impl Focusable for StatusBar {
     fn focus_handle(&self, _cx: &App) -> FocusHandle {
         self.focus_handle.clone()
@@ -212,6 +221,14 @@ mod tests {
         assert_eq!(status_bar_label("Zed"), "Status bar");
         assert_eq!(sidebar_toggle_label("Dez"), "Open Workspaces");
         assert_eq!(sidebar_toggle_label("Zed"), "Open Sessions");
+        assert_eq!(
+            sidebar_toggle_accessibility_label("Dez", true),
+            "Open Workspaces, attention needed"
+        );
+        assert_eq!(
+            sidebar_toggle_accessibility_label("Dez", false),
+            "Open Workspaces"
+        );
     }
 }
 
@@ -287,6 +304,7 @@ impl StatusBar {
         let has_notifications = sidebar.has_notifications;
         let indicator_border = cx.theme().colors().status_bar_background;
         let toggle_label = sidebar_toggle_label(APP_NAME);
+        let accessibility_label = sidebar_toggle_accessibility_label(APP_NAME, has_notifications);
 
         let toggle = sidebar_side_context_menu("sidebar-status-toggle-menu", cx)
             .anchor(if on_right {
@@ -310,7 +328,7 @@ impl StatusBar {
                 )
                 .icon_size(IconSize::Small)
                 .tab_index(0isize)
-                .aria_label(toggle_label)
+                .aria_label(accessibility_label)
                 .when(has_notifications, |this| {
                     this.indicator(Indicator::dot().color(Color::Accent))
                         .indicator_border_color(Some(indicator_border))

@@ -212,6 +212,33 @@ impl AgentThreadItem {
             })
     }
 
+    pub fn workspace_navigation_icon(&self, is_visible: bool, cx: &App) -> AnyElement {
+        let color = if is_visible {
+            Color::Accent
+        } else {
+            Color::Muted
+        };
+
+        if !self.is_draft(cx)
+            && let Some(icon_path) = self.agent_icon_from_external_svg(cx)
+        {
+            return Icon::from_external_svg(icon_path)
+                .size(IconSize::XSmall)
+                .color(color)
+                .into_any_element();
+        }
+
+        let icon = if self.is_draft(cx) {
+            ui::agent_icon_for_app(paths::APP_NAME)
+        } else {
+            self.agent_icon(cx)
+        };
+        Icon::new(icon)
+            .size(IconSize::XSmall)
+            .color(color)
+            .into_any_element()
+    }
+
     fn install_sibling_thread_host(&self, cx: &mut Context<Self>) {
         if !cx.has_flag::<CreateThreadToolFeatureFlag>() {
             return;

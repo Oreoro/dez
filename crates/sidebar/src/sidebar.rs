@@ -17543,15 +17543,21 @@ impl Sidebar {
                     let is_visible = active_item_id == Some(item.item_id());
                     let is_focused = pane_is_active && is_visible;
                     let is_pinned = item_index < pinned_count;
-                    let icon = item
-                        .tab_icon(window, cx)
-                        .unwrap_or_else(|| Icon::new(IconName::File))
-                        .size(IconSize::XSmall)
-                        .color(if is_visible {
-                            Color::Accent
-                        } else {
-                            Color::Muted
-                        });
+                    let icon = if let Some(agent_thread) = item.downcast::<AgentThreadItem>() {
+                        agent_thread
+                            .read(cx)
+                            .workspace_navigation_icon(is_visible, cx)
+                    } else {
+                        item.tab_icon(window, cx)
+                            .unwrap_or_else(|| Icon::new(IconName::File))
+                            .size(IconSize::XSmall)
+                            .color(if is_visible {
+                                Color::Accent
+                            } else {
+                                Color::Muted
+                            })
+                            .into_any_element()
+                    };
                     let is_dirty = item.is_dirty(cx);
                     let pane_label = workspace_pane_navigation_label(pane_index, pane_count)
                         .unwrap_or_else(|| "Main Work Area".to_owned());
