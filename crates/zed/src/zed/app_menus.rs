@@ -1,3 +1,4 @@
+use agent_settings::AgentSettings;
 use gpui::{App, Menu, MenuItem, OsAction};
 use paths::APP_NAME;
 use release_channel::ReleaseChannel;
@@ -61,6 +62,22 @@ fn developer_surface_menu_label(
     }
 }
 
+fn configured_terminal_menu_label(command: Option<&str>) -> String {
+    let executable = command
+        .map(str::trim)
+        .filter(|command| !command.is_empty())
+        .and_then(|command| command.split_whitespace().next())
+        .and_then(|executable| executable.rsplit('/').next());
+    let launcher = match executable {
+        None => "Native Shell",
+        Some("codex") => "Codex",
+        Some("claude") => "Claude Code",
+        Some("opencode") => "OpenCode",
+        Some(_) => "Custom Command",
+    };
+    format!("Default · {launcher}")
+}
+
 pub fn app_menus(cx: &mut App) -> Vec<Menu> {
     let panels_as_pane_tabs = workspace::PaneGridSettings::get_global(cx).panels_as_pane_tabs();
     let project_pane_label = workspace_tools_menu_label(APP_NAME, panels_as_pane_tabs);
@@ -94,6 +111,11 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
     );
     let git_surface_label =
         developer_surface_menu_label(APP_NAME, panels_as_pane_tabs, "Git", "Git Tab", "Git Panel");
+    let configured_terminal_label = configured_terminal_menu_label(
+        AgentSettings::get_global(cx)
+            .terminal_init_command
+            .as_deref(),
+    );
 
     let mut view_items = vec![
         MenuItem::action(
@@ -364,7 +386,10 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             ),
             MenuItem::separator(),
             MenuItem::submenu(Menu::new("Open Terminal").items([
-                MenuItem::action("Default Terminal", zed_actions::terminal::OpenAgentTerminal),
+                MenuItem::action(
+                    configured_terminal_label,
+                    zed_actions::terminal::OpenAgentTerminal,
+                ),
                 MenuItem::action("Native Shell", zed_actions::terminal::OpenShellTerminal),
                 MenuItem::action("tmux Session", zed_actions::terminal::OpenTmuxTerminal),
                 MenuItem::separator(),
@@ -373,6 +398,11 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                 MenuItem::action("OpenCode", zed_actions::terminal::OpenOpenCodeTerminal),
             ])),
             MenuItem::action("Browse Running Sessions…", workspace::BrowseRunningSessions),
+            MenuItem::action(
+                "Open Workspace in cmux",
+                zed_actions::dez::OpenWorkspaceInCmux,
+            ),
+            MenuItem::separator(),
             MenuItem::action("New File", workspace::NewFile),
         ]);
         #[cfg(not(target_os = "macos"))]
@@ -575,8 +605,9 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
 #[cfg(test)]
 mod tests {
     use super::{
-        developer_surface_menu_label, open_workspace_menu_label, product_menu_label,
-        terminal_panel_surface_visible, workspace_tools_are_grouped, workspace_tools_menu_label,
+        configured_terminal_menu_label, developer_surface_menu_label, open_workspace_menu_label,
+        product_menu_label, terminal_panel_surface_visible, workspace_tools_are_grouped,
+        workspace_tools_menu_label,
     };
 
     #[test]
@@ -644,6 +675,30 @@ mod tests {
         assert_eq!(
             product_menu_label("Zed", "Close Tab", "Close Editor"),
             "Close Editor"
+        );
+    }
+
+    #[test]
+    fn dez_file_menu_names_the_configured_default_terminal() {
+        assert_eq!(
+            configured_terminal_menu_label(None),
+            "Default · Native Shell"
+        );
+        assert_eq!(
+            configured_terminal_menu_label(Some(" codex --yolo ")),
+            "Default · Codex"
+        );
+        assert_eq!(
+            configured_terminal_menu_label(Some("/opt/homebrew/bin/claude --resume")),
+            "Default · Claude Code"
+        );
+        assert_eq!(
+            configured_terminal_menu_label(Some("opencode --continue")),
+            "Default · OpenCode"
+        );
+        assert_eq!(
+            configured_terminal_menu_label(Some("my-agent --resume")),
+            "Default · Custom Command"
         );
     }
 

@@ -78,6 +78,12 @@ reconstructing history.
 
 ## Core product loop {#core-product-loop}
 
+The current product presents this as one short native journey: **Open
+Workspace → Open Terminal or Browse Running Sessions… → supervise in Workspaces
+→ Open Files or Review Changes**. The stages below describe the evidence and
+decision model behind that visible flow; they are not additional navigation
+screens.
+
 1. **Capture:** Start a Run from an ordinary terminal, agent surface, or explicit
    objective.
 2. **Contextualize:** Associate the Run with its host, session, repository,

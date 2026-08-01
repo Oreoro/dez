@@ -999,7 +999,7 @@ impl Pane {
         let (title, description) = if is_dez && show_orientation {
             (
                 "Main Work Area",
-                "Launch or resume a session, then inspect files and review changes.",
+                "Start a terminal or resume running work. Files and Git review open as tabs here.",
             )
         } else if is_dez {
             ("Empty pane", "Open or move a tab here.")
@@ -1065,7 +1065,7 @@ impl Pane {
                                     h_flex()
                                         .gap_2()
                                         .child(
-                                            Icon::new(IconName::File)
+                                            Icon::new(IconName::Tab)
                                                 .size(IconSize::Small)
                                                 .color(Color::Muted),
                                         )

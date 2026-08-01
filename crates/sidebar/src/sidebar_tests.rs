@@ -323,6 +323,18 @@ fn dez_empty_workspace_moves_terminal_creation_to_one_labeled_row() {
         !workspace_header_terminal_action_visible("Zed", false, false),
         "upstream Zed retains its labeled empty-session action"
     );
+    assert!(
+        !workspace_empty_terminal_row_visible_for_active_state("Dez", true),
+        "the active Workspace already exposes terminal creation in the Main Work Area"
+    );
+    assert!(
+        workspace_empty_terminal_row_visible_for_active_state("Dez", false),
+        "an inactive empty Workspace keeps one explicit, Workspace-scoped launcher"
+    );
+    assert!(
+        workspace_empty_terminal_row_visible_for_active_state("Zed", true),
+        "official Zed keeps its inherited empty-project launcher"
+    );
 }
 
 #[test]

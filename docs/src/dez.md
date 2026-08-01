@@ -37,10 +37,10 @@ The main journey uses native surfaces throughout:
 The interface has two ownership regions. The Main Work Area is always present;
 Workspaces is optional and collapsible:
 
-| Region                | What it is for                                                                                                  |
-| --------------------- | --------------------------------------------------------------------------------------------------------------- |
-| **Workspaces** · left | Optionally switch codebases and supervise their terminal and Built-in Agent Sessions                            |
-| **Main Work Area**    | Edit files and use terminal, Files, Outline, Git, Debug, Built-in Agent, settings, diagnostics, and review tabs |
+| Region                    | What it is for                                                                                                  |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **Workspaces** · optional | Switch codebases and supervise their terminal and Built-in Agent Sessions on the configured window edge         |
+| **Main Work Area**        | Edit files and use terminal, Files, Outline, Git, Debug, Built-in Agent, settings, diagnostics, and review tabs |
 
 Workspaces is global and collapsible. It does not turn into Files, Git, or chat,
 and opening a Workspace Tool does not dismiss it. Each codebase remains visible
@@ -75,12 +75,15 @@ and arranged without creating a nested panel or a second navigation model. The
 tab strip and Add control remain visible on an empty Main Work Area, including
 Home.
 
-The Dez **File → Open Terminal** submenu mirrors the native **+** choices in
-the same order: **Default Terminal**, **Native Shell**, **tmux Session**,
-**Codex**, **Claude Code**, and **OpenCode**. **Browse Running Sessions…** is
-the next File-menu action immediately after that submenu. Starting a new
-terminal and resuming discovered work therefore remain adjacent without
-creating a second navigation model.
+The Dez **File → Open Terminal** submenu mirrors the native **+** routes in the
+same order. Its first row previews the configured result as **Default · Native
+Shell**, **Default · Codex**, **Default · Claude Code**, **Default · OpenCode**,
+or **Default · Custom Command**; the pane **+** keeps the shorter **Default
+Terminal** label. Native Shell, tmux Session, Codex, Claude Code, and OpenCode
+remain explicit alternatives. **Browse Running Sessions…** is the next
+File-menu action immediately after that submenu. Starting new work and resuming
+discovered work therefore remain adjacent without creating a second navigation
+model.
 
 Workspaces starts closed in fresh windows and remains available as an on-demand
 supervisor. Workspace Tools start closed and open as ordinary Main Work Area
@@ -116,7 +119,7 @@ other detected agents. Native status treatments distinguish Running, Needs
 Input, Waiting for Permission, Reconnecting, Completed, and Error without
 rendering a second terminal transcript.
 When Workspaces is open, its collapsible **Workspace Tabs** section projects the
-active Workspace's native center-pane tabs above the Workspace and Session list
+active Workspace's native Main Work Area tabs above the Workspace and Session list
 when at least two tabs are open. A one-pane layout remains a flat list. Real splits add quiet **Pane 1**,
 **Pane 2**, and later group labels, so the hierarchy describes the layout that
 already exists instead of manufacturing one. Each row uses the Surface's
@@ -200,17 +203,20 @@ recovery, and All/Attention scope actions remain keyboard reachable as the
 navigator changes state.
 
 Workspace controls follow focus. Selecting or keyboard-focusing a Workspace
-keeps its Open Terminal and Options actions visible; opening the
-Options menu keeps its scoped close controls visible as well. Search clearing
-and banner dismissal are keyboard-focusable, so pointer hover is never the only
-route to a visible shell action. Workspace names and their action cluster share
-one bounded inline row: text truncates within its allocation, actions never
-overlap it, and no gradient mask is painted over either side of the header. An
-expanded Workspace with no Agent Sessions shows one labeled **Open Terminal**
-action below the header; its compact terminal icon is suppressed
-until the Workspace is collapsed or contains Agent Sessions. Readiness remains
-in the overview summary and the Workspace header's accessible name instead of
-being repeated as a decorative dot-and-caption row.
+keeps its Options action visible; opening that menu keeps its scoped close
+controls visible as well. Terminal creation remains visible in the active Main
+Work Area, an inactive empty-Workspace row, or a collapsed Workspace header, so
+pointer hover is never its only route. Search clearing and banner dismissal are
+keyboard-focusable. Workspace names and their action cluster share one bounded
+inline row: text truncates within its allocation, actions never overlap it, and
+no gradient mask is painted over either side of the header. An
+inactive expanded Workspace with no Agent Sessions shows one labeled **Open
+Terminal** action below the header. The active Workspace does not repeat that
+launcher because its Main Work Area already presents **Open Terminal** as the
+primary action. Collapsing a Workspace restores the compact header action, and
+a Workspace with Session activity keeps that compact route available.
+Readiness remains in the overview summary and the Workspace header's accessible
+name instead of being repeated as a decorative dot-and-caption row.
 
 The Main Work Area follows the same rule. Back, Forward, Add, Switch Surface,
 Split, Zoom, and tab close controls are keyboard-focusable and specifically
@@ -226,20 +232,23 @@ to IBM Plex Sans for interface chrome, Lilex for code and terminals, and
 system-selected Lumin Light/Lumin Blur. Custom font or theme choices are not
 treated as generated defaults.
 
-Creation emphasis also follows state. A ready Workspace without a Session
-shows one quiet **Open Terminal** command row. Once work exists, a
-compact terminal action remains in each Workspace header while the Workspaces
-overview stays focused on status and All/Attention scope. Dez does not repeat a
-global launcher for the already-active Workspace.
+Creation emphasis also follows state. An inactive, ready Workspace without a
+Session shows one quiet **Open Terminal** command row; the active Workspace uses
+the same action in its Main Work Area. Once work exists, a compact terminal
+action remains in each Workspace header while the Workspaces overview stays
+focused on status and All/Attention scope. Dez does not repeat a launcher for
+the already-active Workspace.
 
 Workspaces uses one native titlebar label and one options menu for secondary
 destinations such as Command Palette, Recent Workspaces, Workspace activity,
 attention filtering, and Workspaces Settings. It does
 not repeat **Workspaces** inside a dashboard header or reserve a permanent
 footer. Empty, caught-up, search, and recovery states stay in normal sidebar
-flow and never become floating overlays. An empty Workspace keeps one compact
-terminal action in its header instead of expanding into a provider onboarding
-block. At compact widths, the caught-up action shortens to **Show All** without
+flow and never become floating overlays. An empty inactive Workspace keeps one
+scoped terminal row, while a collapsed Workspace keeps the compact header
+action; the active Workspace relies on its visible Main Work Area launcher.
+None expands into a provider onboarding block. At compact widths, the caught-up
+action shortens to **Show All** without
 losing source or status in each row. Explicit tmux and Herdr rows attach in the
 Main Work Area; cmux Workspace rows open in cmux. A row with a current path sits
 beneath the most specific matching Workspace and uses its secondary metadata
@@ -499,9 +508,10 @@ Session in the Agent work area.
 Workspace composition and agent-session metadata are restored where the source
 owns them. If a saved current-Host terminal cannot be reconnected, Dez keeps one
 honest unavailable state with its reason instead of silently starting a
-replacement shell or printing fake recovery text into the PTY. An older Host's
-process remains a legacy Workspaces record until the user chooses its recovery
-path. A fresh terminal is always separate computation.
+replacement shell or printing fake recovery text into the PTY. An eligible
+saved reference from an older Host remains a legacy Workspaces record, but its
+label does not claim that the process is reachable or alive. Opening a fresh
+terminal is always separate computation.
 
 If the terminal service itself is connecting, reconnecting, or failed,
 Workspaces states whether any shell started and whether running processes were
@@ -573,11 +583,13 @@ interrupted transport won the race.
 Host connection, reconnection, and command cycles have deadlines and bounded
 queues. A command with an uncertain outcome is never replayed, and work queued
 behind a failed transport is rejected as stale instead of running later
-against changed state. Each user-input batch occupies one bounded queue slot,
-is rejected above the helper's four-mebibyte PTY budget, and is split into
-frame-safe chunks only after the whole batch is accepted. Saturation therefore
-reports backpressure without queuing only a paste prefix, blocking the UI, or
-growing memory without limit. Awaited control commands have bounded enqueue
+against changed state. The GUI groups the frame-safe chunks for one user-input
+batch into one bounded queue item, so queue admission accepts or rejects that
+batch as a unit. It rejects a batch above the helper's four-mebibyte PTY budget
+and caps aggregate queued GUI input at sixteen mebibytes. Admission is not an
+end-to-end delivery guarantee: after transport or helper processing begins, a
+later failure can leave a prefix delivered. Dez reports that outcome as
+uncertain and never replays it. Awaited control commands have bounded enqueue
 and end-to-end response deadlines. Partial PTY writes resume only after the
 descriptor is writable again.
 
@@ -593,11 +605,13 @@ The current helper uses one generated `TerminalHostEndpoint`: generation,
 socket path, token-file path, and stable Host identity advance together.
 Terminal-agent hooks receive the exact endpoint from their authenticated
 connection, so they cannot accidentally address an inherited Zed path.
-A helper left alive by an older build remains the owner of its shells.
-Workspaces labels those records **Legacy · Access blocked** and offers three
-honest outcomes: open a new shell in the recorded directory, keep the legacy
-process running, or explicitly confirm **Terminate Legacy Session…**. Dez
-never claims to transfer process ownership between Hosts.
+Eligible saved references from older Hosts appear as **Legacy · Access
+blocked**; the label makes no claim that the process is reachable or alive.
+The user may leave the record untouched, open a separate shell in its recorded
+directory, or confirm **Terminate Legacy Session…** so Dez can contact only a
+matching legacy owner. A failed termination attempt leaves the record and any
+process untouched. Dez never claims to transfer process ownership between
+Hosts.
 
 Before a local Workspace restore, Dez enumerates each root once. A macOS
 protected-folder denial becomes one **Workspace access required** notice with
@@ -629,13 +643,15 @@ A failed source does not freeze or erase successful peer integrations. Each
 source has a bounded command deadline shorter than the refresh interval; a
 hung CLI is cancelled and becomes **Failed** rather than blocking every later
 refresh. tmux is empty only after its canonical missing-server response.
-Permission, protocol, Herdr socket, and Herdr query errors are failures rather
-than authoritative empty scans. **Retry** scans tmux, Herdr, and cmux again
+Permission, protocol, Herdr registry, and Herdr snapshot errors are failures
+rather than authoritative empty scans. **Retry** scans tmux, Herdr, and cmux again
 without starting, attaching, selecting, or terminating any external session.
-Herdr endpoints are queried concurrently with individual two-second deadlines,
-and the complete Herdr source scan has a four-second deadline. Results from
-endpoints that finish before the source deadline are preserved; unfinished
-endpoints become failures so their exact last-known rows can remain visible.
+Herdr first reports its live default and named sessions through `herdr session
+list --json`. Those endpoints are then queried concurrently with individual
+two-second deadlines, and the complete Herdr source scan has a four-second
+deadline. Results from endpoints that finish before the source deadline are
+preserved; unfinished endpoints become failures so their exact last-known rows
+can remain visible.
 One hung server therefore cannot hide healthy Sessions reported by another or
 extend the refresh indefinitely.
 The explicit **Open Workspace in cmux** handoff is separately bounded to eight
@@ -646,9 +662,10 @@ select the refreshed row again to open it. **Retry Attach** resolves the current
 session by stable ID, reports sessions that ended during refresh, and surfaces
 a missing terminal provider as an attach failure rather than a successful
 no-op.
-Dez discovers tmux sessions through the documented CLI format, Herdr panes
-through the local snapshot API, and cmux Workspaces through its JSON CLI. tmux
-and Herdr open their documented attach command in a normal terminal Surface.
+Dez discovers tmux sessions through the documented CLI format, asks Herdr's JSON
+session registry which endpoints are live before using its snapshot API, and
+discovers cmux Workspaces through its JSON CLI. tmux and Herdr open their
+documented attach command in a normal terminal Surface.
 cmux Workspaces stay in cmux and open through its `select-workspace` command.
 Discovery updates automatically; **Refresh Running Sessions** in a
 Workspace's options menu requests an immediate scan, shows when discovery is
@@ -692,10 +709,10 @@ state means Dez adopted or ended an external process.
   `/opt/homebrew/bin/cmux`, `/usr/local/bin/cmux`, or on `PATH`. Open the Workspace
   in cmux first, or use **Open Workspace in cmux**; Dez leaves the Workspace
   open if the handoff fails or times out.
-- Herdr requires the `herdr` CLI plus its default
-  `~/.config/herdr/herdr.sock` or a named
-  `~/.config/herdr/sessions/<name>/herdr.sock`. Start the matching Herdr server
-  before refreshing activity.
+- Herdr requires the `herdr` CLI and at least one live session reported by
+  `herdr session list --json`. Start the default or named Herdr server before
+  refreshing activity. Dez follows Herdr's configured registry and does not
+  assume that its sockets live under `~/.config`.
 
 Use **Retry** in the provider warning or **Refresh Running Sessions** after
 correcting a prerequisite. A **last known** row means that source's latest scan
@@ -740,6 +757,13 @@ region.
 Inherited collaboration, staff-only
 instrumentation, legacy dock geometry, and controls for removed sidebar chrome
 stay out of the public Settings navigation.
+
+For most users, setup is three decisions rather than a tour: choose the
+**Default Terminal Command**, decide whether and where Workspaces should open,
+and select an Agent provider only if the optional Built-in Agent is needed.
+Explicit Codex, Claude Code, OpenCode, tmux, and cmux launch actions do not
+rewrite the default terminal. Appearance recovery remains one scoped action,
+not a reset of unrelated preferences.
 
 Workspaces is optional chrome, not a permanent editor column. Fresh windows
 keep it closed; the status bar exposes **Open Workspaces**, and the same toggle

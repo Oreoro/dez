@@ -1,6 +1,5 @@
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
-    fs,
     future::Future,
     io::ErrorKind,
     path::PathBuf,
@@ -227,6 +226,7 @@ pub struct MultiplexerSessionStore {
     source_statuses: Vec<MultiplexerSourceStatus>,
     successful_sources: HashSet<MultiplexerKind>,
     refreshing: bool,
+    refresh_pending: bool,
     _refresh_task: Task<()>,
 }
 
@@ -301,6 +301,7 @@ impl MultiplexerSessionStore {
 
     pub fn refresh(&mut self, cx: &mut Context<Self>) {
         if self.refreshing {
+            self.refresh_pending = true;
             return;
         }
 
@@ -315,7 +316,11 @@ impl MultiplexerSessionStore {
             if let Err(error) = this.update(cx, |store, cx| {
                 store.refreshing = false;
                 store.apply_scan(scan, cx);
-                cx.notify();
+                if std::mem::take(&mut store.refresh_pending) {
+                    store.refresh(cx);
+                } else {
+                    cx.notify();
+                }
             }) {
                 log::debug!("external terminal refresh finished after its store closed: {error:#}");
             }
@@ -357,6 +362,7 @@ impl MultiplexerSessionStore {
             source_statuses: Vec::new(),
             successful_sources: HashSet::new(),
             refreshing: false,
+            refresh_pending: false,
             _refresh_task: refresh_task,
         }
     }
@@ -854,53 +860,17 @@ async fn scan_herdr_sessions(executor: &BackgroundExecutor) -> Result<Multiplexe
         return Ok(MultiplexerScanOutcome::MissingExecutable);
     };
 
-    let herdr_root = paths::home_dir().join(".config").join("herdr");
-    let mut server_names = Vec::new();
-    let default_socket = herdr_root.join("herdr.sock");
-    match fs::metadata(&default_socket) {
-        Ok(_) => server_names.push(None),
-        Err(error) if error.kind() == ErrorKind::NotFound => {}
-        Err(error) => {
-            return Err(error)
-                .with_context(|| format!("inspect Herdr socket {}", default_socket.display()));
-        }
-    }
+    let session_discovery = list_running_herdr_sessions(&executable);
+    let session_deadline = source_deadline.clone();
+    futures::pin_mut!(session_discovery, session_deadline);
+    let server_names = match futures::future::select(session_discovery, session_deadline).await {
+        futures::future::Either::Left((result, _)) => result?,
+        futures::future::Either::Right(_) => anyhow::bail!(
+            "Herdr discovery reached its source-wide deadline after {:?}",
+            HERDR_SOURCE_TIMEOUT
+        ),
+    };
 
-    let named_sessions_dir = herdr_root.join("sessions");
-    match fs::read_dir(&named_sessions_dir) {
-        Ok(entries) => {
-            for entry in entries {
-                let entry = entry.with_context(|| {
-                    format!(
-                        "read Herdr session entry in {}",
-                        named_sessions_dir.display()
-                    )
-                })?;
-                let socket_path = entry.path().join("herdr.sock");
-                match fs::metadata(&socket_path) {
-                    Ok(_) => {
-                        if let Some(name) = entry.file_name().to_str() {
-                            server_names.push(Some(name.to_owned()));
-                        }
-                    }
-                    Err(error) if error.kind() == ErrorKind::NotFound => {}
-                    Err(error) => {
-                        return Err(error).with_context(|| {
-                            format!("inspect Herdr socket {}", socket_path.display())
-                        });
-                    }
-                }
-            }
-        }
-        Err(error) if error.kind() == ErrorKind::NotFound => {}
-        Err(error) => {
-            return Err(error).with_context(|| {
-                format!("read Herdr sessions in {}", named_sessions_dir.display())
-            });
-        }
-    }
-
-    server_names.sort();
     ensure_herdr_source_deadline_open(source_deadline.clone()).await?;
     if server_names.is_empty() {
         return Ok(MultiplexerScanOutcome::Available(
@@ -944,6 +914,72 @@ async fn scan_herdr_sessions(executor: &BackgroundExecutor) -> Result<Multiplexe
             successful_endpoint_count,
         },
     ))
+}
+
+async fn list_running_herdr_sessions(executable: &std::path::Path) -> Result<Vec<Option<String>>> {
+    let mut command = util::command::new_command(executable);
+    command
+        .args(["session", "list", "--json"])
+        .kill_on_drop(true);
+    let output = command
+        .output()
+        .await
+        .context("run Herdr session discovery")?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let detail = stderr.trim();
+        if detail.is_empty() {
+            anyhow::bail!("Herdr session discovery exited with {}", output.status);
+        }
+        anyhow::bail!("Herdr session discovery failed: {detail}");
+    }
+
+    parse_running_herdr_sessions(&String::from_utf8_lossy(&output.stdout))
+}
+
+fn parse_running_herdr_sessions(output: &str) -> Result<Vec<Option<String>>> {
+    let value: Value = serde_json::from_str(output).context("invalid Herdr session-list JSON")?;
+    let result = value.get("result").unwrap_or(&value);
+    let sessions = result
+        .get("sessions")
+        .and_then(Value::as_array)
+        .or_else(|| result.as_array())
+        .context("Herdr session-list response did not contain a sessions array")?;
+
+    let mut server_names = sessions
+        .iter()
+        .map(|session| {
+            let running = session
+                .get("running")
+                .and_then(Value::as_bool)
+                .context("Herdr session-list entry did not contain a running state")?;
+            if !running {
+                return Ok(None);
+            }
+
+            if session
+                .get("default")
+                .and_then(Value::as_bool)
+                .unwrap_or(false)
+            {
+                return Ok(Some(None));
+            }
+
+            let name = session
+                .get("name")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|name| !name.is_empty())
+                .context("running Herdr session did not contain a name")?;
+            Ok(Some(Some(name.to_owned())))
+        })
+        .collect::<Result<Vec<_>>>()?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+    server_names.sort();
+    server_names.dedup();
+    Ok(server_names)
 }
 
 async fn ensure_herdr_source_deadline_open(
@@ -1634,6 +1670,32 @@ mod tests {
             .expect_err("a missing pane schema must preserve last-known sessions");
 
         assert!(error.to_string().contains("panes array"));
+    }
+
+    #[test]
+    fn parses_running_herdr_sessions_from_the_cli_registry() {
+        let output = r#"{
+          "sessions": [
+            {"name": "default", "default": true, "running": true},
+            {"name": "team", "default": false, "running": true},
+            {"name": "stopped", "default": false, "running": false},
+            {"name": "team", "default": false, "running": true}
+          ]
+        }"#;
+
+        assert_eq!(
+            parse_running_herdr_sessions(output).expect("session list should parse"),
+            [None, Some("team".to_owned())]
+        );
+    }
+
+    #[test]
+    fn rejects_running_herdr_sessions_without_a_name() {
+        let error =
+            parse_running_herdr_sessions(r#"{"sessions":[{"default":false,"running":true}]}"#)
+                .expect_err("an incomplete live session must not erase last-known sessions");
+
+        assert!(error.to_string().contains("did not contain a name"));
     }
 
     #[test]

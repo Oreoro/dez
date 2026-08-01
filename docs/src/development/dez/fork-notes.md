@@ -123,7 +123,7 @@ rather than opening a duplicate.
 The visible title is **Workspaces**, because the stable thing a developer
 navigates is a codebase. Agent Sessions appear beneath their owning Workspace;
 ordinary integrated shells stay in the Main Work Area. Path-matched tmux and
-Herdr work and cmux Workspaces are available through **Browse External
+Herdr work and cmux Workspaces are available through **Browse Running
 Sessions…**. The external application remains authoritative. Unrelated terminal
 applications do not appear in Workspaces, and Dez never implies that it owns
 their PTYs.
@@ -287,21 +287,24 @@ branches may retain upstream hover and icon behavior.
 Welcome follows progressive disclosure. With no Workspace it offers only
 **Open Workspace** and **Clone Repository**. A terminal is not offered until a
 codebase can supply review context. With a Workspace it offers **Open
-Terminal**, **Open Files**, and **New File**. Generic utilities such as the
-command palette and replacing the active Workspace remain available through
-normal chrome, but do not compete with the release-defining start loop. Its
-headline is a concrete product promise rather than a second copy of the
-three-step guide: before a Workspace, it explains that opening one connects
-terminal and Agent work with files, Git, diagnostics, and diffs; inside one, it
-says that work stays connected and reviewable in the IDE. One sentence names
-the terminal → Workspaces → review loop; Home does not persist a step diagram,
-provider promotion, enclosing card, or control-like walkthrough.
+Terminal**, **Browse Running Sessions…**, **Open Files**, and **Review
+Changes**. **New File** remains in File, the native Add menu, and keyboard
+shortcuts. Generic utilities such as the command palette and replacing the
+active Workspace remain available through normal chrome, but do not compete
+with the release-defining start loop. Its headline is a concrete product
+promise rather than a second copy of the guide: before a Workspace, it explains
+that opening one connects terminal and Agent work with files, Git, diagnostics,
+and diffs; inside one, it says that work stays connected and reviewable in the
+IDE. One sentence names the start or resume → supervise → inspect or review
+loop; Home does not persist a step diagram, provider promotion, enclosing card,
+or control-like walkthrough.
 
-The active empty Main Work Area uses the same **Open Terminal**
-vocabulary. Its orientation is part of the native work surface, not a bordered
-card floating over it. The focused empty work area is headed **Main Work
-Area**, names what can open there in one sentence, and presents only the three
-immediate actions. It does not repeat Home's product summary. In an
+The active empty Main Work Area uses the same **Open Terminal** vocabulary. Its
+orientation is part of the native work surface, not a bordered card floating
+over it. The focused empty work area is headed **Main Work Area**, names what
+can open there in one sentence, and presents **Open Terminal** plus three
+immediate actions for resume, inspect, and review: **Browse Sessions**, **Find
+File**, and **Review Changes**. It does not repeat Home's product summary. In an
 explicit multi-pane layout, inactive empty work areas say **Open something
 here** and keep the same operational actions. The action row owns all
 interactive styling. Copy describes live terminal and Agent state without
@@ -1226,12 +1229,14 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   keyboard actions remain in a fixed inline cluster and never paint gradient
   masks over content. Workspace headers follow the same rule in opaque and
   glass windows, so theme appearance cannot switch them back to an overlay
-  layout. An expanded Workspace with no Sessions suppresses the compact header
-  terminal control because the labeled **Open Agent Terminal** action below
-  it already owns that transition; collapsing the Workspace or adding a Session
-  restores the compact control. The overview and accessible Workspace header
-  already report readiness, so the expanded body does not repeat a decorative
-  **Ready for a session** row above the action. A Terminal Session offers one
+  layout. An expanded inactive Workspace with no Sessions suppresses the
+  compact header control because the labeled **Open Terminal** action below it
+  owns that transition. The active Workspace suppresses that body row too,
+  because its Main Work Area already presents the same primary action.
+  Collapsing the Workspace or adding a Session restores the compact control.
+  The overview and accessible Workspace header already report readiness, so
+  the expanded body does not repeat a decorative **Ready for a session** row
+  above the action. A Terminal Session offers one
   primary IDE handoff—**Review** for a dirty Workspace, otherwise
   **Details**—plus its close or terminate lifecycle control. An Agent Session
   offers exactly one state action: **Stop**, **Discard**, **Review**, or
@@ -1751,8 +1756,10 @@ are future options only if they strengthen the terminal-to-IDE review loop.
 - **2026-07-29: Workspaces renders a Workspace-first activity tree.** Local Agent
   Sessions and path-matched tmux, Herdr, and cmux activity sit beneath the
   owning Workspace. Overlapping roots choose the most specific Workspace.
-  Empty Workspaces retain one compact terminal action in their header instead
-  of expanding into provider-logo onboarding chrome.
+  Empty inactive Workspaces retain one scoped terminal row, collapsed
+  Workspaces retain a compact header action, and the active Workspace relies on
+  its Main Work Area launcher. None expands into provider-logo onboarding
+  chrome or duplicates the same action beside the active work surface.
 - **2026-07-29: Empty editor panes remain native chrome, not onboarding.** The
   active empty Main Work Area shows a compact top-left label, one sentence, and
   terminal/file actions. Secondary empty panes use shorter copy. The Dez visual
@@ -1886,20 +1893,26 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   boundary.** `TerminalHostId` includes the Host generation, and one
   `TerminalHostEndpoint` supplies that connection's socket and token-file paths
   to every terminal-agent hook. A newer GUI never rewrites or claims an older
-  Host's process. Workspaces keeps that process visible as **Legacy · Access
-  blocked** and offers only **Open New Shell Here**, **Keep Running**, or the
-  confirmed **Terminate Legacy Session…** action. Replacement shells are
-  separate computation.
-- **2026-07-31: Open Tabs is a native navigation projection.** When expanded in
-  Workspaces, Open Tabs lists the active Workspace's real Main Work Area items
+  Host record. Eligible saved references appear as **Legacy · Access blocked**,
+  which does not claim that the process is reachable or alive. The user can
+  leave the record untouched, choose **Open New Shell Here**, or confirm
+  **Terminate Legacy Session…** so Dez contacts only a matching legacy owner.
+  Replacement shells are separate computation.
+- **2026-07-31: Open Tabs is a native navigation projection, now labeled
+  Workspace Tabs.** When expanded in Workspaces, Workspace Tabs lists the
+  active Workspace's real Main Work Area items
   and groups them only when real panes exist. Selecting a row calls native item
   activation. The pane remains the owner of order, drag, preview, pin, close,
   dirty state, and split membership; Workspaces stores no duplicate tab model.
 - **2026-08-01: External multiplexer discovery fails per source.** tmux, Herdr,
   and cmux reconcile independently. A failed or timed-out source preserves only
   its own rows as **last known**, while an authoritative successful empty scan
-  removes them. Periodic and manual refresh share one guarded scan. A native
-  provider warning explains retained rows and exposes a non-destructive
+  removes them. Periodic and manual refresh share one guarded scan; a Retry
+  requested during active discovery queues exactly one immediate follow-up
+  instead of being dropped. Herdr enumerates live default and named sessions
+  through `herdr session list --json`, then queries those snapshot endpoints,
+  so alternate Herdr/XDG locations do not depend on guessed socket paths. A
+  native provider warning explains retained rows and exposes a non-destructive
   **Retry**. Selection refreshes stale data before attach, failed attach exposes
   **Retry Attach**, and no retry starts a duplicate attachment automatically.
   The external tool remains the process and layout owner.

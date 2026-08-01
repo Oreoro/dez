@@ -86,6 +86,7 @@ struct SectionButton {
     focus_handle: FocusHandle,
     primary: bool,
     meta: Option<SharedString>,
+    show_meta: bool,
 }
 
 impl SectionButton {
@@ -105,11 +106,17 @@ impl SectionButton {
             focus_handle,
             primary,
             meta: None,
+            show_meta: true,
         }
     }
 
     fn meta(mut self, meta: impl Into<SharedString>) -> Self {
         self.meta = Some(meta.into());
+        self
+    }
+
+    fn show_meta(mut self, show_meta: bool) -> Self {
+        self.show_meta = show_meta;
         self
     }
 }
@@ -119,6 +126,15 @@ impl RenderOnce for SectionButton {
         let id = format!("home-action-{}-{}", self.label, self.tab_index);
         let action_ref: &dyn Action = &*self.action;
         let meta = self.meta.clone();
+        let show_meta = self.show_meta;
+        let aria_description = match (self.primary, meta.as_deref()) {
+            (true, Some(meta)) => Some(SharedString::from(format!(
+                "Recommended first step. {meta}"
+            ))),
+            (true, None) => Some(SharedString::from("Recommended first step")),
+            (false, Some(meta)) => Some(SharedString::from(meta.to_owned())),
+            (false, None) => None,
+        };
         let icon_color = if self.primary {
             Color::Accent
         } else {
@@ -129,14 +145,11 @@ impl RenderOnce for SectionButton {
             .tab_index(self.tab_index as isize)
             .aria_label(self.label.clone())
             .when(APP_NAME != "Zed", |this| this.style(ButtonStyle::Subtle))
-            .when(self.primary, |this| {
-                this.style(ButtonStyle::Filled)
-                    .aria_description("Recommended first step")
+            .when(self.primary, |this| this.style(ButtonStyle::Filled))
+            .when_some(aria_description, |this, description| {
+                this.aria_description(description)
             })
-            .when_some(meta.clone(), |this, meta| {
-                this.aria_description(meta.clone())
-                    .tooltip(Tooltip::text(meta))
-            })
+            .when_some(meta.clone(), |this, meta| this.tooltip(Tooltip::text(meta)))
             .full_width()
             .size(ButtonSize::Medium)
             .child(
@@ -160,15 +173,17 @@ impl RenderOnce for SectionButton {
                         h_flex()
                             .flex_none()
                             .gap_2()
-                            .when_some(meta, |this, meta| {
-                                this.child(
-                                    div().max_w(rems_from_px(220.)).overflow_hidden().child(
-                                        Label::new(meta)
-                                            .truncate()
-                                            .size(LabelSize::XSmall)
-                                            .color(Color::Muted),
-                                    ),
-                                )
+                            .when(show_meta, |this| {
+                                this.when_some(meta, |this, meta| {
+                                    this.child(
+                                        div().max_w(rems_from_px(220.)).overflow_hidden().child(
+                                            Label::new(meta)
+                                                .truncate()
+                                                .size(LabelSize::XSmall)
+                                                .color(Color::Muted),
+                                        ),
+                                    )
+                                })
                             })
                             .child(
                                 KeyBinding::for_action_in(action_ref, &self.focus_handle, cx)
@@ -197,6 +212,7 @@ impl SectionVisibility {
 struct SectionEntry {
     icon: IconName,
     title: &'static str,
+    meta: Option<&'static str>,
     action: &'static dyn Action,
     visibility_guard: SectionVisibility,
 }
@@ -207,9 +223,10 @@ impl SectionEntry {
         button_index: usize,
         focus: &FocusHandle,
         primary: bool,
+        show_meta: bool,
     ) -> Option<impl IntoElement> {
         self.visibility_guard.is_visible().then(|| {
-            SectionButton::new(
+            let button = SectionButton::new(
                 self.title,
                 self.icon,
                 self.action,
@@ -217,6 +234,11 @@ impl SectionEntry {
                 focus.clone(),
                 primary,
             )
+            .show_meta(show_meta);
+            match self.meta {
+                Some(meta) => button.meta(meta),
+                None => button,
+            }
         })
     }
 }
@@ -278,30 +300,35 @@ const ZED_CONTENT: (Section, Section) = (
             SectionEntry {
                 icon: IconName::Terminal,
                 title: "New Terminal",
+                meta: None,
                 action: &NEW_CENTER_TERMINAL,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
                 icon: IconName::FolderOpen,
                 title: "Open Workspace",
+                meta: None,
                 action: &Open::DEFAULT,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
                 icon: IconName::CloudDownload,
                 title: "Clone Repository",
+                meta: None,
                 action: &GitClone,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
                 icon: IconName::Plus,
                 title: "New File",
+                meta: None,
                 action: &NewFile,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
                 icon: IconName::ListCollapse,
                 title: "Open Command Palette",
+                meta: None,
                 action: &command_palette::Toggle,
                 visibility_guard: SectionVisibility::Always,
             },
@@ -313,18 +340,21 @@ const ZED_CONTENT: (Section, Section) = (
             SectionEntry {
                 icon: IconName::Settings,
                 title: "Open Settings",
+                meta: None,
                 action: &OpenSettings,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
                 icon: IconName::Keyboard,
                 title: "Keyboard Shortcuts",
+                meta: None,
                 action: &OpenKeymap,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
                 icon: IconName::Blocks,
                 title: "Explore Extensions",
+                meta: None,
                 action: &Extensions {
                     category_filter: None,
                     id: None,
@@ -342,12 +372,14 @@ const DEZ_CONTENT: (Section, Section) = (
             SectionEntry {
                 icon: IconName::FolderOpen,
                 title: "Open Workspace",
+                meta: Some("Local folder"),
                 action: &OPEN_WORKSPACE,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
                 icon: IconName::CloudDownload,
                 title: "Clone Repository",
+                meta: Some("From Git"),
                 action: &GitClone,
                 visibility_guard: SectionVisibility::Always,
             },
@@ -366,24 +398,28 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
             SectionEntry {
                 icon: IconName::Terminal,
                 title: "Open Terminal",
+                meta: Some("Start new work"),
                 action: &OPEN_AGENT_TERMINAL,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
                 icon: IconName::ListTree,
                 title: "Browse Running Sessions…",
+                meta: Some("Resume work"),
                 action: &BROWSE_RUNNING_SESSIONS,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
                 icon: IconName::FolderOpen,
                 title: "Open Files",
+                meta: Some("Inspect code"),
                 action: &REVEAL_FILES,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
                 icon: IconName::Diff,
                 title: "Review Changes",
+                meta: Some("Review Git"),
                 action: &REVEAL_GIT_CHANGES,
                 visibility_guard: SectionVisibility::Always,
             },
@@ -407,6 +443,7 @@ impl Section {
         index_offset: usize,
         focus: &FocusHandle,
         emphasize_first: bool,
+        show_meta: bool,
     ) -> impl IntoElement {
         v_flex()
             .w_full()
@@ -418,7 +455,12 @@ impl Section {
                     .iter()
                     .enumerate()
                     .filter_map(|(index, entry)| {
-                        entry.render(index_offset + index, focus, emphasize_first && index == 0)
+                        entry.render(
+                            index_offset + index,
+                            focus,
+                            emphasize_first && index == 0,
+                            show_meta,
+                        )
                     }),
             )
     }
@@ -799,6 +841,7 @@ impl Render for WelcomePage {
                             action_tab_offset + first_section_entries,
                             &self.focus_handle,
                             false,
+                            true,
                         )
                         .into_any_element(),
                 ),
@@ -940,6 +983,7 @@ impl Render for WelcomePage {
                                     action_tab_offset,
                                     &section_focus_handle,
                                     welcome_emphasizes_first_action(APP_NAME),
+                                    true,
                                 )),
                         )
                         .when_some(secondary_content.take(), |this, secondary_content| {
@@ -967,6 +1011,7 @@ impl Render for WelcomePage {
                             action_tab_offset,
                             &section_focus_handle,
                             welcome_emphasizes_first_action(APP_NAME),
+                            !compact_spacing,
                         ))
                         .when_some(secondary_content.take(), |this, secondary_content| {
                             this.child(Divider::horizontal().color(DividerColor::BorderVariant))
@@ -1344,7 +1389,9 @@ mod tests {
         assert_eq!(welcome_tab_icon("Dez"), Some(IconName::Compass));
         assert_eq!(welcome_tab_icon("Zed"), None);
         assert_eq!(DEZ_CONTENT.0.entries[0].title, "Open Workspace");
+        assert_eq!(DEZ_CONTENT.0.entries[0].meta, Some("Local folder"));
         assert_eq!(DEZ_CONTENT.0.entries[1].title, "Clone Repository");
+        assert_eq!(DEZ_CONTENT.0.entries[1].meta, Some("From Git"));
         assert_eq!(
             DEZ_CONTENT.0.entries.len(),
             2,
@@ -1352,11 +1399,21 @@ mod tests {
         );
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[0].title, "Open Terminal");
         assert_eq!(
+            DEZ_WORKSPACE_CONTENT.0.entries[0].meta,
+            Some("Start new work")
+        );
+        assert_eq!(
             DEZ_WORKSPACE_CONTENT.0.entries[1].title,
             "Browse Running Sessions…"
         );
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[1].meta, Some("Resume work"));
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[2].title, "Open Files");
+        assert_eq!(
+            DEZ_WORKSPACE_CONTENT.0.entries[2].meta,
+            Some("Inspect code")
+        );
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[3].title, "Review Changes");
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[3].meta, Some("Review Git"));
         assert!(
             DEZ_CONTENT.1.entries.is_empty(),
             "Dez Welcome should leave configuration to normal application navigation"

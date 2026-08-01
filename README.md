@@ -22,10 +22,12 @@ Workspace instead of separate applications or hidden panel modes.
 
 - **Main Work Area** — files, terminals, search results, settings, diagnostics,
   previews, and reviews are ordinary movable and splittable Surfaces.
-- **Workspaces** — a stable, collapsible left navigator for codebases and their
-  open Surfaces and Agent Sessions. Its collapsible **Workspace Tabs** section
-  appears when at least two native center-pane tabs are open, grouping them by
-  pane only when the Workspace is split. Selecting a row activates that exact native tab;
+- **Workspaces** — an optional, collapsible navigator for codebases, open
+  Surfaces, and Agent Sessions. Fresh windows keep it closed unless the user
+  enables it, restored layouts may reopen it, and its window edge is
+  configurable. Its collapsible **Workspace Tabs** section appears when at
+  least two native Main Work Area tabs are open, grouping them by pane only
+  when the Workspace is split. Selecting a row activates that exact native tab;
   tab ownership, dirty state, close behavior, dragging, and ordering remain in
   Zed's pane model rather than being copied into the navigator. Agent Session
   rows show provider identity and Running, Needs Input, Waiting for Permission,
@@ -90,9 +92,10 @@ primary Home or empty-state action.
 
 The window is deliberately not a dashboard of equal columns. Each Workspace
 owns one codebase context, one Main Work Area, its terminals, and its Git state.
-Workspaces stays global on the left. Files, Git, Outline, Debug, Built-in Agent,
-commits, diffs, reviews, agent terminals, and ordinary terminals use the
-native workspace tab and pane model instead of another navigation system.
+Workspaces stays global and optional on its configured window edge. Files, Git,
+Outline, Debug, Built-in Agent, commits, diffs, reviews, agent terminals, and
+ordinary terminals use the native Workspace tab and pane model instead of
+another navigation system.
 When Workspaces is visible, **Workspace Tabs** provides a compact vertical route
 to those same open tabs once there is something useful to switch between. It
 stays flat for a single pane and introduces small **Pane 1**, **Pane 2**, and
@@ -110,10 +113,13 @@ provider launchers. **Browse Running Sessions…** refreshes discovery and
 refocuses Workspaces without adding another navigation surface.
 
 Dez's **File → Open Terminal** submenu mirrors those native `+` terminal
-choices in the same order: **Default Terminal**, **Native Shell**, **tmux
-Session**, **Codex**, **Claude Code**, and **OpenCode**. **Browse Running
-Sessions…** follows immediately after the submenu, so starting and resuming
-terminal work stay adjacent in both navigation paths.
+routes in the same order. Its first row previews the configured result as
+**Default · Native Shell**, **Default · Codex**, **Default · Claude Code**,
+**Default · OpenCode**, or **Default · Custom Command**; the pane `+` keeps the
+shorter **Default Terminal** label. Native Shell, tmux Session, Codex, Claude
+Code, and OpenCode remain explicit alternatives. **Browse Running Sessions…**
+follows immediately after the submenu, so starting and resuming terminal work
+stay adjacent in both navigation paths.
 
 Six optional layout commands remain available through **View** and Command
 Palette: **Work Area + Files**, **Work Area + Built-in Agent**, **Focus Work
@@ -135,6 +141,13 @@ exposes shortcut search, conflict inspection, base keymaps, and optional full
 Vim or Helix editing. Vim and Helix share native leader destinations for
 recent tabs (`Space b`), files (`Space f`), the configured agent terminal
 (`Space t`), a shell (`Space T`), and Workspace search (`Space /`).
+
+Most users only need three product decisions: choose the **Default Terminal
+Command**, decide whether and where Workspaces should open, and configure an
+Agent provider only if the optional Built-in Agent is needed. **Restore Native
+Dez Appearance** remains one scoped repair action that preserves font sizes and
+unrelated preferences. Codex, Claude Code, OpenCode, tmux, and cmux remain
+explicit per-launch choices; choosing one never rewrites the default.
 
 From a selected Agent Session row in Workspaces, `Enter` returns to the
 existing Session, `Shift+F` opens its Workspace files, `Shift+G` opens its
@@ -164,9 +177,10 @@ one Zed-compatible Project:
 A terminal is therefore not embedded in chat, and the editor is not a separate
 mode. They are peer Surfaces in one native pane grid. Dez detects supported
 agents running in its terminals, including Codex, Claude Code, OpenCode, and
-Herdr. Dez v0.2 discovers explicitly shared tmux sessions, live Herdr panes,
-and cmux Workspaces. tmux and Herdr attach through ordinary terminal tabs; cmux
-Workspaces open in cmux. Each integration reports one truthful state:
+Herdr. Dez v0.2 discovers explicitly shared tmux sessions, live Herdr panes
+through Herdr's JSON session registry and snapshot API, and cmux Workspaces.
+tmux and Herdr attach through ordinary terminal tabs; cmux Workspaces open in
+cmux. Each integration reports one truthful state:
 **Missing** when its executable is unavailable, **Empty** when an available
 source has no sessions, **Failed** when discovery did not complete, or
 **Ready** when it returned sessions. A failed source preserves only its own

@@ -158,7 +158,7 @@ fn terminal_session_init_setting_copy(app_name: &str) -> (&'static str, &'static
     } else {
         (
             "Default Terminal Command",
-            "Command used by Open Terminal and Ctrl+`. Leave blank for the native shell. Use the tab-strip + or Command Palette for one-off Native Shell, tmux, Codex, Claude Code, or OpenCode launches.",
+            "Command used by Open Terminal and Ctrl+`. Leave blank for the native shell. The pane + and File → Open Terminal keep explicit Native Shell, tmux, Codex, Claude Code, and OpenCode routes without changing this default.",
         )
     }
 }
@@ -286,7 +286,7 @@ fn projects_startup_setting() -> SettingsPageItem {
         description: if paths::APP_NAME == "Zed" {
             "Show Sessions in new windows. Restored windows keep their saved layout."
         } else {
-            "Show Workspaces in new windows. Restored windows keep their saved layout."
+            "Open Workspaces in new windows. When off, use the status bar or View menu on demand. Restored windows keep their saved layout."
         },
         field: Box::new(SettingField {
             organization_override: None,
@@ -11750,7 +11750,7 @@ mod tests {
             terminal_session_init_setting_copy("Dez"),
             (
                 "Default Terminal Command",
-                "Command used by Open Terminal and Ctrl+`. Leave blank for the native shell. Use the tab-strip + or Command Palette for one-off Native Shell, tmux, Codex, Claude Code, or OpenCode launches.",
+                "Command used by Open Terminal and Ctrl+`. Leave blank for the native shell. The pane + and File → Open Terminal keep explicit Native Shell, tmux, Codex, Claude Code, and OpenCode routes without changing this default.",
             )
         );
         assert_eq!(

@@ -1048,9 +1048,9 @@
   "sidebar": {
     // Where to position the sidebar. Can be 'left' or 'right'.
     "side": "left",
-    // Workspaces is an on-demand supervisor. Fresh windows keep it closed so
-    // the native Main Work Area remains primary; restored and explicitly
-    // opened Workspaces layouts are still preserved.
+    // Workspaces is the global Workspace and session navigator. Fresh windows
+    // keep it closed so the native Main Work Area remains primary; restored
+    // and explicitly opened Workspaces layouts are still preserved.
     "starts_open": false,
     // Whether to show the project pane toggle button in the sidebar header.
     "show_project_pane_button": true,
@@ -1094,7 +1094,7 @@
     "show_layout": false,
     "show_agent_attention": true
   },
-  // Settings for Workspaces, the optional Dez Workspace navigator.
+  // Settings for Workspaces, Dez's native Workspace and session navigator.
   "session_rail": {
     "visibility": "auto",
     "mode": "compact",

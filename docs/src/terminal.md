@@ -32,8 +32,8 @@ with the primary navigation label.
 
 Workspace Tools and Built-in Agent also begin closed in a fresh default
 Workspace, so the terminal or editor remains the obvious primary surface.
-**Files**, **Outline**, **Git**, and **Debug** reveal Workspace Tools on demand;
-repeating a destination focuses it instead of toggling the drawer away.
+**Files**, **Outline**, **Git**, and **Debug** open the named native tab on
+demand; repeating a destination focuses it instead of closing it.
 Restored layouts and explicit `project_panel.starts_open` preferences remain
 respected.
 
@@ -63,7 +63,24 @@ Set the default under **Settings → Workspaces & Terminals → Terminal Launch 
 Default Terminal Command**. The adjacent `+` after each native pane's tabs
 offers that default, Native Shell, a Workspace-named tmux Session, Codex,
 Claude Code, and OpenCode as separate choices. Choosing a provider once does
-not rewrite the default.
+not rewrite the default. In **File → Open Terminal**, the first row makes the
+resolved choice explicit as **Default · Native Shell**, **Default · Codex**,
+**Default · Claude Code**, **Default · OpenCode**, or **Default · Custom
+Command**; the pane `+` retains **Default Terminal** for compactness.
+
+Choose the route by ownership, not by appearance:
+
+| Choice                                      | What Dez does                                                                                                     |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Default Terminal**                        | Runs the configured default command in a native terminal tab                                                      |
+| **Native Shell**                            | Opens the Workspace shell without starting an agent                                                               |
+| **Codex**, **Claude Code**, or **OpenCode** | Starts that CLI and keeps its real TUI in the native terminal                                                     |
+| **tmux Session**                            | Attaches or creates the Workspace-named tmux session inside a native terminal                                     |
+| **Browse Running Sessions…**                | Refreshes Workspaces so a discovered tmux or Herdr row can be attached, or a cmux Workspace can be opened in cmux |
+| **Open Workspace in cmux**                  | Hands the Workspace path to the external cmux application and keeps Dez open                                      |
+
+**Built-in Agent** is a separate provider-backed conversation Surface. It is
+not a terminal renderer and does not wrap a Codex, Claude Code, or OpenCode TUI.
 
 Dez lists that terminal under the matching Workspace when it detects a
 supported agent. The add control stays available when focus moves to Workspace
@@ -130,11 +147,12 @@ adopt its PTY, restore its process, or attribute its work. No Workspaces row is
 created for an unrelated external TTY.
 
 Dez adds a narrow, explicit control boundary for tmux, Herdr, and cmux.
-Dez discovers live tmux sessions through `list-panes`, live Herdr panes through
-the documented snapshot API, and cmux Workspaces through
-`list-workspaces --json`. A session whose working directory is inside an open
-root appears beneath the most specific matching Workspace. Sessions with no
-working directory or no matching open root remain visible under **Other Running
+Dez discovers live tmux sessions through `list-panes`, asks `herdr session list
+--json` for the live default and named Herdr endpoints before querying the
+documented snapshot API, and discovers cmux Workspaces through `list-workspaces
+--json`. A session whose working directory is inside an open root appears
+beneath the most specific matching Workspace. Sessions with no working
+directory or no matching open root remain visible under **Other Running
 Sessions**. **Browse Running Sessions…** opens or refocuses Workspaces, clears
 temporary filters, expands matching groups, and refreshes every source.
 tmux and Herdr open the documented attach command in an ordinary Main Work Area
@@ -151,10 +169,11 @@ successful sources continue updating. A ready source may still have no session
 matching the selected Workspace, in which case its unmatched items stay under
 **Other Running Sessions** rather than disappearing.
 
-Herdr queries endpoints concurrently with an individual deadline for each
-endpoint and one deadline for the complete Herdr source scan. A large or
-unresponsive endpoint set therefore becomes **Failed** instead of extending one
-refresh cycle indefinitely.
+Herdr registry discovery and endpoint queries share one source-wide deadline;
+endpoint snapshots run concurrently with an individual deadline for each
+session. A large or unresponsive endpoint set therefore becomes **Failed**
+instead of extending one refresh cycle indefinitely. A Retry requested while a
+scan is active queues one immediate follow-up scan rather than disappearing.
 
 For the current local codebase, **Workspace: Open in cmux** in Command Palette
 hands the Workspace path to cmux and keeps the Dez window intact. It reports
@@ -567,44 +586,16 @@ By default, `Cmd+Click`/`Ctrl+Click` opens links even when the running applicati
 }
 ```
 
-## Panel Configuration
+## Compatibility Panel Settings
 
-### Dock Position
+Dez opens terminals in the Main Work Area and exposes no separate terminal
+panel destination. The inherited `terminal.dock`, `terminal.default_width`,
+`terminal.default_height`, and `terminal.button` settings remain available for
+official Zed compatibility, but Dez hides them from graphical Settings and
+does not use them to place Main Work Area terminals. Use native tabs, splits,
+and Workspace Layout commands to arrange terminals in Dez.
 
-```json [settings]
-{
-  "terminal": {
-    "dock": "bottom"
-  }
-}
-```
-
-Options: `"bottom"` (default), `"left"`, `"right"`
-
-### Default Size
-
-```json [settings]
-{
-  "terminal": {
-    "default_width": 640,
-    "default_height": 320
-  }
-}
-```
-
-### Terminal Button
-
-Hide the terminal button in the status bar:
-
-```json [settings]
-{
-  "terminal": {
-    "button": false
-  }
-}
-```
-
-### Toolbar
+## Optional Terminal Breadcrumbs
 
 Show the terminal title in a breadcrumb toolbar:
 

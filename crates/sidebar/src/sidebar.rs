@@ -1323,6 +1323,10 @@ fn workspace_header_terminal_action_visible(
     }
 }
 
+fn workspace_empty_terminal_row_visible_for_active_state(app_name: &str, is_active: bool) -> bool {
+    app_name != "Dez" || !is_active
+}
+
 fn workspace_options_action_persistent(
     is_active: bool,
     is_focused: bool,
@@ -7812,8 +7816,10 @@ impl Sidebar {
                 )
                 .into_any_element()
         } else if !is_collapsed
+            && !is_sticky
             && !has_threads
             && (APP_NAME == "Dez" || (APP_NAME == "Zed" && labels_visible))
+            && workspace_empty_terminal_row_visible_for_active_state(APP_NAME, is_active)
         {
             v_flex()
                 .w_full()
