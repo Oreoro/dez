@@ -892,7 +892,7 @@ fn session_empty_state_copy(
             (
                 IconName::Terminal,
                 "No sessions yet",
-                "Open a terminal and run Codex, Claude Code, OpenCode, or another CLI. Workspaces adds supported activity here automatically.",
+                "Open a terminal and run Codex, Claude Code, OpenCode, or another supported agent. Workspaces adds detected activity here automatically.",
             )
         }
     }

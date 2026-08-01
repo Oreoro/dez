@@ -261,7 +261,7 @@ fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Write. Delegate. Watch. Verify."
     } else if has_workspace {
-        "Launch or resume a terminal session, monitor it in Workspaces, then inspect files and review changes."
+        "Start an agent or work directly. Watch attention in Workspaces, then inspect the code and verify the diff."
     } else {
         "Open a codebase once. Dez keeps its terminals, agent sessions, files, and review together in one Workspace."
     }
@@ -271,9 +271,19 @@ fn welcome_title(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Terminal-native development"
     } else if has_workspace {
-        "Continue in this Workspace"
+        "Build in this Workspace"
     } else {
         "Start with a Workspace"
+    }
+}
+
+fn welcome_hero_icon(app_name: &str, has_workspace: bool) -> IconName {
+    if app_name == "Zed" {
+        IconName::Terminal
+    } else if has_workspace {
+        IconName::DezAgent
+    } else {
+        IconName::FolderOpen
     }
 }
 
@@ -398,14 +408,14 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
             SectionEntry {
                 icon: IconName::Terminal,
                 title: "Open Terminal",
-                meta: Some("Start new work"),
+                meta: Some("Start an agent or shell"),
                 action: &OPEN_AGENT_TERMINAL,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
                 icon: IconName::ListTree,
                 title: "Browse Running Sessions…",
-                meta: Some("Resume work"),
+                meta: Some("Watch agent activity"),
                 action: &BROWSE_RUNNING_SESSIONS,
                 visibility_guard: SectionVisibility::Always,
             },
@@ -419,7 +429,7 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
             SectionEntry {
                 icon: IconName::Diff,
                 title: "Review Changes",
-                meta: Some("Review Git"),
+                meta: Some("Verify the diff"),
                 action: &REVEAL_GIT_CHANGES,
                 visibility_guard: SectionVisibility::Always,
             },
@@ -1074,13 +1084,9 @@ impl Render for WelcomePage {
                                         .items_center()
                                         .justify_center()
                                         .child(
-                                            Icon::new(if has_workspace {
-                                                IconName::Terminal
-                                            } else {
-                                                IconName::FolderOpen
-                                            })
-                                            .size(IconSize::Small)
-                                            .color(Color::Accent),
+                                            Icon::new(welcome_hero_icon(APP_NAME, has_workspace))
+                                                .size(IconSize::Small)
+                                                .color(Color::Accent),
                                         ),
                                 )
                                 .child(
@@ -1373,15 +1379,18 @@ mod tests {
         );
         assert_eq!(
             welcome_summary("Dez", true),
-            "Launch or resume a terminal session, monitor it in Workspaces, then inspect files and review changes."
+            "Start an agent or work directly. Watch attention in Workspaces, then inspect the code and verify the diff."
         );
         assert_eq!(
             welcome_summary("Zed", true),
             "Write. Delegate. Watch. Verify."
         );
         assert_eq!(welcome_title("Dez", false), "Start with a Workspace");
-        assert_eq!(welcome_title("Dez", true), "Continue in this Workspace");
+        assert_eq!(welcome_title("Dez", true), "Build in this Workspace");
         assert_eq!(welcome_title("Zed", false), "Terminal-native development");
+        assert_eq!(welcome_hero_icon("Dez", true), IconName::DezAgent);
+        assert_eq!(welcome_hero_icon("Dez", false), IconName::FolderOpen);
+        assert_eq!(welcome_hero_icon("Zed", true), IconName::Terminal);
         assert_eq!(welcome_surface_label("Dez"), "Home");
         assert_eq!(welcome_surface_label("Zed"), "Welcome");
         assert!(welcome_forces_tab_bar("Dez"));
@@ -1400,20 +1409,26 @@ mod tests {
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[0].title, "Open Terminal");
         assert_eq!(
             DEZ_WORKSPACE_CONTENT.0.entries[0].meta,
-            Some("Start new work")
+            Some("Start an agent or shell")
         );
         assert_eq!(
             DEZ_WORKSPACE_CONTENT.0.entries[1].title,
             "Browse Running Sessions…"
         );
-        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[1].meta, Some("Resume work"));
+        assert_eq!(
+            DEZ_WORKSPACE_CONTENT.0.entries[1].meta,
+            Some("Watch agent activity")
+        );
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[2].title, "Open Files");
         assert_eq!(
             DEZ_WORKSPACE_CONTENT.0.entries[2].meta,
             Some("Inspect code")
         );
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[3].title, "Review Changes");
-        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[3].meta, Some("Review Git"));
+        assert_eq!(
+            DEZ_WORKSPACE_CONTENT.0.entries[3].meta,
+            Some("Verify the diff")
+        );
         assert!(
             DEZ_CONTENT.1.entries.is_empty(),
             "Dez Welcome should leave configuration to normal application navigation"
