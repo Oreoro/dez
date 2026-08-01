@@ -232,15 +232,112 @@ status-bar control remains the recovery route and uses **Open Workspaces** for
 its tooltip and action. Compact layouts may hide secondary text, never the
 control's meaning or accessible identity.
 
+## Operational-state wireframe
+
+### 9. Empty Main Work Area
+
+```text
+┌ Workspaces ───────┬ + ──────────────────────────────────────────────┐
+│ dez · main        │ Main Work Area                                  │
+│                   │ Start a terminal or resume running work.         │
+│ No sessions yet   │ Files and Git review open as tabs here.          │
+│                   │                                                  │
+│ superzed          │ [Open Terminal · Codex]                          │
+│ website           │ [Browse Sessions] [Find File] [Review Changes]   │
+├───────────────────┴──────────────────────────────────────────────────┤
+│ Workspace: dez | main | Permissions: Healthy                       │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+This is an operational start state for an open Workspace, not another Home.
+The tab strip remains visible but contains no invented placeholder tab. Its
+adjacent `+` is available immediately. The one primary action names the
+resolved configured destination—Native Shell, tmux Session, a recognized
+provider, or Custom Command—while the provider glyph reinforces that identity.
+
+### 10. Add and switch tabs
+
+```text
+┌ Codex · Working | app.rs* | Diff · config.rs | Terminal | + | Switch Tab ┐
+│ Add to Main Work Area             Tabs in This Pane                      │
+│  Default Terminal                 Codex · Working · Active               │
+│  Native Shell                     app.rs · Modified                       │
+│  Workspace tmux                   Diff · config.rs                        │
+│  Codex · Claude Code · OpenCode   Terminal · Pinned                       │
+│  More Agent CLIs ›                Settings                                │
+│  Continue Agent ›                                                         │
+│  Browse Running Sessions…                                                  │
+│  Open Workspace in cmux                                                   │
+│  Files · Review · Task · Debug                                             │
+│  Home · Recent Workspaces                                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+The two menus are alternate anchored native menus and never appear together in
+the product. `+` follows the final visible tab and remains pinned to the tab
+viewport edge during overflow. **Switch Tab** lists only the owning pane and
+preserves active, modified, and pinned meaning in text as well as icon state.
+
+### 11. Discover and supervise
+
+```text
+┌ Workspaces ─────────────────┬ app.rs ─ + ────────────────────────────┐
+│ Search · All · Attention    │ Existing editor remains active.        │
+│ dez · main                  │                                        │
+│ Sessions                    │ Browse Running Sessions never opens    │
+│  Codex · Working            │ or replaces this Main Work Area tab.   │
+│  Claude Code · Attention    │                                        │
+│  tmux · Available           │                                        │
+│ Herdr unavailable           │                                        │
+│ Discovery timed out.        │                                        │
+│ Last-known rows stay visible│                                        │
+│ [Retry]                     │                                        │
+│ Other Running Sessions      │                                        │
+│  cmux · Available           │                                        │
+├─────────────────────────────┴────────────────────────────────────────┤
+│ Workspace: dez | main | 3 agents | 2 ports | Permissions: Healthy   │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+Each external source owns one Missing, Empty, Failed, or Ready state. One
+bounded failed-source notice exposes one non-destructive **Retry**; concurrent
+refresh requests coalesce, and last-known rows remain visibly qualified. A
+truly empty list uses one primary **Open Terminal** action. Search recovery uses
+one primary **Clear Search** action, while a caught-up Attention scope uses a
+subordinate **Show All** action.
+
+### 12. Terminal launch failure
+
+```text
+┌ Terminal did not start | + | app.rs ─────────────────────────────────┐
+│ [!] Terminal did not start                                           │
+│   codex: command not found                                           │
+│                                                                      │
+│   No terminal process was started. Review Terminal Launch settings, │
+│   then open a new terminal.                                          │
+│                                                                      │
+│   [Edit Terminal Settings ▾]                                         │
+│      Open Settings                                                   │
+│      Edit settings.json                                              │
+├──────────────────────────────────────────────────────────────────────┤
+│ Workspace: dez | main | Permissions: Healthy                        │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+The failure remains in its owning native tab, uses terminal material, names the
+cause, and starts no substitute process. The primary split action deep-links to
+**Workspaces & Terminals → Terminal Launch → Default Terminal**; its menu keeps
+the general Settings and raw JSON alternatives available.
+
 ## Surface inventory
 
 | Surface | Owner | Primary job | Entry | Empty, failure, or recovery state |
 | --- | --- | --- | --- | --- |
 | Home | Main Work Area tab | Start or resume the product loop | tab `+`, Help, first run | install-first and recent-history retry are inline |
 | Workspaces | optional window navigator | switch codebases and supervise activity | status bar, View menu, shortcut | one Open Workspace action; bounded notices |
-| Open Tabs & Tools | Workspaces projection | return to an existing surface | expands with two or more tabs | hidden for one tab; pane labels only for real splits |
+| Open Tabs & Tools | Workspaces projection | return to an existing surface | expands with two or more tabs | hidden for one tab; pane labels only for real splits; overflow stays pane-scoped |
 | Sessions | Workspaces activity group | observe agents, tasks, tmux, Herdr, and cmux | Browse Running Sessions | source-specific Missing, Empty, Failed, Ready, or last-known state |
-| Terminal | Main Work Area tab | run shell, TUI, task, or attach command | Home, tab `+`, File, Workspace menu | preserves output; cause plus Retry or fresh-shell recovery |
+| Terminal | Main Work Area tab | run shell, TUI, task, or attach command | Home, tab `+`, File, Workspace menu | preserves output; launch failure deep-links to Terminal Launch settings; attach failure offers Retry or a fresh shell |
 | Terminal Details | inline Terminal disclosure | inspect lifecycle, ownership, cwd, and evidence | terminal context strip | connection uncertainty never claims process death |
 | Editor, diff, search, diagnostics | Main Work Area tabs | inspect and modify the codebase | native Zed actions | native Zed empty and error states |
 | Files, Outline, Git, Debug | Main Work Area tabs | inspect Workspace tools | tab `+`, View, terminal handoff | no permanent second drawer or column |
@@ -260,6 +357,9 @@ control's meaning or accessible identity.
   accessibility navigation.
 - Use cause plus recovery for errors: **Attach failed · Connection refused**,
   then **Retry Attach** or **Open new shell here**.
+- Name the configured result at the point of launch. Generic **Open Terminal**
+  may become **Open Terminal · Codex** or the resolved equivalent when space
+  permits.
 - Keep permission scope explicit: **Workspace access required** and **Grant
   Access…** for one exact root.
 - Keep recovery in its owning surface: installation on Home, root access in
@@ -288,6 +388,8 @@ control's meaning or accessible identity.
   as a native tab and appears in Open Tabs & Tools when that projection is
   useful.
 - Browse Running Sessions focuses Workspaces without replacing the current tab.
+- Empty Workspaces and search states expose one visually primary recovery;
+  caught-up scope changes remain subordinate.
 - Native pane tabs remain the source of order, focus, dirty, close, and split
   truth.
 - Terminal Details expands inline and never obscures terminal output.

@@ -239,8 +239,11 @@ native surface. Focus closes contextual tools. Split Work Area only arranges
 existing Main Work Area surfaces; it never starts a process or opens an
 unrelated tool. No recipe may manufacture an empty column.
 When that work area is empty, one restrained launch panel states the product
-purpose and offers **Open Terminal**, **Browse Sessions**, **Find File**, and
-**Review Changes**. It does not repeat Home's product summary. It is an
+purpose and offers a resolved primary destination such as **Open Terminal ·
+Native Shell**, **Open Terminal · Codex**, or **Open Terminal · Custom
+Command**, followed by **Browse Sessions**, **Find File**, and **Review
+Changes**. Its provider or terminal mark matches that configured destination.
+It does not repeat Home's product summary or invent a placeholder tab. It is an
 operational start state for the current Workspace, not a second Home screen.
 **Workspaces** is a projection over the real owners. Each open codebase
 remains visible even before an agent starts; its Agent Sessions appear beneath
@@ -497,10 +500,12 @@ Clone recovery actions are keyboard-reachable.
 
 If a terminal cannot start, Dez opens no substitute process. The terminal
 surface keeps its native material and presents an edge-anchored recovery state
-with the launch error, one **Edit Settings** action, and a secondary settings
-menu. Center-terminal and compatibility-panel launch paths use the same
-hierarchy, so a failure never turns into a centered promotional card or a
-different workflow.
+with the launch error, one **Edit Terminal Settings** action, and a secondary
+settings menu. The primary action opens **Workspaces & Terminals → Terminal
+Launch → Default Terminal** instead of dropping the user at generic setup.
+Center-terminal and compatibility-panel launch paths use the same hierarchy,
+so a failure never turns into a centered promotional card, fake shell prompt,
+automatic replacement process, or different workflow.
 
 ### 2. Run or attach work in native tabs
 

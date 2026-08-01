@@ -16314,10 +16314,11 @@ impl Sidebar {
                                 .style(if APP_NAME == "Zed" {
                                     ButtonStyle::OutlinedCustom(cx.theme().colors().border)
                                 } else {
-                                    ButtonStyle::Subtle
+                                    ButtonStyle::Filled
                                 })
                                 .label_size(LabelSize::Small)
                                 .tab_index(0isize)
+                                .aria_label("Clear Workspaces Search")
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     this.reset_filter_editor_text(window, cx);
                                     this.update_entries(cx);
@@ -16329,11 +16330,7 @@ impl Sidebar {
                         this.child(
                             Button::new("no-results-new-terminal", terminal_launch_label(APP_NAME))
                                 .full_width()
-                                .style(if APP_NAME == "Zed" {
-                                    ButtonStyle::Filled
-                                } else {
-                                    ButtonStyle::Subtle
-                                })
+                                .style(ButtonStyle::Filled)
                                 .label_size(LabelSize::Small)
                                 .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
                                 .tab_index(0isize)
@@ -16404,7 +16401,7 @@ impl Sidebar {
                     .style(if APP_NAME == "Zed" {
                         ButtonStyle::OutlinedCustom(cx.theme().colors().border)
                     } else {
-                        ButtonStyle::Subtle
+                        ButtonStyle::Outlined
                     })
                     .label_size(LabelSize::Small)
                     .tab_index(0isize)

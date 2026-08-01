@@ -461,7 +461,15 @@ pub(crate) fn terminal_failed_to_start_guidance(app_name: &str) -> &'static str 
     if app_name == "Zed" {
         "No terminal process was started. Review terminal settings, then use New Terminal to try again."
     } else {
-        "No terminal process was started. Review terminal settings, then open a new terminal."
+        "No terminal process was started. Review Terminal Launch settings, then open a new terminal."
+    }
+}
+
+pub(crate) fn terminal_launch_failure_settings_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Edit Settings"
+    } else {
+        "Edit Terminal Settings"
     }
 }
 
@@ -1369,6 +1377,7 @@ impl Focusable for FailedToSpawnTerminal {
 impl Render for FailedToSpawnTerminal {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let is_dez = terminal_launch_failure_is_top_anchored(paths::APP_NAME);
+        let settings_label = terminal_launch_failure_settings_label(paths::APP_NAME);
         let popover_menu = PopoverMenu::new("settings-popover")
             .trigger(
                 IconButton::new("icon-button-popover", IconName::ChevronDown)
@@ -1440,12 +1449,26 @@ impl Render for FailedToSpawnTerminal {
                     )
                     .child(SplitButton::new(
                         ButtonLike::new("open-settings-ui")
-                            .child(Label::new("Edit Settings").size(LabelSize::Small))
+                            .child(Label::new(settings_label).size(LabelSize::Small))
                             .tab_index(0isize)
                             .aria_label("Edit Terminal Settings")
                             .tooltip(Tooltip::text("Edit Terminal Settings"))
-                            .on_click(|_, window, cx| {
-                                window.dispatch_action(zed_actions::OpenSettings.boxed_clone(), cx);
+                            .on_click(move |_, window, cx| {
+                                if is_dez {
+                                    window.dispatch_action(
+                                        zed_actions::OpenSettingsAt {
+                                            path: "agent.terminal_launcher".to_owned(),
+                                            target: None,
+                                        }
+                                        .boxed_clone(),
+                                        cx,
+                                    );
+                                } else {
+                                    window.dispatch_action(
+                                        zed_actions::OpenSettings.boxed_clone(),
+                                        cx,
+                                    );
+                                }
                             }),
                         popover_menu.into_any_element(),
                     )),
@@ -4672,7 +4695,15 @@ mod tests {
         assert!(!terminal_launch_failure_is_top_anchored("Zed"));
         assert_eq!(
             terminal_failed_to_start_guidance("Dez"),
-            "No terminal process was started. Review terminal settings, then open a new terminal."
+            "No terminal process was started. Review Terminal Launch settings, then open a new terminal."
+        );
+        assert_eq!(
+            terminal_launch_failure_settings_label("Dez"),
+            "Edit Terminal Settings"
+        );
+        assert_eq!(
+            terminal_launch_failure_settings_label("Zed"),
+            "Edit Settings"
         );
     }
 

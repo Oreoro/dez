@@ -1979,3 +1979,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   groups. Browse Running Sessions focuses Workspaces without creating a
   Sessions page. Terminal Details expands inline inside the terminal surface so
   ownership and recovery never cover the TUI or create a permanent inspector.
+- **2026-08-02: Operational empty and failure states name the next result.** An
+  empty Main Work Area keeps its native tab strip and adjacent `+`, then labels
+  the primary launcher with the configured result, such as **Open Terminal ·
+  Codex**. Workspaces uses filled actions only for true empty/search recovery;
+  a caught-up Attention scope keeps **Show All** subordinate. Terminal launch
+  failure renders no fake prompt or substitute process and opens the exact
+  **Default Terminal** control through **Edit Terminal Settings**. Add and
+  Switch Tab remain alternate native pane menus, and Browse Running Sessions
+  continues to focus Workspaces without creating another page.

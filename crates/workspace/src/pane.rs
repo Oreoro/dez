@@ -20,7 +20,10 @@ use crate::{
         WorkspaceSettings,
     },
 };
-use agent_settings::{AgentSettings, built_in_agent_is_ready, configured_terminal_launcher_icon};
+use agent_settings::{
+    AgentSettings, built_in_agent_is_ready, configured_terminal_launcher_icon,
+    configured_terminal_launcher_label,
+};
 use anyhow::Result;
 use collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use futures::{StreamExt, stream::FuturesUnordered};
@@ -120,6 +123,21 @@ fn pane_keeps_tab_bar_when_empty(app_name: &str, pane_kind: PaneKind) -> bool {
 
 fn empty_main_work_area_shows_orientation(app_name: &str, is_active_pane: bool) -> bool {
     app_name == "Zed" || is_active_pane
+}
+
+fn empty_main_work_area_terminal_action_label(
+    app_name: &str,
+    configured_command: Option<&str>,
+) -> SharedString {
+    if app_name == "Zed" {
+        return "Start Terminal Session".into();
+    }
+
+    let configured_label = configured_terminal_launcher_label(configured_command);
+    let destination = configured_label
+        .strip_prefix("Default · ")
+        .unwrap_or(&configured_label);
+    format!("Open Terminal · {destination}").into()
 }
 
 fn empty_auxiliary_surface_is_edge_anchored(app_name: &str, pane_kind: PaneKind) -> bool {
@@ -997,12 +1015,10 @@ impl Pane {
         let show_orientation =
             empty_main_work_area_shows_orientation(paths::APP_NAME, is_active_pane);
         let is_dez = paths::APP_NAME != "Zed";
+        let configured_terminal_command =
+            AgentSettings::get_global(cx).terminal_init_command.clone();
         let terminal_action_icon = if is_dez {
-            configured_terminal_launcher_icon(
-                AgentSettings::get_global(cx)
-                    .terminal_init_command
-                    .as_deref(),
-            )
+            configured_terminal_launcher_icon(configured_terminal_command.as_deref())
         } else {
             IconName::Terminal
         };
@@ -1024,11 +1040,10 @@ impl Pane {
                 "Open a terminal, find a file, or create one in this work area.",
             )
         };
-        let terminal_action_label = if paths::APP_NAME == "Zed" {
-            "Start Terminal Session"
-        } else {
-            "Open Terminal"
-        };
+        let terminal_action_label = empty_main_work_area_terminal_action_label(
+            paths::APP_NAME,
+            configured_terminal_command.as_deref(),
+        );
         let terminal_action_aria_label = if paths::APP_NAME == "Zed" {
             "Start Terminal Session in Main Work Area"
         } else {
@@ -6855,6 +6870,22 @@ mod tests {
         assert!(pane_navigation_history_buttons_visible("Dez", true));
         assert!(pane_navigation_history_buttons_visible("Zed", true));
         assert!(!pane_navigation_history_buttons_visible("Zed", false));
+        assert_eq!(
+            empty_main_work_area_terminal_action_label("Dez", None),
+            "Open Terminal · Native Shell"
+        );
+        assert_eq!(
+            empty_main_work_area_terminal_action_label("Dez", Some("codex --yolo")),
+            "Open Terminal · Codex"
+        );
+        assert_eq!(
+            empty_main_work_area_terminal_action_label("Dez", Some("my-tui")),
+            "Open Terminal · Custom Command"
+        );
+        assert_eq!(
+            empty_main_work_area_terminal_action_label("Zed", Some("codex")),
+            "Start Terminal Session"
+        );
         assert_eq!(
             pane_new_surface_control_copy("Dez"),
             (
