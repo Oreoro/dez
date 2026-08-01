@@ -159,7 +159,7 @@ fn terminal_session_init_setting_copy(app_name: &str) -> (&'static str, &'static
     } else {
         (
             "Default Terminal Command",
-            "Open Terminal and Ctrl+` start this command in a native Workspace tab. Leave blank for the native shell. Home, File, and Workspace menus preserve known provider identity, including env or exec wrappers. The pane + keeps one-off Native Shell, tmux, Codex, Claude Code, and OpenCode launchers plus Continue Agent routes without changing this default.",
+            "Open Terminal and Ctrl+` start this command in a native Workspace tab. Leave blank for the native shell. Home, File, and Workspace menus preserve known provider identity, including env or exec wrappers. The pane + keeps Native Shell, tmux, Codex, Claude Code, and OpenCode primary; More Agent CLIs exposes Gemini CLI, Aider, and Herdr without changing this default.",
         )
     }
 }
@@ -11802,7 +11802,7 @@ mod tests {
             terminal_session_init_setting_copy("Dez"),
             (
                 "Default Terminal Command",
-                "Open Terminal and Ctrl+` start this command in a native Workspace tab. Leave blank for the native shell. Home, File, and Workspace menus preserve known provider identity, including env or exec wrappers. The pane + keeps one-off Native Shell, tmux, Codex, Claude Code, and OpenCode launchers plus Continue Agent routes without changing this default.",
+                "Open Terminal and Ctrl+` start this command in a native Workspace tab. Leave blank for the native shell. Home, File, and Workspace menus preserve known provider identity, including env or exec wrappers. The pane + keeps Native Shell, tmux, Codex, Claude Code, and OpenCode primary; More Agent CLIs exposes Gemini CLI, Aider, and Herdr without changing this default.",
             )
         );
         assert_eq!(

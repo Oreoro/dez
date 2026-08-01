@@ -245,7 +245,7 @@ fn render_dez_workflow_section() -> impl IntoElement {
         (
             IconName::Terminal,
             "Run",
-            "Choose a native shell, Codex, Claude Code, OpenCode, or the explicit cmux handoff for this Workspace.",
+            "Start the configured terminal, pick another agent CLI, or hand this Workspace to cmux.",
         ),
         (
             IconName::ListTree,

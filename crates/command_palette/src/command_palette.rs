@@ -67,6 +67,9 @@ fn product_hidden_action_types(app_name: &str) -> Vec<TypeId> {
             TypeId::of::<zed_actions::terminal::ResumeClaudeCodeTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenOpenCodeTerminal>(),
             TypeId::of::<zed_actions::terminal::ResumeOpenCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenGeminiTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenAiderTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenHerdrTerminal>(),
         ]
     } else {
         vec![
@@ -965,6 +968,9 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
         "terminal::ResumeOpenCodeTerminal" => {
             return "terminal::ContinueOpenCode".to_owned();
         }
+        "terminal::OpenGeminiTerminal" => return "terminal::LaunchGeminiCli".to_owned(),
+        "terminal::OpenAiderTerminal" => return "terminal::LaunchAider".to_owned(),
+        "terminal::OpenHerdrTerminal" => return "terminal::LaunchHerdr".to_owned(),
         "dez::GrantWorkspaceAccess" => return "workspace::GrantAccess".to_owned(),
         "dez::OpenWorkspaceInCmux" => return "workspace::OpenInCmux".to_owned(),
         "zed::ApplyCanvasFullLayout" => return "layout::WorkAreaAndFiles".to_owned(),
@@ -1224,6 +1230,18 @@ mod tests {
             "terminal: continue open code"
         );
         assert_eq!(
+            humanize_action_name_for_product("terminal::OpenGeminiTerminal", "Dez"),
+            "terminal: launch gemini cli"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenAiderTerminal", "Dez"),
+            "terminal: launch aider"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenHerdrTerminal", "Dez"),
+            "terminal: launch herdr"
+        );
+        assert_eq!(
             humanize_action_name_for_product("dez::GrantWorkspaceAccess", "Dez"),
             "workspace: grant access"
         );
@@ -1406,6 +1424,9 @@ mod tests {
             TypeId::of::<zed_actions::terminal::ResumeClaudeCodeTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenOpenCodeTerminal>(),
             TypeId::of::<zed_actions::terminal::ResumeOpenCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenGeminiTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenAiderTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenHerdrTerminal>(),
         ] {
             assert!(hidden_types.contains(&action_type));
         }

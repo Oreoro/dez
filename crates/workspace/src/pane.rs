@@ -5781,6 +5781,26 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                                 IconName::AiOpenCode,
                                 zed_actions::terminal::OpenOpenCodeTerminal.boxed_clone(),
                             )
+                            .submenu(
+                                "More Agent CLIs",
+                                |menu, _, _| {
+                                    menu.action_with_icon(
+                                        "Gemini CLI",
+                                        IconName::AiGemini,
+                                        zed_actions::terminal::OpenGeminiTerminal.boxed_clone(),
+                                    )
+                                    .action_with_icon(
+                                        "Aider",
+                                        IconName::Robot,
+                                        zed_actions::terminal::OpenAiderTerminal.boxed_clone(),
+                                    )
+                                    .action_with_icon(
+                                        "Herdr",
+                                        IconName::SplitAlt,
+                                        zed_actions::terminal::OpenHerdrTerminal.boxed_clone(),
+                                    )
+                                },
+                            )
                         })
                         .submenu("Continue Agent", |menu, _, _| {
                             menu.action_with_icon(

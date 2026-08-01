@@ -129,7 +129,13 @@ pub mod terminal {
             /// Opens OpenCode in a native Main Work Area terminal.
             OpenOpenCodeTerminal,
             /// Continues the most recent OpenCode session in a native Main Work Area terminal.
-            ResumeOpenCodeTerminal
+            ResumeOpenCodeTerminal,
+            /// Opens Gemini CLI in a native Main Work Area terminal.
+            OpenGeminiTerminal,
+            /// Opens Aider in a native Main Work Area terminal.
+            OpenAiderTerminal,
+            /// Opens Herdr in a native Main Work Area terminal.
+            OpenHerdrTerminal
         ]
     );
 }

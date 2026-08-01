@@ -380,6 +380,11 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                 MenuItem::action("Codex", zed_actions::terminal::OpenCodexTerminal),
                 MenuItem::action("Claude Code", zed_actions::terminal::OpenClaudeCodeTerminal),
                 MenuItem::action("OpenCode", zed_actions::terminal::OpenOpenCodeTerminal),
+                MenuItem::submenu(Menu::new("More Agent CLIs").items([
+                    MenuItem::action("Gemini CLI", zed_actions::terminal::OpenGeminiTerminal),
+                    MenuItem::action("Aider", zed_actions::terminal::OpenAiderTerminal),
+                    MenuItem::action("Herdr", zed_actions::terminal::OpenHerdrTerminal),
+                ])),
             ])),
             MenuItem::submenu(Menu::new("Continue Agent").items([
                 MenuItem::action(

@@ -79,9 +79,9 @@ use workspace::{
     },
 };
 use zed_actions::terminal::{
-    OpenAgentTerminal, OpenClaudeCodeTerminal, OpenCodexTerminal, OpenOpenCodeTerminal,
-    OpenShellTerminal, OpenTmuxTerminal, ResumeClaudeCodeTerminal, ResumeCodexTerminal,
-    ResumeOpenCodeTerminal,
+    OpenAgentTerminal, OpenAiderTerminal, OpenClaudeCodeTerminal, OpenCodexTerminal,
+    OpenGeminiTerminal, OpenHerdrTerminal, OpenOpenCodeTerminal, OpenShellTerminal,
+    OpenTmuxTerminal, ResumeClaudeCodeTerminal, ResumeCodexTerminal, ResumeOpenCodeTerminal,
 };
 
 struct ImeState {
@@ -672,6 +672,9 @@ pub fn init(cx: &mut App) {
         workspace.register_action(resume_claude_code_terminal);
         workspace.register_action(open_opencode_terminal);
         workspace.register_action(resume_opencode_terminal);
+        workspace.register_action(open_gemini_terminal);
+        workspace.register_action(open_aider_terminal);
+        workspace.register_action(open_herdr_terminal);
         workspace.register_action(open_terminal);
         if let Some(window) = window
             && let Some((database_id, serialization_key)) = workspace
@@ -1127,6 +1130,42 @@ fn resume_opencode_terminal(
         return;
     }
     open_terminal_with_startup_command(workspace, "opencode --continue", window, cx);
+}
+
+fn open_gemini_terminal(
+    workspace: &mut Workspace,
+    _: &OpenGeminiTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "gemini", window, cx);
+}
+
+fn open_aider_terminal(
+    workspace: &mut Workspace,
+    _: &OpenAiderTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "aider", window, cx);
+}
+
+fn open_herdr_terminal(
+    workspace: &mut Workspace,
+    _: &OpenHerdrTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "herdr", window, cx);
 }
 
 fn prepare_agent_terminal_workspace(

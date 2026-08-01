@@ -67,8 +67,9 @@ Workspace instead of separate applications or hidden panel modes.
   reattaches the same Session; task and remote terminals keep their existing
   lifecycle semantics. Workspace Options can launch the configured default,
   a plain shell, a Workspace-named tmux session, Codex, Claude Code, or
-  OpenCode in the native terminal, and can hand the Workspace path to cmux
-  without pretending cmux is a shell.
+  OpenCode in the native terminal; **More Agent CLIs** adds Gemini CLI, Aider,
+  and Herdr without expanding the primary list. It can hand the Workspace path
+  to cmux without pretending cmux is a shell.
 - **Evidence and review** — Dez distinguishes observed facts from reported or
   unknown state, then uses Workspace, terminal, command, check, file, and Git
   evidence to make review safer.
@@ -127,16 +128,20 @@ The adjacent native `+` reopens Home, opens Recent Workspaces, or routes to a
 terminal, file, search, Files, Review Changes, Run Task, Debug, or Built-in Agent surface
 through the existing Zed actions. Its terminal submenu names the configured
 Default Terminal first, followed by Native Shell, tmux Session, and explicit
-provider launchers. **Continue Agent** resumes the last Codex, Claude Code, or
-OpenCode session. **Browse Running Sessions…** refreshes external discovery and
-refocuses Workspaces without adding another navigation surface.
+Codex, Claude Code, and OpenCode launchers. **More Agent CLIs** keeps Gemini
+CLI, Aider, and Herdr available without crowding the frequent path. **Continue
+Agent** resumes the last Codex, Claude Code, or OpenCode session. **Browse
+Running Sessions…** refreshes external discovery and refocuses Workspaces
+without adding another navigation surface.
 
 Dez's **File → Open Terminal** submenu mirrors those native `+` terminal
 launch routes in the same order, followed by **Continue Agent**. Its first row previews the configured result as
 **Default · Native Shell**, **Default · Codex**, **Default · Claude Code**,
-**Default · OpenCode**, or **Default · Custom Command**; the pane `+` keeps the
-shorter **Default Terminal** label. Native Shell, tmux Session, Codex, Claude
-Code, and OpenCode remain explicit alternatives. Continue uses
+**Default · OpenCode**, **Default · tmux Session**, a detected agent, or
+**Default · Custom Command**; the pane `+` keeps the shorter **Default
+Terminal** label. Native Shell, tmux Session, Codex, Claude Code, and OpenCode
+remain explicit alternatives; Gemini CLI, Aider, and Herdr live one level
+deeper under **More Agent CLIs**. Continue uses
 `codex resume --last`, `claude --continue`, or `opencode --continue` in the
 active Workspace. **Browse Running Sessions…** follows those menus, so starting,
 continuing, and reopening externally owned work stay adjacent.
@@ -151,8 +156,9 @@ and `⌘9` selects the last tab; Linux and Windows use `Alt+1`–`Alt+9`.
 `Ctrl+Tab` opens the recent-tab switcher, split-pane focus keeps the native
 Zed chords, `Ctrl+Backtick` opens the configured terminal, and
 `Ctrl+Shift+Backtick` always opens the native shell. Command Palette can start
-or continue Codex, Claude Code, or OpenCode, launch a shell or Workspace-named
-tmux session, or hand the Workspace to cmux. The native tab-strip `+` exposes the same terminal choices, **Browse
+Codex, Claude Code, OpenCode, Gemini CLI, Aider, or Herdr; continue a supported
+provider; launch a shell or Workspace-named tmux session; or hand the Workspace
+to cmux. The native tab-strip `+` exposes the same terminal choices, **Browse
 Running Sessions…**, and **Open Workspace in cmux** without creating a second
 navigation system. The default launch command lives under **Settings →
 Workspaces & Terminals → Terminal Launch → Default Terminal Command**;
@@ -173,8 +179,8 @@ Most users only need three product decisions: choose the **Default Terminal
 Command**, decide whether and where Workspaces should open, and configure an
 Agent provider only if the optional Built-in Agent is needed. **Restore Native
 Dez Appearance** remains one scoped repair action that preserves font sizes and
-unrelated preferences. Codex, Claude Code, OpenCode, tmux, and cmux remain
-explicit per-launch choices; choosing one never rewrites the default.
+unrelated preferences. Primary agent CLIs, **More Agent CLIs**, tmux, and cmux
+remain explicit per-launch choices; choosing one never rewrites the default.
 
 The **Agents** Settings page follows the same priority: terminal-agent privacy
 and attention controls come first, followed by clearly optional Built-in Agent
@@ -195,18 +201,20 @@ workflow.
 
 ### Terminal-agent ownership
 
-Codex, Claude Code, and OpenCode render as their normal TUIs inside Dez's native
-terminal; Dez does not replace their keyboard handling, colors, or full-screen
-layout with chat chrome. tmux owns its server sessions. Herdr owns its panes.
+Codex, Claude Code, OpenCode, Gemini CLI, Aider, and Herdr render as their normal
+TUIs inside Dez's native terminal; Dez does not replace their keyboard handling,
+colors, or full-screen layout with chat chrome. tmux owns its server sessions.
+Herdr owns its panes.
 cmux stays an external native application and receives the active path through
 its documented `cmux open <path>` command. Dez contributes Workspace context,
 native tabs and splits, durable ownership for eligible Dez-created terminals,
 attention, and direct Files/Git review routes.
 
-Native launch menus keep identity visible before a terminal starts: Codex,
-Claude Code, and OpenCode use their provider marks, the Built-in Agent uses the
-Dez Agent mark, and shell or multiplexer routes retain terminal-specific icons.
-Those marks identify ownership; live state remains separate status text.
+Native launch menus keep identity visible before a terminal starts: primary
+agents use their provider marks; Gemini CLI has its provider mark; Aider uses
+the terminal-agent mark; Herdr and tmux use the split-session mark; the Built-in
+Agent uses the Dez Agent mark; and shells retain the terminal icon. Those marks
+identify ownership; live state remains separate status text.
 
 cmux notification and supported-session restore hooks remain an explicit cmux
 setup choice:

@@ -27,8 +27,9 @@ The main journey uses native surfaces throughout:
 2. **Open Workspace** to establish the codebase, Git, and working-directory
    context.
 3. Use **Open Terminal** or the tab-strip **+** to start the configured default,
-   a native shell, tmux, Codex, Claude Code, or OpenCode in native tabs. Use
-   **Open Workspace in cmux** for an explicit external handoff.
+   a native shell, tmux, Codex, Claude Code, or OpenCode in native tabs. **More
+   Agent CLIs** adds Gemini CLI, Aider, and Herdr without crowding that primary
+   list. Use **Open Workspace in cmux** for an explicit external handoff.
 4. Use **Continue Agent** to resume the last Codex, Claude Code, or OpenCode
    session in this Workspace. Use **Browse Running Sessions…** for discovered
    tmux, Herdr, and cmux work.
@@ -49,8 +50,10 @@ eligible, attention projection, and routes back to Files and Git review.
 | **Codex**       | `codex`                              | `codex resume --last`                                   | Native Dez terminal                       |
 | **Claude Code** | `claude`                             | `claude --continue`                                     | Native Dez terminal                       |
 | **OpenCode**    | `opencode`                           | `opencode --continue`                                   | Native Dez terminal                       |
+| **Gemini CLI**  | `gemini`                             | Start a new terminal-owned CLI session                  | Native Dez terminal                       |
+| **Aider**       | `aider`                              | Start a new terminal-owned CLI session                  | Native Dez terminal                       |
 | **tmux**        | `tmux new-session -A -s <workspace>-<root-id>` | The same root-scoped command attaches when the named session exists | tmux process inside a native Dez terminal |
-| **Herdr**       | Start with Herdr itself              | Select a discovered pane in Workspaces                  | Herdr; Dez attaches explicitly            |
+| **Herdr**       | `herdr`                              | Select a discovered pane in Workspaces                  | Herdr; Dez attaches explicitly            |
 | **cmux**        | Start work in cmux                   | **Open Workspace in cmux** uses `cmux open <path>`      | cmux remains the external app             |
 
 The Start and Continue routes are available from the pane **+**, **File**, a
@@ -67,11 +70,13 @@ subscriptions remain owned by each provider CLI.
 cmux is an external Workspace handoff, not a Dez terminal profile. Install it
 separately, then use **Open Workspace in cmux**. Its
 [custom commands](https://cmux.com/docs/custom-commands) own Codex, Claude Code,
-and OpenCode actions as well as any multi-pane agent layouts. Dez deliberately
-does not reproduce that layout inside the editor. **Settings → Workspaces &
-Terminals → Terminal Launch → cmux Integration** links to the documented local
-API and access modes. cmux may reject API calls made outside a cmux-owned
-terminal because **cmux processes only** is its secure default. Cross-app
+and OpenCode actions as well as any multi-pane agent layouts. Its current action
+registry can also place user-defined agent actions in cmux's own tab bar and
+Command Palette; Dez does not import or rewrite that configuration. Dez
+deliberately does not reproduce that layout inside the editor. **Settings →
+Workspaces & Terminals → Terminal Launch → cmux Integration** links to the
+documented local API and access modes. cmux may reject API calls made outside a
+cmux-owned terminal because **cmux processes only** is its secure default. Cross-app
 discovery requires the documented `CMUX_SOCKET_MODE=allowAll` environment
 override when the user deliberately accepts that local access boundary; Dez
 never changes it. A process-only refusal is the expected **Access required**
@@ -157,8 +162,9 @@ be split below or beside code while keeping their Workspace ownership.
 
 The tab-strip **+** is the single **Add to Main Work Area** control. Its
 **Open Terminal** submenu launches the **Default Terminal**, a **Native Shell**,
-a Workspace-named tmux session, Codex, Claude Code, or OpenCode. It also opens
-the optional Built-in Agent, a file, Files, Review Changes, Run Task, Debug,
+a Workspace-named tmux session, Codex, Claude Code, or OpenCode. **More Agent
+CLIs** keeps Gemini CLI, Aider, and Herdr one level deeper. The Add menu also
+opens the optional Built-in Agent, a file, Files, Review Changes, Run Task, Debug,
 Workspace search, or symbol search. **Continue Agent** resumes the last native
 provider session without mixing it into running-session discovery. The control
 follows the final tab while space remains and stays pinned to the tab viewport
@@ -178,9 +184,11 @@ Home.
 The Dez **File → Open Terminal** submenu mirrors the native **+** launch routes
 in the same order, followed by **Continue Agent**. Its first row previews the
 configured result as **Default · Native Shell**, **Default · Codex**, **Default
-· Claude Code**, **Default · OpenCode**, or **Default · Custom Command**; the
-pane **+** keeps the shorter **Default Terminal** label. Native Shell, tmux
-Session, Codex, Claude Code, and OpenCode remain explicit alternatives.
+· Claude Code**, **Default · OpenCode**, **Default · tmux Session**, a detected
+agent, or **Default · Custom Command**; the pane **+** keeps the shorter
+**Default Terminal** label. Native Shell, tmux Session, Codex, Claude Code, and
+OpenCode remain explicit alternatives. Gemini CLI, Aider, and Herdr are grouped
+under **More Agent CLIs** so the frequent path stays short.
 Continue routes use the providers' documented last-session commands. **Browse
 Running Sessions…** follows those menus. Starting new work, continuing provider
 state, and reopening externally owned work therefore stay adjacent without
@@ -302,7 +310,8 @@ native shell when that setting is blank. Its inline detail names that resolved
 default before launch, so a returning user does not need to reopen Settings to
 remember whether **Open Terminal** starts a shell or agent. The adjacent **+**
 and Command Palette keep Native Shell, tmux, Codex, Claude Code, and OpenCode
-available as one-off launches. **New File** remains available from File, the
+available as one-off launches, with Gemini CLI, Aider, and Herdr grouped under
+**More Agent CLIs**. **New File** remains available from File, the
 native **+**, and keyboard shortcuts, but is no longer a primary Home or
 empty-state action.
 Recent Workspaces remain ordinary keyboard-reachable rows rather than a
@@ -436,7 +445,8 @@ different workflow.
 
 Open a file to edit directly, choose **Open Terminal** for the configured
 default, or use the adjacent **+** for a Native Shell, tmux, Codex, Claude Code,
-or OpenCode. Each opens in a native Main Work Area terminal tab. Use
+OpenCode, or a **More Agent CLIs** entry. Each opens in a native Main Work
+Area terminal tab. Use
 **Built-in Agent** only when you want a provider-backed Agent Session beside the
 editor.
 
@@ -474,8 +484,9 @@ and model.
 
 The tab-strip **+** exposes native terminal launch choices: **Default
 Terminal**, **Native Shell**, **tmux Session**, **Codex**, **Claude Code**, and
-**OpenCode**. Workspace Options identifies the configured default command and
-keeps a separate native-shell choice beside the explicit providers.
+**OpenCode**, followed by **More Agent CLIs** for **Gemini CLI**, **Aider**, and
+**Herdr**. Workspace Options identifies the configured default command and keeps
+a separate native-shell choice beside the explicit providers.
 The default command is editable under **Settings → Workspaces & Terminals →
 Terminal Launch → Default Terminal Command**; leaving it blank keeps a normal
 shell. Known commands reuse the same terminal-agent vocabulary as Workspaces,
@@ -484,7 +495,8 @@ back to anonymous **Custom Command** copy.
 Provider shortcuts are per-launch choices and never rewrite that setting.
 The same choices are native Command Palette actions: **Terminal: Open
 Terminal**, **Open Native Shell**, **Open tmux Session**, **Launch Codex**,
-**Launch Claude Code**, and **Launch OpenCode**. **Open tmux Session** derives a
+**Launch Claude Code**, **Launch OpenCode**, **Launch Gemini CLI**, **Launch
+Aider**, and **Launch Herdr**. **Open tmux Session** derives a
 shell-safe name from the primary Workspace root and a stable root identity, then
 runs `tmux new-session -A -s <workspace>-<root-id>` after the native login shell
 is ready. Repositories with the same folder name therefore cannot attach to one
@@ -922,7 +934,7 @@ stay out of the public Settings navigation.
 For most users, setup is three decisions rather than a tour: choose the
 **Default Terminal Command**, decide whether and where Workspaces should open,
 and select an Agent provider only if the optional Built-in Agent is needed.
-Explicit Codex, Claude Code, OpenCode, tmux, and cmux launch actions do not
+Explicit agent CLI, tmux, and cmux launch actions do not
 rewrite the default terminal. Appearance recovery remains one scoped action,
 not a reset of unrelated preferences.
 

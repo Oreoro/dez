@@ -8578,7 +8578,42 @@ impl Sidebar {
                                             ),
                                         );
                                     }
-                                    submenu
+                                    submenu.submenu(
+                                        "More Agent CLIs",
+                                        move |mut more_agents, _window, _cx| {
+                                            for (label, icon, startup_command) in [
+                                                ("Gemini CLI", IconName::AiGemini, "gemini"),
+                                                ("Aider", IconName::Robot, "aider"),
+                                                ("Herdr", IconName::SplitAlt, "herdr"),
+                                            ] {
+                                                let terminal_sidebar = terminal_sidebar.clone();
+                                                let terminal_key = terminal_key.clone();
+                                                let terminal_menu = terminal_menu.clone();
+                                                more_agents = more_agents.item(
+                                                    ContextMenuEntry::new(label)
+                                                        .icon(icon)
+                                                        .handler(move |window, cx| {
+                                                            terminal_sidebar
+                                                                .update(cx, |sidebar, cx| {
+                                                                    sidebar.create_terminal_in_project_group(
+                                                                        &terminal_key,
+                                                                        Some(startup_command.to_owned()),
+                                                                        window,
+                                                                        cx,
+                                                                    );
+                                                                })
+                                                                .log_err();
+                                                            terminal_menu
+                                                                .update(cx, |_, cx| {
+                                                                    cx.emit(DismissEvent)
+                                                                })
+                                                                .log_err();
+                                                        }),
+                                                );
+                                            }
+                                            more_agents
+                                        },
+                                    )
                                 },
                             )
                             .submenu("Continue Agent", move |mut submenu, _window, _cx| {
