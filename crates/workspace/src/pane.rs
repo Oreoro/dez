@@ -3448,7 +3448,7 @@ impl Pane {
         let tab_accessibility_label = item.tab_content_text(detail, cx);
 
         let read_only_toggle = |toggleable: bool| {
-            IconButton::new("toggle_read_only", IconName::FileLock)
+            IconButton::new(("toggle-read-only", item_id), IconName::FileLock)
                 .size(ButtonSize::None)
                 .shape(IconButtonShape::Square)
                 .icon_color(Color::Muted)
@@ -3621,7 +3621,7 @@ impl Pane {
                     end_slot_action = &TogglePinTab;
                     end_slot_tooltip_text = "Unpin Tab";
                     Some(
-                        IconButton::new("unpin tab", IconName::Pin)
+                        IconButton::new(("unpin-tab", item_id), IconName::Pin)
                             .shape(IconButtonShape::Square)
                             .icon_color(Color::Muted)
                             .size(ButtonSize::None)
@@ -3638,8 +3638,12 @@ impl Pane {
                     end_slot_tooltip_text = item.tab_close_tooltip_text(cx);
                     let close_icon = item.tab_close_icon(cx);
                     match show_close_button {
-                        ShowCloseButton::Always => Some(IconButton::new("close tab", close_icon)),
-                        ShowCloseButton::Hover => Some(IconButton::new("close tab", close_icon)),
+                        ShowCloseButton::Always => {
+                            Some(IconButton::new(("close-tab", item_id), close_icon))
+                        }
+                        ShowCloseButton::Hover => {
+                            Some(IconButton::new(("close-tab", item_id), close_icon))
+                        }
                         ShowCloseButton::Hidden => None,
                     }
                     .map(|button| {

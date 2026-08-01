@@ -380,7 +380,9 @@ named. Files, Git, Outline, Debug, and Built-in Agent use the native Main Work
 Area tab strip; each has one icon, is keyboard reachable, and follows the same
 tab lifecycle as files, terminals, and diffs. Work tabs remain native and
 draggable. The active unpinned Main Work Area Surface keeps its close control
-visible in Dez; inactive tabs remain visually quiet.
+visible in Dez; inactive tabs remain visually quiet. Close, Unpin, and
+read-only controls are scoped to the owning tab, so split panes and rapid tab
+switching cannot transfer hover, focus, or activation state to a sibling tab.
 
 Existing generated Dez profiles are upgraded consistently. A known legacy
 profile that pinned `.ZedSans`, One Light, and light-only appearance migrates
