@@ -1348,7 +1348,7 @@ impl TerminalBuilder {
             };
 
             let no_task = task.is_none();
-            let terminal = Terminal {
+            let mut terminal = Terminal {
                 session_id: session_host::TerminalSessionId::new(),
                 task,
                 terminal_type,
