@@ -347,17 +347,23 @@ fn agent_session_stop_label(app_name: &str) -> &'static str {
     agent_session_label(app_name, "Stop Generation", "Stop Agent Run")
 }
 
-fn workspace_built_in_agent_action_label(
+fn workspace_built_in_agent_action_presentation(
     app_name: &str,
     built_in_agent_ready: bool,
-) -> &'static str {
-    if app_name == "Zed" {
+) -> (&'static str, IconName) {
+    let label = if app_name == "Zed" {
         "New Agent Thread"
     } else if built_in_agent_ready {
         "New Built-in Agent Session…"
     } else {
         "Configure Built-in Agent…"
-    }
+    };
+    let icon = if app_name != "Zed" && !built_in_agent_ready {
+        IconName::Settings
+    } else {
+        IconName::DezAgent
+    };
+    (label, icon)
 }
 
 fn draft_discard_requires_confirmation(app_name: &str) -> bool {
@@ -381,16 +387,16 @@ mod agent_session_label_tests {
         assert_eq!(agent_session_stop_label("Zed"), "Stop Generation");
         assert_eq!(agent_session_stop_label("Dez"), "Stop Agent Run");
         assert_eq!(
-            workspace_built_in_agent_action_label("Zed", false),
-            "New Agent Thread"
+            workspace_built_in_agent_action_presentation("Zed", false),
+            ("New Agent Thread", IconName::DezAgent)
         );
         assert_eq!(
-            workspace_built_in_agent_action_label("Dez", true),
-            "New Built-in Agent Session…"
+            workspace_built_in_agent_action_presentation("Dez", true),
+            ("New Built-in Agent Session…", IconName::DezAgent)
         );
         assert_eq!(
-            workspace_built_in_agent_action_label("Dez", false),
-            "Configure Built-in Agent…"
+            workspace_built_in_agent_action_presentation("Dez", false),
+            ("Configure Built-in Agent…", IconName::Settings)
         );
         assert!(session_switcher_uses_modal_overlay("Zed"));
         assert!(!session_switcher_uses_modal_overlay("Dez"));
@@ -8654,13 +8660,16 @@ impl Sidebar {
                         let new_agent_key = project_group_key.clone();
                         let new_agent_sidebar = this_for_menu.clone();
                         let new_agent_menu = weak_menu.clone();
+                        let configure_agent_menu = weak_menu.clone();
                         let built_in_agent_ready = built_in_agent_is_ready(menu_cx);
+                        let (built_in_agent_label, built_in_agent_icon) =
+                            workspace_built_in_agent_action_presentation(
+                                APP_NAME,
+                                built_in_agent_ready,
+                            );
                         let menu = if APP_NAME == "Zed" {
                             menu.entry(
-                                workspace_built_in_agent_action_label(
-                                    APP_NAME,
-                                    built_in_agent_ready,
-                                ),
+                                built_in_agent_label,
                                 Some(Box::new(NewThreadInGroup)),
                                 move |window, cx| {
                                     new_agent_sidebar
@@ -8849,39 +8858,63 @@ impl Sidebar {
                                 }
                                 submenu
                             })
-                            .separator()
-                            .item(
-                                ContextMenuEntry::new(workspace_built_in_agent_action_label(
-                                    APP_NAME,
-                                    built_in_agent_ready,
-                                ))
-                                .icon(IconName::DezAgent)
-                                .action(Box::new(NewThreadInGroup))
-                                .handler(move |window, cx| {
-                                    new_agent_sidebar
-                                        .update(cx, |sidebar, cx| {
-                                            sidebar.set_group_expanded(&new_agent_key, true, cx);
-                                            sidebar.selection = None;
-                                            if let Some(workspace) =
-                                                sidebar.workspace_for_group(&new_agent_key, cx)
-                                            {
-                                                sidebar.create_new_thread(&workspace, window, cx);
-                                            } else {
-                                                sidebar.open_workspace_and_create_entry(
-                                                    &new_agent_key,
-                                                    NewEntryTarget::AgentThread,
-                                                    window,
-                                                    cx,
-                                                );
-                                            }
-                                        })
-                                        .ok();
-                                    new_agent_menu
-                                        .update(cx, |_, cx| cx.emit(DismissEvent))
-                                        .ok();
-                                }),
-                            )
-                            .when(
+                            .separator();
+                            let menu = if built_in_agent_ready {
+                                menu.item(
+                                    ContextMenuEntry::new(built_in_agent_label)
+                                        .icon(built_in_agent_icon)
+                                        .action(Box::new(NewThreadInGroup))
+                                        .handler(move |window, cx| {
+                                            new_agent_sidebar
+                                                .update(cx, |sidebar, cx| {
+                                                    sidebar
+                                                        .set_group_expanded(&new_agent_key, true, cx);
+                                                    sidebar.selection = None;
+                                                    if let Some(workspace) = sidebar
+                                                        .workspace_for_group(&new_agent_key, cx)
+                                                    {
+                                                        sidebar.create_new_thread(
+                                                            &workspace, window, cx,
+                                                        );
+                                                    } else {
+                                                        sidebar.open_workspace_and_create_entry(
+                                                            &new_agent_key,
+                                                            NewEntryTarget::AgentThread,
+                                                            window,
+                                                            cx,
+                                                        );
+                                                    }
+                                                })
+                                                .log_err();
+                                            new_agent_menu
+                                                .update(cx, |_, cx| cx.emit(DismissEvent))
+                                                .log_err();
+                                        }),
+                                )
+                            } else {
+                                menu.item(
+                                    ContextMenuEntry::new(built_in_agent_label)
+                                        .icon(built_in_agent_icon)
+                                        .action(Box::new(zed_actions::OpenSettingsAt {
+                                            path: "llm_providers".to_owned(),
+                                            target: None,
+                                        }))
+                                        .handler(move |window, cx| {
+                                            window.dispatch_action(
+                                                zed_actions::OpenSettingsAt {
+                                                    path: "llm_providers".to_owned(),
+                                                    target: None,
+                                                }
+                                                .boxed_clone(),
+                                                cx,
+                                            );
+                                            configure_agent_menu
+                                                .update(cx, |_, cx| cx.emit(DismissEvent))
+                                                .log_err();
+                                        }),
+                                )
+                            };
+                            menu.when(
                                 project_group_key.host().is_none(),
                                 |menu| {
                                     menu.separator().item(

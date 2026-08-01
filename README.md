@@ -59,6 +59,9 @@ Workspace instead of separate applications or hidden panel modes.
 - **Built-in Agent** — is distinct from terminal agents such as Codex, Claude
   Code, OpenCode, and Herdr. **Open Terminal** launches the configured default,
   while the Add menu keeps explicit provider and native-shell choices nearby.
+  The native Add menu and Workspace Options open Built-in Agent only when a
+  default model is usable; otherwise **Configure Built-in Agent…** opens
+  provider Settings with the Settings mark.
   All edits still land in ordinary buffers and Git changes, so the same
   diagnostics, diff, and review tools apply.
 - **Terminal Sessions** — terminals open in the Main Work Area. Session

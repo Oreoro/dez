@@ -194,11 +194,11 @@ tab strip and Add control remain visible on an empty Main Work Area, including
 Home.
 
 The Built-in Agent route is readiness-aware. When an authenticated default
-model is available, the Add menu shows **Open Built-in Agent** with the Dez Agent
-mark. Until then, that same native row shows **Configure Built-in Agent…** with
-the Settings mark and opens provider settings. It never leads a first-time user
-into a model-less Agent surface. Terminal agents remain independent of this
-provider setup.
+model is available, the Add menu and Workspace Options show a Built-in Agent
+action with the Dez Agent mark. Until then, both native menus show **Configure
+Built-in Agent…** with the Settings mark and open provider settings. Neither
+route leads a first-time user into a model-less Agent surface. Terminal agents
+remain independent of this provider setup.
 
 The Dez **File → Open Terminal** submenu mirrors the native **+** launch routes
 in the same order, followed by **Continue Agent**. Its first row previews the
