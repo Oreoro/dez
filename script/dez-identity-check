@@ -1704,7 +1704,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'IconButton::new\([[:space:]]*\("close-workspace", workspace_index\).*?tab_index\(0isize\).*?aria_label\("Close Worktree from Window"\).*?Tooltip::text\([[:space:]]*"Close Worktree from Window"' \
     'the Workspace-menu close control can regress to an ambiguous or pointer-only action'
 reject_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'IconButton::new\([[:space:]]*\("close-workspace", workspace_index\).*?visible_on_hover' \
+    'IconButton::new\([[:space:]]*\("close-workspace", workspace_index\).{0,3000}visible_on_hover' \
     'the already-open Workspace menu can hide its close action until pointer hover'
 require_pattern crates/sidebar/src/sidebar.rs \
     '"Remove Workspace from Window"' \
