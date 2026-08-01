@@ -402,7 +402,10 @@ The Workspace header owns Git branch and changed-file metadata. Repository
 association follows path-component ancestry in both directions, so opening a
 repository subdirectory or a parent folder that contains repositories does not
 erase Git identity. Similar string prefixes such as `dez` and `dez-tools` never
-match. Unrelated machine terminals do not render.
+match. At narrow widths, the title and Git summary truncate inside their own
+flexible region before they can displace Workspace controls. Hover and
+accessibility descriptions retain the full root and Git details. Unrelated
+machine terminals do not render.
 Explicit external rows never hide the primary **Open Workspace…** path when no
 Workspace is open.
 

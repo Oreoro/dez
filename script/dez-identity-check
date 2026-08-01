@@ -1056,7 +1056,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_header_status_visible.*?app_name == "Zed" \|\| is_searching \|\| is_restoring \|\| has_attention.*?ListEntry::Thread.*?if APP_NAME == "Zed".*?pl_3\(\).*?ListEntry::Terminal.*?if APP_NAME == "Zed".*?pl_3\(\).*?fn render_sidebar_header.*?\.flex_1\(\).*?Label::new\(session_rail_title\(APP_NAME\)\).*?session_header_status_visible\(' \
     'Dez Workspaces can regress to replacing the navigation title with routine inventory or flattening child sessions into the Workspace level'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn workspace_navigation_label.*?root_count <= 1.*?format!\("\{primary_name\} · \{root_count\} roots"\).*?let full_label = group_key\.display_name\(&path_detail_map\).*?fuzzy_match_positions\(&query, &full_label\).*?full_label,[[:space:]]*highlight_positions.*?Workspace roots: \{full_label\}.*?id\(format!\("\{id_prefix\}project-labels-\{ix\}"\)\).*?when_some\(workspace_roots_tooltip\.clone\(\).*?this\.tooltip\(Tooltip::text\(tooltip\)\)' \
+    'fn workspace_navigation_label.*?root_count <= 1.*?format!\("\{primary_name\} · \{root_count\} roots"\).*?let full_label = group_key\.display_name\(&path_detail_map\).*?fuzzy_match_positions\(&query, &full_label\).*?full_label,[[:space:]]*highlight_positions.*?Workspace roots: \{full_label\}.*?workspace_header_details_tooltip.*?id\(format!\("\{id_prefix\}project-labels-\{ix\}"\)\).*?when_some\(workspace_details_tooltip\.clone\(\).*?this\.tooltip\(Tooltip::text\(tooltip\)\)' \
     'multi-root Workspaces can regress to a clipped comma-separated identity or stop matching every root'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_overview_status_label.*?\{attention_count\} \{attention_noun\} \{attention_verb\} attention.*?\{workspace_label\} · \{session_count\} \{session_noun\} active.*?fn canvas_thread_item_style.*?if APP_NAME != "Zed".*?metadata_visible\(true\)' \
@@ -1920,7 +1920,7 @@ require_multiline_pattern docs/src/development/dez/v0.2-workspace-polish.md \
     'Add menu also exposes.*?Built-in Agent row opens that native.*?authenticated default model.*?Configure Built-in Agent….*?Settings mark.*?provider settings instead of a dead model-less surface' \
     'the active Workspace contract can regress to sending unconfigured users into a dead Built-in Agent surface'
 require_multiline_pattern docs/src/development/dez/v0.2-workspace-polish.md \
-    'Workspace rows.*?live Git branch.*?changed-file metadata.*?Git association is path-component aware.*?root equals, contains, or sits inside a discovered.*?repository.*?multi-root summaries deduplicate repository work directories' \
+    'Workspace rows.*?live Git branch.*?changed-file metadata.*?Git association is path-component aware.*?root equals, contains, or sits inside a discovered.*?repository.*?multi-root summaries deduplicate repository work directories.*?two-line title and Git stack.*?flexible row width.*?truncates before disclosure, attention, terminal, or options controls.*?tooltip and accessibility description' \
     'the active Workspace contract can regress to hiding Git identity for nested or parent-folder Workspace roots'
 reject_multiline_pattern crates/workspace/src/welcome.rs \
     'const DEZ_CONTENT: \(Section, Section\).*?title: "Open Terminal".*?const DEZ_WORKSPACE_CONTENT' \
@@ -2355,6 +2355,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_controls_name_their_actual_workspace.*?workspace_root_overlaps_repository\([[:space:]]*Path::new\("/code/dez/crates/sidebar"\),[[:space:]]*Path::new\("/code/dez"\).*?workspace_root_overlaps_repository\([[:space:]]*Path::new\("/code"\),[[:space:]]*Path::new\("/code/dez"\).*?!workspace_root_overlaps_repository\([[:space:]]*Path::new\("/code/dez"\),[[:space:]]*Path::new\("/code/dez-tools"\)' \
     'Workspace Git association can regress to exact-root matching or unsafe string-prefix matching'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn workspace_header_metadata_description.*?app_name == "Zed".*?format!\("Git: \{metadata\}"\).*?fn workspace_header_details_tooltip.*?details\.join\("\\n"\).*?fn workspace_header_accessibility_with_metadata.*?workspace_header_metadata_description.*?let workspace_details_tooltip = workspace_header_details_tooltip.*?workspace_header_accessibility_with_metadata.*?aria_label\(workspace_accessibility_label\).*?id\(format!\("\{id_prefix\}project-labels-\{ix\}"\)\).*?min_w_0\(\).*?flex_1\(\).*?overflow_hidden\(\).*?when_some\(workspace_details_tooltip\.clone\(\).*?Tooltip::text\(tooltip\)' \
+    'narrow Workspace headers can regress to clipping controls or hiding complete Git metadata from hover and assistive technology'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_empty_terminal_row_visible_for_active_state\(app_name: &str, is_active: bool\) -> bool \{[[:space:]]*app_name != "Dez" \|\| !is_active[[:space:]]*\}.*?else if !is_collapsed[[:space:]]*&& !is_sticky[[:space:]]*&& !has_threads.*?&& workspace_empty_terminal_row_visible_for_active_state\(APP_NAME, is_active\)' \
     'the active Dez Workspace can regress to duplicating its Main Work Area terminal action in an empty Workspaces row'

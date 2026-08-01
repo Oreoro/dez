@@ -1427,6 +1427,43 @@ fn workspace_repository_summary_label(
     }
 }
 
+fn workspace_header_metadata_description(app_name: &str, metadata: &str) -> String {
+    if app_name == "Zed" {
+        metadata.to_owned()
+    } else {
+        format!("Git: {metadata}")
+    }
+}
+
+fn workspace_header_details_tooltip(
+    app_name: &str,
+    roots: Option<&str>,
+    metadata: Option<&str>,
+) -> Option<String> {
+    let mut details = Vec::new();
+    if let Some(roots) = roots {
+        details.push(roots.to_owned());
+    }
+    if let Some(metadata) = metadata {
+        details.push(workspace_header_metadata_description(app_name, metadata));
+    }
+    (!details.is_empty()).then(|| details.join("\n"))
+}
+
+fn workspace_header_accessibility_with_metadata(
+    app_name: &str,
+    accessibility_label: String,
+    metadata: Option<&str>,
+) -> String {
+    match metadata {
+        Some(metadata) => format!(
+            "{accessibility_label}. {}.",
+            workspace_header_metadata_description(app_name, metadata)
+        ),
+        None => accessibility_label,
+    }
+}
+
 fn merge_unambiguous_branch(
     branches: &mut HashMap<PathBuf, SharedString>,
     ambiguous_paths: &mut HashSet<PathBuf>,
@@ -2184,6 +2221,32 @@ mod workspace_header_label_tests {
             Some("1 change")
         );
         assert_eq!(workspace_repository_summary_label(None, 0), None);
+        assert_eq!(
+            workspace_header_details_tooltip(
+                "Dez",
+                Some("Workspace roots: app, api"),
+                Some("feature/navigation · 3 changes")
+            )
+            .as_deref(),
+            Some("Workspace roots: app, api\nGit: feature/navigation · 3 changes")
+        );
+        assert_eq!(workspace_header_details_tooltip("Dez", None, None), None);
+        assert_eq!(
+            workspace_header_accessibility_with_metadata(
+                "Dez",
+                "Workspace app, ready for a session".to_owned(),
+                Some("main · 1 change")
+            ),
+            "Workspace app, ready for a session. Git: main · 1 change."
+        );
+        assert_eq!(
+            workspace_header_accessibility_with_metadata(
+                "Zed",
+                "Workspace app, ready for a session".to_owned(),
+                Some("Layout: Review")
+            ),
+            "Workspace app, ready for a session. Layout: Review."
+        );
         assert!(workspace_root_overlaps_repository(
             Path::new("/code/dez/crates/sidebar"),
             Path::new("/code/dez")
@@ -7580,6 +7643,16 @@ impl Sidebar {
         );
         let workspace_roots_tooltip =
             (label != full_label).then(|| format!("Workspace roots: {full_label}"));
+        let workspace_details_tooltip = workspace_header_details_tooltip(
+            APP_NAME,
+            workspace_roots_tooltip.as_deref(),
+            layout_label.map(|label| label.as_ref()),
+        );
+        let workspace_accessibility_label = workspace_header_accessibility_with_metadata(
+            APP_NAME,
+            workspace_accessibility_label,
+            layout_label.map(|label| label.as_ref()),
+        );
 
         let is_collapsed = self.is_group_collapsed(key, cx);
         let disclosure_icon = if is_collapsed {
@@ -7741,6 +7814,8 @@ impl Sidebar {
                             v_flex()
                                 .id(format!("{id_prefix}project-labels-{ix}"))
                                 .min_w_0()
+                                .flex_1()
+                                .overflow_hidden()
                                 .gap(px(1.0))
                                 .child(label)
                                 .when_some(
@@ -7758,7 +7833,7 @@ impl Sidebar {
                                         )
                                     },
                                 )
-                                .when_some(workspace_roots_tooltip.clone(), |this, tooltip| {
+                                .when_some(workspace_details_tooltip.clone(), |this, tooltip| {
                                     this.tooltip(Tooltip::text(tooltip))
                                 }),
                         )
