@@ -180,8 +180,10 @@ The tab-strip **+** is the single **Add to Main Work Area** control. Its
 **Open Terminal** submenu launches the **Default Terminal**, a **Native Shell**,
 a **Workspace tmux** session, Codex, Claude Code, or OpenCode. **More Agent
 CLIs** keeps Gemini CLI, Aider, and Herdr one level deeper. The Add menu also
-opens the optional Built-in Agent, a file, Files, Review Changes, Run Task, Debug,
-Workspace search, or symbol search. **Continue Agent** resumes the last native
+opens the optional Built-in Agent, a file, Files, Review Changes, Run Task,
+Debug, Workspace search, or symbol search. Terminal and Agent routes lead;
+running-session and cmux handoffs follow; Home and Recent Workspaces remain at
+the end as secondary navigation. **Continue Agent** resumes the last native
 provider session without mixing it into running-session discovery. The control
 follows the final tab while space remains and stays pinned to the tab viewport
 edge when tabs overflow. **Browse Running

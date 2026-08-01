@@ -5775,12 +5775,6 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                         )
                 } else {
                     let menu = menu
-                        .action("Open Home", crate::welcome::ShowWelcome.boxed_clone())
-                        .action(
-                            "Open Recent Workspaces…",
-                            zed_actions::OpenRecent::default().boxed_clone(),
-                        )
-                        .separator()
                         .submenu("Open Terminal", |menu, _, _| {
                             menu.action_with_icon(
                                 "Default Terminal",
@@ -5898,6 +5892,12 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                         .separator()
                         .action(search_workspace, DeploySearch::default().boxed_clone())
                         .action(search_symbols, ToggleProjectSymbols.boxed_clone())
+                        .separator()
+                        .action("Open Home", crate::welcome::ShowWelcome.boxed_clone())
+                        .action(
+                            "Open Recent Workspaces…",
+                            zed_actions::OpenRecent::default().boxed_clone(),
+                        )
                 }
             }))
         })
@@ -5939,7 +5939,7 @@ fn pane_new_surface_control_copy(app_name: &str) -> (&'static str, &'static str)
     } else {
         (
             "Add to Main Work Area",
-            "Add a terminal, file, review, or Workspace tool",
+            "Add a terminal, Agent, file, review, or Workspace tool",
         )
     }
 }
@@ -6855,7 +6855,7 @@ mod tests {
             pane_new_surface_control_copy("Dez"),
             (
                 "Add to Main Work Area",
-                "Add a terminal, file, review, or Workspace tool"
+                "Add a terminal, Agent, file, review, or Workspace tool"
             )
         );
         assert_eq!(pane_new_surface_control_copy("Zed"), ("New Item", "New…"));
