@@ -1161,6 +1161,16 @@ fn workspace_pane_navigation_label(pane_index: usize, pane_count: usize) -> Opti
     (pane_count > 1).then(|| format!("Pane {}", pane_index + 1))
 }
 
+fn workspace_tab_icon_color(is_visible: bool, is_focused: bool) -> Color {
+    if is_focused {
+        Color::Accent
+    } else if is_visible {
+        Color::Default
+    } else {
+        Color::Muted
+    }
+}
+
 fn session_rail_search_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Search Sessions"
@@ -2406,6 +2416,9 @@ mod session_start_state_tests {
             workspace_pane_navigation_label(1, 3).as_deref(),
             Some("Pane 2")
         );
+        assert_eq!(workspace_tab_icon_color(false, false), Color::Muted);
+        assert_eq!(workspace_tab_icon_color(true, false), Color::Default);
+        assert_eq!(workspace_tab_icon_color(true, true), Color::Accent);
         assert_eq!(
             session_rail_search_label("Dez"),
             "Search Workspaces and Sessions"
@@ -17543,19 +17556,16 @@ impl Sidebar {
                     let is_visible = active_item_id == Some(item.item_id());
                     let is_focused = pane_is_active && is_visible;
                     let is_pinned = item_index < pinned_count;
+                    let icon_color = workspace_tab_icon_color(is_visible, is_focused);
                     let icon = if let Some(agent_thread) = item.downcast::<AgentThreadItem>() {
                         agent_thread
                             .read(cx)
-                            .workspace_navigation_icon(is_visible, cx)
+                            .workspace_navigation_icon(icon_color, cx)
                     } else {
                         item.tab_icon(window, cx)
                             .unwrap_or_else(|| Icon::new(IconName::File))
                             .size(IconSize::XSmall)
-                            .color(if is_visible {
-                                Color::Accent
-                            } else {
-                                Color::Muted
-                            })
+                            .color(icon_color)
                             .into_any_element()
                     };
                     let is_dirty = item.is_dirty(cx);
@@ -17610,7 +17620,7 @@ impl Sidebar {
                                 .size(ButtonSize::Medium)
                                 .style(ButtonStyle::Subtle)
                                 .full_width()
-                                .toggle_state(is_focused)
+                                .toggle_state(is_visible)
                                 .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                                 .tab_index(0isize)
                                 .aria_label(accessibility_label.clone())

@@ -212,13 +212,7 @@ impl AgentThreadItem {
             })
     }
 
-    pub fn workspace_navigation_icon(&self, is_visible: bool, cx: &App) -> AnyElement {
-        let color = if is_visible {
-            Color::Accent
-        } else {
-            Color::Muted
-        };
-
+    pub fn workspace_navigation_icon(&self, color: Color, cx: &App) -> AnyElement {
         if !self.is_draft(cx)
             && let Some(icon_path) = self.agent_icon_from_external_svg(cx)
         {

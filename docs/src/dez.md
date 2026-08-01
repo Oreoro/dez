@@ -255,8 +255,10 @@ native icon, disambiguated tab title, active state, dirty state, and pinned
 state. Terminal rows preserve their task, Agent provider, or tmux mark.
 Built-in and external Agent tabs preserve the same Dez or provider mark used
 by their native tab, and the projection announces each row's position in the
-native tab set. Activating a row calls the owning Workspace's native item
-activation path. An unpinned row
+native tab set. In split layouts, each pane's visible tab has a quiet selected
+row and the focused pane keeps the accent icon, so pane visibility does not
+disappear when focus moves. Activating a row calls the owning Workspace's
+native item activation path. An unpinned row
 exposes the Surface's native close icon on hover, keeps it
 visible while that Surface is active in its pane, and accepts middle-click.
 Both routes call the owning pane's normal close path, including unsaved-work
