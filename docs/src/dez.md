@@ -817,7 +817,10 @@ One hung server therefore cannot hide healthy Sessions reported by another or
 extend the refresh indefinitely.
 The explicit **Open Workspace in cmux** handoff is separately bounded to eight
 seconds. A timeout leaves the Workspace unchanged and replaces the progress
-notice with actionable failure copy.
+notice with a persistent native toast linked to the cmux API guide. If cmux is
+not installed, the same native surface offers **Get cmux** instead. Successful
+handoffs use a short confirmation and do not leave another navigation surface
+behind.
 Last-known external rows refresh their source instead of attaching blindly;
 select the refreshed row again to open it. **Retry Attach** resolves the current
 session by stable ID, reports sessions that ended during refresh, and surfaces

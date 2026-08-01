@@ -282,8 +282,10 @@ machine PTYs remain excluded.
 
 Opening the active Workspace in cmux also has a bounded handoff. If cmux does
 not respond within eight seconds, Dez keeps the Workspace open, ends the
-progress state, and reports a retryable failure instead of leaving an endless
-“Opening…” notice.
+progress state, and keeps a native recovery toast visible instead of leaving an
+endless “Opening…” notice. A missing installation offers **Get cmux**; launch,
+access, and timeout failures offer **Open cmux API guide**. Successful handoffs
+remain brief confirmations.
 Live cmux discovery treats the documented process-only refusal as **activity
 sharing is off**, not as a failed terminal integration. Previously discovered
 rows remain last known, and an inline **Open API Guide** action explains the

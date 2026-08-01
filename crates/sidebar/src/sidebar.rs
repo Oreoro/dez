@@ -3664,6 +3664,52 @@ fn other_running_sessions_empty_label(
 
 const CMUX_HANDOFF_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
 const CMUX_API_GUIDE_URL: &str = "https://cmux.com/docs/api";
+const CMUX_WEBSITE_URL: &str = "https://cmux.com";
+
+#[derive(Debug)]
+pub enum CmuxWorkspaceHandoffError {
+    NotInstalled,
+    TimedOut,
+    Failed(String),
+}
+
+impl std::fmt::Display for CmuxWorkspaceHandoffError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NotInstalled => write!(
+                formatter,
+                "cmux isn't installed yet. This Workspace is still open in Dez."
+            ),
+            Self::TimedOut => write!(
+                formatter,
+                "cmux did not respond within {} seconds. This Workspace is still open in Dez.",
+                CMUX_HANDOFF_TIMEOUT.as_secs()
+            ),
+            Self::Failed(message) => formatter.write_str(message),
+        }
+    }
+}
+
+impl std::error::Error for CmuxWorkspaceHandoffError {}
+
+pub fn cmux_workspace_handoff_toast(
+    notification_id: NotificationId,
+    path_label: String,
+    outcome: Result<(), CmuxWorkspaceHandoffError>,
+) -> Toast {
+    match outcome {
+        Ok(()) => Toast::new(notification_id, format!("Opened {path_label} in cmux.")).autohide(),
+        Err(CmuxWorkspaceHandoffError::NotInstalled) => Toast::new(
+            notification_id,
+            CmuxWorkspaceHandoffError::NotInstalled.to_string(),
+        )
+        .on_click("Get cmux", |_window, cx| cx.open_url(CMUX_WEBSITE_URL)),
+        Err(error) => Toast::new(notification_id, error.to_string())
+            .on_click("Open cmux API guide", |_window, cx| {
+                cx.open_url(CMUX_API_GUIDE_URL)
+            }),
+    }
+}
 
 async fn run_bounded_cmux_command(
     command: &mut util::command::Command,
@@ -3688,7 +3734,7 @@ async fn run_bounded_cmux_command(
 pub async fn open_workspace_path_in_cmux(
     path: &Path,
     executor: &gpui::BackgroundExecutor,
-) -> Result<(), String> {
+) -> Result<(), CmuxWorkspaceHandoffError> {
     for program in [
         "/Applications/cmux.app/Contents/Resources/bin/cmux",
         "/opt/homebrew/bin/cmux",
@@ -3701,22 +3747,33 @@ pub async fn open_workspace_path_in_cmux(
             Ok(output) if output.status.success() => return Ok(()),
             Ok(output) => {
                 let detail = String::from_utf8_lossy(&output.stderr);
-                let detail = detail.trim();
-                return Err(if detail.is_empty() {
-                    format!("cmux exited with {}.", output.status)
+                let detail = detail
+                    .trim()
+                    .trim_end_matches(|character: char| matches!(character, '.' | '!' | '?'));
+                return Err(CmuxWorkspaceHandoffError::Failed(if detail.is_empty() {
+                    format!(
+                        "cmux couldn't open this Workspace ({}). This Workspace is still open in Dez.",
+                        output.status
+                    )
                 } else {
-                    format!("cmux could not open this Workspace: {detail}")
-                });
+                    format!(
+                        "cmux couldn't open this Workspace: {detail}. This Workspace is still open in Dez."
+                    )
+                }));
             }
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
             Err(error) if error.kind() == std::io::ErrorKind::TimedOut => {
-                return Err(format!("{error}. Dez kept this Workspace open."));
+                return Err(CmuxWorkspaceHandoffError::TimedOut);
             }
-            Err(error) => return Err(format!("Could not start cmux: {error}")),
+            Err(error) => {
+                return Err(CmuxWorkspaceHandoffError::Failed(format!(
+                    "Dez couldn't start cmux: {error}. This Workspace is still open in Dez."
+                )));
+            }
         }
     }
 
-    Err("cmux is not installed. Dez kept the Workspace open here.".to_owned())
+    Err(CmuxWorkspaceHandoffError::NotInstalled)
 }
 
 async fn terminate_legacy_terminal_session(
@@ -15285,20 +15342,16 @@ impl Sidebar {
             }
             weak_workspace
                 .update(cx, |workspace, cx| {
-                    let message = match outcome {
-                        Ok(()) => format!("Opened {path_label} in cmux."),
-                        Err(error) => error,
-                    };
                     workspace.show_toast(
-                        Toast::new(
+                        cmux_workspace_handoff_toast(
                             NotificationId::composite::<CmuxWorkspaceOpenToast>(toast_key),
-                            message,
-                        )
-                        .autohide(),
+                            path_label,
+                            outcome,
+                        ),
                         cx,
                     );
                 })
-                .ok();
+                .log_err();
             if let Some(store) = multiplexer_store {
                 store.update(cx, |store, cx| store.refresh(cx));
             }

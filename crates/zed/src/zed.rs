@@ -1573,16 +1573,12 @@ fn register_actions(
                         log::error!("cmux Workspace open failed: {error}");
                     }
                     workspace.update_in(cx, |workspace, _, cx| {
-                        let message = match outcome {
-                            Ok(()) => format!("Opened {path_label} in cmux."),
-                            Err(error) => error,
-                        };
                         workspace.show_toast(
-                            Toast::new(
+                            sidebar::cmux_workspace_handoff_toast(
                                 NotificationId::composite::<OpenWorkspaceInCmux>(toast_key),
-                                message,
-                            )
-                            .autohide(),
+                                path_label,
+                                outcome,
+                            ),
                             cx,
                         );
                     })?;
