@@ -306,10 +306,10 @@ fn active_or_focused_workspace_keeps_its_new_terminal_action_discoverable() {
 }
 
 #[test]
-fn dez_empty_workspace_keeps_one_compact_native_terminal_action() {
+fn dez_empty_workspace_moves_terminal_creation_to_one_labeled_row() {
     assert!(
-        workspace_header_terminal_action_visible("Dez", false, false),
-        "Dez keeps terminal creation in the Workspace header instead of an onboarding block"
+        !workspace_header_terminal_action_visible("Dez", false, false),
+        "an expanded empty Dez Workspace gives terminal creation to its labeled row"
     );
     assert!(
         workspace_header_terminal_action_visible("Dez", false, true),
@@ -317,7 +317,7 @@ fn dez_empty_workspace_keeps_one_compact_native_terminal_action() {
     );
     assert!(
         workspace_header_terminal_action_visible("Dez", true, false),
-        "a populated Workspace keeps terminal creation available in its compact header"
+        "a Workspace with activity keeps terminal creation available in its compact header"
     );
     assert!(
         !workspace_header_terminal_action_visible("Zed", false, false),

@@ -185,9 +185,11 @@ impl TerminalInlineAssistant {
         assist
             .terminal
             .update(cx, |terminal, cx| {
-                terminal
-                    .terminal()
-                    .update(cx, |terminal, _| terminal.input(CLEAR_INPUT.as_bytes()));
+                terminal.terminal().update(cx, |terminal, terminal_cx| {
+                    if terminal.input(CLEAR_INPUT.as_bytes()) {
+                        terminal_cx.notify();
+                    }
+                });
             })
             .log_err();
 

@@ -17,14 +17,12 @@ packaging behavior through exact artifacts.
 ## Dependency order {#dependency-order}
 
 ```text
-upstream and identity gate
--> durable workspace owner
--> local terminal host and session
--> terminal-agent adapter
--> attention projection
--> Run and review brief
--> restart recovery demonstration
--> remote continuity and conflict awareness
+source checks
+-> remote exact-candidate compilation and optimized packaging
+-> installed-artifact Workspace access, navigation, and durable terminal recovery
+-> external agent and multiplexer integrations
+-> visual, input, responsive, and accessibility validation
+-> Developer ID signing, notarization, and stable release
 ```
 
 Visual polish continues in small slices, but it must support truthful state and
@@ -49,12 +47,12 @@ Open Workspace
 The v0.2 dependency order is:
 
 ```text
-validate the exact v0.2.2 source candidate
--> simplify Home, Workspaces, menus, and native tab navigation
--> prove durable terminal and Workspace recovery
--> harden Codex, Claude Code, OpenCode, tmux, and Herdr integrations
--> pass visual, responsive, and accessibility matrices
--> rehearse upstream merge and exact release packaging
+pass source checks for the exact v0.2.2 candidate
+-> remotely compile and package that exact candidate
+-> validate installed Workspace access, navigation, and durable terminal recovery
+-> validate Codex, Claude Code, OpenCode, tmux, Herdr, and cmux integrations
+-> pass visual, input, responsive, and accessibility matrices
+-> pass Developer ID signing, notarization, and stable-release gates
 ```
 
 Do not advance a marketing version because source looks plausible. Each

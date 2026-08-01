@@ -916,8 +916,10 @@ pub fn init(cx: &mut App) {
                                     if !text.is_empty() {
                                         let view = agent_terminal.view.clone();
                                         view.update(cx, |view, cx| {
-                                            view.terminal().update(cx, |terminal, _| {
-                                                terminal.paste(&text);
+                                            view.terminal().update(cx, |terminal, terminal_cx| {
+                                                if terminal.paste(&text) {
+                                                    terminal_cx.notify();
+                                                }
                                             });
                                             window.focus(&view.focus_handle(cx), cx);
                                         });

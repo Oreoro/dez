@@ -98,24 +98,24 @@ The first vertical slice is:
 ```text
 current upstream baseline
 -> isolated Dez identity
--> one durable workspace
+-> one durable Workspace
 -> one persistent local terminal
 -> Codex detection
--> attention item
--> deterministic review brief
+-> Workspaces attention state
+-> deterministic Review Brief
 -> restart and recover
 ```
 
 The minimum product surfaces are:
 
-- an attention inbox that links to existing owning surfaces;
-- session cards with actor, host, repository, branch, state, time, changes,
-  checks, and last meaningful event;
-- a review brief that never invents successful checks;
+- Workspaces attention that links to existing owning Surfaces;
+- Agent Session rows with provider, Host, repository, branch, state, time,
+  changes, checks, and last meaningful event;
+- a Review Brief that never invents successful checks;
 - a bounded structured activity timeline;
-- safe session recovery states;
-- a keyboard-first switcher across workspaces, surfaces, actors, hosts, and
-  attention items.
+- safe Agent Session recovery states;
+- a keyboard-first switcher across Workspaces, Surfaces, Agent Sessions, Hosts,
+  and attention items.
 
 Conflict radar, SSH continuity, task recipes, worktree brokering, workspace
 briefs, mobile attention, and shared team projections follow after this loop is
@@ -123,16 +123,22 @@ reliable.
 
 ## Hero workflow {#hero-workflow}
 
+This is the target workflow for validation, not a claim about the current
+source candidate or an installed artifact. It remains unvalidated until the
+exact remote-built application completes the sequence on real repositories.
+
 1. Start Codex in a frontend terminal.
 2. Start another supported agent in a backend terminal.
 3. Run a watcher on a remote host.
 4. Edit a related file manually.
 5. Close and reopen Dez without killing the work.
-6. See one actor waiting for permission and another ready for review.
-7. Open the ready task's brief and diff beside its owning terminal.
-8. Receive an advisory warning if two actors touch overlapping files.
+6. See one Agent Session waiting for permission in Workspaces and another ready
+   for review.
+7. Open the ready Agent Session's Review Brief and diff beside its owning
+   terminal.
+8. Receive an advisory warning if two Agent Sessions touch overlapping files.
 9. Approve, redirect, pause, or discard work explicitly.
-10. Return later with workspace and session context intact.
+10. Return later with Workspace and Agent Session context intact.
 
 If this workflow is unreliable or confusing, broad feature count does not make
 the release successful.

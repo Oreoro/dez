@@ -1,8 +1,15 @@
 # Summary
 
-# Welcome
+# Dez
 
 - [What is Dez?](./dez.md)
+- [Terminal Sessions](./terminal.md)
+- [Workspace Navigation and Access Recovery](./development/dez/v0.2-workspace-polish.md)
+- [Settings and Shortcuts](./dez.md#settings-and-navigation-visibility)
+- [Release Status](./development/dez/release-evidence.md)
+
+# Upstream Zed reference
+
 - [Getting Started](./getting-started.md)
 - [Installation](./installation.md)
   - [Update](./update.md)
@@ -23,7 +30,6 @@
   - [Project Panel](./project-panel.md)
   - [Tab Switcher](./tab-switcher.md)
 - [Running & Testing](./running-testing.md)
-  - [Terminal](./terminal.md)
   - [Tasks](./tasks.md)
   - [Debugger](./debugger.md)
   - [REPL](./repl.md)

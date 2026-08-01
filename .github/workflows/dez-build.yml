@@ -176,6 +176,11 @@ jobs:
             expected_bundle_id=dev.dez.Dez-Preview
             artifact_label=Dez-Preview
           fi
+          expected_version="$(
+            sed -n 's/^version = "\([^"]*\)"/\1/p' crates/zed/Cargo.toml |
+              head -n 1
+          )"
+          test -n "$expected_version"
           app="$mount_dir/${expected_name}.app"
           plist="$app/Contents/Info.plist"
           main="$app/Contents/MacOS/dez"
@@ -189,6 +194,7 @@ jobs:
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")" = "$expected_name"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")" = "$expected_bundle_id"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$plist")" = "dez"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")" = "$expected_version"
 
           for binary in "$main" "$cli" "$terminal_host" "$git_binary"; do
             test -x "$binary"
@@ -231,7 +237,7 @@ jobs:
             "$terminal_host" --help
           } >"$artifact_dir/runtime-smoke.txt"
           grep -F "$expected_name" "$artifact_dir/runtime-smoke.txt"
-          grep -F "0.2.2" "$artifact_dir/runtime-smoke.txt"
+          grep -F "$expected_version" "$artifact_dir/runtime-smoke.txt"
           grep -F "Usage: dez-terminal-host" "$artifact_dir/runtime-smoke.txt"
 
           {

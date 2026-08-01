@@ -1876,10 +1876,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   temporary, or user-local launch opens native Home with **Install and
   Relaunch** and starts no persistent helper. After relaunch, each restored
   local root is read-preflighted once. A denied root becomes one
-  **Workspace access required** state with **Choose Workspace…**; Git, search,
-  LSP, Agent, and terminal startup do not proceed against a half-open Workspace.
-  Granting one root clears only that root, permission diagnostics are aggregated,
-  and pending Workspace searches are cancelled during quit.
+  **Workspace access required** state with **Grant Access…**. The single-folder
+  action validates an exact blocked root without opening or replacing the
+  current Workspace; Git, search, LSP, Agent, and terminal startup do not
+  proceed against a half-open Workspace. Granting one root clears only that
+  root, permission diagnostics are aggregated, and pending Workspace searches
+  are cancelled during quit.
 - **2026-07-31: Terminal Host generation and endpoint are one ownership
   boundary.** `TerminalHostId` includes the Host generation, and one
   `TerminalHostEndpoint` supplies that connection's socket and token-file paths

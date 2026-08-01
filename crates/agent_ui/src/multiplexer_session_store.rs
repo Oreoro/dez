@@ -9,6 +9,7 @@ use std::{
 };
 
 use anyhow::{Context as _, Result};
+use futures::{FutureExt as _, Stream, StreamExt as _};
 use gpui::{App, AppContext as _, BackgroundExecutor, Context, Entity, Global, Task};
 use paths::APP_NAME;
 use serde_json::Value;
@@ -19,6 +20,9 @@ use crate::terminal_thread_metadata_store::{
 
 const MULTIPLEXER_REFRESH_INTERVAL: Duration = Duration::from_secs(5);
 const MULTIPLEXER_COMMAND_TIMEOUT: Duration = Duration::from_secs(4);
+const HERDR_ENDPOINT_TIMEOUT: Duration = Duration::from_secs(2);
+const HERDR_SOURCE_TIMEOUT: Duration = Duration::from_secs(4);
+const HERDR_MAX_CONCURRENT_ENDPOINT_QUERIES: usize = 8;
 // tmux sanitizes control characters when Dez is launched from Finder's
 // minimal, locale-free environment. Keep this printable so the exact same
 // parser works from a shell, Finder, and a signed application bundle.
@@ -366,7 +370,7 @@ async fn scan_external_multiplexer_sessions(
     executor: &BackgroundExecutor,
 ) -> ExternalMultiplexerScan {
     let tmux = bounded_multiplexer_scan("tmux", scan_tmux_sessions(), executor);
-    let herdr = bounded_multiplexer_scan("Herdr", scan_herdr_sessions(), executor);
+    let herdr = scan_herdr_sessions(executor);
     let cmux = bounded_multiplexer_scan("cmux", scan_cmux_workspaces(), executor);
     let (tmux, herdr, cmux) = futures::join!(tmux, herdr, cmux);
     ExternalMultiplexerScan { tmux, herdr, cmux }
@@ -377,12 +381,28 @@ async fn bounded_multiplexer_scan(
     scan: impl Future<Output = Result<MultiplexerScanOutcome>>,
     executor: &BackgroundExecutor,
 ) -> Result<MultiplexerScanOutcome> {
-    let timeout = executor.timer(MULTIPLEXER_COMMAND_TIMEOUT);
-    futures::pin_mut!(scan, timeout);
-    match futures::future::select(scan, timeout).await {
+    run_bounded_multiplexer_operation(
+        format!("{source} discovery"),
+        scan,
+        executor,
+        MULTIPLEXER_COMMAND_TIMEOUT,
+    )
+    .await
+}
+
+async fn run_bounded_multiplexer_operation<T>(
+    operation_name: impl Into<String>,
+    operation: impl Future<Output = Result<T>>,
+    executor: &BackgroundExecutor,
+    timeout_duration: Duration,
+) -> Result<T> {
+    let operation_name = operation_name.into();
+    let timeout = executor.timer(timeout_duration);
+    futures::pin_mut!(operation, timeout);
+    match futures::future::select(operation, timeout).await {
         futures::future::Either::Left((result, _)) => result,
         futures::future::Either::Right(_) => {
-            anyhow::bail!("{source} discovery timed out after {MULTIPLEXER_COMMAND_TIMEOUT:?}")
+            anyhow::bail!("{operation_name} timed out after {timeout_duration:?}")
         }
     }
 }
@@ -816,11 +836,21 @@ fn parse_tmux_sessions(
         .collect())
 }
 
-async fn scan_herdr_sessions() -> Result<MultiplexerScanOutcome> {
-    let Some(executable) =
-        first_available_program(&["/opt/homebrew/bin/herdr", "/usr/local/bin/herdr", "herdr"])
-            .await?
-    else {
+async fn scan_herdr_sessions(executor: &BackgroundExecutor) -> Result<MultiplexerScanOutcome> {
+    let source_deadline = executor.timer(HERDR_SOURCE_TIMEOUT).shared();
+    let executable_discovery =
+        first_available_program(&["/opt/homebrew/bin/herdr", "/usr/local/bin/herdr", "herdr"]);
+    let executable_deadline = source_deadline.clone();
+    futures::pin_mut!(executable_discovery, executable_deadline);
+    let executable = match futures::future::select(executable_discovery, executable_deadline).await
+    {
+        futures::future::Either::Left((result, _)) => result?,
+        futures::future::Either::Right(_) => anyhow::bail!(
+            "Herdr discovery reached its source-wide deadline after {:?}",
+            HERDR_SOURCE_TIMEOUT
+        ),
+    };
+    let Some(executable) = executable else {
         return Ok(MultiplexerScanOutcome::MissingExecutable);
     };
 
@@ -871,51 +901,31 @@ async fn scan_herdr_sessions() -> Result<MultiplexerScanOutcome> {
     }
 
     server_names.sort();
+    ensure_herdr_source_deadline_open(source_deadline.clone()).await?;
     if server_names.is_empty() {
         return Ok(MultiplexerScanOutcome::Available(
             AvailableMultiplexerScan::complete(Vec::new()),
         ));
     }
 
+    let expected_server_names = server_names.clone();
+    let endpoint_scans = futures::stream::iter(server_names.into_iter().map(|server_name| {
+        scan_herdr_endpoint_with_timeout(executable.clone(), server_name, executor)
+    }))
+    .buffer_unordered(HERDR_MAX_CONCURRENT_ENDPOINT_QUERIES);
+    let mut endpoint_scans = collect_herdr_endpoint_results_until_deadline(
+        endpoint_scans,
+        expected_server_names,
+        source_deadline,
+    )
+    .await;
+    endpoint_scans.sort_by(|left, right| left.0.cmp(&right.0));
     let mut sessions = Vec::new();
     let mut warnings = Vec::new();
     let mut successful_endpoint_count = 0usize;
-    for server_name in server_names {
+    for (server_name, result) in endpoint_scans {
         let server_label = server_name.clone().unwrap_or_else(|| "default".to_owned());
-        let mut args = Vec::new();
-        if let Some(name) = &server_name {
-            args.extend(["--session".to_owned(), name.clone()]);
-        }
-        args.extend(["api".to_owned(), "snapshot".to_owned()]);
-
-        let mut command = util::command::new_command(&executable);
-        command.args(&args).kill_on_drop(true);
-        let output = match command.output().await {
-            Ok(output) => output,
-            Err(error) => {
-                warnings.push(MultiplexerScanWarning {
-                    herdr_session_name: server_name,
-                    summary: format!("Herdr session discovery failed for {server_label}: {error}"),
-                });
-                continue;
-            }
-        };
-        if !output.status.success() {
-            warnings.push(MultiplexerScanWarning {
-                herdr_session_name: server_name,
-                summary: format!(
-                    "Herdr session discovery failed for {server_label}: {}",
-                    String::from_utf8_lossy(&output.stderr).trim()
-                ),
-            });
-            continue;
-        }
-
-        match parse_herdr_snapshot(
-            &String::from_utf8_lossy(&output.stdout),
-            executable.clone(),
-            server_name.clone(),
-        ) {
+        match result {
             Ok(scanned_sessions) => {
                 sessions.extend(scanned_sessions);
                 successful_endpoint_count += 1;
@@ -934,6 +944,112 @@ async fn scan_herdr_sessions() -> Result<MultiplexerScanOutcome> {
             successful_endpoint_count,
         },
     ))
+}
+
+async fn ensure_herdr_source_deadline_open(
+    source_deadline: impl Future<Output = ()>,
+) -> Result<()> {
+    let deadline = source_deadline.fuse();
+    let continue_scan = futures::future::ready(()).fuse();
+    futures::pin_mut!(deadline, continue_scan);
+    futures::select_biased! {
+        _ = deadline => anyhow::bail!(
+            "Herdr discovery reached its source-wide deadline after {:?}",
+            HERDR_SOURCE_TIMEOUT
+        ),
+        _ = continue_scan => Ok(()),
+    }
+}
+
+async fn collect_herdr_endpoint_results_until_deadline<T>(
+    endpoint_scans: impl Stream<Item = (Option<String>, Result<T>)>,
+    mut pending_server_names: Vec<Option<String>>,
+    source_deadline: impl Future<Output = ()>,
+) -> Vec<(Option<String>, Result<T>)> {
+    let mut endpoint_scans = Box::pin(endpoint_scans.fuse());
+    let deadline = source_deadline.fuse();
+    futures::pin_mut!(deadline);
+    let mut results = Vec::new();
+
+    loop {
+        futures::select_biased! {
+            _ = deadline => break,
+            result = endpoint_scans.next() => {
+                let Some(result) = result else {
+                    break;
+                };
+                pending_server_names.retain(|server_name| server_name != &result.0);
+                results.push(result);
+            }
+        }
+    }
+
+    drop(endpoint_scans);
+    results.extend(pending_server_names.into_iter().map(|server_name| {
+        (
+            server_name,
+            Err(anyhow::anyhow!(
+                "Herdr discovery reached its source-wide deadline after {:?}",
+                HERDR_SOURCE_TIMEOUT
+            )),
+        )
+    }));
+    results
+}
+
+async fn scan_herdr_endpoint_with_timeout(
+    executable: PathBuf,
+    server_name: Option<String>,
+    executor: &BackgroundExecutor,
+) -> (Option<String>, Result<Vec<ExternalMultiplexerSession>>) {
+    let result = run_bounded_herdr_endpoint_query(
+        scan_herdr_endpoint(executable, server_name.clone()),
+        executor,
+    )
+    .await;
+    (server_name, result)
+}
+
+async fn run_bounded_herdr_endpoint_query<T>(
+    query: impl Future<Output = Result<T>>,
+    executor: &BackgroundExecutor,
+) -> Result<T> {
+    run_bounded_multiplexer_operation(
+        "Herdr endpoint query",
+        query,
+        executor,
+        HERDR_ENDPOINT_TIMEOUT,
+    )
+    .await
+}
+
+async fn scan_herdr_endpoint(
+    executable: PathBuf,
+    server_name: Option<String>,
+) -> Result<Vec<ExternalMultiplexerSession>> {
+    let mut args = Vec::new();
+    if let Some(name) = &server_name {
+        args.extend(["--session".to_owned(), name.clone()]);
+    }
+    args.extend(["api".to_owned(), "snapshot".to_owned()]);
+
+    let mut command = util::command::new_command(&executable);
+    command.args(&args).kill_on_drop(true);
+    let output = command.output().await.context("run Herdr snapshot query")?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let detail = stderr.trim();
+        if detail.is_empty() {
+            anyhow::bail!("Herdr snapshot query exited with {}", output.status);
+        }
+        anyhow::bail!("{detail}");
+    }
+
+    parse_herdr_snapshot(
+        &String::from_utf8_lossy(&output.stdout),
+        executable,
+        server_name,
+    )
 }
 
 fn parse_herdr_snapshot(
@@ -1269,6 +1385,80 @@ mod tests {
     #[test]
     fn discovery_timeout_finishes_before_the_next_refresh_interval() {
         assert!(MULTIPLEXER_COMMAND_TIMEOUT < MULTIPLEXER_REFRESH_INTERVAL);
+        assert!(HERDR_SOURCE_TIMEOUT < MULTIPLEXER_REFRESH_INTERVAL);
+        assert!(HERDR_ENDPOINT_TIMEOUT < HERDR_SOURCE_TIMEOUT);
+    }
+
+    #[gpui::test]
+    async fn an_elapsed_herdr_source_deadline_cannot_report_authoritative_empty() {
+        let error = ensure_herdr_source_deadline_open(futures::future::ready(()))
+            .await
+            .expect_err("an elapsed source deadline should fail before the empty result");
+        assert!(error.to_string().contains("source-wide deadline"));
+
+        ensure_herdr_source_deadline_open(futures::future::pending())
+            .await
+            .expect("an open source deadline should allow the scan to continue");
+    }
+
+    #[gpui::test]
+    async fn a_hung_herdr_endpoint_does_not_hide_a_healthy_endpoint(
+        background_executor: BackgroundExecutor,
+    ) {
+        let hung = run_bounded_herdr_endpoint_query(
+            futures::future::pending::<Result<&'static str>>(),
+            &background_executor,
+        );
+        let healthy = run_bounded_herdr_endpoint_query(
+            async { Ok::<_, anyhow::Error>("healthy") },
+            &background_executor,
+        );
+        let (hung, healthy) = futures::join!(hung, healthy);
+
+        let error = hung.expect_err("hung endpoint should reach its own deadline");
+        assert!(error.to_string().contains("endpoint query timed out"));
+        assert_eq!(
+            healthy.expect("healthy endpoint should complete"),
+            "healthy"
+        );
+    }
+
+    #[gpui::test]
+    async fn herdr_source_deadline_keeps_completed_endpoint_results(
+        background_executor: BackgroundExecutor,
+    ) {
+        let healthy = async {
+            (
+                Some("healthy".to_owned()),
+                Ok::<_, anyhow::Error>("healthy"),
+            )
+        }
+        .boxed();
+        let hung = futures::future::pending::<(Option<String>, Result<&'static str>)>().boxed();
+        let endpoint_scans = futures::stream::iter(vec![hung, healthy]).buffer_unordered(2);
+        let mut results = collect_herdr_endpoint_results_until_deadline(
+            endpoint_scans,
+            vec![Some("hung".to_owned()), Some("healthy".to_owned())],
+            background_executor.timer(Duration::from_millis(1)),
+        )
+        .await;
+        results.sort_by(|left, right| left.0.cmp(&right.0));
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].0.as_deref(), Some("healthy"));
+        assert_eq!(
+            results[0]
+                .1
+                .as_ref()
+                .expect("healthy endpoint should be preserved"),
+            &"healthy"
+        );
+        assert_eq!(results[1].0.as_deref(), Some("hung"));
+        let error = results[1]
+            .1
+            .as_ref()
+            .expect_err("unfinished endpoint should receive a source-timeout warning");
+        assert!(error.to_string().contains("source-wide deadline"));
     }
 
     #[test]

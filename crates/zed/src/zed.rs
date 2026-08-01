@@ -928,6 +928,7 @@ fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
 }
 
 struct InstallationRequiredForWorkspaceAction;
+struct WorkspaceAccessGrantFeedback;
 
 fn workspace_action_blocked_by_installation(
     workspace: &mut Workspace,
@@ -1333,6 +1334,176 @@ fn register_actions(
                     let _ = (workspace, window);
                     cx.propagate();
                 }
+            },
+        )
+        .register_action({
+            let fs = app_state.fs.clone();
+            move |workspace: &mut Workspace,
+                  _: &zed_actions::dez::GrantWorkspaceAccess,
+                  window,
+                  cx| {
+                if APP_NAME == "Zed" {
+                    cx.propagate();
+                    return;
+                }
+
+                if !matches!(
+                    workspace::workspace_access_state(cx),
+                    workspace::WorkspaceAccessState::AccessRequired { .. }
+                ) {
+                    workspace.show_toast(
+                        Toast::new(
+                            NotificationId::unique::<WorkspaceAccessGrantFeedback>(),
+                            "No Workspace folder currently needs access.",
+                        )
+                        .autohide(),
+                        cx,
+                    );
+                    return;
+                }
+
+                let selection = cx.prompt_for_paths(PathPromptOptions {
+                    files: false,
+                    directories: true,
+                    multiple: false,
+                    prompt: Some("Grant Workspace Access".into()),
+                });
+                let fs = fs.clone();
+                cx.spawn_in(window, async move |workspace, cx| {
+                    let selected_paths = match selection.await {
+                        Ok(Some(selected_paths)) => selected_paths,
+                        Ok(None) => return anyhow::Ok(()),
+                        Err(error) => {
+                            log::warn!("native Workspace access picker failed: {error:#}");
+                            workspace.update_in(cx, |workspace, _, cx| {
+                                workspace.show_toast(
+                                    Toast::new(
+                                        NotificationId::unique::<WorkspaceAccessGrantFeedback>(),
+                                        "Dez could not open the native folder picker. Nothing changed; retry, or allow Files and Folders access in System Settings.",
+                                    )
+                                    .autohide(),
+                                    cx,
+                                );
+                            })?;
+                            return anyhow::Ok(());
+                        }
+                    };
+                    let Some(selected_path) = selected_paths.into_iter().next() else {
+                        return anyhow::Ok(());
+                    };
+
+                    let matching_root = cx.update(|_, cx| {
+                        let workspace::WorkspaceAccessState::AccessRequired { roots } =
+                            workspace::workspace_access_state(cx)
+                        else {
+                            return None;
+                        };
+                        roots
+                            .iter()
+                            .find(|root| root.as_path() == selected_path.as_path())
+                            .cloned()
+                    })?;
+                    let Some(matching_root) = matching_root else {
+                        workspace.update_in(cx, |workspace, _, cx| {
+                            workspace.show_toast(
+                                Toast::new(
+                                    NotificationId::unique::<WorkspaceAccessGrantFeedback>(),
+                                    "That folder is not a blocked Workspace root. Nothing changed; choose one of the folders named in the access notice.",
+                                )
+                                .autohide(),
+                                cx,
+                            );
+                        })?;
+                        return anyhow::Ok(());
+                    };
+
+                    let validation = match fs.read_dir(&matching_root).await {
+                        Ok(mut entries) => entries.next().await.transpose().map(|_| ()),
+                        Err(error) => Err(error),
+                    };
+                    let root_label = matching_root
+                        .file_name()
+                        .and_then(|name| name.to_str())
+                        .map(ToOwned::to_owned)
+                        .unwrap_or_else(|| matching_root.display().to_string());
+                    if let Err(error) = validation {
+                        log::warn!(
+                            "Workspace access validation failed for {}: {error:#}",
+                            matching_root.display()
+                        );
+                        workspace.update_in(cx, |workspace, _, cx| {
+                            workspace.show_toast(
+                                Toast::new(
+                                    NotificationId::unique::<WorkspaceAccessGrantFeedback>(),
+                                    format!(
+                                        "Dez still cannot read “{root_label}”. Nothing changed; choose that exact folder in the macOS picker or allow Files and Folders access in System Settings."
+                                    ),
+                                )
+                                .autohide(),
+                                cx,
+                            );
+                        })?;
+                        return anyhow::Ok(());
+                    }
+
+                    workspace.update_in(cx, |workspace, _, cx| {
+                        workspace::mark_workspace_roots_accessible(
+                            std::slice::from_ref(&matching_root),
+                            cx,
+                        );
+                        let remaining_count = match workspace::workspace_access_state(cx) {
+                            workspace::WorkspaceAccessState::Available => 0,
+                            workspace::WorkspaceAccessState::AccessRequired { roots } => roots.len(),
+                        };
+                        let message = if remaining_count == 0 {
+                            format!(
+                                "Access granted for “{root_label}”. Dez kept the current layout. Relaunch Dez to retry startup restoration, or use File > Open Recent Workspaces if a Workspace is still missing."
+                            )
+                        } else if remaining_count == 1 {
+                            format!(
+                                "Access granted for “{root_label}”. One Workspace folder still needs access; Dez kept the current layout."
+                            )
+                        } else {
+                            format!(
+                                "Access granted for “{root_label}”. {remaining_count} Workspace folders still need access; Dez kept the current layout."
+                            )
+                        };
+                        workspace.show_toast(
+                            Toast::new(
+                                NotificationId::unique::<WorkspaceAccessGrantFeedback>(),
+                                message,
+                            )
+                            .autohide(),
+                            cx,
+                        );
+                    })?;
+                    anyhow::Ok(())
+                })
+                .detach_and_log_err(cx);
+            }
+        })
+        .register_action(
+            |workspace: &mut Workspace,
+             _: &zed_actions::dez::RetryTerminalService,
+             _,
+             cx| {
+                if APP_NAME == "Zed" {
+                    cx.propagate();
+                    return;
+                }
+
+                struct RetryTerminalService;
+
+                let message = if crate::terminal_host_runtime::TerminalHostRuntime::retry(cx) {
+                    "Retrying the terminal service…"
+                } else {
+                    "The terminal service cannot retry in place. Relaunch Dez; if the problem returns, open the local diagnostics log."
+                };
+                workspace.show_toast(
+                    Toast::new(NotificationId::unique::<RetryTerminalService>(), message)
+                        .autohide(),
+                    cx,
+                );
             },
         )
         .register_action(

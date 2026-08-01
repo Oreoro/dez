@@ -363,7 +363,16 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                 zed_actions::OpenRemote::default(),
             ),
             MenuItem::separator(),
-            MenuItem::action("Open Terminal", zed_actions::terminal::OpenAgentTerminal),
+            MenuItem::submenu(Menu::new("Open Terminal").items([
+                MenuItem::action("Default Terminal", zed_actions::terminal::OpenAgentTerminal),
+                MenuItem::action("Native Shell", zed_actions::terminal::OpenShellTerminal),
+                MenuItem::action("tmux Session", zed_actions::terminal::OpenTmuxTerminal),
+                MenuItem::separator(),
+                MenuItem::action("Codex", zed_actions::terminal::OpenCodexTerminal),
+                MenuItem::action("Claude Code", zed_actions::terminal::OpenClaudeCodeTerminal),
+                MenuItem::action("OpenCode", zed_actions::terminal::OpenOpenCodeTerminal),
+            ])),
+            MenuItem::action("Browse Running Sessions…", workspace::BrowseRunningSessions),
             MenuItem::action("New File", workspace::NewFile),
         ]);
         #[cfg(not(target_os = "macos"))]

@@ -29,7 +29,10 @@ struct GlobalTerminalHostRuntime(Entity<TerminalHostRuntime>);
 
 impl Global for GlobalTerminalHostRuntime {}
 
-pub struct TerminalHostRuntime;
+pub struct TerminalHostRuntime {
+    host_id: TerminalHostId,
+    connection_attempt: u64,
+}
 
 impl TerminalHostRuntime {
     pub fn init(host_id: TerminalHostId, cx: &mut App) -> Entity<Self> {
@@ -40,19 +43,31 @@ impl TerminalHostRuntime {
         terminal::session_host::transport::TerminalHostSnapshotRevision::init(cx);
         TerminalHostStartupStatus::init(cx);
         let enabled = terminal_host_enabled_for_app(paths::APP_NAME);
-        let runtime = cx.new(|_| Self);
+        let runtime = cx.new(|_| Self {
+            host_id,
+            connection_attempt: 0,
+        });
         cx.set_global(GlobalTerminalHostRuntime(runtime.clone()));
         if !enabled {
             return runtime;
         }
-        TerminalHostStartupStatus::set(TerminalHostStartupState::Connecting, cx);
+        runtime.update(cx, |runtime, cx| runtime.connect(cx));
+        runtime
+    }
 
+    fn connect(&mut self, cx: &mut gpui::Context<Self>) {
+        self.connection_attempt = self.connection_attempt.wrapping_add(1);
+        let connection_attempt = self.connection_attempt;
+        let host_id = self.host_id;
+        TerminalHostStartupStatus::set(TerminalHostStartupState::Connecting, cx);
         let background_executor = cx.background_executor().clone();
-        let runtime_handle = runtime.downgrade();
-        cx.spawn(async move |cx| {
+        cx.spawn(async move |runtime, cx| {
             let result = connect_or_launch(host_id, &background_executor).await;
-            runtime_handle
-                .update(cx, |_runtime, cx| {
+            runtime
+                .update(cx, |runtime, cx| {
+                    if runtime.connection_attempt != connection_attempt {
+                        return;
+                    }
                     match result {
                         Ok(connection) => {
                             let connection = Arc::new(connection);
@@ -74,12 +89,25 @@ impl TerminalHostRuntime {
                 .log_err();
         })
         .detach();
-        runtime
     }
 
     pub fn try_global(cx: &App) -> Option<Entity<Self>> {
         cx.try_global::<GlobalTerminalHostRuntime>()
             .map(|runtime| runtime.0.clone())
+    }
+
+    pub fn retry(cx: &mut App) -> bool {
+        let Some(runtime) = Self::try_global(cx) else {
+            return false;
+        };
+        if !matches!(
+            TerminalHostStartupStatus::state(cx),
+            TerminalHostStartupState::Failed { .. }
+        ) {
+            return false;
+        }
+        runtime.update(cx, |runtime, cx| runtime.connect(cx));
+        true
     }
 }
 

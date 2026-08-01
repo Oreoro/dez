@@ -658,7 +658,7 @@ fn terminal_host_status_presentation(
         TerminalHostStartupState::Failed { .. } => Some(TerminalHostStatusPresentation {
             kind: TerminalHostStatusKind::Failed,
             title: "Terminal service is unavailable",
-            description: "Dez could not start its terminal service. No fallback shell or replacement computation was created. Restart Dez; if the problem returns, open the local log.",
+            description: "Dez could not start its terminal service. Retry without replacing any running process; if the problem returns, open the local log.",
         }),
     }
 }
@@ -1316,7 +1316,11 @@ fn workspace_header_terminal_action_visible(
     has_sessions: bool,
     is_collapsed: bool,
 ) -> bool {
-    app_name != "Zed" || has_sessions || is_collapsed
+    if app_name == "Dez" {
+        has_sessions || is_collapsed
+    } else {
+        app_name != "Zed" || has_sessions || is_collapsed
+    }
 }
 
 fn workspace_options_action_persistent(
@@ -2223,7 +2227,7 @@ mod workspace_header_label_tests {
         );
         assert_eq!(workspace_access_root_label(Path::new("/")), "/");
         assert_eq!(workspace_new_terminal_tooltip_label("Dez"), "Open Terminal");
-        assert!(workspace_header_terminal_action_visible(
+        assert!(!workspace_header_terminal_action_visible(
             "Dez", false, false
         ));
         assert!(!workspace_header_terminal_action_visible(
@@ -7648,7 +7652,7 @@ impl Sidebar {
                     .children(
                         workspace_header_terminal_action_visible(
                             APP_NAME,
-                            has_threads,
+                            has_threads || (APP_NAME == "Dez" && !external_sessions.is_empty()),
                             is_collapsed,
                         )
                         .then(|| {
@@ -7807,7 +7811,10 @@ impl Sidebar {
                         .children(external_rows),
                 )
                 .into_any_element()
-        } else if APP_NAME == "Zed" && labels_visible && !is_collapsed && !has_threads {
+        } else if !is_collapsed
+            && !has_threads
+            && (APP_NAME == "Dez" || (APP_NAME == "Zed" && labels_visible))
+        {
             v_flex()
                 .w_full()
                 .child(header)
@@ -7817,35 +7824,37 @@ impl Sidebar {
                         .pt_1()
                         .pb_2()
                         .gap_1()
-                        .child(
-                            Label::new("Run Codex, Claude Code, or OpenCode in this project.")
-                                .size(LabelSize::XSmall)
-                                .color(Color::Muted),
-                        )
-                        .child(
-                            h_flex().flex_wrap().gap_x_2().gap_y_1().children(
-                                [
-                                    (IconName::AiOpenAi, "Codex"),
-                                    (IconName::AiClaude, "Claude Code"),
-                                    (IconName::AiOpenCode, "OpenCode"),
-                                ]
-                                .into_iter()
-                                .map(|(icon, label)| {
-                                    h_flex()
-                                        .gap_1()
-                                        .child(
-                                            Icon::new(icon)
-                                                .size(IconSize::XSmall)
-                                                .color(Color::Muted),
-                                        )
-                                        .child(
-                                            Label::new(label)
-                                                .size(LabelSize::XSmall)
-                                                .color(Color::Muted),
-                                        )
-                                }),
-                            ),
-                        )
+                        .when(APP_NAME == "Zed", |this| {
+                            this.child(
+                                Label::new("Run Codex, Claude Code, or OpenCode in this project.")
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Muted),
+                            )
+                            .child(
+                                h_flex().flex_wrap().gap_x_2().gap_y_1().children(
+                                    [
+                                        (IconName::AiOpenAi, "Codex"),
+                                        (IconName::AiClaude, "Claude Code"),
+                                        (IconName::AiOpenCode, "OpenCode"),
+                                    ]
+                                    .into_iter()
+                                    .map(|(icon, label)| {
+                                        h_flex()
+                                            .gap_1()
+                                            .child(
+                                                Icon::new(icon)
+                                                    .size(IconSize::XSmall)
+                                                    .color(Color::Muted),
+                                            )
+                                            .child(
+                                                Label::new(label)
+                                                    .size(LabelSize::XSmall)
+                                                    .color(Color::Muted),
+                                            )
+                                    }),
+                                ),
+                            )
+                        })
                         .child(
                             Button::new(
                                 SharedString::from(format!(
@@ -7855,7 +7864,11 @@ impl Sidebar {
                             )
                             .full_width()
                             .size(ButtonSize::Medium)
-                            .style(ButtonStyle::Filled)
+                            .style(if APP_NAME == "Zed" {
+                                ButtonStyle::Filled
+                            } else {
+                                ButtonStyle::Subtle
+                            })
                             .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
                             .tab_index(0isize)
                             .aria_label(SharedString::from(format!(
@@ -16379,7 +16392,7 @@ impl Sidebar {
                         .child(Label::new("Install Dez to continue").size(LabelSize::Small))
                         .child(
                             Label::new(
-                                "Install Dez in Applications and relaunch before opening Workspaces or durable terminals.",
+                                "Install Dez in Applications and relaunch before opening a Workspace or starting durable terminals.",
                             )
                             .size(LabelSize::XSmall)
                             .color(Color::Muted),
@@ -16390,7 +16403,7 @@ impl Sidebar {
                                 .style(ButtonStyle::Filled)
                                 .start_icon(Icon::new(IconName::Download).size(IconSize::Small))
                                 .tab_index(0isize)
-                                .aria_label("Install Dez and Relaunch")
+                                .aria_label("Install Dez in Applications and Relaunch")
                                 .tooltip(Tooltip::text(
                                     "Install Dez in Applications, then relaunch it",
                                 ))
@@ -16530,10 +16543,19 @@ impl Sidebar {
                 };
                 let should_offer_install = APP_NAME != "Zed"
                     && presentation.kind == TerminalHostStatusKind::InstallationRequired;
+                let should_offer_retry =
+                    APP_NAME != "Zed" && presentation.kind == TerminalHostStatusKind::Failed;
                 let primary_label = if should_offer_install {
                     "Install and Relaunch"
+                } else if should_offer_retry {
+                    "Retry"
                 } else {
                     "Open Local Log"
+                };
+                let primary_aria_label = if should_offer_retry {
+                    "Retry Terminal Service"
+                } else {
+                    primary_label
                 };
                 callout.actions_slot(
                     h_flex()
@@ -16544,12 +16566,17 @@ impl Sidebar {
                                 .size(ButtonSize::Medium)
                                 .style(ButtonStyle::Filled)
                                 .tab_index(0isize)
-                                .aria_label(primary_label)
-                                .tooltip(Tooltip::text(primary_label))
+                                .aria_label(primary_aria_label)
+                                .tooltip(Tooltip::text(primary_aria_label))
                                 .on_click(move |_, window, cx| {
                                     if should_offer_install {
                                         window.dispatch_action(
                                             zed_actions::dez::InstallAndRelaunch.boxed_clone(),
+                                            cx,
+                                        );
+                                    } else if should_offer_retry {
+                                        window.dispatch_action(
+                                            zed_actions::dez::RetryTerminalService.boxed_clone(),
                                             cx,
                                         );
                                     } else {
@@ -16557,6 +16584,19 @@ impl Sidebar {
                                     }
                                 }),
                         )
+                        .when(should_offer_retry, |this| {
+                            this.child(
+                                Button::new("open-terminal-host-log", "Open Local Log")
+                                    .size(ButtonSize::Medium)
+                                    .style(ButtonStyle::Outlined)
+                                    .tab_index(0isize)
+                                    .aria_label("Open Local Terminal Service Log")
+                                    .tooltip(Tooltip::text("Open Local Terminal Service Log"))
+                                    .on_click(|_, window, cx| {
+                                        window.dispatch_action(OpenLog.boxed_clone(), cx);
+                                    }),
+                            )
+                        })
                         .child(
                             Button::new("copy-terminal-host-details", copy_label)
                                 .size(ButtonSize::Medium)
@@ -16596,12 +16636,12 @@ impl Sidebar {
             .collect::<Vec<_>>();
         let description = if root_labels.len() == 1 {
             format!(
-                "“{}” needs access before Git, search, agents, or terminals can start. Choose it once in the macOS folder picker.",
+                "“{}” needs access before Git, search, agents, or terminals can start. Grant access to that exact folder once; Dez will keep the current layout.",
                 root_labels[0]
             )
         } else {
             format!(
-                "{} Workspace folders need access before Git, search, agents, or terminals can start. Choose each blocked folder once in the macOS picker.",
+                "{} Workspace folders need access before Git, search, agents, or terminals can start. Grant each exact folder once; Dez will keep the current layout.",
                 root_labels.len()
             )
         };
@@ -16613,20 +16653,17 @@ impl Sidebar {
                 .title("Workspace access required")
                 .description(description)
                 .actions_slot(
-                    Button::new("choose-blocked-workspace", "Choose Workspace…")
+                    Button::new("grant-blocked-workspace-access", "Grant Access…")
                         .size(ButtonSize::Medium)
                         .style(ButtonStyle::Filled)
                         .tab_index(0isize)
-                        .aria_label("Choose Blocked Workspace Folder")
+                        .aria_label("Grant Access to a Blocked Workspace Folder")
                         .tooltip(Tooltip::text(
-                            "Choose a blocked Workspace folder in the native macOS picker",
+                            "Grant access without opening or replacing a Workspace",
                         ))
                         .on_click(|_, window, cx| {
                             window.dispatch_action(
-                                OpenFolder {
-                                    create_new_window: Some(false),
-                                }
-                                .boxed_clone(),
+                                zed_actions::dez::GrantWorkspaceAccess.boxed_clone(),
                                 cx,
                             );
                         }),

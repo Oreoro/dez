@@ -1531,20 +1531,7 @@ pub(crate) async fn restore_or_create_workspace(
     if let Some(multi_workspaces) = restorable_workspaces(cx, &app_state).await {
         let local_roots = multi_workspaces
             .iter()
-            .filter(|multi_workspace| {
-                matches!(
-                    multi_workspace.active_workspace.location,
-                    SerializedWorkspaceLocation::Local
-                )
-            })
-            .flat_map(|multi_workspace| {
-                multi_workspace
-                    .active_workspace
-                    .paths
-                    .paths()
-                    .iter()
-                    .cloned()
-            })
+            .flat_map(serialized_multi_workspace_local_roots)
             .collect();
         let inaccessible_roots = preflight_workspace_roots(&app_state.fs, local_roots).await;
         let inaccessible_root_set = inaccessible_roots.iter().cloned().collect::<HashSet<_>>();
@@ -1570,13 +1557,7 @@ pub(crate) async fn restore_or_create_workspace(
         let mut error_count = 0;
         for multi_workspace in multi_workspaces {
             let restoring_workspace_id: i64 = multi_workspace.active_workspace.workspace_id.into();
-            if matches!(
-                multi_workspace.active_workspace.location,
-                SerializedWorkspaceLocation::Local
-            ) && multi_workspace
-                .active_workspace
-                .paths
-                .paths()
+            if serialized_multi_workspace_local_roots(&multi_workspace)
                 .iter()
                 .any(|path| inaccessible_root_set.contains(path))
             {
@@ -1767,6 +1748,34 @@ async fn preflight_workspace_roots(fs: &Arc<dyn Fs>, roots: Vec<PathBuf>) -> Vec
     }
     inaccessible_roots.sort();
     inaccessible_roots
+}
+
+fn serialized_multi_workspace_local_roots(
+    multi_workspace: &workspace::SerializedMultiWorkspace,
+) -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    if matches!(
+        multi_workspace.active_workspace.location,
+        SerializedWorkspaceLocation::Local
+    ) {
+        roots.extend(
+            multi_workspace
+                .active_workspace
+                .paths
+                .paths()
+                .iter()
+                .cloned(),
+        );
+    }
+    for serialized_group in &multi_workspace.state.project_groups {
+        let group: workspace::ProjectGroupKey = serialized_group.clone().into();
+        if group.host().is_none() {
+            roots.extend(group.path_list().paths().iter().cloned());
+        }
+    }
+    roots.sort();
+    roots.dedup();
+    roots
 }
 
 fn is_permission_denied(error: &anyhow::Error) -> bool {

@@ -986,6 +986,7 @@ impl Pane {
     fn render_empty_project_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let open_file_focus = self.focus_handle.clone();
         let new_file_focus = self.focus_handle.clone();
+        let browse_sessions_focus = self.focus_handle.clone();
         let review_changes_focus = self.focus_handle.clone();
         let terminal_focus = self.focus_handle.clone();
         let is_active_pane = match self.workspace.upgrade() {
@@ -998,7 +999,7 @@ impl Pane {
         let (title, description) = if is_dez && show_orientation {
             (
                 "Main Work Area",
-                "Open a terminal, find a file, or review changes in this Workspace.",
+                "Launch or resume a session, then inspect files and review changes.",
             )
         } else if is_dez {
             ("Empty pane", "Open or move a tab here.")
@@ -1107,9 +1108,32 @@ impl Pane {
                                         );
                                     }),
                             )
+                            .when(is_dez, |this| {
+                                this.child(
+                                    Button::new("empty-project-browse-sessions", "Browse Sessions")
+                                        .tab_index(1isize)
+                                        .style(ButtonStyle::Outlined)
+                                        .start_icon(Icon::new(IconName::ListTree))
+                                        .aria_label("Browse Running Sessions")
+                                        .tooltip(|_, cx| {
+                                            Tooltip::for_action(
+                                                "Browse Running Sessions",
+                                                &BrowseRunningSessions,
+                                                cx,
+                                            )
+                                        })
+                                        .on_click(move |_, window, cx| {
+                                            browse_sessions_focus.dispatch_action(
+                                                &BrowseRunningSessions,
+                                                window,
+                                                cx,
+                                            );
+                                        }),
+                                )
+                            })
                             .child(
                                 Button::new("empty-project-open-file", "Find File")
-                                    .tab_index(1isize)
+                                    .tab_index(if is_dez { 2isize } else { 1isize })
                                     .style(ButtonStyle::Outlined)
                                     .start_icon(Icon::new(IconName::FolderSearch))
                                     .aria_label("Find File in Workspace")
@@ -1131,7 +1155,7 @@ impl Pane {
                             .when(is_dez, |this| {
                                 this.child(
                                     Button::new("empty-project-review-changes", "Review Changes")
-                                        .tab_index(2isize)
+                                        .tab_index(3isize)
                                         .style(ButtonStyle::Outlined)
                                         .start_icon(Icon::new(IconName::Diff))
                                         .aria_label("Review Workspace Changes")
@@ -1151,17 +1175,21 @@ impl Pane {
                                         }),
                                 )
                             })
-                            .child(
-                                Button::new("empty-project-new-file", "New File")
-                                    .tab_index(if is_dez { 3isize } else { 2isize })
-                                    .style(ButtonStyle::Subtle)
-                                    .start_icon(Icon::new(IconName::File))
-                                    .aria_label("New File")
-                                    .tooltip(|_, cx| Tooltip::for_action("New File", &NewFile, cx))
-                                    .on_click(move |_, window, cx| {
-                                        new_file_focus.dispatch_action(&NewFile, window, cx);
-                                    }),
-                            ),
+                            .when(!is_dez, |this| {
+                                this.child(
+                                    Button::new("empty-project-new-file", "New File")
+                                        .tab_index(2isize)
+                                        .style(ButtonStyle::Subtle)
+                                        .start_icon(Icon::new(IconName::File))
+                                        .aria_label("New File")
+                                        .tooltip(|_, cx| {
+                                            Tooltip::for_action("New File", &NewFile, cx)
+                                        })
+                                        .on_click(move |_, window, cx| {
+                                            new_file_focus.dispatch_action(&NewFile, window, cx);
+                                        }),
+                                )
+                            }),
                     ),
             )
     }

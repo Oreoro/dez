@@ -57,6 +57,7 @@ fn product_hidden_action_types(app_name: &str) -> Vec<TypeId> {
     if app_name == "Zed" {
         vec![
             TypeId::of::<zed_actions::dez::OpenWorkspaceInCmux>(),
+            TypeId::of::<zed_actions::dez::GrantWorkspaceAccess>(),
             TypeId::of::<zed_actions::terminal::OpenAgentTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenShellTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenTmuxTerminal>(),
@@ -954,6 +955,7 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
         "terminal::OpenOpenCodeTerminal" => {
             return "terminal::LaunchOpenCode".to_owned();
         }
+        "dez::GrantWorkspaceAccess" => return "workspace::GrantAccess".to_owned(),
         "dez::OpenWorkspaceInCmux" => return "workspace::OpenInCmux".to_owned(),
         "zed::ApplyCanvasFullLayout" => return "layout::WorkAreaAndFiles".to_owned(),
         "zed::ApplyCanvasAgentControlLayout" => {
@@ -1200,6 +1202,10 @@ mod tests {
             "terminal: launch open code"
         );
         assert_eq!(
+            humanize_action_name_for_product("dez::GrantWorkspaceAccess", "Dez"),
+            "workspace: grant access"
+        );
+        assert_eq!(
             humanize_action_name_for_product("dez::OpenWorkspaceInCmux", "Dez"),
             "workspace: open in cmux"
         );
@@ -1368,6 +1374,7 @@ mod tests {
         let hidden_types = product_hidden_action_types("Zed");
         for action_type in [
             TypeId::of::<zed_actions::dez::OpenWorkspaceInCmux>(),
+            TypeId::of::<zed_actions::dez::GrantWorkspaceAccess>(),
             TypeId::of::<zed_actions::terminal::OpenAgentTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenShellTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenTmuxTerminal>(),

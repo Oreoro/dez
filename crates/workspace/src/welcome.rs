@@ -1,6 +1,7 @@
 use crate::{
-    NewFile, Open, OpenFolder, OpenMode, PathList, RecentWorkspace, RevealFiles, RevealGitChanges,
-    SerializedWorkspaceLocation, Workspace, WorkspaceId, WorkspaceSettings,
+    BrowseRunningSessions, NewFile, Open, OpenFolder, OpenMode, PathList, RecentWorkspace,
+    RevealFiles, RevealGitChanges, SerializedWorkspaceLocation, Workspace, WorkspaceId,
+    WorkspaceSettings,
     item::{Item, ItemEvent},
     persistence::WorkspaceDb,
 };
@@ -227,6 +228,7 @@ const NEW_CENTER_TERMINAL: crate::NewCenterTerminal = crate::NewCenterTerminal {
 };
 const OPEN_AGENT_TERMINAL: zed_actions::terminal::OpenAgentTerminal =
     zed_actions::terminal::OpenAgentTerminal;
+const BROWSE_RUNNING_SESSIONS: BrowseRunningSessions = BrowseRunningSessions;
 const OPEN_WORKSPACE: OpenFolder = OpenFolder {
     create_new_window: Some(false),
 };
@@ -237,9 +239,9 @@ fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Write. Delegate. Watch. Verify."
     } else if has_workspace {
-        "Run or attach in a native terminal tab. Monitor Sessions in Workspaces, then inspect Files or Review Changes."
+        "Launch or resume a terminal session, monitor it in Workspaces, then inspect files and review changes."
     } else {
-        "Open a codebase to keep terminals, files, agents, and review together in one Workspace."
+        "Open a codebase once. Dez keeps its terminals, agent sessions, files, and review together in one Workspace."
     }
 }
 
@@ -368,6 +370,12 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
+                icon: IconName::ListTree,
+                title: "Browse Running Sessions…",
+                action: &BROWSE_RUNNING_SESSIONS,
+                visibility_guard: SectionVisibility::Always,
+            },
+            SectionEntry {
                 icon: IconName::FolderOpen,
                 title: "Open Files",
                 action: &REVEAL_FILES,
@@ -377,12 +385,6 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
                 icon: IconName::Diff,
                 title: "Review Changes",
                 action: &REVEAL_GIT_CHANGES,
-                visibility_guard: SectionVisibility::Always,
-            },
-            SectionEntry {
-                icon: IconName::File,
-                title: "New File",
-                action: &NewFile,
                 visibility_guard: SectionVisibility::Always,
             },
         ],
@@ -852,11 +854,11 @@ impl Render for WelcomePage {
                             .and_then(|name| name.to_str())
                             .unwrap_or("This Workspace");
                         format!(
-                            "Choose “{root}” once so Dez can open its files and start Workspace terminals and agents."
+                            "Grant access to “{root}” once so Dez can open its files and start Workspace terminals and agents. The current layout will stay unchanged."
                         )
                     } else {
                         format!(
-                            "Choose each of the {} Workspace folders once so Dez can open their files and start terminals and agents.",
+                            "Grant each of the {} Workspace folders access once so Dez can open their files and start terminals and agents. The current layout will stay unchanged.",
                             roots.len()
                         )
                     };
@@ -867,12 +869,15 @@ impl Render for WelcomePage {
                             .title("Workspace access required")
                             .description(description)
                             .actions_slot(
-                                Button::new("home-choose-workspace-access", "Choose Workspace…")
+                                Button::new("home-grant-workspace-access", "Grant Access…")
                                     .style(ui::ButtonStyle::Filled)
                                     .tab_index(installation_action_count as isize)
-                                    .aria_label("Choose Blocked Workspace Folder")
+                                    .aria_label("Grant Access to a Blocked Workspace Folder")
                                     .on_click(|_, window, cx| {
-                                        window.dispatch_action(OPEN_WORKSPACE.boxed_clone(), cx);
+                                        window.dispatch_action(
+                                            zed_actions::dez::GrantWorkspaceAccess.boxed_clone(),
+                                            cx,
+                                        );
                                     }),
                             )
                             .into_any_element(),
@@ -1319,11 +1324,11 @@ mod tests {
     fn dez_home_states_the_workflow_without_a_persistent_walkthrough() {
         assert_eq!(
             welcome_summary("Dez", false),
-            "Open a codebase to keep terminals, files, agents, and review together in one Workspace."
+            "Open a codebase once. Dez keeps its terminals, agent sessions, files, and review together in one Workspace."
         );
         assert_eq!(
             welcome_summary("Dez", true),
-            "Run or attach in a native terminal tab. Monitor Sessions in Workspaces, then inspect Files or Review Changes."
+            "Launch or resume a terminal session, monitor it in Workspaces, then inspect files and review changes."
         );
         assert_eq!(
             welcome_summary("Zed", true),
@@ -1346,9 +1351,12 @@ mod tests {
             "the empty Dez window must not offer a pathless agent-terminal dead end"
         );
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[0].title, "Open Terminal");
-        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[1].title, "Open Files");
-        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[2].title, "Review Changes");
-        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[3].title, "New File");
+        assert_eq!(
+            DEZ_WORKSPACE_CONTENT.0.entries[1].title,
+            "Browse Running Sessions…"
+        );
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[2].title, "Open Files");
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[3].title, "Review Changes");
         assert!(
             DEZ_CONTENT.1.entries.is_empty(),
             "Dez Welcome should leave configuration to normal application navigation"

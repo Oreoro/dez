@@ -96,6 +96,10 @@ pub mod dez {
             RestoreVisualProfile,
             /// Installs a temporary macOS app bundle in /Applications and relaunches it.
             InstallAndRelaunch,
+            /// Grants native filesystem access to one currently blocked Workspace folder.
+            GrantWorkspaceAccess,
+            /// Retries the durable terminal service without replacing running processes.
+            RetryTerminalService,
             /// Opens the active local Workspace in cmux while keeping Dez open.
             OpenWorkspaceInCmux
         ]

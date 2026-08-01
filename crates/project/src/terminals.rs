@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use collections::HashMap;
 use gpui::{App, AppContext as _, Context, Entity, Task, WeakEntity};
 
@@ -39,6 +39,31 @@ const TERMINAL_HOST_CREATE_INTERVAL: Duration = Duration::from_millis(50);
 pub struct Terminals {
     pub(crate) local_handles: Vec<WeakEntity<terminal::Terminal>>,
 }
+
+#[derive(Debug)]
+pub struct TerminalWorkspaceAccessRequired {
+    path: PathBuf,
+    detail: String,
+}
+
+impl TerminalWorkspaceAccessRequired {
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
+impl std::fmt::Display for TerminalWorkspaceAccessRequired {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            formatter,
+            "Workspace access required for {} before a terminal can start: {}",
+            self.path.display(),
+            self.detail
+        )
+    }
+}
+
+impl std::error::Error for TerminalWorkspaceAccessRequired {}
 
 impl Project {
     pub fn active_entry_directory(&self, cx: &App) -> Option<PathBuf> {
@@ -123,10 +148,6 @@ impl Project {
         let path_style = self.path_style(cx);
         let shell_kind = ShellKind::new(&shell, path_style.is_windows());
 
-        // Prepare a task for resolving the environment
-        let env_task =
-            self.resolve_directory_environment(&shell, path.clone(), remote_client.clone(), cx);
-
         // Scope the toolchain lookup to the worktree the terminal is being
         // spawned in. Previously this iterated the active editor's worktree
         // and then every visible worktree, so a Python toolchain persisted
@@ -142,13 +163,32 @@ impl Project {
             })
             .into_iter()
             .collect();
-        let toolchains = project_path_contexts
-            .into_iter()
-            .filter(|_| detect_venv)
-            .map(|p| self.active_toolchain(p, LanguageName::new_static("Python"), cx))
-            .collect::<Vec<_>>();
         let lang_registry = self.languages.clone();
+        let fs = self.fs.clone();
         cx.spawn(async move |project, cx| {
+            if let Some(local_path) = &local_path {
+                preflight_terminal_working_directory(fs.as_ref(), local_path).await?;
+            }
+            let (env_task, toolchains) = project.update(cx, |project, cx| {
+                let env_task = project.resolve_directory_environment(
+                    &shell,
+                    path.clone(),
+                    remote_client.clone(),
+                    cx,
+                );
+                let toolchains = project_path_contexts
+                    .into_iter()
+                    .filter(|_| detect_venv)
+                    .map(|project_path| {
+                        project.active_toolchain(
+                            project_path,
+                            LanguageName::new_static("Python"),
+                            cx,
+                        )
+                    })
+                    .collect::<Vec<_>>();
+                (env_task, toolchains)
+            })?;
             let mut env = env_task.await.unwrap_or_default();
             env.extend(settings.env);
 
@@ -369,11 +409,6 @@ impl Project {
             })
             .into_iter()
             .collect();
-        let toolchains = project_path_contexts
-            .into_iter()
-            .filter(|_| detect_venv)
-            .map(|p| self.active_toolchain(p, LanguageName::new_static("Python"), cx))
-            .collect::<Vec<_>>();
         let remote_client = if force_local {
             None
         } else {
@@ -393,16 +428,32 @@ impl Project {
 
         let path_style = self.path_style(cx);
 
-        // Prepare a task for resolving the environment
-        let env_task =
-            self.resolve_directory_environment(&env_shell, path.clone(), remote_client.clone(), cx);
-
         let lang_registry = self.languages.clone();
         let fs = self.fs.clone();
         cx.spawn(async move |project, cx| {
             if let Some(local_path) = &local_path {
                 preflight_terminal_working_directory(fs.as_ref(), local_path).await?;
             }
+            let (env_task, toolchains) = project.update(cx, |project, cx| {
+                let env_task = project.resolve_directory_environment(
+                    &env_shell,
+                    path.clone(),
+                    remote_client.clone(),
+                    cx,
+                );
+                let toolchains = project_path_contexts
+                    .into_iter()
+                    .filter(|_| detect_venv)
+                    .map(|project_path| {
+                        project.active_toolchain(
+                            project_path,
+                            LanguageName::new_static("Python"),
+                            cx,
+                        )
+                    })
+                    .collect::<Vec<_>>();
+                (env_task, toolchains)
+            })?;
             let shell_kind = ShellKind::new(&shell, path_style.is_windows());
             let mut env = env_task.await.unwrap_or_default();
             env.extend(settings.env);
@@ -803,21 +854,32 @@ impl Project {
 }
 
 async fn preflight_terminal_working_directory(fs: &dyn fs::Fs, path: &Path) -> Result<()> {
-    let mut entries = fs.read_dir(path).await.map_err(|error| {
-        anyhow::anyhow!(
-            "Workspace access required for {} before a terminal can start: {error:#}",
-            path.display()
-        )
-    })?;
+    let mut entries = fs
+        .read_dir(path)
+        .await
+        .map_err(|error| terminal_working_directory_error(path, error))?;
     if let Some(entry) = entries.next().await {
-        entry.map_err(|error| {
-            anyhow::anyhow!(
-                "Workspace access required for {} before a terminal can start: {error:#}",
-                path.display()
-            )
-        })?;
+        entry.map_err(|error| terminal_working_directory_error(path, error))?;
     }
     Ok(())
+}
+
+fn terminal_working_directory_error(path: &Path, error: anyhow::Error) -> anyhow::Error {
+    if error.chain().any(|cause| {
+        cause
+            .downcast_ref::<std::io::Error>()
+            .is_some_and(|error| error.kind() == std::io::ErrorKind::PermissionDenied)
+    }) {
+        anyhow::Error::new(TerminalWorkspaceAccessRequired {
+            path: path.to_path_buf(),
+            detail: format!("{error:#}"),
+        })
+    } else {
+        error.context(format!(
+            "could not read terminal working directory {}",
+            path.display()
+        ))
+    }
 }
 
 fn create_remote_shell(

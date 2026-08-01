@@ -25,7 +25,7 @@ use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 
 const PTY_READ_BUFFER_BYTES: usize = 64 * 1024;
 const PTY_INPUT_QUEUE_CAPACITY: usize = 256;
-const MAX_PTY_QUEUED_INPUT_BYTES: usize = 4 * 1024 * 1024;
+pub(super) const MAX_PTY_QUEUED_INPUT_BYTES: usize = 4 * 1024 * 1024;
 const FOREGROUND_PROCESS_REFRESH_INTERVAL: Duration = Duration::from_millis(200);
 const FOREGROUND_PROCESS_WATCH_DURATION: Duration = Duration::from_secs(2);
 // `EventedPty` assigns these fixed polling keys during registration, but the

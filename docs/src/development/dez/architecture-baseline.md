@@ -174,28 +174,31 @@ pair reattaches the same computation through the authenticated connection. A
 partial, malformed, or unavailable current reference does not create a shell;
 it opens a display-only recovery Surface explaining that Dez started no
 replacement computation. Agent recovery also skips the initialization command
-in that state. Records owned by an older Host generation remain visible as
-**Legacy · Access blocked** until the user keeps them running, opens a separate
-new shell in the recorded directory, or confirms termination. Dez never claims
-to transfer a running process between Hosts.
+in that state. Eligible saved records owned by an older Host generation remain
+visible as **Legacy · Access blocked**. The label does not assert that the old
+process is reachable or alive. The user can leave the record untouched, open a
+separate new shell in the recorded directory, or ask a matching legacy owner to
+terminate the Session behind confirmation. Dez never claims to transfer a
+running process between Hosts.
 
 Terminal attention is also stored as an additive SQLite field. Bell-derived
 attention is persisted immediately when raised and when acknowledged, so a GUI
 restart cannot silently erase it. Structured Codex attention remains owned by
 the helper snapshot and is acknowledged when the owning terminal is opened.
 
-Workspaces projects detached local Sessions, preserves stable Session identity
-through reattachment, and returns an attached Session to a normal Main Work
-Area tab. Closing a live tab detaches it; termination remains a separate,
-confirmed destructive action. A hosted termination stays attached until the
-Host acknowledges an exited snapshot; a rejected or dropped response leaves
-the terminal visible with retry guidance. After an event-stream failure the
-GUI clears its Host cursor and requires a fresh authoritative list before
-accepting incremental events from a restarted helper. Failed reconciliation
-preserves the title and opens one display-only unavailable warning with the
-exact reason. The PTY grid stays free of synthetic output and an inert cursor.
-**Start Fresh Terminal** is explicit separate computation; recovery itself
-starts no replacement process.
+Workspaces projects detached local Sessions only when they carry supported-agent
+or managed-terminal evidence; ordinary shells remain Main Work Area Surfaces.
+For a projected Session, Workspaces preserves stable identity through
+reattachment and returns an attachment to a normal Main Work Area tab. Closing a
+live tab detaches it; termination remains a separate, confirmed destructive
+action. A hosted termination stays attached until the Host acknowledges an
+exited snapshot; a rejected or dropped response leaves the terminal visible
+with retry guidance. After an event-stream failure the GUI clears its Host
+cursor and requires a fresh authoritative list before accepting incremental
+events from a restarted helper. Failed reconciliation preserves the title and
+opens one display-only unavailable warning with the exact reason. The PTY grid
+stays free of synthetic output and an inert cursor. **Start Fresh Terminal** is
+explicit separate computation; recovery itself starts no replacement process.
 
 Packaged Dez enables `dez-terminal-host` by default when the sibling executable
 is present. A source or partial installation without that helper uses
@@ -228,16 +231,26 @@ input, resize, detach, and terminate route through the Host connection without
 giving GPUI process ownership. Connection, reconnection, and command cycles are
 bounded. An uncertain command is never replayed, and work queued behind a
 transport failure is rejected as stale instead of running after a later
-handshake. PTY input is bounded by 256 queued messages and four mebibytes,
-supports partial writes, and waits for writable readiness before continuing.
-Input saturation returns explicit backpressure, while resize and termination
-use a separate control channel. Connecting, Failed, and Reconnecting states
-remain visible in Workspaces with copyable diagnostics.
+handshake. The GUI command path groups every frame-safe chunk for one input batch
+into one queue item, so queue admission accepts or rejects the batch as a unit.
+It rejects a batch above the helper's four-mebibyte PTY budget and enforces an
+aggregate byte cap across queued input. This is admission atomicity only: after
+transport begins sending a batch, a later helper rejection or transport failure
+can leave a prefix delivered. Dez treats that outcome as uncertain and never
+replays the batch. The helper PTY queue independently enforces 256 queued
+messages and four mebibytes, supports partial writes, and waits for writable
+readiness before continuing. Input saturation returns explicit backpressure;
+inside the helper, resize and termination use a separate PTY control channel.
+Connecting, Failed, and Reconnecting states remain visible in Workspaces with
+copyable diagnostics.
 
 Workspace access is a separate startup boundary. Restore preflights each local
 root once. A denied root enters `WorkspaceAccessState::AccessRequired`, is not
 opened as a half-working Workspace, and appears in one native access notice with
-**Choose Workspace…**. Granting one root removes only that root from the notice.
+**Grant Access…**. Its single-folder picker accepts only an exact blocked root,
+validates readability, and never opens or replaces the current Workspace.
+Granting one root removes only that root from the notice. Relaunch or **Open
+Recent Workspaces…** retries restoration when a Workspace is still missing.
 Git, search, LSP, Agent, and terminal work for a denied root do not begin behind
 the warning. Workspace Search deduplicates permission errors per root and
 cancels pending work during quit.

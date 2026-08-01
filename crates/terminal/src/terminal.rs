@@ -720,6 +720,7 @@ pub enum MaybeNavigationTarget {
 #[derive(Clone)]
 enum InternalEvent {
     Resize(TerminalBounds),
+    HostedInputRejected(String),
     Clear,
     // FocusNextMatch,
     Scroll(Scroll),
@@ -1100,6 +1101,7 @@ impl TerminalBuilder {
             observed_exit_code: None,
             process_exited: false,
             keyboard_input_sent: false,
+            hosted_input_rejection_visible: false,
             init_command_startup_marker: None,
             init_command_startup_tx: None,
             event_loop_task: Task::ready(Ok(())),
@@ -1396,6 +1398,7 @@ impl TerminalBuilder {
                 observed_exit_code: None,
                 process_exited: false,
                 keyboard_input_sent: false,
+                hosted_input_rejection_visible: false,
                 init_command_startup_marker: None,
                 init_command_startup_tx: None,
                 event_loop_task: Task::ready(Ok(())),
@@ -1612,6 +1615,7 @@ pub struct Terminal {
     observed_exit_code: Option<i32>,
     process_exited: bool,
     keyboard_input_sent: bool,
+    hosted_input_rejection_visible: bool,
     init_command_startup_marker: Option<String>,
     init_command_startup_tx: Option<Sender<()>>,
     event_loop_task: Task<Result<(), anyhow::Error>>,
@@ -1756,11 +1760,13 @@ impl Terminal {
                         _ => format(""),
                     }
                     .into_bytes(),
-                )
+                );
             }
-            TerminalBackendEvent::PtyWrite(out) => self.write_to_pty(out.into_bytes()),
+            TerminalBackendEvent::PtyWrite(out) => {
+                self.write_to_pty(out.into_bytes());
+            }
             TerminalBackendEvent::TextAreaSizeRequest(format) => {
-                self.write_to_pty(format(self.last_content.terminal_bounds).into_bytes())
+                self.write_to_pty(format(self.last_content.terminal_bounds).into_bytes());
             }
             TerminalBackendEvent::CursorBlinkingChange => {
                 let terminal = self.term.lock();
@@ -1838,6 +1844,13 @@ impl Terminal {
                 if !self.matches.is_empty() {
                     cx.emit(Event::Wakeup);
                 }
+            }
+            InternalEvent::HostedInputRejected(message) => {
+                let notice = format!("\n[Dez: terminal input was not queued: {message}]\n");
+                let converted =
+                    convert_lf_to_crlf(notice.as_bytes(), &mut self.output_previous_byte_was_cr);
+                self.output_processor.advance(term, &converted);
+                cx.emit(Event::Wakeup);
             }
             InternalEvent::Clear => {
                 trace!("Clearing");
@@ -2234,9 +2247,12 @@ impl Terminal {
         }
     }
 
-    /// Write the Input payload to the PTY, if applicable.
-    /// (This is a no-op for display-only terminals.)
-    fn write_to_pty(&self, input: impl Into<Cow<'static, [u8]>>) {
+    /// Write the input payload to the PTY, if applicable.
+    ///
+    /// Returns true only when a new hosted-input rejection notice was queued.
+    /// The caller must notify the terminal entity in that case because a rejected
+    /// write produces no Host output to wake the view.
+    fn write_to_pty(&mut self, input: impl Into<Cow<'static, [u8]>>) -> bool {
         let input = input.into();
         #[cfg(any(test, feature = "test-support"))]
         self.pty_write_log.borrow_mut().push(input.to_vec());
@@ -2250,20 +2266,33 @@ impl Terminal {
                     }
                 }
                 pty_tx.notify(input);
+                false
             }
-            TerminalType::Hosted { controller } => {
-                if let Err(error) = controller.input(input.into_owned()) {
-                    log::warn!("failed to write to hosted terminal: {error:#}");
+            TerminalType::Hosted { controller } => match controller.input(input.into_owned()) {
+                Ok(()) => {
+                    self.hosted_input_rejection_visible = false;
+                    false
                 }
-            }
-            TerminalType::DisplayOnly => {}
+                Err(error) => {
+                    log::warn!("failed to write to hosted terminal: {error:#}");
+                    if !self.hosted_input_rejection_visible {
+                        self.hosted_input_rejection_visible = true;
+                        self.events
+                            .push_back(InternalEvent::HostedInputRejected(error.to_string()));
+                        true
+                    } else {
+                        false
+                    }
+                }
+            },
+            TerminalType::DisplayOnly => false,
         }
     }
 
-    pub fn input(&mut self, input: impl Into<Cow<'static, [u8]>>) {
+    pub fn input(&mut self, input: impl Into<Cow<'static, [u8]>>) -> bool {
         self.keyboard_input_sent = true;
         self.complete_init_command_startup_handshake();
-        self.write_input(input);
+        self.write_input(input)
     }
 
     /// Sends a shell-level marker command and returns a task that completes when
@@ -2371,7 +2400,7 @@ impl Terminal {
         cx.emit(Event::Wakeup);
     }
 
-    fn write_input(&mut self, input: impl Into<Cow<'static, [u8]>>) {
+    fn write_input(&mut self, input: impl Into<Cow<'static, [u8]>>) -> bool {
         self.events.push_back(InternalEvent::Scroll(Scroll::Bottom));
         self.events.push_back(InternalEvent::SetSelection(None));
 
@@ -2379,7 +2408,7 @@ impl Terminal {
         #[cfg(any(test, feature = "test-support"))]
         self.input_log.push(input.to_vec());
 
-        self.write_to_pty(input);
+        self.write_to_pty(input)
     }
 
     #[cfg(any(test, feature = "test-support"))]
@@ -2492,21 +2521,32 @@ impl Terminal {
     }
 
     pub fn try_keystroke(&mut self, keystroke: &Keystroke, option_as_meta: bool) -> bool {
+        self.try_keystroke_with_feedback(keystroke, option_as_meta)
+            .0
+    }
+
+    /// Returns `(handled, input_rejected)`. A true `input_rejected` value means
+    /// the caller must notify the terminal entity so the queued notice renders.
+    pub fn try_keystroke_with_feedback(
+        &mut self,
+        keystroke: &Keystroke,
+        option_as_meta: bool,
+    ) -> (bool, bool) {
         if self.vi_mode_enabled {
             self.vi_motion(keystroke);
-            return true;
+            return (true, false);
         }
 
         // Keep default terminal behavior
         let esc = to_esc_str(keystroke, self.last_content.mode, option_as_meta);
         if let Some(esc) = esc {
-            match esc {
+            let input_rejected = match esc {
                 Cow::Borrowed(string) => self.input(string.as_bytes()),
                 Cow::Owned(string) => self.input(string.into_bytes()),
             };
-            true
+            (true, input_rejected)
         } else {
-            false
+            (false, false)
         }
     }
 
@@ -2528,15 +2568,15 @@ impl Terminal {
         cx.notify();
     }
 
-    ///Paste text into the terminal
-    pub fn paste(&mut self, text: &str) {
+    /// Paste text into the terminal, returning whether a rejection notice was queued.
+    pub fn paste(&mut self, text: &str) -> bool {
         let paste_text = if self.last_content.mode.contains(Modes::BRACKETED_PASTE) {
             format!("{}{}{}", "\x1b[200~", text.replace('\x1b', ""), "\x1b[201~")
         } else {
             text.replace("\r\n", "\r").replace('\n', "\r")
         };
 
-        self.input(paste_text.into_bytes());
+        self.input(paste_text.into_bytes())
     }
 
     pub fn sync(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -2566,7 +2606,7 @@ impl Terminal {
         last_non_empty_lines(&terminal, n)
     }
 
-    pub fn focus_in(&self) {
+    pub fn focus_in(&mut self) {
         if self.last_content.mode.contains(Modes::FOCUS_IN_OUT) {
             self.write_to_pty("\x1b[I".as_bytes());
         }

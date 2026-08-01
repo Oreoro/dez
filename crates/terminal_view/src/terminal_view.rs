@@ -108,6 +108,14 @@ const TERMINAL_CONTEXT_DETAILS_LABEL_MIN_WIDTH: Pixels = px(920.);
 
 struct InstallationRequiredForTerminal;
 
+fn record_terminal_workspace_access_required(error: &anyhow::Error, cx: &mut App) {
+    if let Some(access_required) =
+        error.downcast_ref::<project::terminals::TerminalWorkspaceAccessRequired>()
+    {
+        workspace::mark_workspace_access_required(access_required.path().to_path_buf(), cx);
+    }
+}
+
 fn resolve_terminal_startup_command(
     requested: Option<String>,
     configured: Option<String>,
@@ -794,11 +802,20 @@ impl WorkspaceTerminalProviderState {
                 Ok(workspace.project().clone())
             })??;
 
-            let terminal = project
+            let terminal = match project
                 .update(cx, |project, cx| {
                     project.create_terminal_task(spawn_task, cx)
                 })
-                .await?;
+                .await
+            {
+                Ok(terminal) => terminal,
+                Err(error) => {
+                    workspace.update(cx, |_workspace, cx| {
+                        record_terminal_workspace_access_required(&error, cx);
+                    })?;
+                    return Err(error);
+                }
+            };
 
             workspace.update_in(cx, |workspace, window, cx| {
                 attach_terminal_to_workspace(
@@ -825,11 +842,20 @@ impl WorkspaceTerminalProviderState {
         let workspace = self.workspace.clone();
         cx.spawn_in(window, async move |_, cx| {
             let project = workspace.read_with(cx, |workspace, _| workspace.project().clone())?;
-            let new_terminal = project
+            let new_terminal = match project
                 .update(cx, |project, cx| {
                     project.create_terminal_task(spawn_task, cx)
                 })
-                .await?;
+                .await
+            {
+                Ok(terminal) => terminal,
+                Err(error) => {
+                    workspace.update(cx, |_workspace, cx| {
+                        record_terminal_workspace_access_required(&error, cx);
+                    })?;
+                    return Err(error);
+                }
+            };
 
             terminal_to_replace.update_in(cx, |terminal_to_replace, window, cx| {
                 terminal_to_replace.set_terminal(new_terminal.clone(), window, cx);
@@ -1084,6 +1110,7 @@ where
                 Ok(terminal.downgrade())
             }
             Err(error) => {
+                record_terminal_workspace_access_required(&error, cx);
                 let pane = workspace.active_pane().clone();
                 let failed_to_spawn = Box::new(cx.new(|cx| FailedToSpawnTerminal {
                     error: error.to_string(),
@@ -1636,8 +1663,10 @@ impl TerminalView {
     /// Commits (sends) the given text to the PTY. Called by InputHandler::replace_text_in_range.
     pub(crate) fn commit_text(&mut self, text: &str, cx: &mut Context<Self>) {
         if !text.is_empty() {
-            self.terminal.update(cx, |term, _| {
-                term.input(text.to_string().into_bytes());
+            self.terminal.update(cx, |term, terminal_cx| {
+                if term.input(text.to_string().into_bytes()) {
+                    terminal_cx.notify();
+                }
             });
         }
     }
@@ -1883,11 +1912,14 @@ impl TerminalView {
             .mode
             .contains(Modes::ALT_SCREEN)
         {
-            self.terminal.update(cx, |term, cx| {
-                term.try_keystroke(
+            self.terminal.update(cx, |term, terminal_cx| {
+                let (_, input_rejected) = term.try_keystroke_with_feedback(
                     &Keystroke::parse("ctrl-cmd-space").unwrap(),
-                    TerminalSettings::get_global(cx).option_as_meta,
-                )
+                    TerminalSettings::get_global(terminal_cx).option_as_meta,
+                );
+                if input_rejected {
+                    terminal_cx.notify();
+                }
             });
         } else {
             window.show_character_palette();
@@ -2251,8 +2283,11 @@ impl TerminalView {
             }
             _ => {
                 if let Some(text) = clipboard.text() {
-                    self.terminal
-                        .update(cx, |terminal, _cx| terminal.paste(&text));
+                    self.terminal.update(cx, |terminal, terminal_cx| {
+                        if terminal.paste(&text) {
+                            terminal_cx.notify();
+                        }
+                    });
                 }
             }
         }
@@ -2277,16 +2312,21 @@ impl TerminalView {
         };
 
         if let Some(text) = clipboard.text() {
-            self.terminal
-                .update(cx, |terminal, _cx| terminal.paste(&text));
+            self.terminal.update(cx, |terminal, terminal_cx| {
+                if terminal.paste(&text) {
+                    terminal_cx.notify();
+                }
+            });
         }
     }
 
     /// Emits a raw Ctrl+V so TUI agents can read the OS clipboard directly
     /// and attach images using their native workflows.
     fn forward_ctrl_v(&self, cx: &mut Context<Self>) {
-        self.terminal.update(cx, |term, _| {
-            term.input(vec![0x16]);
+        self.terminal.update(cx, |term, terminal_cx| {
+            if term.input(vec![0x16]) {
+                terminal_cx.notify();
+            }
         });
     }
 
@@ -2297,16 +2337,20 @@ impl TerminalView {
             .collect::<String>();
         text.push(' ');
         window.focus(&self.focus_handle(cx), cx);
-        self.terminal.update(cx, |terminal, _| {
-            terminal.paste(&text);
+        self.terminal.update(cx, |terminal, terminal_cx| {
+            if terminal.paste(&text) {
+                terminal_cx.notify();
+            }
         });
     }
 
     fn send_text(&mut self, text: &SendText, _: &mut Window, cx: &mut Context<Self>) {
         self.clear_bell(cx);
         self.blink_manager.update(cx, BlinkManager::pause_blinking);
-        self.terminal.update(cx, |term, _| {
-            term.input(text.0.to_string().into_bytes());
+        self.terminal.update(cx, |term, terminal_cx| {
+            if term.input(text.0.to_string().into_bytes()) {
+                terminal_cx.notify();
+            }
         });
     }
 
@@ -2745,14 +2789,15 @@ impl TerminalView {
     /// updates the cursor locally without sending data to the shell, so there's no
     /// shell output to automatically trigger a re-render.
     fn process_keystroke(&mut self, keystroke: &Keystroke, cx: &mut Context<Self>) -> bool {
-        let (handled, vi_mode_enabled) = self.terminal.update(cx, |term, cx| {
-            (
-                term.try_keystroke(keystroke, TerminalSettings::get_global(cx).option_as_meta),
-                term.vi_mode_enabled(),
-            )
+        let (handled, vi_mode_enabled, input_rejected) = self.terminal.update(cx, |term, cx| {
+            let (handled, input_rejected) = term.try_keystroke_with_feedback(
+                keystroke,
+                TerminalSettings::get_global(cx).option_as_meta,
+            );
+            (handled, term.vi_mode_enabled(), input_rejected)
         });
 
-        if handled && vi_mode_enabled {
+        if handled && (vi_mode_enabled || input_rejected) {
             cx.notify();
         }
 

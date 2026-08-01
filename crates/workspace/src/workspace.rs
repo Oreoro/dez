@@ -205,6 +205,48 @@ pub fn set_workspace_access_state(state: WorkspaceAccessState, cx: &mut App) {
     cx.refresh_windows();
 }
 
+pub fn mark_workspace_access_required(root: PathBuf, cx: &mut App) {
+    let mut roots = match workspace_access_state(cx) {
+        WorkspaceAccessState::Available => Vec::new(),
+        WorkspaceAccessState::AccessRequired { roots } => roots.to_vec(),
+    };
+    if roots.iter().any(|existing| root.starts_with(existing)) {
+        return;
+    }
+    roots.retain(|existing| !existing.starts_with(&root));
+    roots.push(root);
+    roots.sort();
+    set_workspace_access_state(
+        WorkspaceAccessState::AccessRequired {
+            roots: roots.into(),
+        },
+        cx,
+    );
+}
+
+pub fn mark_workspace_roots_accessible(accessible_roots: &[PathBuf], cx: &mut App) {
+    let WorkspaceAccessState::AccessRequired { roots } = workspace_access_state(cx) else {
+        return;
+    };
+    let remaining_roots = roots
+        .iter()
+        .filter(|root| !accessible_roots.contains(root))
+        .cloned()
+        .collect::<Vec<_>>();
+    if remaining_roots.len() == roots.len() {
+        return;
+    }
+
+    let state = if remaining_roots.is_empty() {
+        WorkspaceAccessState::Available
+    } else {
+        WorkspaceAccessState::AccessRequired {
+            roots: remaining_roots.into(),
+        }
+    };
+    set_workspace_access_state(state, cx);
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum WorkspaceStartupState {
     #[default]

@@ -80,6 +80,14 @@ surfaces attention. **Open Files** and **Review Changes** bring the result
 back into the same Main Work Area. The native tab-strip `+` is the shared Add
 menu for every step; no separate dashboard or onboarding mode is required.
 
+Inside an active Workspace, Home makes that **Start → Resume → Inspect →
+Review** route concrete with four actions in order: **Open Terminal**, **Browse
+Running Sessions…**, **Open Files**, and **Review Changes**. An active empty
+Main Work Area uses the same route with space-aware labels: **Open Terminal**,
+**Browse Sessions**, **Find File**, and **Review Changes**. **New File** remains
+available from File, the native `+`, and keyboard shortcuts, but is not a
+primary Home or empty-state action.
+
 The window is deliberately not a dashboard of equal columns. Each Workspace
 owns one codebase context, one Main Work Area, its terminals, and its Git state.
 Workspaces stays global on the left. Files, Git, Outline, Debug, Built-in Agent,
@@ -95,11 +103,17 @@ Those tabs support reorder, cross-pane drag, preview replacement, pinning,
 closing, and horizontal or vertical splits. A terminal can therefore sit
 below code without Dez manufacturing a separate multiplexer UI.
 The adjacent native `+` reopens Home, opens Recent Workspaces, or routes to a
-terminal, file, search, Files, Changes, Debug, or Built-in Agent surface
+terminal, file, search, Files, Review Changes, Debug, or Built-in Agent surface
 through the existing Zed actions. Its terminal submenu names the configured
 Default Terminal first, followed by Native Shell, tmux Session, and explicit
 provider launchers. **Browse Running Sessions…** refreshes discovery and
 refocuses Workspaces without adding another navigation surface.
+
+Dez's **File → Open Terminal** submenu mirrors those native `+` terminal
+choices in the same order: **Default Terminal**, **Native Shell**, **tmux
+Session**, **Codex**, **Claude Code**, and **OpenCode**. **Browse Running
+Sessions…** follows immediately after the submenu, so starting and resuming
+terminal work stay adjacent in both navigation paths.
 
 Six optional layout commands remain available through **View** and Command
 Palette: **Work Area + Files**, **Work Area + Built-in Agent**, **Focus Work
@@ -124,9 +138,10 @@ recent tabs (`Space b`), files (`Space f`), the configured agent terminal
 
 From a selected Agent Session row in Workspaces, `Enter` returns to the
 existing Session, `Shift+F` opens its Workspace files, `Shift+G` opens its
-change review, and `Shift+V` opens evidence-backed Session details. The same
-Files, Review Changes, and Session Details handoff appears on standalone
-terminals; it never creates a duplicate shell or project. If the owning
+change review, and `Shift+V` opens its evidence-backed **Review Brief**. On a
+standalone terminal row, `Shift+V` instead opens **Terminal Details** for that
+terminal and Host. Files and Review Changes remain available from both routes;
+none of these actions creates a duplicate shell or project. If the owning
 Workspace is closed, Files restores that Workspace and the exact selected
 Session before revealing the tree.
 
@@ -157,15 +172,17 @@ source has no sessions, **Failed** when discovery did not complete, or
 **Ready** when it returned sessions. A failed source preserves only its own
 rows as **last known** while successful sources continue updating. Every
 discovery command is bounded and cancelled before the next refresh cycle, so
-an unresponsive external tool cannot freeze Workspace activity. **Browse
-Running Sessions…** clears transient navigator filters, refreshes all sources,
-expands matching Workspace groups, and focuses Workspaces. Matching items
-appear under the most specific Workspace; unmatched or pathless items remain
-visible under **Other Running Sessions**. Process and layout ownership always
-stays with the external application. **Terminal: Open tmux Session** attaches or
-creates a stable session named from the active Workspace with
-`tmux new-session -A`; discovered sessions remain available individually in
-Workspaces. Arbitrary machine PTYs remain excluded.
+an unresponsive external tool cannot freeze Workspace activity. Herdr applies
+both per-endpoint deadlines and one deadline to the complete source scan, so a
+large endpoint set cannot extend one refresh indefinitely. **Browse Running
+Sessions…** clears transient navigator filters, refreshes all sources, expands
+matching Workspace groups, and focuses Workspaces. Matching items appear under
+the most specific Workspace; unmatched or pathless items remain visible under
+**Other Running Sessions**. Process and layout ownership always stays with the
+external application. **Terminal: Open tmux Session** attaches or creates a
+stable session named from the active Workspace with `tmux new-session -A`;
+discovered sessions remain available individually in Workspaces. Arbitrary
+machine PTYs remain excluded.
 
 Opening the active Workspace in cmux also has a bounded handoff. If cmux does
 not respond within eight seconds, Dez keeps the Workspace open, ends the
@@ -189,25 +206,35 @@ and relaunched it; there is no background override.
 
 Before restoring a local Workspace, Dez verifies that each root can be read.
 Protected-folder failures are aggregated into one **Workspace access required**
-notice with a native **Choose Workspace…** folder action. Select each blocked
-root once in the macOS picker. A successfully reopened root leaves the blocked
-set immediately; other denied roots remain visible. Git, Workspace Search,
-agents, and terminal creation wait rather than repeatedly failing against the
-same root.
+notice with a native **Grant Access…** folder action. Select each exact blocked
+root once in the single-folder picker. Dez validates the selection without
+opening or replacing a Workspace; a readable root leaves the blocked set while
+other denied roots remain visible. Relaunch retries startup restoration, and
+**Open Recent Workspaces…** remains the explicit retry when a Workspace is
+still missing. Git, Workspace Search, agents, and terminal creation wait rather
+than repeatedly failing against the same root.
 
 Each installed terminal Host has a generated endpoint identity: its generation,
 socket, token file, and stable Host ID are one connection-owned value. Terminal
-hooks receive those exact paths. Sessions from older Hosts remain alive and
-appear as **Legacy · Access blocked**. Selecting one opens a new shell in its
-recorded working directory; **Terminate Legacy Session…** is separate,
-confirmed, and contacts only the legacy owner. Dez never claims to migrate or
-silently terminate a running process.
+hooks receive those exact paths. Saved references from older Hosts appear as
+**Legacy · Access blocked**; that label does not claim that the old process is
+reachable or alive. Selecting one opens a separate new shell in its recorded
+working directory. **Terminate Legacy Session…** is confirmed and contacts only
+a matching legacy owner; failure leaves the record and any process untouched.
+Dez never claims to migrate or silently terminate a running process.
 
 Host connection, reconnection, and command cycles are bounded. An uncertain
 command is never replayed, and queued work behind a broken connection fails as
-stale instead of running later against a different state. PTY input is bounded
-by message count and bytes; saturation reports backpressure while resize and
-termination continue through a separate control lane.
+stale instead of running later against a different state. The GUI groups every
+frame-safe chunk for one user-input batch into one queue item, so queue admission
+accepts or rejects the batch as a unit. It rejects a batch above the helper's
+four-mebibyte PTY budget, caps aggregate bytes waiting in the GUI queue, and
+shows an admission failure in the terminal Surface. Once transport starts
+sending an accepted batch, a later failure can still leave a prefix delivered;
+Dez treats that delivery as uncertain, logs the transport failure, and does not
+replay it.
+Awaited terminal-service commands also have bounded enqueue and response
+deadlines.
 
 tmux and Herdr attach commands run in the native terminal with a visible rerun
 control. A failed attach keeps the external session unchanged, shows
@@ -255,12 +282,13 @@ stapled-ticket validation.
 ## Current status
 
 The v0.2.2 source candidate contains the opinionated Dez shell,
-identity isolation, Workspace composition, persistent Workspaces navigation,
-ordinary closeable workspace-tool tabs, explicit Agent Session state,
-host-owned local terminal lifecycle, setting-controlled Back/Forward history,
-native draggable tab navigation, first-run experience, Lumin/Plex/Lilex visual
-defaults, truthful tmux, Herdr, and cmux discovery, explicit external
-attach/open actions, and a large set of static product-contract checks.
+identity isolation, Workspace composition, persistent Workspace state with
+optional Workspaces navigation, ordinary closeable workspace-tool tabs,
+explicit Agent Session state, host-owned local terminal lifecycle,
+setting-controlled Back/Forward history, native draggable tab navigation,
+first-run experience, Lumin/Plex/Lilex visual defaults, truthful tmux, Herdr,
+and cmux discovery, explicit external attach/open actions, and a large set of
+static product-contract checks.
 Arbitrary machine terminals are deliberately absent because Dez cannot safely
 control or attribute them.
 

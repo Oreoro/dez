@@ -30,11 +30,12 @@ in the header tooltip and accessibility label. Agent provider and lifecycle
 state use the row beneath a terminal or Session title, so status never competes
 with the primary navigation label.
 
-Workspace Tools and Agent also begin closed in a fresh default Workspace, so
-the terminal or editor remains the obvious primary surface. **Files**,
-**Outline**, **Git**, and **Debug** reveal Workspace Tools on demand; repeating
-a destination focuses it instead of toggling the drawer away. Restored layouts
-and explicit `project_panel.starts_open` preferences remain respected.
+Workspace Tools and Built-in Agent also begin closed in a fresh default
+Workspace, so the terminal or editor remains the obvious primary surface.
+**Files**, **Outline**, **Git**, and **Debug** reveal Workspace Tools on demand;
+repeating a destination focuses it instead of toggling the drawer away.
+Restored layouts and explicit `project_panel.starts_open` preferences remain
+respected.
 
 ## Opening Terminals
 
@@ -72,8 +73,8 @@ and never present a second terminal destination.
 ### One Terminal Model
 
 Dez has no separate Terminal Panel destination. Every **Open Terminal**
-action opens an ordinary main-area terminal Surface in the active Workspace.
-You can:
+action opens an ordinary Main Work Area terminal Surface in the active
+Workspace. You can:
 
 - keep it as a tab beside files;
 - split it into the same pane grid;
@@ -86,17 +87,22 @@ You can:
 
 The packaged Host bounds connection, reconnection, and command cycles. It does
 not replay a command whose outcome is uncertain, and it rejects work queued
-behind a broken transport as stale. Terminal input is bounded by message count
-and bytes; a full input queue reports backpressure instead of blocking or
-growing without limit. Resize and termination use a separate control lane so
-an input backlog cannot prevent recovery controls from running.
+behind a broken transport as stale. The GUI groups every frame-safe chunk for
+one user-input batch into one queue item, so queue admission is all-or-nothing.
+A batch above the helper's four-mebibyte PTY budget is rejected, and an aggregate
+byte cap bounds input waiting in the GUI queue. A rejected admission is shown
+inside the terminal Surface. After transport starts sending an accepted batch,
+a later failure can still leave a prefix delivered; Dez treats that delivery as
+uncertain, logs the transport failure, and does not replay it. Awaited
+commands also have bounded enqueue and response deadlines instead of waiting
+forever.
 
 ### Foreground agents stay in the terminal
 
 Starting `codex`, `claude`, or another recognized terminal agent does not open
-an Agent panel or create a second terminal. The existing terminal remains in the
-Main Work Area and is listed as a concise Agent Session row such as **Codex ·
-Running**. Selecting that row returns to the same terminal Surface. When an
+Built-in Agent or create a second terminal. The existing terminal remains in
+the Main Work Area and is listed as a concise Agent Session row such as **Codex
+· Running**. Selecting that row returns to the same terminal Surface. When an
 ordinary detected agent exits back to its shell, the terminal stays open in
 the Main Work Area and leaves Workspaces.
 
@@ -145,6 +151,11 @@ successful sources continue updating. A ready source may still have no session
 matching the selected Workspace, in which case its unmatched items stay under
 **Other Running Sessions** rather than disappearing.
 
+Herdr queries endpoints concurrently with an individual deadline for each
+endpoint and one deadline for the complete Herdr source scan. A large or
+unresponsive endpoint set therefore becomes **Failed** instead of extending one
+refresh cycle indefinitely.
+
 For the current local codebase, **Workspace: Open in cmux** in Command Palette
 hands the Workspace path to cmux and keeps the Dez window intact. It reports
 success or the exact launch failure through a native toast and refreshes the
@@ -167,14 +178,22 @@ or remove the dead reference from Workspaces.
 
 ### Moving from a Session into the IDE
 
-The selected agent Session and its active terminal expose one shared handoff:
+Agent Sessions and terminal rows share navigation shortcuts, but their detail
+destinations are deliberately different:
 
-| Intent                         | Workspaces shortcut      |
-| ------------------------------ | ------------------------ |
-| Return to the existing Session | `Enter` or `Shift+Enter` |
-| Open its Workspace files       | `Shift+F`                |
-| Review its changes             | `Shift+G`                |
-| Open its run details           | `Shift+V`                |
+| Intent                                 | Workspaces shortcut      |
+| -------------------------------------- | ------------------------ |
+| Return to the existing Session         | `Enter` or `Shift+Enter` |
+| Open its Workspace files               | `Shift+F`                |
+| Review its changes                     | `Shift+G`                |
+| Open an Agent Session's Review Brief   | `Shift+V`                |
+| Open a terminal row's Terminal Details | `Shift+V`                |
+
+An Agent Session **Review Brief** organizes observed intent, changes, commands,
+checks, failures, and unresolved risk for review. A terminal row's **Terminal
+Details** reports terminal and Host evidence such as lifecycle, ownership, and
+working-directory context. Terminal Details does not imply that an ordinary
+shell is an Agent Session or that Dez has a review result for it.
 
 The terminal context bar exposes **Files**, **Review Changes**, and **Terminal
 Details**. A detected or managed agent terminal projects its live state into
@@ -210,8 +229,9 @@ selects the first dirty repository deterministically.
 A completely clean Workspace remains on Git's explicit clean state. The review
 tab is named **Diff · filename**, with diff base and relative path retained in
 its tooltip.
-**Terminal Details** opens the evidence-backed terminal summary. None of these actions
-starts another terminal or creates a second project context.
+**Terminal Details** opens the evidence-backed terminal summary; an Agent
+Session's **Review Brief** remains the separate run-review destination. None of
+these actions starts another terminal or creates a second project context.
 
 **Files** and **Review Changes** are idempotent destination actions. Repeating
 them keeps the requested tool visible and focused instead of toggling it closed.
@@ -229,9 +249,9 @@ content, not proof.
 ## Working with Multiple Terminals
 
 Create additional terminals from the Main Work Area **+** menu or **Open
-Terminal**. Each terminal is an independent main-area tab and keeps the active
-Workspace's directory context. Only detected or managed agent terminals appear
-in Workspaces.
+Terminal**. Each terminal is an independent Main Work Area tab and keeps the
+active Workspace's directory context. Only detected or managed agent terminals
+appear in Workspaces.
 
 Split terminals horizontally with `Cmd+D` (macOS) or `Ctrl+Shift+5` (Linux/Windows).
 

@@ -196,18 +196,27 @@ impl TerminalTransaction {
         // Ensure that the assistant cannot accidentally execute commands that are streamed into the terminal
         let input = Self::sanitize_input(hunk);
         self.completion.push_str(&input);
-        self.terminal
-            .update(cx, |terminal, _| terminal.input(input.into_bytes()));
+        self.terminal.update(cx, |terminal, terminal_cx| {
+            if terminal.input(input.into_bytes()) {
+                terminal_cx.notify();
+            }
+        });
     }
 
     pub fn undo(self, cx: &mut App) {
-        self.terminal
-            .update(cx, |terminal, _| terminal.input(CLEAR_INPUT.as_bytes()));
+        self.terminal.update(cx, |terminal, terminal_cx| {
+            if terminal.input(CLEAR_INPUT.as_bytes()) {
+                terminal_cx.notify();
+            }
+        });
     }
 
     pub fn complete(self, cx: &mut App) {
-        self.terminal
-            .update(cx, |terminal, _| terminal.input(CARRIAGE_RETURN.as_bytes()));
+        self.terminal.update(cx, |terminal, terminal_cx| {
+            if terminal.input(CARRIAGE_RETURN.as_bytes()) {
+                terminal_cx.notify();
+            }
+        });
     }
 
     fn sanitize_input(mut input: String) -> String {

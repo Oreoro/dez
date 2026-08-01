@@ -27,8 +27,10 @@ The main journey uses native surfaces throughout:
 3. Use **Open Terminal** or the tab-strip **+** to open the configured default,
    a native shell, tmux, Codex, Claude Code, or OpenCode in native tabs. Use
    **Open Workspace in cmux** for an explicit external handoff.
-4. Monitor terminal and Built-in Agent Sessions in **Workspaces**.
-5. Open **Files** for context or **Review Changes** to inspect the result.
+4. Use **Browse Running Sessions…** to resume discovered work, then monitor
+   terminal and Built-in Agent Sessions in **Workspaces**.
+5. Use **Open Files** to inspect code context or **Review Changes** to review
+   the result.
 
 ## The screen model
 
@@ -61,7 +63,7 @@ be split below or beside code while keeping their Workspace ownership.
 The tab-strip **+** is the single **Add to Main Work Area** control. Its
 **Open Terminal** submenu launches the **Default Terminal**, a **Native Shell**,
 a Workspace-named tmux session, Codex, Claude Code, or OpenCode. It also opens
-the optional Built-in Agent, a file, Files, Changes, Debug, Workspace search,
+the optional Built-in Agent, a file, Files, Review Changes, Debug, Workspace search,
 or symbol search. The control follows the final tab while space remains and
 stays pinned to the tab viewport edge when tabs overflow. **Browse Running
 Sessions…** clears temporary filters,
@@ -72,6 +74,13 @@ Every destination uses the existing native pane system, so it can be focused
 and arranged without creating a nested panel or a second navigation model. The
 tab strip and Add control remain visible on an empty Main Work Area, including
 Home.
+
+The Dez **File → Open Terminal** submenu mirrors the native **+** choices in
+the same order: **Default Terminal**, **Native Shell**, **tmux Session**,
+**Codex**, **Claude Code**, and **OpenCode**. **Browse Running Sessions…** is
+the next File-menu action immediately after that submenu. Starting a new
+terminal and resuming discovered work therefore remain adjacent without
+creating a second navigation model.
 
 Workspaces starts closed in fresh windows and remains available as an on-demand
 supervisor. Workspace Tools start closed and open as ordinary Main Work Area
@@ -93,9 +102,9 @@ native surface. Focus closes contextual tools. Split Work Area only arranges
 existing Main Work Area surfaces; it never starts a process or opens an
 unrelated tool. No recipe may manufacture an empty column.
 When that work area is empty, one restrained launch panel states the product
-purpose and offers Open Terminal, Find File, Review Changes, and New File. It does
-not repeat Home's product summary. It is an operational start state for the
-current Workspace, not a second Home screen.
+purpose and offers **Open Terminal**, **Browse Sessions**, **Find File**, and
+**Review Changes**. It does not repeat Home's product summary. It is an
+operational start state for the current Workspace, not a second Home screen.
 **Workspaces** is a projection over the real owners. Each open codebase
 remains visible even before an agent starts; its Agent Sessions appear beneath
 it as they are detected or managed. Selecting a Session focuses or reattaches
@@ -154,13 +163,14 @@ Terminal creation appears under `terminal: open terminal …`, and the six
 layout transitions and their management commands appear under `layout: ...`;
 neither route exposes inherited Project, Thread, or Canvas terminology.
 
-Hierarchy follows the next useful action. Home places **Open Workspace**
-first when no codebase is open, or **Open Terminal** first inside an
-active Workspace. These are native command rows on the editor surface, not
-filled dashboard cards. Dense Files & Git and Built-in Agent toolbars use
-compact icons, but every control has a specific accessible name, tooltip, and
-place in the keyboard tab order. A critical action is never available only on
-pointer hover.
+Hierarchy follows the next useful action. Home places **Open Workspace** first
+when no codebase is open. Inside an active Workspace it presents **Open
+Terminal**, **Browse Running Sessions…**, **Open Files**, and **Review Changes**
+in that order: Start → Resume → Inspect → Review. These are native command rows
+on the editor surface, not filled dashboard cards. Dense Files & Git and
+Built-in Agent toolbars use compact icons, but every control has a specific
+accessible name, tooltip, and place in the keyboard tab order. A critical
+action is never available only on pointer hover.
 
 First run follows the same rule. Dez opens **Home** as a normal Main Work Area
 tab, not a setup modal, tour, floating card, or restored split. When the app is
@@ -172,10 +182,12 @@ native Settings.
 Without a Workspace, Home offers **Open Workspace** and **Clone Repository**.
 It does not offer a pathless terminal before a codebase can supply file, Git,
 and working-directory context. Inside a Workspace, Home offers **Open
-Terminal**, **Open Files**, **Review Changes**, and **New File**. **Open
-Terminal** uses the configured **Default Terminal Command**, or the native shell
-when that setting is blank. The adjacent **+** and Command Palette keep Native
-Shell, tmux, Codex, Claude Code, and OpenCode available as one-off launches.
+Terminal**, **Browse Running Sessions…**, **Open Files**, and **Review Changes**.
+**Open Terminal** uses the configured **Default Terminal Command**, or the
+native shell when that setting is blank. The adjacent **+** and Command Palette
+keep Native Shell, tmux, Codex, Claude Code, and OpenCode available as one-off
+launches. **New File** remains available from File, the native **+**, and
+keyboard shortcuts, but is no longer a primary Home or empty-state action.
 Recent Workspaces remain ordinary keyboard-reachable rows rather than a
 separate dashboard.
 
@@ -493,10 +505,11 @@ path. A fresh terminal is always separate computation.
 
 If the terminal service itself is connecting, reconnecting, or failed,
 Workspaces states whether any shell started and whether running processes were
-touched. **Open Local Log** and **Copy Details/Error** expose diagnostics
-without putting transport jargon in the main notice. If a Workspace cannot reopen, **Open Recent
-Workspaces** retries through the normal picker; **Remove Recovery Entry**
-removes only that recovery entry and keeps recent Workspace data.
+touched. A failed startup offers **Retry** without replacing running processes;
+**Open Local Log** and **Copy Details/Error** expose diagnostics without putting
+transport jargon in the main notice. If a Workspace cannot reopen, **Open
+Recent Workspaces** retries through the normal picker; **Remove Recovery
+Entry** removes only that recovery entry and keeps recent Workspace data.
 These recovery actions are keyboard reachable.
 
 ## Terminal and Agent integration
@@ -560,11 +573,13 @@ interrupted transport won the race.
 Host connection, reconnection, and command cycles have deadlines and bounded
 queues. A command with an uncertain outcome is never replayed, and work queued
 behind a failed transport is rejected as stale instead of running later
-against changed state. PTY input uses a bounded queue by both message count and
-bytes. Saturation returns explicit backpressure rather than blocking the UI or
-growing memory without limit, while resize and termination continue through a
-separate control lane. Partial PTY writes resume only after the descriptor is
-writable again.
+against changed state. Each user-input batch occupies one bounded queue slot,
+is rejected above the helper's four-mebibyte PTY budget, and is split into
+frame-safe chunks only after the whole batch is accepted. Saturation therefore
+reports backpressure without queuing only a paste prefix, blocking the UI, or
+growing memory without limit. Awaited control commands have bounded enqueue
+and end-to-end response deadlines. Partial PTY writes resume only after the
+descriptor is writable again.
 
 An app bundle must be installed in `/Applications` before this service starts
 or Workspaces restore. A DMG, App Translocation, temporary, or user-local app
@@ -586,12 +601,15 @@ never claims to transfer process ownership between Hosts.
 
 Before a local Workspace restore, Dez enumerates each root once. A macOS
 protected-folder denial becomes one **Workspace access required** notice with
-the native **Choose Workspace…** folder picker. Select each blocked root once;
-a successfully reopened root is removed from the access warning while other
-denied roots remain visible. Git, Workspace Search, LSP, agent, and terminal
-startup wait behind that preflight. Workspace Search deduplicates permission
-diagnostics per root, and active searches are cancelled during quit so denied
-trees cannot flood the log or hold `app_will_quit` open.
+the native **Grant Access…** single-folder picker. Select each exact blocked
+root once. Dez validates the selected directory without opening or replacing a
+Workspace; a readable root leaves the access warning while other denied roots
+remain visible. Relaunch retries startup restoration, and **Open Recent
+Workspaces…** remains the explicit retry if a Workspace is still missing. Git,
+Workspace Search, LSP, agent, and terminal startup wait behind that preflight.
+Workspace Search deduplicates permission diagnostics per root, and active
+searches are cancelled during quit so denied trees cannot flood the log or hold
+`app_will_quit` open.
 
 Workspaces does not list arbitrary current-user TTYs from Terminal.app, iTerm,
 Warp, another IDE, or an unrelated application. Those processes are neither
@@ -614,6 +632,12 @@ refresh. tmux is empty only after its canonical missing-server response.
 Permission, protocol, Herdr socket, and Herdr query errors are failures rather
 than authoritative empty scans. **Retry** scans tmux, Herdr, and cmux again
 without starting, attaching, selecting, or terminating any external session.
+Herdr endpoints are queried concurrently with individual two-second deadlines,
+and the complete Herdr source scan has a four-second deadline. Results from
+endpoints that finish before the source deadline are preserved; unfinished
+endpoints become failures so their exact last-known rows can remain visible.
+One hung server therefore cannot hide healthy Sessions reported by another or
+extend the refresh indefinitely.
 The explicit **Open Workspace in cmux** handoff is separately bounded to eight
 seconds. A timeout leaves the Workspace unchanged and replaces the progress
 notice with actionable failure copy.
@@ -695,13 +719,14 @@ keeps editors, terminals, prompts, and review code compact and legible. Users
 can still override any role through normal settings.
 
 Empty Main Work Area panes avoid a centered onboarding card: they use compact
-top-left native chrome with direct terminal, file-finder, and new-file actions.
-The Dez visual profile keeps the status bar visible and includes active-file
-and line-ending context alongside the inherited language, diagnostics, and
-cursor controls. Native Back and Forward controls are visible in every Main
-Work Area tab strip, alongside Add, tab overflow, and split controls. They
-traverse the pane's actual history of files, terminals, settings, diffs, and
-other Surfaces; Dez does not add browser chrome over the editor.
+top-left native chrome with **Open Terminal**, **Browse Sessions**, **Find
+File**, and **Review Changes**. The Dez visual profile keeps the status bar
+visible and includes active-file and line-ending context alongside the
+inherited language, diagnostics, and cursor controls. Native Back and Forward
+controls are visible in every Main Work Area tab strip, alongside Add, tab
+overflow, and split controls. They traverse the pane's actual history of files,
+terminals, settings, diffs, and other Surfaces; Dez does not add browser chrome
+over the editor.
 
 ### Settings and navigation visibility
 

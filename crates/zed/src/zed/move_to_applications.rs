@@ -45,7 +45,7 @@ pub fn installation_required(cx: &App) -> bool {
 
 pub fn installation_required_message() -> String {
     format!(
-        "{} is running from a temporary location. Install it in /Applications and relaunch before opening Workspaces or durable terminals.",
+        "{} is running from a temporary location. Install it in /Applications and relaunch before opening a Workspace or starting durable terminals.",
         RELEASE_CHANNEL.display_name()
     )
 }
