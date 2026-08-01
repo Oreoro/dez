@@ -217,7 +217,7 @@ fn cmux_integration_action_link() -> SettingsPageItem {
     SettingsPageItem::ActionLink(ActionLink {
         title: "cmux Integration".into(),
         description: Some(
-            "cmux owns its agent actions and pane layouts. Dez hands off local Workspace paths and reads read-only Workspace and notification metadata only when cmux permits cross-app socket access. cmux's secure default may reject Dez; Dez never changes its access mode or hooks."
+            "cmux owns its agent actions and pane layouts. Open Workspace in cmux remains available without control-socket access. Live cmux rows use read-only Workspace and notification metadata only when cmux permits cross-app access; its secure process-only default appears as activity sharing off, not an integration failure. Dez never changes cmux access or hooks."
                 .into(),
         ),
         button_text: "Open API Guide".into(),

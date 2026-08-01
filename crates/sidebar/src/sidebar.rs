@@ -3535,6 +3535,15 @@ mod external_multiplexer_project_group_tests {
             "No running tmux, Herdr, or cmux sessions"
         );
 
+        let cmux_private = [source_status(
+            MultiplexerKind::Cmux,
+            MultiplexerSourceAvailability::AccessRequired,
+        )];
+        assert_eq!(
+            external_sessions_empty_label(false, &cmux_private),
+            "cmux activity sharing is off; no other running sessions"
+        );
+
         let ready = [source_status(
             MultiplexerKind::Cmux,
             MultiplexerSourceAvailability::Ready,
@@ -3645,6 +3654,15 @@ fn external_sessions_empty_label(
     }
     if statuses
         .iter()
+        .any(|status| status.availability == MultiplexerSourceAvailability::AccessRequired)
+        && !statuses
+            .iter()
+            .any(|status| status.availability == MultiplexerSourceAvailability::Ready)
+    {
+        return "cmux activity sharing is off; no other running sessions";
+    }
+    if statuses
+        .iter()
         .any(|status| status.availability == MultiplexerSourceAvailability::Ready)
     {
         return "No running session matches this Workspace";
@@ -3668,6 +3686,7 @@ fn other_running_sessions_empty_label(
 }
 
 const CMUX_HANDOFF_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
+const CMUX_API_GUIDE_URL: &str = "https://cmux.com/docs/api";
 
 async fn run_bounded_cmux_command(
     command: &mut util::command::Command,
@@ -16970,6 +16989,38 @@ impl Sidebar {
         )
     }
 
+    fn render_cmux_access_status(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let store = MultiplexerSessionStore::try_global(cx)?;
+        let status = store.read(cx).source_status(MultiplexerKind::Cmux)?.clone();
+        if status.availability != MultiplexerSourceAvailability::AccessRequired {
+            return None;
+        }
+
+        let description = if status.had_successful_scan {
+            "cmux stopped sharing live Workspace activity with Dez. Last-known rows remain visible; Open Workspace in cmux still works. Enable cross-app API access only if you want live cmux rows. Dez never changes this setting."
+        } else {
+            "cmux is installed and keeping its secure process-only API boundary. Open Workspace in cmux still works. Enable cross-app API access only if you want live cmux rows in Dez. Dez never changes this setting."
+        };
+
+        Some(
+            Callout::new()
+                .severity(Severity::Info)
+                .icon(IconName::Screen)
+                .title("cmux activity sharing is off")
+                .description(description)
+                .actions_slot(
+                    Button::new("open-cmux-api-guide", "Open API Guide")
+                        .size(ButtonSize::Medium)
+                        .style(ButtonStyle::Outlined)
+                        .tab_index(0isize)
+                        .aria_label("Open cmux API and Access Guide")
+                        .tooltip(Tooltip::text("Open cmux API and Access Guide"))
+                        .on_click(|_, _window, cx| cx.open_url(CMUX_API_GUIDE_URL)),
+                )
+                .into_any_element(),
+        )
+    }
+
     fn app_session(&self, cx: &App) -> Option<Entity<AppSession>> {
         let multi_workspace = self.multi_workspace.upgrade()?;
         let workspace = multi_workspace.read(cx).workspace().clone();
@@ -17131,7 +17182,7 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
-        let mut notices = Vec::with_capacity(4);
+        let mut notices = Vec::with_capacity(5);
         if let Some(workspace_access_status) = self.render_workspace_access_status(cx) {
             notices.push(workspace_access_status);
         }
@@ -17140,6 +17191,9 @@ impl Sidebar {
         }
         if let Some(terminal_host_status) = self.render_terminal_host_status(cx) {
             notices.push(terminal_host_status);
+        }
+        if let Some(cmux_access_status) = self.render_cmux_access_status(cx) {
+            notices.push(cmux_access_status);
         }
         if let Some(external_activity_status) = self.render_external_activity_status(cx) {
             notices.push(external_activity_status);

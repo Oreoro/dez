@@ -154,6 +154,9 @@ Workspaces & Terminals → Terminal Launch → Default Terminal Command**;
 automation boundary. cmux still owns its custom actions and multi-pane layouts;
 Dez keeps those layouts externally owned. Its secure socket default accepts
 cmux-owned processes; Dez never enables cross-app access on the user's behalf.
+When that boundary rejects live discovery, Workspaces reports **cmux activity
+sharing is off** as an informational privacy state rather than presenting cmux
+as broken. The path handoff remains available independently.
 Provider launchers and Continue actions remain one-off choices. **Settings → Keyboard & Vim**
 exposes shortcut search, conflict inspection, base keymaps, and optional full
 Vim or Helix editing. Vim and Helix share native leader destinations for
@@ -263,6 +266,10 @@ Opening the active Workspace in cmux also has a bounded handoff. If cmux does
 not respond within eight seconds, Dez keeps the Workspace open, ends the
 progress state, and reports a retryable failure instead of leaving an endless
 “Opening…” notice.
+Live cmux discovery treats the documented process-only refusal as **activity
+sharing is off**, not as a failed terminal integration. Previously discovered
+rows remain last known, and an inline **Open API Guide** action explains the
+opt-in boundary without changing cmux configuration.
 
 Last-known external rows are never attached blindly. Their action refreshes
 that source first; select a fresh row again before opening it. Retry resolves

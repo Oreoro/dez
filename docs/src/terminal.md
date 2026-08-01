@@ -178,21 +178,26 @@ of cmux state. Dez does not mark notifications read, send terminal input,
 reproduce cmux panes, or infer ownership from notification text.
 
 cmux protects its socket with an access mode. Its default may reject a CLI
-launched outside a cmux-owned terminal. When that happens, Dez shows one failed
-cmux source with the CLI diagnostic and a Retry action; an unchanged failure is
-logged once rather than on every five-second discovery cycle. Dez never weakens
-cmux's access mode automatically. The secure default is **cmux processes only**;
-cross-app discovery requires the documented `CMUX_SOCKET_MODE=allowAll`
-environment override when the user deliberately accepts that local access
-boundary. The current command and access contract is in the
-[cmux CLI/API reference](https://cmux.com/docs/api).
+launched outside a cmux-owned terminal. Dez treats that documented refusal as
+**Access required**, shows the informational **cmux activity sharing is off**
+notice, and keeps any prior rows as **last known**. **Open Workspace in cmux**
+still works because path handoff does not require control-socket access. Dez
+never weakens cmux's access mode automatically. The secure default is **cmux
+processes only**; cross-app discovery requires the documented
+`CMUX_SOCKET_MODE=allowAll` environment override when the user deliberately
+accepts that local access boundary. Unexpected API failures remain **Failed**
+and are logged once rather than on every five-second discovery cycle. The
+current command and access contract is in the [cmux CLI/API
+reference](https://cmux.com/docs/api).
 
 Each integration reports its source truth independently: **Missing** means the
-executable is unavailable, **Empty** means an available source returned no
-sessions, **Failed** means discovery did not complete, and **Ready** means it
-returned sessions. Failure preserves only that source's rows as **last known**;
-successful sources continue updating. A ready source may still have no session
-matching the selected Workspace, in which case its unmatched items stay under
+executable is unavailable, **Access required** means cmux is installed but is
+not sharing live activity across its secure process boundary, **Empty** means an
+available source returned no sessions, **Failed** means discovery did not
+complete, and **Ready** means it returned sessions. Access-required and failure
+states preserve only that source's rows as **last known**; successful sources
+continue updating. A ready source may still have no session matching the
+selected Workspace, in which case its unmatched items stay under
 **Other Running Sessions** rather than disappearing.
 
 If current cmux Workspace discovery succeeds but notification discovery fails,

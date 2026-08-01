@@ -74,8 +74,12 @@ API and access modes. cmux may reject API calls made outside a cmux-owned
 terminal because **cmux processes only** is its secure default. Cross-app
 discovery requires the documented `CMUX_SOCKET_MODE=allowAll` environment
 override when the user deliberately accepts that local access boundary; Dez
-never changes it. When access is unavailable, Dez reports one native source
-issue per state change instead of flooding logs on every refresh. For
+never changes it. A process-only refusal is the expected **Access required**
+state, rendered as the informational **cmux activity sharing is off** notice
+with an **Open API Guide** action. It is not reported as a broken integration,
+and **Open Workspace in cmux** remains available because path handoff does not
+require the control socket. Unexpected API failures still produce one native
+source issue per state change instead of flooding logs on every refresh. For
 cmux-owned notification and restore metadata, review and run its hook setup
 explicitly:
 
@@ -758,6 +762,8 @@ Dez v0.2 retains explicit integration for tmux, Herdr, and cmux. Each source
 updates independently and reports one truthful state:
 
 - **Missing** — the source executable is unavailable;
+- **Access required** — cmux is installed but its secure process-only API
+  boundary is intentionally not sharing live activity with Dez;
 - **Empty** — the source is available and authoritatively returned no sessions;
 - **Failed** — discovery did not complete, with any previous rows retained as
   **last known**; or
@@ -767,9 +773,12 @@ A failed source does not freeze or erase successful peer integrations. Each
 source has a bounded command deadline shorter than the refresh interval; a
 hung CLI is cancelled and becomes **Failed** rather than blocking every later
 refresh. tmux is empty only after its canonical missing-server response.
-Permission, protocol, Herdr registry, and Herdr snapshot errors are failures
-rather than authoritative empty scans. **Retry** scans tmux, Herdr, and cmux again
-without starting, attaching, selecting, or terminating any external session.
+Unexpected permission, protocol, Herdr registry, and Herdr snapshot errors are
+failures rather than authoritative empty scans. cmux's documented process-only
+refusal is **Access required** instead: it preserves last-known rows, avoids a
+warning-state failure, and continues automatic discovery so an explicit access
+change can recover without restarting Dez. **Retry** scans tmux, Herdr, and cmux
+again without starting, attaching, selecting, or terminating any external session.
 Herdr first reports its live default and named sessions through `herdr session
 list --json`. Those endpoints are then queried concurrently with individual
 two-second deadlines, and the complete Herdr source scan has a four-second
@@ -824,7 +833,10 @@ The empty-state copy distinguishes source availability from Workspace matching.
 **Running session status is not ready** appears before any source has reported.
 **Install tmux, Herdr, or cmux to browse running sessions** means every source
 executable is missing. **Running session discovery needs attention** means at least one
-source failed. **No running session matches this Workspace** means a ready
+source failed. **cmux activity sharing is off; no other running sessions** means
+cmux is installed with its secure process-only boundary and no peer source has
+current activity; the informational notice links to the official access guide.
+**No running session matches this Workspace** means a ready
 source has activity, but none belongs beneath the selected Workspace; check
 **Other Running Sessions** for unmatched or pathless items. **No running tmux,
 Herdr, or cmux sessions** means the available sources returned no activity. No
@@ -840,7 +852,10 @@ state means Dez adopted or ended an external process.
   `/Applications/cmux.app/Contents/Resources/bin/cmux`,
   `/opt/homebrew/bin/cmux`, `/usr/local/bin/cmux`, or on `PATH`. Open the Workspace
   in cmux first, or use **Open Workspace in cmux**; Dez leaves the Workspace
-  open if the handoff fails or times out.
+  open if the handoff fails or times out. Live rows are optional: a secure
+  process-only refusal appears as **cmux activity sharing is off** and never
+  changes cmux's access mode. Use **Open API Guide** only if you deliberately
+  want cross-app Workspace and notification metadata.
 - Herdr requires the `herdr` CLI and at least one live session reported by
   `herdr session list --json`. Start the default or named Herdr server before
   refreshing activity. Dez follows Herdr's configured registry and does not

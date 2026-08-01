@@ -47,6 +47,7 @@ pub struct MultiplexerSourceIssue {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MultiplexerSourceAvailability {
     MissingExecutable,
+    AccessRequired,
     AvailableEmpty,
     Failed,
     Ready,
@@ -261,6 +262,7 @@ struct MultiplexerScanWarning {
 
 enum MultiplexerScanOutcome {
     MissingExecutable,
+    AccessRequired { summary: String },
     Available(AvailableMultiplexerScan),
 }
 
@@ -480,6 +482,26 @@ fn reconcile_external_multiplexer_sessions(
                     had_successful_scan: successful_sources.contains(&kind),
                 });
             }
+            Ok(MultiplexerScanOutcome::AccessRequired { summary }) => {
+                let last_known_sessions = previous_sessions
+                    .iter()
+                    .filter(|session| session.kind == kind)
+                    .map(|session| {
+                        let mut session = session.clone();
+                        session.discovery_stale = true;
+                        session
+                    })
+                    .collect::<Vec<_>>();
+                let session_count = last_known_sessions.len();
+                sessions.extend(last_known_sessions);
+                source_statuses.push(MultiplexerSourceStatus {
+                    kind,
+                    availability: MultiplexerSourceAvailability::AccessRequired,
+                    session_count,
+                    summary: Some(summary),
+                    had_successful_scan: successful_sources.contains(&kind),
+                });
+            }
             Ok(MultiplexerScanOutcome::Available(mut scan)) if scan.warnings.is_empty() => {
                 let session_count = scan.sessions.len();
                 let availability = if scan.sessions.is_empty() {
@@ -671,6 +693,10 @@ async fn scan_cmux_workspaces() -> Result<MultiplexerScanOutcome> {
 
     let workspace_output = if current_output.status.success() {
         current_output
+    } else if cmux_access_is_restricted(&current_output) {
+        return Ok(MultiplexerScanOutcome::AccessRequired {
+            summary: cmux_access_required_summary().to_owned(),
+        });
     } else {
         let compatibility_output = run_multiplexer_command(
             &executable,
@@ -679,6 +705,11 @@ async fn scan_cmux_workspaces() -> Result<MultiplexerScanOutcome> {
         )
         .await?;
         if !compatibility_output.status.success() {
+            if cmux_access_is_restricted(&compatibility_output) {
+                return Ok(MultiplexerScanOutcome::AccessRequired {
+                    summary: cmux_access_required_summary().to_owned(),
+                });
+            }
             anyhow::bail!(
                 "cmux Workspace discovery failed. Open cmux and verify that its local CLI/socket access permits this integration, then Retry. Dez did not change cmux access settings. Documented command: {}; compatibility fallback: {}",
                 concise_command_stderr(&current_output),
@@ -723,6 +754,26 @@ async fn scan_cmux_workspaces() -> Result<MultiplexerScanOutcome> {
     }
 
     Ok(MultiplexerScanOutcome::Available(scan))
+}
+
+fn cmux_access_is_restricted(output: &Output) -> bool {
+    let message = format!(
+        "{} {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    cmux_access_message_is_restricted(&message)
+}
+
+fn cmux_access_message_is_restricted(message: &str) -> bool {
+    let message = message.to_ascii_lowercase();
+    message.contains("only processes started inside cmux can connect")
+        || message.contains("access denied") && message.contains("inside cmux")
+        || message.contains("unable to verify client process")
+}
+
+fn cmux_access_required_summary() -> &'static str {
+    "cmux is installed and keeping its secure process-only API boundary. Live cmux Workspace activity is not shared with Dez, and Dez did not change cmux access settings"
 }
 
 fn parse_cmux_workspaces(
@@ -1598,6 +1649,49 @@ mod tests {
             CMUX_COMPATIBILITY_WORKSPACE_LIST_ARGS,
             &["workspace", "list", "--json"]
         );
+    }
+
+    #[test]
+    fn cmux_secure_default_is_an_access_state_instead_of_a_failure() {
+        assert!(cmux_access_message_is_restricted(
+            "ERROR: Access denied - only processes started inside cmux can connect"
+        ));
+        assert!(cmux_access_message_is_restricted(
+            "ERROR: Unable to verify client process"
+        ));
+        assert!(!cmux_access_message_is_restricted(
+            "ERROR: workspace.list is unavailable"
+        ));
+
+        let previous_sessions = vec![external_session(MultiplexerKind::Cmux, "cmux-last-known")];
+        let summary = cmux_access_required_summary().to_owned();
+        let (sessions, source_issues, source_statuses, newly_successful_sources) =
+            reconcile_external_multiplexer_sessions(
+                &previous_sessions,
+                ExternalMultiplexerScan {
+                    tmux: Ok(MultiplexerScanOutcome::MissingExecutable),
+                    herdr: Ok(MultiplexerScanOutcome::MissingExecutable),
+                    cmux: Ok(MultiplexerScanOutcome::AccessRequired {
+                        summary: summary.clone(),
+                    }),
+                },
+                &HashSet::from([MultiplexerKind::Cmux]),
+            );
+
+        assert!(source_issues.is_empty());
+        assert_eq!(sessions.len(), 1);
+        assert!(sessions[0].is_last_known());
+        assert_eq!(source_statuses.len(), 3);
+        assert_eq!(
+            source_statuses[2].availability,
+            MultiplexerSourceAvailability::AccessRequired
+        );
+        assert_eq!(
+            source_statuses[2].summary.as_deref(),
+            Some(summary.as_str())
+        );
+        assert!(source_statuses[2].had_successful_scan);
+        assert!(newly_successful_sources.is_empty());
     }
 
     #[test]
