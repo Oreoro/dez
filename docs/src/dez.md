@@ -496,8 +496,10 @@ process is visible; Aider uses the native edit-agent mark, Herdr uses the
 orchestration mark and reports **Herdr running**, tmux uses a split-session
 mark, and ordinary shells keep the standard terminal icon. Tooltips state the
 observed foreground owner, while task status icons continue to take precedence
-for task terminals. cmux remains external and therefore never masquerades as a
-Dez terminal tab.
+for task terminals. Terminal lifecycle also takes precedence over stale process
+observation: failed, exited, completed, unavailable, and unknown terminals name
+that state instead of claiming an Agent is still running. cmux remains external
+and therefore never masquerades as a Dez terminal tab.
 
 Agent edits land in ordinary buffers and Git changes. A terminal starts in the
 Workspace's working-directory context. Both sit beside files in the same pane

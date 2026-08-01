@@ -272,9 +272,17 @@ fn terminal_context_activity_label(
     status: &str,
     foreground_agent: Option<TerminalForegroundPresentation>,
 ) -> Option<String> {
-    foreground_agent
-        .map(|agent| format!("{} running", agent.display_name))
-        .or_else(|| (status != "Active").then(|| status.to_owned()))
+    if terminal_context_uses_foreground_activity(status)
+        && let Some(agent) = foreground_agent
+    {
+        return Some(format!("{} running", agent.display_name));
+    }
+
+    (status != "Active").then(|| status.to_owned())
+}
+
+fn terminal_context_uses_foreground_activity(status: &str) -> bool {
+    matches!(status, "Active" | "Running")
 }
 
 fn terminal_context_activity_label_visible(width: Pixels) -> bool {
@@ -3007,11 +3015,12 @@ impl TerminalView {
         let activity_accessibility_label = activity_label.as_deref().unwrap_or(status).to_owned();
         let activity_label_visible =
             activity_label.is_some() && terminal_context_activity_label_visible(context_width);
-        let activity_color = if foreground_agent.is_some() {
-            Color::Accent
-        } else {
-            status_color
-        };
+        let activity_color =
+            if foreground_agent.is_some() && terminal_context_uses_foreground_activity(status) {
+                Color::Accent
+            } else {
+                status_color
+            };
         let has_persistent_owner = terminal_has_persistent_owner(&terminal, cx);
         let host_connection_verified = terminal_host_connection_verified(&terminal, cx);
         let ownership = if has_persistent_owner && !host_connection_verified {
@@ -4605,6 +4614,30 @@ mod tests {
         assert_eq!(
             terminal_context_activity_label("Failed", None),
             Some("Failed".to_owned())
+        );
+        assert_eq!(
+            terminal_context_activity_label("Running", Some(codex)),
+            Some("Codex running".to_owned())
+        );
+        assert_eq!(
+            terminal_context_activity_label("Running", None),
+            Some("Running".to_owned())
+        );
+        assert_eq!(
+            terminal_context_activity_label("Failed", Some(codex)),
+            Some("Failed".to_owned())
+        );
+        assert_eq!(
+            terminal_context_activity_label("Exited", Some(codex)),
+            Some("Exited".to_owned())
+        );
+        assert_eq!(
+            terminal_context_activity_label("Completed", Some(codex)),
+            Some("Completed".to_owned())
+        );
+        assert_eq!(
+            terminal_context_activity_label("Status unknown", Some(codex)),
+            Some("Status unknown".to_owned())
         );
         assert!(!terminal_context_activity_label_visible(px(359.)));
         assert!(terminal_context_activity_label_visible(px(360.)));
