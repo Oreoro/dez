@@ -397,6 +397,11 @@ active file, language, line endings, diagnostics, and cursor context. Empty
 Main Work Area panes use compact top-left editor chrome and direct actions
 instead of a centered onboarding or workflow overlay.
 
+Closing the optional Workspaces navigator leaves a compact, labeled
+**Workspaces** control in the status bar. Its side-aware icon carries pending
+attention, while the tooltip and accessibility label expose the native
+**Open Workspaces** action.
+
 Fresh Dez windows open the top-anchored native Home launcher inside the normal
 Main Work Area tab frame. The tab strip and its adjacent Add control remain
 visible before the first file or terminal opens. Home does not auto-read a

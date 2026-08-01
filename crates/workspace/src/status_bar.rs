@@ -131,6 +131,18 @@ fn sidebar_toggle_accessibility_label(app_name: &str, has_notifications: bool) -
     }
 }
 
+fn sidebar_toggle_visible_label(app_name: &str) -> Option<&'static str> {
+    (app_name != "Zed").then_some("Workspaces")
+}
+
+fn toggle_workspace_sidebar(window: &mut Window, cx: &mut App) {
+    if let Some(multi_workspace) = window.root::<MultiWorkspace>().flatten() {
+        multi_workspace.update(cx, |multi_workspace, cx| {
+            multi_workspace.toggle_sidebar(window, cx);
+        });
+    }
+}
+
 impl Focusable for StatusBar {
     fn focus_handle(&self, _cx: &App) -> FocusHandle {
         self.focus_handle.clone()
@@ -229,6 +241,8 @@ mod tests {
             sidebar_toggle_accessibility_label("Dez", false),
             "Open Workspaces"
         );
+        assert_eq!(sidebar_toggle_visible_label("Dez"), Some("Workspaces"));
+        assert_eq!(sidebar_toggle_visible_label("Zed"), None);
     }
 }
 
@@ -305,6 +319,7 @@ impl StatusBar {
         let indicator_border = cx.theme().colors().status_bar_background;
         let toggle_label = sidebar_toggle_label(APP_NAME);
         let accessibility_label = sidebar_toggle_accessibility_label(APP_NAME, has_notifications);
+        let visible_label = sidebar_toggle_visible_label(APP_NAME);
 
         let toggle = sidebar_side_context_menu("sidebar-status-toggle-menu", cx)
             .anchor(if on_right {
@@ -318,29 +333,45 @@ impl StatusBar {
                 Anchor::TopLeft
             })
             .trigger(move |_is_active, _window, _cx| {
-                IconButton::new(
-                    "toggle-workspace-sidebar",
-                    if on_right {
-                        IconName::SidebarRightClosed
-                    } else {
-                        IconName::SidebarLeftClosed
-                    },
-                )
-                .icon_size(IconSize::Small)
-                .tab_index(0isize)
-                .aria_label(accessibility_label)
-                .when(has_notifications, |this| {
-                    this.indicator(Indicator::dot().color(Color::Accent))
-                        .indicator_border_color(Some(indicator_border))
-                })
-                .tooltip(move |_, cx| Tooltip::for_action(toggle_label, &ToggleSidebar, cx))
-                .on_click(move |_, window, cx| {
-                    if let Some(multi_workspace) = window.root::<MultiWorkspace>().flatten() {
-                        multi_workspace.update(cx, |multi_workspace, cx| {
-                            multi_workspace.toggle_sidebar(window, cx);
-                        });
-                    }
-                })
+                let icon = if on_right {
+                    IconName::SidebarRightClosed
+                } else {
+                    IconName::SidebarLeftClosed
+                };
+
+                if let Some(visible_label) = visible_label {
+                    Button::new("toggle-workspace-sidebar", visible_label)
+                        .start_icon(Icon::new(icon).size(IconSize::XSmall).color(
+                            if has_notifications {
+                                Color::Accent
+                            } else {
+                                Color::Muted
+                            },
+                        ))
+                        .size(ButtonSize::Compact)
+                        .label_size(LabelSize::Small)
+                        .tab_index(0isize)
+                        .aria_label(accessibility_label)
+                        .tooltip(move |_, cx| Tooltip::for_action(toggle_label, &ToggleSidebar, cx))
+                        .on_click(move |_, window, cx| {
+                            toggle_workspace_sidebar(window, cx);
+                        })
+                        .into_any_element()
+                } else {
+                    IconButton::new("toggle-workspace-sidebar", icon)
+                        .icon_size(IconSize::Small)
+                        .tab_index(0isize)
+                        .aria_label(accessibility_label)
+                        .when(has_notifications, |this| {
+                            this.indicator(Indicator::dot().color(Color::Accent))
+                                .indicator_border_color(Some(indicator_border))
+                        })
+                        .tooltip(move |_, cx| Tooltip::for_action(toggle_label, &ToggleSidebar, cx))
+                        .on_click(move |_, window, cx| {
+                            toggle_workspace_sidebar(window, cx);
+                        })
+                        .into_any_element()
+                }
             });
 
         h_flex()

@@ -1009,11 +1009,14 @@ native **Terminal Experience → Appearance & Behavior** subpage instead of
 competing with the initial product choices.
 
 Workspaces is optional chrome, not a permanent editor column. Fresh windows
-keep it closed; the status bar exposes **Open Workspaces**, and the same toggle
-remains available through **View** and Command Palette. **Settings → Workspaces
-& Terminals → Show Workspaces on Startup** makes it persistent for people who
-prefer that layout. **Workspaces Position** chooses its window edge. Closing
-Workspaces never closes a Workspace, terminal, or Agent Session.
+keep it closed; a compact, labeled **Workspaces** control stays in the status
+bar, with **Open Workspaces** as its action and tooltip. Pending attention
+colors its side-aware icon without turning the whole control into an alert.
+The same toggle remains available through **View** and Command Palette.
+**Settings → Workspaces & Terminals → Show Workspaces on Startup** makes it
+persistent for people who prefer that layout. **Workspaces Position** chooses
+its window edge. Closing Workspaces never closes a Workspace, terminal, or
+Agent Session.
 
 Workspaces intentionally omits the inherited Workspace Bar, centered Command
 Search row, and duplicate project/branch identity strip. Each Workspace row
