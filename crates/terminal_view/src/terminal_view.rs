@@ -171,16 +171,35 @@ mod startup_command_tests {
     }
 
     #[test]
-    fn tmux_session_names_are_workspace_scoped_and_shell_safe() {
-        assert_eq!(
-            tmux_session_name_from_workspace_label(Some("Dez 3.0")),
-            "Dez-3-0"
+    fn tmux_session_names_are_root_scoped_and_shell_safe() {
+        let first_root = Path::new("/Users/example/first/app");
+        let second_root = Path::new("/Users/example/second/app");
+        let first_name = tmux_session_name_from_workspace_root(Some(first_root));
+        let second_name = tmux_session_name_from_workspace_root(Some(second_root));
+
+        assert!(first_name.starts_with("app-"));
+        assert!(
+            first_name
+                .chars()
+                .all(|character| character.is_ascii_alphanumeric() || character == '-')
         );
+        assert_ne!(first_name, second_name);
+        assert_eq!(tmux_session_name_from_workspace_root(None), "dez");
+    }
+
+    #[test]
+    fn tmux_startup_preserves_only_a_matching_legacy_workspace_session() {
+        let command = tmux_startup_command_for_workspace(Some(Path::new("/workspace/Dez 3.0")));
+
+        assert!(command.contains("tmux has-session"));
+        assert!(command.contains("#{pane_current_path}"));
+        assert!(command.contains("\"$PWD\"|\"$PWD\"/*"));
+        assert!(command.contains("attach-session -t =Dez-3-0"));
+        assert!(command.contains("new-session -A -s Dez-3-0-"));
         assert_eq!(
-            tmux_session_name_from_workspace_label(Some("../../")),
-            "dez"
+            tmux_startup_command_for_workspace(None),
+            "exec tmux new-session -A -s dez"
         );
-        assert_eq!(tmux_session_name_from_workspace_label(None), "dez");
     }
 }
 
@@ -939,7 +958,7 @@ fn open_shell_terminal(
     );
 }
 
-pub fn tmux_session_name_from_workspace_label(label: Option<&str>) -> String {
+fn tmux_session_name_from_workspace_label(label: Option<&str>) -> String {
     let session_name = label
         .unwrap_or("dez")
         .chars()
@@ -957,6 +976,39 @@ pub fn tmux_session_name_from_workspace_label(label: Option<&str>) -> String {
     } else {
         session_name.to_owned()
     }
+}
+
+pub fn tmux_session_name_from_workspace_root(root: Option<&Path>) -> String {
+    let legacy_name = tmux_session_name_from_workspace_label(
+        root.and_then(Path::file_name)
+            .and_then(|name| name.to_str()),
+    );
+    let Some(root) = root else {
+        return legacy_name;
+    };
+
+    // DefaultHasher does not promise a stable identity across Rust releases.
+    let mut hash = 0xcbf29ce484222325_u64;
+    for byte in root.to_string_lossy().as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    format!("{legacy_name}-{hash:010x}")
+}
+
+pub fn tmux_startup_command_for_workspace(root: Option<&Path>) -> String {
+    let legacy_name = tmux_session_name_from_workspace_label(
+        root.and_then(Path::file_name)
+            .and_then(|name| name.to_str()),
+    );
+    let session_name = tmux_session_name_from_workspace_root(root);
+    if session_name == legacy_name {
+        return format!("exec tmux new-session -A -s {session_name}");
+    }
+
+    format!(
+        "if tmux has-session -t ={session_name} 2>/dev/null; then exec tmux attach-session -t ={session_name}; elif tmux has-session -t ={legacy_name} 2>/dev/null; then dez_tmux_cwd=$(tmux display-message -p -t ={legacy_name} '#{{pane_current_path}}' 2>/dev/null); case \"$dez_tmux_cwd\" in \"$PWD\"|\"$PWD\"/*) exec tmux attach-session -t ={legacy_name} ;; *) exec tmux new-session -A -s {session_name} ;; esac; else exec tmux new-session -A -s {session_name}; fi"
+    )
 }
 
 pub fn configured_terminal_launcher_label(command: Option<&str>) -> String {
@@ -986,19 +1038,9 @@ fn open_tmux_terminal(
     }
 
     let project_group_key = workspace.project_group_key(cx);
-    let workspace_label = project_group_key
-        .path_list()
-        .ordered_paths()
-        .next()
-        .and_then(|path| path.file_name())
-        .and_then(|name| name.to_str());
-    let session_name = tmux_session_name_from_workspace_label(workspace_label);
-    open_terminal_with_startup_command(
-        workspace,
-        &format!("tmux new-session -A -s {session_name}"),
-        window,
-        cx,
-    );
+    let workspace_root = project_group_key.path_list().ordered_paths().next();
+    let startup_command = tmux_startup_command_for_workspace(workspace_root);
+    open_terminal_with_startup_command(workspace, &startup_command, window, cx);
 }
 
 fn open_codex_terminal(

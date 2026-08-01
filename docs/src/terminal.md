@@ -75,9 +75,16 @@ Choose the route by ownership, not by appearance:
 | **Default Terminal**                        | Runs the configured default command in a native terminal tab                                                      |
 | **Native Shell**                            | Opens the Workspace shell without starting an agent                                                               |
 | **Codex**, **Claude Code**, or **OpenCode** | Starts that CLI and keeps its real TUI in the native terminal                                                     |
-| **tmux Session**                            | Attaches or creates the Workspace-named tmux session inside a native terminal                                     |
+| **tmux Session**                            | Attaches or creates the primary-root-scoped tmux session inside a native terminal                                 |
 | **Browse Running Sessions…**                | Refreshes Workspaces so a discovered tmux or Herdr row can be attached, or a cmux Workspace can be opened in cmux |
 | **Open Workspace in cmux**                  | Hands the Workspace path to the external cmux application and keeps Dez open                                      |
+
+The tmux launcher combines a shell-safe Workspace label with a stable identity
+for the primary root. Two repositories with the same folder name therefore get
+different sessions. If an older basename-only session already exists, Dez
+reattaches it only when tmux reports that its active pane is inside the current
+Workspace root. Otherwise Dez creates or attaches the root-scoped session and
+leaves the unrelated legacy process untouched.
 
 **Built-in Agent** is a separate provider-backed conversation Surface. It is
 not a terminal renderer and does not wrap a Codex, Claude Code, or OpenCode TUI.

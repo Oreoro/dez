@@ -1941,6 +1941,13 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   their existing names. Workspaces remains the stable navigation noun, and its
   collapsible native-tab projection is labeled **Workspace Tabs** and stays
   hidden until there are at least two native tabs to navigate.
+- **2026-08-01: tmux identity is rooted, not basename-only.** **Open tmux
+  Session** combines the primary local Workspace root's shell-safe folder name
+  with a stable root identity. Same-named repositories cannot collide. A
+  basename-only session created by an older Dez build is reused only when its
+  active pane working directory equals or descends from the current root;
+  otherwise it remains externally owned and untouched while Dez uses the
+  root-scoped session.
 - **2026-08-01: Starting and continuing terminal agents are separate native
   actions.** Codex, Claude Code, and OpenCode start as ordinary PTY applications
   through `codex`, `claude`, and `opencode`. **Continue Agent** uses each

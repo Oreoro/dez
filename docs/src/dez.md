@@ -49,7 +49,7 @@ eligible, attention projection, and routes back to Files and Git review.
 | **Codex**       | `codex`                              | `codex resume --last`                                   | Native Dez terminal                       |
 | **Claude Code** | `claude`                             | `claude --continue`                                     | Native Dez terminal                       |
 | **OpenCode**    | `opencode`                           | `opencode --continue`                                   | Native Dez terminal                       |
-| **tmux**        | `tmux new-session -A -s <workspace>` | The same command attaches when the named session exists | tmux process inside a native Dez terminal |
+| **tmux**        | `tmux new-session -A -s <workspace>-<root-id>` | The same root-scoped command attaches when the named session exists | tmux process inside a native Dez terminal |
 | **Herdr**       | Start with Herdr itself              | Select a discovered pane in Workspaces                  | Herdr; Dez attaches explicitly            |
 | **cmux**        | Start work in cmux                   | **Open Workspace in cmux** uses `cmux open <path>`      | cmux remains the external app             |
 
@@ -444,11 +444,15 @@ shell.
 Provider shortcuts are per-launch choices and never rewrite that setting.
 The same choices are native Command Palette actions: **Terminal: Open
 Terminal**, **Open Native Shell**, **Open tmux Session**, **Launch Codex**,
-**Launch Claude Code**, and **Launch OpenCode**. **Open tmux Session** runs
-`tmux new-session -A -s <workspace>` after the native login shell is ready, so
-each codebase gets a stable attach-or-create destination. **Workspace: Open in
-cmux** hands the active local Workspace to cmux without replacing or closing
-Dez. **Browse Running Sessions…** opens or refocuses Workspaces, removes
+**Launch Claude Code**, and **Launch OpenCode**. **Open tmux Session** derives a
+shell-safe name from the primary Workspace root and a stable root identity, then
+runs `tmux new-session -A -s <workspace>-<root-id>` after the native login shell
+is ready. Repositories with the same folder name therefore cannot attach to one
+another. During compatibility recovery, Dez attaches an older basename-only
+session only when its active pane is inside the current Workspace root; it never
+renames or terminates that session. **Workspace: Open in cmux** hands the active
+local Workspace to cmux without replacing or closing Dez. **Browse Running
+Sessions…** opens or refocuses Workspaces, removes
 temporary search and attention filters, refreshes all supported sources, and
 reveals their current destinations instead of guessing which target the user
 intended.
@@ -792,8 +796,9 @@ state means Dez adopted or ended an external process.
 - tmux is discovered at `/opt/homebrew/bin/tmux`, `/usr/local/bin/tmux`, or on
   `PATH`. Start or attach to a tmux server and ensure the pane's working
   directory is inside the intended Workspace. **Open tmux Session** remains
-  available when you want Dez to create or attach to the Workspace-named
-  session explicitly.
+  available when you want Dez to create or attach to the root-scoped session
+  explicitly. A basename-only session from an older Dez build remains visible
+  and is reused only when its active pane still belongs to that Workspace root.
 - cmux is discovered at
   `/Applications/cmux.app/Contents/Resources/bin/cmux`,
   `/opt/homebrew/bin/cmux`, `/usr/local/bin/cmux`, or on `PATH`. Open the Workspace

@@ -8422,17 +8422,10 @@ impl Sidebar {
                             let configured_command = AgentSettings::get_global(menu_cx)
                                 .terminal_init_command
                                 .clone();
-                            let tmux_session_name =
-                                terminal_view::tmux_session_name_from_workspace_label(
-                                    project_group_key
-                                        .path_list()
-                                        .ordered_paths()
-                                        .next()
-                                        .and_then(|path| path.file_name())
-                                        .and_then(|name| name.to_str()),
-                                );
                             let tmux_startup_command =
-                                format!("tmux new-session -A -s {tmux_session_name}");
+                                terminal_view::tmux_startup_command_for_workspace(
+                                    project_group_key.path_list().ordered_paths().next(),
+                                );
                             menu.submenu(
                                 terminal_launch_label(APP_NAME),
                                 move |mut submenu, _window, _cx| {
