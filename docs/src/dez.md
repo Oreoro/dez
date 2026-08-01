@@ -414,6 +414,13 @@ or OpenCode. Each opens in a native Main Work Area terminal tab. Use
 **Built-in Agent** only when you want a provider-backed Agent Session beside the
 editor.
 
+Terminal-tab identity follows observed foreground-process evidence rather than
+the launch label. Supported agents use their provider mark as soon as the
+process is visible; tmux and Herdr use a split-session mark; ordinary shells
+keep the standard terminal icon. Tooltips state the observed foreground owner,
+while task status icons continue to take precedence for task terminals. cmux
+remains external and therefore never masquerades as a Dez terminal tab.
+
 Agent edits land in ordinary buffers and Git changes. A terminal starts in the
 Workspace's working-directory context. Both sit beside files in the same pane
 grid, so direct and delegated work can be compared rather than hidden behind

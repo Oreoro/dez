@@ -213,7 +213,10 @@ agents running in its terminals, including Codex, Claude Code, OpenCode, and
 Herdr. Dez v0.2 discovers explicitly shared tmux sessions, live Herdr panes
 through Herdr's JSON session registry and snapshot API, and cmux Workspaces.
 tmux and Herdr attach through ordinary terminal tabs; cmux Workspaces open in
-cmux. Each integration reports one truthful state:
+cmux. Native terminal tabs use observed foreground-process evidence for their
+identity: supported agents receive provider marks, tmux and Herdr receive the
+split-session mark, and ordinary shells remain generic terminals. Each
+integration reports one truthful state:
 **Missing** when its executable is unavailable, **Empty** when an available
 source has no sessions, **Failed** when discovery did not complete, or
 **Ready** when it returned sessions. A failed source preserves only its own

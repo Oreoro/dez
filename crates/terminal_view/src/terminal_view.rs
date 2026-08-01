@@ -211,7 +211,7 @@ struct TerminalContextActionLabelVisibility {
 }
 
 #[derive(Clone, Copy)]
-struct TerminalForegroundAgentPresentation {
+struct TerminalForegroundPresentation {
     display_name: &'static str,
     icon: IconName,
 }
@@ -227,7 +227,7 @@ fn terminal_container_reuses_terminal_material(app_name: &str, transparent_theme
 fn terminal_foreground_agent_presentation(
     app_name: &str,
     command: Option<&str>,
-) -> Option<TerminalForegroundAgentPresentation> {
+) -> Option<TerminalForegroundPresentation> {
     if app_name == "Zed" {
         return None;
     }
@@ -265,12 +265,41 @@ fn terminal_foreground_agent_presentation(
         _ => return None,
     };
 
-    Some(TerminalForegroundAgentPresentation { display_name, icon })
+    Some(TerminalForegroundPresentation { display_name, icon })
+}
+
+fn terminal_foreground_multiplexer_presentation(
+    app_name: &str,
+    command: Option<&str>,
+) -> Option<TerminalForegroundPresentation> {
+    if app_name == "Zed" {
+        return None;
+    }
+
+    let command = command?
+        .trim()
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    let command = command.strip_suffix(".exe").unwrap_or(command.as_str());
+
+    match command {
+        "tmux" => Some(TerminalForegroundPresentation {
+            display_name: "tmux",
+            icon: IconName::SplitAlt,
+        }),
+        "herdr" => Some(TerminalForegroundPresentation {
+            display_name: "Herdr",
+            icon: IconName::SplitAlt,
+        }),
+        _ => None,
+    }
 }
 
 fn terminal_context_activity_label(
     status: &str,
-    foreground_agent: Option<TerminalForegroundAgentPresentation>,
+    foreground_agent: Option<TerminalForegroundPresentation>,
 ) -> Option<String> {
     foreground_agent
         .map(|agent| format!("{} running", agent.display_name))
@@ -3534,6 +3563,11 @@ impl Item for TerminalView {
         let foreground_agent =
             terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref())
                 .map(|agent| agent.display_name);
+        let foreground_multiplexer = terminal_foreground_multiplexer_presentation(
+            paths::APP_NAME,
+            foreground_command.as_deref(),
+        )
+        .map(|multiplexer| multiplexer.display_name);
         let ownership =
             terminal_ownership_label(paths::APP_NAME, has_persistent_owner, session_unavailable);
         let working_directory = terminal
@@ -3575,6 +3609,18 @@ impl Item for TerminalView {
                             .size(LabelSize::Small),
                         )
                     })
+                    .when_some(
+                        foreground_multiplexer,
+                        |this, foreground_multiplexer| {
+                            this.child(
+                                Label::new(format!(
+                                    "Foreground multiplexer: {foreground_multiplexer} (observed process)"
+                                ))
+                                .color(Color::Muted)
+                                .size(LabelSize::Small),
+                            )
+                        },
+                    )
                     .when_some(working_directory.clone(), |this, working_directory| {
                         this.child(
                             Label::new(format!("Working directory: {working_directory}"))
@@ -3630,6 +3676,10 @@ impl Item for TerminalView {
         let foreground_command = terminal.foreground_process_command_name();
         let foreground_agent =
             terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref());
+        let foreground_multiplexer = terminal_foreground_multiplexer_presentation(
+            paths::APP_NAME,
+            foreground_command.as_deref(),
+        );
         let (icon, icon_color, rerun_button) = match terminal.task() {
             Some(terminal_task) => match &terminal_task.status {
                 TaskStatus::Running => (
@@ -3654,10 +3704,14 @@ impl Item for TerminalView {
             },
             None => foreground_agent
                 .map(|agent| (agent.icon, Color::Accent, None))
+                .or_else(|| {
+                    foreground_multiplexer.map(|multiplexer| (multiplexer.icon, Color::Muted, None))
+                })
                 .unwrap_or((IconName::Terminal, Color::Muted, None)),
         };
-        let foreground_agent_label =
-            foreground_agent.map(|agent| format!("{} running in terminal", agent.display_name));
+        let foreground_process_label = foreground_agent
+            .or(foreground_multiplexer)
+            .map(|process| format!("{} running in terminal", process.display_name));
 
         Some(
             h_flex()
@@ -3668,7 +3722,7 @@ impl Item for TerminalView {
                 .items_center()
                 .justify_center()
                 .group("term-tab-icon")
-                .when_some(foreground_agent_label, |this, label| {
+                .when_some(foreground_process_label, |this, label| {
                     this.role(gpui::Role::Label).aria_label(label)
                 })
                 .child(
@@ -4550,6 +4604,17 @@ mod tests {
             .expect("Claude Code should receive native terminal presentation");
         assert_eq!(claude.display_name, "Claude Code");
 
+        let tmux =
+            terminal_foreground_multiplexer_presentation("Dez", Some("/opt/homebrew/bin/tmux"))
+                .expect("tmux should receive native terminal presentation");
+        assert_eq!(tmux.display_name, "tmux");
+        assert_eq!(tmux.icon, IconName::SplitAlt);
+        assert_eq!(
+            terminal_foreground_multiplexer_presentation("Dez", Some("herdr"))
+                .map(|presentation| presentation.display_name),
+            Some("Herdr")
+        );
+
         assert!(
             terminal_foreground_agent_presentation("Dez", Some("zsh")).is_none(),
             "ordinary shells should keep quiet terminal presentation"
@@ -4560,6 +4625,10 @@ mod tests {
         );
         assert!(
             terminal_foreground_agent_presentation("Zed", Some("codex")).is_none(),
+            "official Zed keeps its upstream terminal presentation"
+        );
+        assert!(
+            terminal_foreground_multiplexer_presentation("Zed", Some("tmux")).is_none(),
             "official Zed keeps its upstream terminal presentation"
         );
     }
