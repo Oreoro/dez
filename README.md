@@ -86,7 +86,10 @@ Open Workspace
 The primary user story is deliberately short. **Home** starts or resumes a
 Workspace. **Open Terminal** launches the configured terminal workflow and
 previews it inline as **Default · Native Shell**, **Default · Codex**, **Default
-· Claude Code**, **Default · OpenCode**, or **Default · Custom Command**.
+· Claude Code**, **Default · OpenCode**, **Default · tmux Session**, a known
+provider such as **Default · Aider** or **Default · Herdr**, or **Default ·
+Custom Command**. Simple `env`, `exec`, environment-variable, and absolute-path
+wrappers keep the underlying provider identity.
 **Workspaces** switches codebases, returns to current Workspace tabs, and
 surfaces attention. **Open Files** and **Review Changes** bring the result
 back into the same Main Work Area. The native tab-strip `+` is the shared Add

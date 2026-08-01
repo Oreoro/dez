@@ -1447,6 +1447,14 @@ mod tests {
         );
         assert_eq!(
             welcome_terminal_action_meta("Dez", true, Some("aider")).as_deref(),
+            Some("Default · Aider")
+        );
+        assert_eq!(
+            welcome_terminal_action_meta("Dez", true, Some("tmux")).as_deref(),
+            Some("Default · tmux Session")
+        );
+        assert_eq!(
+            welcome_terminal_action_meta("Dez", true, Some("my-agent")).as_deref(),
             Some("Default · Custom Command")
         );
         assert_eq!(

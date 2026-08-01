@@ -277,8 +277,11 @@ Terminal**, **Browse Running Sessions…**, **Open Files**, and **Review Changes
 in that order: Start → Resume → Inspect → Review. These are native command rows
 on the editor surface, not filled dashboard cards. Home's first row identifies
 the configured result as **Default · Native Shell**, **Default · Codex**,
-**Default · Claude Code**, **Default · OpenCode**, or **Default · Custom
-Command**, using the same shared identity as File and Workspace menus. Dense
+**Default · Claude Code**, **Default · OpenCode**, **Default · tmux Session**,
+another detected terminal agent such as **Default · Aider** or **Default ·
+Herdr**, or **Default · Custom Command**, using the same shared identity as File
+and Workspace menus. Simple `env`, `exec`, environment-variable, and
+absolute-path wrappers retain the underlying provider name. Dense
 Files & Git and Built-in Agent toolbars use compact icons, but every control has
 a specific accessible name, tooltip, and place in the keyboard tab order. A
 critical action is never available only on pointer hover.
@@ -475,7 +478,9 @@ Terminal**, **Native Shell**, **tmux Session**, **Codex**, **Claude Code**, and
 keeps a separate native-shell choice beside the explicit providers.
 The default command is editable under **Settings → Workspaces & Terminals →
 Terminal Launch → Default Terminal Command**; leaving it blank keeps a normal
-shell.
+shell. Known commands reuse the same terminal-agent vocabulary as Workspaces,
+so Gemini CLI, Aider, Amp, Herdr, Pi, and other detected providers do not fall
+back to anonymous **Custom Command** copy.
 Provider shortcuts are per-launch choices and never rewrite that setting.
 The same choices are native Command Palette actions: **Terminal: Open
 Terminal**, **Open Native Shell**, **Open tmux Session**, **Launch Codex**,

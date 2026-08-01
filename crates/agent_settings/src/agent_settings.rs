@@ -31,18 +31,233 @@ pub const SUMMARIZE_THREAD_DETAILED_PROMPT: &str =
     include_str!("prompts/summarize_thread_detailed_prompt.txt");
 pub const COMPACTION_PROMPT: &str = include_str!("prompts/compaction_prompt.txt");
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TerminalAgentKind {
+    Claude,
+    Codex,
+    Gemini,
+    Aider,
+    Agy,
+    OpenCode,
+    Amp,
+    Crush,
+    Devin,
+    Droid,
+    Goose,
+    Grok,
+    OpenHands,
+    Herdr,
+    Pi,
+    Qwen,
+    Cursor,
+    Copilot,
+}
+
+impl TerminalAgentKind {
+    pub fn display_name(self) -> &'static str {
+        match self {
+            Self::Claude => "Claude Code",
+            Self::Codex => "Codex",
+            Self::Gemini => "Gemini CLI",
+            Self::Aider => "Aider",
+            Self::Agy => "Agy",
+            Self::OpenCode => "OpenCode",
+            Self::Amp => "Amp",
+            Self::Crush => "Crush",
+            Self::Devin => "Devin",
+            Self::Droid => "Droid",
+            Self::Goose => "Goose",
+            Self::Grok => "Grok",
+            Self::OpenHands => "OpenHands",
+            Self::Herdr => "Herdr",
+            Self::Pi => "Pi",
+            Self::Qwen => "Qwen Code",
+            Self::Cursor => "Cursor Agent",
+            Self::Copilot => "GitHub Copilot",
+        }
+    }
+}
+
+pub fn terminal_title_without_prefix(title: &str) -> &str {
+    terminal_title_prefix(title)
+        .map(|prefix| &title[prefix.len()..])
+        .unwrap_or(title)
+}
+
+pub fn terminal_title_prefix(title: &str) -> Option<&str> {
+    let mut prefix_byte_len = 0;
+    let mut saw_prefix_character = false;
+    let mut saw_whitespace_after_prefix = false;
+
+    let mut characters = title.chars().peekable();
+    while let Some(character) = characters.next() {
+        if character.is_alphanumeric() {
+            return None;
+        }
+
+        if character.is_whitespace() {
+            if !saw_prefix_character {
+                return None;
+            }
+
+            prefix_byte_len += character.len_utf8();
+            saw_whitespace_after_prefix = true;
+
+            while let Some(character) = characters.peek() {
+                if !character.is_whitespace() {
+                    break;
+                }
+
+                prefix_byte_len += character.len_utf8();
+                characters.next();
+            }
+
+            break;
+        }
+
+        saw_prefix_character = true;
+        prefix_byte_len += character.len_utf8();
+    }
+
+    if saw_whitespace_after_prefix {
+        Some(&title[..prefix_byte_len])
+    } else {
+        None
+    }
+}
+
+pub fn detect_terminal_agent_kind(title: &str) -> Option<TerminalAgentKind> {
+    let title = terminal_title_without_prefix(title);
+    let normalized = title
+        .chars()
+        .map(|character| {
+            if character.is_alphanumeric() {
+                character.to_ascii_lowercase()
+            } else {
+                ' '
+            }
+        })
+        .collect::<String>();
+    let tokens = normalized.split_whitespace().collect::<Vec<_>>();
+    if tokens.is_empty() {
+        return None;
+    }
+
+    let has_token = |token: &str| tokens.contains(&token);
+    let has_phrase = |phrase: &[&str]| {
+        tokens
+            .windows(phrase.len())
+            .any(|candidate| candidate == phrase)
+    };
+    let compact = tokens.join("");
+
+    if has_token("claude") || has_phrase(&["claude", "code"]) {
+        Some(TerminalAgentKind::Claude)
+    } else if has_token("codex") {
+        Some(TerminalAgentKind::Codex)
+    } else if has_token("gemini") {
+        Some(TerminalAgentKind::Gemini)
+    } else if has_token("aider") {
+        Some(TerminalAgentKind::Aider)
+    } else if has_token("agy") {
+        Some(TerminalAgentKind::Agy)
+    } else if has_token("opencode") || compact.contains("opencode") {
+        Some(TerminalAgentKind::OpenCode)
+    } else if has_token("amp") {
+        Some(TerminalAgentKind::Amp)
+    } else if has_token("crush") {
+        Some(TerminalAgentKind::Crush)
+    } else if has_token("devin") {
+        Some(TerminalAgentKind::Devin)
+    } else if has_token("droid") {
+        Some(TerminalAgentKind::Droid)
+    } else if has_token("goose") {
+        Some(TerminalAgentKind::Goose)
+    } else if has_token("grok") {
+        Some(TerminalAgentKind::Grok)
+    } else if has_token("openhands") || compact.contains("openhands") {
+        Some(TerminalAgentKind::OpenHands)
+    } else if has_token("herdr") {
+        Some(TerminalAgentKind::Herdr)
+    } else if has_token("pi") {
+        Some(TerminalAgentKind::Pi)
+    } else if has_token("qwen") {
+        Some(TerminalAgentKind::Qwen)
+    } else if has_token("cursor") {
+        Some(TerminalAgentKind::Cursor)
+    } else if has_token("copilot") {
+        Some(TerminalAgentKind::Copilot)
+    } else {
+        None
+    }
+}
+
+pub fn detect_terminal_agent_command(command: &str) -> Option<TerminalAgentKind> {
+    let command = command.trim();
+    if command.is_empty() {
+        return None;
+    }
+
+    let command = command.rsplit(['/', '\\']).next().unwrap_or(command);
+    let command = command.strip_suffix(".exe").unwrap_or(command);
+
+    detect_terminal_agent_kind(command)
+}
+
+fn shell_assignment(token: &str) -> bool {
+    token.split_once('=').is_some_and(|(name, _)| {
+        !name.is_empty()
+            && name
+                .chars()
+                .all(|character| character == '_' || character.is_ascii_alphanumeric())
+    })
+}
+
+fn configured_terminal_executable(command: &str) -> Option<&str> {
+    let mut skip_wrapper_option_value = false;
+    for token in command
+        .split_whitespace()
+        .map(|token| token.trim_matches(|character| matches!(character, '\'' | '"')))
+    {
+        if skip_wrapper_option_value {
+            skip_wrapper_option_value = false;
+            continue;
+        }
+
+        let executable = token.rsplit(['/', '\\']).next().unwrap_or(token);
+        if shell_assignment(token) || matches!(executable, "env" | "exec" | "command") {
+            continue;
+        }
+        if matches!(token, "-u" | "--unset" | "-C" | "--chdir") {
+            skip_wrapper_option_value = true;
+            continue;
+        }
+        if token.starts_with('-') {
+            continue;
+        }
+
+        return Some(token);
+    }
+
+    None
+}
+
 pub fn configured_terminal_launcher_label(command: Option<&str>) -> String {
-    let executable = command
-        .map(str::trim)
-        .filter(|command| !command.is_empty())
-        .and_then(|command| command.split_whitespace().next())
-        .and_then(|executable| executable.rsplit('/').next());
-    let launcher = match executable {
-        None => "Native Shell",
-        Some("codex") => "Codex",
-        Some("claude") => "Claude Code",
-        Some("opencode") => "OpenCode",
-        Some(_) => "Custom Command",
+    let command = command.map(str::trim).filter(|command| !command.is_empty());
+    let launcher = match command.and_then(configured_terminal_executable) {
+        None if command.is_none() => "Native Shell",
+        Some(executable)
+            if executable
+                .rsplit(['/', '\\'])
+                .next()
+                .is_some_and(|executable| executable.eq_ignore_ascii_case("tmux")) =>
+        {
+            "tmux Session"
+        }
+        Some(executable) => detect_terminal_agent_command(executable)
+            .map(TerminalAgentKind::display_name)
+            .unwrap_or("Custom Command"),
+        None => "Custom Command",
     };
     format!("Default · {launcher}")
 }
@@ -972,7 +1187,7 @@ mod tests {
             "Default · Native Shell"
         );
         assert_eq!(
-            configured_terminal_launcher_label(Some(" codex --yolo ")),
+            configured_terminal_launcher_label(Some("env CODEX_HOME=/tmp codex --yolo")),
             "Default · Codex"
         );
         assert_eq!(
@@ -984,7 +1199,23 @@ mod tests {
             "Default · OpenCode"
         );
         assert_eq!(
-            configured_terminal_launcher_label(Some("aider")),
+            configured_terminal_launcher_label(Some("exec aider")),
+            "Default · Aider"
+        );
+        assert_eq!(
+            configured_terminal_launcher_label(Some("HERDR_PORT=7777 herdr")),
+            "Default · Herdr"
+        );
+        assert_eq!(
+            configured_terminal_launcher_label(Some("/opt/homebrew/bin/tmux")),
+            "Default · tmux Session"
+        );
+        assert_eq!(
+            configured_terminal_launcher_label(Some("env -u OLD_CODEX_HOME codex --yolo")),
+            "Default · Codex"
+        );
+        assert_eq!(
+            configured_terminal_launcher_label(Some("my-agent")),
             "Default · Custom Command"
         );
     }

@@ -1,5 +1,9 @@
 use std::path::{Path, PathBuf};
 
+pub use agent_settings::{
+    TerminalAgentKind, detect_terminal_agent_command, detect_terminal_agent_kind,
+    terminal_title_prefix, terminal_title_without_prefix,
+};
 use anyhow::Context as _;
 use chrono::{DateTime, Utc};
 use collections::{HashMap, HashSet};
@@ -175,53 +179,6 @@ impl TerminalAttentionState {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TerminalAgentKind {
-    Claude,
-    Codex,
-    Gemini,
-    Aider,
-    Agy,
-    OpenCode,
-    Amp,
-    Crush,
-    Devin,
-    Droid,
-    Goose,
-    Grok,
-    OpenHands,
-    Herdr,
-    Pi,
-    Qwen,
-    Cursor,
-    Copilot,
-}
-
-impl TerminalAgentKind {
-    pub fn display_name(self) -> &'static str {
-        match self {
-            Self::Claude => "Claude Code",
-            Self::Codex => "Codex",
-            Self::Gemini => "Gemini CLI",
-            Self::Aider => "Aider",
-            Self::Agy => "Agy",
-            Self::OpenCode => "OpenCode",
-            Self::Amp => "Amp",
-            Self::Crush => "Crush",
-            Self::Devin => "Devin",
-            Self::Droid => "Droid",
-            Self::Goose => "Goose",
-            Self::Grok => "Grok",
-            Self::OpenHands => "OpenHands",
-            Self::Herdr => "Herdr",
-            Self::Pi => "Pi",
-            Self::Qwen => "Qwen Code",
-            Self::Cursor => "Cursor Agent",
-            Self::Copilot => "GitHub Copilot",
-        }
-    }
-}
-
 impl TerminalThreadMetadata {
     pub fn folder_paths(&self) -> &PathList {
         self.worktree_paths.folder_path_list()
@@ -260,132 +217,6 @@ pub(crate) fn compose_terminal_thread_title(
     } else {
         SharedString::from(custom_title.to_string())
     }
-}
-
-pub fn terminal_title_without_prefix(title: &str) -> &str {
-    terminal_title_prefix(title)
-        .map(|prefix| &title[prefix.len()..])
-        .unwrap_or(title)
-}
-
-pub fn terminal_title_prefix(title: &str) -> Option<&str> {
-    let mut prefix_byte_len = 0;
-    let mut saw_prefix_character = false;
-    let mut saw_whitespace_after_prefix = false;
-
-    let mut chars = title.chars().peekable();
-    while let Some(character) = chars.next() {
-        if character.is_alphanumeric() {
-            return None;
-        }
-
-        if character.is_whitespace() {
-            if !saw_prefix_character {
-                return None;
-            }
-
-            prefix_byte_len += character.len_utf8();
-            saw_whitespace_after_prefix = true;
-
-            while let Some(character) = chars.peek() {
-                if !character.is_whitespace() {
-                    break;
-                }
-
-                prefix_byte_len += character.len_utf8();
-                chars.next();
-            }
-
-            break;
-        }
-
-        saw_prefix_character = true;
-        prefix_byte_len += character.len_utf8();
-    }
-
-    if saw_whitespace_after_prefix {
-        Some(&title[..prefix_byte_len])
-    } else {
-        None
-    }
-}
-
-pub fn detect_terminal_agent_kind(title: &str) -> Option<TerminalAgentKind> {
-    let title = terminal_title_without_prefix(title);
-    let normalized = title
-        .chars()
-        .map(|character| {
-            if character.is_alphanumeric() {
-                character.to_ascii_lowercase()
-            } else {
-                ' '
-            }
-        })
-        .collect::<String>();
-    let tokens = normalized.split_whitespace().collect::<Vec<_>>();
-    if tokens.is_empty() {
-        return None;
-    }
-
-    let has_token = |token: &str| tokens.contains(&token);
-    let has_phrase = |phrase: &[&str]| {
-        tokens
-            .windows(phrase.len())
-            .any(|candidate| candidate == phrase)
-    };
-    let compact = tokens.join("");
-
-    if has_token("claude") || has_phrase(&["claude", "code"]) {
-        Some(TerminalAgentKind::Claude)
-    } else if has_token("codex") {
-        Some(TerminalAgentKind::Codex)
-    } else if has_token("gemini") {
-        Some(TerminalAgentKind::Gemini)
-    } else if has_token("aider") {
-        Some(TerminalAgentKind::Aider)
-    } else if has_token("agy") {
-        Some(TerminalAgentKind::Agy)
-    } else if has_token("opencode") || compact.contains("opencode") {
-        Some(TerminalAgentKind::OpenCode)
-    } else if has_token("amp") {
-        Some(TerminalAgentKind::Amp)
-    } else if has_token("crush") {
-        Some(TerminalAgentKind::Crush)
-    } else if has_token("devin") {
-        Some(TerminalAgentKind::Devin)
-    } else if has_token("droid") {
-        Some(TerminalAgentKind::Droid)
-    } else if has_token("goose") {
-        Some(TerminalAgentKind::Goose)
-    } else if has_token("grok") {
-        Some(TerminalAgentKind::Grok)
-    } else if has_token("openhands") || compact.contains("openhands") {
-        Some(TerminalAgentKind::OpenHands)
-    } else if has_token("herdr") {
-        Some(TerminalAgentKind::Herdr)
-    } else if has_token("pi") {
-        Some(TerminalAgentKind::Pi)
-    } else if has_token("qwen") {
-        Some(TerminalAgentKind::Qwen)
-    } else if has_token("cursor") {
-        Some(TerminalAgentKind::Cursor)
-    } else if has_token("copilot") {
-        Some(TerminalAgentKind::Copilot)
-    } else {
-        None
-    }
-}
-
-pub fn detect_terminal_agent_command(command: &str) -> Option<TerminalAgentKind> {
-    let command = command.trim();
-    if command.is_empty() {
-        return None;
-    }
-
-    let command = command.rsplit(['/', '\\']).next().unwrap_or(command);
-    let command = command.strip_suffix(".exe").unwrap_or(command);
-
-    detect_terminal_agent_kind(command)
 }
 
 pub struct TerminalThreadMetadataStore {
