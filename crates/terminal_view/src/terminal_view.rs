@@ -4,8 +4,8 @@ pub mod terminal_panel;
 mod terminal_path_like_target;
 pub mod terminal_scrollbar;
 
-use agent_settings::AgentSettings;
 pub use agent_settings::configured_terminal_launcher_label;
+use agent_settings::{AgentSettings, TerminalAgentKind, detect_terminal_agent_command};
 use anyhow::{Result, anyhow};
 use collections::HashMap;
 use editor::{
@@ -225,6 +225,29 @@ fn terminal_container_reuses_terminal_material(app_name: &str, transparent_theme
     app_name != "Zed" && transparent_theme
 }
 
+pub fn terminal_agent_icon(kind: TerminalAgentKind) -> IconName {
+    match kind {
+        TerminalAgentKind::Claude => IconName::AiClaude,
+        TerminalAgentKind::Codex => IconName::AiOpenAi,
+        TerminalAgentKind::Copilot => IconName::Copilot,
+        TerminalAgentKind::Cursor => IconName::EditorCursor,
+        TerminalAgentKind::Gemini => IconName::AiGemini,
+        TerminalAgentKind::OpenCode => IconName::AiOpenCode,
+        TerminalAgentKind::Grok => IconName::AiXAi,
+        TerminalAgentKind::Aider => IconName::AiEdit,
+        TerminalAgentKind::Herdr => IconName::Inception,
+        TerminalAgentKind::Agy
+        | TerminalAgentKind::Amp
+        | TerminalAgentKind::Crush
+        | TerminalAgentKind::Devin
+        | TerminalAgentKind::Droid
+        | TerminalAgentKind::Goose
+        | TerminalAgentKind::OpenHands
+        | TerminalAgentKind::Pi
+        | TerminalAgentKind::Qwen => IconName::Robot,
+    }
+}
+
 fn terminal_foreground_agent_presentation(
     app_name: &str,
     command: Option<&str>,
@@ -233,38 +256,9 @@ fn terminal_foreground_agent_presentation(
         return None;
     }
 
-    let command = command?
-        .trim()
-        .rsplit(['/', '\\'])
-        .next()
-        .unwrap_or_default()
-        .to_ascii_lowercase();
-    let command = command.strip_suffix(".exe").unwrap_or(command.as_str());
-
-    let (display_name, icon) = match command {
-        "claude" => ("Claude Code", IconName::AiClaude),
-        command if command.starts_with("claude-code") => ("Claude Code", IconName::AiClaude),
-        "codex" => ("Codex", IconName::AiOpenAi),
-        command if command.starts_with("codex-") => ("Codex", IconName::AiOpenAi),
-        "gemini" => ("Gemini CLI", IconName::AiGemini),
-        command if command.starts_with("gemini-") => ("Gemini CLI", IconName::AiGemini),
-        "opencode" | "open-code" => ("OpenCode", IconName::AiOpenCode),
-        "grok" => ("Grok", IconName::AiXAi),
-        command if command.starts_with("grok-") => ("Grok", IconName::AiXAi),
-        "copilot" | "github-copilot" => ("GitHub Copilot", IconName::Copilot),
-        "cursor-agent" => ("Cursor Agent", IconName::EditorCursor),
-        "aider" => ("Aider", IconName::Robot),
-        "agy" => ("Agy", IconName::Robot),
-        "amp" => ("Amp", IconName::Robot),
-        "crush" => ("Crush", IconName::Robot),
-        "devin" => ("Devin", IconName::Robot),
-        "droid" => ("Droid", IconName::Robot),
-        "goose" => ("Goose", IconName::Robot),
-        "openhands" | "open-hands" => ("OpenHands", IconName::Robot),
-        "pi" => ("Pi", IconName::Robot),
-        "qwen" | "qwen-code" => ("Qwen Code", IconName::Robot),
-        _ => return None,
-    };
+    let kind = detect_terminal_agent_command(command?)?;
+    let display_name = kind.display_name();
+    let icon = terminal_agent_icon(kind);
 
     Some(TerminalForegroundPresentation { display_name, icon })
 }
@@ -288,10 +282,6 @@ fn terminal_foreground_multiplexer_presentation(
     match command {
         "tmux" => Some(TerminalForegroundPresentation {
             display_name: "tmux",
-            icon: IconName::SplitAlt,
-        }),
-        "herdr" => Some(TerminalForegroundPresentation {
-            display_name: "Herdr",
             icon: IconName::SplitAlt,
         }),
         _ => None,
@@ -4628,15 +4618,28 @@ mod tests {
             .expect("Claude Code should receive native terminal presentation");
         assert_eq!(claude.display_name, "Claude Code");
 
+        let aider = terminal_foreground_agent_presentation("Dez", Some("aider"))
+            .expect("Aider should receive native terminal presentation");
+        assert_eq!(aider.display_name, "Aider");
+        assert_eq!(aider.icon, IconName::AiEdit);
+
+        let herdr = terminal_foreground_agent_presentation("Dez", Some("herdr"))
+            .expect("Herdr should receive native terminal presentation");
+        assert_eq!(herdr.display_name, "Herdr");
+        assert_eq!(herdr.icon, IconName::Inception);
+        assert_eq!(
+            terminal_context_activity_label("Active", Some(herdr)),
+            Some("Herdr running".to_owned())
+        );
+
         let tmux =
             terminal_foreground_multiplexer_presentation("Dez", Some("/opt/homebrew/bin/tmux"))
                 .expect("tmux should receive native terminal presentation");
         assert_eq!(tmux.display_name, "tmux");
         assert_eq!(tmux.icon, IconName::SplitAlt);
-        assert_eq!(
-            terminal_foreground_multiplexer_presentation("Dez", Some("herdr"))
-                .map(|presentation| presentation.display_name),
-            Some("Herdr")
+        assert!(
+            terminal_foreground_multiplexer_presentation("Dez", Some("herdr")).is_none(),
+            "Herdr should keep its agent identity when it is the foreground process"
         );
 
         assert!(

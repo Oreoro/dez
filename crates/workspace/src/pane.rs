@@ -5791,12 +5791,12 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                                     )
                                     .action_with_icon(
                                         "Aider",
-                                        IconName::Robot,
+                                        IconName::AiEdit,
                                         zed_actions::terminal::OpenAiderTerminal.boxed_clone(),
                                     )
                                     .action_with_icon(
                                         "Herdr",
-                                        IconName::SplitAlt,
+                                        IconName::Inception,
                                         zed_actions::terminal::OpenHerdrTerminal.boxed_clone(),
                                     )
                                 },

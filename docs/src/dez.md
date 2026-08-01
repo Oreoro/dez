@@ -452,10 +452,12 @@ editor.
 
 Terminal-tab identity follows observed foreground-process evidence rather than
 the launch label. Supported agents use their provider mark as soon as the
-process is visible; tmux and Herdr use a split-session mark; ordinary shells
-keep the standard terminal icon. Tooltips state the observed foreground owner,
-while task status icons continue to take precedence for task terminals. cmux
-remains external and therefore never masquerades as a Dez terminal tab.
+process is visible; Aider uses the native edit-agent mark, Herdr uses the
+orchestration mark and reports **Herdr running**, tmux uses a split-session
+mark, and ordinary shells keep the standard terminal icon. Tooltips state the
+observed foreground owner, while task status icons continue to take precedence
+for task terminals. cmux remains external and therefore never masquerades as a
+Dez terminal tab.
 
 Agent edits land in ordinary buffers and Git changes. A terminal starts in the
 Workspace's working-directory context. Both sit beside files in the same pane
@@ -645,7 +647,8 @@ Session in the Agent work area.
 Agent identity remains stable while state changes. The built-in Dez Agent uses
 the four-node Dez Agent mark; its Subagents use the related parent-and-child
 mark. Codex, Claude Code, OpenCode, Gemini, and other recognized terminal agents
-retain their provider marks, including while hosted in a native terminal or an
+retain provider-aware marks, including Aider's edit mark and Herdr's
+orchestration mark, while hosted in a native terminal or projected from an
 externally owned tmux, Herdr, or cmux Session. A draft keeps its selected Agent
 mark rather than collapsing to an anonymous dot. Running, waiting, attention,
 error, and completion are separate indicator treatments, so a spinner or

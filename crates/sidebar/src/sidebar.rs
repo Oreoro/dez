@@ -77,7 +77,7 @@ use terminal::{
         },
     },
 };
-use terminal_view::{TerminalView, configured_terminal_launcher_label};
+use terminal_view::{TerminalView, configured_terminal_launcher_label, terminal_agent_icon};
 use theme::{ActiveTheme, CLIENT_SIDE_DECORATION_ROUNDING};
 use ui::{
     AgentThreadStatus, ButtonLike, Callout, CommonAnimationExt, ContextMenu, ContextMenuEntry,
@@ -1824,29 +1824,6 @@ fn split_leading_icon_char(
     ))
 }
 
-fn terminal_agent_icon(kind: TerminalAgentKind) -> IconName {
-    match kind {
-        TerminalAgentKind::Claude => IconName::AiClaude,
-        TerminalAgentKind::Codex => IconName::AiOpenAi,
-        TerminalAgentKind::Copilot => IconName::Copilot,
-        TerminalAgentKind::Cursor => IconName::EditorCursor,
-        TerminalAgentKind::Gemini => IconName::AiGemini,
-        TerminalAgentKind::OpenCode => IconName::AiOpenCode,
-        TerminalAgentKind::Grok => IconName::AiXAi,
-        TerminalAgentKind::Aider
-        | TerminalAgentKind::Agy
-        | TerminalAgentKind::Amp
-        | TerminalAgentKind::Crush
-        | TerminalAgentKind::Devin
-        | TerminalAgentKind::Droid
-        | TerminalAgentKind::Goose
-        | TerminalAgentKind::Herdr
-        | TerminalAgentKind::OpenHands
-        | TerminalAgentKind::Pi
-        | TerminalAgentKind::Qwen => IconName::Robot,
-    }
-}
-
 const CODEX_HOOK_SETUP: &str = include_str!("../../../assets/dez/codex-hooks.json");
 
 fn terminal_agent_state_label(
@@ -2483,11 +2460,11 @@ mod session_row_action_tests {
         );
         assert_eq!(
             terminal_agent_icon(TerminalAgentKind::Aider),
-            IconName::Robot
+            IconName::AiEdit
         );
         assert_eq!(
             terminal_agent_icon(TerminalAgentKind::Herdr),
-            IconName::Robot
+            IconName::Inception
         );
     }
 
@@ -3592,7 +3569,7 @@ fn external_multiplexer_icon(session: &ExternalMultiplexerSession) -> IconName {
         .map(terminal_agent_icon)
         .unwrap_or(match session.kind {
             MultiplexerKind::Tmux => IconName::Terminal,
-            MultiplexerKind::Herdr => IconName::Robot,
+            MultiplexerKind::Herdr => IconName::Inception,
             MultiplexerKind::Cmux => IconName::Screen,
         })
 }
@@ -8583,8 +8560,8 @@ impl Sidebar {
                                         move |mut more_agents, _window, _cx| {
                                             for (label, icon, startup_command) in [
                                                 ("Gemini CLI", IconName::AiGemini, "gemini"),
-                                                ("Aider", IconName::Robot, "aider"),
-                                                ("Herdr", IconName::SplitAlt, "herdr"),
+                                                ("Aider", IconName::AiEdit, "aider"),
+                                                ("Herdr", IconName::Inception, "herdr"),
                                             ] {
                                                 let terminal_sidebar = terminal_sidebar.clone();
                                                 let terminal_key = terminal_key.clone();
