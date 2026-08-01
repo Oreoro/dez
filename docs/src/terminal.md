@@ -51,16 +51,20 @@ modal, or overlay is opened.
 | Command palette          | `Cmd+Shift+P`      | `Ctrl+Shift+P`     |
 | Split terminal           | `Cmd+D`            | `Ctrl+Shift+5`     |
 
-**Open Terminal** opens a normal terminal in the Main Work Area and runs the
-**Default Terminal Command** after the configured shell is ready. A blank
-command keeps the native shell prompt. Command Palette also exposes **Open
-Native Shell**, **Launch Codex**, **Launch Claude Code**, and **Launch OpenCode**, so
-switching providers does not require changing the default. These commands,
+**Open Terminal** opens a normal terminal in the Main Work Area and uses the
+guided **Default Terminal** choice. Native Shell keeps the shell prompt;
+provider presets start their TUI after the configured shell is ready; tmux uses
+the Workspace-named native attach/create path. Command Palette also exposes
+**Open Native Shell**, **Launch Codex**, **Launch Claude Code**, and **Launch
+OpenCode**, so switching providers does not require changing the default. These commands,
 Workspaces, the tab-strip add control, and an empty Workspace all converge on the
 same native terminal Surface.
 
 Set the default under **Settings → Workspaces & Terminals → Terminal Launch →
-Default Terminal Command**. The adjacent `+` after each native pane's tabs
+Default Terminal**. Choose Native Shell, Codex, Claude Code, OpenCode, Gemini
+CLI, Aider, Herdr, tmux Session, or Custom Command. Custom Command reveals a
+raw command field for another terminal-native tool or wrapper, and existing
+command-only configurations remain compatible. The adjacent `+` after each native pane's tabs
 offers that default, Native Shell, a Workspace-named tmux Session, Codex,
 Claude Code, and OpenCode as separate choices. Choosing a provider once does
 not rewrite the default. In **File → Open Terminal**, the first row makes the
@@ -76,7 +80,7 @@ Choose the route by ownership, not by appearance:
 
 | Choice                                      | What Dez does                                                                                                     |
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Default Terminal**                        | Runs the configured default command in a native terminal tab                                                      |
+| **Default Terminal**                        | Opens the configured shell, agent TUI, tmux session, or custom command in a native terminal tab                   |
 | **Native Shell**                            | Opens the Workspace shell without starting an agent                                                               |
 | **Codex**, **Claude Code**, or **OpenCode** | Starts that CLI and keeps its real TUI in the native terminal                                                     |
 | **tmux Session**                            | Attaches or creates the primary-root-scoped tmux session inside a native terminal                                 |

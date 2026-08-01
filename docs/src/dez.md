@@ -62,10 +62,11 @@ Area terminal in the active Workspace; they do not open a provider onboarding
 overlay, manufacture a chat transcript, or rewrite the default launcher.
 
 Set the frequent path in **Settings → Workspaces & Terminals → Terminal Launch
-→ Default Terminal Command**. Leave it blank for the native shell, or use a
-command such as `codex`, `claude`, or `opencode`. Use **Continue Agent** when
-returning to the most recent provider session. Provider authentication and
-subscriptions remain owned by each provider CLI.
+→ Default Terminal**. The native dropdown offers Native Shell, Codex, Claude
+Code, OpenCode, Gemini CLI, Aider, Herdr, tmux Session, and Custom Command. A
+custom command is the escape hatch for another TUI or wrapper. Use **Continue
+Agent** when returning to the most recent provider session. Provider
+authentication and subscriptions remain owned by each provider CLI.
 
 The default action carries its resolved identity across native navigation.
 Home, the empty Main Work Area, pane `+`, and Workspaces show the corresponding
@@ -311,10 +312,10 @@ Without a Workspace, Home offers **Open Workspace** and **Clone Repository**.
 It does not offer a pathless terminal before a codebase can supply file, Git,
 and working-directory context. Inside a Workspace, Home offers **Open
 Terminal**, **Browse Running Sessions…**, **Open Files**, and **Review Changes**.
-**Open Terminal** uses the configured **Default Terminal Command**, or the
-native shell when that setting is blank. Its inline detail names that resolved
-default before launch, so a returning user does not need to reopen Settings to
-remember whether **Open Terminal** starts a shell or agent. The adjacent **+**
+**Open Terminal** uses the configured **Default Terminal**. Its inline detail
+names that resolved default before launch, so a returning user does not need to
+reopen Settings to remember whether **Open Terminal** starts a shell, agent, or
+Workspace-named tmux session. The adjacent **+**
 and Command Palette keep Native Shell, tmux, Codex, Claude Code, and OpenCode
 available as one-off launches, with Gemini CLI, Aider, and Herdr grouped under
 **More Agent CLIs**. **New File** remains available from File, the
@@ -495,13 +496,15 @@ and model.
 The tab-strip **+** exposes native terminal launch choices: **Default
 Terminal**, **Native Shell**, **tmux Session**, **Codex**, **Claude Code**, and
 **OpenCode**, followed by **More Agent CLIs** for **Gemini CLI**, **Aider**, and
-**Herdr**. Workspace Options identifies the configured default command and keeps
+**Herdr**. Workspace Options identifies the configured default launcher and keeps
 a separate native-shell choice beside the explicit providers.
-The default command is editable under **Settings → Workspaces & Terminals →
-Terminal Launch → Default Terminal Command**; leaving it blank keeps a normal
-shell. Known commands reuse the same terminal-agent vocabulary as Workspaces,
-so Gemini CLI, Aider, Amp, Herdr, Pi, and other detected providers do not fall
-back to anonymous **Custom Command** copy.
+The guided default is editable under **Settings → Workspaces & Terminals →
+Terminal Launch → Default Terminal**. Native Shell and the supported launchers
+need no command entry; **Custom Command** reveals the existing raw command field
+for another TUI or wrapper. Legacy command-only configurations are inferred and
+preserved. Known commands reuse the same terminal-agent vocabulary as
+Workspaces, so Gemini CLI, Aider, Amp, Herdr, Pi, and other detected providers
+do not fall back to anonymous **Custom Command** copy.
 Provider shortcuts are per-launch choices and never rewrite that setting.
 The same choices are native Command Palette actions: **Terminal: Open
 Terminal**, **Open Native Shell**, **Open tmux Session**, **Launch Codex**,
@@ -949,7 +952,7 @@ instrumentation, legacy dock geometry, and controls for removed sidebar chrome
 stay out of the public Settings navigation.
 
 For most users, setup is three decisions rather than a tour: choose the
-**Default Terminal Command**, decide whether and where Workspaces should open,
+**Default Terminal**, decide whether and where Workspaces should open,
 and select an Agent provider only if the optional Built-in Agent is needed.
 Explicit agent CLI, tmux, and cmux launch actions do not
 rewrite the default terminal. Appearance recovery remains one scoped action,

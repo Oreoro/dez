@@ -31,7 +31,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use settings::{
     CanvasDensity, SeedQuerySetting, Settings, SettingsStore, TerminalBell, TerminalBlink,
-    WorkingDirectory,
+    TerminalLauncher, WorkingDirectory,
 };
 use std::{
     any::Any,
@@ -934,6 +934,8 @@ fn open_agent_terminal(
 ) {
     if paths::APP_NAME == "Zed" {
         new_terminal(workspace, &NewTerminal::default(), window, cx);
+    } else if AgentSettings::get_global(cx).terminal_launcher == TerminalLauncher::Tmux {
+        open_tmux_terminal(workspace, &OpenTmuxTerminal, window, cx);
     } else if prepare_agent_terminal_workspace(workspace, window, cx) {
         TerminalView::deploy(workspace, &NewCenterTerminal::default(), window, cx);
     }

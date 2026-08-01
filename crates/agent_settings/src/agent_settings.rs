@@ -514,6 +514,7 @@ pub struct AgentSettings {
     pub enable_feedback: bool,
     pub expand_edit_card: bool,
     pub expand_terminal_card: bool,
+    pub terminal_launcher: settings::TerminalLauncher,
     pub terminal_init_command: Option<String>,
     pub thinking_display: ThinkingBlockDisplay,
     pub cancel_generation_on_terminal_stop: bool,
@@ -1030,6 +1031,23 @@ fn canvas_content_width(content: &settings::SettingsContent) -> Option<Pixels> {
 impl Settings for AgentSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
         let agent = content.agent.clone().unwrap();
+        let terminal_launcher = if paths::APP_NAME == "Zed" {
+            settings::TerminalLauncher::from_legacy_command(agent.terminal_init_command.as_deref())
+        } else {
+            agent.terminal_launcher.unwrap_or_else(|| {
+                settings::TerminalLauncher::from_legacy_command(
+                    agent.terminal_init_command.as_deref(),
+                )
+            })
+        };
+        let terminal_init_command = if paths::APP_NAME == "Zed" {
+            agent
+                .terminal_init_command
+                .clone()
+                .filter(|command| !command.trim().is_empty())
+        } else {
+            terminal_launcher.startup_command(agent.terminal_init_command.as_deref())
+        };
         Self {
             enabled: agent.enabled.unwrap(),
             button: agent.button.unwrap(),
@@ -1084,9 +1102,8 @@ impl Settings for AgentSettings {
             enable_feedback: agent.enable_feedback.unwrap(),
             expand_edit_card: agent.expand_edit_card.unwrap(),
             expand_terminal_card: agent.expand_terminal_card.unwrap(),
-            terminal_init_command: agent
-                .terminal_init_command
-                .filter(|command| !command.trim().is_empty()),
+            terminal_launcher,
+            terminal_init_command,
             thinking_display: agent.thinking_display.unwrap(),
             cancel_generation_on_terminal_stop: agent.cancel_generation_on_terminal_stop.unwrap(),
             use_modifier_to_send: agent.use_modifier_to_send.unwrap(),
@@ -1420,6 +1437,54 @@ mod tests {
             AgentSettings::get_global(cx)
                 .terminal_init_command
                 .is_none()
+        );
+
+        SettingsStore::update_global(cx, |store, cx| {
+            store
+                .set_user_settings(
+                    r#"{
+                        "agent": {
+                            "terminal_launcher": "codex",
+                            "terminal_init_command": "my-agent --resume"
+                        }
+                    }"#,
+                    cx,
+                )
+                .unwrap();
+        });
+        assert_eq!(
+            AgentSettings::get_global(cx).terminal_launcher,
+            settings::TerminalLauncher::Codex
+        );
+        assert_eq!(
+            AgentSettings::get_global(cx)
+                .terminal_init_command
+                .as_deref(),
+            Some("codex")
+        );
+
+        SettingsStore::update_global(cx, |store, cx| {
+            store
+                .set_user_settings(
+                    r#"{
+                        "agent": {
+                            "terminal_launcher": "custom",
+                            "terminal_init_command": "my-agent --resume"
+                        }
+                    }"#,
+                    cx,
+                )
+                .unwrap();
+        });
+        assert_eq!(
+            AgentSettings::get_global(cx).terminal_launcher,
+            settings::TerminalLauncher::CustomCommand
+        );
+        assert_eq!(
+            AgentSettings::get_global(cx)
+                .terminal_init_command
+                .as_deref(),
+            Some("my-agent --resume")
         );
     }
 

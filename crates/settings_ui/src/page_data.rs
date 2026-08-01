@@ -158,10 +158,37 @@ fn terminal_session_init_setting_copy(app_name: &str) -> (&'static str, &'static
         )
     } else {
         (
-            "Default Terminal Command",
-            "Choose what Open Terminal and Ctrl+` start in each Workspace. Leave blank for Native Shell, or enter codex, claude, opencode, or another command. One-off launchers stay available from the native + and File menus.",
+            "Custom Terminal Command",
+            "Command to run when Default Terminal is set to Custom Command. Leave blank to open the native shell.",
         )
     }
+}
+
+fn terminal_launcher_for_content(settings_content: &SettingsContent) -> settings::TerminalLauncher {
+    let agent = settings_content.agent.as_ref();
+    agent
+        .and_then(|agent| agent.terminal_launcher)
+        .unwrap_or_else(|| {
+            settings::TerminalLauncher::from_legacy_command(
+                agent.and_then(|agent| agent.terminal_init_command.as_deref()),
+            )
+        })
+}
+
+fn terminal_launcher_variant(
+    settings_content: &SettingsContent,
+) -> Option<&'static settings::TerminalLauncher> {
+    let launcher = terminal_launcher_for_content(settings_content);
+    settings::TerminalLauncher::VARIANTS
+        .iter()
+        .find(|candidate| **candidate == launcher)
+}
+
+fn terminal_launcher_variant_index(settings_content: &SettingsContent) -> Option<usize> {
+    let launcher = terminal_launcher_for_content(settings_content);
+    settings::TerminalLauncher::VARIANTS
+        .iter()
+        .position(|candidate| *candidate == launcher)
 }
 
 fn terminal_session_init_setting_visible(_app_name: &str) -> bool {
@@ -180,8 +207,8 @@ fn terminal_session_init_setting_placeholder(app_name: &str) -> &'static str {
     }
 }
 
-fn terminal_session_init_setting_item() -> SettingsPageItem {
-    SettingsPageItem::SettingItem(SettingItem {
+fn terminal_session_init_command_setting_item() -> SettingItem {
+    SettingItem {
         title: terminal_session_init_setting_copy(paths::APP_NAME).0,
         description: terminal_session_init_setting_copy(paths::APP_NAME).1,
         field: Box::new(SettingField {
@@ -210,6 +237,46 @@ fn terminal_session_init_setting_item() -> SettingsPageItem {
             ..Default::default()
         })),
         files: USER,
+    }
+}
+
+fn terminal_session_init_setting_item() -> SettingsPageItem {
+    if paths::APP_NAME == "Zed" {
+        return SettingsPageItem::SettingItem(terminal_session_init_command_setting_item());
+    }
+
+    SettingsPageItem::DynamicItem(DynamicItem {
+        discriminant: SettingItem {
+            title: "Default Terminal",
+            description: "Choose what Open Terminal and Ctrl+` start in each Workspace. Explicit launchers remain available from the native + and File menus.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("agent.terminal_launcher"),
+                pick: terminal_launcher_variant,
+                write: |settings_content, value, _| {
+                    settings_content
+                        .agent
+                        .get_or_insert_default()
+                        .terminal_launcher = value;
+                },
+            }),
+            metadata: Some(Box::new(SettingsFieldMetadata {
+                should_do_titlecase: Some(false),
+                ..Default::default()
+            })),
+            files: USER,
+        },
+        pick_discriminant: terminal_launcher_variant_index,
+        fields: settings::TerminalLauncher::VARIANTS
+            .iter()
+            .map(|launcher| {
+                if *launcher == settings::TerminalLauncher::CustomCommand {
+                    vec![terminal_session_init_command_setting_item()]
+                } else {
+                    Vec::new()
+                }
+            })
+            .collect(),
     })
 }
 
@@ -11785,7 +11852,7 @@ mod tests {
     }
 
     #[test]
-    fn terminal_startup_setting_exposes_the_native_dez_agent_launcher() {
+    fn terminal_startup_setting_exposes_the_native_dez_launcher() {
         assert!(terminal_session_init_setting_visible("Dez"));
         assert!(terminal_session_init_setting_visible("Zed"));
         assert!(terminal_session_init_setting_on_terminal_page("Dez"));
@@ -11801,13 +11868,46 @@ mod tests {
         assert_eq!(
             terminal_session_init_setting_copy("Dez"),
             (
-                "Default Terminal Command",
-                "Choose what Open Terminal and Ctrl+` start in each Workspace. Leave blank for Native Shell, or enter codex, claude, opencode, or another command. One-off launchers stay available from the native + and File menus.",
+                "Custom Terminal Command",
+                "Command to run when Default Terminal is set to Custom Command. Leave blank to open the native shell.",
             )
         );
         assert_eq!(
             terminal_session_init_setting_copy("Zed").0,
             "Terminal Thread Init Command"
+        );
+
+        let mut settings_content = SettingsContent::default();
+        assert_eq!(
+            terminal_launcher_for_content(&settings_content),
+            settings::TerminalLauncher::NativeShell
+        );
+
+        settings_content
+            .agent
+            .get_or_insert_default()
+            .terminal_init_command = Some("codex".to_owned());
+        assert_eq!(
+            terminal_launcher_for_content(&settings_content),
+            settings::TerminalLauncher::Codex
+        );
+
+        settings_content
+            .agent
+            .get_or_insert_default()
+            .terminal_init_command = Some("my-agent --resume".to_owned());
+        assert_eq!(
+            terminal_launcher_for_content(&settings_content),
+            settings::TerminalLauncher::CustomCommand
+        );
+
+        settings_content
+            .agent
+            .get_or_insert_default()
+            .terminal_launcher = Some(settings::TerminalLauncher::Tmux);
+        assert_eq!(
+            terminal_launcher_for_content(&settings_content),
+            settings::TerminalLauncher::Tmux
         );
     }
 

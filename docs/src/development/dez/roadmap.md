@@ -72,8 +72,8 @@ a second navigation model:
   **Ready**, preserving only failed-source rows as **last known**;
 - browsing running Sessions clears transient navigator filters, refreshes
   sources, expands matching groups, and focuses Workspaces;
-- **Default Terminal Command** lives in **Workspaces & Terminals → Terminal
-  Launch**; and
+- a guided **Default Terminal** chooser lives in **Workspaces & Terminals →
+  Terminal Launch**, with Custom Command as the compatible escape hatch; and
 - Host command cycles and PTY input are bounded, ambiguous commands are not
   replayed, and resize or termination cannot be starved by input backlog.
 

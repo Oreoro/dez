@@ -1355,10 +1355,16 @@
     //
     // Default: true
     "expand_terminal_card": true,
-    // Default command to run after Dez opens a native agent terminal.
-    // The command is sent after the configured shell is ready, including on
-    // remote/WSL projects. Use "codex", "claude", "opencode", or another
-    // terminal-native agent. Set to "" to open the shell without an agent.
+    // Dez Settings writes "terminal_launcher" when a guided Default Terminal
+    // preset is selected. Supported values are "native_shell", "codex",
+    // "claude", "opencode", "gemini", "aider", "herdr", "tmux", and
+    // "custom". Omitting it preserves older terminal_init_command behavior.
+    //
+    // Example: "terminal_launcher": "codex"
+    //
+    // Custom or legacy command to run after the configured shell is ready,
+    // including on remote/WSL projects. Set terminal_launcher to "custom" to
+    // edit this command in Settings. A blank command opens the native shell.
     //
     // Example: "terminal_init_command": "claude"
     "terminal_init_command": "",

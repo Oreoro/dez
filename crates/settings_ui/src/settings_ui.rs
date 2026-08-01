@@ -781,6 +781,7 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<settings::NotifyWhenAgentWaiting>(render_dropdown)
         .add_basic_renderer::<settings::PlaySoundWhenAgentDone>(render_dropdown)
         .add_basic_renderer::<settings::ThinkingBlockDisplay>(render_dropdown)
+        .add_basic_renderer::<settings::TerminalLauncher>(render_dropdown)
         .add_basic_renderer::<Option<settings::LanguageModelSelection>>(
             render_subagent_model_picker,
         )
