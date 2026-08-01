@@ -3358,6 +3358,10 @@ impl Pane {
         window: &Window,
         cx: &App,
     ) -> Option<AnyElement> {
+        if let Some(icon) = item.tab_icon_element(window, cx) {
+            return Some(icon);
+        }
+
         let icon = item
             .tab_icon(window, cx)?
             .size(IconSize::Small)

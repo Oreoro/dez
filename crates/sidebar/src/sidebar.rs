@@ -17511,6 +17511,7 @@ impl Sidebar {
             .unwrap_or_else(|| SharedString::from("Current Workspace"));
         let pane_count = pane_items.len();
         let mut rows = Vec::with_capacity(tab_count + pane_count);
+        let mut tab_position = 0;
 
         if self.workspace_tabs_expanded {
             for (pane_index, (pane, items)) in pane_items.into_iter().enumerate() {
@@ -17535,6 +17536,8 @@ impl Sidebar {
                 }
 
                 for (item_index, item) in items.into_iter().enumerate() {
+                    tab_position += 1;
+                    let position_in_set = tab_position;
                     let detail = details.get(item_index).copied().unwrap_or_default();
                     let label = item.tab_content_text(detail, cx);
                     let is_visible = active_item_id == Some(item.item_id());
@@ -17573,6 +17576,9 @@ impl Sidebar {
 
                     rows.push(
                         div()
+                            .role(gpui::Role::ListItem)
+                            .aria_position_in_set(position_in_set)
+                            .aria_size_of_set(tab_count)
                             .when(!is_pinned, |this| {
                                 this.on_aux_click(move |event: &ClickEvent, window, cx| {
                                     if !event.is_middle_click() {
@@ -17749,7 +17755,7 @@ impl Sidebar {
                     this.child(
                         v_flex()
                             .id("active-workspace-tab-list")
-                            .role(gpui::Role::Group)
+                            .role(gpui::Role::List)
                             .aria_label("Open tabs grouped by pane")
                             .max_h(vh(0.18, window))
                             .overflow_y_scroll()

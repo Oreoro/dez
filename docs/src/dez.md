@@ -252,8 +252,10 @@ when at least two tabs are open. A one-pane layout remains a flat list. Real spl
 **Pane 2**, and later group labels, so the hierarchy describes the layout that
 already exists instead of manufacturing one. Each row uses the Surface's
 native icon, disambiguated tab title, active state, dirty state, and pinned
-state. Activating a row calls the owning Workspace's native item activation
-path. An unpinned row exposes the Surface's native close icon on hover, keeps it
+state. Terminal rows preserve their task, Agent provider, or tmux mark, and the
+projection announces each row's position in the native tab set. Activating a
+row calls the owning Workspace's native item activation path. An unpinned row
+exposes the Surface's native close icon on hover, keeps it
 visible while that Surface is active in its pane, and accepts middle-click.
 Both routes call the owning pane's normal close path, including unsaved-work
 confirmation. Pinned rows remain protected. Ordering, dragging, preview

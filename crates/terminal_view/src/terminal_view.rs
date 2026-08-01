@@ -363,6 +363,23 @@ fn terminal_tab_status_label_visible(status: &str) -> bool {
     matches!(status, "Failed" | "Unavailable" | "Status unknown")
 }
 
+fn terminal_tab_icon_presentation(
+    task_status: Option<&TaskStatus>,
+    foreground_agent: Option<TerminalForegroundPresentation>,
+    foreground_multiplexer: Option<TerminalForegroundPresentation>,
+) -> (IconName, Color) {
+    match task_status {
+        Some(TaskStatus::Running) => (IconName::PlayFilled, Color::Disabled),
+        Some(TaskStatus::Unknown) => (IconName::Warning, Color::Warning),
+        Some(TaskStatus::Completed { success: true }) => (IconName::Check, Color::Success),
+        Some(TaskStatus::Completed { success: false }) => (IconName::XCircle, Color::Error),
+        None => foreground_agent
+            .map(|agent| (agent.icon, Color::Accent))
+            .or_else(|| foreground_multiplexer.map(|multiplexer| (multiplexer.icon, Color::Muted)))
+            .unwrap_or((IconName::Terminal, Color::Muted)),
+    }
+}
+
 fn terminal_surface_accessibility_label(app_name: &str, title: &str, status: &str) -> String {
     if app_name == "Zed" {
         format!("Terminal Session: {title}. Status: {status}")
@@ -3666,6 +3683,24 @@ impl Item for TerminalView {
         )
     }
 
+    fn tab_icon(&self, _window: &Window, cx: &App) -> Option<Icon> {
+        let terminal = self.terminal().read(cx);
+        let foreground_command = terminal.foreground_process_command_name();
+        let foreground_agent =
+            terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref());
+        let foreground_multiplexer = terminal_foreground_multiplexer_presentation(
+            paths::APP_NAME,
+            foreground_command.as_deref(),
+        );
+        let (icon, color) = terminal_tab_icon_presentation(
+            terminal.task().map(|task| &task.status),
+            foreground_agent,
+            foreground_multiplexer,
+        );
+
+        Some(Icon::new(icon).size(IconSize::Small).color(color))
+    }
+
     fn tab_icon_element(&self, _window: &Window, cx: &App) -> Option<AnyElement> {
         let terminal_entity_id = self.terminal().entity_id();
         let terminal = self.terminal().read(cx);
@@ -3676,35 +3711,13 @@ impl Item for TerminalView {
             paths::APP_NAME,
             foreground_command.as_deref(),
         );
-        let (icon, icon_color, rerun_button) = match terminal.task() {
-            Some(terminal_task) => match &terminal_task.status {
-                TaskStatus::Running => (
-                    IconName::PlayFilled,
-                    Color::Disabled,
-                    TerminalView::rerun_button(terminal_task),
-                ),
-                TaskStatus::Unknown => (
-                    IconName::Warning,
-                    Color::Warning,
-                    TerminalView::rerun_button(terminal_task),
-                ),
-                TaskStatus::Completed { success } => {
-                    let rerun_button = TerminalView::rerun_button(terminal_task);
-
-                    if *success {
-                        (IconName::Check, Color::Success, rerun_button)
-                    } else {
-                        (IconName::XCircle, Color::Error, rerun_button)
-                    }
-                }
-            },
-            None => foreground_agent
-                .map(|agent| (agent.icon, Color::Accent, None))
-                .or_else(|| {
-                    foreground_multiplexer.map(|multiplexer| (multiplexer.icon, Color::Muted, None))
-                })
-                .unwrap_or((IconName::Terminal, Color::Muted, None)),
-        };
+        let terminal_task = terminal.task();
+        let (icon, icon_color) = terminal_tab_icon_presentation(
+            terminal_task.map(|task| &task.status),
+            foreground_agent,
+            foreground_multiplexer,
+        );
+        let rerun_button = terminal_task.and_then(TerminalView::rerun_button);
         let foreground_process_label = foreground_agent
             .or(foreground_multiplexer)
             .map(|process| format!("{} running in terminal", process.display_name));
@@ -4639,6 +4652,33 @@ mod tests {
         assert!(
             terminal_foreground_multiplexer_presentation("Zed", Some("tmux")).is_none(),
             "official Zed keeps its upstream terminal presentation"
+        );
+
+        assert_eq!(
+            terminal_tab_icon_presentation(None, Some(codex), None).0,
+            IconName::AiOpenAi
+        );
+        assert_eq!(
+            terminal_tab_icon_presentation(None, None, Some(tmux)).0,
+            IconName::SplitAlt
+        );
+        assert_eq!(
+            terminal_tab_icon_presentation(Some(&TaskStatus::Running), Some(codex), None).0,
+            IconName::PlayFilled,
+            "task state should outrank the process observed inside that task terminal"
+        );
+        assert_eq!(
+            terminal_tab_icon_presentation(
+                Some(&TaskStatus::Completed { success: false }),
+                None,
+                None,
+            )
+            .0,
+            IconName::XCircle
+        );
+        assert_eq!(
+            terminal_tab_icon_presentation(None, None, None).0,
+            IconName::Terminal
         );
     }
 
