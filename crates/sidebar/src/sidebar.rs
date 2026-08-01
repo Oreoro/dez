@@ -1338,7 +1338,7 @@ fn session_start_state_copy(
     } else {
         (
             "No Workspace open",
-            "Open a Workspace, then start a terminal. Terminal and agent activity appear here automatically.",
+            "Open a codebase. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area.",
             "Open Workspace…",
             None,
         )
@@ -2506,7 +2506,7 @@ mod session_start_state_tests {
             session_start_state_copy("Dez"),
             (
                 "No Workspace open",
-                "Open a Workspace, then start a terminal. Terminal and agent activity appear here automatically.",
+                "Open a codebase. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area.",
                 "Open Workspace…",
                 None
             ),
@@ -17013,11 +17013,7 @@ impl Sidebar {
                     .child(
                         Button::new("start-open", open_workspace_label)
                             .full_width()
-                            .style(if APP_NAME == "Zed" {
-                                ButtonStyle::Filled
-                            } else {
-                                ButtonStyle::Subtle
-                            })
+                            .style(ButtonStyle::Filled)
                             .start_icon(Icon::new(IconName::FolderOpen).size(IconSize::Small))
                             .tab_index(0isize)
                             .aria_label(open_workspace_label)

@@ -244,8 +244,8 @@ fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
     assert!(!session_search_visible("Dez", 0, false, false, false));
     assert!(!session_search_control_visible("Dez", 0));
     assert!(
-        session_overview_visible(true),
-        "the rail keeps its identity and zero-session status visible above onboarding"
+        !session_overview_visible("Dez", 0, 0, false),
+        "the native Workspaces titlebar owns identity without an empty second header"
     );
     assert!(
         !session_overview_create_action_visible("Dez", 0),
@@ -277,7 +277,7 @@ fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
     assert!(session_search_control_visible("Dez", 2));
     assert!(session_search_visible("Dez", 1, false, true, false));
     assert!(session_search_visible("Dez", 1, false, false, true));
-    assert!(session_overview_visible(false));
+    assert!(!session_overview_visible("Dez", 1, 0, false));
     assert!(
         !session_overview_create_action_visible("Dez", 1),
         "populated Dez keeps creation scoped to Workspace groups"
@@ -672,7 +672,7 @@ fn start_state_waits_for_restore_and_only_describes_a_true_empty_app() {
     assert_eq!(session_start_state_copy("Dez").0, "No Workspace open");
     assert_eq!(
         session_start_state_copy("Dez").1,
-        "Open a codebase, then launch an agent in its Main Work Area. Sessions only shows detected or managed agent work."
+        "Open a codebase. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area."
     );
     assert_eq!(
         session_start_state_copy("Dez").2,
@@ -2304,11 +2304,11 @@ fn session_rail_default_creation_is_terminal_first() {
 fn workspace_header_accessibility_copy_is_state_complete_without_color() {
     assert_eq!(
         workspace_header_accessibility_label("Dez", "dez", false, false, 0),
-        "Project dez, ready for a session"
+        "Workspace dez, ready for a session"
     );
     assert_eq!(
         workspace_header_accessibility_label("Dez", "dez", true, true, 2),
-        "Project dez, running work, 2 sessions need attention"
+        "Workspace dez, running work, 2 sessions need attention"
     );
 }
 

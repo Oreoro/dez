@@ -348,9 +348,10 @@ Recent Workspaces remain ordinary keyboard-reachable rows rather than a
 separate dashboard.
 
 The empty Workspaces navigator follows the same activation loop. **No Workspace
-open** explains that a codebase supplies context to agent work and review.
-**Open Workspace** is its only start action. Once a Workspace is ready, the
-scoped action becomes **Open Terminal**. The Workspace remains visible,
+open** explains that the codebase keeps terminals, Agent Sessions, files, and
+review together in one Main Work Area. **Open Workspace** is its only start
+action and uses the native primary-action treatment. Once a Workspace is ready,
+the scoped action becomes **Open Terminal**. The Workspace remains visible,
 but its Agent Session list stays empty until agent evidence exists. Start,
 recovery, and All/Attention scope actions remain keyboard reachable as the
 navigator changes state.
