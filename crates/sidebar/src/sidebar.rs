@@ -77,7 +77,10 @@ use terminal::{
         },
     },
 };
-use terminal_view::{TerminalView, configured_terminal_launcher_label, terminal_agent_icon};
+use terminal_view::{
+    TerminalView, configured_terminal_launcher_icon, configured_terminal_launcher_label,
+    terminal_agent_icon,
+};
 use theme::{ActiveTheme, CLIENT_SIDE_DECORATION_ROUNDING};
 use ui::{
     AgentThreadStatus, ButtonLike, Callout, CommonAnimationExt, ContextMenu, ContextMenuEntry,
@@ -1246,6 +1249,14 @@ fn terminal_launch_label(app_name: &str) -> &'static str {
     }
 }
 
+fn workspace_default_terminal_icon(app_name: &str, configured_command: Option<&str>) -> IconName {
+    if app_name == "Zed" {
+        IconName::Terminal
+    } else {
+        configured_terminal_launcher_icon(configured_command)
+    }
+}
+
 fn terminal_launch_in_main_work_area_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Start Terminal Session in Main Work Area"
@@ -2231,6 +2242,22 @@ mod workspace_header_label_tests {
         assert_eq!(
             configured_terminal_launcher_label(Some("my-agent --resume")),
             "Default · Custom Command"
+        );
+        assert_eq!(
+            workspace_default_terminal_icon("Dez", Some("codex --yolo")),
+            IconName::AiOpenAi
+        );
+        assert_eq!(
+            workspace_default_terminal_icon("Dez", Some("tmux")),
+            IconName::SplitAlt
+        );
+        assert_eq!(
+            workspace_default_terminal_icon("Dez", Some("my-agent")),
+            IconName::Terminal
+        );
+        assert_eq!(
+            workspace_default_terminal_icon("Zed", Some("codex --yolo")),
+            IconName::Terminal
         );
     }
 
@@ -8028,7 +8055,15 @@ impl Sidebar {
                             } else {
                                 ButtonStyle::Subtle
                             })
-                            .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                            .start_icon(
+                                Icon::new(workspace_default_terminal_icon(
+                                    APP_NAME,
+                                    AgentSettings::get_global(cx)
+                                        .terminal_init_command
+                                        .as_deref(),
+                                ))
+                                .size(IconSize::XSmall),
+                            )
                             .tab_index(0isize)
                             .aria_label(SharedString::from(format!(
                                 "{} in {}",
@@ -8094,7 +8129,12 @@ impl Sidebar {
 
         let button = IconButton::new(
             SharedString::from(format!("{id_prefix}workspace-new-session-{ix}")),
-            IconName::Terminal,
+            workspace_default_terminal_icon(
+                APP_NAME,
+                AgentSettings::get_global(cx)
+                    .terminal_init_command
+                    .as_deref(),
+            ),
         )
         .size(ButtonSize::Medium)
         .selected_style(ButtonStyle::Tinted(TintColor::Accent))
@@ -8563,6 +8603,10 @@ impl Sidebar {
                             let configured_command = AgentSettings::get_global(menu_cx)
                                 .terminal_init_command
                                 .clone();
+                            let configured_icon = workspace_default_terminal_icon(
+                                APP_NAME,
+                                configured_command.as_deref(),
+                            );
                             let tmux_startup_command =
                                 terminal_view::tmux_startup_command_for_workspace(
                                     project_group_key.path_list().ordered_paths().next(),
@@ -8578,7 +8622,7 @@ impl Sidebar {
                                             configured_terminal_launcher_label(
                                                 configured_command.as_deref(),
                                             ),
-                                            IconName::Terminal,
+                                            configured_icon,
                                             None,
                                         ),
                                         (

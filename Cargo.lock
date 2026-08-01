@@ -424,6 +424,7 @@ dependencies = [
  "fs",
  "futures 0.3.32",
  "gpui",
+ "icons",
  "language_model",
  "log",
  "paths",

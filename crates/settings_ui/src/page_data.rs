@@ -159,7 +159,7 @@ fn terminal_session_init_setting_copy(app_name: &str) -> (&'static str, &'static
     } else {
         (
             "Default Terminal Command",
-            "Open Terminal and Ctrl+` start this command in a native Workspace tab. Leave blank for the native shell. Home, File, and Workspace menus preserve known provider identity, including env or exec wrappers. The pane + keeps Native Shell, tmux, Codex, Claude Code, and OpenCode primary; More Agent CLIs exposes Gemini CLI, Aider, and Herdr without changing this default.",
+            "Choose what Open Terminal and Ctrl+` start in each Workspace. Leave blank for Native Shell, or enter codex, claude, opencode, or another command. One-off launchers stay available from the native + and File menus.",
         )
     }
 }
@@ -217,10 +217,10 @@ fn cmux_integration_action_link() -> SettingsPageItem {
     SettingsPageItem::ActionLink(ActionLink {
         title: "cmux Integration".into(),
         description: Some(
-            "cmux owns its agent actions and pane layouts. Open Workspace in cmux remains available without control-socket access. Live cmux rows use read-only Workspace and notification metadata only when cmux permits cross-app access; its secure process-only default appears as activity sharing off, not an integration failure. Dez never changes cmux access or hooks."
+            "cmux stays an external Workspace. Open Workspace in cmux works without live sharing. Enable cross-app API access only if you want cmux Workspace, port, and notification rows in Dez; Dez never changes cmux permissions or hooks."
                 .into(),
         ),
-        button_text: "Open API Guide".into(),
+        button_text: "Open cmux API Guide".into(),
         on_click: Arc::new(|_settings_window, _window, cx| {
             cx.open_url("https://cmux.com/docs/api");
         }),
@@ -11802,7 +11802,7 @@ mod tests {
             terminal_session_init_setting_copy("Dez"),
             (
                 "Default Terminal Command",
-                "Open Terminal and Ctrl+` start this command in a native Workspace tab. Leave blank for the native shell. Home, File, and Workspace menus preserve known provider identity, including env or exec wrappers. The pane + keeps Native Shell, tmux, Codex, Claude Code, and OpenCode primary; More Agent CLIs exposes Gemini CLI, Aider, and Herdr without changing this default.",
+                "Choose what Open Terminal and Ctrl+` start in each Workspace. Leave blank for Native Shell, or enter codex, claude, opencode, or another command. One-off launchers stay available from the native + and File menus.",
             )
         );
         assert_eq!(

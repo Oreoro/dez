@@ -20,6 +20,7 @@ use crate::{
         WorkspaceSettings,
     },
 };
+use agent_settings::{AgentSettings, configured_terminal_launcher_icon};
 use anyhow::Result;
 use collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use futures::{StreamExt, stream::FuturesUnordered};
@@ -996,6 +997,15 @@ impl Pane {
         let show_orientation =
             empty_main_work_area_shows_orientation(paths::APP_NAME, is_active_pane);
         let is_dez = paths::APP_NAME != "Zed";
+        let terminal_action_icon = if is_dez {
+            configured_terminal_launcher_icon(
+                AgentSettings::get_global(cx)
+                    .terminal_init_command
+                    .as_deref(),
+            )
+        } else {
+            IconName::Terminal
+        };
         let (title, description) = if is_dez && show_orientation {
             (
                 "Main Work Area",
@@ -1091,7 +1101,7 @@ impl Pane {
                                 Button::new("empty-project-terminal", terminal_action_label)
                                     .tab_index(0isize)
                                     .style(ButtonStyle::Filled)
-                                    .start_icon(Icon::new(IconName::Terminal))
+                                    .start_icon(Icon::new(terminal_action_icon))
                                     .aria_label(terminal_action_aria_label)
                                     .tooltip(move |_, cx| {
                                         Tooltip::for_action(
@@ -5710,6 +5720,11 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
             let has_workspace_root = workspace_location.is_some_and(|(_, has_root)| has_root);
             let cmux_handoff_applicable =
                 workspace_location.is_some_and(|(is_local, has_root)| is_local && has_root);
+            let default_terminal_icon = configured_terminal_launcher_icon(
+                AgentSettings::get_global(cx)
+                    .terminal_init_command
+                    .as_deref(),
+            );
             Some(ContextMenu::build(window, cx, move |menu, _, _| {
                 if paths::APP_NAME == "Zed" {
                     menu.action(new_file, NewFile.boxed_clone())
@@ -5752,7 +5767,7 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                         .submenu("Open Terminal", |menu, _, _| {
                             menu.action_with_icon(
                                 "Default Terminal",
-                                IconName::Terminal,
+                                default_terminal_icon,
                                 zed_actions::terminal::OpenAgentTerminal.boxed_clone(),
                             )
                             .action_with_icon(

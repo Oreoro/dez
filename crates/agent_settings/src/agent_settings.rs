@@ -11,6 +11,7 @@ use collections::{HashSet, IndexMap};
 use fs::Fs;
 use futures::channel::oneshot;
 use gpui::{App, Pixels, SharedString, px};
+use icons::IconName;
 use language_model::LanguageModel;
 use project::DisableAiSettings;
 use schemars::JsonSchema;
@@ -242,22 +243,73 @@ fn configured_terminal_executable(command: &str) -> Option<&str> {
     None
 }
 
-pub fn configured_terminal_launcher_label(command: Option<&str>) -> String {
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+enum ConfiguredTerminalLauncher {
+    NativeShell,
+    Tmux,
+    Agent(TerminalAgentKind),
+    CustomCommand,
+}
+
+fn configured_terminal_launcher(command: Option<&str>) -> ConfiguredTerminalLauncher {
     let command = command.map(str::trim).filter(|command| !command.is_empty());
-    let launcher = match command.and_then(configured_terminal_executable) {
-        None if command.is_none() => "Native Shell",
+    match command.and_then(configured_terminal_executable) {
+        None if command.is_none() => ConfiguredTerminalLauncher::NativeShell,
         Some(executable)
             if executable
                 .rsplit(['/', '\\'])
                 .next()
+                .map(|executable| executable.strip_suffix(".exe").unwrap_or(executable))
                 .is_some_and(|executable| executable.eq_ignore_ascii_case("tmux")) =>
         {
-            "tmux Session"
+            ConfiguredTerminalLauncher::Tmux
         }
         Some(executable) => detect_terminal_agent_command(executable)
-            .map(TerminalAgentKind::display_name)
-            .unwrap_or("Custom Command"),
-        None => "Custom Command",
+            .map(ConfiguredTerminalLauncher::Agent)
+            .unwrap_or(ConfiguredTerminalLauncher::CustomCommand),
+        None => ConfiguredTerminalLauncher::CustomCommand,
+    }
+}
+
+pub fn terminal_agent_icon(kind: TerminalAgentKind) -> IconName {
+    match kind {
+        TerminalAgentKind::Claude => IconName::AiClaude,
+        TerminalAgentKind::Codex => IconName::AiOpenAi,
+        TerminalAgentKind::Copilot => IconName::Copilot,
+        TerminalAgentKind::Cursor => IconName::EditorCursor,
+        TerminalAgentKind::Gemini => IconName::AiGemini,
+        TerminalAgentKind::OpenCode => IconName::AiOpenCode,
+        TerminalAgentKind::Grok => IconName::AiXAi,
+        TerminalAgentKind::Aider => IconName::AiEdit,
+        TerminalAgentKind::Herdr => IconName::Inception,
+        TerminalAgentKind::Agy
+        | TerminalAgentKind::Amp
+        | TerminalAgentKind::Crush
+        | TerminalAgentKind::Devin
+        | TerminalAgentKind::Droid
+        | TerminalAgentKind::Goose
+        | TerminalAgentKind::OpenHands
+        | TerminalAgentKind::Pi
+        | TerminalAgentKind::Qwen => IconName::Robot,
+    }
+}
+
+pub fn configured_terminal_launcher_icon(command: Option<&str>) -> IconName {
+    match configured_terminal_launcher(command) {
+        ConfiguredTerminalLauncher::NativeShell | ConfiguredTerminalLauncher::CustomCommand => {
+            IconName::Terminal
+        }
+        ConfiguredTerminalLauncher::Tmux => IconName::SplitAlt,
+        ConfiguredTerminalLauncher::Agent(kind) => terminal_agent_icon(kind),
+    }
+}
+
+pub fn configured_terminal_launcher_label(command: Option<&str>) -> String {
+    let launcher = match configured_terminal_launcher(command) {
+        ConfiguredTerminalLauncher::NativeShell => "Native Shell",
+        ConfiguredTerminalLauncher::Tmux => "tmux Session",
+        ConfiguredTerminalLauncher::Agent(kind) => kind.display_name(),
+        ConfiguredTerminalLauncher::CustomCommand => "Custom Command",
     };
     format!("Default · {launcher}")
 }
@@ -1217,6 +1269,40 @@ mod tests {
         assert_eq!(
             configured_terminal_launcher_label(Some("my-agent")),
             "Default · Custom Command"
+        );
+
+        assert_eq!(configured_terminal_launcher_icon(None), IconName::Terminal);
+        assert_eq!(
+            configured_terminal_launcher_icon(Some("env CODEX_HOME=/tmp codex --yolo")),
+            IconName::AiOpenAi
+        );
+        assert_eq!(
+            configured_terminal_launcher_icon(Some("/opt/homebrew/bin/claude --continue")),
+            IconName::AiClaude
+        );
+        assert_eq!(
+            configured_terminal_launcher_icon(Some("opencode --continue")),
+            IconName::AiOpenCode
+        );
+        assert_eq!(
+            configured_terminal_launcher_icon(Some("exec aider")),
+            IconName::AiEdit
+        );
+        assert_eq!(
+            configured_terminal_launcher_icon(Some("HERDR_PORT=7777 herdr")),
+            IconName::Inception
+        );
+        assert_eq!(
+            configured_terminal_launcher_icon(Some("/opt/homebrew/bin/tmux")),
+            IconName::SplitAlt
+        );
+        assert_eq!(
+            configured_terminal_launcher_icon(Some("C:\\tools\\tmux.exe")),
+            IconName::SplitAlt
+        );
+        assert_eq!(
+            configured_terminal_launcher_icon(Some("my-agent")),
+            IconName::Terminal
         );
     }
 

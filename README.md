@@ -164,6 +164,9 @@ to cmux. The native tab-strip `+` exposes the same terminal choices, **Browse
 Running Sessions…**, and **Open Workspace in cmux** without creating a second
 navigation system. The default launch command lives under **Settings →
 Workspaces & Terminals → Terminal Launch → Default Terminal Command**;
+Home, the empty Main Work Area, pane `+`, and Workspaces show the resolved
+provider or tmux mark on that default action instead of a generic terminal
+glyph. Wrapped commands such as `env … codex` retain the same identity.
 **cmux Integration** beside it opens cmux's API guide and explains the external
 automation boundary. cmux still owns its custom actions and multi-pane layouts;
 Dez keeps those layouts externally owned. Its secure socket default accepts

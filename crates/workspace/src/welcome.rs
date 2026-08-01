@@ -5,7 +5,9 @@ use crate::{
     item::{Item, ItemEvent},
     persistence::WorkspaceDb,
 };
-use agent_settings::{AgentSettings, configured_terminal_launcher_label};
+use agent_settings::{
+    AgentSettings, configured_terminal_launcher_icon, configured_terminal_launcher_label,
+};
 use git::Clone as GitClone;
 use gpui::WeakEntity;
 use gpui::{
@@ -226,11 +228,12 @@ impl SectionEntry {
         primary: bool,
         show_meta: bool,
         meta_override: Option<SharedString>,
+        icon_override: Option<IconName>,
     ) -> Option<impl IntoElement> {
         self.visibility_guard.is_visible().then(|| {
             let button = SectionButton::new(
                 self.title,
-                self.icon,
+                icon_override.unwrap_or(self.icon),
                 self.action,
                 button_index,
                 focus.clone(),
@@ -312,6 +315,15 @@ fn welcome_terminal_action_meta(
 ) -> Option<String> {
     (app_name != "Zed" && has_workspace)
         .then(|| configured_terminal_launcher_label(configured_command))
+}
+
+fn welcome_terminal_action_icon(
+    app_name: &str,
+    has_workspace: bool,
+    configured_command: Option<&str>,
+) -> Option<IconName> {
+    (app_name != "Zed" && has_workspace)
+        .then(|| configured_terminal_launcher_icon(configured_command))
 }
 
 const ZED_CONTENT: (Section, Section) = (
@@ -466,6 +478,7 @@ impl Section {
         emphasize_first: bool,
         show_meta: bool,
         first_entry_meta_override: Option<SharedString>,
+        first_entry_icon_override: Option<IconName>,
     ) -> impl IntoElement {
         v_flex()
             .w_full()
@@ -485,6 +498,7 @@ impl Section {
                             (index == 0)
                                 .then(|| first_entry_meta_override.clone())
                                 .flatten(),
+                            (index == 0).then_some(first_entry_icon_override).flatten(),
                         )
                     }),
             )
@@ -868,6 +882,7 @@ impl Render for WelcomePage {
                             false,
                             true,
                             None,
+                            None,
                         )
                         .into_any_element(),
                 ),
@@ -965,6 +980,13 @@ impl Render for WelcomePage {
                 .as_deref(),
         )
         .map(SharedString::from);
+        let first_entry_icon_override = welcome_terminal_action_icon(
+            APP_NAME,
+            has_workspace,
+            AgentSettings::get_global(cx)
+                .terminal_init_command
+                .as_deref(),
+        );
         let show_onboarding_return = APP_NAME == "Zed" && !self.fallback_to_recent_projects;
         let content_welcome_label = welcome_label.clone();
         let page_title = if installation_required {
@@ -1019,6 +1041,7 @@ impl Render for WelcomePage {
                                     welcome_emphasizes_first_action(APP_NAME),
                                     true,
                                     first_entry_meta_override.clone(),
+                                    first_entry_icon_override,
                                 )),
                         )
                         .when_some(secondary_content.take(), |this, secondary_content| {
@@ -1048,6 +1071,7 @@ impl Render for WelcomePage {
                             welcome_emphasizes_first_action(APP_NAME),
                             !compact_spacing,
                             first_entry_meta_override.clone(),
+                            first_entry_icon_override,
                         ))
                         .when_some(secondary_content.take(), |this, secondary_content| {
                             this.child(Divider::horizontal().color(DividerColor::BorderVariant))
@@ -1463,6 +1487,30 @@ mod tests {
         );
         assert_eq!(
             welcome_terminal_action_meta("Zed", true, Some("codex")),
+            None
+        );
+        assert_eq!(
+            welcome_terminal_action_icon("Dez", true, None),
+            Some(IconName::Terminal)
+        );
+        assert_eq!(
+            welcome_terminal_action_icon("Dez", true, Some("codex --yolo")),
+            Some(IconName::AiOpenAi)
+        );
+        assert_eq!(
+            welcome_terminal_action_icon("Dez", true, Some("claude")),
+            Some(IconName::AiClaude)
+        );
+        assert_eq!(
+            welcome_terminal_action_icon("Dez", true, Some("tmux")),
+            Some(IconName::SplitAlt)
+        );
+        assert_eq!(
+            welcome_terminal_action_icon("Dez", false, Some("codex")),
+            None
+        );
+        assert_eq!(
+            welcome_terminal_action_icon("Zed", true, Some("codex")),
             None
         );
         assert_eq!(

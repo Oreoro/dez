@@ -4,8 +4,10 @@ pub mod terminal_panel;
 mod terminal_path_like_target;
 pub mod terminal_scrollbar;
 
-pub use agent_settings::configured_terminal_launcher_label;
 use agent_settings::{AgentSettings, TerminalAgentKind, detect_terminal_agent_command};
+pub use agent_settings::{
+    configured_terminal_launcher_icon, configured_terminal_launcher_label, terminal_agent_icon,
+};
 use anyhow::{Result, anyhow};
 use collections::HashMap;
 use editor::{
@@ -223,29 +225,6 @@ fn unavailable_session_restores_placeholder_surface(app_name: &str) -> bool {
 
 fn terminal_container_reuses_terminal_material(app_name: &str, transparent_theme: bool) -> bool {
     app_name != "Zed" && transparent_theme
-}
-
-pub fn terminal_agent_icon(kind: TerminalAgentKind) -> IconName {
-    match kind {
-        TerminalAgentKind::Claude => IconName::AiClaude,
-        TerminalAgentKind::Codex => IconName::AiOpenAi,
-        TerminalAgentKind::Copilot => IconName::Copilot,
-        TerminalAgentKind::Cursor => IconName::EditorCursor,
-        TerminalAgentKind::Gemini => IconName::AiGemini,
-        TerminalAgentKind::OpenCode => IconName::AiOpenCode,
-        TerminalAgentKind::Grok => IconName::AiXAi,
-        TerminalAgentKind::Aider => IconName::AiEdit,
-        TerminalAgentKind::Herdr => IconName::Inception,
-        TerminalAgentKind::Agy
-        | TerminalAgentKind::Amp
-        | TerminalAgentKind::Crush
-        | TerminalAgentKind::Devin
-        | TerminalAgentKind::Droid
-        | TerminalAgentKind::Goose
-        | TerminalAgentKind::OpenHands
-        | TerminalAgentKind::Pi
-        | TerminalAgentKind::Qwen => IconName::Robot,
-    }
 }
 
 fn terminal_foreground_agent_presentation(

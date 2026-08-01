@@ -67,6 +67,10 @@ not rewrite the default. In **File → Open Terminal**, the first row makes the
 resolved choice explicit as **Default · Native Shell**, **Default · Codex**,
 **Default · Claude Code**, **Default · OpenCode**, or **Default · Custom
 Command**; the pane `+` retains **Default Terminal** for compactness.
+Home, the empty Main Work Area, pane `+`, and Workspaces show the corresponding
+provider or tmux mark on that default action. Wrapped and absolute commands
+retain known provider identity; Native Shell and unknown custom commands keep
+the terminal mark.
 
 Choose the route by ownership, not by appearance:
 
