@@ -7969,7 +7969,8 @@ impl Sidebar {
                     let sidebar = cx.weak_entity();
                     let open_session = session.clone();
                     let action_label = external_multiplexer_action_label(session);
-                    let port_label = session.port_label().map(SharedString::from);
+                    let port_detail_label = session.port_label().map(SharedString::from);
+                    let compact_port_label = session.compact_port_label().map(SharedString::from);
                     let source_and_state = match &session.working_directory {
                         Some(working_directory) => SharedString::from(format!(
                             "{} · {} · {}",
@@ -7990,11 +7991,12 @@ impl Sidebar {
                         ),
                         None => action_label.clone(),
                     };
-                    if let Some(port_label) = port_label.as_deref() {
+                    if let Some(port_label) = port_detail_label.as_deref() {
                         tooltip_label.push_str("\nListening ports: ");
                         tooltip_label.push_str(port_label);
                     }
-                    let accessibility_label = if let Some(port_label) = port_label.as_deref() {
+                    let accessibility_label = if let Some(port_label) = port_detail_label.as_deref()
+                    {
                         format!("{action_label} Listening ports: {port_label}.")
                     } else {
                         action_label.clone()
@@ -8050,12 +8052,12 @@ impl Sidebar {
                                     }),
                             ),
                     )
-                    .when_some(port_label, |this, port_label| {
+                    .when_some(compact_port_label, |this, port_label| {
                         this.child(
                             h_flex().flex_none().child(
                                 Label::new(port_label)
                                     .size(LabelSize::XSmall)
-                                    .color(Color::Accent),
+                                    .color(Color::Muted),
                             ),
                         )
                     })

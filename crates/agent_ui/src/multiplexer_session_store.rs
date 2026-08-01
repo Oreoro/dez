@@ -188,6 +188,10 @@ impl ExternalMultiplexerSession {
         concise_port_label(&self.listening_ports)
     }
 
+    pub fn compact_port_label(&self) -> Option<String> {
+        compact_port_label(&self.listening_ports)
+    }
+
     pub fn open_command(&self) -> ExternalSessionCommand {
         let program = self.executable.to_string_lossy().into_owned();
         let (args, label, mode) = match self.kind {
@@ -1030,6 +1034,16 @@ fn concise_port_label(ports: &[u16]) -> Option<String> {
     })
 }
 
+fn compact_port_label(ports: &[u16]) -> Option<String> {
+    let first_port = ports.first()?;
+    let remaining_count = ports.len().saturating_sub(1);
+    Some(if remaining_count == 0 {
+        format!(":{first_port}")
+    } else {
+        format!(":{first_port} +{remaining_count}")
+    })
+}
+
 fn concise_command_stderr(output: &Output) -> String {
     let stderr = concise_discovery_message(&String::from_utf8_lossy(&output.stderr));
     if stderr.is_empty() {
@@ -1566,6 +1580,16 @@ async fn first_available_program(programs: &[&str]) -> Result<Option<PathBuf>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn compact_port_labels_preserve_row_width_and_report_hidden_ports() {
+        assert_eq!(compact_port_label(&[]), None);
+        assert_eq!(compact_port_label(&[3000]).as_deref(), Some(":3000"));
+        assert_eq!(
+            compact_port_label(&[3000, 5173, 8080, 9000]).as_deref(),
+            Some(":3000 +3")
+        );
+    }
 
     fn external_session(kind: MultiplexerKind, id: &str) -> ExternalMultiplexerSession {
         ExternalMultiplexerSession {
@@ -2191,6 +2215,10 @@ mod tests {
         );
         assert_eq!(sessions[0].listening_ports, [3000, 5173]);
         assert_eq!(sessions[0].port_label().as_deref(), Some(":3000, :5173"));
+        assert_eq!(
+            sessions[0].compact_port_label().as_deref(),
+            Some(":3000 +1")
+        );
         assert_eq!(sessions[0].location_label(), "/tmp/compiler · :3000, :5173");
     }
 

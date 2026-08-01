@@ -395,8 +395,10 @@ losing source or status in each row. Explicit tmux and Herdr rows attach in the
 Main Work Area; cmux Workspace rows open in cmux. A row with a current path sits
 beneath the most specific matching Workspace and uses its secondary metadata
 row for source, semantic state, working directory or worktree, and attention.
-cmux rows keep API-reported listening ports visible in that native row and its
-accessible tooltip without turning Workspaces into a server scanner.
+cmux rows keep the first API-reported listening port and a hidden-port count in
+the native row's compact trailing metadata. Their tooltip and accessibility
+label retain the richer bounded port list without turning Workspaces into a
+server scanner or treating passive port metadata as an accent action.
 Pathless and unmatched discovered rows remain in **Other Running Sessions**.
 The Workspace header owns Git branch and changed-file metadata. Repository
 association follows path-component ancestry in both directions, so opening a
@@ -929,12 +931,12 @@ attachment automatically.
 Dez only renders metadata with an authoritative owner. Git supplies branch and
 changed-file counts; terminal and multiplexer snapshots supply working
 directory, provider, lifecycle, client count, and attention. cmux additionally
-supplies authoritative `listening_ports`; matching cmux rows keep a bounded
-`:port` label visible beside their title metadata and include the same ports in
-their tooltip and accessibility label. Other local Workspace processes do not
-receive inferred port badges because no Workspace-scoped server or
-port-forwarding model owns that evidence yet. Dez does not scrape terminal
-output or infer ports from process names.
+supplies authoritative `listening_ports`; matching cmux rows keep the first
+`:port` plus a remaining count in compact, muted trailing metadata. Their
+tooltip and accessibility label retain the richer bounded port list. Other
+local Workspace processes do not receive inferred port labels because no
+Workspace-scoped server or port-forwarding model owns that evidence yet. Dez
+does not scrape terminal output or infer ports from process names.
 
 ## Visual design
 
