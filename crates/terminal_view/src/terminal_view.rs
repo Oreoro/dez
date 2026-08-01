@@ -420,6 +420,22 @@ fn terminal_context_strip_is_relevant(
     activity_label.is_some() || !has_workspace_files || changed_files > 0
 }
 
+fn terminal_details_disclosure_label(expanded: bool, show_text: bool) -> &'static str {
+    match (expanded, show_text) {
+        (true, true) => "Hide Details",
+        (false, true) => "Terminal Details",
+        (_, false) => "",
+    }
+}
+
+fn terminal_details_disclosure_accessibility_label(expanded: bool) -> &'static str {
+    if expanded {
+        "Hide Terminal Details"
+    } else {
+        "Show Terminal Details"
+    }
+}
+
 fn terminal_surface_tab_label(app_name: &str, title: &str) -> SharedString {
     let title = title.trim();
     if app_name == "Zed" || title.is_empty() || title == "Terminal" {
@@ -1478,6 +1494,7 @@ pub struct TerminalView {
     session_ref_needs_serialize: bool,
     session_unavailable: bool,
     session_unavailable_reason: Option<String>,
+    show_terminal_details: bool,
     custom_title: Option<String>,
     hover: Option<HoverTarget>,
     hover_tooltip_update: Task<()>,
@@ -1695,6 +1712,7 @@ impl TerminalView {
             session_ref_needs_serialize: true,
             session_unavailable: false,
             session_unavailable_reason: None,
+            show_terminal_details: false,
             custom_title: None,
             ime_state: None,
             self_handle: cx.entity().downgrade(),
@@ -3067,11 +3085,12 @@ impl TerminalView {
         let details_working_directory = working_directory.clone();
         let details_session_id = session_id.clone();
         let details_has_workspace_files = has_workspace_files;
-        let details_visible_label = if action_label_visibility.details {
-            "Terminal Details"
-        } else {
-            ""
-        };
+        let details_visible_label = terminal_details_disclosure_label(
+            self.show_terminal_details,
+            action_label_visibility.details,
+        );
+        let details_accessibility_label =
+            terminal_details_disclosure_accessibility_label(self.show_terminal_details);
         let files_visible_label = if action_label_visibility.workspace {
             "Files"
         } else {
@@ -3098,85 +3117,146 @@ impl TerminalView {
         } else {
             "This Workspace owns the process. Closing Dez also ends it."
         };
-        let details_menu = PopoverMenu::new(("terminal-session-details", terminal_entity_id))
-            .trigger(
-                Button::new(
-                    ("terminal-session-details-trigger", terminal_entity_id),
-                    details_visible_label,
-                )
-                .size(ButtonSize::Compact)
-                .style(ButtonStyle::Subtle)
-                .start_icon(Icon::new(IconName::Info).size(IconSize::XSmall))
-                .tab_index(0isize)
-                .aria_label("Open Terminal Details")
-                .tooltip(Tooltip::text("Terminal Details")),
-            )
-            .menu(move |window, cx| {
-                let details_status = details_status.clone();
-                let details_repository = details_repository.clone();
-                let details_changes = details_changes.clone();
-                let details_working_directory = details_working_directory.clone();
-                let details_session_id = details_session_id.clone();
-                Some(ContextMenu::build(window, cx, move |mut menu, _, _| {
-                    menu = menu
-                        .header("Terminal")
-                        .label(details_status.clone())
-                        .label(details_repository.clone())
-                        .label(details_changes.clone())
-                        .label(ownership_note);
-                    if let Some(foreground_agent) = details_foreground_agent {
-                        menu = menu.label(format!(
-                            "Foreground agent: {foreground_agent} (observed process)."
-                        ));
-                    }
-                    if let Some(working_directory) = details_working_directory.clone() {
-                        menu = menu
-                            .label(format!("Working directory: {working_directory}"))
-                            .entry("Copy Working Directory", None, move |_window, cx| {
-                                cx.write_to_clipboard(ClipboardItem::new_string(
-                                    working_directory.clone(),
-                                ));
-                            });
-                    }
-                    menu.entry("Copy Session ID", None, move |_window, cx| {
-                        cx.write_to_clipboard(ClipboardItem::new_string(
-                            details_session_id.clone(),
-                        ));
-                    })
-                    .separator()
-                    .header("Evidence")
-                    .label("Lifecycle · observed from Terminal and Host.")
-                    .label("Git · changed-file counts belong to the Workspace.")
-                    .label("Attribution · changes are not assigned to this Session.")
-                    .label("Agents · confidence and checks require trusted evidence.")
-                    .label("Terminal text is display content, not proof.")
-                    .separator()
-                    .header("Workflow")
-                    .label("Run · This process stays in this terminal.")
-                    .when(paths::APP_NAME == "Zed", |menu| {
-                        menu.label("Supervise · Sessions keeps live state and attention visible.")
-                    })
-                    .when(paths::APP_NAME != "Zed", |menu| {
-                        menu.label(
-                            "Supervise · Workspaces shows attention and returns you to this terminal.",
+        let details_toggle = Button::new(
+            ("terminal-session-details-trigger", terminal_entity_id),
+            details_visible_label,
+        )
+        .size(ButtonSize::Compact)
+        .style(ButtonStyle::Subtle)
+        .start_icon(Icon::new(IconName::Info).size(IconSize::XSmall))
+        .tab_index(0isize)
+        .aria_label(details_accessibility_label)
+        .tooltip(Tooltip::text(details_accessibility_label))
+        .on_click(cx.listener(|this, _, _, cx| {
+            this.show_terminal_details = !this.show_terminal_details;
+            cx.notify();
+        }));
+
+        let details = self.show_terminal_details.then(|| {
+            let details_accessibility_label = format!(
+                "Terminal Details. {details_status}. {details_repository}. {details_changes}."
+            );
+            let copy_working_directory = details_working_directory.clone();
+            let copy_session_id = details_session_id.clone();
+
+            v_flex()
+                .id(("terminal-session-details", terminal_entity_id))
+                .role(gpui::Role::Region)
+                .aria_label(details_accessibility_label)
+                .w_full()
+                .flex_none()
+                .gap_1()
+                .px(terminal_context_strip_padding_x(density))
+                .py_1p5()
+                .border_b_1()
+                .border_color(terminal_context_strip_border(cx))
+                .bg(terminal_context_strip_background(cx))
+                .child(
+                    h_flex()
+                        .w_full()
+                        .min_w_0()
+                        .flex_wrap()
+                        .gap_x_3()
+                        .gap_y_1()
+                        .child(
+                            Label::new("Terminal Details")
+                                .size(LabelSize::Small)
+                                .color(Color::Default),
                         )
+                        .child(
+                            Label::new(details_status)
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
+                        )
+                        .child(
+                            Label::new(details_repository)
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
+                        )
+                        .child(
+                            Label::new(details_changes)
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
+                        )
+                        .when_some(details_foreground_agent, |this, foreground_agent| {
+                            this.child(
+                                Label::new(format!("Foreground · {foreground_agent}"))
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Muted),
+                            )
+                        }),
+                )
+                .when_some(details_working_directory, |this, working_directory| {
+                    this.child(
+                        Label::new(format!("Working directory · {working_directory}"))
+                            .size(LabelSize::XSmall)
+                            .color(Color::Muted),
+                    )
+                })
+                .child(
+                    Label::new(ownership_note)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted),
+                )
+                .child(
+                    Label::new(
+                        "Evidence · lifecycle comes from Terminal and Host; Git belongs to the Workspace; terminal text is display content, not proof.",
+                    )
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted),
+                )
+                .child(
+                    Label::new(if details_has_workspace_files {
+                        "Workflow · run here, supervise in Workspaces, review with Files and Git."
+                    } else {
+                        "Workflow · run here, supervise in Workspaces, then open a Workspace for Files and Git."
                     })
-                    .when(details_has_workspace_files, |menu| {
-                        menu.label("Review · Files and Git inspect this Workspace.")
-                    })
-                    .when(!details_has_workspace_files, |menu| {
-                        menu.label("Connect · Open a Workspace to add Files and Git review.")
-                    })
-                }))
-            })
-            .anchor(Anchor::TopRight)
-            .offset(gpui::Point {
-                x: px(0.),
-                y: px(2.),
-            });
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted),
+                )
+                .child(
+                    h_flex()
+                        .flex_wrap()
+                        .gap_1()
+                        .when_some(copy_working_directory, |this, working_directory| {
+                            this.child(
+                                Button::new(
+                                    ("copy-terminal-working-directory", terminal_entity_id),
+                                    "Copy Working Directory",
+                                )
+                                .size(ButtonSize::Compact)
+                                .style(ButtonStyle::Subtle)
+                                .tab_index(0isize)
+                                .on_click(move |_, _, cx| {
+                                    cx.write_to_clipboard(ClipboardItem::new_string(
+                                        working_directory.clone(),
+                                    ));
+                                }),
+                            )
+                        })
+                        .child(
+                            Button::new(
+                                ("copy-terminal-session-id", terminal_entity_id),
+                                "Copy Session ID",
+                            )
+                            .size(ButtonSize::Compact)
+                            .style(ButtonStyle::Subtle)
+                            .tab_index(0isize)
+                            .on_click(move |_, _, cx| {
+                                cx.write_to_clipboard(ClipboardItem::new_string(
+                                    copy_session_id.clone(),
+                                ));
+                            }),
+                        ),
+                )
+        });
 
         Some(
-            h_flex()
+            v_flex()
+                .w_full()
+                .flex_none()
+                .child(
+                    h_flex()
                 .id(("terminal-session-context", terminal_entity_id))
                 .role(gpui::Role::Toolbar)
                 .aria_label(format!(
@@ -3289,8 +3369,10 @@ impl TerminalView {
                                 }),
                             )
                         })
-                        .child(details_menu),
+                        .child(details_toggle),
                 )
+                )
+                .children(details)
                 .into_any_element(),
         )
     }
@@ -4773,6 +4855,23 @@ mod tests {
         ));
         assert!(terminal_context_strip_is_relevant(None, true, 2));
         assert!(terminal_context_strip_is_relevant(None, false, 0));
+        assert_eq!(
+            terminal_details_disclosure_label(false, true),
+            "Terminal Details"
+        );
+        assert_eq!(
+            terminal_details_disclosure_label(true, true),
+            "Hide Details"
+        );
+        assert_eq!(terminal_details_disclosure_label(false, false), "");
+        assert_eq!(
+            terminal_details_disclosure_accessibility_label(false),
+            "Show Terminal Details"
+        );
+        assert_eq!(
+            terminal_details_disclosure_accessibility_label(true),
+            "Hide Terminal Details"
+        );
         assert_eq!(
             terminal_surface_tab_label("Dez", "Codex"),
             SharedString::from("Terminal · Codex")

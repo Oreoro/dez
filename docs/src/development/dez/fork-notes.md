@@ -1971,3 +1971,11 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   discovered external work. cmux remains an external owner and receives an
   explicit `cmux open <path>` handoff; hook setup remains a deliberate
   cmux/provider configuration action.
+- **2026-08-02: The four-state native surface contract is authoritative.** Home
+  launches work, the Main Work Area owns every terminal, editor, diff, browser,
+  Settings, and Workspace tool surface, Workspaces supervises live activity,
+  and review remains in native tabs. Open Tabs & Tools is a projection of those
+  items, not a second model, and only a user-created split introduces pane
+  groups. Browse Running Sessions focuses Workspaces without creating a
+  Sessions page. Terminal Details expands inline inside the terminal surface so
+  ownership and recovery never cover the TUI or create a permanent inspector.

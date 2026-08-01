@@ -1,0 +1,208 @@
+# Dez surface contract
+
+This document is the source-controlled wireframe and interaction contract for
+Dez's native shell. It complements the visual review sheet with exact labels,
+ownership, state, and responsive behavior. When a rendered sketch and this
+document disagree, this document wins.
+
+## Product loop
+
+```text
+Open or resume a Workspace
+-> run a shell, terminal agent, task, or multiplexer in a native tab
+-> supervise owned activity and attention in Workspaces
+-> inspect files, diagnostics, and Git in native tabs
+-> Review Changes in the same Main Work Area
+```
+
+The primary user is a developer or vibe coder coordinating several terminal
+tools without giving up a complete editor. Dez is therefore a Workspace-first
+development environment, not a terminal dashboard and not a chat client.
+
+## Ownership model
+
+```text
+Window
+├── Workspaces (optional global navigator)
+│   ├── Workspace rows
+│   ├── Sessions (live activity only)
+│   ├── Open Tabs & Tools (projection of the active Workspace)
+│   └── Workspace notices (bounded recovery states)
+├── Main Work Area (authoritative native pane and tab model)
+│   ├── Home, files, diffs, search, Settings, browser, diagnostics
+│   ├── TerminalView surfaces for shells, agents, tmux, and Herdr
+│   ├── Files, Outline, Git, Debug, and Built-in Agent tools
+│   └── user-created panes and splits
+└── Status bar (durable context and navigation)
+```
+
+One Workspace owns every tab, tool, Session, and user-created pane associated
+with its codebase. A Workspace is not a list of terminals. **Open Tabs &
+Tools** reads the native pane model and activates its existing items; it never
+stores duplicate order, focus, close, pin, dirty, or split state.
+
+## Final wireframe
+
+### 1. Home and launch
+
+```text
+┌ Workspaces ──────┬ Home ─ + ─────────────────────────────────────────┐
+│ dez  main        │ Continue your work                                │
+│ 3 agents · 2 ports│ Run a tool, supervise its work, then review it.   │
+│                  │                                                    │
+│ Open Tabs & Tools│ Start with a tool          Recent Workspaces      │
+│  Home            │  Open Terminal · Default   superzed               │
+│  Codex · Working │  Codex                     website                │
+│  app.rs          │  Claude Code               infra                  │
+│  Terminal · Ready│  OpenCode                  tools                  │
+│  Files           │  Workspace tmux                                   │
+│  Git Changes     │  Open Workspace in cmux                           │
+│                  │                                                    │
+│ superzed         │ Inspect and resume                                │
+│ website          │  Browse Running Sessions                          │
+│                  │  Open Files · Review Changes                      │
+├──────────────────┴────────────────────────────────────────────────────┤
+│ Workspace: dez | main | 3 agents | 2 ports | Permissions: Healthy    │
+└───────────────────────────────────────────────────────────────────────┘
+```
+
+Home is a launcher in a normal closeable tab. It has no hero illustration,
+provider promotion, setup wizard, or overlay. The adjacent `+` remains visible.
+
+### 2. Run and active work
+
+```text
+┌ Workspaces ──────┬ Codex · Working | app.rs | Terminal | Files | Git | + ┐
+│ dez  main        │ Workspace: dez · main · ~/code/dez · Codex working     │
+│ Sessions         ├─────────────────────────────────────────────────────────┤
+│  Codex · Working │                                                         │
+│  Claude · Attention  Native TerminalView renders the provider TUI here.   │
+│  Terminal · Ready│  Dez does not place a custom chat renderer around it.  │
+│ Open Tabs & Tools│                                                         │
+│  Codex · Working │                                                         │
+│  app.rs          │                                                         │
+│  Terminal        │                                                         │
+│  Files · Git     │                                                         │
+├──────────────────┴─────────────────────────────────────────────────────────┤
+│ Workspace: dez | main | 3 agents | 2 ports | Permissions: Healthy          │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+Provider and subagent glyphs identify activity; adjacent state text says
+Working, Needs attention, Completed, Failed, or Available. Color is supportive,
+never the only state signal.
+
+### 3. Supervise and recover
+
+```text
+┌ Workspaces ─────────────┬ Terminal · Herdr attach · Failed ─ + ──────┐
+│ dez  main               │ Herdr attach failed · Connection refused    │
+│ Workspace access required│ [Retry Attach] [Open new shell here]       │
+│ [Grant Access…]         ├──────────────────────────────────────────────┤
+│ Sessions                │ Existing terminal output remains visible.    │
+│  Codex · Working        │                                              │
+│  Claude · Attention     │ Terminal Details                             │
+│  Terminal · Ready       │ Provider · Herdr                             │
+│  tmux · Attach failed   │ Working directory · ~/code/dez               │
+│  Legacy · Access blocked│ Host generation · legacy                     │
+│ Open Tabs & Tools       │ Endpoint · offline                           │
+│  Terminal · Failed      │ Ownership · external process unchanged       │
+│  Files · Diff · Git     │                                              │
+├─────────────────────────┴──────────────────────────────────────────────┤
+│ Workspace: dez | main | 3 agents | 2 ports | Access required          │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+**Browse Running Sessions…** focuses Workspaces, clears transient filters,
+expands groups with activity, refreshes discovery, and preserves the active
+Main Work Area tab. It never creates a duplicate Sessions page. Recovery is
+inline and states both cause and next action. Terminal Details is a disclosure
+within the terminal surface, not a floating inspector. Destructive legacy
+termination remains behind a native confirmation.
+
+### 4. Review and intentional split
+
+```text
+┌ Workspaces ──────┬ Diff · app.rs | app.rs | + ┬ Terminal | Files | Git | + ┐
+│ dez  main        │                              │                             │
+│ Open Tabs & Tools│ diff                         │ native terminal              │
+│ Pane 1 · Focused │                              │ or review-adjacent tool      │
+│  Diff · app.rs   │                              │                             │
+│  app.rs          │                              │                             │
+│ Pane 2           │                              │                             │
+│  Terminal        │                              │                             │
+│  Files           │                              │                             │
+│  Git Changes     │                              │                             │
+├──────────────────┴──────────────────────────────┴─────────────────────────────┤
+│ Workspace: dez | main | 3 agents | 2 ports | Permissions: Healthy            │
+└────────────────────────────────────────────────────────────────────────────────┘
+```
+
+A pane group exists only after the user invokes a split action. Each pane owns
+its native tab strip and adjacent `+`. Closing Workspaces preserves both panes,
+their tabs, and the focused Main Work Area item.
+
+## Surface inventory
+
+| Surface | Owner | Primary job | Entry | Empty, failure, or recovery state |
+| --- | --- | --- | --- | --- |
+| Home | Main Work Area tab | Start or resume the product loop | tab `+`, Help, first run | install-first and recent-history retry are inline |
+| Workspaces | optional window navigator | switch codebases and supervise activity | status bar, View menu, shortcut | one Open Workspace action; bounded notices |
+| Open Tabs & Tools | Workspaces projection | return to an existing surface | expands with two or more tabs | hidden for one tab; pane labels only for real splits |
+| Sessions | Workspaces activity group | observe agents, tasks, tmux, Herdr, and cmux | Browse Running Sessions | source-specific Missing, Empty, Failed, Ready, or last-known state |
+| Terminal | Main Work Area tab | run shell, TUI, task, or attach command | Home, tab `+`, File, Workspace menu | preserves output; cause plus Retry or fresh-shell recovery |
+| Terminal Details | inline Terminal disclosure | inspect lifecycle, ownership, cwd, and evidence | terminal context strip | connection uncertainty never claims process death |
+| Editor, diff, search, diagnostics | Main Work Area tabs | inspect and modify the codebase | native Zed actions | native Zed empty and error states |
+| Files, Outline, Git, Debug | Main Work Area tabs | inspect Workspace tools | tab `+`, View, terminal handoff | no permanent second drawer or column |
+| Built-in Agent | Main Work Area tab | use Zed's model-backed agent | tab `+`, Workspace menu | configure provider instead of opening a dead surface |
+| Settings | native Settings surface | configure workflow, appearance, terminal, agents | app menu, Command Palette | Workspace-dependent sections bind to the active Workspace |
+| Status bar | window | durable Workspace and editor context | visible by default | explicit preference may hide it; closed Workspaces keeps a labeled restore control |
+| Installation and access | Home plus Workspaces notice | unblock safe startup | startup preflight | install/relaunch or grant one exact folder; never background prompt loops |
+
+## Interaction and copy rules
+
+- Use one primary action per state. Put secondary actions in ordinary rows or
+  an overflow menu.
+- Use native Zed buttons, tabs, menus, prompts, focus, and theme tokens.
+- Keep labels beside navigation icons. Provider glyphs identify a tool; state
+  text identifies lifecycle.
+- Preserve visible keyboard focus and a visual reading order that matches
+  accessibility navigation.
+- Use cause plus recovery for errors: **Attach failed · Connection refused**,
+  then **Retry Attach** or **Open new shell here**.
+- Keep permission scope explicit: **Workspace access required** and **Grant
+  Access…** for one exact root.
+- Reserve the status bar for durable context. Transient progress and lengthy
+  diagnostics belong to the owning surface.
+- Never introduce a Studio/Projects mode switch, custom browser tabs, a chat
+  wrapper around terminal tools, floating onboarding, or an automatic split.
+
+## Responsive contract
+
+- The Main Work Area keeps at least 60% of the window width.
+- Workspaces may collapse or close; its state remains reachable from the
+  labeled status-bar control.
+- Secondary row metadata truncates before the title or primary recovery action.
+- Compact widths hide button text but retain the icon, tooltip, accessibility
+  label, and keyboard target.
+- Open Tabs & Tools remains flat for one pane. With a user-created split it
+  groups by pane and names the focused pane.
+- Long detail text wraps inside the owning surface; it does not create a new
+  persistent column.
+
+## Acceptance checklist
+
+- Every open panel, tool, terminal, file, diff, and browser surface is reachable
+  as a native tab and appears in Open Tabs & Tools when that projection is
+  useful.
+- Browse Running Sessions focuses Workspaces without replacing the current tab.
+- Native pane tabs remain the source of order, focus, dirty, close, and split
+  truth.
+- Terminal Details expands inline and never obscures terminal output.
+- Provider and subagent glyphs use the shared icon family; lifecycle remains
+  readable without color.
+- Empty, loading, permission, attach-failure, disconnected-host, and legacy
+  states each have one truthful recovery route.
+- The status bar remains visible by default and contains no transient prose.
+- No screen creates an unexplained pane, permanent inspector, custom tab bar,
+  floating onboarding, or duplicated Workspace navigation.

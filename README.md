@@ -461,6 +461,8 @@ runbook remains historical evidence, not the current release plan.
 - [What is Dez?](./docs/src/dez.md) — public product guide
 - [v0.2 Workspace Polish](./docs/src/development/dez/v0.2-workspace-polish.md)
   — active native Workspace shell and source-polish contract
+- [Native Surface Contract](./docs/src/development/dez/surface-contract.md) —
+  final text wireframes, surface ownership, recovery, and responsive behavior
 - [v0.1 Product Hardening](./docs/src/development/dez/v0.1-product-hardening.md)
   — preserved release ladder and acceptance gates
 - [v0.0.4 External Sessions](./docs/src/development/dez/v0.0.4-external-sessions.md)
