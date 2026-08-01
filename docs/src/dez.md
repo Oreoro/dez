@@ -392,20 +392,23 @@ system-selected Lumin Light/Lumin Blur. Custom font or theme choices are not
 treated as generated defaults.
 
 Creation emphasis also follows state. An inactive, ready Workspace without a
-Session shows one quiet **Open Terminal** command row; the active Workspace uses
-the same action in its Main Work Area. Once work exists, a compact terminal
-action remains in each Workspace header while the Workspaces overview stays
-focused on status and All/Attention scope. Dez does not repeat a launcher for
-the already-active Workspace.
+Session shows one quiet **Open Terminal** command row; the active Workspace
+keeps the compact terminal menu in its header. The Main Work Area also keeps its
+own empty-state action, but it is no longer the only visible path from
+Workspace navigation. Once work exists, the compact action remains in each
+Workspace header while the overview stays focused on status and All/Attention
+scope.
 
 Workspaces uses one native titlebar label and one options menu for secondary
 destinations such as Command Palette, Recent Workspaces, Workspace activity,
-attention filtering, and Workspaces Settings. It does
-not repeat **Workspaces** inside a dashboard header or reserve a permanent
-footer. Empty, caught-up, search, and recovery states stay in normal sidebar
-flow and never become floating overlays. An empty inactive Workspace keeps one
-scoped terminal row, while a collapsed Workspace keeps the compact header
-action; the active Workspace relies on its visible Main Work Area launcher.
+attention filtering, and Workspaces Settings. Routine state leaves that title
+quiet. Search, restoration, and attention add one compact inline status label;
+search counts matching Workspace rows together with matching Sessions and
+terminals. It does not repeat **Workspaces** inside a dashboard header or
+reserve a permanent footer. Empty, caught-up, search, and recovery states stay
+in normal sidebar flow and never become floating overlays. An empty inactive
+Workspace keeps one scoped terminal row, while a collapsed or active Workspace
+keeps the compact header action.
 None expands into a provider onboarding block. At compact widths, the caught-up
 action shortens to **Show All** without
 losing source or status in each row. Explicit tmux and Herdr rows attach in the

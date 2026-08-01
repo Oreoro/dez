@@ -807,9 +807,23 @@ fn session_overview_status_label_with_observed_terminals(
     is_restoring: bool,
 ) -> String {
     if is_searching {
-        let matching_count = session_count + observed_terminal_count;
-        let noun = if matching_count == 1 { "item" } else { "items" };
-        return format!("{matching_count} matching {noun}");
+        let matching_count = session_count
+            + observed_terminal_count
+            + if app_name == "Zed" {
+                0
+            } else {
+                workspace_count
+            };
+        if app_name == "Zed" {
+            let noun = if matching_count == 1 { "item" } else { "items" };
+            return format!("{matching_count} matching {noun}");
+        }
+        let noun = if matching_count == 1 {
+            "result"
+        } else {
+            "results"
+        };
+        return format!("{matching_count} {noun}");
     }
     if is_restoring {
         return session_overview_status_label(
@@ -1120,6 +1134,38 @@ fn session_header_status_visible(
     has_attention: bool,
 ) -> bool {
     app_name == "Zed" || is_searching || is_restoring || has_attention
+}
+
+fn session_header_status_label(
+    app_name: &str,
+    matching_item_count: usize,
+    attention_count: usize,
+    has_attention: bool,
+    is_searching: bool,
+    is_restoring: bool,
+) -> Option<String> {
+    if app_name == "Zed"
+        || !session_header_status_visible(app_name, is_searching, is_restoring, has_attention)
+    {
+        return None;
+    }
+
+    if is_searching {
+        let noun = if matching_item_count == 1 {
+            "result"
+        } else {
+            "results"
+        };
+        Some(format!("{matching_item_count} {noun}"))
+    } else if is_restoring {
+        Some("Restoring…".to_owned())
+    } else if attention_count == 0 {
+        Some("Attention needed".to_owned())
+    } else if attention_count == 1 {
+        Some("1 session needs attention".to_owned())
+    } else {
+        Some(format!("{attention_count} sessions need attention"))
+    }
 }
 
 fn session_rail_title(app_name: &str) -> &'static str {
@@ -2409,6 +2455,34 @@ mod workspace_header_label_tests {
         assert!(session_header_status_visible("Dez", true, false, false));
         assert!(session_header_status_visible("Dez", false, true, false));
         assert!(session_header_status_visible("Dez", false, false, true));
+        assert_eq!(
+            session_header_status_label("Dez", 4, 0, false, true, false),
+            Some("4 results".to_owned())
+        );
+        assert_eq!(
+            session_header_status_label("Dez", 2, 0, false, false, true),
+            Some("Restoring…".to_owned())
+        );
+        assert_eq!(
+            session_header_status_label("Dez", 2, 0, true, false, false),
+            Some("Attention needed".to_owned())
+        );
+        assert_eq!(
+            session_header_status_label("Dez", 2, 1, true, false, false),
+            Some("1 session needs attention".to_owned())
+        );
+        assert_eq!(
+            session_header_status_label("Dez", 2, 3, true, false, false),
+            Some("3 sessions need attention".to_owned())
+        );
+        assert_eq!(
+            session_header_status_label("Dez", 2, 0, false, false, false),
+            None
+        );
+        assert_eq!(
+            session_header_status_label("Zed", 2, 1, true, false, false),
+            None
+        );
     }
 }
 
@@ -17839,6 +17913,14 @@ impl Sidebar {
             session_search_control_visible(paths::APP_NAME, searchable_item_count)
                 && !search_is_active;
         let is_restoring = self.workspace_restore_status_is_visible(cx);
+        let header_status_label = session_header_status_label(
+            APP_NAME,
+            searchable_item_count,
+            self.contents.attention_count,
+            self.contents.has_attention,
+            has_query,
+            is_restoring,
+        );
         let status_label = session_overview_status_label_with_observed_terminals(
             APP_NAME,
             self.contents.session_count,
@@ -17929,30 +18011,29 @@ impl Sidebar {
                                 .flex_none()
                                 .truncate(),
                         )
-                        .when(
-                            session_header_status_visible(
-                                APP_NAME,
-                                has_query,
-                                is_restoring,
-                                self.contents.has_attention,
-                            ),
-                            |this| {
-                                this.child(
-                                    h_flex()
-                                        .id("session-rail-header-status")
-                                        .min_w_0()
-                                        .gap_1()
-                                        .role(gpui::Role::Status)
-                                        .aria_label(status_label.clone())
-                                        .tooltip(Tooltip::text(status_label.clone()))
-                                        .child(
-                                            Icon::new(status_icon)
-                                                .size(IconSize::XSmall)
-                                                .color(status_color),
-                                        ),
-                                )
-                            },
-                        ),
+                        .when_some(header_status_label, |this, header_status_label| {
+                            this.child(
+                                h_flex()
+                                    .id("session-rail-header-status")
+                                    .min_w_0()
+                                    .flex_1()
+                                    .gap_1()
+                                    .role(gpui::Role::Status)
+                                    .aria_label(status_label.clone())
+                                    .tooltip(Tooltip::text(status_label.clone()))
+                                    .child(
+                                        Icon::new(status_icon)
+                                            .size(IconSize::XSmall)
+                                            .color(status_color),
+                                    )
+                                    .child(
+                                        Label::new(header_status_label)
+                                            .size(LabelSize::XSmall)
+                                            .color(status_color)
+                                            .truncate(),
+                                    ),
+                            )
+                        }),
                 )
             })
             .when(!session_sidebar_title_in_titlebar(APP_NAME), |this| {

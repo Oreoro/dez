@@ -591,7 +591,7 @@ fn session_overview_copy_distinguishes_empty_search_attention_and_caught_up_stat
     );
     assert_eq!(
         session_overview_status_label_with_observed_terminals("Dez", 1, 2, 0, 1, true, false),
-        "3 matching items"
+        "4 results"
     );
     assert_eq!(
         session_overview_status_label_with_observed_terminals("Dez", 1, 2, 0, 1, false, true),

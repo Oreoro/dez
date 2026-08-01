@@ -100,6 +100,11 @@ wrappers keep the underlying provider identity.
 surfaces attention. **Open Files** and **Review Changes** bring the result
 back into the same Main Work Area. The native tab-strip `+` is the shared Add
 menu for every step; no separate dashboard or onboarding mode is required.
+Its titlebar stays quiet during routine work, then names transient state beside
+**Workspaces**: matching-result count during search, **Restoring…** during
+recovery, or the number of Sessions needing attention. Search counts visible
+Workspace rows as well as Session rows, so the status cannot claim zero while
+a matching codebase is on screen.
 
 Inside an active Workspace, Home makes the **Start → Watch → Inspect → Verify**
 route concrete with four actions in order: **Open Terminal**, **Browse Running

@@ -1768,9 +1768,10 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   Sessions and path-matched tmux, Herdr, and cmux activity sit beneath the
   owning Workspace. Overlapping roots choose the most specific Workspace.
   Empty inactive Workspaces retain one scoped terminal row, collapsed
-  Workspaces retain a compact header action, and the active Workspace relies on
-  its Main Work Area launcher. None expands into provider-logo onboarding
-  chrome or duplicates the same action beside the active work surface.
+  Workspaces retain a compact header action, and the active Workspace keeps its
+  compact terminal menu visible before or after Session activity exists. None
+  expands into provider-logo onboarding chrome; the Main Work Area remains the
+  owner of opened terminal surfaces.
 - **2026-07-29: Empty editor panes remain native chrome, not onboarding.** The
   active empty Main Work Area shows a compact top-left label, one sentence, and
   terminal/file actions. Secondary empty panes use shorter copy. The Dez visual
