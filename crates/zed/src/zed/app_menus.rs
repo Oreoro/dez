@@ -3,7 +3,7 @@ use gpui::{App, Menu, MenuItem, OsAction};
 use paths::APP_NAME;
 use release_channel::ReleaseChannel;
 use settings::Settings as _;
-use terminal_view::terminal_panel;
+use terminal_view::{configured_terminal_launcher_label, terminal_panel};
 use zed_actions::{Quit, assistant, debug_panel, dev, git_panel, project_panel};
 
 fn terminal_panel_surface_visible(app_name: &str) -> bool {
@@ -62,22 +62,6 @@ fn developer_surface_menu_label(
     }
 }
 
-fn configured_terminal_menu_label(command: Option<&str>) -> String {
-    let executable = command
-        .map(str::trim)
-        .filter(|command| !command.is_empty())
-        .and_then(|command| command.split_whitespace().next())
-        .and_then(|executable| executable.rsplit('/').next());
-    let launcher = match executable {
-        None => "Native Shell",
-        Some("codex") => "Codex",
-        Some("claude") => "Claude Code",
-        Some("opencode") => "OpenCode",
-        Some(_) => "Custom Command",
-    };
-    format!("Default · {launcher}")
-}
-
 pub fn app_menus(cx: &mut App) -> Vec<Menu> {
     let panels_as_pane_tabs = workspace::PaneGridSettings::get_global(cx).panels_as_pane_tabs();
     let project_pane_label = workspace_tools_menu_label(APP_NAME, panels_as_pane_tabs);
@@ -111,7 +95,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
     );
     let git_surface_label =
         developer_surface_menu_label(APP_NAME, panels_as_pane_tabs, "Git", "Git Tab", "Git Panel");
-    let configured_terminal_label = configured_terminal_menu_label(
+    let configured_terminal_label = configured_terminal_launcher_label(
         AgentSettings::get_global(cx)
             .terminal_init_command
             .as_deref(),
@@ -397,6 +381,20 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                 MenuItem::action("Claude Code", zed_actions::terminal::OpenClaudeCodeTerminal),
                 MenuItem::action("OpenCode", zed_actions::terminal::OpenOpenCodeTerminal),
             ])),
+            MenuItem::submenu(Menu::new("Continue Agent").items([
+                MenuItem::action(
+                    "Codex · Last Session",
+                    zed_actions::terminal::ResumeCodexTerminal,
+                ),
+                MenuItem::action(
+                    "Claude Code · Last Session",
+                    zed_actions::terminal::ResumeClaudeCodeTerminal,
+                ),
+                MenuItem::action(
+                    "OpenCode · Last Session",
+                    zed_actions::terminal::ResumeOpenCodeTerminal,
+                ),
+            ])),
             MenuItem::action("Browse Running Sessions…", workspace::BrowseRunningSessions),
             MenuItem::action(
                 "Open Workspace in cmux",
@@ -605,9 +603,9 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
 #[cfg(test)]
 mod tests {
     use super::{
-        configured_terminal_menu_label, developer_surface_menu_label, open_workspace_menu_label,
-        product_menu_label, terminal_panel_surface_visible, workspace_tools_are_grouped,
-        workspace_tools_menu_label,
+        configured_terminal_launcher_label, developer_surface_menu_label,
+        open_workspace_menu_label, product_menu_label, terminal_panel_surface_visible,
+        workspace_tools_are_grouped, workspace_tools_menu_label,
     };
 
     #[test]
@@ -681,23 +679,23 @@ mod tests {
     #[test]
     fn dez_file_menu_names_the_configured_default_terminal() {
         assert_eq!(
-            configured_terminal_menu_label(None),
+            configured_terminal_launcher_label(None),
             "Default · Native Shell"
         );
         assert_eq!(
-            configured_terminal_menu_label(Some(" codex --yolo ")),
+            configured_terminal_launcher_label(Some(" codex --yolo ")),
             "Default · Codex"
         );
         assert_eq!(
-            configured_terminal_menu_label(Some("/opt/homebrew/bin/claude --resume")),
+            configured_terminal_launcher_label(Some("/opt/homebrew/bin/claude --resume")),
             "Default · Claude Code"
         );
         assert_eq!(
-            configured_terminal_menu_label(Some("opencode --continue")),
+            configured_terminal_launcher_label(Some("opencode --continue")),
             "Default · OpenCode"
         );
         assert_eq!(
-            configured_terminal_menu_label(Some("my-agent --resume")),
+            configured_terminal_launcher_label(Some("my-agent --resume")),
             "Default · Custom Command"
         );
     }

@@ -5776,6 +5776,20 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                                 zed_actions::terminal::OpenOpenCodeTerminal.boxed_clone(),
                             )
                         })
+                        .submenu("Continue Agent", |menu, _, _| {
+                            menu.action(
+                                "Codex · Last Session",
+                                zed_actions::terminal::ResumeCodexTerminal.boxed_clone(),
+                            )
+                            .action(
+                                "Claude Code · Last Session",
+                                zed_actions::terminal::ResumeClaudeCodeTerminal.boxed_clone(),
+                            )
+                            .action(
+                                "OpenCode · Last Session",
+                                zed_actions::terminal::ResumeOpenCodeTerminal.boxed_clone(),
+                            )
+                        })
                         .action(
                             "Browse Running Sessions…",
                             BrowseRunningSessions.boxed_clone(),
@@ -5793,6 +5807,13 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                         .separator()
                         .action("Open Files", RevealFiles.boxed_clone())
                         .action("Review Changes", RevealGitChanges.boxed_clone())
+                        .action(
+                            "Run Task…",
+                            zed_actions::Spawn::ViaModal {
+                                reveal_target: None,
+                            }
+                            .boxed_clone(),
+                        )
                         .action("Open Debug", RevealDebug.boxed_clone())
                         .separator()
                         .action(search_workspace, DeploySearch::default().boxed_clone())

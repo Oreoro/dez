@@ -79,7 +79,8 @@ use workspace::{
 };
 use zed_actions::terminal::{
     OpenAgentTerminal, OpenClaudeCodeTerminal, OpenCodexTerminal, OpenOpenCodeTerminal,
-    OpenShellTerminal, OpenTmuxTerminal,
+    OpenShellTerminal, OpenTmuxTerminal, ResumeClaudeCodeTerminal, ResumeCodexTerminal,
+    ResumeOpenCodeTerminal,
 };
 
 struct ImeState {
@@ -617,8 +618,11 @@ pub fn init(cx: &mut App) {
         workspace.register_action(open_shell_terminal);
         workspace.register_action(open_tmux_terminal);
         workspace.register_action(open_codex_terminal);
+        workspace.register_action(resume_codex_terminal);
         workspace.register_action(open_claude_code_terminal);
+        workspace.register_action(resume_claude_code_terminal);
         workspace.register_action(open_opencode_terminal);
+        workspace.register_action(resume_opencode_terminal);
         workspace.register_action(open_terminal);
         if let Some(window) = window
             && let Some((database_id, serialization_key)) = workspace
@@ -955,6 +959,22 @@ pub fn tmux_session_name_from_workspace_label(label: Option<&str>) -> String {
     }
 }
 
+pub fn configured_terminal_launcher_label(command: Option<&str>) -> String {
+    let executable = command
+        .map(str::trim)
+        .filter(|command| !command.is_empty())
+        .and_then(|command| command.split_whitespace().next())
+        .and_then(|executable| executable.rsplit('/').next());
+    let launcher = match executable {
+        None => "Native Shell",
+        Some("codex") => "Codex",
+        Some("claude") => "Claude Code",
+        Some("opencode") => "OpenCode",
+        Some(_) => "Custom Command",
+    };
+    format!("Default · {launcher}")
+}
+
 fn open_tmux_terminal(
     workspace: &mut Workspace,
     _: &OpenTmuxTerminal,
@@ -993,6 +1013,18 @@ fn open_codex_terminal(
     open_terminal_with_startup_command(workspace, "codex", window, cx);
 }
 
+fn resume_codex_terminal(
+    workspace: &mut Workspace,
+    _: &ResumeCodexTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "codex resume --last", window, cx);
+}
+
 fn open_claude_code_terminal(
     workspace: &mut Workspace,
     _: &OpenClaudeCodeTerminal,
@@ -1005,6 +1037,18 @@ fn open_claude_code_terminal(
     open_terminal_with_startup_command(workspace, "claude", window, cx);
 }
 
+fn resume_claude_code_terminal(
+    workspace: &mut Workspace,
+    _: &ResumeClaudeCodeTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "claude --continue", window, cx);
+}
+
 fn open_opencode_terminal(
     workspace: &mut Workspace,
     _: &OpenOpenCodeTerminal,
@@ -1015,6 +1059,18 @@ fn open_opencode_terminal(
         return;
     }
     open_terminal_with_startup_command(workspace, "opencode", window, cx);
+}
+
+fn resume_opencode_terminal(
+    workspace: &mut Workspace,
+    _: &ResumeOpenCodeTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "opencode --continue", window, cx);
 }
 
 fn prepare_agent_terminal_workspace(

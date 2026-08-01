@@ -1930,3 +1930,18 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   their existing names. Workspaces remains the stable navigation noun, and its
   collapsible native-tab projection is labeled **Workspace Tabs** and stays
   hidden until there are at least two native tabs to navigate.
+- **2026-08-01: Starting and continuing terminal agents are separate native
+  actions.** Codex, Claude Code, and OpenCode start as ordinary PTY applications
+  through `codex`, `claude`, and `opencode`. **Continue Agent** uses each
+  provider's documented last-session contract:
+
+  - Codex: `codex resume --last`
+  - Claude Code: `claude --continue`
+  - OpenCode: `opencode --continue`
+
+  These actions are available from the pane Add control, File, Workspace
+  Options, and Command Palette. They never rewrite the configured default or
+  create a chat wrapper. **Browse Running Sessions…** remains the route for
+  discovered external work. cmux remains an external owner and receives an
+  explicit `cmux open <path>` handoff; hook setup remains a deliberate
+  cmux/provider configuration action.

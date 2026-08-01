@@ -120,10 +120,16 @@ pub mod terminal {
             OpenTmuxTerminal,
             /// Opens Codex in a native Main Work Area terminal.
             OpenCodexTerminal,
+            /// Continues the most recent Codex session in a native Main Work Area terminal.
+            ResumeCodexTerminal,
             /// Opens Claude Code in a native Main Work Area terminal.
             OpenClaudeCodeTerminal,
+            /// Continues the most recent Claude Code session in a native Main Work Area terminal.
+            ResumeClaudeCodeTerminal,
             /// Opens OpenCode in a native Main Work Area terminal.
-            OpenOpenCodeTerminal
+            OpenOpenCodeTerminal,
+            /// Continues the most recent OpenCode session in a native Main Work Area terminal.
+            ResumeOpenCodeTerminal
         ]
     );
 }

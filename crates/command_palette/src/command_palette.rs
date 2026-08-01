@@ -62,8 +62,11 @@ fn product_hidden_action_types(app_name: &str) -> Vec<TypeId> {
             TypeId::of::<zed_actions::terminal::OpenShellTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenTmuxTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenCodexTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeCodexTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenClaudeCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeClaudeCodeTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenOpenCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeOpenCodeTerminal>(),
         ]
     } else {
         vec![
@@ -949,11 +952,18 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
         "terminal::OpenShellTerminal" => return "terminal::OpenNativeShell".to_owned(),
         "terminal::OpenTmuxTerminal" => return "terminal::OpenTmuxSession".to_owned(),
         "terminal::OpenCodexTerminal" => return "terminal::LaunchCodex".to_owned(),
+        "terminal::ResumeCodexTerminal" => return "terminal::ContinueCodex".to_owned(),
         "terminal::OpenClaudeCodeTerminal" => {
             return "terminal::LaunchClaudeCode".to_owned();
         }
+        "terminal::ResumeClaudeCodeTerminal" => {
+            return "terminal::ContinueClaudeCode".to_owned();
+        }
         "terminal::OpenOpenCodeTerminal" => {
             return "terminal::LaunchOpenCode".to_owned();
+        }
+        "terminal::ResumeOpenCodeTerminal" => {
+            return "terminal::ContinueOpenCode".to_owned();
         }
         "dez::GrantWorkspaceAccess" => return "workspace::GrantAccess".to_owned(),
         "dez::OpenWorkspaceInCmux" => return "workspace::OpenInCmux".to_owned(),
@@ -1194,12 +1204,24 @@ mod tests {
             "terminal: launch codex"
         );
         assert_eq!(
+            humanize_action_name_for_product("terminal::ResumeCodexTerminal", "Dez"),
+            "terminal: continue codex"
+        );
+        assert_eq!(
             humanize_action_name_for_product("terminal::OpenClaudeCodeTerminal", "Dez"),
             "terminal: launch claude code"
         );
         assert_eq!(
+            humanize_action_name_for_product("terminal::ResumeClaudeCodeTerminal", "Dez"),
+            "terminal: continue claude code"
+        );
+        assert_eq!(
             humanize_action_name_for_product("terminal::OpenOpenCodeTerminal", "Dez"),
             "terminal: launch open code"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::ResumeOpenCodeTerminal", "Dez"),
+            "terminal: continue open code"
         );
         assert_eq!(
             humanize_action_name_for_product("dez::GrantWorkspaceAccess", "Dez"),
@@ -1379,8 +1401,11 @@ mod tests {
             TypeId::of::<zed_actions::terminal::OpenShellTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenTmuxTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenCodexTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeCodexTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenClaudeCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeClaudeCodeTerminal>(),
             TypeId::of::<zed_actions::terminal::OpenOpenCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeOpenCodeTerminal>(),
         ] {
             assert!(hidden_types.contains(&action_type));
         }

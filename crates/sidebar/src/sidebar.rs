@@ -77,7 +77,7 @@ use terminal::{
         },
     },
 };
-use terminal_view::TerminalView;
+use terminal_view::{TerminalView, configured_terminal_launcher_label};
 use theme::{ActiveTheme, CLIENT_SIDE_DECORATION_ROUNDING};
 use ui::{
     AgentThreadStatus, ButtonLike, Callout, CommonAnimationExt, ContextMenu, ContextMenuEntry,
@@ -1228,18 +1228,6 @@ fn terminal_launch_label(app_name: &str) -> &'static str {
     } else {
         "Open Terminal"
     }
-}
-
-fn configured_terminal_launcher_label(command: Option<&str>) -> String {
-    let command = command.map(str::trim).filter(|command| !command.is_empty());
-    let launcher = match command {
-        None => "Native Shell",
-        Some("codex") => "Codex",
-        Some("claude") => "Claude Code",
-        Some("opencode") => "OpenCode",
-        Some(_) => "Custom Command",
-    };
-    format!("Default · {launcher}")
 }
 
 fn terminal_launch_in_main_work_area_label(app_name: &str) -> &'static str {
@@ -3619,7 +3607,7 @@ pub async fn open_workspace_path_in_cmux(
         "cmux",
     ] {
         let mut command = util::command::new_command(program);
-        command.arg(path);
+        command.arg("open").arg(path);
         match run_bounded_cmux_command(&mut command, executor).await {
             Ok(output) if output.status.success() => return Ok(()),
             Ok(output) => {
@@ -8420,6 +8408,9 @@ impl Sidebar {
                             let terminal_sidebar = this_for_menu.clone();
                             let terminal_key = project_group_key.clone();
                             let terminal_menu = weak_menu.clone();
+                            let resume_sidebar = this_for_menu.clone();
+                            let resume_key = project_group_key.clone();
+                            let resume_menu = weak_menu.clone();
                             let configured_command = AgentSettings::get_global(menu_cx)
                                 .terminal_init_command
                                 .clone();
@@ -8475,6 +8466,31 @@ impl Sidebar {
                                     submenu
                                 },
                             )
+                            .submenu("Continue Agent", move |mut submenu, _window, _cx| {
+                                for (label, startup_command) in [
+                                    ("Codex · Last Session", "codex resume --last"),
+                                    ("Claude Code · Last Session", "claude --continue"),
+                                    ("OpenCode · Last Session", "opencode --continue"),
+                                ] {
+                                    let resume_sidebar = resume_sidebar.clone();
+                                    let resume_key = resume_key.clone();
+                                    let resume_menu = resume_menu.clone();
+                                    submenu = submenu.entry(label, None, move |window, cx| {
+                                        resume_sidebar
+                                            .update(cx, |sidebar, cx| {
+                                                sidebar.create_terminal_in_project_group(
+                                                    &resume_key,
+                                                    Some(startup_command.to_owned()),
+                                                    window,
+                                                    cx,
+                                                );
+                                            })
+                                            .ok();
+                                        resume_menu.update(cx, |_, cx| cx.emit(DismissEvent)).ok();
+                                    });
+                                }
+                                submenu
+                            })
                             .separator()
                             .entry(
                                 workspace_built_in_agent_action_label(

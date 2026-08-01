@@ -1,7 +1,7 @@
 # Dez
 
-**A native IDE for terminal-native developers supervising code, commands, and
-coding agents in one focused workspace.**
+**A native IDE for developers and AI-native builders who edit directly, run
+terminal agents, and review what ships in one focused Workspace.**
 
 Dez is a source-available preview built on
 [Zed](https://github.com/zed-industries/zed). It keeps Zed's fast native
@@ -70,9 +70,10 @@ The primary loop stays inside one native window:
 
 ```text
 Open Workspace
-→ open or attach work in native terminal tabs
+→ start or continue an agent in a native terminal tab
 → supervise Sessions and attention in Workspaces
-→ Open Files or Review Changes in the Main Work Area
+→ inspect with Files, tasks, diagnostics, and Debug
+→ Review Changes in the Main Work Area
 ```
 
 The primary user story is deliberately short. **Home** starts or resumes a
@@ -106,20 +107,22 @@ Those tabs support reorder, cross-pane drag, preview replacement, pinning,
 closing, and horizontal or vertical splits. A terminal can therefore sit
 below code without Dez manufacturing a separate multiplexer UI.
 The adjacent native `+` reopens Home, opens Recent Workspaces, or routes to a
-terminal, file, search, Files, Review Changes, Debug, or Built-in Agent surface
+terminal, file, search, Files, Review Changes, Run Task, Debug, or Built-in Agent surface
 through the existing Zed actions. Its terminal submenu names the configured
 Default Terminal first, followed by Native Shell, tmux Session, and explicit
-provider launchers. **Browse Running Sessions…** refreshes discovery and
+provider launchers. **Continue Agent** resumes the last Codex, Claude Code, or
+OpenCode session. **Browse Running Sessions…** refreshes external discovery and
 refocuses Workspaces without adding another navigation surface.
 
 Dez's **File → Open Terminal** submenu mirrors those native `+` terminal
-routes in the same order. Its first row previews the configured result as
+launch routes in the same order, followed by **Continue Agent**. Its first row previews the configured result as
 **Default · Native Shell**, **Default · Codex**, **Default · Claude Code**,
 **Default · OpenCode**, or **Default · Custom Command**; the pane `+` keeps the
 shorter **Default Terminal** label. Native Shell, tmux Session, Codex, Claude
-Code, and OpenCode remain explicit alternatives. **Browse Running Sessions…**
-follows immediately after the submenu, so starting and resuming terminal work
-stay adjacent in both navigation paths.
+Code, and OpenCode remain explicit alternatives. Continue uses
+`codex resume --last`, `claude --continue`, or `opencode --continue` in the
+active Workspace. **Browse Running Sessions…** follows those menus, so starting,
+continuing, and reopening externally owned work stay adjacent.
 
 Six optional layout commands remain available through **View** and Command
 Palette: **Work Area + Files**, **Work Area + Built-in Agent**, **Focus Work
@@ -130,13 +133,13 @@ Keyboard navigation remains first-class: macOS `⌘1`–`⌘8` selects native ta
 and `⌘9` selects the last tab; Linux and Windows use `Alt+1`–`Alt+9`.
 `Ctrl+Tab` opens the recent-tab switcher, split-pane focus keeps the native
 Zed chords, `Ctrl+Backtick` opens the configured terminal, and
-`Ctrl+Shift+Backtick` always opens the native shell. Command Palette can launch
-Codex, Claude Code, OpenCode, a shell, a Workspace-named tmux session, or cmux
-directly. The native tab-strip `+` exposes the same terminal choices, **Browse
+`Ctrl+Shift+Backtick` always opens the native shell. Command Palette can start
+or continue Codex, Claude Code, or OpenCode, launch a shell or Workspace-named
+tmux session, or hand the Workspace to cmux. The native tab-strip `+` exposes the same terminal choices, **Browse
 Running Sessions…**, and **Open Workspace in cmux** without creating a second
 navigation system. The default launch command lives under **Settings →
 Workspaces & Terminals → Terminal Launch → Default Terminal Command**;
-provider launchers remain one-off choices. **Settings → Keyboard & Vim**
+provider launchers and Continue actions remain one-off choices. **Settings → Keyboard & Vim**
 exposes shortcut search, conflict inspection, base keymaps, and optional full
 Vim or Helix editing. Vim and Helix share native leader destinations for
 recent tabs (`Space b`), files (`Space f`), the configured agent terminal
@@ -160,6 +163,33 @@ Session before revealing the tree.
 
 Read [What is Dez?](./docs/src/dez.md) for the product model and a concrete
 workflow.
+
+### Terminal-agent ownership
+
+Codex, Claude Code, and OpenCode render as their normal TUIs inside Dez's native
+terminal; Dez does not replace their keyboard handling, colors, or full-screen
+layout with chat chrome. tmux owns its server sessions. Herdr owns its panes.
+cmux stays an external native application and receives the active path through
+its documented `cmux open <path>` command. Dez contributes Workspace context,
+native tabs and splits, durable ownership for eligible Dez-created terminals,
+attention, and direct Files/Git review routes.
+
+cmux notification and supported-session restore hooks remain an explicit cmux
+setup choice:
+
+```bash
+cmux hooks setup
+cmux hooks setup codex
+cmux hooks setup --agent opencode
+```
+
+Dez never edits provider or cmux hook configuration automatically. See the
+[Zed terminal documentation](https://zed.dev/docs/terminal),
+[Codex CLI](https://github.com/openai/codex),
+[Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code/cli-usage),
+[OpenCode CLI](https://dev.opencode.ai/docs/cli/), and
+[cmux](https://github.com/manaflow-ai/cmux) for the upstream contracts Dez
+preserves.
 
 ## How the IDE is integrated
 

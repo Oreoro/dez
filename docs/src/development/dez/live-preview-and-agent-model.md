@@ -34,7 +34,7 @@ existing Surface; it never copies a terminal transcript or browser session.
 ```mermaid
 flowchart LR
     OPEN["Open Workspace"] --> RUN["Open Terminal"]
-    RUN --> CLI["Run Codex, Claude Code, or OpenCode"]
+    RUN --> CLI["Start or continue Codex, Claude Code, or OpenCode"]
     CLI --> SERVER["Start or reuse the Workspace dev server"]
     SERVER --> PREVIEW["Open Live Preview in Main Work Area"]
     PREVIEW --> INSPECT["Inspect UI and reload visibly"]

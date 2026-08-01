@@ -158,7 +158,7 @@ fn terminal_session_init_setting_copy(app_name: &str) -> (&'static str, &'static
     } else {
         (
             "Default Terminal Command",
-            "Command used by Open Terminal and Ctrl+`. Leave blank for the native shell. The pane + and File → Open Terminal keep explicit Native Shell, tmux, Codex, Claude Code, and OpenCode routes without changing this default.",
+            "Command used by Open Terminal and Ctrl+`. Leave blank for the native shell. The pane + and File menu keep one-off Native Shell, tmux, Codex, Claude Code, and OpenCode launchers plus Continue Agent routes without changing this default.",
         )
     }
 }

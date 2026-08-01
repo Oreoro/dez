@@ -5,8 +5,10 @@ description: Learn how Dez combines a native IDE, integrated terminals, coding a
 
 # What is Dez?
 
-Dez is a native, Workspace-first development environment for editing code and
-supervising coding agents that run in real terminals.
+Dez is a native, Workspace-first development environment for people who build
+software by mixing direct coding with terminal agents. It is for professional
+developers, technical founders, product engineers, and AI-native independent
+builders who still want to inspect and own the code they ship.
 
 Its product promise is simple:
 
@@ -24,13 +26,91 @@ The main journey uses native surfaces throughout:
    starting durable terminals.
 2. **Open Workspace** to establish the codebase, Git, and working-directory
    context.
-3. Use **Open Terminal** or the tab-strip **+** to open the configured default,
+3. Use **Open Terminal** or the tab-strip **+** to start the configured default,
    a native shell, tmux, Codex, Claude Code, or OpenCode in native tabs. Use
    **Open Workspace in cmux** for an explicit external handoff.
-4. Use **Browse Running Sessions…** to resume discovered work, then monitor
-   terminal and Built-in Agent Sessions in **Workspaces**.
-5. Use **Open Files** to inspect code context or **Review Changes** to review
-   the result.
+4. Use **Continue Agent** to resume the last Codex, Claude Code, or OpenCode
+   session in this Workspace. Use **Browse Running Sessions…** for discovered
+   tmux, Herdr, and cmux work.
+5. Supervise attention in **Workspaces**, then use **Open Files**, **Run Task…**,
+   diagnostics, Debug, and **Review Changes** against the same codebase.
+
+## Terminal agents and multiplexers
+
+Dez does not re-render a terminal application or replace its interface. Codex,
+Claude Code, OpenCode, tmux, and Herdr run inside the inherited Zed terminal
+emulator as real PTY applications. Their colors, alternate-screen behavior,
+mouse input, keyboard input, and TUI layout therefore remain their own. Dez
+adds native tab ownership, Workspace context, durable terminal ownership where
+eligible, attention projection, and routes back to Files and Git review.
+
+| Route           | Start new                            | Continue or attach                                      | Ownership                                 |
+| --------------- | ------------------------------------ | ------------------------------------------------------- | ----------------------------------------- |
+| **Codex**       | `codex`                              | `codex resume --last`                                   | Native Dez terminal                       |
+| **Claude Code** | `claude`                             | `claude --continue`                                     | Native Dez terminal                       |
+| **OpenCode**    | `opencode`                           | `opencode --continue`                                   | Native Dez terminal                       |
+| **tmux**        | `tmux new-session -A -s <workspace>` | The same command attaches when the named session exists | tmux process inside a native Dez terminal |
+| **Herdr**       | Start with Herdr itself              | Select a discovered pane in Workspaces                  | Herdr; Dez attaches explicitly            |
+| **cmux**        | Start work in cmux                   | **Open Workspace in cmux** uses `cmux open <path>`      | cmux remains the external app             |
+
+The Start and Continue routes are available from the pane **+**, **File**, a
+Workspace's options menu, and Command Palette. They create a normal Main Work
+Area terminal in the active Workspace; they do not open a provider onboarding
+overlay, manufacture a chat transcript, or rewrite the default launcher.
+
+Set the frequent path in **Settings → Workspaces & Terminals → Terminal Launch
+→ Default Terminal Command**. Leave it blank for the native shell, or use a
+command such as `codex`, `claude`, or `opencode`. Use **Continue Agent** when
+returning to the most recent provider session. Provider authentication and
+subscriptions remain owned by each provider CLI.
+
+cmux is an external Workspace handoff, not a Dez terminal profile. Install it
+separately, then use **Open Workspace in cmux**. For cmux-owned notification and
+restore metadata, review and run its hook setup explicitly:
+
+```bash
+cmux hooks setup
+cmux hooks setup codex
+cmux hooks setup --agent opencode
+```
+
+Dez never installs or edits cmux, Codex, Claude Code, or OpenCode hooks without
+the user's deliberate action. cmux restores its own app layout and supported
+agent bindings; tmux owns its server sessions; Dez owns only terminals created
+under its current durable terminal Host. Arbitrary running processes cannot be
+silently transferred between those owners.
+
+The integration contracts follow the current primary documentation for the
+[Zed terminal](https://zed.dev/docs/terminal),
+[Codex CLI](https://github.com/openai/codex),
+[Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code/cli-usage),
+[OpenCode CLI](https://dev.opencode.ai/docs/cli/), and
+[cmux](https://github.com/manaflow-ai/cmux).
+
+## Zed features in the Dez workflow
+
+Dez keeps Zed's capabilities, but promotes only the ones that close the active
+Workspace loop. The pane **+** and Command Palette route to the same native
+actions; Dez does not fork a second task runner, debugger, diagnostics view, or
+file navigator.
+
+| Need                      | Native route in Dez                                                              |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| Find code                 | Find File, Workspace Search, Symbol Search, Files, and Outline                   |
+| Run or watch              | **Run Task…** for repeatable project commands; Terminal for interactive tools    |
+| Understand code           | Language servers, active toolchains, diagnostics, references, and symbol outline |
+| Debug                     | **Open Debug**, native breakpoints, variables, stack frames, and debug tasks     |
+| Inspect generated changes | Files, Workspace Diagnostics, Git, native diffs, and Review Changes              |
+| Work remotely             | Open Remote Workspace while preserving the Workspace ownership model             |
+
+Tasks and terminals share the active Workspace directory and environment;
+toolchains feed terminals and language tooling; diagnostics and Debug inspect
+the same buffers the agent edits. See the primary
+[tasks](https://zed.dev/docs/tasks),
+[toolchains](https://zed.dev/docs/toolchains),
+[diagnostics](https://zed.dev/docs/diagnostics), and
+[debugger](https://zed.dev/docs/debugger) documentation for their full native
+behavior.
 
 ## The screen model
 
@@ -63,9 +143,11 @@ be split below or beside code while keeping their Workspace ownership.
 The tab-strip **+** is the single **Add to Main Work Area** control. Its
 **Open Terminal** submenu launches the **Default Terminal**, a **Native Shell**,
 a Workspace-named tmux session, Codex, Claude Code, or OpenCode. It also opens
-the optional Built-in Agent, a file, Files, Review Changes, Debug, Workspace search,
-or symbol search. The control follows the final tab while space remains and
-stays pinned to the tab viewport edge when tabs overflow. **Browse Running
+the optional Built-in Agent, a file, Files, Review Changes, Run Task, Debug,
+Workspace search, or symbol search. **Continue Agent** resumes the last native
+provider session without mixing it into running-session discovery. The control
+follows the final tab while space remains and stays pinned to the tab viewport
+edge when tabs overflow. **Browse Running
 Sessions…** clears temporary filters,
 refreshes discovery, and focuses Workspaces. Path-matched Sessions stay beneath
 their Workspace; unmatched or pathless Sessions stay in **Other Running
@@ -75,15 +157,16 @@ and arranged without creating a nested panel or a second navigation model. The
 tab strip and Add control remain visible on an empty Main Work Area, including
 Home.
 
-The Dez **File → Open Terminal** submenu mirrors the native **+** routes in the
-same order. Its first row previews the configured result as **Default · Native
-Shell**, **Default · Codex**, **Default · Claude Code**, **Default · OpenCode**,
-or **Default · Custom Command**; the pane **+** keeps the shorter **Default
-Terminal** label. Native Shell, tmux Session, Codex, Claude Code, and OpenCode
-remain explicit alternatives. **Browse Running Sessions…** is the next
-File-menu action immediately after that submenu. Starting new work and resuming
-discovered work therefore remain adjacent without creating a second navigation
-model.
+The Dez **File → Open Terminal** submenu mirrors the native **+** launch routes
+in the same order, followed by **Continue Agent**. Its first row previews the
+configured result as **Default · Native Shell**, **Default · Codex**, **Default
+· Claude Code**, **Default · OpenCode**, or **Default · Custom Command**; the
+pane **+** keeps the shorter **Default Terminal** label. Native Shell, tmux
+Session, Codex, Claude Code, and OpenCode remain explicit alternatives.
+Continue routes use the providers' documented last-session commands. **Browse
+Running Sessions…** follows those menus. Starting new work, continuing provider
+state, and reopening externally owned work therefore stay adjacent without
+creating a second navigation model.
 
 Workspaces starts closed in fresh windows and remains available as an on-demand
 supervisor. Workspace Tools start closed and open as ordinary Main Work Area
@@ -549,11 +632,10 @@ built-in emulator, the current Workspace directory, standard TUI line height,
 alternate-screen scrolling, path links, search, and task integration. Optional
 terminal title breadcrumbs remain off in the default Dez profile and can be
 enabled through native terminal settings. cmux is not configured as the shell
-because its documented
-[CLI contract](https://github.com/manaflow-ai/cmux/blob/main/docs/cli-contract.md)
-defines a separate macOS workspace and terminal application. Instead,
+because its documented [CLI](https://github.com/manaflow-ai/cmux) defines a
+separate macOS workspace and terminal application. Instead,
 **Open Workspace in cmux** is the first external-workspace action in Workspace
-Options. It invokes the documented `cmux <path>` handoff, keeps Dez open, and
+Options. It invokes the documented `cmux open <path>` handoff, keeps Dez open, and
 then refreshes path-matched cmux activity. Existing cmux Workspaces remain
 selectable beneath their associated Dez Workspace. This preserves native Dez
 editing and review while making cmux a first-class opt-in owner for users who
