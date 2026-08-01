@@ -3131,6 +3131,21 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'let pane_owned_focus =.*?visible && \(self\.active_pane == pane \|\| pane\.read\(cx\)\.has_focus\(window, cx\)\).*?if pane_owned_focus.*?window\.focus\(&pane\.focus_handle\(cx\), cx\)' \
     'hiding a focused auxiliary pane can strand keyboard focus on an invisible surface'
+require_multiline_pattern crates/diagnostics/src/diagnostics.rs \
+    'fn diagnostics_empty_refresh_visible\(app_name: &str\).*?app_name != "Zed".*?Button::new\("diagnostics-empty-refresh", "Refresh"\).*?tab_index\(0isize\).*?aria_label\("Refresh Workspace Diagnostics"\).*?this\.refresh\(window, cx\)' \
+    'Workspace Diagnostics can regress to a passive healthy empty state without a keyboard-reachable refresh route'
+require_multiline_pattern crates/diagnostics/src/toolbar_controls.rs \
+    'IconButton::new\("toggle_search".*?tab_index\(0isize\).*?aria_label\("Search Diagnostics"\).*?IconButton::new\("stop-updating".*?aria_label\("Stop Diagnostics Update"\).*?IconButton::new\("refresh-diagnostics".*?aria_label\("Refresh Diagnostics"\).*?IconButton::new\("toggle-warnings".*?aria_label\(warning_tooltip\)' \
+    'the diagnostics toolbar can regress to mouse-only or unnamed icon actions'
+require_multiline_pattern crates/tasks_ui/src/modal.rs \
+    'fn task_no_matches_copy.*?"Loading Workspace tasks…".*?"No saved tasks\. Type a command above to run it once\.".*?"No matching task\. Press Enter to run this command once\.".*?fn task_run_action_label.*?"Run Command".*?"Run Task".*?fn no_matches_text.*?task_no_matches_copy\([[:space:]]*paths::APP_NAME' \
+    'the Dez Task picker can regress to a dead No matches state or generic spawn language'
+require_multiline_pattern docs/src/development/dez/surface-contract.md \
+    '### 17\. Find, inspect, and diagnose.*?### 18\. Run work where it belongs.*?### 19\. Debug without a dead end.*?### 20\. Resume and hand off honestly.*?one sidebar, many Workspaces, many panes, any[[:space:]]+native tool, honest ownership, inline recovery' \
+    'the final native-tool and external-ownership wireframe contract is missing'
+require_multiline_pattern docs/src/dez.md \
+    'Dez does not add an embedded browser merely to resemble cmux.*?Open Workspace[[:space:]]+in cmux.*?cmux owns its tabs, splits,[[:space:]]+browser, hooks, and action registry.*?Ordinary web links use the system browser' \
+    'the public product contract can regress to claiming ownership of cmux browser chrome'
 
 reject_pattern crates/release_channel/src/lib.rs \
     'dev\.zed\.Zed' \

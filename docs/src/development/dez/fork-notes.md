@@ -1997,3 +1997,13 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   failed graph request. **Open Subagent Session** focuses the existing child
   Session instead of creating a second record. Unavailable and legacy terminals
   preserve evidence and never imply migration or an automatic replacement.
+- **2026-08-02: Native tools complete the Workspace surface contract.** Files,
+  Workspace Search, Workspace Diagnostics, Tasks, and Debug remain ordinary
+  pane-owned tabs and appear in Workspaces only as an Open Tabs & Tools
+  projection. Diagnostics keeps a keyboard-reachable Refresh action in its
+  healthy empty state. The Task picker distinguishes inventory loading, no
+  saved tasks, and an unmatched typed command; Dez calls the resulting actions
+  **Run Task** and **Run Command** without changing official Zed wording.
+  Recent Workspace recovery uses the same inline state grammar. Dez opens URLs
+  in the system browser and hands Workspaces to cmux explicitly because cmux
+  retains ownership of its browser, tabs, splits, hooks, and action registry.

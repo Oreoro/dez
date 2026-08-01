@@ -70,6 +70,10 @@ fn diagnostics_title(app_name: &str) -> &'static str {
     }
 }
 
+fn diagnostics_empty_refresh_visible(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
 #[derive(Default)]
 pub(crate) struct IncludeWarnings(bool);
 impl Global for IncludeWarnings {}
@@ -128,7 +132,7 @@ impl Render for ProjectDiagnosticsEditor {
                 v_flex()
                     .key_context("EmptyPane")
                     .size_full()
-                    .gap_1()
+                    .gap_2()
                     .justify_center()
                     .items_center()
                     .text_center()
@@ -151,6 +155,17 @@ impl Render for ProjectDiagnosticsEditor {
                                     cx.notify();
                                 }),
                             ),
+                        )
+                    })
+                    .when(diagnostics_empty_refresh_visible(paths::APP_NAME), |this| {
+                        this.child(
+                            Button::new("diagnostics-empty-refresh", "Refresh")
+                                .tab_index(0isize)
+                                .style(ButtonStyle::Outlined)
+                                .aria_label("Refresh Workspace Diagnostics")
+                                .on_click(cx.listener(|this, _, window, cx| {
+                                    this.refresh(window, cx);
+                                })),
                         )
                     })
             } else {
@@ -949,6 +964,8 @@ mod product_label_tests {
     fn diagnostics_title_uses_workspace_scope_only_in_dez() {
         assert_eq!(diagnostics_title("Dez"), "Workspace Diagnostics");
         assert_eq!(diagnostics_title("Zed"), "Project Diagnostics");
+        assert!(diagnostics_empty_refresh_visible("Dez"));
+        assert!(!diagnostics_empty_refresh_visible("Zed"));
     }
 }
 
@@ -974,22 +991,25 @@ impl DiagnosticsToolbarEditor for WeakEntity<ProjectDiagnosticsEditor> {
     }
 
     fn stop_updating(&self, cx: &mut App) {
-        let _ = self.update(cx, |project_diagnostics_editor, cx| {
+        self.update(cx, |project_diagnostics_editor, cx| {
             project_diagnostics_editor.update_excerpts_task = None;
             cx.notify();
-        });
+        })
+        .log_err();
     }
 
     fn refresh_diagnostics(&self, window: &mut Window, cx: &mut App) {
-        let _ = self.update(cx, |project_diagnostics_editor, cx| {
+        self.update(cx, |project_diagnostics_editor, cx| {
             project_diagnostics_editor.refresh(window, cx);
-        });
+        })
+        .log_err();
     }
 
     fn toggle_warnings(&self, window: &mut Window, cx: &mut App) {
-        let _ = self.update(cx, |project_diagnostics_editor, cx| {
+        self.update(cx, |project_diagnostics_editor, cx| {
             project_diagnostics_editor.toggle_warnings(&Default::default(), window, cx);
-        });
+        })
+        .log_err();
     }
 
     fn get_diagnostics_for_buffer(

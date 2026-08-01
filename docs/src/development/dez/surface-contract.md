@@ -425,6 +425,115 @@ death, liveness, ownership transfer, or migration. A fresh shell is explicitly
 separate computation. Terminal Details stays inline, and **Terminate legacy
 session…** remains a context-menu action behind native confirmation.
 
+## Native-tool wireframe
+
+### 17. Find, inspect, and diagnose
+
+```text
+┌ Workspaces ─────────┬ Files | Search | + ──────┬ Workspace Diagnostics | + ┐
+│ paykit              │ Files tree | editor       │ No problems in Workspace   │
+│ main · 2 panes      │                           │ [Refresh]                   │
+│ Sessions            │ Search this Workspace     │                             │
+│  Claude · Working   │ No matches                │                             │
+│  tmux · Attached    │ Broaden the query or      │                             │
+│ Open Tabs & Tools   │ remove path filters.      │                             │
+│  Pane 1             │                           │                             │
+│   Files · Search    │                           │                             │
+│  Pane 2             │                           │                             │
+│   Diagnostics       │                           │                             │
+├─────────────────────┴───────────────────────────┴─────────────────────────────┤
+│ main | 0 errors | 0 warnings | agents healthy | Ln 14, Col 22               │
+└───────────────────────────────────────────────────────────────────────────────┘
+```
+
+Files, Search, and Workspace Diagnostics are ordinary pane tabs. Workspaces
+projects them for navigation only; it does not invent a second tool mode or tab
+order. Loading, empty, and failed states use the same compact inline grammar.
+Every icon-only diagnostics action is keyboard reachable and names its action.
+The empty diagnostics state keeps an explicit **Refresh** action without
+turning a healthy state into a warning.
+
+### 18. Run work where it belongs
+
+```text
+┌ Workspaces ─────────┬ main.rs | Task · test | + ─────────────────────────────┐
+│ paykit              │ Task · test                 Running       [Stop Task] │
+│ Sessions            │ cargo test --workspace                                  │
+│  Claude · Working   │ running 42 tests…                                       │
+│  tmux · Attached    │                                                         │
+│  Task · test        │ ┌ Run Task ──────────────────────────────────────────┐  │
+│    Running          │ │ Find a task, or run a command                      │  │
+│ Open Tabs & Tools   │ │ test · test:unit · test:watch · fmt · clippy       │  │
+│  Pane 1             │ │ [Rerun Last Task]                            [Run] │  │
+│   main.rs           │ └────────────────────────────────────────────────────┘  │
+│   Task · test       │                                                         │
+├─────────────────────┴─────────────────────────────────────────────────────────┤
+│ main | Task: Running | agents healthy                                        │
+└───────────────────────────────────────────────────────────────────────────────┘
+```
+
+A Task owns its native terminal output tab and appears in Workspaces only as
+live activity. The task picker says **Run**, not spawn, in Dez. While inventory
+loads it reports that state; an empty inventory explains that typed input can
+run once; and an unmatched non-empty query offers the same honest one-shot
+command path instead of a dead **No matches** message.
+
+### 19. Debug without a dead end
+
+```text
+┌ Workspaces ─────────┬ main.rs | Debug | + ───────────────────────────────────┐
+│ paykit              │ Start debugging                                       │
+│ Open Tabs & Tools   │ [Start Debug Session] [Configure debug.json]           │
+│  Pane 1             │ Documentation · Adapter Logs                           │
+│   main.rs           ├───────────────────────────┬────────────────────────────┤
+│   Debug             │ Breakpoints               │ Console                    │
+│  Pane 2             │ No breakpoints yet.       │ No debug session running.  │
+│   Diagnostics       │ Set one in an editor      │                            │
+│                     │ gutter.                   │ Launch failed              │
+│                     │                           │ exact adapter reason       │
+│                     │                           │ [Retry] [Adapter Logs]      │
+├─────────────────────┴───────────────────────────┴────────────────────────────┤
+│ main | Debug: Idle | 1 diagnostic                                            │
+└───────────────────────────────────────────────────────────────────────────────┘
+```
+
+Debug owns setup, running controls, output, and recovery in one native surface.
+Idle copy names the result, configuration remains a secondary action, and
+breakpoint guidance points back to the editor. Failures preserve the adapter
+reason and expose Retry and logs inline; they never open an overlay or create a
+second Debug navigation system.
+
+### 20. Resume and hand off honestly
+
+```text
+┌ Workspaces ─────────┬ Home | + ──────────────────────────────────────────────┐
+│ paykit              │ Recent Workspaces                                      │
+│ Sessions            │ paykit · ~/dev/paykit                                  │
+│  Claude · Working   │ client-app · Access required     [Grant Folder Access] │
+│  tmux · Attached    │ Recent Workspaces unavailable                 [Retry]  │
+│ Open Tabs & Tools   │                                                        │
+│  Pane 1 · Home      │ External tools                                         │
+│  Pane 2 ·           │ [Open Workspace in cmux]                               │
+│   Diagnostics       │ cmux owns its tabs, splits, and browser.               │
+│                     │ [Open URL in System Browser]                           │
+│                     │                                                        │
+│                     │ Legacy · Access blocked                                │
+│                     │ [Open New Shell Here] [Keep Running] [Terminate…]      │
+├─────────────────────┴────────────────────────────────────────────────────────┤
+│ main | Permissions: Access required | Host: Ready                            │
+└───────────────────────────────────────────────────────────────────────────────┘
+```
+
+Workspace permission is requested once per root and blocks dependent work
+before Git, Search, language services, agents, or terminals begin. A replacement
+shell is always described as new computation. Dez never claims to migrate a
+live process. cmux owns its tabs, splits, browser, hooks, and action registry;
+Dez provides an explicit Workspace handoff. Ordinary URLs open in the system
+browser rather than a fake embedded browser surface.
+
+The final shell contract is: **one sidebar, many Workspaces, many panes, any
+native tool, honest ownership, inline recovery**.
+
 ## Surface inventory
 
 | Surface | Owner | Primary job | Entry | Empty, failure, or recovery state |
@@ -435,10 +544,12 @@ session…** remains a context-menu action behind native confirmation.
 | Sessions | Workspaces activity group | observe agents, tasks, tmux, Herdr, and cmux | Browse Running Sessions | source-specific Missing, Empty, Failed, Ready, or last-known state |
 | Terminal | Main Work Area tab | run shell, TUI, task, or attach command | Home, tab `+`, File, Workspace menu | preserves output; launch failure deep-links to Terminal Launch settings; attach failure offers Retry or a fresh shell |
 | Terminal Details | inline Terminal disclosure | inspect lifecycle, ownership, cwd, and evidence | terminal context strip | connection uncertainty never claims process death |
-| Editor, diff, search, diagnostics | Main Work Area tabs | inspect and modify the codebase | native Zed actions | native Zed empty and error states |
+| Editor, diff, Files, Search, Diagnostics | Main Work Area tabs | inspect and modify the codebase | native Zed actions, tab `+`, Workspaces projection | inline idle/loading/no-match states; Diagnostics keeps keyboard actions and explicit Refresh |
+| Tasks | Main Work Area terminal tab | run a saved task or a one-shot command | tab `+`, command palette, pane Add | loading names Workspace inventory; empty and unmatched states explain the one-shot command path |
 | Agent Review | Main Work Area tab | inspect and decide agent edits | Review Changes, changed-file Review | pending edits disable decisions with an explanation; no custom overlay |
 | Git Changes and History | Main Work Area tabs | review repository state and commits | Review Changes, Git tool | loading has status feedback; failure alone offers Retry |
-| Files, Outline, Debug | Main Work Area tabs | inspect Workspace tools | tab `+`, View, terminal handoff | no permanent second drawer or column |
+| Outline and Debug | Main Work Area tabs | inspect symbols or own a complete Debug lifecycle | tab `+`, View, terminal handoff | Debug owns setup, output, breakpoints, Retry, and adapter logs; no permanent second drawer |
+| External web and cmux | system browser or cmux | continue work in the external owner | explicit URL or Open Workspace in cmux action | no fake embedded browser and no ownership or migration claim |
 | Built-in Agent | Main Work Area tab | use Zed's model-backed agent and supervise Subagents | tab `+`, Workspace menu | configure provider instead of opening a dead surface; Subagent handoff focuses the existing child Session |
 | Settings | native Settings surface | configure Workspace and terminal launch first, then agents and appearance | app menu, Command Palette | Workspace-dependent sections bind to the active Workspace |
 | Status bar | window | durable Workspace and editor context | visible by default | explicit preference may hide it; closed Workspaces keeps a labeled restore control |

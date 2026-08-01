@@ -5,8 +5,8 @@ use editor::Editor;
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
     Action, AnyElement, App, AppContext as _, Context, DismissEvent, Entity, EventEmitter,
-    Focusable, InteractiveElement, ParentElement, Render, Styled, Subscription, Task, WeakEntity,
-    Window,
+    Focusable, InteractiveElement, ParentElement, Render, SharedString, Styled, Subscription, Task,
+    WeakEntity, Window,
 };
 use itertools::Itertools;
 use picker::{Picker, PickerDelegate, highlighted_match_with_paths::HighlightedMatch};
@@ -41,6 +41,59 @@ pub struct TasksModalDelegate {
 pub struct TaskOverrides {
     /// See [`RevealTarget`].
     pub reveal_target: Option<RevealTarget>,
+}
+
+fn task_no_matches_copy(app_name: &str, candidates_loaded: bool, prompt: &str) -> SharedString {
+    if app_name == "Zed" {
+        return "No matches".into();
+    }
+
+    if !candidates_loaded {
+        "Loading Workspace tasks…".into()
+    } else if prompt.trim().is_empty() {
+        "No saved tasks. Type a command above to run it once.".into()
+    } else {
+        "No matching task. Press Enter to run this command once.".into()
+    }
+}
+
+fn task_run_action_label(
+    app_name: &str,
+    is_recent: bool,
+    is_command: bool,
+    without_history: bool,
+) -> &'static str {
+    if app_name == "Zed" {
+        if is_command {
+            if without_history {
+                "Spawn Oneshot Without History"
+            } else {
+                "Spawn Oneshot"
+            }
+        } else if is_recent {
+            "Rerun"
+        } else if without_history {
+            "Spawn Without History"
+        } else {
+            "Spawn"
+        }
+    } else if is_command {
+        if without_history {
+            "Run Command Without History"
+        } else {
+            "Run Command"
+        }
+    } else if is_recent {
+        if without_history {
+            "Rerun Without History"
+        } else {
+            "Rerun"
+        }
+    } else if without_history {
+        "Run Task Without History"
+    } else {
+        "Run Task"
+    }
 }
 
 impl TasksModalDelegate {
@@ -263,6 +316,14 @@ impl PickerDelegate for TasksModalDelegate {
         self.placeholder_text.clone()
     }
 
+    fn no_matches_text(&self, _window: &mut Window, _cx: &mut App) -> Option<SharedString> {
+        Some(task_no_matches_copy(
+            paths::APP_NAME,
+            self.candidates.is_some(),
+            &self.prompt,
+        ))
+    }
+
     fn update_matches(
         &mut self,
         query: String,
@@ -341,10 +402,11 @@ impl PickerDelegate for TasksModalDelegate {
                                 let _ = picker.delegate.candidates.insert(new_candidates);
                                 match_candidates
                             })
-                            .ok()
+                            .log_err()
                             .unwrap_or_default()
                     })
                 } else {
+                    self.candidates = Some(Vec::new());
                     Task::ready(Vec::new())
                 }
             }
@@ -425,7 +487,7 @@ impl PickerDelegate for TasksModalDelegate {
                     cx,
                 );
             })
-            .ok();
+            .log_err();
 
         cx.emit(DismissEvent);
     }
@@ -621,7 +683,7 @@ impl PickerDelegate for TasksModalDelegate {
                     cx,
                 )
             })
-            .ok();
+            .log_err();
         cx.emit(DismissEvent);
     }
 
@@ -682,13 +744,14 @@ impl PickerDelegate for TasksModalDelegate {
                         }
                         .boxed_clone();
                         this.child({
-                            let spawn_oneshot_label = if current_modifiers.secondary() {
-                                "Spawn Oneshot Without History"
-                            } else {
-                                "Spawn Oneshot"
-                            };
+                            let spawn_oneshot_label = task_run_action_label(
+                                paths::APP_NAME,
+                                false,
+                                true,
+                                current_modifiers.secondary(),
+                            );
 
-                            Button::new("spawn-onehshot", spawn_oneshot_label)
+                            Button::new("spawn-oneshot", spawn_oneshot_label)
                                 .key_binding(KeyBinding::for_action(&*action, cx))
                                 .on_click(move |_, window, cx| {
                                     window.dispatch_action(action.boxed_clone(), cx)
@@ -696,11 +759,12 @@ impl PickerDelegate for TasksModalDelegate {
                         })
                     } else if current_modifiers.secondary() {
                         this.child({
-                            let label = if is_recent_selected {
-                                "Rerun Without History"
-                            } else {
-                                "Spawn Without History"
-                            };
+                            let label = task_run_action_label(
+                                paths::APP_NAME,
+                                is_recent_selected,
+                                false,
+                                true,
+                            );
                             Button::new("spawn", label)
                                 .key_binding(KeyBinding::for_action(&menu::SecondaryConfirm, cx))
                                 .on_click(move |_, window, cx| {
@@ -709,8 +773,12 @@ impl PickerDelegate for TasksModalDelegate {
                         })
                     } else {
                         this.child({
-                            let run_entry_label =
-                                if is_recent_selected { "Rerun" } else { "Spawn" };
+                            let run_entry_label = task_run_action_label(
+                                paths::APP_NAME,
+                                is_recent_selected,
+                                false,
+                                false,
+                            );
 
                             Button::new("spawn", run_entry_label)
                                 .key_binding(KeyBinding::for_action(&menu::Confirm, cx))
@@ -754,6 +822,40 @@ mod tests {
     use crate::{modal::Spawn, tests::init_test};
 
     use super::*;
+
+    #[test]
+    fn dez_task_picker_explains_loading_empty_and_command_states() {
+        assert_eq!(
+            task_no_matches_copy("Dez", false, ""),
+            "Loading Workspace tasks…"
+        );
+        assert_eq!(
+            task_no_matches_copy("Dez", true, ""),
+            "No saved tasks. Type a command above to run it once."
+        );
+        assert_eq!(
+            task_no_matches_copy("Dez", true, "cargo test"),
+            "No matching task. Press Enter to run this command once."
+        );
+        assert_eq!(task_no_matches_copy("Zed", true, ""), "No matches");
+    }
+
+    #[test]
+    fn dez_task_picker_uses_run_language_without_changing_zed() {
+        assert_eq!(
+            task_run_action_label("Dez", false, true, false),
+            "Run Command"
+        );
+        assert_eq!(
+            task_run_action_label("Dez", false, false, false),
+            "Run Task"
+        );
+        assert_eq!(
+            task_run_action_label("Zed", false, true, false),
+            "Spawn Oneshot"
+        );
+        assert_eq!(task_run_action_label("Zed", false, false, false), "Spawn");
+    }
 
     #[gpui::test]
     async fn test_spawn_tasks_modal_query_reuse(cx: &mut TestAppContext) {

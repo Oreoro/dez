@@ -144,6 +144,15 @@ the same buffers the agent edits. See the primary
 [debugger](https://zed.dev/docs/debugger) documentation for their full native
 behavior.
 
+Native tool states follow one compact grammar. Workspace Search distinguishes
+idle, file-scan, searching, and no-match states inline. Workspace Diagnostics
+keeps Search, Assist, Stop/Refresh, and warning controls keyboard reachable;
+when no problems exist, an outlined **Refresh** remains available without
+turning health into a warning. The Task picker reports inventory loading,
+explains when no saved tasks exist, and treats unmatched typed input as a valid
+one-shot command. Its Dez actions say **Run Task** and **Run Command**; inherited
+Zed builds retain their upstream wording.
+
 ## The screen model
 
 The interface has two ownership regions. The Main Work Area is always present;
@@ -169,8 +178,11 @@ The Main Work Area is one native pane grid. A file, agent terminal, ordinary
 terminal, diff, search result, settings page, or review can be tabbed, split,
 moved, and focused through the same rules. Its tab strip provides native
 reorder, cross-pane drag, preview replacement, pin, and close behavior; Dez
-does not imitate browser tabs with a separate navigation system. Terminals can
-be split below or beside code while keeping their Workspace ownership.
+does not imitate browser tabs with a separate navigation system. Workspaces can
+project all open files and tools under **Open Tabs & Tools**, grouped only when
+real pane splits exist; selecting one focuses its existing pane-owned tab.
+Terminals can be split below or beside code while keeping their Workspace
+ownership.
 
 When tabs overflow, **Switch Tab** opens a native **Tabs in This Pane** menu.
 Its rows retain active, modified, and pinned state, so compact navigation does
@@ -757,6 +769,13 @@ Recent Workspaces** retries through the normal picker; **Remove Recovery
 Entry** removes only that recovery entry and keeps recent Workspace data.
 These recovery actions are keyboard reachable.
 
+Home applies the same contract to recent Workspace history. Loading, empty,
+and unavailable states stay inline; unavailable history offers one **Retry**.
+Folder access is requested at the Workspace-root boundary before dependent
+Git, Search, language, agent, task, Debug, or terminal work starts. A denied or
+missing grant remains **Access required** for that root instead of producing a
+stream of unrelated background failures.
+
 ## Terminal and Agent integration
 
 Dez does not put the terminal inside chat.
@@ -1005,6 +1024,12 @@ controls are visible in every Main Work Area tab strip, alongside Add, tab
 overflow, and split controls. They traverse the pane's actual history of files,
 terminals, settings, diffs, and other Surfaces; Dez does not add browser chrome
 over the editor.
+
+Dez does not add an embedded browser merely to resemble cmux. **Open Workspace
+in cmux** is an explicit external handoff because cmux owns its tabs, splits,
+browser, hooks, and action registry. Ordinary web links use the system browser.
+The ownership boundary stays visible in action copy and recovery text, and no
+handoff claims to transfer a live terminal process.
 
 ### Settings and navigation visibility
 
