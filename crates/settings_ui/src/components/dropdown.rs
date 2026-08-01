@@ -3,8 +3,8 @@ use std::rc::Rc;
 use gpui::{App, ElementId, IntoElement, RenderOnce, SharedString};
 use heck::ToTitleCase as _;
 use ui::{
-    ButtonSize, ContextMenu, Disableable as _, DropdownMenu, DropdownStyle, FluentBuilder as _,
-    IconPosition, px,
+    ButtonSize, ContextMenu, ContextMenuEntry, Disableable as _, DropdownMenu, DropdownStyle,
+    FluentBuilder as _, Icon, IconName, IconPosition, IconSize, h_flex, px,
 };
 
 #[derive(IntoElement)]
@@ -21,6 +21,7 @@ where
     disabled: bool,
     aria_label: Option<SharedString>,
     aria_description: Option<SharedString>,
+    icon_for_value: Option<Rc<dyn Fn(T) -> IconName + 'static>>,
     on_change: Rc<dyn Fn(T, &mut ui::Window, &mut App) + 'static>,
 }
 
@@ -45,6 +46,7 @@ where
             disabled: false,
             aria_label: None,
             aria_description: None,
+            icon_for_value: None,
             on_change: Rc::new(on_change),
         }
     }
@@ -61,6 +63,11 @@ where
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn icon_for_value(mut self, icon_for_value: impl Fn(T) -> IconName + 'static) -> Self {
+        self.icon_for_value = Some(Rc::new(icon_for_value));
         self
     }
 
@@ -84,56 +91,83 @@ where
     T: strum::VariantArray + strum::VariantNames + Copy + PartialEq + Send + Sync + 'static,
 {
     fn render(self, window: &mut ui::Window, cx: &mut ui::App) -> impl gpui::IntoElement {
-        let current_value_label = self.labels[self
-            .variants
+        let Self {
+            id,
+            current_value,
+            variants,
+            labels,
+            should_do_title_case,
+            tab_index,
+            disabled,
+            aria_label,
+            aria_description,
+            icon_for_value,
+            on_change,
+        } = self;
+
+        let current_value_index = variants
             .iter()
-            .position(|v| *v == self.current_value)
-            .unwrap()];
+            .position(|value| *value == current_value)
+            .unwrap_or_default();
+        let current_value_label = labels.get(current_value_index).copied().unwrap_or_default();
+        let visible_label = if should_do_title_case {
+            current_value_label.to_title_case()
+        } else {
+            current_value_label.to_string()
+        };
+        let menu_icon_for_value = icon_for_value.clone();
 
         let context_menu = window.use_keyed_state(current_value_label, cx, |window, cx| {
             ContextMenu::new(window, cx, move |mut menu, _, _| {
-                for (&value, &label) in std::iter::zip(self.variants, self.labels) {
-                    let on_change = self.on_change.clone();
-                    let current_value = self.current_value;
-                    menu = menu.toggleable_entry(
-                        if self.should_do_title_case {
-                            label.to_title_case()
-                        } else {
-                            label.to_string()
-                        },
-                        value == current_value,
-                        IconPosition::End,
-                        None,
-                        move |window, cx| {
-                            on_change(value, window, cx);
-                        },
-                    );
+                for (&value, &label) in std::iter::zip(variants, labels) {
+                    let on_change = on_change.clone();
+                    let entry = ContextMenuEntry::new(if should_do_title_case {
+                        label.to_title_case()
+                    } else {
+                        label.to_string()
+                    })
+                    .toggleable(IconPosition::End, value == current_value)
+                    .handler(move |window, cx| {
+                        on_change(value, window, cx);
+                    });
+                    menu = if let Some(icon_for_value) = menu_icon_for_value.as_ref() {
+                        menu.item(entry.icon(icon_for_value(value)))
+                    } else {
+                        menu.item(entry)
+                    };
                 }
                 menu
             })
         });
 
-        DropdownMenu::new(
-            self.id,
-            if self.should_do_title_case {
-                current_value_label.to_title_case()
-            } else {
-                current_value_label.to_string()
-            },
-            context_menu,
-        )
-        .when_some(self.aria_label, |this, label| this.aria_label(label))
-        .when_some(self.aria_description, |this, description| {
-            this.aria_description(description)
-        })
-        .disabled(self.disabled)
-        .when_some(self.tab_index, |elem, tab_index| elem.tab_index(tab_index))
-        .trigger_size(ButtonSize::Medium)
-        .style(DropdownStyle::Outlined)
-        .offset(gpui::Point {
-            x: px(0.0),
-            y: px(2.0),
-        })
-        .into_any_element()
+        let dropdown = if let Some(icon_for_value) = icon_for_value {
+            DropdownMenu::new_with_element(
+                id,
+                h_flex()
+                    .gap_1p5()
+                    .child(Icon::new(icon_for_value(current_value)).size(IconSize::Small))
+                    .child(visible_label.clone())
+                    .into_any_element(),
+                context_menu,
+            )
+            .aria_value(visible_label)
+        } else {
+            DropdownMenu::new(id, visible_label, context_menu)
+        };
+
+        dropdown
+            .when_some(aria_label, |this, label| this.aria_label(label))
+            .when_some(aria_description, |this, description| {
+                this.aria_description(description)
+            })
+            .disabled(disabled)
+            .when_some(tab_index, |elem, tab_index| elem.tab_index(tab_index))
+            .trigger_size(ButtonSize::Medium)
+            .style(DropdownStyle::Outlined)
+            .offset(gpui::Point {
+                x: px(0.0),
+                y: px(2.0),
+            })
+            .into_any_element()
     }
 }

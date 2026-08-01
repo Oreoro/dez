@@ -64,15 +64,17 @@ overlay, manufacture a chat transcript, or rewrite the default launcher.
 Set the frequent path in **Settings → Workspaces & Terminals → Terminal Launch
 → Default Terminal**. The native dropdown offers Native Shell, Codex, Claude
 Code, OpenCode, Gemini CLI, Aider, Herdr, tmux Session, and Custom Command. A
-custom command is the escape hatch for another TUI or wrapper. Use **Continue
-Agent** when returning to the most recent provider session. Provider
-authentication and subscriptions remain owned by each provider CLI.
+custom command is the escape hatch for another TUI or wrapper. Provider and
+tmux marks lead each choice while the current choice keeps a separate trailing
+check. Use **Continue Agent** when returning to the most recent provider
+session. Provider authentication and subscriptions remain owned by each
+provider CLI.
 
 The default action carries its resolved identity across native navigation.
-Home, the empty Main Work Area, pane `+`, and Workspaces show the corresponding
-provider or tmux mark; Native Shell and unknown custom commands keep the
-terminal mark. Wrappers and absolute executable paths do not erase a known
-provider identity.
+The Default Terminal chooser, Home, the empty Main Work Area, pane `+`, and
+Workspaces show the corresponding provider or tmux mark; Native Shell and
+unknown custom commands keep the terminal mark. Wrappers and absolute
+executable paths do not erase a known provider identity.
 
 cmux is an external Workspace handoff, not a Dez terminal profile. Install it
 separately, then use **Open Workspace in cmux**. Its

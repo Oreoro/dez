@@ -294,6 +294,21 @@ pub fn terminal_agent_icon(kind: TerminalAgentKind) -> IconName {
     }
 }
 
+pub fn terminal_launcher_icon(launcher: settings::TerminalLauncher) -> IconName {
+    match launcher {
+        settings::TerminalLauncher::NativeShell | settings::TerminalLauncher::CustomCommand => {
+            IconName::Terminal
+        }
+        settings::TerminalLauncher::Codex => terminal_agent_icon(TerminalAgentKind::Codex),
+        settings::TerminalLauncher::ClaudeCode => terminal_agent_icon(TerminalAgentKind::Claude),
+        settings::TerminalLauncher::OpenCode => terminal_agent_icon(TerminalAgentKind::OpenCode),
+        settings::TerminalLauncher::GeminiCli => terminal_agent_icon(TerminalAgentKind::Gemini),
+        settings::TerminalLauncher::Aider => terminal_agent_icon(TerminalAgentKind::Aider),
+        settings::TerminalLauncher::Herdr => terminal_agent_icon(TerminalAgentKind::Herdr),
+        settings::TerminalLauncher::Tmux => IconName::SplitAlt,
+    }
+}
+
 pub fn configured_terminal_launcher_icon(command: Option<&str>) -> IconName {
     match configured_terminal_launcher(command) {
         ConfiguredTerminalLauncher::NativeShell | ConfiguredTerminalLauncher::CustomCommand => {
@@ -1321,6 +1336,23 @@ mod tests {
             configured_terminal_launcher_icon(Some("my-agent")),
             IconName::Terminal
         );
+
+        for (launcher, expected_icon) in [
+            (settings::TerminalLauncher::NativeShell, IconName::Terminal),
+            (settings::TerminalLauncher::Codex, IconName::AiOpenAi),
+            (settings::TerminalLauncher::ClaudeCode, IconName::AiClaude),
+            (settings::TerminalLauncher::OpenCode, IconName::AiOpenCode),
+            (settings::TerminalLauncher::GeminiCli, IconName::AiGemini),
+            (settings::TerminalLauncher::Aider, IconName::AiEdit),
+            (settings::TerminalLauncher::Herdr, IconName::Inception),
+            (settings::TerminalLauncher::Tmux, IconName::SplitAlt),
+            (
+                settings::TerminalLauncher::CustomCommand,
+                IconName::Terminal,
+            ),
+        ] {
+            assert_eq!(terminal_launcher_icon(launcher), expected_icon);
+        }
     }
 
     #[test]

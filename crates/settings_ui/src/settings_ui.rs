@@ -2,7 +2,7 @@ mod components;
 mod page_data;
 pub mod pages;
 
-use agent_settings::{AgentSettings, language_model_to_selection};
+use agent_settings::{AgentSettings, language_model_to_selection, terminal_launcher_icon};
 use agent_skills::SkillIndex;
 use agent_ui::{LanguageModelSelector, language_model_selector};
 use anyhow::{Context as _, Result};
@@ -781,7 +781,7 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<settings::NotifyWhenAgentWaiting>(render_dropdown)
         .add_basic_renderer::<settings::PlaySoundWhenAgentDone>(render_dropdown)
         .add_basic_renderer::<settings::ThinkingBlockDisplay>(render_dropdown)
-        .add_basic_renderer::<settings::TerminalLauncher>(render_dropdown)
+        .add_basic_renderer::<settings::TerminalLauncher>(render_terminal_launcher_dropdown)
         .add_basic_renderer::<Option<settings::LanguageModelSelection>>(
             render_subagent_model_picker,
         )
@@ -5302,6 +5302,41 @@ fn render_dropdown<T>(
 where
     T: strum::VariantArray + strum::VariantNames + Copy + PartialEq + Send + Sync + 'static,
 {
+    render_dropdown_with_optional_icons(field, file, metadata, title, description, None, cx)
+}
+
+fn render_terminal_launcher_dropdown(
+    field: SettingField<settings::TerminalLauncher>,
+    file: SettingsUiFile,
+    metadata: Option<&SettingsFieldMetadata>,
+    title: &'static str,
+    description: &'static str,
+    _window: &mut Window,
+    cx: &mut App,
+) -> AnyElement {
+    render_dropdown_with_optional_icons(
+        field,
+        file,
+        metadata,
+        title,
+        description,
+        Some(terminal_launcher_icon),
+        cx,
+    )
+}
+
+fn render_dropdown_with_optional_icons<T>(
+    field: SettingField<T>,
+    file: SettingsUiFile,
+    metadata: Option<&SettingsFieldMetadata>,
+    title: &'static str,
+    description: &'static str,
+    icon_for_value: Option<fn(T) -> IconName>,
+    cx: &mut App,
+) -> AnyElement
+where
+    T: strum::VariantArray + strum::VariantNames + Copy + PartialEq + Send + Sync + 'static,
+{
     let variants = || -> &'static [T] { <T as strum::VariantArray>::VARIANTS };
     let labels = || -> &'static [&'static str] { <T as strum::VariantNames>::VARIANTS };
     let should_do_titlecase = metadata
@@ -5331,6 +5366,9 @@ where
         }
     })
     .aria_label(title)
+    .when_some(icon_for_value, |this, icon_for_value| {
+        this.icon_for_value(icon_for_value)
+    })
     .when(!description.is_empty(), |this| {
         this.aria_description(description)
     })

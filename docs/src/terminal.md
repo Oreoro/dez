@@ -64,17 +64,19 @@ Set the default under **Settings → Workspaces & Terminals → Terminal Launch 
 Default Terminal**. Choose Native Shell, Codex, Claude Code, OpenCode, Gemini
 CLI, Aider, Herdr, tmux Session, or Custom Command. Custom Command reveals a
 raw command field for another terminal-native tool or wrapper, and existing
-command-only configurations remain compatible. The adjacent `+` after each native pane's tabs
+command-only configurations remain compatible. The dropdown shows the same
+provider or tmux mark used by native launch surfaces, with a separate trailing
+check for the current choice. The adjacent `+` after each native pane's tabs
 offers that default, Native Shell, a Workspace-named tmux Session, Codex,
 Claude Code, and OpenCode as separate choices. Choosing a provider once does
 not rewrite the default. In **File → Open Terminal**, the first row makes the
 resolved choice explicit as **Default · Native Shell**, **Default · Codex**,
 **Default · Claude Code**, **Default · OpenCode**, or **Default · Custom
 Command**; the pane `+` retains **Default Terminal** for compactness.
-Home, the empty Main Work Area, pane `+`, and Workspaces show the corresponding
-provider or tmux mark on that default action. Wrapped and absolute commands
-retain known provider identity; Native Shell and unknown custom commands keep
-the terminal mark.
+The chooser, Home, the empty Main Work Area, pane `+`, and Workspaces show the
+corresponding provider or tmux mark on that default action. Wrapped and
+absolute commands retain known provider identity; Native Shell and unknown
+custom commands keep the terminal mark.
 
 Choose the route by ownership, not by appearance:
 
