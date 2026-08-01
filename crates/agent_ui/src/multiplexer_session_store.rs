@@ -22,6 +22,8 @@ const MULTIPLEXER_COMMAND_TIMEOUT: Duration = Duration::from_secs(4);
 const HERDR_ENDPOINT_TIMEOUT: Duration = Duration::from_secs(2);
 const HERDR_SOURCE_TIMEOUT: Duration = Duration::from_secs(4);
 const HERDR_MAX_CONCURRENT_ENDPOINT_QUERIES: usize = 8;
+const CMUX_WORKSPACE_LIST_ARGS: &[&str] = &["list-workspaces", "--json"];
+const CMUX_COMPATIBILITY_WORKSPACE_LIST_ARGS: &[&str] = &["workspace", "list", "--json"];
 // tmux sanitizes control characters when Dez is launched from Finder's
 // minimal, locale-free environment. Keep this printable so the exact same
 // parser works from a shell, Finder, and a signed application bundle.
@@ -648,30 +650,30 @@ async fn scan_cmux_workspaces() -> Result<MultiplexerScanOutcome> {
             "/usr/local/bin/cmux",
             "cmux",
         ],
-        &["workspace", "list", "--json"],
+        CMUX_WORKSPACE_LIST_ARGS,
     )
     .await?
     else {
         return Ok(MultiplexerScanOutcome::MissingExecutable);
     };
 
-    let (workspace_output, used_legacy_workspace_verb) = if current_output.status.success() {
-        (current_output, false)
+    let workspace_output = if current_output.status.success() {
+        current_output
     } else {
-        let legacy_output = run_multiplexer_command(
+        let compatibility_output = run_multiplexer_command(
             &executable,
-            &["list-workspaces", "--json"],
+            CMUX_COMPATIBILITY_WORKSPACE_LIST_ARGS,
             "cmux compatibility workspace discovery",
         )
         .await?;
-        if !legacy_output.status.success() {
+        if !compatibility_output.status.success() {
             anyhow::bail!(
-                "cmux discovery failed: {}; compatibility fallback failed: {}",
+                "cmux Workspace discovery failed. Open cmux and verify that its local CLI/socket access permits this integration, then Retry. Dez did not change cmux access settings. Documented command: {}; compatibility fallback: {}",
                 concise_command_stderr(&current_output),
-                concise_command_stderr(&legacy_output)
+                concise_command_stderr(&compatibility_output)
             );
         }
-        (legacy_output, true)
+        compatibility_output
     };
 
     let notification_output = run_multiplexer_command(
@@ -685,12 +687,6 @@ async fn scan_cmux_workspaces() -> Result<MultiplexerScanOutcome> {
             Some(String::from_utf8_lossy(&notification_output.stdout).into_owned()),
             None,
         )
-    } else if used_legacy_workspace_verb {
-        log::debug!(
-            "cmux compatibility discovery does not expose notifications: {}",
-            concise_command_stderr(&notification_output)
-        );
-        (None, None)
     } else {
         (
             None,
@@ -1580,6 +1576,15 @@ mod tests {
         assert_eq!(
             newly_successful_sources,
             [MultiplexerKind::Tmux, MultiplexerKind::Cmux]
+        );
+    }
+
+    #[test]
+    fn cmux_discovery_prefers_the_documented_cli_before_compatibility() {
+        assert_eq!(CMUX_WORKSPACE_LIST_ARGS, &["list-workspaces", "--json"]);
+        assert_eq!(
+            CMUX_COMPATIBILITY_WORKSPACE_LIST_ARGS,
+            &["workspace", "list", "--json"]
         );
     }
 

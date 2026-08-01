@@ -212,16 +212,16 @@ fn terminal_session_init_setting_item() -> SettingsPageItem {
     })
 }
 
-fn cmux_workflows_action_link() -> SettingsPageItem {
+fn cmux_integration_action_link() -> SettingsPageItem {
     SettingsPageItem::ActionLink(ActionLink {
-        title: "cmux Workflows".into(),
+        title: "cmux Integration".into(),
         description: Some(
-            "cmux owns its Codex, Claude Code, and OpenCode actions and pane layouts. Dez opens and observes those external Workspaces without copying their layout into the editor."
+            "cmux owns its agent actions and pane layouts. Dez hands off local Workspace paths and reads Workspace and notification metadata through cmux's documented local API when cmux permits automation access. Dez never changes cmux access or hook settings."
                 .into(),
         ),
-        button_text: "Open cmux Guide".into(),
+        button_text: "Open API Guide".into(),
         on_click: Arc::new(|_settings_window, _window, cx| {
-            cx.open_url("https://cmux.com/docs/custom-commands");
+            cx.open_url("https://cmux.com/docs/api");
         }),
         files: USER,
     })
@@ -7208,7 +7208,7 @@ fn terminal_page() -> SettingsPage {
             vec![
                 SettingsPageItem::SectionHeader("Terminal Launch"),
                 terminal_session_init_setting_item(),
-                cmux_workflows_action_link(),
+                cmux_integration_action_link(),
             ]
         } else {
             Vec::new()

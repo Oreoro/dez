@@ -69,9 +69,11 @@ separately, then use **Open Workspace in cmux**. Its
 [custom commands](https://cmux.com/docs/custom-commands) own Codex, Claude Code,
 and OpenCode actions as well as any multi-pane agent layouts. Dez deliberately
 does not reproduce that layout inside the editor. **Settings → Workspaces &
-Terminals → Terminal Launch → cmux Workflows** links to that configuration
-guide. For cmux-owned notification and restore metadata, review and run its
-hook setup explicitly:
+Terminals → Terminal Launch → cmux Integration** links to the documented local
+API and access modes. cmux may reject API calls made outside a cmux-owned
+terminal until the user chooses an appropriate automation mode; Dez reports
+that failure and never weakens cmux access automatically. For cmux-owned
+notification and restore metadata, review and run its hook setup explicitly:
 
 ```bash
 cmux hooks setup

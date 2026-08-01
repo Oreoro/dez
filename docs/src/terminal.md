@@ -156,25 +156,33 @@ created for an unrelated external TTY.
 Dez adds a narrow, explicit control boundary for tmux, Herdr, and cmux.
 Dez discovers live tmux sessions through `list-panes`, asks `herdr session list
 --json` for the live default and named Herdr endpoints before querying the
-documented snapshot API, and discovers cmux Workspaces through `workspace list
---json`. Older cmux releases remain supported through the compatibility
-`list-workspaces --json` verb. A session whose working directory is inside an open root appears
-beneath the most specific matching Workspace. Sessions with no working
-directory or no matching open root remain visible under **Other Running
-Sessions**. **Browse Running Sessions…** opens or refocuses Workspaces, clears
-temporary filters, expands matching groups, and refreshes every source.
+documented snapshot API, and discovers cmux Workspaces through the documented
+`list-workspaces --json` CLI. The namespaced `workspace list --json` form is a
+bounded compatibility fallback, not the normal polling path. A session whose
+working directory is inside an open root appears beneath the most specific
+matching Workspace. Sessions with no working directory or no matching open root
+remain visible under **Other Running Sessions**. **Browse Running Sessions…**
+opens or refocuses Workspaces, clears temporary filters, expands matching
+groups, and refreshes every source.
 tmux and Herdr open the documented attach command in an ordinary Main Work Area
 terminal. A cmux Workspace opens in cmux through `select-workspace`; Dez does
 not manufacture an attachment terminal for it. The external application
 remains authoritative, closing a Dez tab detaches rather than terminates, and
 Dez never requests a Herdr takeover automatically.
 
-For a current cmux release, Dez also correlates `list-notifications --json`
-with the Workspace list. Unread notifications become **Needs Input**; the
-latest notification or conversation summary and up to three listening ports
-remain compact metadata in the native Workspace row. They are a read-only
-projection of cmux state. Dez does not mark notifications read, send terminal
-input, reproduce cmux panes, or infer ownership from notification text.
+Dez also correlates the documented `list-notifications --json` result with the
+Workspace list. Unread notifications become **Needs Input**; the latest
+notification or conversation summary and up to three listening ports remain
+compact metadata in the native Workspace row. They are a read-only projection
+of cmux state. Dez does not mark notifications read, send terminal input,
+reproduce cmux panes, or infer ownership from notification text.
+
+cmux protects its socket with an access mode. Its default may reject a CLI
+launched outside a cmux-owned terminal. When that happens, Dez shows one failed
+cmux source with the CLI diagnostic and a Retry action; it never weakens cmux's
+access mode automatically. Open cmux and choose an automation mode appropriate
+for the machine before retrying. The current command and access contract is in
+the [cmux CLI/API reference](https://cmux.com/docs/api).
 
 Each integration reports its source truth independently: **Missing** means the
 executable is unavailable, **Empty** means an available source returned no
